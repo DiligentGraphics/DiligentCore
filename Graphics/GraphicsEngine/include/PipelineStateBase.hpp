@@ -46,7 +46,7 @@ namespace Diligent
 
 void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false);
 void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false);
-void ValidateRayTracingPipelineCreateInfo(const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
+void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept;
 
@@ -122,7 +122,7 @@ public:
                       bool                                     bIsDeviceInternal = false) :
         PipelineStateBase{pRefCounters, pDevice, RayTracingPipelineCI.PSODesc, bIsDeviceInternal}
     {
-        ValidateRayTracingPipelineCreateInfo(RayTracingPipelineCI);
+        ValidateRayTracingPipelineCreateInfo(pDevice, RayTracingPipelineCI);
     }
 
 
@@ -344,8 +344,6 @@ protected:
     void ReserveSpaceForPipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
                                      LinearAllocator&                         MemPool) const noexcept
     {
-        ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
-
         for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
         {
             MemPool.AddSpaceForString(CreateInfo.pGeneralShaders[i].Name);
@@ -358,6 +356,8 @@ protected:
         {
             MemPool.AddSpaceForString(CreateInfo.pProceduralHitShaders[i].Name);
         }
+
+        ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // reserve size for shader handles

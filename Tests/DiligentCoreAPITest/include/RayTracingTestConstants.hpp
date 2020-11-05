@@ -129,13 +129,19 @@ namespace TestingConstants
         struct ShaderRecord
         {
             float4 Weight;
-            float4 Padding;
+            uint   GeometryID;
+            uint   padding[3];
+
+            ShaderRecord(const float4& w, uint id) {}
         };
         static const ShaderRecord Weights[] =
         {
-            ShaderRecord{{1.0f, 0.4f, 0.4f, 1.0f}, {}},
-            ShaderRecord{{0.4f, 1.0f, 0.4f, 1.0f}, {}},
-            ShaderRecord{{0.4f, 0.4f, 1.0f, 1.0f}, {}}
+            ShaderRecord{{1.0f, 0.4f, 0.4f, 1.0f}, 0},
+            ShaderRecord{{0.4f, 1.0f, 0.4f, 1.0f}, 1},
+            ShaderRecord{{0.4f, 0.4f, 1.0f, 1.0f}, 2},
+            ShaderRecord{{0.4f, 1.0f, 0.4f, 1.0f}, 0},
+            ShaderRecord{{0.4f, 0.4f, 1.0f, 1.0f}, 1},
+            ShaderRecord{{1.0f, 0.4f, 0.4f, 1.0f}, 2},
         };
         static constexpr Uint32 ShaderRecordSize = sizeof(Weights[0]);
         static constexpr Uint32 InstanceCount    = 2;
@@ -145,6 +151,7 @@ namespace TestingConstants
         static_assert(_countof(Primitives) == 9, "Update array size in shaders");
         static_assert(_countof(Indices) % 3 == 0, "Invalid index count");
         static_assert(_countof(Indices) / 3 == _countof(Primitives), "Primitive count mismatch");
+        static_assert(ShaderRecordSize == 32, "bust be 32 bytes");
 
     } // namespace MultiGeometry
 

@@ -281,7 +281,7 @@ public:
                  BindingTable& HitShaderBindingTable,
                  BindingTable& CallableShaderBindingTable)
     {
-        const auto ShaderGroupBaseAlignment = GetDevice()->GetShaderGroupBaseAlignment();
+        const auto ShaderGroupBaseAlignment = this->m_pDevice->GetShaderGroupBaseAlignment();
 
         const auto AlignToLarger = [ShaderGroupBaseAlignment](size_t offset) -> Uint32 {
             return Align(static_cast<Uint32>(offset), ShaderGroupBaseAlignment);
@@ -298,14 +298,14 @@ public:
         {
             this->m_pBuffer = nullptr;
 
-            String     BuffName = String{GetDesc().Name} + " - internal buffer";
+            String     BuffName = String{this->m_Desc.Name} + " - internal buffer";
             BufferDesc BuffDesc;
             BuffDesc.Name          = BuffName.c_str();
             BuffDesc.Usage         = USAGE_DEFAULT;
             BuffDesc.BindFlags     = BIND_RAY_TRACING;
             BuffDesc.uiSizeInBytes = BufSize;
 
-            GetDevice()->CreateBuffer(BuffDesc, nullptr, &this->m_pBuffer);
+            this->m_pDevice->CreateBuffer(BuffDesc, nullptr, &this->m_pBuffer);
             VERIFY_EXPR(this->m_pBuffer != nullptr);
         }
 
@@ -399,7 +399,10 @@ protected:
     Uint32 m_ShaderRecordStride = 0;
     bool   m_Changed            = true;
 
-    static const Uint8 EmptyElem = 0xA7;
+    static const Uint8 EmptyElem;
 };
+
+template <class BaseInterface, class PipelineStateImplType, class RenderDeviceImplType>
+const Uint8 ShaderBindingTableBase<BaseInterface, PipelineStateImplType, RenderDeviceImplType>::EmptyElem = 0xA7;
 
 } // namespace Diligent

@@ -279,8 +279,8 @@ protected:
     // clang-format on
 #endif
 
-    bool BuildBLAS(const BLASBuildAttribs& Attribs, int) const;
-    bool BuildTLAS(const TLASBuildAttribs& Attribs, int) const;
+    bool BuildBLAS(const BuildBLASAttribs& Attribs, int) const;
+    bool BuildTLAS(const BuildTLASAttribs& Attribs, int) const;
     bool CopyBLAS(const CopyBLASAttribs& Attribs, int) const;
     bool CopyTLAS(const CopyTLASAttribs& Attribs, int) const;
     bool WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const;
@@ -1970,7 +1970,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 #endif // DILIGENT_DEVELOPMENT
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLASBuildAttribs& Attribs, int) const
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
 {
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
@@ -2211,7 +2211,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLASBuildAttribs& Attribs, int) const
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
 {
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
@@ -2287,6 +2287,12 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         if (Attribs.pInstances[i].pBLAS == nullptr)
         {
             LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].pBLAS must not be null");
+            return false;
+        }
+
+        if (!ValidatedCast<BottomLevelASType>(Attribs.pInstances[i].pBLAS)->ValidateContent())
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].pBLAS is not valid");
             return false;
         }
 

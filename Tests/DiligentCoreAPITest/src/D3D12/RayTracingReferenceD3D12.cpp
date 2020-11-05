@@ -244,7 +244,7 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, Uint32 ShaderRe
         Param.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
         Param.ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
         Param.Constants.Num32BitValues = ShaderRecordSize / 4;
-        Param.Constants.RegisterSpace  = 1;
+        Param.Constants.RegisterSpace  = 0;
         Param.Constants.ShaderRegister = 0;
 
         RootSignatureDesc.Flags         = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
@@ -1260,13 +1260,13 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
             UpdateBuffer(Ctx, Ctx.pSBTBuffer, Offset + handleSize, ShaderRecord, sizeof(Weights[0]));
         };
         // instance 1
-        SetHitGroup(0, L"HitGroup1", &Weights[2]); // geometry 1
-        SetHitGroup(1, L"HitGroup1", &Weights[0]); // geometry 2
-        SetHitGroup(2, L"HitGroup1", &Weights[1]); // geometry 3
+        SetHitGroup(0, L"HitGroup1", &Weights[0]); // geometry 1
+        SetHitGroup(1, L"HitGroup1", &Weights[1]); // geometry 2
+        SetHitGroup(2, L"HitGroup1", &Weights[2]); // geometry 3
         // instance 2
-        SetHitGroup(3, L"HitGroup2", &Weights[2]); // geometry 1
-        SetHitGroup(4, L"HitGroup2", &Weights[1]); // geometry 2
-        SetHitGroup(5, L"HitGroup2", &Weights[0]); // geometry 3
+        SetHitGroup(3, L"HitGroup2", &Weights[3]); // geometry 1
+        SetHitGroup(4, L"HitGroup2", &Weights[4]); // geometry 2
+        SetHitGroup(5, L"HitGroup2", &Weights[5]); // geometry 3
 
         SBTBufferBarrier(Ctx);
 

@@ -298,9 +298,12 @@ StructuredBuffer<uint4>  g_Primitives     : register(t4); // array size = 9
 struct LocalRootConst
 {
     float4 Weight;
+    uint   GeometryID; // same as GeometryIndex() in DXR 1.1
 };
-//[[vk::shader_record_ext]]
-//ConstantBuffer<LocalRootConst> g_LocalRoot : register(b0);
+#ifdef VULKAN
+  [[vk::shader_record_nv]]
+#endif
+ConstantBuffer<LocalRootConst> g_LocalRoot : register(b0);
 )hlsl";
 
 const std::string RayTracingTest4_RCH1 = RayTracingTest4_Uniforms + 
@@ -308,8 +311,8 @@ R"hlsl(
 [shader("closesthit")]
 void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-    float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);// * g_LocalRoot.Weight.xyz;
-    uint   primOffset   = g_PerInstance[InstanceIndex()][GeometryIndex()];
+    float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y) * g_LocalRoot.Weight.xyz;
+    uint   primOffset   = g_PerInstance[InstanceIndex()][g_LocalRoot.GeometryID];
     uint4  triFace      = g_Primitives[primOffset + PrimitiveIndex()];
     Vertex v0           = g_Vertices[triFace.x];
     Vertex v1           = g_Vertices[triFace.y];
@@ -324,8 +327,8 @@ R"hlsl(
 [shader("closesthit")]
 void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-    float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);// * g_LocalRoot.Weight.xyz;
-    uint   primOffset   = g_PerInstance[InstanceIndex()][GeometryIndex()]; // AZ TODO: GeometryIndex required DXR 1.1
+    float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y) * g_LocalRoot.Weight.xyz;
+    uint   primOffset   = g_PerInstance[InstanceIndex()][g_LocalRoot.GeometryID];
     uint4  triFace      = g_Primitives[primOffset + PrimitiveIndex()];
     Vertex v0           = g_Vertices[triFace.x];
     Vertex v1           = g_Vertices[triFace.y];

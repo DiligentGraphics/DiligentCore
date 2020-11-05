@@ -33,7 +33,6 @@
 #include <unordered_map>
 
 #include "TopLevelAS.h"
-#include "BottomLevelAS.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
 #include "StringPool.hpp"
@@ -158,7 +157,7 @@ public:
         if (iter != this->m_Instances.end())
         {
             Result.ContributionToHitGroupIndex = iter->second.ContributionToHitGroupIndex;
-            Result.pBLAS                       = iter->second.pBLAS.RawPtr<IBottomLevelAS>();
+            Result.pBLAS                       = iter->second.pBLAS.template RawPtr<IBottomLevelAS>();
         }
         else
         {
@@ -199,7 +198,7 @@ public:
 
         if (m_Instances.empty())
         {
-            LOG_ERROR_MESSAGE("TLAS with name ('", GetDesc().Name, "') doesn't have instances, use IDeviceContext::BuildTLAS() or IDeviceContext::CopyTLAS() to initialize TLAS content");
+            LOG_ERROR_MESSAGE("TLAS with name ('", this->m_Desc.Name, "') doesn't have instances, use IDeviceContext::BuildTLAS() or IDeviceContext::CopyTLAS() to initialize TLAS content");
             result = false;
         }
 

@@ -702,7 +702,12 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             });
 
         if (ShaderCI.Desc.ShaderType & RayTracingStages)
-            DxilArgs.push_back(L"-fspv-target-env=vulkan1.2");
+        {
+            DxilArgs.push_back(L"-fspv-extension=SPV_NV_ray_tracing");
+            DxilArgs.push_back(L"-fspv-extension=SPV_GOOGLE_hlsl_functionality1");
+            DxilArgs.push_back(L"-fspv-extension=SPV_GOOGLE_user_type");
+            //DxilArgs.push_back(L"-fspv-target-env=vulkan1.2");
+        }
     }
     else
     {

@@ -135,7 +135,8 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
                                            const SHADER_RESOURCE_VARIABLE_TYPE* const AllowedVarTypes,
                                            Uint32                                     NumAllowedTypes,
                                            ShaderResourceCacheD3D12*                  pResourceCache,
-                                           RootSignature*                             pRootSig)
+                                           RootSignature*                             pRootSig,
+                                           LocalRootSignature*                        pLocalRootSig)
 {
     m_pd3d12Device = pd3d12Device;
 
@@ -170,6 +171,9 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
             auto VarType = pResources->FindVariableType(Res, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
+                if (pLocalRootSig && pLocalRootSig->SetOrMerge(Res))
+                    return;
+
                 bool IsUniqueName = ResourceNameToIndex.emplace(HashMapStringKey{Res.Name}, InvalidResourceIndex).second;
                 if (IsUniqueName)
                 {
@@ -313,6 +317,9 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
         pResources->ProcessResources(
             [&](const D3DShaderResourceAttribs& CB, Uint32) //
             {
+                if (pLocalRootSig && pLocalRootSig->SetOrMerge(CB))
+                    return;
+
                 auto VarType = pResources->FindVariableType(CB, ResourceLayout);
                 if (IsAllowedType(VarType, AllowedTypeBits))
                     AddResource(CB, CachedResourceType::CBV, VarType);

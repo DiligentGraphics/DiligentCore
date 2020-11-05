@@ -92,7 +92,7 @@ hitAttributeEXT vec2  hitAttribs;
 
 void main()
 {
-    const vec3 barycentrics = vec3(1.0f - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);
+    const vec3 barycentrics = vec3(1.0 - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);
     payload = vec4(barycentrics, 1.0);
 }
 )glsl"
@@ -174,7 +174,7 @@ hitAttributeEXT vec2  hitAttribs;
 
 void main()
 {
-    const vec3 barycentrics = vec3(1.0f - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);
+    const vec3 barycentrics = vec3(1.0 - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);
     if (barycentrics.y > barycentrics.x)
         ignoreIntersectionEXT();
     else
@@ -337,6 +337,7 @@ R"glsl(
 layout(shaderRecordEXT) buffer ShaderRecord
 {
     vec4 Weights;
+    uint GeometryID; // same as gl_GeometryIndexEXT but compatible with VK_NV_ray_tracing
 };
 
 layout(location=0) rayPayloadInEXT vec4  payload;
@@ -366,7 +367,7 @@ const std::string RayTracingTest4_RCH1 = RayTracingTest4_Uniforms +
 R"glsl(
 void main()
 {
-    vec3   barycentrics = vec3(1.0f - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);// * Weights.xyz;
+    vec3   barycentrics = vec3(1.0 - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y) * Weights.xyz;
     uint   primOffset   = g_PerInstance[gl_InstanceID].PrimitiveOffsets[gl_GeometryIndexEXT];
     uvec4  triFace      = g_Primitives[primOffset + gl_PrimitiveID];
     Vertex v0           = g_Vertices[triFace.x];
@@ -381,7 +382,7 @@ const std::string RayTracingTest4_RCH2 = RayTracingTest4_Uniforms +
 R"glsl(
 void main()
 {
-    vec3   barycentrics = vec3(1.0f - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);// * Weights.xyz;
+    vec3   barycentrics = vec3(1.0 - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y) * Weights.xyz;
     uint   primOffset   = g_PerInstance[gl_InstanceID].PrimitiveOffsets[gl_GeometryIndexEXT];
     uvec4  triFace      = g_Primitives[primOffset + gl_PrimitiveID];
     Vertex v0           = g_Vertices[triFace.x];

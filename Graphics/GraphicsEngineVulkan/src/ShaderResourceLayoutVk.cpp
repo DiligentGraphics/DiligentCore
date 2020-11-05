@@ -300,7 +300,7 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(const std::vector<co
                         // For immutable separate samplers we allocate VkResource instances, but they are never exposed to the app
                     }
 
-                    Uint32 Binding       = Attribs.Type;
+                    Uint32 Binding       = Uint32{Attribs.Type};
                     Uint32 DescriptorSet = 0;
                     Uint32 CacheOffset   = StaticResCacheSize;
                     StaticResCacheSize += Attribs.ArraySize;
@@ -1161,7 +1161,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint3
 
     if (pObj)
     {
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please handle the new resource type below");
+        static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type below");
         switch (Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
@@ -1265,7 +1265,7 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
         // Get resource attributes
         const auto& DstRes = GetResource(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
         const auto& SrcRes = SrcLayout.GetResource(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
-        VERIFY(SrcRes.Binding == SrcRes.Type, "Unexpected binding");
+        VERIFY(SrcRes.Binding == Uint32{SrcRes.Type}, "Unexpected binding");
         VERIFY(SrcRes.ArraySize == DstRes.ArraySize, "Inconsistent array size");
 
         if (DstRes.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler &&
@@ -1412,7 +1412,7 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
         WriteDescrSetIt->descriptorType = PipelineLayout::GetVkDescriptorType(Res.Type);
 
         // For every resource type, try to batch as many descriptor updates as we can
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please handle the new resource type below");
+        static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type below");
         switch (Res.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:

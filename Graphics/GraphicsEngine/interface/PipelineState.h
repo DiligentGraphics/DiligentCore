@@ -472,7 +472,13 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
     
     /// Direct3D12 only: set name of constant buffer that will be used by local root signature.
     /// Ignored if RayTracingPipelineDesc::ShaderRecordSize is zero.
-    const char*                               ShaderRecordName         DEFAULT_INITIALIZER(nullptr);
+    const char*                               pShaderRecordName        DEFAULT_INITIALIZER(nullptr);
+    
+    /// Direct3D12 only: set max hit shader attribute size in bytes.
+    Uint32                                    MaxAttributeSize         DEFAULT_INITIALIZER(0);
+    
+    /// Direct3D12 only: set max payload size in bytes.
+    Uint32                                    MaxPayloadSize           DEFAULT_INITIALIZER(0);
 };
 typedef struct RayTracingPipelineStateCreateInfo RayTracingPipelineStateCreateInfo;
 

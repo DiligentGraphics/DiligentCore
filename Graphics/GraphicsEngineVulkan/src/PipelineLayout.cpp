@@ -45,19 +45,19 @@ class ResourceTypeToVkDescriptorType
 public:
     ResourceTypeToVkDescriptorType()
     {
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please add the corresponding decriptor type");
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]         = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer]       = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer]       = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer]    = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer]    = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]          = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SampledImage]          = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]         = VK_DESCRIPTOR_TYPE_MAX_ENUM; // atomic counter doesn't exist in Vulkan
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]         = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler]       = VK_DESCRIPTOR_TYPE_SAMPLER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::InputAttachment]       = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure] = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please add the corresponding decriptor type");
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::UniformBuffer}]         = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer}]       = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer}]       = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer}]    = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer}]    = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::StorageImage}]          = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::SampledImage}]          = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::AtomicCounter}]         = VK_DESCRIPTOR_TYPE_MAX_ENUM; // atomic counter doesn't exist in Vulkan
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::SeparateImage}]         = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::SeparateSampler}]       = VK_DESCRIPTOR_TYPE_SAMPLER;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::InputAttachment}]       = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        m_Map[Uint32{SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure}] = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     }
 
     VkDescriptorType operator[](SPIRVShaderResourceAttribs::ResourceType ResType) const
@@ -66,7 +66,7 @@ public:
     }
 
 private:
-    std::array<VkDescriptorType, SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes> m_Map = {};
+    std::array<VkDescriptorType, Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes}> m_Map = {};
 };
 
 VkDescriptorType PipelineLayout::GetVkDescriptorType(SPIRVShaderResourceAttribs::ResourceType Type)

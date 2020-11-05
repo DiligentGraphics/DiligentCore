@@ -587,4 +587,23 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
     }
 }
 
+
+class LocalRootSignature
+{
+public:
+    LocalRootSignature(const char* pCBName, Uint32 ShaderRecordSize);
+
+    bool SetOrMerge(const D3DShaderResourceAttribs& CB);
+
+    ID3D12RootSignature* Create(ID3D12Device* pDevice);
+
+private:
+    static constexpr Uint32 InvalidBindPoint = ~0u;
+
+    const char*                  m_pName            = nullptr;
+    Uint32                       m_BindPoint        = InvalidBindPoint;
+    const Uint32                 m_ShaderRecordSize = 0;
+    CComPtr<ID3D12RootSignature> m_LocalRootSignature;
+};
+
 } // namespace Diligent

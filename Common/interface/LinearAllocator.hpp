@@ -289,6 +289,11 @@ private:
         m_ReservedSize  = 0;
         m_CurrAlignment = 0;
         m_pAllocator    = nullptr;
+
+#if DILIGENT_DEBUG
+        m_DbgCurrAllocation = 0;
+        m_DbgAllocations.clear();
+#endif
     }
 
     uint8_t*          m_pDataStart    = nullptr;

@@ -208,17 +208,18 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     VERIFY_EXPR(Uint32{CreateInfo.GeneralShaderCount} + Uint32{CreateInfo.TriangleHitShaderCount} + Uint32{CreateInfo.ProceduralHitShaderCount} == GroupIndex);
 
-    if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH)
-        LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth must be less than equal to ", D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH);
+    const Uint32 RecursionDepthLimit = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH - 1;
+    if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > RecursionDepthLimit)
+        LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth must be less than or equal to ", RecursionDepthLimit);
 
     auto& PipelineConfig = *TempPool.Construct<D3D12_RAYTRACING_PIPELINE_CONFIG>();
-    // for compatibility with Vulkan set minimal recursion depth to 1
-    PipelineConfig.MaxTraceRecursionDepth = std::max<Uint32>(1, CreateInfo.RayTracingPipeline.MaxRecursionDepth);
+    // For compatibility with Vulkan set minimal recursion depth to one, zero means no tracing of rays at all.
+    PipelineConfig.MaxTraceRecursionDepth = CreateInfo.RayTracingPipeline.MaxRecursionDepth + 1;
     Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &PipelineConfig});
 
     auto& ShaderConfig                   = *TempPool.Construct<D3D12_RAYTRACING_SHADER_CONFIG>();
-    ShaderConfig.MaxAttributeSizeInBytes = D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
-    ShaderConfig.MaxPayloadSizeInBytes   = 32; // AZ TODO
+    ShaderConfig.MaxAttributeSizeInBytes = CreateInfo.MaxAttributeSize == 0 ? D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES : CreateInfo.MaxAttributeSize;
+    ShaderConfig.MaxPayloadSizeInBytes   = CreateInfo.MaxPayloadSize == 0 ? 32 : CreateInfo.MaxPayloadSize;
     Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &ShaderConfig});
 #undef LOG_PSO_ERROR_AND_THROW
 }
@@ -304,6 +305,7 @@ size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 template <typename PSOCreateInfoType, typename InitPSODescType>
 void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo,
                                                  TShaderStages&           ShaderStages,
+                                                 LocalRootSignature*      pLocalRoot,
                                                  InitPSODescType          InitPSODesc)
 {
     m_ResourceLayoutIndex.fill(-1);
@@ -343,7 +345,7 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitResourceLayouts(CreateInfo, ShaderStages);
+    InitResourceLayouts(CreateInfo, ShaderStages, pLocalRoot);
 }
 
 
@@ -356,7 +358,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
     try
     {
         TShaderStages ShaderStages;
-        InitInternalObjects(CreateInfo, ShaderStages,
+        InitInternalObjects(CreateInfo, ShaderStages, nullptr,
                             [this](const GraphicsPipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool) //
                             {
                                 InitializePipelineDesc(CreateInfo, MemPool);
@@ -567,7 +569,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
     try
     {
         TShaderStages ShaderStages;
-        InitInternalObjects(CreateInfo, ShaderStages,
+        InitInternalObjects(CreateInfo, ShaderStages, nullptr,
                             [this](const ComputePipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool) //
                             {
                                 InitializePipelineDesc(CreateInfo, MemPool);
@@ -625,12 +627,12 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 {
     try
     {
-        CreateLocalRootSignature(CreateInfo.RayTracingPipeline);
-
+        LocalRootSignature                 LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
         TShaderStages                      ShaderStages;
         std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
         DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
-        InitInternalObjects(CreateInfo, ShaderStages,
+
+        InitInternalObjects(CreateInfo, ShaderStages, &LocalRootSig,
                             [&](const RayTracingPipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool) //
                             {
                                 TNameToGroupIndexMap NameToGroupIndex;
@@ -639,11 +641,13 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                             } //
         );
 
+        auto pd3d12Device = pDeviceD3D12->GetD3D12Device5();
+
         D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot = {m_RootSig.GetD3D12RootSignature()};
         Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &GlobalRoot});
 
-        D3D12_LOCAL_ROOT_SIGNATURE LocalRoot = {m_LocalRootSignature};
-        if (m_LocalRootSignature)
+        D3D12_LOCAL_ROOT_SIGNATURE LocalRoot = {LocalRootSig.Create(pd3d12Device)};
+        if (LocalRoot.pLocalRootSignature)
             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &LocalRoot});
 
         D3D12_STATE_OBJECT_DESC RTPipelineDesc = {};
@@ -651,8 +655,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         RTPipelineDesc.NumSubobjects           = static_cast<UINT>(Subobjects.size());
         RTPipelineDesc.pSubobjects             = Subobjects.data();
 
-        auto    pd3d12Device = pDeviceD3D12->GetD3D12Device5();
-        HRESULT hr           = pd3d12Device->CreateStateObject(&RTPipelineDesc, IID_PPV_ARGS(&m_pd3d12PSO));
+        HRESULT hr = pd3d12Device->CreateStateObject(&RTPipelineDesc, IID_PPV_ARGS(&m_pd3d12PSO));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create ray tracing state object");
 
@@ -672,35 +675,6 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         Destruct();
         throw;
     }
-}
-
-void PipelineStateD3D12Impl::CreateLocalRootSignature(const RayTracingPipelineDesc& Desc)
-{
-    // AZ TODO
-    /*if (Desc.ShaderRecordSize == 0)
-        return;
-
-    D3D12_ROOT_SIGNATURE_DESC d3d12RootSignatureDesc = {};
-    D3D12_ROOT_PARAMETER      d3d12Params            = {};
-
-    d3d12Params.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    d3d12Params.ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
-    d3d12Params.Constants.Num32BitValues = Desc.ShaderRecordSize / 4;
-    d3d12Params.Constants.RegisterSpace  = Desc.LocalRootRegisterSpace;
-    d3d12Params.Constants.ShaderRegister = 0;
-
-    d3d12RootSignatureDesc.Flags         = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-    d3d12RootSignatureDesc.NumParameters = 1;
-    d3d12RootSignatureDesc.pParameters   = &d3d12Params;
-
-    CComPtr<ID3DBlob> signature;
-    auto              hr = D3D12SerializeRootSignature(&d3d12RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
-    CHECK_D3D_RESULT_THROW(hr, "Failed to serialize root signature");
-
-    auto pd3d12Device = GetDevice()->GetD3D12Device();
-
-    hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_LocalRootSignature));
-    CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");*/
 }
 
 PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
@@ -749,7 +723,8 @@ IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipel
 
 
 void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
-                                                 TShaderStages&                 ShaderStages)
+                                                 TShaderStages&                 ShaderStages,
+                                                 LocalRootSignature*            pLocalRoot)
 {
     auto        pd3d12Device   = GetDevice()->GetD3D12Device();
     const auto& ResourceLayout = m_Desc.ResourceLayout;
@@ -786,7 +761,8 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             nullptr,
             0,
             nullptr,
-            &m_RootSig //
+            &m_RootSig,
+            pLocalRoot //
         );
 
         const SHADER_RESOURCE_VARIABLE_TYPE StaticVarType[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
@@ -799,7 +775,8 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             StaticVarType,
             _countof(StaticVarType),
             m_pStaticResourceCaches + s,
-            nullptr //
+            nullptr,
+            pLocalRoot //
         );
 
         m_pStaticVarManagers[s].Initialize(

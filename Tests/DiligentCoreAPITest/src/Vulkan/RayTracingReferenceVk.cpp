@@ -178,18 +178,14 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
         vkCreatePipelineLayout(Ctx.vkDevice, &PipelineLayoutCI, nullptr, &Ctx.vkLayout);
         ASSERT_TRUE(Ctx.vkLayout != VK_NULL_HANDLE);
 
-        PipelineCI.sType                  = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
-        PipelineCI.flags                  = 0;
-        PipelineCI.stageCount             = static_cast<Uint32>(Helper.Stages.size());
-        PipelineCI.pStages                = Helper.Stages.data();
-        PipelineCI.groupCount             = static_cast<Uint32>(Helper.Groups.size());
-        PipelineCI.pGroups                = Helper.Groups.data();
-        PipelineCI.maxRecursionDepth      = 0;
-        PipelineCI.layout                 = Ctx.vkLayout;
-        PipelineCI.libraries.sType        = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
-        PipelineCI.libraries.pNext        = nullptr;
-        PipelineCI.libraries.libraryCount = 0;
-        PipelineCI.libraries.pLibraries   = nullptr;
+        PipelineCI.sType             = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+        PipelineCI.stageCount        = static_cast<Uint32>(Helper.Stages.size());
+        PipelineCI.pStages           = Helper.Stages.data();
+        PipelineCI.groupCount        = static_cast<Uint32>(Helper.Groups.size());
+        PipelineCI.pGroups           = Helper.Groups.data();
+        PipelineCI.maxRecursionDepth = 0;
+        PipelineCI.layout            = Ctx.vkLayout;
+        PipelineCI.libraries.sType   = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
 
         res = vkCreateRayTracingPipelinesKHR(Ctx.vkDevice, VK_NULL_HANDLE, 1, &PipelineCI, nullptr, &Ctx.vkPipeline);
         ASSERT_GE(res, 0);
@@ -281,9 +277,7 @@ void CreateBLAS(const RTContext& Ctx, const VkAccelerationStructureCreateGeometr
 
     BLASCI.sType            = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
     BLASCI.type             = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-    BLASCI.flags            = 0;
     BLASCI.maxGeometryCount = GeometryCount;
-    BLASCI.compactedSize    = 0;
     BLASCI.pGeometryInfos   = pGeometries;
 
     res = vkCreateAccelerationStructureKHR(Ctx.vkDevice, &BLASCI, nullptr, &BLAS.vkAS);
@@ -314,9 +308,6 @@ void CreateBLAS(const RTContext& Ctx, const VkAccelerationStructureCreateGeometr
 
     BindInfo.sType                 = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
     BindInfo.memory                = BLAS.vkMemory;
-    BindInfo.memoryOffset          = 0;
-    BindInfo.deviceIndexCount      = 0;
-    BindInfo.pDeviceIndices        = nullptr;
     BindInfo.accelerationStructure = BLAS.vkAS;
 
     res = vkBindAccelerationStructureMemoryKHR(Ctx.vkDevice, 1, &BindInfo);
@@ -609,6 +600,35 @@ void ClearRenderTarget(RTContext& Ctx, TestingSwapChainVk* pTestingSwapChainVk)
 
     pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_GENERAL, 0);
 }
+
+void PrepareForTraceRays(const RTContext& Ctx)
+{
+    // Barrier for TLAS & SBT
+    VkMemoryBarrier Barrier = {};
+    Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    Barrier.srcAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
+    Barrier.dstAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+    vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
+                         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+                         0, 1, &Barrier, 0, nullptr, 0, nullptr);
+
+    vkCmdBindPipeline(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkPipeline);
+    vkCmdBindDescriptorSets(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkLayout, 0, 1, &Ctx.vkDescriptorSet, 0, nullptr);
+}
+
+void AccelStructBarrier(const RTContext& Ctx)
+{
+    // Barrier for vertex & index buffers, BLAS, scratch buffer, instance buffer
+    VkMemoryBarrier Barrier = {};
+    Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    Barrier.srcAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
+    Barrier.dstAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+    vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
+                         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                         0, 1, &Barrier, 0, nullptr, 0, nullptr);
+}
 } // namespace
 
 
@@ -720,6 +740,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
                             rtGroups.SetStage(RAYGEN_SHADER, SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest1_RG);
                             rtGroups.SetStage(MISS_SHADER, SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest1_RM);
                             rtGroups.SetStage(HIT_SHADER, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest1_RCH);
+
                             rtGroups.SetGeneralGroup(RAYGEN_GROUP, RAYGEN_SHADER);
                             rtGroups.SetGeneralGroup(MISS_GROUP, MISS_SHADER);
                             rtGroups.SetTriangleHitGroup(HIT_GROUP, HIT_SHADER);
@@ -727,9 +748,6 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
 
     // Create acceleration structures
     {
-        VkMemoryBarrier Barrier = {};
-        Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-
         const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
 
         VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
@@ -747,14 +765,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         CreateRTBuffers(Ctx, sizeof(Vertices), 0, 1, 1, 1);
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkVertexBuffer, 0, sizeof(Vertices), Vertices);
-
-        // barrier for vertex & index buffers
-        Barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
+        AccelStructBarrier(Ctx);
 
         VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
         VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
@@ -771,14 +782,10 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
         Geometry.geometry.triangles.indexType                = VK_INDEX_TYPE_NONE_KHR;
 
-        Offset.primitiveCount  = GeometryCI.maxPrimitiveCount;
-        Offset.firstVertex     = 0;
-        Offset.primitiveOffset = 0;
-        Offset.transformOffset = 0;
+        Offset.primitiveCount = GeometryCI.maxPrimitiveCount;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        ASBuildInfo.flags                     = 0;
         ASBuildInfo.update                    = VK_FALSE;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.BLAS.vkAS;
@@ -790,24 +797,15 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
 
         VkAccelerationStructureInstanceKHR InstanceData     = {};
-        InstanceData.instanceCustomIndex                    = 0;
         InstanceData.instanceShaderBindingTableRecordOffset = 0;
         InstanceData.mask                                   = 0xFF;
-        InstanceData.flags                                  = 0;
         InstanceData.accelerationStructureReference         = Ctx.BLAS.vkAddress;
         InstanceData.transform.matrix[0][0]                 = 1.0f;
         InstanceData.transform.matrix[1][1]                 = 1.0f;
         InstanceData.transform.matrix[2][2]                 = 1.0f;
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkInstanceBuffer, 0, sizeof(InstanceData), &InstanceData);
-
-        // barrier for BLAS, scratch buffer, instance buffer
-        Barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
+        AccelStructBarrier(Ctx);
 
         Geometry.flags                                 = 0;
         Geometry.geometryType                          = VK_GEOMETRY_TYPE_INSTANCES_KHR;
@@ -816,14 +814,10 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.instances.arrayOfPointers    = VK_FALSE;
         Geometry.geometry.instances.data.deviceAddress = Ctx.vkInstanceBufferAddress;
 
-        Offset.primitiveCount  = 1;
-        Offset.firstVertex     = 0;
-        Offset.primitiveOffset = 0;
-        Offset.transformOffset = 0;
+        Offset.primitiveCount = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        ASBuildInfo.flags                     = 0;
         ASBuildInfo.update                    = VK_FALSE;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.TLAS.vkAS;
@@ -874,19 +868,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, HIT_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, HitShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
 
-        // Barriers for TLAS & SBT
-        VkMemoryBarrier Barrier = {};
-        Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        Barrier.srcAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
-
-        vkCmdBindPipeline(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkPipeline);
-        vkCmdBindDescriptorSets(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkLayout, 0, 1, &Ctx.vkDescriptorSet, 0, nullptr);
-
+        PrepareForTraceRays(Ctx);
         vkCmdTraceRaysKHR(Ctx.vkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, SCDesc.Width, SCDesc.Height, 1);
 
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0);
@@ -930,16 +912,14 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
                             rtGroups.SetStage(MISS_SHADER, SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest2_RM);
                             rtGroups.SetStage(HIT_SHADER, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest2_RCH);
                             rtGroups.SetStage(ANY_HIT_SHADER, SHADER_TYPE_RAY_ANY_HIT, GLSL::RayTracingTest2_RAH);
+
                             rtGroups.SetGeneralGroup(RAYGEN_GROUP, RAYGEN_SHADER);
                             rtGroups.SetGeneralGroup(MISS_GROUP, MISS_SHADER);
                             rtGroups.SetTriangleHitGroup(HIT_GROUP, HIT_SHADER, ANY_HIT_SHADER);
                         });
 
-    // create acceleration structurea
+    // Create acceleration structurea
     {
-        VkMemoryBarrier Barrier = {};
-        Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-
         const auto& Vertices = TestingConstants::TriangleAnyHit::Vertices;
 
         VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
@@ -957,14 +937,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         CreateRTBuffers(Ctx, sizeof(Vertices), 0, 1, 1, 1);
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkVertexBuffer, 0, sizeof(Vertices), Vertices);
-
-        // barrier for vertex & index buffers
-        Barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
+        AccelStructBarrier(Ctx);
 
         VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
         VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
@@ -981,14 +954,10 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
         Geometry.geometry.triangles.indexType                = VK_INDEX_TYPE_NONE_KHR;
 
-        Offset.primitiveCount  = GeometryCI.maxPrimitiveCount;
-        Offset.firstVertex     = 0;
-        Offset.primitiveOffset = 0;
-        Offset.transformOffset = 0;
+        Offset.primitiveCount = GeometryCI.maxPrimitiveCount;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        ASBuildInfo.flags                     = 0;
         ASBuildInfo.update                    = VK_FALSE;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.BLAS.vkAS;
@@ -1000,24 +969,15 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
 
         VkAccelerationStructureInstanceKHR InstanceData     = {};
-        InstanceData.instanceCustomIndex                    = 0;
         InstanceData.instanceShaderBindingTableRecordOffset = 0;
         InstanceData.mask                                   = 0xFF;
-        InstanceData.flags                                  = 0;
         InstanceData.accelerationStructureReference         = Ctx.BLAS.vkAddress;
         InstanceData.transform.matrix[0][0]                 = 1.0f;
         InstanceData.transform.matrix[1][1]                 = 1.0f;
         InstanceData.transform.matrix[2][2]                 = 1.0f;
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkInstanceBuffer, 0, sizeof(InstanceData), &InstanceData);
-
-        // barrier for BLAS, scratch buffer, instance buffer
-        Barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
+        AccelStructBarrier(Ctx);
 
         Geometry.flags                                 = 0;
         Geometry.geometryType                          = VK_GEOMETRY_TYPE_INSTANCES_KHR;
@@ -1026,14 +986,10 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.instances.arrayOfPointers    = VK_FALSE;
         Geometry.geometry.instances.data.deviceAddress = Ctx.vkInstanceBufferAddress;
 
-        Offset.primitiveCount  = 1;
-        Offset.firstVertex     = 0;
-        Offset.primitiveOffset = 0;
-        Offset.transformOffset = 0;
+        Offset.primitiveCount = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        ASBuildInfo.flags                     = 0;
         ASBuildInfo.update                    = VK_FALSE;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.TLAS.vkAS;
@@ -1084,19 +1040,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, HIT_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, HitShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
 
-        // Barriers for TLAS & SBT
-        VkMemoryBarrier Barrier = {};
-        Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        Barrier.srcAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
-
-        vkCmdBindPipeline(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkPipeline);
-        vkCmdBindDescriptorSets(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkLayout, 0, 1, &Ctx.vkDescriptorSet, 0, nullptr);
-
+        PrepareForTraceRays(Ctx);
         vkCmdTraceRaysKHR(Ctx.vkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, SCDesc.Width, SCDesc.Height, 1);
 
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0);
@@ -1140,16 +1084,14 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
                             rtGroups.SetStage(MISS_SHADER, SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest3_RM);
                             rtGroups.SetStage(HIT_SHADER, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest3_RCH);
                             rtGroups.SetStage(INTERSECTION_SHADER, SHADER_TYPE_RAY_INTERSECTION, GLSL::RayTracingTest3_RI);
+
                             rtGroups.SetGeneralGroup(RAYGEN_GROUP, RAYGEN_SHADER);
                             rtGroups.SetGeneralGroup(MISS_GROUP, MISS_SHADER);
                             rtGroups.SetProceduralHitGroup(HIT_GROUP, INTERSECTION_SHADER, HIT_SHADER);
                         });
 
-    // create acceleration structurea
+    // Create acceleration structurea
     {
-        VkMemoryBarrier Barrier = {};
-        Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-
         const auto& Boxes = TestingConstants::ProceduralIntersection::Boxes;
 
         VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
@@ -1164,14 +1106,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         CreateRTBuffers(Ctx, sizeof(Boxes), 0, 1, 1, 1);
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkVertexBuffer, 0, sizeof(Boxes), Boxes);
-
-        // barrier for vertex & index buffers
-        Barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
+        AccelStructBarrier(Ctx);
 
         VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
         VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
@@ -1187,14 +1122,10 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.aabbs.data.deviceAddress = Ctx.vkVertexBufferAddress;
         Geometry.geometry.aabbs.stride             = sizeof(float3) * 2;
 
-        Offset.primitiveCount  = GeometryCI.maxPrimitiveCount;
-        Offset.firstVertex     = 0;
-        Offset.primitiveOffset = 0;
-        Offset.transformOffset = 0;
+        Offset.primitiveCount = GeometryCI.maxPrimitiveCount;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        ASBuildInfo.flags                     = 0;
         ASBuildInfo.update                    = VK_FALSE;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.BLAS.vkAS;
@@ -1206,24 +1137,15 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
 
         VkAccelerationStructureInstanceKHR InstanceData     = {};
-        InstanceData.instanceCustomIndex                    = 0;
         InstanceData.instanceShaderBindingTableRecordOffset = 0;
         InstanceData.mask                                   = 0xFF;
-        InstanceData.flags                                  = 0;
         InstanceData.accelerationStructureReference         = Ctx.BLAS.vkAddress;
         InstanceData.transform.matrix[0][0]                 = 1.0f;
         InstanceData.transform.matrix[1][1]                 = 1.0f;
         InstanceData.transform.matrix[2][2]                 = 1.0f;
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkInstanceBuffer, 0, sizeof(InstanceData), &InstanceData);
-
-        // Barrier for BLAS, scratch buffer, instance buffer
-        Barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
+        AccelStructBarrier(Ctx);
 
         Geometry.flags                                 = 0;
         Geometry.geometryType                          = VK_GEOMETRY_TYPE_INSTANCES_KHR;
@@ -1232,14 +1154,10 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.instances.arrayOfPointers    = VK_FALSE;
         Geometry.geometry.instances.data.deviceAddress = Ctx.vkInstanceBufferAddress;
 
-        Offset.primitiveCount  = 1;
-        Offset.firstVertex     = 0;
-        Offset.primitiveOffset = 0;
-        Offset.transformOffset = 0;
+        Offset.primitiveCount = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        ASBuildInfo.flags                     = 0;
         ASBuildInfo.update                    = VK_FALSE;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.TLAS.vkAS;
@@ -1290,19 +1208,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, HIT_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, HitShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
 
-        // barrier for TLAS & SBT
-        VkMemoryBarrier Barrier = {};
-        Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        Barrier.srcAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
-
-        vkCmdBindPipeline(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkPipeline);
-        vkCmdBindDescriptorSets(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkLayout, 0, 1, &Ctx.vkDescriptorSet, 0, nullptr);
-
+        PrepareForTraceRays(Ctx);
         vkCmdTraceRaysKHR(Ctx.vkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, SCDesc.Width, SCDesc.Height, 1);
 
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0);
@@ -1351,10 +1257,12 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
                             rtGroups.SetStage(MISS_SHADER, SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest4_RM);
                             rtGroups.SetStage(HIT_SHADER_1, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest4_RCH1);
                             rtGroups.SetStage(HIT_SHADER_2, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest4_RCH2);
+
                             rtGroups.SetGeneralGroup(RAYGEN_GROUP, RAYGEN_SHADER);
                             rtGroups.SetGeneralGroup(MISS_GROUP, MISS_SHADER);
                             rtGroups.SetTriangleHitGroup(HIT_GROUP_1, HIT_SHADER_1);
                             rtGroups.SetTriangleHitGroup(HIT_GROUP_2, HIT_SHADER_2);
+
                             rtGroups.AddBinding(2u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, InstanceCount, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
                             rtGroups.AddBinding(3u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
                             rtGroups.AddBinding(4u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
@@ -1363,11 +1271,8 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
     const auto& PrimitiveOffsets = TestingConstants::MultiGeometry::PrimitiveOffsets;
     const auto& Primitives       = TestingConstants::MultiGeometry::Primitives;
 
-    // create acceleration structurea
+    // Create acceleration structurea
     {
-        VkMemoryBarrier Barrier = {};
-        Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-
         const auto& Vertices = TestingConstants::MultiGeometry::Vertices;
         const auto& Indices  = TestingConstants::MultiGeometry::Indices;
 
@@ -1403,14 +1308,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkVertexBuffer, 0, sizeof(Vertices), Vertices);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkIndexBuffer, 0, sizeof(Indices), Indices);
-
-        // barrier for vertex & index buffers
-        Barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
+        AccelStructBarrier(Ctx);
 
         VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo   = {};
         VkAccelerationStructureBuildOffsetInfoKHR        Offsets[3]    = {};
@@ -1457,7 +1355,6 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        ASBuildInfo.flags                     = 0;
         ASBuildInfo.update                    = VK_FALSE;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.BLAS.vkAS;
@@ -1470,19 +1367,15 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
 
         VkAccelerationStructureInstanceKHR InstanceData[2] = {};
 
-        InstanceData[0].instanceCustomIndex                    = 0;
         InstanceData[0].instanceShaderBindingTableRecordOffset = 0;
         InstanceData[0].mask                                   = 0xFF;
-        InstanceData[0].flags                                  = 0;
         InstanceData[0].accelerationStructureReference         = Ctx.BLAS.vkAddress;
         InstanceData[0].transform.matrix[0][0]                 = 1.0f;
         InstanceData[0].transform.matrix[1][1]                 = 1.0f;
         InstanceData[0].transform.matrix[2][2]                 = 1.0f;
 
-        InstanceData[1].instanceCustomIndex                    = 2;
         InstanceData[1].instanceShaderBindingTableRecordOffset = HitGroupCount / 2;
         InstanceData[1].mask                                   = 0xFF;
-        InstanceData[1].flags                                  = 0;
         InstanceData[1].accelerationStructureReference         = Ctx.BLAS.vkAddress;
         InstanceData[1].transform.matrix[0][0]                 = 1.0f;
         InstanceData[1].transform.matrix[1][1]                 = 1.0f;
@@ -1492,14 +1385,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         InstanceData[1].transform.matrix[2][3]                 = 0.0f;
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkInstanceBuffer, 0, sizeof(InstanceData), InstanceData);
-
-        // barrier for BLAS, scratch buffer, instance buffer
-        Barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
+        AccelStructBarrier(Ctx);
 
         VkAccelerationStructureBuildOffsetInfoKHR InstOffsets  = {};
         VkAccelerationStructureGeometryKHR        Instances[2] = {};
@@ -1510,23 +1396,18 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         OffsetPtr                  = &InstOffsets;
         InstOffsets.primitiveCount = _countof(Instances);
 
-        Instances[0].flags                                 = 0;
         Instances[0].geometryType                          = VK_GEOMETRY_TYPE_INSTANCES_KHR;
         Instances[0].geometry.instances.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-        Instances[0].geometry.instances.pNext              = nullptr;
         Instances[0].geometry.instances.arrayOfPointers    = VK_FALSE;
         Instances[0].geometry.instances.data.deviceAddress = Ctx.vkInstanceBufferAddress;
 
-        Instances[1].flags                                 = 0;
         Instances[1].geometryType                          = VK_GEOMETRY_TYPE_INSTANCES_KHR;
         Instances[1].geometry.instances.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-        Instances[1].geometry.instances.pNext              = nullptr;
         Instances[1].geometry.instances.arrayOfPointers    = VK_FALSE;
         Instances[1].geometry.instances.data.deviceAddress = Ctx.vkInstanceBufferAddress + sizeof(VkAccelerationStructureInstanceKHR);
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        ASBuildInfo.flags                     = 0;
         ASBuildInfo.update                    = VK_FALSE;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.TLAS.vkAS;
@@ -1578,7 +1459,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         vkUpdateDescriptorSets(Ctx.vkDevice, 1, &DescriptorWrite, 0, nullptr);
     }
 
-    // trace rays
+    // Trace rays
     {
         VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
         VkStridedBufferRegionKHR MissShaderBindingTable     = {};
@@ -1620,27 +1501,15 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
             vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset + ShaderGroupHandleSize, sizeof(Weights[0]), ShaderRecord);
         };
         // instance 1
-        SetHitGroup(0, HIT_GROUP_1, &Weights[2]); // geometry 1
-        SetHitGroup(1, HIT_GROUP_1, &Weights[0]); // geometry 2
-        SetHitGroup(2, HIT_GROUP_1, &Weights[1]); // geometry 3
+        SetHitGroup(0, HIT_GROUP_1, &Weights[0]); // geometry 1
+        SetHitGroup(1, HIT_GROUP_1, &Weights[1]); // geometry 2
+        SetHitGroup(2, HIT_GROUP_1, &Weights[2]); // geometry 3
         // instance 2
-        SetHitGroup(3, HIT_GROUP_2, &Weights[2]); // geometry 1
-        SetHitGroup(4, HIT_GROUP_2, &Weights[1]); // geometry 2
-        SetHitGroup(5, HIT_GROUP_2, &Weights[0]); // geometry 3
+        SetHitGroup(3, HIT_GROUP_2, &Weights[3]); // geometry 1
+        SetHitGroup(4, HIT_GROUP_2, &Weights[4]); // geometry 2
+        SetHitGroup(5, HIT_GROUP_2, &Weights[5]); // geometry 3
 
-        // barrier for TLAS & SBT
-        VkMemoryBarrier Barrier = {};
-        Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        Barrier.srcAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
-        Barrier.dstAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-        vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
-                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
-                             VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-                             0, 1, &Barrier, 0, nullptr, 0, nullptr);
-
-        vkCmdBindPipeline(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkPipeline);
-        vkCmdBindDescriptorSets(Ctx.vkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Ctx.vkLayout, 0, 1, &Ctx.vkDescriptorSet, 0, nullptr);
-
+        PrepareForTraceRays(Ctx);
         vkCmdTraceRaysKHR(Ctx.vkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, SCDesc.Width, SCDesc.Height, 1);
 
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0);

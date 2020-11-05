@@ -761,9 +761,6 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
         const auto& LogicalDevice         = GetDevice()->GetLogicalDevice();
         const auto  ShaderGroupHandleSize = pDeviceVk->GetShaderGroupHandleSize();
 
-        if (LogicalDevice.GetEnabledExtFeatures().RayTracing.rayTracing == VK_FALSE)
-            LOG_ERROR_AND_THROW("Ray tracing is not supported by this device");
-
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
         std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;

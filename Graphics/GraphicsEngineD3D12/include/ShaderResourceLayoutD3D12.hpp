@@ -140,7 +140,8 @@ public:
                     const SHADER_RESOURCE_VARIABLE_TYPE* const VarTypes,
                     Uint32                                     NumAllowedTypes,
                     ShaderResourceCacheD3D12*                  pResourceCache,
-                    class RootSignature*                       pRootSig);
+                    class RootSignature*                       pRootSig,
+                    class LocalRootSignature*                  pLocalRootSig);
 
     // clang-format off
     ShaderResourceLayoutD3D12            (const ShaderResourceLayoutD3D12&) = delete;

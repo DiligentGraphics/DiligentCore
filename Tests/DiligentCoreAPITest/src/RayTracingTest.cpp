@@ -109,7 +109,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTrian
     VERIFY_EXPR(ScratchBuffer != nullptr);
 
     // Build
-    BLASBuildAttribs Attribs;
+    BuildBLASAttribs Attribs;
     Attribs.pBLAS                       = pBLAS;
     Attribs.BLASTransitionMode          = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     Attribs.GeometryTransitionMode      = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
@@ -157,7 +157,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
     VERIFY_EXPR(ScratchBuffer != nullptr);
 
     // Build
-    BLASBuildAttribs Attribs;
+    BuildBLASAttribs Attribs;
     Attribs.pBLAS                       = pBLAS;
     Attribs.BLASTransitionMode          = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     Attribs.GeometryTransitionMode      = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
@@ -205,7 +205,7 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuil
     VERIFY_EXPR(InstanceBuffer != nullptr);
 
     // Build
-    TLASBuildAttribs Attribs;
+    BuildTLASAttribs Attribs;
     Attribs.pTLAS                        = pTLAS;
     Attribs.pInstances                   = Instances;
     Attribs.InstanceCount                = InstanceCount;
@@ -1081,7 +1081,7 @@ TEST_P(RT4, MultiGeometry)
     PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth = 0;
 
     PSOCreateInfo.RayTracingPipeline.ShaderRecordSize = TestingConstants::MultiGeometry::ShaderRecordSize;
-    PSOCreateInfo.ShaderRecordName                    = "g_LocalRoot";
+    PSOCreateInfo.pShaderRecordName                   = "g_LocalRoot";
 
     PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
@@ -1210,12 +1210,12 @@ TEST_P(RT4, MultiGeometry)
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
-    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 1", 0, "HitGroup1", &Weights[2], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 2", 0, "HitGroup1", &Weights[0], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 3", 0, "HitGroup1", &Weights[1], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 1", 0, "HitGroup2", &Weights[2], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 2", 0, "HitGroup2", &Weights[1], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 3", 0, "HitGroup2", &Weights[0], sizeof(Weights[0]));
+    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 1", 0, "HitGroup1", &Weights[0], sizeof(Weights[0]));
+    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 2", 0, "HitGroup1", &Weights[1], sizeof(Weights[0]));
+    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 3", 0, "HitGroup1", &Weights[2], sizeof(Weights[0]));
+    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 1", 0, "HitGroup2", &Weights[3], sizeof(Weights[0]));
+    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 2", 0, "HitGroup2", &Weights[4], sizeof(Weights[0]));
+    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 3", 0, "HitGroup2", &Weights[5], sizeof(Weights[0]));
 
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_TLAS")->Set(pTLAS);
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_ColorBuffer")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());

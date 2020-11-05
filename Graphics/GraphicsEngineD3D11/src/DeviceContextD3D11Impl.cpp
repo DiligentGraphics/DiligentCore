@@ -2299,12 +2299,12 @@ void DeviceContextD3D11Impl::ResolveTextureSubresource(ITexture*                
     m_pd3d11DeviceContext->ResolveSubresource(pDstTexD3D11->GetD3D11Texture(), DstSubresIndex, pSrcTexD3D11->GetD3D11Texture(), SrcSubresIndex, DXGIFmt);
 }
 
-void DeviceContextD3D11Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
+void DeviceContextD3D11Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
 {
     UNSUPPORTED("BuildBLAS is not supported in DirectX 11");
 }
 
-void DeviceContextD3D11Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
+void DeviceContextD3D11Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 {
     UNSUPPORTED("BuildTLAS is not supported in DirectX 11");
 }

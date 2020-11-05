@@ -2272,7 +2272,7 @@ void DeviceContextD3D12Impl::ResolveTextureSubresource(ITexture*                
     CmdCtx.ResolveSubresource(pDstTexD3D12->GetD3D12Resource(), DstSubresIndex, pSrcTexD3D12->GetD3D12Resource(), SrcSubresIndex, DXGIFmt);
 }
 
-void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
+void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
 {
     if (!TDeviceContextBase::BuildBLAS(Attribs, 0))
         return;
@@ -2344,6 +2344,8 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
                 auto* const pTB        = ValidatedCast<BufferD3D12Impl>(SrcTris.pTransformBuffer);
                 d3d12Tris.Transform3x4 = pTB->GetGPUAddress() + SrcTris.TransformBufferOffset;
 
+                VERIFY_EXPR(d3d12Tris.Transform3x4 % D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT == 0);
+
                 TransitionOrVerifyBufferState(CmdCtx, *pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
             }
             else
@@ -2378,6 +2380,8 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
             d3d12AABs.AABBs.StartAddress  = pBB->GetGPUAddress() + SrcBoxes.BoxOffset;
             d3d12AABs.AABBs.StrideInBytes = SrcBoxes.BoxStride;
 
+            VERIFY_EXPR(d3d12AABs.AABBs.StartAddress % D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT == 0);
+
             TransitionOrVerifyBufferState(CmdCtx, *pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }
     }
@@ -2389,8 +2393,10 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
     d3d12BuildASInputs.pGeometryDescs = Geometries.data();
 
     d3d12BuildASDesc.DestAccelerationStructureData    = pBLASD12->GetGPUAddress();
-    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress();
+    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress() + Attribs.ScratchBufferOffset;
     d3d12BuildASDesc.SourceAccelerationStructureData  = 0;
+
+    VERIFY_EXPR(d3d12BuildASDesc.ScratchAccelerationStructureData % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0);
 
     CmdCtx.AsGraphicsContext4().BuildRaytracingAccelerationStructure(d3d12BuildASDesc, 0, nullptr);
     ++m_State.NumCommands;
@@ -2400,7 +2406,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
 #endif
 }
 
-void DeviceContextD3D12Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
+void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 {
     if (!TDeviceContextBase::BuildTLAS(Attribs, 0))
         return;
@@ -2451,11 +2457,14 @@ void DeviceContextD3D12Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
     d3d12BuildASInputs.Flags         = BuildASFlagsToD3D12ASBuildFlags(pTLASD12->GetDesc().Flags);
     d3d12BuildASInputs.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY;
     d3d12BuildASInputs.NumDescs      = Attribs.InstanceCount;
-    d3d12BuildASInputs.InstanceDescs = pInstancesD12->GetGPUAddress();
+    d3d12BuildASInputs.InstanceDescs = pInstancesD12->GetGPUAddress() + Attribs.InstanceBufferOffset;
 
     d3d12BuildASDesc.DestAccelerationStructureData    = pTLASD12->GetGPUAddress();
-    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress();
+    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress() + Attribs.ScratchBufferOffset;
     d3d12BuildASDesc.SourceAccelerationStructureData  = 0;
+
+    VERIFY_EXPR(d3d12BuildASInputs.InstanceDescs % D3D12_RAYTRACING_INSTANCE_DESCS_BYTE_ALIGNMENT == 0);
+    VERIFY_EXPR(d3d12BuildASDesc.ScratchAccelerationStructureData % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0);
 
     CmdCtx.AsGraphicsContext4().BuildRaytracingAccelerationStructure(d3d12BuildASDesc, 0, nullptr);
     ++m_State.NumCommands;

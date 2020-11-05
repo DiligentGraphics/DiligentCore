@@ -139,16 +139,13 @@ private:
     using TShaderStages = std::vector<ShaderStageInfo>;
 
     template <typename PSOCreateInfoType, typename InitPSODescType>
-    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, TShaderStages& ShaderStages, InitPSODescType InitPSODesc);
-    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages);
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot, InitPSODescType InitPSODesc);
+    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot);
 
     void Destruct();
 
-    void CreateLocalRootSignature(const RayTracingPipelineDesc& Desc);
-
-    CComPtr<ID3D12DeviceChild>   m_pd3d12PSO;
-    RootSignature                m_RootSig;
-    CComPtr<ID3D12RootSignature> m_LocalRootSignature;
+    CComPtr<ID3D12DeviceChild> m_pd3d12PSO;
+    RootSignature              m_RootSig;
 
     // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;

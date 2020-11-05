@@ -255,10 +255,10 @@ public:
     virtual void DILIGENT_CALL_TYPE Flush() override final;
 
     /// Implementation of IDeviceContext::BuildBLAS() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BLASBuildAttribs& Attribs) override final;
+    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BuildBLASAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::BuildTLAS() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE BuildTLAS(const TLASBuildAttribs& Attribs) override final;
+    virtual void DILIGENT_CALL_TYPE BuildTLAS(const BuildTLASAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::CopyBLAS() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;

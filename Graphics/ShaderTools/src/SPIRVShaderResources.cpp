@@ -133,7 +133,7 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const diligent_spirv_cros
 
 SHADER_RESOURCE_TYPE SPIRVShaderResourceAttribs::GetShaderResourceType(ResourceType Type)
 {
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please handle the new resource type below");
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type below");
     switch (Type)
     {
         case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
@@ -291,7 +291,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     size_t ResourceNamesPoolSize = 0;
     for (const auto& ub : resources.uniform_buffers)
         ResourceNamesPoolSize += GetUBName(Compiler, ub, ParsedIRSource).length() + 1;
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please account for the new resource type below");
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please account for the new resource type below");
     for (auto* pResType :
          {
              &resources.storage_buffers,
@@ -371,7 +371,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     ResCounters.NumSepImgs      = static_cast<Uint32>(resources.separate_images.size());
     ResCounters.NumInptAtts     = static_cast<Uint32>(resources.subpass_inputs.size());
     ResCounters.NumAccelStructs = static_cast<Uint32>(resources.acceleration_structures.size());
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please set the new resource type counter here");
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please set the new resource type counter here");
 
     // Resource names pool is only needed to facilitate string allocation.
     StringPool ResourceNamesPool;
@@ -558,7 +558,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         VERIFY_EXPR(CurrAccelStruct == GetNumAccelStructs());
     }
 
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please initialize SPIRVShaderResourceAttribs for the new resource type here");
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please initialize SPIRVShaderResourceAttribs for the new resource type here");
 
     if (CombinedSamplerSuffix != nullptr)
     {
@@ -626,7 +626,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     m_InputAttachmentOffset = AdvanceOffset(Counters.NumInptAtts);
     m_AccelStructOffset     = AdvanceOffset(Counters.NumAccelStructs);
     m_TotalResources        = AdvanceOffset(0);
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please update the new resource type offset");
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please update the new resource type offset");
 
     VERIFY(NumShaderStageInputs <= MaxOffset, "Max offset exceeded");
     m_NumShaderStageInputs = static_cast<OffsetType>(NumShaderStageInputs);
@@ -648,7 +648,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     VERIFY_EXPR(GetNumSepImgs()      == Counters.NumSepImgs);
     VERIFY_EXPR(GetNumInptAtts()     == Counters.NumInptAtts);
     VERIFY_EXPR(GetNumAccelStructs() == Counters.NumAccelStructs);
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please update the new resource count verification");
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please update the new resource count verification");
     // clang-format on
 
     if (MemorySize)
@@ -694,7 +694,7 @@ SPIRVShaderResources::~SPIRVShaderResources()
     for (Uint32 n = 0; n < GetNumAccelStructs(); ++n)
         GetAccelStruct(n).~SPIRVShaderResourceAttribs();
 
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please add destructor for the new resource");
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please add destructor for the new resource");
 }
 
 
@@ -836,7 +836,7 @@ bool SPIRVShaderResources::IsCompatibleWith(const SPIRVShaderResources& Resource
         return false;
     // clang-format on
     VERIFY_EXPR(GetTotalResources() == Resources.GetTotalResources());
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please update comparison with the new resource");
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please update comparison with the new resource");
 
     bool IsCompatible = true;
     ProcessResources(

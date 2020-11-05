@@ -156,7 +156,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
     for (Uint32 res = 0; res < m_TotalResources; ++res)
     {
         auto& Res = pResources[res];
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please handle the new resource type below");
+        static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type below");
         switch (Res.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:

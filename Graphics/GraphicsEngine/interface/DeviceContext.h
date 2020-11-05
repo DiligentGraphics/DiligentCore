@@ -876,7 +876,7 @@ typedef struct BLASBuildBoundingBoxData BLASBuildBoundingBoxData;
 
 
 /// This structure is used by IDeviceContext::BuildBLAS().
-struct BLASBuildAttribs
+struct BuildBLASAttribs
 {
     /// Target bottom-level AS.
     IBottomLevelAS*                 pBLAS                       DEFAULT_INITIALIZER(nullptr);
@@ -913,10 +913,10 @@ struct BLASBuildAttribs
     RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
 #if DILIGENT_CPP_INTERFACE
-    BLASBuildAttribs() noexcept {}
+    BuildBLASAttribs() noexcept {}
 #endif
 };
-typedef struct BLASBuildAttribs BLASBuildAttribs;
+typedef struct BuildBLASAttribs BuildBLASAttribs;
 
 
 /// Can be used in TLASBuildInstanceData::ContributionToHitGroupIndex to calculate index
@@ -973,7 +973,7 @@ struct InstanceMatrix
 typedef struct InstanceMatrix InstanceMatrix;
 
 
-/// This structure is used by TLASBuildAttribs.
+/// This structure is used by BuildTLASAttribs.
 struct TLASBuildInstanceData
 {
     /// Instance name that used to map instance to hit group in shader binding table.
@@ -1009,12 +1009,12 @@ typedef struct TLASBuildInstanceData TLASBuildInstanceData;
 
 
 /// Instance size in GPU side.
-/// Used to calculate size of TLASBuildAttribs::pInstanceBuffer.
+/// Used to calculate size of BuildTLASAttribs::pInstanceBuffer.
 static const Uint32 TLAS_INSTANCE_DATA_SIZE = 64;
 
 
 /// This structure is used by IDeviceContext::BuildTLAS().
-struct TLASBuildAttribs
+struct BuildTLASAttribs
 {
     /// Target top-level AS.
     ITopLevelAS*                    pTLAS                         DEFAULT_INITIALIZER(nullptr);
@@ -1058,10 +1058,10 @@ struct TLASBuildAttribs
     RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
 #if DILIGENT_CPP_INTERFACE
-    TLASBuildAttribs() noexcept {}
+    BuildTLASAttribs() noexcept {}
 #endif
 };
-typedef struct TLASBuildAttribs TLASBuildAttribs;
+typedef struct BuildTLASAttribs BuildTLASAttribs;
 
 
 /// This structure is used by IDeviceContext::CopyBLAS().
@@ -2085,16 +2085,16 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Build Bottom-level acceleration structure with the specified geometries.
 
-    /// \param [in] Attribs - Structure describing build BLAS command attributes, see Diligent::BLASBuildAttribs for details.
+    /// \param [in] Attribs - Structure describing build BLAS command attributes, see Diligent::BuildBLASAttribs for details.
     VIRTUAL void METHOD(BuildBLAS)(THIS_
-                                   const BLASBuildAttribs REF Attribs) PURE;
+                                   const BuildBLASAttribs REF Attribs) PURE;
     
 
     /// Build Top-level acceleration structure with the specified instances.
 
-    /// \param [in] Attribs - Structure describing build TLAS command attributes, see Diligent::TLASBuildAttribs for details.
+    /// \param [in] Attribs - Structure describing build TLAS command attributes, see Diligent::BuildTLASAttribs for details.
     VIRTUAL void METHOD(BuildTLAS)(THIS_
-                                   const TLASBuildAttribs REF Attribs) PURE;
+                                   const BuildTLASAttribs REF Attribs) PURE;
     
 
     /// Copies data from one acceleration structure to another.

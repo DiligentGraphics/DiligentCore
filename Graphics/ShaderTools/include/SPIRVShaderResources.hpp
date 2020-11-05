@@ -58,7 +58,7 @@ namespace Diligent
 // sizeof(SPIRVShaderResourceAttribs) == 32, msvc x64
 struct SPIRVShaderResourceAttribs
 {
-    enum ResourceType : Uint8
+    enum class ResourceType : Uint8
     {
         UniformBuffer = 0,
         ROStorageBuffer,
@@ -111,37 +111,37 @@ public:
 
     bool IsValidSepSamplerAssigned() const
     {
-        VERIFY_EXPR(Type == SeparateImage);
+        VERIFY_EXPR(Type == ResourceType::SeparateImage);
         return SepSmplrOrImgInd != InvalidSepSmplrOrImgInd;
     }
 
     bool IsValidSepImageAssigned() const
     {
-        VERIFY_EXPR(Type == SeparateSampler);
+        VERIFY_EXPR(Type == ResourceType::SeparateSampler);
         return SepSmplrOrImgInd != InvalidSepSmplrOrImgInd;
     }
 
     Uint32 GetAssignedSepSamplerInd() const
     {
-        VERIFY_EXPR(Type == SeparateImage);
+        VERIFY_EXPR(Type == ResourceType::SeparateImage);
         return SepSmplrOrImgInd;
     }
 
     Uint32 GetAssignedSepImageInd() const
     {
-        VERIFY_EXPR(Type == SeparateSampler);
+        VERIFY_EXPR(Type == ResourceType::SeparateSampler);
         return SepSmplrOrImgInd;
     }
 
     void AssignSeparateSampler(Uint32 SemSamplerInd)
     {
-        VERIFY_EXPR(Type == SeparateImage);
+        VERIFY_EXPR(Type == ResourceType::SeparateImage);
         SepSmplrOrImgInd = SemSamplerInd;
     }
 
     void AssignSeparateImage(Uint32 SepImageInd)
     {
-        VERIFY_EXPR(Type == SeparateSampler);
+        VERIFY_EXPR(Type == ResourceType::SeparateSampler);
         SepSmplrOrImgInd = SepImageInd;
     }
 
@@ -337,7 +337,7 @@ public:
             HandleAccelStruct(AccelStruct, n);
         }
 
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please handle the new resource type here, if needed");
+        static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type here, if needed");
     }
 
     template <typename THandler>

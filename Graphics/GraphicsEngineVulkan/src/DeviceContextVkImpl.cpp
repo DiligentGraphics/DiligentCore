@@ -2792,7 +2792,7 @@ void DeviceContextVkImpl::ResolveTextureSubresource(ITexture*                   
                                  1, &ResolveRegion);
 }
 
-void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
+void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
 {
     if (!TDeviceContextBase::BuildBLAS(Attribs, 0))
         return;
@@ -2945,7 +2945,7 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
 #endif
 }
 
-void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
+void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 {
     if (!TDeviceContextBase::BuildTLAS(Attribs, 0))
         return;
@@ -2967,14 +2967,13 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
 
     // copy instance data into instance buffer
     {
-        size_t Size             = Attribs.InstanceCount * sizeof(VkAccelerationStructureInstanceKHR);
-        auto   TmpSpace         = m_UploadHeap.Allocate(Size, 16);
-        void*  pMappedInstances = TmpSpace.CPUAddress;
+        size_t Size     = Attribs.InstanceCount * sizeof(VkAccelerationStructureInstanceKHR);
+        auto   TmpSpace = m_UploadHeap.Allocate(Size, 16);
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
             const auto& Inst     = Attribs.pInstances[i];
-            auto&       vkASInst = static_cast<VkAccelerationStructureInstanceKHR*>(pMappedInstances)[i];
+            auto&       vkASInst = static_cast<VkAccelerationStructureInstanceKHR*>(TmpSpace.CPUAddress)[i];
             auto* const pBLASVk  = ValidatedCast<BottomLevelASVkImpl>(Inst.pBLAS);
 
             static_assert(sizeof(vkASInst.transform) == sizeof(Inst.Transform), "size mismatch");

@@ -1109,4 +1109,57 @@ void RootSignature::TransitionResources(ShaderResourceCacheD3D12& ResourceCache,
     );
 }
 
+
+LocalRootSignature::LocalRootSignature(const char* pCBName, Uint32 ShaderRecordSize) :
+    m_pName{pCBName},
+    m_ShaderRecordSize{ShaderRecordSize}
+{
+    VERIFY_EXPR((m_pName != nullptr) == (m_ShaderRecordSize > 0));
+}
+
+bool LocalRootSignature::SetOrMerge(const D3DShaderResourceAttribs& CB)
+{
+    if (m_ShaderRecordSize > 0 &&
+        CB.GetInputType() == D3D_SIT_CBUFFER &&
+        strcmp(m_pName, CB.Name) == 0)
+    {
+        if (m_BindPoint == InvalidBindPoint)
+            m_BindPoint = CB.BindPoint;
+
+        VERIFY_EXPR(CB.BindCount == 1);
+        VERIFY_EXPR(m_BindPoint == CB.BindPoint);
+
+        return true;
+    }
+    return false;
+}
+
+ID3D12RootSignature* LocalRootSignature::Create(ID3D12Device* pDevice)
+{
+    if (m_ShaderRecordSize == 0 || m_BindPoint == InvalidBindPoint)
+        return nullptr;
+
+    D3D12_ROOT_SIGNATURE_DESC d3d12RootSignatureDesc = {};
+    D3D12_ROOT_PARAMETER      d3d12Params            = {};
+
+    d3d12Params.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    d3d12Params.ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
+    d3d12Params.Constants.Num32BitValues = m_ShaderRecordSize / 4;
+    d3d12Params.Constants.RegisterSpace  = 0;
+    d3d12Params.Constants.ShaderRegister = m_BindPoint;
+
+    d3d12RootSignatureDesc.Flags         = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+    d3d12RootSignatureDesc.NumParameters = 1;
+    d3d12RootSignatureDesc.pParameters   = &d3d12Params;
+
+    CComPtr<ID3DBlob> signature;
+    auto              hr = D3D12SerializeRootSignature(&d3d12RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
+    CHECK_D3D_RESULT_THROW(hr, "Failed to serialize root signature");
+
+    hr = pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_LocalRootSignature));
+    CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
+
+    return m_LocalRootSignature;
+}
+
 } // namespace Diligent

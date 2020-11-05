@@ -55,14 +55,33 @@ constexpr VkDeviceAddress                     g_BufferMask                 = 0xF
 PFN_vkCreateBuffer              Origin_vkCreateBuffer              = nullptr;
 PFN_vkDestroyBuffer             Origin_vkDestroyBuffer             = nullptr;
 PFN_vkGetBufferDeviceAddressKHR Origin_vkGetBufferDeviceAddressKHR = nullptr;
+PFN_vkAllocateMemory            Origin_vkAllocateMemory            = nullptr;
+
 
 VKAPI_ATTR VkResult VKAPI_CALL Wrap_vkCreateBuffer(VkDevice                     device,
                                                    const VkBufferCreateInfo*    pCreateInfo,
                                                    const VkAllocationCallbacks* pAllocator,
                                                    VkBuffer*                    pBuffer)
 {
-    const_cast<VkBufferCreateInfo*>(pCreateInfo)->usage &= ~VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-    return Origin_vkCreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
+    VkBufferCreateInfo CreateInfo = *pCreateInfo;
+    CreateInfo.usage &= ~VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    return Origin_vkCreateBuffer(device, &CreateInfo, pAllocator, pBuffer);
+}
+
+VKAPI_ATTR VkResult VKAPI_PTR Wrap_vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+{
+    VkMemoryAllocateInfo AllocInfo = *pAllocateInfo;
+
+    for (auto* pNext = static_cast<VkBaseOutStructure*>(const_cast<void*>(AllocInfo.pNext)); pNext;)
+    {
+        // remove VkMemoryAllocateFlagsInfo because VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT is removed from buffer create info.
+        if (pNext->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO)
+            pNext->pNext = pNext->pNext;
+
+        pNext = pNext->pNext;
+    }
+
+    return Origin_vkAllocateMemory(device, &AllocInfo, pAllocator, pMemory);
 }
 
 VKAPI_ATTR void VKAPI_CALL Wrap_vkDestroyBuffer(VkDevice                     device,
@@ -509,6 +528,8 @@ VKAPI_ATTR VkResult VKAPI_CALL Redirect_vkCreateRayTracingPipelinesKHR(VkDevice 
 
 void EnableRayTracingKHRviaNV()
 {
+    LOG_WARNING_MESSAGE("This is fallback implementation, you should use VK_KHR_ray_tracing instead");
+
     vkCreateAccelerationStructureKHR                = &Redirect_vkCreateAccelerationStructureKHR;
     vkGetAccelerationStructureMemoryRequirementsKHR = &Redirect_vkGetAccelerationStructureMemoryRequirementsKHR;
     vkBindAccelerationStructureMemoryKHR            = &Redirect_vkBindAccelerationStructureMemoryKHR;
@@ -523,8 +544,10 @@ void EnableRayTracingKHRviaNV()
     Origin_vkGetBufferDeviceAddressKHR = vkGetBufferDeviceAddressKHR;
     Origin_vkCreateBuffer              = vkCreateBuffer;
     Origin_vkDestroyBuffer             = vkDestroyBuffer;
+    Origin_vkAllocateMemory            = vkAllocateMemory;
     vkCreateBuffer                     = &Wrap_vkCreateBuffer;
     vkDestroyBuffer                    = &Wrap_vkDestroyBuffer;
+    vkAllocateMemory                   = Wrap_vkAllocateMemory;
     vkGetBufferDeviceAddressKHR        = &Wrap_vkGetBufferDeviceAddressKHR;
     vkGetBufferDeviceAddress           = &Wrap_vkGetBufferDeviceAddressKHR;
     vkGetBufferDeviceAddressEXT        = &Wrap_vkGetBufferDeviceAddressKHR;

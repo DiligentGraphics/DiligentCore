@@ -1720,12 +1720,12 @@ void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                   
     CommitRenderTargets();
 }
 
-void DeviceContextGLImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
+void DeviceContextGLImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
 {
     UNSUPPORTED("BuildBLAS is not supported in OpenGL");
 }
 
-void DeviceContextGLImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
+void DeviceContextGLImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 {
     UNSUPPORTED("BuildTLAS is not supported in OpenGL");
 }

@@ -249,11 +249,17 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
     VALIDATE_SHADER_TYPE(CreateInfo.pCS, SHADER_TYPE_COMPUTE, "compute");
 }
 
-void ValidateRayTracingPipelineCreateInfo(const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
+void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING");
+
+    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+    {
+        if ((CreateInfo.pShaderRecordName != nullptr) != (CreateInfo.RayTracingPipeline.ShaderRecordSize > 0))
+            LOG_PSO_ERROR_AND_THROW("pShaderRecordName must not be null if RayTracingPipeline.ShaderRecordSize is not zero");
+    }
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
