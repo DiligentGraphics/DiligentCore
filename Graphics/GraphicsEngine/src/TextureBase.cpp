@@ -32,7 +32,7 @@
 namespace Diligent
 {
 
-void ValidateTextureDesc(const TextureDesc& Desc)
+void ValidateTextureDesc(const TextureDesc& Desc) noexcept(false)
 {
 #define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
 
@@ -308,6 +308,232 @@ void ValidateMapTextureParams(const TextureDesc& TexDesc,
     if (pMapRegion != nullptr)
     {
         ValidateTextureRegion(TexDesc, MipLevel, ArraySlice, *pMapRegion);
+    }
+}
+
+void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewDesc& ViewDesc) noexcept(false)
+{
+#define TEX_VIEW_VALIDATION_ERROR(...) LOG_ERROR_AND_THROW("\n                 Failed to create texture view '", (ViewDesc.Name ? ViewDesc.Name : ""), "' for texture '", TexDesc.Name, "': ", ##__VA_ARGS__)
+
+    if (!(ViewDesc.ViewType > TEXTURE_VIEW_UNDEFINED && ViewDesc.ViewType < TEXTURE_VIEW_NUM_VIEWS))
+        TEX_VIEW_VALIDATION_ERROR("Texture view type is not specified");
+
+    if (ViewDesc.MostDetailedMip >= TexDesc.MipLevels)
+        TEX_VIEW_VALIDATION_ERROR("Most detailed mip (", ViewDesc.MostDetailedMip, ") is out of range. The texture has only ", TexDesc.MipLevels, " mip ", (TexDesc.MipLevels > 1 ? "levels." : "level."));
+
+    if (ViewDesc.NumMipLevels != REMAINING_MIP_LEVELS && ViewDesc.MostDetailedMip + ViewDesc.NumMipLevels > TexDesc.MipLevels)
+        TEX_VIEW_VALIDATION_ERROR("Most detailed mip (", ViewDesc.MostDetailedMip, ") and number of mip levels in the view (", ViewDesc.NumMipLevels, ") is out of range. The texture has only ", TexDesc.MipLevels, " mip ", (TexDesc.MipLevels > 1 ? "levels." : "level."));
+
+    if (ViewDesc.Format == TEX_FORMAT_UNKNOWN)
+        ViewDesc.Format = GetDefaultTextureViewFormat(TexDesc.Format, ViewDesc.ViewType, TexDesc.BindFlags);
+
+    if (ViewDesc.TextureDim == RESOURCE_DIM_UNDEFINED)
+    {
+        if (TexDesc.Type == RESOURCE_DIM_TEX_CUBE || TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+        {
+            switch (ViewDesc.ViewType)
+            {
+                case TEXTURE_VIEW_SHADER_RESOURCE:
+                    ViewDesc.TextureDim = TexDesc.Type;
+                    break;
+
+                case TEXTURE_VIEW_RENDER_TARGET:
+                case TEXTURE_VIEW_DEPTH_STENCIL:
+                case TEXTURE_VIEW_UNORDERED_ACCESS:
+                    ViewDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
+                    break;
+
+                default: UNEXPECTED("Unexpected view type");
+            }
+        }
+        else
+        {
+            ViewDesc.TextureDim = TexDesc.Type;
+        }
+    }
+
+    switch (TexDesc.Type)
+    {
+        case RESOURCE_DIM_TEX_1D:
+            if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_1D)
+            {
+                TEX_VIEW_VALIDATION_ERROR("Incorrect texture type for Texture 1D view: only Texture 1D is allowed");
+            }
+            break;
+
+        case RESOURCE_DIM_TEX_1D_ARRAY:
+            if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_1D_ARRAY &&
+                ViewDesc.TextureDim != RESOURCE_DIM_TEX_1D)
+            {
+                TEX_VIEW_VALIDATION_ERROR("Incorrect view type for Texture 1D Array: only Texture 1D or Texture 1D Array are allowed");
+            }
+            break;
+
+        case RESOURCE_DIM_TEX_2D:
+            if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY &&
+                ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D)
+            {
+                TEX_VIEW_VALIDATION_ERROR("Incorrect texture type for Texture 2D view: only Texture 2D or Texture 2D Array are allowed");
+            }
+            break;
+
+        case RESOURCE_DIM_TEX_2D_ARRAY:
+            if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY &&
+                ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D)
+            {
+                TEX_VIEW_VALIDATION_ERROR("Incorrect texture type for Texture 2D Array view: only Texture 2D or Texture 2D Array are allowed");
+            }
+            break;
+
+        case RESOURCE_DIM_TEX_3D:
+            if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D)
+            {
+                TEX_VIEW_VALIDATION_ERROR("Incorrect texture type for Texture 3D view: only Texture 3D is allowed");
+            }
+            break;
+
+        case RESOURCE_DIM_TEX_CUBE:
+            if (ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
+            {
+                if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D &&
+                    ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY &&
+                    ViewDesc.TextureDim != RESOURCE_DIM_TEX_CUBE)
+                {
+                    TEX_VIEW_VALIDATION_ERROR("Incorrect texture type for Texture cube SRV: Texture 2D, Texture 2D array or Texture Cube is allowed");
+                }
+            }
+            else
+            {
+                if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D &&
+                    ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY)
+                {
+                    TEX_VIEW_VALIDATION_ERROR("Incorrect texture type for Texture cube non-shader resource view: Texture 2D or Texture 2D array is allowed");
+                }
+            }
+            break;
+
+        case RESOURCE_DIM_TEX_CUBE_ARRAY:
+            if (ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
+            {
+                if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D &&
+                    ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY &&
+                    ViewDesc.TextureDim != RESOURCE_DIM_TEX_CUBE &&
+                    ViewDesc.TextureDim != RESOURCE_DIM_TEX_CUBE_ARRAY)
+                {
+                    TEX_VIEW_VALIDATION_ERROR("Incorrect texture type for Texture cube array SRV: Texture 2D, Texture 2D array, Texture Cube or Texture Cube Array is allowed");
+                }
+            }
+            else
+            {
+                if (ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D &&
+                    ViewDesc.TextureDim != RESOURCE_DIM_TEX_2D_ARRAY)
+                {
+                    TEX_VIEW_VALIDATION_ERROR("Incorrect texture type for Texture cube array non-shader resource view: Texture 2D or Texture 2D array is allowed");
+                }
+            }
+            break;
+
+        default:
+            UNEXPECTED("Unexpected texture type");
+            break;
+    }
+
+    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE)
+    {
+        if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
+            TEX_VIEW_VALIDATION_ERROR("Unexpected view type: SRV is expected");
+        if (ViewDesc.NumArraySlices != 6 && ViewDesc.NumArraySlices != 0 && ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES)
+            TEX_VIEW_VALIDATION_ERROR("Texture cube SRV is expected to have 6 array slices, while ", ViewDesc.NumArraySlices, " is provided");
+        if (ViewDesc.FirstArraySlice != 0)
+            TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstArraySlice, ") must be 0 for non-array texture cube SRV");
+    }
+    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    {
+        if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
+            TEX_VIEW_VALIDATION_ERROR("Unexpected view type: SRV is expected");
+        if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && (ViewDesc.NumArraySlices % 6) != 0)
+            TEX_VIEW_VALIDATION_ERROR("Number of slices in texture cube array SRV is expected to be multiple of 6. ", ViewDesc.NumArraySlices, " slices is provided.");
+    }
+
+    if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D ||
+        ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D)
+    {
+        if (ViewDesc.FirstArraySlice != 0)
+            TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstArraySlice, ") must be 0 for non-array texture 1D/2D views");
+
+        if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && ViewDesc.NumArraySlices > 1)
+            TEX_VIEW_VALIDATION_ERROR("Number of slices in the view (", ViewDesc.NumArraySlices, ") must be 1 (or 0) for non-array texture 1D/2D views");
+    }
+    else if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY ||
+             ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY ||
+             ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE ||
+             ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    {
+        if (ViewDesc.FirstArraySlice >= TexDesc.ArraySize)
+            TEX_VIEW_VALIDATION_ERROR("First array slice (", ViewDesc.FirstArraySlice, ") exceeds the number of slices in the texture array (", TexDesc.ArraySize, ")");
+
+        if (ViewDesc.NumArraySlices != REMAINING_ARRAY_SLICES && ViewDesc.FirstArraySlice + ViewDesc.NumArraySlices > TexDesc.ArraySize)
+            TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstArraySlice, ") and number of slices in the view (", ViewDesc.NumArraySlices, ") specify more slices than target texture has (", TexDesc.ArraySize, ")");
+    }
+    else if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_3D)
+    {
+        auto MipDepth = TexDesc.Depth >> ViewDesc.MostDetailedMip;
+        if (ViewDesc.FirstDepthSlice + ViewDesc.NumDepthSlices > MipDepth)
+            TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstDepthSlice, ") and number of slices in the view (", ViewDesc.NumDepthSlices, ") specify more slices than target 3D texture mip level has (", MipDepth, ")");
+    }
+    else
+    {
+        UNEXPECTED("Unexpected texture dimension");
+    }
+
+    if (GetTextureFormatAttribs(ViewDesc.Format).IsTypeless)
+    {
+        TEX_VIEW_VALIDATION_ERROR("Texture view format (", GetTextureFormatAttribs(ViewDesc.Format).Name, ") cannot be typeless");
+    }
+
+    if ((ViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0)
+    {
+        if ((TexDesc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) == 0)
+            TEX_VIEW_VALIDATION_ERROR("TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag can only set if the texture was created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag");
+
+        if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
+            TEX_VIEW_VALIDATION_ERROR("TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag can only be used with TEXTURE_VIEW_SHADER_RESOURCE view type");
+    }
+
+#undef TEX_VIEW_VALIDATION_ERROR
+
+    if (ViewDesc.NumMipLevels == 0 || ViewDesc.NumMipLevels == REMAINING_MIP_LEVELS)
+    {
+        if (ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
+            ViewDesc.NumMipLevels = TexDesc.MipLevels - ViewDesc.MostDetailedMip;
+        else
+            ViewDesc.NumMipLevels = 1;
+    }
+
+    if (ViewDesc.NumArraySlices == 0 || ViewDesc.NumArraySlices == REMAINING_ARRAY_SLICES)
+    {
+        if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY ||
+            ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY ||
+            ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE ||
+            ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY)
+            ViewDesc.NumArraySlices = TexDesc.ArraySize - ViewDesc.FirstArraySlice;
+        else if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_3D)
+        {
+            auto MipDepth           = TexDesc.Depth >> ViewDesc.MostDetailedMip;
+            ViewDesc.NumDepthSlices = MipDepth - ViewDesc.FirstDepthSlice;
+        }
+        else
+            ViewDesc.NumArraySlices = 1;
+    }
+
+    if ((ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET) &&
+        (ViewDesc.Format == TEX_FORMAT_R8_SNORM || ViewDesc.Format == TEX_FORMAT_RG8_SNORM || ViewDesc.Format == TEX_FORMAT_RGBA8_SNORM ||
+         ViewDesc.Format == TEX_FORMAT_R16_SNORM || ViewDesc.Format == TEX_FORMAT_RG16_SNORM || ViewDesc.Format == TEX_FORMAT_RGBA16_SNORM))
+    {
+        const auto* FmtName = GetTextureFormatAttribs(ViewDesc.Format).Name;
+        LOG_WARNING_MESSAGE(FmtName, " render target view is created.\n"
+                                     "There might be an issue in OpenGL driver on NVidia hardware: when rendering to SNORM textures, all negative values are clamped to zero.\n"
+                                     "Use UNORM format instead.");
     }
 }
 

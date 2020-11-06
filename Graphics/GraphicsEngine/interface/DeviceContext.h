@@ -1190,8 +1190,8 @@ struct TraceRaysAttribs
 typedef struct TraceRaysAttribs TraceRaysAttribs;
 
 
-static const Uint32 REMAINING_MIP_LEVELS   = 0xFFFFFFFFU;
-static const Uint32 REMAINING_ARRAY_SLICES = 0xFFFFFFFFU;
+static const Uint32 REMAINING_MIP_LEVELS   = ~0u;
+static const Uint32 REMAINING_ARRAY_SLICES = ~0u;
 
 /// Resource state transition barrier description
 struct StateTransitionDesc

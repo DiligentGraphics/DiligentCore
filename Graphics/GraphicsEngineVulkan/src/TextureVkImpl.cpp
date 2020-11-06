@@ -498,7 +498,7 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
         auto UpdatedViewDesc = ViewDesc;
-        CorrectTextureViewDesc(UpdatedViewDesc);
+        ValidatedAndCorrectTextureViewDesc(m_Desc, UpdatedViewDesc);
 
         VulkanUtilities::ImageViewWrapper ImgView = CreateImageView(UpdatedViewDesc);
         auto                              pViewVk = NEW_RC_OBJ(TexViewAllocator, "TextureViewVkImpl instance", TextureViewVkImpl, bIsDefaultView ? this : nullptr)(GetDevice(), UpdatedViewDesc, this, std::move(ImgView), bIsDefaultView);

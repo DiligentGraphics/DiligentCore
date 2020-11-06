@@ -138,30 +138,46 @@ public:
         // Create default views for structured and raw buffers. For formatted buffers we do not know the view format, so
         // cannot create views.
 
-        if (this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS && (this->m_Desc.Mode == BUFFER_MODE_STRUCTURED || this->m_Desc.Mode == BUFFER_MODE_RAW))
+        auto CreateDefaultView = [&](BUFFER_VIEW_TYPE ViewType) //
         {
             BufferViewDesc ViewDesc;
-            ViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
-            auto UAVName      = FormatString("Default UAV of buffer '", this->m_Desc.Name, '\'');
-            ViewDesc.Name     = UAVName.c_str();
+            ViewDesc.ViewType = ViewType;
 
-            IBufferView* pUAV = nullptr;
-            CreateViewInternal(ViewDesc, &pUAV, true);
-            m_pDefaultUAV.reset(static_cast<BufferViewImplType*>(pUAV));
-            VERIFY(m_pDefaultUAV->GetDesc().ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Unexpected view type");
+            std::string ViewName;
+            switch (ViewType)
+            {
+                case BUFFER_VIEW_UNORDERED_ACCESS:
+                    ViewName = "Default UAV of buffer '";
+                    break;
+
+                case BUFFER_VIEW_SHADER_RESOURCE:
+                    ViewName = "Default SRV of buffer '";
+                    break;
+
+                default:
+                    UNEXPECTED("Unexpected buffer view type");
+            }
+
+            ViewName += this->m_Desc.Name;
+            ViewName += '\'';
+            ViewDesc.Name = ViewName.c_str();
+
+            IBufferView* pView = nullptr;
+            CreateViewInternal(ViewDesc, &pView, true);
+            VERIFY(pView != nullptr, "Failed to create default view for buffer '", this->m_Desc.Name, "'");
+            VERIFY(pView->GetDesc().ViewType == ViewType, "Unexpected view type");
+
+            return static_cast<BufferViewImplType*>(pView);
+        };
+
+        if (this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS && (this->m_Desc.Mode == BUFFER_MODE_STRUCTURED || this->m_Desc.Mode == BUFFER_MODE_RAW))
+        {
+            m_pDefaultUAV.reset(CreateDefaultView(BUFFER_VIEW_UNORDERED_ACCESS));
         }
 
         if (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE && (this->m_Desc.Mode == BUFFER_MODE_STRUCTURED || this->m_Desc.Mode == BUFFER_MODE_RAW))
         {
-            BufferViewDesc ViewDesc;
-            ViewDesc.ViewType = BUFFER_VIEW_SHADER_RESOURCE;
-            auto SRVName      = FormatString("Default SRV of buffer '", this->m_Desc.Name, '\'');
-            ViewDesc.Name     = SRVName.c_str();
-
-            IBufferView* pSRV = nullptr;
-            CreateViewInternal(ViewDesc, &pSRV, true);
-            m_pDefaultSRV.reset(static_cast<BufferViewImplType*>(pSRV));
-            VERIFY(m_pDefaultSRV->GetDesc().ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpected view type");
+            m_pDefaultSRV.reset(CreateDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
         }
     }
 
