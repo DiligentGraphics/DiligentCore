@@ -58,7 +58,7 @@ namespace Diligent
 // sizeof(SPIRVShaderResourceAttribs) == 32, msvc x64
 struct SPIRVShaderResourceAttribs
 {
-    enum class ResourceType : Uint8
+    enum ResourceType : Uint8
     {
         UniformBuffer = 0,
         ROStorageBuffer,

@@ -538,7 +538,7 @@ TEST_P(RT1, TriangleClosestHitShader)
     Triangle.VertexCount          = _countof(Vertices);
     Triangle.VertexValueType      = VT_FLOAT32;
     Triangle.VertexComponentCount = 3;
-    Triangle.Flags                = RAYTRACING_GEOMETRY_OPAQUE;
+    Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
     CreateBLAS(pDevice, pContext, &Triangle, 1, pTempBLAS);
@@ -731,7 +731,7 @@ TEST_P(RT2, TriangleAnyHitShader)
     Triangle.VertexCount          = _countof(Vertices);
     Triangle.VertexValueType      = VT_FLOAT32;
     Triangle.VertexComponentCount = 3;
-    Triangle.Flags                = RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION;
+    Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
     CreateBLAS(pDevice, pContext, &Triangle, 1, pTempBLAS);
@@ -922,7 +922,7 @@ TEST_P(RT3, ProceduralIntersection)
     Box.pBoxBuffer   = pBoxBuffer;
     Box.BoxCount     = _countof(Boxes) / 2;
     Box.BoxStride    = sizeof(float3) * 2;
-    Box.Flags        = RAYTRACING_GEOMETRY_OPAQUE;
+    Box.Flags        = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
     CreateBLAS(pDevice, pContext, &Box, 1, pTempBLAS);
@@ -1149,7 +1149,7 @@ TEST_P(RT4, MultiGeometry)
     Triangles[0].IndexType             = VT_UINT32;
     Triangles[0].PrimitiveCount        = (PrimitiveOffsets[1] - PrimitiveOffsets[0]);
     Triangles[0].IndexOffset           = PrimitiveOffsets[0] * sizeof(uint) * 3;
-    Triangles[0].Flags                 = RAYTRACING_GEOMETRY_OPAQUE;
+    Triangles[0].Flags                 = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     Triangles[1].GeometryName         = "Geom 2";
     Triangles[1].pVertexBuffer        = pVertexBuffer;
@@ -1161,7 +1161,7 @@ TEST_P(RT4, MultiGeometry)
     Triangles[1].IndexType            = VT_UINT32;
     Triangles[1].PrimitiveCount       = (PrimitiveOffsets[2] - PrimitiveOffsets[1]);
     Triangles[1].IndexOffset          = PrimitiveOffsets[1] * sizeof(uint) * 3;
-    Triangles[1].Flags                = RAYTRACING_GEOMETRY_OPAQUE;
+    Triangles[1].Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     Triangles[2].GeometryName         = "Geom 3";
     Triangles[2].pVertexBuffer        = pVertexBuffer;
@@ -1173,7 +1173,7 @@ TEST_P(RT4, MultiGeometry)
     Triangles[2].IndexType            = VT_UINT32;
     Triangles[2].PrimitiveCount       = (_countof(Primitives) - PrimitiveOffsets[2]);
     Triangles[2].IndexOffset          = PrimitiveOffsets[2] * sizeof(uint) * 3;
-    Triangles[2].Flags                = RAYTRACING_GEOMETRY_OPAQUE;
+    Triangles[2].Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
     CreateBLAS(pDevice, pContext, Triangles, _countof(Triangles), pTempBLAS);

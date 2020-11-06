@@ -221,7 +221,7 @@ struct RayTracingGeneralShaderGroup
     /// Unique group name.
     const char* Name    DEFAULT_INITIALIZER(nullptr);
 
-    /// Shader type must be SHADER_TYPE_RAY_GEN or SHADER_TYPE_RAY_MISS or SHADER_TYPE_CALLABLE.
+    /// Shader type must be SHADER_TYPE_RAY_GEN, SHADER_TYPE_RAY_MISS or SHADER_TYPE_CALLABLE.
     IShader*    pShader DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
@@ -244,11 +244,11 @@ struct RayTracingTriangleHitShaderGroup
     const char* Name              DEFAULT_INITIALIZER(nullptr);
 
     /// Closest hit shader.
-    /// Shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
+    /// The shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
     IShader*    pClosestHitShader DEFAULT_INITIALIZER(nullptr);
 
     /// Any-hit shader. Can be null.
-    /// Shader type must be SHADER_TYPE_RAY_ANY_HIT.
+    /// The shader type must be SHADER_TYPE_RAY_ANY_HIT.
     IShader*    pAnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
 
 #if DILIGENT_CPP_INTERFACE
@@ -273,15 +273,15 @@ struct RayTracingProceduralHitShaderGroup
     const char* Name                DEFAULT_INITIALIZER(nullptr);
 
     /// Intersection shader.
-    /// Shader type must be SHADER_TYPE_RAY_INTERSECTION.
+    /// The shader type must be SHADER_TYPE_RAY_INTERSECTION.
     IShader*    pIntersectionShader DEFAULT_INITIALIZER(nullptr);
     
     /// Closest hit shader. Can be null.
-    /// Shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
+    /// The shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
     IShader*    pClosestHitShader   DEFAULT_INITIALIZER(nullptr);
     
     /// Any-hit shader. Can be null.
-    /// Shader type must be SHADER_TYPE_RAY_ANY_HIT.
+    /// The shader type must be SHADER_TYPE_RAY_ANY_HIT.
     IShader*    pAnyHitShader       DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
@@ -309,7 +309,7 @@ struct RayTracingPipelineDesc
     /// Shader record size plus shader group size (32 bytes) must not exceed 4096 bytes.
     Uint16  ShaderRecordSize   DEFAULT_INITIALIZER(0);
 
-    /// Number of recursive call of TraceRay() in HLSL or traceRay() in GLSL.
+    /// Number of recursive calls of TraceRay() in HLSL or traceRay() in GLSL.
     Uint8   MaxRecursionDepth  DEFAULT_INITIALIZER(0); // must be 0..31 (check current device limits)
 };
 typedef struct RayTracingPipelineDesc RayTracingPipelineDesc;
@@ -450,34 +450,34 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
     /// Ray tracing pipeline description.
     RayTracingPipelineDesc                    RayTracingPipeline;
 
-    /// A pointer to an array of GeneralShaderCount RayTracingGeneralShaderGroup structures that contains shader group description.
+    /// A pointer to an array of GeneralShaderCount RayTracingGeneralShaderGroup structures that contain shader group description.
     const RayTracingGeneralShaderGroup*       pGeneralShaders          DEFAULT_INITIALIZER(nullptr);
     
-    /// Number of general shader groups.
+    /// The number of general shader groups.
     Uint32                                    GeneralShaderCount       DEFAULT_INITIALIZER(0);
     
-    /// A pointer to an array of TriangleHitShaderCount RayTracingTriangleHitShaderGroup structures that contains shader group description.
+    /// A pointer to an array of TriangleHitShaderCount RayTracingTriangleHitShaderGroup structures that contain shader group description.
     /// Can be null.
     const RayTracingTriangleHitShaderGroup*   pTriangleHitShaders      DEFAULT_INITIALIZER(nullptr);
     
-    /// Number of triangle hit shader groups.
+    /// The number of triangle hit shader groups.
     Uint32                                    TriangleHitShaderCount   DEFAULT_INITIALIZER(0);
     
-    /// A pointer to an array of ProceduralHitShaderCount RayTracingProceduralHitShaderGroup structures that contains shader group description.
+    /// A pointer to an array of ProceduralHitShaderCount RayTracingProceduralHitShaderGroup structures that contain shader group description.
     /// Can be null.
     const RayTracingProceduralHitShaderGroup* pProceduralHitShaders    DEFAULT_INITIALIZER(nullptr);
     
-    /// Number of procedural shader groups.
+    /// The number of procedural shader groups.
     Uint32                                    ProceduralHitShaderCount DEFAULT_INITIALIZER(0);
     
-    /// Direct3D12 only: set name of constant buffer that will be used by local root signature.
+    /// Direct3D12 only: the name of the constant buffer that will be used by the local root signature.
     /// Ignored if RayTracingPipelineDesc::ShaderRecordSize is zero.
     const char*                               pShaderRecordName        DEFAULT_INITIALIZER(nullptr);
     
-    /// Direct3D12 only: set max hit shader attribute size in bytes.
+    /// Direct3D12 only: the maximum hit shader attribute size in bytes.
     Uint32                                    MaxAttributeSize         DEFAULT_INITIALIZER(0);
     
-    /// Direct3D12 only: set max payload size in bytes.
+    /// Direct3D12 only: the maximum payload size in bytes.
     Uint32                                    MaxPayloadSize           DEFAULT_INITIALIZER(0);
 };
 typedef struct RayTracingPipelineStateCreateInfo RayTracingPipelineStateCreateInfo;

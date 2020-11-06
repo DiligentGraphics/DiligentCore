@@ -50,27 +50,27 @@ static const INTERFACE_ID IID_BottomLevelAS =
 struct BLASTriangleDesc
 {
     /// Geometry name.
-    /// The name is used to map triangles data (BLASBuildTriangleData) to this geometry.
+    /// The name is used to map triangle data (BLASBuildTriangleData) to this geometry.
     const char*               GeometryName          DEFAULT_INITIALIZER(nullptr);
 
-    /// The maximum vertex count for this geometry.
+    /// The maximum vertex count in this geometry.
     /// Current number of vertices is defined in BLASBuildTriangleData::VertexCount.
     Uint32                    MaxVertexCount        DEFAULT_INITIALIZER(0);
 
     /// The type of vertices in this geometry, see Diligent::VALUE_TYPE.
     VALUE_TYPE                VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
-    /// The number of components in vertex.
+    /// The number of components in the vertex.
     /// 2 and 3 are supported.
     Uint8                     VertexComponentCount  DEFAULT_INITIALIZER(0);
 
-    /// The maximum primitive count of this geometry.
+    /// The maximum primitive count in this geometry.
     /// The current number of primitives is defined in BLASBuildTriangleData::PrimitiveCount.
     Uint32                    MaxPrimitiveCount         DEFAULT_INITIALIZER(0);
 
     /// Index type of this geometry, see Diligent::VALUE_TYPE.
     /// Must be VT_UINT16, VT_UINT32 or VT_UNDEFINED.
-    /// If not defined then used vertex array instead of indexed vertices.
+    /// If not defined then vertex array is used instead of indexed vertices.
     VALUE_TYPE                IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// Vulkan only, allows to use transformations in BLASBuildTriangleData.
@@ -83,7 +83,7 @@ struct BLASTriangleDesc
 typedef struct BLASTriangleDesc BLASTriangleDesc;
 
 
-/// Defines bottom level acceleration structure axis aligned bounding boxes description.
+/// Defines bottom level acceleration structure axis-aligned bounding boxes description.
 
 /// AABB geometry description.
 struct BLASBoundingBoxDesc
@@ -92,8 +92,8 @@ struct BLASBoundingBoxDesc
     /// The name is used to map AABB data (BLASBuildBoundingBoxData) to this geometry.
     const char*               GeometryName  DEFAULT_INITIALIZER(nullptr);
     
-    /// The maximum AABBs count.
-    /// Current number of AABBs defined in BLASBuildBoundingBoxData::BoxCount. 
+    /// The maximum AABB count.
+    /// Current number of AABBs is defined in BLASBuildBoundingBoxData::BoxCount. 
     Uint32                    MaxBoxCount   DEFAULT_INITIALIZER(0);
     
 #if DILIGENT_CPP_INTERFACE
@@ -113,7 +113,7 @@ DILIGENT_TYPED_ENUM(RAYTRACING_BUILD_AS_FLAGS, Uint8)
 
     /// Indicates that the specified acceleration structure can act as the source for
     /// a copy acceleration structure command IDeviceContext::CopyBLAS() or IDeviceContext::CopyTLAS()
-    /// with mode of COPY_AS_MODE_COMPACT to produce a compacted acceleration structure.
+    /// with COPY_AS_MODE_COMPACT mode to produce a compacted acceleration structure.
     RAYTRACING_BUILD_AS_ALLOW_COMPACTION  = 0x02,
 
     /// Indicates that the given acceleration structure build should prioritize trace performance over build time.
@@ -163,7 +163,7 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 typedef struct BottomLevelASDesc BottomLevelASDesc;
 
 
-/// Defines scratch buffer info for acceleration structure.
+/// Defines the scratch buffer info for acceleration structure.
 struct ScratchBufferSizes
 {
     /// Scratch buffer size for acceleration structure building.
@@ -196,19 +196,19 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     virtual const BottomLevelASDesc& DILIGENT_CALL_TYPE GetDesc() const override = 0;
 #endif
 
-    /// Returns geometry index that can be used in shader binding table.
+    /// Returns the geometry index that can be used in a shader binding table.
     
-    /// \param [in] Name - Geometry name that specified in BLASTriangleDesc or BLASBoundingBoxDesc.
+    /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
     /// \return Geometry index.
     VIRTUAL Uint32 METHOD(GetGeometryIndex)(THIS_
                                             const char* Name) CONST PURE;
 
-    /// Returns scratch buffer info for current acceleration structure.
+    /// Returns the scratch buffer info for the current acceleration structure.
     
-    /// \return structure object.
+    /// \return ScratchBufferSizes object, see Diligent::ScratchBufferSizes.
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
 
-    /// Returns native acceleration structure handle specific to the underlying graphics API
+    /// Returns the native acceleration structure handle specific to the underlying graphics API
 
     /// \return pointer to ID3D12Resource interface, for D3D12 implementation\n
     ///         VkAccelerationStructureKHR handle, for Vulkan implementation

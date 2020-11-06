@@ -68,11 +68,11 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Ray tracing build flags, see Diligent::RAYTRACING_BUILD_AS_FLAGS.
     RAYTRACING_BUILD_AS_FLAGS Flags            DEFAULT_INITIALIZER(RAYTRACING_BUILD_AS_NONE);
     
-    /// Size from the result of IDeviceContext::WriteTLASCompactedSize() if this acceleration structure
+    /// The size returned by IDeviceContext::WriteTLASCompactedSize(), if this acceleration structure
     /// is going to be the target of a compacting copy (IDeviceContext::CopyTLAS() with COPY_AS_MODE_COMPACT).
     Uint32                    CompactedSize    DEFAULT_INITIALIZER(0);
 
-    /// Binding mode that used for TLASBuildInstanceData::ContributionToHitGroupIndex calculation,
+    /// Binding mode that i used for TLASBuildInstanceData::ContributionToHitGroupIndex calculation,
     /// see Diligent::SHADER_BINDING_MODE.
     SHADER_BINDING_MODE       BindingMode      DEFAULT_INITIALIZER(SHADER_BINDING_MODE_PER_GEOMETRY);
     
@@ -89,10 +89,10 @@ typedef struct TopLevelASDesc TopLevelASDesc;
 /// Top-level AS instance description.
 struct TLASInstanceDesc
 {
-    /// Index that specified in TLASBuildInstanceData::ContributionToHitGroupIndex.
+    /// Index that corresponds to the one specified in TLASBuildInstanceData::ContributionToHitGroupIndex.
     Uint32          ContributionToHitGroupIndex DEFAULT_INITIALIZER(0);
 
-    /// Bottom-level AS that specified in TLASBuildInstanceData::pBLAS.
+    /// Bottom-level AS that is specified in TLASBuildInstanceData::pBLAS.
     IBottomLevelAS* pBLAS                       DEFAULT_INITIALIZER(nullptr);
     
 #if DILIGENT_CPP_INTERFACE
@@ -121,12 +121,12 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
     
     /// Returns instance description that can be used in shader binding table.
     
-    /// \param [in] Name - Instance name that specified in TLASBuildInstanceData::InstanceName.
+    /// \param [in] Name - Instance name that is specified in TLASBuildInstanceData::InstanceName.
     /// \return structure object.
     VIRTUAL TLASInstanceDesc METHOD(GetInstanceDesc)(THIS_
                                                      const char* Name) CONST PURE;
     
-    /// Returns scratch buffer info for current acceleration structure.
+    /// Returns scratch buffer info for the current acceleration structure.
     
     /// \return structure object.
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;

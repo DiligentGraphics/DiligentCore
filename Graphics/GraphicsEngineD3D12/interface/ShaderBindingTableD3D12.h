@@ -47,11 +47,15 @@ static const INTERFACE_ID IID_ShaderBindingTableD3D12 =
     IShaderBindingTableD3D12Methods ShaderBindingTableD3D12
 // clang-format off
 
+#if DILIGENT_CPP_INTERFACE // Empty structs are not allwed in C
+
 /// Exposes Direct3D12-specific functionality of a shader binding table object.
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableD3D12, IShaderBindingTable)
 {
 };
 DILIGENT_END_INTERFACE
+
+#endif
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 

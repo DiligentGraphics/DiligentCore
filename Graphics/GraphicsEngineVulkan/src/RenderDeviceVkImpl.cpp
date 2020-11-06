@@ -159,7 +159,14 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI.DynamicHeapSize,
         ~Uint64{0}
     },
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath)}
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath)},
+    m_Properties
+    {
+        m_PhysicalDevice->GetExtProperties().RayTracing.shaderGroupHandleSize,
+        m_PhysicalDevice->GetExtProperties().RayTracing.maxShaderGroupStride,
+        m_PhysicalDevice->GetExtProperties().RayTracing.shaderGroupBaseAlignment,
+        m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount
+    }
 // clang-format on
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");

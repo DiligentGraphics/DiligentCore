@@ -1634,18 +1634,18 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
 
 VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags)
 {
-    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION,
+    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION,
                   "Please update the switch below to handle the new ray tracing geometry flag");
 
     VkGeometryFlagsKHR Result = 0;
-    while (Flags != RAYTRACING_GEOMETRY_NONE)
+    while (Flags != RAYTRACING_GEOMETRY_FLAG_NONE)
     {
         auto FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
         switch (FlagBit)
         {
             // clang-format off
-            case RAYTRACING_GEOMETRY_OPAQUE:                          Result |= VK_GEOMETRY_OPAQUE_BIT_KHR; break;
-            case RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR; break;
+            case RAYTRACING_GEOMETRY_FLAG_OPAQUE:                          Result |= VK_GEOMETRY_OPAQUE_BIT_KHR; break;
+            case RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR; break;
             // clang-format on
             default: UNEXPECTED("unknown geometry flag");
         }

@@ -609,18 +609,18 @@ DXGI_FORMAT ValueTypeToIndexType(VALUE_TYPE IndexType)
 
 D3D12_RAYTRACING_GEOMETRY_FLAGS GeometryFlagsToD3D12RTGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags)
 {
-    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION,
+    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION,
                   "Please update the switch below to handle the new ray tracing geometry flag");
 
     D3D12_RAYTRACING_GEOMETRY_FLAGS Result = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
-    while (Flags != RAYTRACING_GEOMETRY_NONE)
+    while (Flags != RAYTRACING_GEOMETRY_FLAG_NONE)
     {
         auto FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
         switch (FlagBit)
         {
             // clang-format off
-            case RAYTRACING_GEOMETRY_OPAQUE:                          Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;                         break;
-            case RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION; break;
+            case RAYTRACING_GEOMETRY_FLAG_OPAQUE:                          Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;                         break;
+            case RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION; break;
             // clang-format on
             default: UNEXPECTED("unknown geometry flag");
         }

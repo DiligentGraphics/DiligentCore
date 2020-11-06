@@ -1156,10 +1156,10 @@ ID3D12RootSignature* LocalRootSignature::Create(ID3D12Device* pDevice)
     auto              hr = D3D12SerializeRootSignature(&d3d12RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
     CHECK_D3D_RESULT_THROW(hr, "Failed to serialize root signature");
 
-    hr = pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_LocalRootSignature));
-    CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
+    hr = pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_pd3d12RootSignature));
+    CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D12 root signature");
 
-    return m_LocalRootSignature;
+    return m_pd3d12RootSignature;
 }
 
 } // namespace Diligent

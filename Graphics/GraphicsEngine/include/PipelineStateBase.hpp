@@ -361,7 +361,7 @@ protected:
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // reserve size for shader handles
-        const auto ShaderHandleSize = this->m_pDevice->GetShaderGroupHandleSize();
+        const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         // Extra bytes are reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::Shaders);
@@ -642,7 +642,7 @@ protected:
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // reserve size for shader handles
-        const auto ShaderHandleSize = this->m_pDevice->GetShaderGroupHandleSize();
+        const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const auto ShaderDataSize   = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         RTDataSize += ShaderDataSize;
         // Extra bytes are reserved to avoid compiler errors on zero-sized arrays

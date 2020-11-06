@@ -112,7 +112,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounte
     d3d12SRVDesc.RaytracingAccelerationStructure.Location = GetGPUAddress();
     pd3d12Device->CreateShaderResourceView(nullptr, &d3d12SRVDesc, m_DescriptorHandle.GetCpuHandle());
 
-    VERIFY_EXPR(GetGPUAddress() % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0);
+    DEV_CHECK_ERR(GetGPUAddress() % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0, "GPU virtual address is expect to be at least 256-byte aligned");
 
     SetState(RESOURCE_STATE_BUILD_AS_READ);
 }

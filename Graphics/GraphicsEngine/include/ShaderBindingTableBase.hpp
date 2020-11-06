@@ -68,7 +68,7 @@ public:
 
         this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
         this->m_ShaderRecordSize   = this->m_pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
-        this->m_ShaderRecordStride = this->m_ShaderRecordSize + this->m_pDevice->GetShaderGroupHandleSize();
+        this->m_ShaderRecordStride = this->m_ShaderRecordSize + this->m_pDevice->GetProperties().ShaderGroupHandleSize;
     }
 
     ~ShaderBindingTableBase()
@@ -97,7 +97,7 @@ public:
         this->m_Desc               = Desc;
         this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
         this->m_ShaderRecordSize   = this->m_pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
-        this->m_ShaderRecordStride = this->m_ShaderRecordSize + this->m_pDevice->GetShaderGroupHandleSize();
+        this->m_ShaderRecordStride = this->m_ShaderRecordSize + this->m_pDevice->GetProperties().ShaderGroupHandleSize;
     }
 
     void DILIGENT_CALL_TYPE BindRayGenShader(const char* ShaderGroupName, const void* Data, Uint32 DataSize) override final
@@ -108,7 +108,7 @@ public:
         this->m_RayGenShaderRecord.resize(this->m_ShaderRecordStride, EmptyElem);
         this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_RayGenShaderRecord.data(), this->m_ShaderRecordStride);
 
-        const Uint32 GroupSize = this->m_pDevice->GetShaderGroupHandleSize();
+        const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         std::memcpy(this->m_RayGenShaderRecord.data() + GroupSize, Data, DataSize);
         this->m_Changed = true;
     }
@@ -118,7 +118,7 @@ public:
         VERIFY_EXPR((Data == nullptr) == (DataSize == 0));
         VERIFY_EXPR(Data == nullptr || (DataSize == this->m_ShaderRecordSize));
 
-        const Uint32 GroupSize = this->m_pDevice->GetShaderGroupHandleSize();
+        const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const Uint32 Offset    = MissIndex * this->m_ShaderRecordStride;
         this->m_MissShadersRecord.resize(std::max<size_t>(this->m_MissShadersRecord.size(), Offset + this->m_ShaderRecordStride), EmptyElem);
 
@@ -148,7 +148,7 @@ public:
         const Uint32 GeometryIndex = Desc.pBLAS->GetGeometryIndex(GeometryName);
         const Uint32 Index         = InstanceIndex + GeometryIndex * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
         const Uint32 Offset        = Index * this->m_ShaderRecordStride;
-        const Uint32 GroupSize     = this->m_pDevice->GetShaderGroupHandleSize();
+        const Uint32 GroupSize     = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
 
         this->m_HitGroupsRecord.resize(std::max<size_t>(this->m_HitGroupsRecord.size(), Offset + this->m_ShaderRecordStride), EmptyElem);
 
@@ -190,7 +190,7 @@ public:
 
         const Uint32 BeginIndex = InstanceIndex + 0 * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
         const Uint32 EndIndex   = InstanceIndex + GeometryCount * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
-        const Uint32 GroupSize  = this->m_pDevice->GetShaderGroupHandleSize();
+        const Uint32 GroupSize  = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const auto*  DataPtr    = static_cast<const Uint8*>(Data);
 
         this->m_HitGroupsRecord.resize(std::max<size_t>(this->m_HitGroupsRecord.size(), EndIndex * this->m_ShaderRecordStride), EmptyElem);
@@ -214,7 +214,7 @@ public:
         VERIFY_EXPR((Data == nullptr) == (DataSize == 0));
         VERIFY_EXPR(Data == nullptr || (DataSize == this->m_ShaderRecordSize));
 
-        const Uint32 GroupSize = this->m_pDevice->GetShaderGroupHandleSize();
+        const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const Uint32 Offset    = CallableIndex * this->m_ShaderRecordStride;
         this->m_CallableShadersRecord.resize(std::max<size_t>(this->m_CallableShadersRecord.size(), Offset + this->m_ShaderRecordStride), EmptyElem);
 
@@ -228,7 +228,7 @@ public:
         Uint32     ShCounter   = 0;
         Uint32     RecCounter  = 0;
         const auto Stride      = this->m_ShaderRecordStride;
-        const auto ShSize      = this->m_pDevice->GetShaderGroupHandleSize();
+        const auto ShSize      = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const auto FindPattern = [&ShCounter, &RecCounter, Stride, ShSize](const std::vector<Uint8>& Data, const char* Name) -> bool //
         {
             for (size_t i = 0; i < Data.size(); i += Stride)
@@ -281,7 +281,7 @@ public:
                  BindingTable& HitShaderBindingTable,
                  BindingTable& CallableShaderBindingTable)
     {
-        const auto ShaderGroupBaseAlignment = this->m_pDevice->GetShaderGroupBaseAlignment();
+        const auto ShaderGroupBaseAlignment = this->m_pDevice->GetProperties().ShaderGroupBaseAlignment;
 
         const auto AlignToLarger = [ShaderGroupBaseAlignment](size_t offset) -> Uint32 {
             return Align(static_cast<Uint32>(offset), ShaderGroupBaseAlignment);
@@ -367,19 +367,19 @@ protected:
             LOG_SBT_ERROR_AND_THROW("pPSO must be ray tracing pipeline");
         }
 
-        const auto ShaderGroupHandleSize = this->m_pDevice->GetShaderGroupHandleSize();
-        const auto MaxShaderRecordStride = this->m_pDevice->GetMaxShaderRecordStride();
-        const auto ShaderRecordSize      = Desc.pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
-        const auto ShaderRecordStride    = ShaderRecordSize + ShaderGroupHandleSize;
+        const auto& DeviceProps        = this->m_pDevice->GetProperties();
+        const auto  ShaderRecordSize   = Desc.pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
+        const auto  ShaderRecordStride = ShaderRecordSize + DeviceProps.ShaderGroupHandleSize;
 
-        if (ShaderRecordStride > MaxShaderRecordStride)
+        if (ShaderRecordStride > DeviceProps.MaxShaderRecordStride)
         {
-            LOG_SBT_ERROR_AND_THROW("ShaderRecordSize(", ShaderRecordSize, ") is too big, max size is: ", MaxShaderRecordStride - ShaderGroupHandleSize);
+            LOG_SBT_ERROR_AND_THROW("ShaderRecordSize(", ShaderRecordSize, ") is too big, max size is: ", DeviceProps.MaxShaderRecordStride - DeviceProps.ShaderGroupHandleSize);
         }
 
-        if (ShaderRecordStride % ShaderGroupHandleSize != 0)
+        if (ShaderRecordStride % DeviceProps.ShaderGroupHandleSize != 0)
         {
-            LOG_SBT_ERROR_AND_THROW("ShaderRecordSize(", ShaderRecordSize, ") plus ShaderGroupHandleSize(", ShaderGroupHandleSize, ") must be multiple of ", ShaderGroupHandleSize);
+            LOG_SBT_ERROR_AND_THROW("ShaderRecordSize(", ShaderRecordSize, ") plus ShaderGroupHandleSize(", DeviceProps.ShaderGroupHandleSize,
+                                    ") must be a multiple of ", DeviceProps.ShaderGroupHandleSize);
         }
 #undef LOG_SBT_ERROR_AND_THROW
     }

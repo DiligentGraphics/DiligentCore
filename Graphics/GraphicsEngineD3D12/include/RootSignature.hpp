@@ -603,7 +603,7 @@ private:
     const char*                  m_pName            = nullptr;
     Uint32                       m_BindPoint        = InvalidBindPoint;
     const Uint32                 m_ShaderRecordSize = 0;
-    CComPtr<ID3D12RootSignature> m_LocalRootSignature;
+    CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
 };
 
 } // namespace Diligent

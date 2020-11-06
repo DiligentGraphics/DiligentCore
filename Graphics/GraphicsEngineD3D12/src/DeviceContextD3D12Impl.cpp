@@ -2380,7 +2380,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
             d3d12AABs.AABBs.StartAddress  = pBB->GetGPUAddress() + SrcBoxes.BoxOffset;
             d3d12AABs.AABBs.StrideInBytes = SrcBoxes.BoxStride;
 
-            VERIFY_EXPR(d3d12AABs.AABBs.StartAddress % D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT == 0);
+            DEV_CHECK_ERR(d3d12AABs.AABBs.StartAddress % D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT == 0, "AABB start address is not properly aligned");
 
             TransitionOrVerifyBufferState(CmdCtx, *pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }
@@ -2396,7 +2396,8 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
     d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress() + Attribs.ScratchBufferOffset;
     d3d12BuildASDesc.SourceAccelerationStructureData  = 0;
 
-    VERIFY_EXPR(d3d12BuildASDesc.ScratchAccelerationStructureData % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0);
+    DEV_CHECK_ERR(d3d12BuildASDesc.ScratchAccelerationStructureData % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0,
+                  "Scratch data address is not properly aligned");
 
     CmdCtx.AsGraphicsContext4().BuildRaytracingAccelerationStructure(d3d12BuildASDesc, 0, nullptr);
     ++m_State.NumCommands;
@@ -2463,8 +2464,10 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
     d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress() + Attribs.ScratchBufferOffset;
     d3d12BuildASDesc.SourceAccelerationStructureData  = 0;
 
-    VERIFY_EXPR(d3d12BuildASInputs.InstanceDescs % D3D12_RAYTRACING_INSTANCE_DESCS_BYTE_ALIGNMENT == 0);
-    VERIFY_EXPR(d3d12BuildASDesc.ScratchAccelerationStructureData % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0);
+    DEV_CHECK_ERR(d3d12BuildASInputs.InstanceDescs % D3D12_RAYTRACING_INSTANCE_DESCS_BYTE_ALIGNMENT == 0,
+                  "Instance data address is not properly aligned");
+    DEV_CHECK_ERR(d3d12BuildASDesc.ScratchAccelerationStructureData % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0,
+                  "Scratch data address is not properly algined");
 
     CmdCtx.AsGraphicsContext4().BuildRaytracingAccelerationStructure(d3d12BuildASDesc, 0, nullptr);
     ++m_State.NumCommands;

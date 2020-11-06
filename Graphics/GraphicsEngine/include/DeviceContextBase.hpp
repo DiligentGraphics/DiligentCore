@@ -1529,9 +1529,9 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_WARNING_MESSAGE("DrawMesh command arguments are invalid: number of groups to dispatch is zero.");
     }
 
-    if (Attribs.ThreadGroupCount > m_pDevice->GetMaxDrawMeshTasksCount())
+    if (Attribs.ThreadGroupCount > m_pDevice->GetProperties().MaxDrawMeshTasksCount)
     {
-        LOG_WARNING_MESSAGE("DrawMesh command arguments are invalid: number of groups to dispatch must be less then ", m_pDevice->GetMaxDrawMeshTasksCount());
+        LOG_WARNING_MESSAGE("DrawMesh command arguments are invalid: number of groups to dispatch must be less then ", m_pDevice->GetProperties().MaxDrawMeshTasksCount);
     }
 
     return true;
@@ -2272,11 +2272,11 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const Bui
     // calculate instance data size
     for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
     {
-        VERIFY((Attribs.pInstances[i].CustomId & ~0x00FFFFFF) == 0, "Only first 24 bits are used");
+        VERIFY((Attribs.pInstances[i].CustomId & ~0x00FFFFFF) == 0, "Only the lower 24 bits are used");
 
         VERIFY(Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO ||
                    (Attribs.pInstances[i].ContributionToHitGroupIndex & ~0x00FFFFFF) == 0,
-               "Only first 24 bits are used");
+               "Only the lower 24 bits are used");
 
         if (Attribs.pInstances[i].InstanceName == nullptr)
         {
@@ -2302,8 +2302,9 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const Bui
 
         if (TLASDesc.BindingMode != SHADER_BINDING_USER_DEFINED && Attribs.pInstances[i].ContributionToHitGroupIndex != TLAS_INSTANCE_OFFSET_AUTO)
         {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO "
-                                                                           "if TLAS created with BindingMode that is not SHADER_BINDING_USER_DEFINED");
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i,
+                              "].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO "
+                              "if TLAS created with BindingMode that is not SHADER_BINDING_USER_DEFINED");
             return false;
         }
     }

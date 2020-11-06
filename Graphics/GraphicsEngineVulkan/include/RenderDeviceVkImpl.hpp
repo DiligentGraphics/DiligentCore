@@ -197,22 +197,17 @@ public:
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
-    Uint32 GetShaderGroupHandleSize() const
+    struct Properties
     {
-        return GetPhysicalDevice().GetExtProperties().RayTracing.shaderGroupHandleSize;
-    }
-    Uint32 GetMaxShaderRecordStride() const
-    {
-        return GetPhysicalDevice().GetExtProperties().RayTracing.maxShaderGroupStride;
-    }
-    Uint32 GetShaderGroupBaseAlignment() const
-    {
-        return GetPhysicalDevice().GetExtProperties().RayTracing.shaderGroupBaseAlignment;
-    }
+        const Uint32 ShaderGroupHandleSize    = 0;
+        const Uint32 MaxShaderRecordStride    = 0;
+        const Uint32 ShaderGroupBaseAlignment = 0;
+        const Uint32 MaxDrawMeshTasksCount    = 0;
+    };
 
-    Uint32 GetMaxDrawMeshTasksCount() const
+    const Properties& GetProperties() const
     {
-        return GetPhysicalDevice().GetExtProperties().MeshShader.maxDrawMeshTasksCount;
+        return m_Properties;
     }
 
 private:
@@ -249,6 +244,8 @@ private:
     VulkanDynamicMemoryManager m_DynamicMemoryManager;
 
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
+
+    Properties m_Properties;
 };
 
 } // namespace Diligent

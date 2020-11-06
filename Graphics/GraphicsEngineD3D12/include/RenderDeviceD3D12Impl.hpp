@@ -175,14 +175,20 @@ public:
     ID3D12Device2* GetD3D12Device2();
     ID3D12Device5* GetD3D12Device5();
 
-    ShaderVersion     GetMaxShaderModel() const;
-    D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
+    struct Properties
+    {
+        const Uint32 ShaderGroupHandleSize    = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        const Uint32 MaxShaderRecordStride    = D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE;
+        const Uint32 ShaderGroupBaseAlignment = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+        const Uint32 MaxDrawMeshTasksCount    = 64000;
 
-    static Uint32 GetShaderGroupHandleSize() { return D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; }
-    static Uint32 GetMaxShaderRecordStride() { return D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE; }
-    static Uint32 GetShaderGroupBaseAlignment() { return D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT; }
+        ShaderVersion MaxShaderVersion;
+    };
 
-    static Uint32 GetMaxDrawMeshTasksCount() { return 64000; }
+    const Properties& GetProperties() const
+    {
+        return m_Properties;
+    }
 
 private:
     template <typename PSOCreateInfoType>
@@ -217,7 +223,7 @@ private:
 
     QueryManagerD3D12 m_QueryMgr;
 
-    D3D_SHADER_MODEL m_MaxShaderModel = D3D_SHADER_MODEL_5_1;
+    Properties m_Properties;
 
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
 };

@@ -224,8 +224,8 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
                                                                 "RESOURCE_STATE_UNKNOWN to make the engine use current resource state");
     }
 
-    // RESOURCE_STATE_UNORDERED_ACCESS and RESOURCE_STATE_BUILD_AS_WRITE converted to D3D12_RESOURCE_STATE_UNORDERED_ACCESS.
-    // UAV barrier must be inserted between D3D12_RESOURCE_STATE_UNORDERED_ACCESS resource usage.
+    // RESOURCE_STATE_UNORDERED_ACCESS and RESOURCE_STATE_BUILD_AS_WRITE are converted to D3D12_RESOURCE_STATE_UNORDERED_ACCESS.
+    // UAV barrier must be inserted between D3D12_RESOURCE_STATE_UNORDERED_ACCESS resource usages.
     bool RequireUAVBarrier =
         (OldState == RESOURCE_STATE_UNORDERED_ACCESS || OldState == RESOURCE_STATE_BUILD_AS_WRITE) &&
         (Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE);

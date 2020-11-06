@@ -2683,16 +2683,16 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource state is known to the engine, but is undefined. A resource is typically in an undefined state right after initialization.
     RESOURCE_STATE_UNDEFINED            = 0x00001,
 
-    /// The resource is accessed as vertex buffer
+    /// The resource is accessed as a vertex buffer
     RESOURCE_STATE_VERTEX_BUFFER        = 0x00002,
 
-    /// The resource is accessed as constant (uniform) buffer
+    /// The resource is accessed as a constant (uniform) buffer
     RESOURCE_STATE_CONSTANT_BUFFER      = 0x00004,
 
-    /// The resource is accessed as index buffer
+    /// The resource is accessed as an index buffer
     RESOURCE_STATE_INDEX_BUFFER         = 0x00008,
 
-    /// The resource is accessed as render target
+    /// The resource is accessed as a render target
     RESOURCE_STATE_RENDER_TARGET        = 0x00010,
         
     /// The resource is used for unordered access
@@ -2710,7 +2710,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is used as the destination for stream output
     RESOURCE_STATE_STREAM_OUT           = 0x00200,
 
-    /// The resource is used as indirect draw/dispatch arguments buffer
+    /// The resource is used as an indirect draw/dispatch arguments buffer
     RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x00400,
 
     /// The resource is used as the destination in a copy operation
@@ -2725,20 +2725,20 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is used as the source in a resolve operation 
     RESOURCE_STATE_RESOLVE_SOURCE       = 0x04000,
 
-    /// The resource is used as input attachment in a render pass subpass
+    /// The resource is used as an input attachment in a render pass subpass
     RESOURCE_STATE_INPUT_ATTACHMENT     = 0x08000,
 
     /// The resource is used for present
     RESOURCE_STATE_PRESENT              = 0x10000,
 
-    /// The resource is used as vertex/index/instance buffer in a AS building operation
-    /// or as acceleration structure source in a AS copy operation.
+    /// The resource is used as vertex/index/instance buffer in an AS building operation
+    /// or as an acceleration structure source in an AS copy operation.
     RESOURCE_STATE_BUILD_AS_READ        = 0x20000,
 
-    /// The resource is used as target in a AS building or AS copy operations.
+    /// The resource is used as the target for AS building or AS copy operations.
     RESOURCE_STATE_BUILD_AS_WRITE       = 0x40000,
 
-    /// The resource is used as top-level AS shader resource in a trace rays operation.
+    /// The resource is used as a top-level AS shader resource in a trace rays operation.
     RESOURCE_STATE_RAY_TRACING          = 0x80000,
 
     RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_RAY_TRACING,

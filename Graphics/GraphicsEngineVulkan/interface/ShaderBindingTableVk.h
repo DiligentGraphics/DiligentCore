@@ -46,6 +46,8 @@ static const INTERFACE_ID IID_ShaderBindingTableVk =
     IShaderBindingTableInclusiveMethods;      \
     IShaderBindingTableVkMethods ShaderBindingTableVk
 
+#if DILIGENT_CPP_INTERFACE // Empty structs are not allwed in C
+
 // clang-format off
 /// Exposes Vulkan-specific functionality of a Shader binding table object.
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableVk, IShaderBindingTable)
@@ -53,6 +55,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTableVk, IShaderBindingTable)
 };
 DILIGENT_END_INTERFACE
 // clang-format on
+
+#endif
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 

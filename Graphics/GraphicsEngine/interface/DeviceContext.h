@@ -720,7 +720,7 @@ struct BeginRenderPassAttribs
 typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
 
 
-/// TLAS instance flags that used in IDeviceContext::BuildTLAS().
+/// TLAS instance flags that are used in IDeviceContext::BuildTLAS().
 DILIGENT_TYPED_ENUM(RAYTRACING_INSTANCE_FLAGS, Uint8)
 {
     RAYTRACING_INSTANCE_NONE = 0,
@@ -734,11 +734,11 @@ DILIGENT_TYPED_ENUM(RAYTRACING_INSTANCE_FLAGS, Uint8)
     RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE = 0x02,
 
     /// Causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were specified on all 
-    /// geometries referenced by this instance. This behavior can be overridden in shader by ray flags.
+    /// geometries referenced by this instance. This behavior can be overridden in the shader with ray flags.
     RAYTRACING_INSTANCE_FORCE_OPAQUE = 0x04,
 
     /// Causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were not specified on all
-    /// geometries referenced by this instance. This behavior can be overridden shader by ray flags.
+    /// geometries referenced by this instance. This behavior can be overridden in the shader with ray flags.
     RAYTRACING_INSTANCE_FORCE_NO_OPAQUE = 0x08,
 
     RAYTRACING_INSTANCE_FLAGS_LAST = RAYTRACING_INSTANCE_FORCE_NO_OPAQUE
@@ -748,7 +748,7 @@ DEFINE_FLAG_ENUM_OPERATORS(RAYTRACING_INSTANCE_FLAGS)
 
 /// Defines acceleration structure copy mode.
 
-/// These flags are used by IDeviceContext::CopyBLAS() and IDeviceContext::CopyTLAS().
+/// These the flags used by IDeviceContext::CopyBLAS() and IDeviceContext::CopyTLAS().
 DILIGENT_TYPED_ENUM(COPY_AS_MODE, Uint8)
 {
     /// Creates a direct copy of the acceleration structure specified in pSrc into the one specified by pDst.
@@ -768,16 +768,16 @@ DILIGENT_TYPED_ENUM(COPY_AS_MODE, Uint8)
 /// Defines geometry flags for ray tracing.
 DILIGENT_TYPED_ENUM(RAYTRACING_GEOMETRY_FLAGS, Uint8)
 {
-    RAYTRACING_GEOMETRY_NONE = 0,
+    RAYTRACING_GEOMETRY_FLAG_NONE = 0,
 
     /// Indicates that this geometry does not invoke the any-hit shaders even if present in a hit group.
-    RAYTRACING_GEOMETRY_OPAQUE = 0x01,
+    RAYTRACING_GEOMETRY_FLAG_OPAQUE = 0x01,
 
     /// Indicates that the implementation must only call the any-hit shader a single time for each primitive in this geometry.
     /// If this bit is absent an implementation may invoke the any-hit shader more than once for this geometry.
-    RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION = 0x02,
+    RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION = 0x02,
 
-    RAYTRACING_GEOMETRY_FLAGS_LAST = RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION
+    RAYTRACING_GEOMETRY_FLAGS_LAST = RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION
 };
 DEFINE_FLAG_ENUM_OPERATORS(RAYTRACING_GEOMETRY_FLAGS)
 
@@ -785,55 +785,57 @@ DEFINE_FLAG_ENUM_OPERATORS(RAYTRACING_GEOMETRY_FLAGS)
 /// Triangle geometry data description.
 struct BLASBuildTriangleData
 {
-    /// Geometry name used to map geometry to hit group in shader binding table.
-    /// Put geometry data to geometry that allocated by BLASTriangleDesc with the same name.
+    /// Geometry name used to map a geometry to a hit group in the shader binding table.
+    /// Add geometry data to the geometry that is allocated by BLASTriangleDesc with the same name.
     const char* GeometryName          DEFAULT_INITIALIZER(nullptr);
     
     /// Triangle vertices data source.
     /// Triangles are considered "inactive" if the x component of each vertex is NaN.
-    /// Buffer must be created with BIND_RAY_TRACING flag.
+    /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*    pVertexBuffer         DEFAULT_INITIALIZER(nullptr);
     
     /// Data offset in bytes in pVertexBuffer.
     Uint32      VertexOffset          DEFAULT_INITIALIZER(0);
     
-    /// Stride in bytes between each vertex.
+    /// Stride in bytes between vertices.
     Uint32      VertexStride          DEFAULT_INITIALIZER(0);
     
-    /// Number of triangle vertices.
+    /// The number of triangle vertices.
     /// Must be less than or equal to BLASTriangleDesc::MaxVertexCount.
     Uint32      VertexCount           DEFAULT_INITIALIZER(0);
     
-    /// The type of vertex and number of components.
-    /// This is optional values. Must be undefined or same as in BLASTriangleDesc. 
+    /// The type of the vertex components.
+    /// This is an optional values. Must be undefined or same as in BLASTriangleDesc. 
     VALUE_TYPE  VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
+
+    /// The number of vertex components
     Uint8       VertexComponentCount  DEFAULT_INITIALIZER(0);
     
-    /// Number of triangles.
-    /// Must equal to VertexCount / 3 if pIndexBuffer is null or must equal to index count / 3.
+    /// The number of triangles.
+    /// Must equal to VertexCount / 3 if pIndexBuffer is null or must be equal to index count / 3.
     Uint32      PrimitiveCount        DEFAULT_INITIALIZER(0);
 
     /// Triangle indices data source.
     /// Must be null if BLASTriangleDesc::IndexType is undefined.
-    /// Buffer must be created with BIND_RAY_TRACING flag.
+    /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*    pIndexBuffer          DEFAULT_INITIALIZER(nullptr);
     
     /// Data offset in bytes in pIndexBuffer.
     Uint32      IndexOffset           DEFAULT_INITIALIZER(0);
     
-    /// Type of triangle indices, see Diligent::VALUE_TYPE.
-    /// This is optional value. Must be undefined or same as in BLASTriangleDesc.
+    /// The type of triangle indices, see Diligent::VALUE_TYPE.
+    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc.
     VALUE_TYPE  IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
     
     /// Geometry transformation data source.
-    /// Buffer must be created with BIND_RAY_TRACING flag.
+    /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*    pTransformBuffer      DEFAULT_INITIALIZER(nullptr);
     
     /// Data offset in bytes in pTransformBuffer.
     Uint32      TransformBufferOffset DEFAULT_INITIALIZER(0);
 
-    /// Geometry flags.
-    RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_NONE);
+    /// Geometry flags, se Diligent::RAYTRACING_GEOMETRY_FLAGS.
+    RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_FLAG_NONE);
     
 #if DILIGENT_CPP_INTERFACE
     BLASBuildTriangleData() noexcept {}
@@ -866,7 +868,7 @@ struct BLASBuildBoundingBoxData
     Uint32      BoxCount     DEFAULT_INITIALIZER(0);
     
     /// Geometry flags, see Diligent::RAYTRACING_GEOMETRY_FLAGS.
-    RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_NONE);
+    RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_FLAG_NONE);
     
 #if DILIGENT_CPP_INTERFACE
     BLASBuildBoundingBoxData() noexcept {}
@@ -890,20 +892,20 @@ struct BuildBLASAttribs
     /// A pointer to an array of TriangleDataCount BLASBuildTriangleData structures that contains triangle geometry data.
     BLASBuildTriangleData const*    pTriangleData               DEFAULT_INITIALIZER(nullptr);
     
-    /// Number of triangle grometries.
+    /// The number of triangle grometries.
     /// Must be less than or equal to BottomLevelASDesc::TriangleCount.
     Uint32                          TriangleDataCount           DEFAULT_INITIALIZER(0);
     
-    /// A pointer to an array of BoxDataCount BLASBuildBoundingBoxData structures that contains AABB geometry data.
+    /// A pointer to an array of BoxDataCount BLASBuildBoundingBoxData structures that contain AABB geometry data.
     BLASBuildBoundingBoxData const* pBoxData                    DEFAULT_INITIALIZER(nullptr);
     
-    /// Number of AABB geometries.
+    /// The number of AABB geometries.
     /// Must be less than or equal to BottomLevelASDesc::BoxCount.
     Uint32                          BoxDataCount                DEFAULT_INITIALIZER(0);
     
-    /// Buffer that used for acceleration structure building.
+    /// The buffer that is used for acceleration structure building.
     /// Must be created with BIND_RAY_TRACING.
-    /// Call IBottomLevelAS::GetScratchBufferSizes().Build to get minimal size for scratch buffer.
+    /// Call IBottomLevelAS::GetScratchBufferSizes().Build to get the minimal size for the scratch buffer.
     IBuffer*                        pScratchBuffer              DEFAULT_INITIALIZER(nullptr);
     
     /// Offset from the beginning of the buffer.
@@ -919,7 +921,7 @@ struct BuildBLASAttribs
 typedef struct BuildBLASAttribs BuildBLASAttribs;
 
 
-/// Can be used in TLASBuildInstanceData::ContributionToHitGroupIndex to calculate index
+/// Can be used in TLASBuildInstanceData::ContributionToHitGroupIndex to calculate the index
 /// depending on geometry count in TLASBuildInstanceData::pBLAS and shader binding mode in TopLevelASDesc::BindingMode.
 /// 
 /// Example:
@@ -934,11 +936,10 @@ static const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
 /// Row-major matrix 
 struct InstanceMatrix
 {
-    /// (0.0 1.0 2.0)
-    /// (0.1 1.1 2.1) - rotation
-    /// (0.2 1.2 2.2)
-    /// 
-    /// [0.3 1.3 2.3] - translation
+    ///        rotation        translation
+    /// ([0,0]  [0,1]  [0,2])   ([0,3])
+    /// ([1,0]  [1,1]  [1,2])   ([1,3])
+    /// ([2,0]  [2,1]  [2,2])   ([2,3])
     float data [3][4];
 
 #if DILIGENT_CPP_INTERFACE
@@ -951,7 +952,7 @@ struct InstanceMatrix
 
     InstanceMatrix(const InstanceMatrix&) noexcept = default;
     
-    /// Set matrix translation.
+    /// Sets the translation part.
     InstanceMatrix& SetTranslation(float x, float y, float z) noexcept
     {
         data[0][3] = x;
@@ -960,7 +961,7 @@ struct InstanceMatrix
         return *this;
     }
 
-    /// Set matrix rotation basis.
+    /// Sets the rotation part.
     InstanceMatrix& SetRotation(const float* pMatrix3x3) noexcept
     {
         data[0][0] = pMatrix3x3[0];  data[1][0] = pMatrix3x3[1];  data[2][0] = pMatrix3x3[2];
@@ -976,7 +977,7 @@ typedef struct InstanceMatrix InstanceMatrix;
 /// This structure is used by BuildTLASAttribs.
 struct TLASBuildInstanceData
 {
-    /// Instance name that used to map instance to hit group in shader binding table.
+    /// Instance name that is used to map an instance to a hit group in shader binding table.
     const char*               InstanceName    DEFAULT_INITIALIZER(nullptr);
     
     /// Bottom-level AS that represents instance geometry.
@@ -985,20 +986,21 @@ struct TLASBuildInstanceData
     /// Instace to world transformation.
     InstanceMatrix            Transform;
     
-    /// User-defined value that can be accessed in shader via InstanceID() in HLSL and gl_InstanceCustomIndex in GLSL.
-    /// Used only first 24 bits.
+    /// User-defined value that can be accessed in the shader via InstanceID() in HLSL and gl_InstanceCustomIndex in GLSL.
+    /// Only the lower 24 bits are used.
     Uint32                    CustomId        DEFAULT_INITIALIZER(0);
     
     /// Instance flags, see Diligent::RAYTRACING_INSTANCE_FLAGS.
     RAYTRACING_INSTANCE_FLAGS Flags           DEFAULT_INITIALIZER(RAYTRACING_INSTANCE_NONE);
 
     /// Visibility mask for the geometry, the instance may only be hit if rayMask & instance.Mask != 0.
-    /// (rayMask in GLSL is a cullMask argument of traceRayEXT(), rayMask in HLSL is a InstanceInclusionMask argument of TraceRay()).
+    /// (rayMask in GLSL is a cullMask argument of traceRayEXT(), rayMask in HLSL is an InstanceInclusionMask argument of TraceRay()).
     Uint8                     Mask            DEFAULT_INITIALIZER(0xFF);
     
-    /// Index used to calculate hit group location in shader binding table.
-    /// Must be TLAS_INSTANCE_OFFSET_AUTO is TLAS created with BindingMode SHADER_BINDING_MODE_PER_GEOMETRY or SHADER_BINDING_MODE_PER_INSTANCE.
-    /// Used only first 24 bits.
+    /// The index used to calculate the hit group location in the shader binding table.
+    /// Must be TLAS_INSTANCE_OFFSET_AUTO if TLAS is created with BindingMode SHADER_BINDING_MODE_PER_GEOMETRY,
+    /// or SHADER_BINDING_MODE_PER_INSTANCE otherwise.
+    /// Only the lower 24 bits are used.
     Uint32                    ContributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO);
     
 #if DILIGENT_CPP_INTERFACE
@@ -1025,19 +1027,19 @@ struct BuildTLASAttribs
     /// Bottom-level AS (in TLASBuildInstanceData::pBLAS) state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  BLASTransitionMode            DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
-    /// A pointer to an array of InstanceCount TLASBuildInstanceData structures that contains instance data.
+    /// A pointer to an array of InstanceCount TLASBuildInstanceData structures that contain instance data.
     TLASBuildInstanceData const*    pInstances                    DEFAULT_INITIALIZER(nullptr);
     
-    /// Number of instances.
+    /// The number of instances.
     /// Must be less than or equal to TopLevelASDesc::MaxInstanceCount.
     Uint32                          InstanceCount                 DEFAULT_INITIALIZER(0);
     
-    /// Buffer that will be used to store instance data during AS building.
-    /// Buffer size must be at least TLAS_INSTANCE_DATA_SIZE * InstanceCount.
-    /// Buffer must be created with BIND_RAY_TRACING flag.
+    /// The buffer that will be used to store instance data during AS building.
+    /// The buffer size must be at least TLAS_INSTANCE_DATA_SIZE * InstanceCount.
+    /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*                        pInstanceBuffer               DEFAULT_INITIALIZER(nullptr);
     
-    /// Offset from the beginning of the buffer to location of instance data.
+    /// Offset from the beginning of the buffer to the location of instance data.
     Uint32                          InstanceBufferOffset          DEFAULT_INITIALIZER(0);
     
     /// Instance buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
@@ -1046,9 +1048,9 @@ struct BuildTLASAttribs
     /// AZ TODO
     Uint32                          HitShadersPerInstance         DEFAULT_INITIALIZER(1);
     
-    /// Buffer that used for acceleration structure building.
+    /// Buffer that is used for acceleration structure building.
     /// Must be created with BIND_RAY_TRACING.
-    /// Call ITopLevelAS::GetScratchBufferSizes().Build to get minimal size for scratch buffer.
+    /// Call ITopLevelAS::GetScratchBufferSizes().Build to get the minimal size for the scratch buffer.
     IBuffer*                        pScratchBuffer                DEFAULT_INITIALIZER(nullptr);
     
     /// Offset from the beginning of the buffer.
@@ -1072,7 +1074,7 @@ struct CopyBLASAttribs
     
     /// Destination bottom-level AS.
     /// If Mode is COPY_AS_MODE_COMPACT then pDst must be created with CompactedSize
-    /// that is greater or equal to size that returned by IDeviceContext::WriteBLASCompactedSize.
+    /// that is greater or equal to the size returned by IDeviceContext::WriteBLASCompactedSize.
     IBottomLevelAS*                pDst              DEFAULT_INITIALIZER(nullptr);
     
     /// Acceleration structure copy mode, see Diligent::COPY_AS_MODE.
@@ -1124,10 +1126,10 @@ struct WriteBLASCompactedSizeAttribs
     /// Bottom-level AS.
     IBottomLevelAS*                pBLAS                DEFAULT_INITIALIZER(nullptr);
     
-    /// Command will writes 64 bit value with acceleration structure compacted size into buffer.
+    /// The destination buffer into which a 64-bit value representing the acceleration structure compacted size will be written to.
     IBuffer*                       pDestBuffer          DEFAULT_INITIALIZER(nullptr);
     
-    /// Offset from the beginning of the buffer to location of AS compacted size.
+    /// Offset from the beginning of the buffer to the location of the AS compacted size.
     Uint32                         DestBufferOffset     DEFAULT_INITIALIZER(0);
     
     /// Bottom-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
@@ -1149,10 +1151,10 @@ struct WriteTLASCompactedSizeAttribs
     /// Top-level AS.
     ITopLevelAS*                   pTLAS                DEFAULT_INITIALIZER(nullptr);
     
-    /// Command will writes 64 bit value with acceleration structure compacted size into buffer.
+    /// The destination buffer into which a 64-bit value representing the acceleration structure compacted size will be written to.
     IBuffer*                       pDestBuffer          DEFAULT_INITIALIZER(nullptr);
     
-    /// Offset from the beginning of the buffer to location of AS compacted size.
+    /// Offset from the beginning of the buffer to the location of the AS compacted size.
     Uint32                         DestBufferOffset     DEFAULT_INITIALIZER(0);
     
     /// Top-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
@@ -1174,9 +1176,9 @@ struct TraceRaysAttribs
     /// Shader binding table.
     IShaderBindingTable* pSBT        DEFAULT_INITIALIZER(nullptr);
     
-    Uint32               DimensionX  DEFAULT_INITIALIZER(1); ///< Number of rays dispatched in X direction.
-    Uint32               DimensionY  DEFAULT_INITIALIZER(1); ///< Number of rays dispatched in Y direction.
-    Uint32               DimensionZ  DEFAULT_INITIALIZER(1); ///< Number of rays dispatched in Z direction.
+    Uint32               DimensionX  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in X direction.
+    Uint32               DimensionY  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in Y direction.
+    Uint32               DimensionZ  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in Z direction.
     
     /// Shader binding table buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE SBTTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -2083,14 +2085,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                                    const ResolveTextureSubresourceAttribs REF ResolveAttribs) PURE;
     
 
-    /// Build Bottom-level acceleration structure with the specified geometries.
+    /// Builds a bottom-level acceleration structure with the specified geometries.
 
     /// \param [in] Attribs - Structure describing build BLAS command attributes, see Diligent::BuildBLASAttribs for details.
     VIRTUAL void METHOD(BuildBLAS)(THIS_
                                    const BuildBLASAttribs REF Attribs) PURE;
     
 
-    /// Build Top-level acceleration structure with the specified instances.
+    /// Builds a top-level acceleration structure with the specified instances.
 
     /// \param [in] Attribs - Structure describing build TLAS command attributes, see Diligent::BuildTLASAttribs for details.
     VIRTUAL void METHOD(BuildTLAS)(THIS_
@@ -2111,14 +2113,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                   const CopyTLASAttribs REF Attribs) PURE;
     
 
-    /// Writes acceleration structure memory size to the buffer for compacting operation.
+    /// Writes a bottom-level acceleration structure memory size required for compacting operation to a buffer.
 
     /// \param [in] Attribs - Structure describing write BLAS compacted size command attributes, see Diligent::WriteBLASCompactedSizeAttribs for details.
     VIRTUAL void METHOD(WriteBLASCompactedSize)(THIS_
                                                 const WriteBLASCompactedSizeAttribs REF Attribs) PURE;
     
 
-    /// Writes acceleration structure memory size to the buffer for compacting operation.
+    /// Writes a top-level acceleration structure memory size required for compacting operation to a buffer.
 
     /// \param [in] Attribs - Structure describing write TLAS compacted size command attributes, see Diligent::WriteTLASCompactedSizeAttribs for details.
     VIRTUAL void METHOD(WriteTLASCompactedSize)(THIS_

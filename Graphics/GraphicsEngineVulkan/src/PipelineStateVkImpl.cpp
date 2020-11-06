@@ -758,8 +758,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 {
     try
     {
-        const auto& LogicalDevice         = GetDevice()->GetLogicalDevice();
-        const auto  ShaderGroupHandleSize = pDeviceVk->GetShaderGroupHandleSize();
+        const auto& LogicalDevice         = pDeviceVk->GetLogicalDevice();
+        const auto  ShaderGroupHandleSize = pDeviceVk->GetProperties().ShaderGroupHandleSize;
 
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;

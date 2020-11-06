@@ -26,4 +26,4 @@
  */
 
 #include "DiligentCore/ThirdParty/Vulkan-Headers/include/vulkan/vulkan.h"
-#include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/ShaderResourceBindingVk.h"
+#include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/ShaderBindingTableVk.h"

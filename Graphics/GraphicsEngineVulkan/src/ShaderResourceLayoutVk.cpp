@@ -827,12 +827,12 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
 #ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(*this, GetVariableType(), ArrayInd, pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
 
-    if (pBufferVk->GetDesc().uiSizeInBytes != BufferStaticSize)
+    if (pBufferVk->GetDesc().uiSizeInBytes < BufferStaticSize)
     {
         std::stringstream ss;
-        ss << "binding buffer '" << pBufferVk->GetDesc().Name << "' size (" << pBufferVk->GetDesc().uiSizeInBytes
-           << ") doesn't match buffer size in shader (" << BufferStaticSize << ")";
-        LOG_INFO_MESSAGE(ss.str());
+        ss << "The size of buffer '" << pBufferVk->GetDesc().Name << "' (" << pBufferVk->GetDesc().uiSizeInBytes
+           << ") is not large enough for what the shader expects (" << BufferStaticSize << ")";
+        LOG_ERROR_MESSAGE(ss.str());
     }
 #endif
 
@@ -890,9 +890,9 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
 
             if (ViewDesc.ByteWidth < BufferStaticSize || (ViewDesc.ByteWidth - BufferStaticSize) % BufferStride != 0)
             {
-                LOG_INFO_MESSAGE("binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                 Name, "' in shader '", ParentResLayout.GetShaderName(), "': size mismatch, in shader buffer has static size (",
-                                 BufferStaticSize, ") and array stride (", BufferStride, "), but actual size is (", ViewDesc.ByteWidth, ").");
+                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                  Name, "' in shader '", ParentResLayout.GetShaderName(), "': static buffer size in the shader (",
+                                  BufferStaticSize, ") and array element stride (", BufferStride, ") are incompatible with the actual buffer size (", ViewDesc.ByteWidth, ").");
             }
         }
     }

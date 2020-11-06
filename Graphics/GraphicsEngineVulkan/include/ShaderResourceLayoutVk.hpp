@@ -198,7 +198,7 @@ public:
 /* 16  */ const char* const                 Name;
 /* 24  */ const ShaderResourceLayoutVk&     ParentResLayout;
 
-#ifdef DILIGENT_DEBUG
+#ifdef DILIGENT_DEVELOPMENT
 /* 32  */ const Uint32                      BufferStaticSize;
 /* 36  */ const Uint32                      BufferStride;
 #endif
@@ -229,7 +229,7 @@ public:
             Type                     {_Type          },
             ResourceDim              {_ResourceDim   },
             IsMS                     {_IsMS ? Uint8{1} : Uint8{0}},
-#ifdef DILIGENT_DEBUG
+#ifdef DILIGENT_DEVELOPMENT
             BufferStaticSize         {_BufferStaticSize},
             BufferStride             {_BufferStride    },
 #endif

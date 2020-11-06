@@ -381,16 +381,16 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         Uint32 CurrUB = 0;
         for (const auto& UB : resources.uniform_buffers)
         {
-            const auto&  name = GetUBName(Compiler, UB, ParsedIRSource);
-            const auto&  Type = Compiler.get_type(UB.type_id);
-            const size_t Size = Compiler.get_declared_struct_size(Type);
+            const auto& name = GetUBName(Compiler, UB, ParsedIRSource);
+            const auto& Type = Compiler.get_type(UB.type_id);
+            const auto  Size = Compiler.get_declared_struct_size(Type);
             new (&GetUB(CurrUB++))
                 SPIRVShaderResourceAttribs(Compiler,
                                            UB,
                                            ResourceNamesPool.CopyString(name),
                                            SPIRVShaderResourceAttribs::ResourceType::UniformBuffer,
                                            SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd,
-                                           Uint32(Size));
+                                           static_cast<Uint32>(Size));
         }
         VERIFY_EXPR(CurrUB == GetNumUBs());
     }
@@ -404,17 +404,17 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
             auto ResType     = IsReadOnly ?
                 SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer :
                 SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer;
-            const auto&  Type   = Compiler.get_type(SB.type_id);
-            const size_t Size   = Compiler.get_declared_struct_size(Type);
-            const size_t Stride = Compiler.get_declared_struct_size_runtime_array(Type, 1);
+            const auto& Type   = Compiler.get_type(SB.type_id);
+            const auto  Size   = Compiler.get_declared_struct_size(Type);
+            const auto  Stride = Compiler.get_declared_struct_size_runtime_array(Type, 1);
             new (&GetSB(CurrSB++))
                 SPIRVShaderResourceAttribs(Compiler,
                                            SB,
                                            ResourceNamesPool.CopyString(SB.name),
                                            ResType,
                                            SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd,
-                                           Uint32(Size),
-                                           Uint32(Stride));
+                                           static_cast<Uint32>(Size),
+                                           static_cast<Uint32>(Stride));
         }
         VERIFY_EXPR(CurrSB == GetNumSBs());
     }
