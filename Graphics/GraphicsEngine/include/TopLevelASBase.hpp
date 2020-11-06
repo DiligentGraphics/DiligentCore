@@ -241,7 +241,7 @@ private:
     void ClearInstanceData()
     {
         this->m_Instances.clear();
-        this->m_StringPool.Release();
+        this->m_StringPool.Clear();
     }
 
 protected:

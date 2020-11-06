@@ -65,12 +65,12 @@ public:
 
     ~StringPool()
     {
-        Release();
+        Clear();
     }
 
     void Reserve(size_t Size, IMemoryAllocator& Allocator)
     {
-        Release();
+        Clear();
 
         VERIFY(m_ReservedSize == 0, "Pool is already initialized");
         m_pAllocator   = &Allocator;
@@ -82,7 +82,7 @@ public:
         m_pCurrPtr = m_pBuffer;
     }
 
-    void Release()
+    void Clear()
     {
         if (m_pBuffer != nullptr && m_pAllocator != nullptr)
         {
