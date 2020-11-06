@@ -76,6 +76,7 @@ set(SOURCE
     src/ResourceMappingBase.cpp
     src/RenderPassBase.cpp
     src/TextureBase.cpp
+    src/TopLevelASBase.cpp
 )
 
 add_library(Diligent-GraphicsEngine STATIC ${SOURCE} ${INTERFACE} ${INCLUDE})

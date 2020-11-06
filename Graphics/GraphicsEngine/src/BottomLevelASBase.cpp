@@ -53,7 +53,7 @@ void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false)
         if (Desc.pTriangles == nullptr && Desc.TriangleCount > 0)
             LOG_BLAS_ERROR_AND_THROW("pTriangles is null, but TriangleCount is not 0");
 
-        if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) && (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD))
+        if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) != 0 && (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD) != 0)
             LOG_BLAS_ERROR_AND_THROW("RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD flags are mutually exclusive");
 
         for (Uint32 i = 0; i < Desc.TriangleCount; ++i)

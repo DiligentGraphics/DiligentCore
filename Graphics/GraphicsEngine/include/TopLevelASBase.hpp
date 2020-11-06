@@ -41,10 +41,13 @@
 namespace Diligent
 {
 
+/// Validates top-level AS description and throws an exception in case of an error.
+void ValidateTopLevelASDesc(const TopLevelASDesc& Desc) noexcept(false);
+
 /// Template class implementing base functionality for a top-level acceleration structure object.
 
-/// \tparam BaseInterface - base interface that this class will inheret
-///                          (Diligent::ITopLevelASD3D12 or Diligent::ITopLevelASVk).
+/// \tparam BaseInterface        - base interface that this class will inheret
+///                                (Diligent::ITopLevelASD3D12 or Diligent::ITopLevelASVk).
 /// \tparam RenderDeviceImplType - type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class BottomLevelASType, class RenderDeviceImplType>
@@ -64,25 +67,28 @@ public:
                    bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        ValidateTopLevelASDesc(Desc);
+        ValidateTopLevelASDesc(this->m_Desc);
     }
 
     ~TopLevelASBase()
     {
     }
 
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelAS, TDeviceObjectBase)
+
     void SetInstanceData(const TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitShadersPerInstance) noexcept
     {
         try
         {
-            this->m_Instances.clear();
-            this->m_StringPool.Release();
+            ClearInstanceData();
+
             this->m_HitShadersPerInstance = HitShadersPerInstance;
 
             size_t StringPoolSize = 0;
             for (Uint32 i = 0; i < InstanceCount; ++i)
             {
-                StringPoolSize += strlen(pInstances[i].InstanceName) + 1;
+                VERIFY_EXPR(pInstances[i].InstanceName != nullptr);
+                StringPoolSize += StringPool::GetRequiredReserveSize(pInstances[i].InstanceName);
             }
 
             this->m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
@@ -112,7 +118,7 @@ public:
                         case SHADER_BINDING_MODE_PER_GEOMETRY: InstanceOffset += (BLASDesc.TriangleCount + BLASDesc.BoxCount) * HitShadersPerInstance;     break;
                         case SHADER_BINDING_MODE_PER_INSTANCE: InstanceOffset += HitShadersPerInstance;                                                    break;
                         case SHADER_BINDING_USER_DEFINED:      UNEXPECTED("TLAS_INSTANCE_OFFSET_AUTO is not compatible with SHADER_BINDING_USER_DEFINED"); break;
-                        default:                               UNEXPECTED("unknown ray tracing shader binding mode");
+                        default:                               UNEXPECTED("Unknown ray tracing shader binding mode");
                             // clang-format on
                     }
                 }
@@ -126,14 +132,14 @@ public:
         }
         catch (...)
         {
-            this->m_Instances.clear();
+            ClearInstanceData();
         }
     }
 
     void CopyInstancceData(const TopLevelASBase& Src) noexcept
     {
-        this->m_Instances.clear();
-        this->m_StringPool.Release();
+        ClearInstanceData();
+
         this->m_StringPool.Reserve(Src.m_StringPool.GetReservedSize(), GetRawAllocator());
         this->m_HitShadersPerInstance = Src.m_HitShadersPerInstance;
         this->m_Desc.BindingMode      = Src.m_Desc.BindingMode;
@@ -202,8 +208,8 @@ public:
             result = false;
         }
 
-        // validate instances
-        for (auto& NameAndInst : m_Instances)
+        // Validate instances
+        for (const auto& NameAndInst : m_Instances)
         {
             const InstanceDesc&      Inst = NameAndInst.second;
             const BottomLevelASDesc& Desc = Inst.pBLAS->GetDesc();
@@ -231,40 +237,12 @@ public:
     }
 #endif
 
-protected:
-    static void ValidateTopLevelASDesc(const TopLevelASDesc& Desc)
+private:
+    void ClearInstanceData()
     {
-#define LOG_TLAS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of Top-level AS '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
-
-        if (Desc.CompactedSize > 0)
-        {
-            if (Desc.MaxInstanceCount != 0)
-            {
-                LOG_TLAS_ERROR_AND_THROW("If CompactedSize is specified then MaxInstanceCount must be zero");
-            }
-
-            if (Desc.Flags != RAYTRACING_BUILD_AS_NONE)
-            {
-                LOG_TLAS_ERROR_AND_THROW("If CompactedSize is specified then Flags must be RAYTRACING_BUILD_AS_NONE");
-            }
-        }
-        else
-        {
-            if (Desc.MaxInstanceCount == 0)
-            {
-                LOG_TLAS_ERROR_AND_THROW("MaxInstanceCount must not be zero");
-            }
-
-            if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) && (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD))
-            {
-                LOG_TLAS_ERROR_AND_THROW("can not set both flags RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD");
-            }
-        }
-
-#undef LOG_TLAS_ERROR_AND_THROW
+        this->m_Instances.clear();
+        this->m_StringPool.Release();
     }
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelAS, TDeviceObjectBase)
 
 protected:
     RESOURCE_STATE m_State                 = RESOURCE_STATE_UNKNOWN;

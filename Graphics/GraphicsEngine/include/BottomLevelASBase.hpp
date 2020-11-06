@@ -54,8 +54,8 @@ void CopyBottomLevelASDesc(const BottomLevelASDesc&                             
 
 /// Template class implementing base functionality for a bottom-level acceleration structure object.
 
-/// \tparam BaseInterface - base interface that this class will inheret
-///                          (Diligent::IBottomLevelASD3D12 or Diligent::IBottomLevelASVk).
+/// \tparam BaseInterface        - base interface that this class will inheret
+///                                (Diligent::IBottomLevelASD3D12 or Diligent::IBottomLevelASVk).
 /// \tparam RenderDeviceImplType - type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>

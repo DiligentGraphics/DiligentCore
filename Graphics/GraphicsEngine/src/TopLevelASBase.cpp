@@ -25,21 +25,41 @@
  *  of the possibility of such damages.
  */
 
-/// \file
-/// Precomputed header
+#include "TopLevelASBase.hpp"
 
-#pragma once
+namespace Diligent
+{
 
-#include <vector>
-#include <list>
-#include <set>
-#include <map>
-#include <unordered_map>
-#include <memory>
-#include <algorithm>
-#include "GraphicsTypes.h"
-#include "RefCntAutoPtr.hpp"
-#include "Errors.hpp"
-#include "DebugUtilities.hpp"
-#include "RenderDeviceBase.hpp"
-#include "DeviceContextBase.hpp"
+void ValidateTopLevelASDesc(const TopLevelASDesc& Desc) noexcept(false)
+{
+#define LOG_TLAS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a top-level AS '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
+
+    if (Desc.CompactedSize > 0)
+    {
+        if (Desc.MaxInstanceCount != 0)
+        {
+            LOG_TLAS_ERROR_AND_THROW("If non-zero CompactedSize is specified, MaxInstanceCount must be zero");
+        }
+
+        if (Desc.Flags != RAYTRACING_BUILD_AS_NONE)
+        {
+            LOG_TLAS_ERROR_AND_THROW("If non-zero CompactedSize is specified, Flags must be RAYTRACING_BUILD_AS_NONE");
+        }
+    }
+    else
+    {
+        if (Desc.MaxInstanceCount == 0)
+        {
+            LOG_TLAS_ERROR_AND_THROW("MaxInstanceCount must not be zero");
+        }
+
+        if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) != 0 && (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD) != 0)
+        {
+            LOG_TLAS_ERROR_AND_THROW("RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD flags are mutually exclusive");
+        }
+    }
+
+#undef LOG_TLAS_ERROR_AND_THROW
+}
+
+} // namespace Diligent
