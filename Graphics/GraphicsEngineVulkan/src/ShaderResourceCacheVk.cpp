@@ -166,9 +166,10 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                 {
                     constexpr RESOURCE_STATE RequiredState = RESOURCE_STATE_CONSTANT_BUFFER;
                     VERIFY_EXPR((ResourceStateFlagsToVkAccessFlags(RequiredState) & VK_ACCESS_UNIFORM_READ_BIT) == VK_ACCESS_UNIFORM_READ_BIT);
+                    const bool IsInRequiredState = pBufferVk->CheckState(RequiredState);
                     if (VerifyOnly)
                     {
-                        if (!pBufferVk->CheckState(RequiredState))
+                        if (!IsInRequiredState)
                         {
                             LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
                                               GetResourceStateString(RequiredState), ". Actual state: ",
@@ -180,7 +181,10 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                     }
                     else
                     {
-                        pCtxVkImpl->TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        if (!IsInRequiredState)
+                        {
+                            pCtxVkImpl->TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        }
                         VERIFY_EXPR(pBufferVk->CheckAccessFlags(VK_ACCESS_UNIFORM_READ_BIT));
                     }
                 }
@@ -207,10 +211,11 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                         (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
                     VERIFY_EXPR((ResourceStateFlagsToVkAccessFlags(RequiredState) & RequiredAccessFlags) == RequiredAccessFlags);
 #endif
+                    const bool IsInRequiredState = pBufferVk->CheckState(RequiredState);
 
                     if (VerifyOnly)
                     {
-                        if (!pBufferVk->CheckState(RequiredState))
+                        if (!IsInRequiredState)
                         {
                             LOG_ERROR_MESSAGE("State of buffer '", pBufferVk->GetDesc().Name, "' is incorrect. Required state: ",
                                               GetResourceStateString(RequiredState), ". Actual state: ",
@@ -222,7 +227,12 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                     }
                     else
                     {
-                        pCtxVkImpl->TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        // When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, we need to execute UAV barrier
+                        // to make sure that all UAV writes are complete and visible.
+                        if (!IsInRequiredState || RequiredState == RESOURCE_STATE_UNORDERED_ACCESS)
+                        {
+                            pCtxVkImpl->TransitionBufferState(*pBufferVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        }
                         VERIFY_EXPR(pBufferVk->CheckAccessFlags(RequiredAccessFlags));
                     }
                 }
@@ -265,10 +275,11 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                             VERIFY_EXPR(ResourceStateToVkImageLayout(RequiredState) == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
                         }
                     }
+                    const bool IsInRequiredState = pTextureVk->CheckState(RequiredState);
 
                     if (VerifyOnly)
                     {
-                        if (!pTextureVk->CheckState(RequiredState))
+                        if (!IsInRequiredState)
                         {
                             LOG_ERROR_MESSAGE("State of texture '", pTextureVk->GetDesc().Name, "' is incorrect. Required state: ",
                                               GetResourceStateString(RequiredState), ". Actual state: ",
@@ -280,7 +291,12 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                     }
                     else
                     {
-                        pCtxVkImpl->TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        // When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, we need to execute UAV barrier
+                        // to make sure that all UAV writes are complete and visible.
+                        if (!IsInRequiredState || RequiredState == RESOURCE_STATE_UNORDERED_ACCESS)
+                        {
+                            pCtxVkImpl->TransitionTextureState(*pTextureVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        }
                     }
                 }
             }
@@ -311,10 +327,11 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                 auto* pTLASVk = Res.pObject.RawPtr<TopLevelASVkImpl>();
                 if (pTLASVk != nullptr && pTLASVk->IsInKnownState())
                 {
-                    constexpr RESOURCE_STATE RequiredState = RESOURCE_STATE_RAY_TRACING;
+                    constexpr RESOURCE_STATE RequiredState     = RESOURCE_STATE_RAY_TRACING;
+                    const bool               IsInRequiredState = pTLASVk->CheckState(RequiredState);
                     if (VerifyOnly)
                     {
-                        if (!pTLASVk->CheckState(RequiredState))
+                        if (!IsInRequiredState)
                         {
                             LOG_ERROR_MESSAGE("State of TLAS '", pTLASVk->GetDesc().Name, "' is incorrect. Required state: ",
                                               GetResourceStateString(RequiredState), ". Actual state: ",
@@ -323,15 +340,18 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                                               "when calling IDeviceContext::CommitShaderResources() or explicitly transition the TLAS state "
                                               "with IDeviceContext::TransitionResourceStates().");
                         }
-
-#ifdef DILIGENT_DEVELOPMENT
-                        pTLASVk->ValidateContent();
-#endif
                     }
                     else
                     {
-                        pCtxVkImpl->TransitionTLASState(*pTLASVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        if (!IsInRequiredState)
+                        {
+                            pCtxVkImpl->TransitionTLASState(*pTLASVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        }
                     }
+
+#ifdef DILIGENT_DEVELOPMENT
+                    pTLASVk->ValidateContent();
+#endif
                 }
             }
             break;
