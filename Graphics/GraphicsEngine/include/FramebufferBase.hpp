@@ -66,7 +66,7 @@ public:
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
         m_pRenderPass{Desc.pRenderPass}
     {
-        ValidateFramebufferDesc(Desc);
+        ValidateFramebufferDesc(this->m_Desc);
 
         if (this->m_Desc.AttachmentCount > 0)
         {

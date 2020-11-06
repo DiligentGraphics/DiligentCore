@@ -64,7 +64,7 @@ public:
                            bool                          bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        ValidateShaderBindingTableDesc(Desc);
+        ValidateShaderBindingTableDesc(this->m_Desc);
 
         this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
         this->m_ShaderRecordSize   = this->m_pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;

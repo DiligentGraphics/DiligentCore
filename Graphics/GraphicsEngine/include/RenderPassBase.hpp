@@ -81,7 +81,7 @@ public:
                    bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        ValidateRenderPassDesc(Desc);
+        ValidateRenderPassDesc(this->m_Desc);
 
         if (Desc.AttachmentCount != 0)
         {
