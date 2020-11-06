@@ -199,10 +199,10 @@ public:
 
     struct Properties
     {
-        const Uint32 ShaderGroupHandleSize    = 0;
-        const Uint32 MaxShaderRecordStride    = 0;
-        const Uint32 ShaderGroupBaseAlignment = 0;
-        const Uint32 MaxDrawMeshTasksCount    = 0;
+        const Uint32 ShaderGroupHandleSize;
+        const Uint32 MaxShaderRecordStride;
+        const Uint32 ShaderGroupBaseAlignment;
+        const Uint32 MaxDrawMeshTasksCount;
     };
 
     const Properties& GetProperties() const
