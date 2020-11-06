@@ -444,7 +444,7 @@ void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
 VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDesc& ViewDesc)
 {
     VulkanUtilities::BufferViewWrapper BuffView;
-    CorrectBufferViewDesc(ViewDesc);
+    ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc);
     if ((ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) &&
         (m_Desc.Mode == BUFFER_MODE_FORMATTED || m_Desc.Mode == BUFFER_MODE_RAW))
     {

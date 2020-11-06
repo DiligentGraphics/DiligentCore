@@ -383,7 +383,7 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
     try
     {
         auto ViewDesc = OrigViewDesc;
-        CorrectBufferViewDesc(ViewDesc);
+        ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc);
 
         auto* pDeviceGLImpl     = GetDevice();
         auto& BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
