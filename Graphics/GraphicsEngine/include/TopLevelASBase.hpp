@@ -167,7 +167,7 @@ public:
         }
         else
         {
-            UNEXPECTED("Can't find instance with the specified name ('", Name, "')");
+            LOG_ERROR_MESSAGE("Can't find instance with the specified name ('", Name, "')");
         }
 
         return Result;

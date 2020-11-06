@@ -102,16 +102,11 @@ void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false)
 #undef LOG_BLAS_ERROR_AND_THROW
 }
 
-void CopyBottomLevelASDesc(const BottomLevelASDesc&                                                SrcDesc,
-                           BottomLevelASDesc&                                                      DstDesc,
-                           LinearAllocator&                                                        MemPool,
-                           std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToIndex) noexcept(false)
+void CopyBLASGeometryDesc(const BottomLevelASDesc&                                                SrcDesc,
+                          BottomLevelASDesc&                                                      DstDesc,
+                          LinearAllocator&                                                        MemPool,
+                          std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToIndex) noexcept(false)
 {
-    // Preserve original name
-    const auto* Name = DstDesc.Name;
-    DstDesc          = SrcDesc;
-    DstDesc.Name     = Name;
-
     if (SrcDesc.pTriangles != nullptr)
     {
         MemPool.AddSpace<decltype(*SrcDesc.pTriangles)>(SrcDesc.TriangleCount);
@@ -132,9 +127,10 @@ void CopyBottomLevelASDesc(const BottomLevelASDesc&                             
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Geometry name '", SrcGeoName, "' is not unique");
         }
-        DstDesc.pTriangles = pTriangles;
-        DstDesc.pBoxes     = nullptr;
-        DstDesc.BoxCount   = 0;
+        DstDesc.pTriangles    = pTriangles;
+        DstDesc.TriangleCount = SrcDesc.TriangleCount;
+        DstDesc.pBoxes        = nullptr;
+        DstDesc.BoxCount      = 0;
     }
     else if (SrcDesc.pBoxes != nullptr)
     {
@@ -157,6 +153,7 @@ void CopyBottomLevelASDesc(const BottomLevelASDesc&                             
                 LOG_ERROR_AND_THROW("Geometry name '", SrcGeoName, "' is not unique");
         }
         DstDesc.pBoxes        = pBoxes;
+        DstDesc.BoxCount      = SrcDesc.BoxCount;
         DstDesc.pTriangles    = nullptr;
         DstDesc.TriangleCount = 0;
     }

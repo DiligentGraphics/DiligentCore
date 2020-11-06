@@ -220,6 +220,41 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuil
     pContext->BuildTLAS(Attribs);
 }
 
+void CompareGeometryDesc(const ITopLevelAS* pLhsAS, const ITopLevelAS* pRhsAS)
+{}
+
+void CompareGeometryDesc(const IBottomLevelAS* pLhsAS, const IBottomLevelAS* pRhsAS)
+{
+    const auto& lDesc = pLhsAS->GetDesc();
+    const auto& rDesc = pRhsAS->GetDesc();
+
+    ASSERT_EQ(lDesc.TriangleCount, rDesc.TriangleCount);
+    ASSERT_EQ(lDesc.BoxCount, rDesc.BoxCount);
+
+    for (Uint32 i = 0; i < lDesc.TriangleCount; ++i)
+    {
+        const auto& lTri = lDesc.pTriangles[i];
+        const auto& rTri = rDesc.pTriangles[i];
+
+        ASSERT_STREQ(lTri.GeometryName, rTri.GeometryName);
+        ASSERT_EQ(lTri.MaxVertexCount, rTri.MaxVertexCount);
+        ASSERT_EQ(lTri.VertexValueType, rTri.VertexValueType);
+        ASSERT_EQ(lTri.VertexComponentCount, rTri.VertexComponentCount);
+        ASSERT_EQ(lTri.MaxPrimitiveCount, rTri.MaxPrimitiveCount);
+        ASSERT_EQ(lTri.IndexType, rTri.IndexType);
+        ASSERT_EQ(lTri.AllowsTransforms, rTri.AllowsTransforms);
+    }
+
+    for (Uint32 i = 0; i < lDesc.BoxCount; ++i)
+    {
+        const auto& iBox = lDesc.pBoxes[i];
+        const auto& rBox = rDesc.pBoxes[i];
+
+        ASSERT_STREQ(iBox.GeometryName, rBox.GeometryName);
+        ASSERT_EQ(iBox.MaxBoxCount, rBox.MaxBoxCount);
+    }
+}
+
 template <typename WriteASCompactedSizeAttribs,
           typename ASDescType,
           typename CopyASAttribsType,
@@ -278,6 +313,7 @@ void ASCompaction(IRenderDevice*             pDevice,
     pContext->MapBuffer(pReadbackBuffer, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pMapped);
 
     ASDescType ASDesc;
+    ASDesc.Name          = "AS compacted copy";
     ASDesc.CompactedSize = static_cast<Uint32>(*static_cast<Uint64*>(pMapped));
 
     pContext->UnmapBuffer(pReadbackBuffer, MAP_READ);
@@ -298,6 +334,11 @@ void ASCompaction(IRenderDevice*             pDevice,
     CopyAttribs.SrcTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     CopyAttribs.DstTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     (pContext->*CopyASFn)(CopyAttribs);
+
+    ASSERT_EQ(pDstAS->GetDesc().CompactedSize, ASDesc.CompactedSize);
+    ASSERT_EQ(pDstAS->GetDesc().Flags, ASDesc.Flags);
+    ASSERT_STREQ(pDstAS->GetDesc().Name, ASDesc.Name);
+    CompareGeometryDesc(pSrcAS, pDstAS);
 }
 
 template <typename ASDescType,
@@ -313,6 +354,7 @@ void ASCopy(IRenderDevice*         pDevice,
             CopyASFnType           CopyASFn)
 {
     ASDescType ASDesc = pSrcAS->GetDesc();
+    ASDesc.Name       = "AS copy";
     (pDevice->*CreateASFn)(ASDesc, &pDstAS);
     VERIFY_EXPR(pDstAS != nullptr);
 
@@ -323,6 +365,9 @@ void ASCopy(IRenderDevice*         pDevice,
     CopyAttribs.SrcTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     CopyAttribs.DstTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     (pContext->*CopyASFn)(CopyAttribs);
+
+    ASSERT_EQ(pDstAS->GetDesc().Flags, ASDesc.Flags);
+    CompareGeometryDesc(pSrcAS, pDstAS);
 }
 
 void BLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pContext, IBottomLevelAS* pSrcBLAS, RefCntAutoPtr<IBottomLevelAS>& pDstBLAS)

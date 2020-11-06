@@ -2485,7 +2485,7 @@ void DeviceContextD3D12Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
 
     // Dst BLAS description has specified CompactedSize, but doesn't have specified pTriangles and pBoxes.
     // We should copy geometries because it required for SBT to map geometry name to hit group.
-    pDstD3D12->CopyDescription(*pSrcD3D12);
+    pDstD3D12->CopyGeometryDescription(*pSrcD3D12);
 
     const char* OpName = "Copy BottomLevelAS (DeviceContextD3D12Impl::CopyBLAS)";
     TransitionOrVerifyBLASState(CmdCtx, *pSrcD3D12, Attribs.SrcTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);

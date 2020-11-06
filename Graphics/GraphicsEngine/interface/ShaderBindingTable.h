@@ -115,7 +115,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     
     /// AZ TODO
     VIRTUAL void METHOD(Reset)(THIS_
-                               const ShaderBindingTableDesc REF Desc) PURE;
+                               IPipelineState* pPSO,
+                               Uint32          HitShadersPerInstance) PURE;
     
     /// AZ TODO
     VIRTUAL void METHOD(ResetHitGroups)(THIS_

@@ -69,10 +69,10 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     RAYTRACING_BUILD_AS_FLAGS Flags            DEFAULT_INITIALIZER(RAYTRACING_BUILD_AS_NONE);
     
     /// The size returned by IDeviceContext::WriteTLASCompactedSize(), if this acceleration structure
-    /// is going to be the target of a compacting copy (IDeviceContext::CopyTLAS() with COPY_AS_MODE_COMPACT).
+    /// is going to be the target of a compacting copy command (IDeviceContext::CopyTLAS() with COPY_AS_MODE_COMPACT).
     Uint32                    CompactedSize    DEFAULT_INITIALIZER(0);
 
-    /// Binding mode that i used for TLASBuildInstanceData::ContributionToHitGroupIndex calculation,
+    /// Binding mode that is used for TLASBuildInstanceData::ContributionToHitGroupIndex calculation,
     /// see Diligent::SHADER_BINDING_MODE.
     SHADER_BINDING_MODE       BindingMode      DEFAULT_INITIALIZER(SHADER_BINDING_MODE_PER_GEOMETRY);
     
@@ -122,19 +122,20 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
     /// Returns instance description that can be used in shader binding table.
     
     /// \param [in] Name - Instance name that is specified in TLASBuildInstanceData::InstanceName.
-    /// \return structure object.
+    /// \return TLASInstanceDesc object, see Diligent::TLASInstanceDesc.
+    ///         If instance does not exist then structure initialized with default values.
     VIRTUAL TLASInstanceDesc METHOD(GetInstanceDesc)(THIS_
                                                      const char* Name) CONST PURE;
     
     /// Returns scratch buffer info for the current acceleration structure.
     
-    /// \return structure object.
+    /// \return ScratchBufferSizes object, see Diligent::ScratchBufferSizes.
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
 
     /// Returns native acceleration structure handle specific to the underlying graphics API
 
     /// \return pointer to ID3D12Resource interface, for D3D12 implementation\n
-    ///         VkAccelerationStructureKHR handle, for Vulkan implementation
+    ///         VkAccelerationStructure handle, for Vulkan implementation
     VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
 
     /// Sets the acceleration structure usage state.

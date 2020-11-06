@@ -45,11 +45,11 @@ namespace Diligent
 /// Validates bottom-level AS description and throws and exception in case of an error.
 void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false);
 
-/// Copies bottom-level AS description (except for the Name) using MemPool to allocate required dynamic space.
-void CopyBottomLevelASDesc(const BottomLevelASDesc&                                                SrcDesc,
-                           BottomLevelASDesc&                                                      DstDesc,
-                           LinearAllocator&                                                        MemPool,
-                           std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToIndex) noexcept(false);
+/// Copies bottom-level AS geometry description using MemPool to allocate required dynamic space.
+void CopyBLASGeometryDesc(const BottomLevelASDesc&                                                SrcDesc,
+                          BottomLevelASDesc&                                                      DstDesc,
+                          LinearAllocator&                                                        MemPool,
+                          std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToIndex) noexcept(false);
 
 
 /// Template class implementing base functionality for a bottom-level acceleration structure object.
@@ -82,13 +82,13 @@ public:
         }
         else
         {
-            CopyDescriptionUnsafe(Desc);
+            CopyGeometryDescriptionUnsafe(Desc);
         }
     }
 
     ~BottomLevelASBase()
     {
-        Clear();
+        ClearGeometry();
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
@@ -149,29 +149,29 @@ public:
     }
 #endif // DILIGENT_DEVELOPMENT
 
-    void CopyDescription(const BottomLevelASBase& SrcBLAS) noexcept
+    void CopyGeometryDescription(const BottomLevelASBase& SrcBLAS) noexcept
     {
-        Clear();
+        ClearGeometry();
 
         try
         {
-            CopyDescriptionUnsafe(SrcBLAS.GetDesc());
+            CopyGeometryDescriptionUnsafe(SrcBLAS.GetDesc());
         }
         catch (...)
         {
-            Clear();
+            ClearGeometry();
         }
     }
 
 private:
-    void CopyDescriptionUnsafe(const BottomLevelASDesc& SrcDesc) noexcept(false)
+    void CopyGeometryDescriptionUnsafe(const BottomLevelASDesc& SrcDesc) noexcept(false)
     {
         LinearAllocator MemPool{GetRawAllocator()};
-        CopyBottomLevelASDesc(SrcDesc, this->m_Desc, MemPool, m_NameToIndex);
+        CopyBLASGeometryDesc(SrcDesc, this->m_Desc, MemPool, m_NameToIndex);
         this->m_pRawPtr = MemPool.Release();
     }
 
-    void Clear() noexcept
+    void ClearGeometry() noexcept
     {
         if (this->m_pRawPtr != nullptr)
         {
@@ -179,10 +179,11 @@ private:
             this->m_pRawPtr = nullptr;
         }
 
-        // Preserve original name - it was allocated by DeviceObjectBase
-        auto* Name        = this->m_Desc.Name;
-        this->m_Desc      = BottomLevelASDesc{};
-        this->m_Desc.Name = Name;
+        // keep Name, Flags, CompactedSize, CommandQueueMask
+        this->m_Desc.pTriangles    = nullptr;
+        this->m_Desc.TriangleCount = 0;
+        this->m_Desc.pBoxes        = nullptr;
+        this->m_Desc.BoxCount      = 0;
 
         m_NameToIndex.clear();
     }

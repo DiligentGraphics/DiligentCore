@@ -805,10 +805,11 @@ struct BLASBuildTriangleData
     Uint32      VertexCount           DEFAULT_INITIALIZER(0);
     
     /// The type of the vertex components.
-    /// This is an optional values. Must be undefined or same as in BLASTriangleDesc. 
+    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc. 
     VALUE_TYPE  VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
-    /// The number of vertex components
+    /// The number of vertex components.
+    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc. 
     Uint8       VertexComponentCount  DEFAULT_INITIALIZER(0);
     
     /// The number of triangles.
@@ -998,8 +999,7 @@ struct TLASBuildInstanceData
     Uint8                     Mask            DEFAULT_INITIALIZER(0xFF);
     
     /// The index used to calculate the hit group location in the shader binding table.
-    /// Must be TLAS_INSTANCE_OFFSET_AUTO if TLAS is created with BindingMode SHADER_BINDING_MODE_PER_GEOMETRY,
-    /// or SHADER_BINDING_MODE_PER_INSTANCE otherwise.
+    /// Must be TLAS_INSTANCE_OFFSET_AUTO if TLAS is created with BindingMode that is not SHADER_BINDING_USER_DEFINED.
     /// Only the lower 24 bits are used.
     Uint32                    ContributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO);
     

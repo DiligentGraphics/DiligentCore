@@ -81,29 +81,28 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTable, TDeviceObjectBase)
 
-    void DILIGENT_CALL_TYPE Reset(const ShaderBindingTableDesc& Desc) override final
+    void DILIGENT_CALL_TYPE Reset(IPipelineState* pPSO, Uint32 HitShadersPerInstance) override final
     {
         this->m_RayGenShaderRecord.clear();
         this->m_MissShadersRecord.clear();
         this->m_CallableShadersRecord.clear();
         this->m_HitGroupsRecord.clear();
-        this->m_Changed  = true;
-        this->m_pPSO     = nullptr;
-        const auto* Name = this->m_Desc.Name; // Store original name
-        this->m_Desc     = {};
+        this->m_Changed = true;
+        this->m_pPSO    = nullptr;
+
+        this->m_Desc.pPSO                  = pPSO;
+        this->m_Desc.HitShadersPerInstance = HitShadersPerInstance;
 
         const auto& DeviceProps = this->m_pDevice->GetProperties();
         try
         {
-            ValidateShaderBindingTableDesc(Desc, DeviceProps.ShaderGroupHandleSize, DeviceProps.MaxShaderRecordStride);
+            ValidateShaderBindingTableDesc(this->m_Desc, DeviceProps.ShaderGroupHandleSize, DeviceProps.MaxShaderRecordStride);
         }
         catch (const std::runtime_error&)
         {
             return;
         }
 
-        this->m_Desc               = Desc;
-        this->m_Desc.Name          = Name; // Restore original name
         this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
         this->m_ShaderRecordSize   = this->m_pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
         this->m_ShaderRecordStride = this->m_ShaderRecordSize + DeviceProps.ShaderGroupHandleSize;
@@ -128,8 +127,8 @@ public:
         VERIFY_EXPR((Data == nullptr) || (DataSize == this->m_ShaderRecordSize));
 
         const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
-        const Uint32 Offset    = MissIndex * this->m_ShaderRecordStride;
-        this->m_MissShadersRecord.resize(std::max(this->m_MissShadersRecord.size(), size_t{Offset} + size_t{this->m_ShaderRecordStride}), Uint8{EmptyElem});
+        const size_t Offset    = MissIndex * this->m_ShaderRecordStride;
+        this->m_MissShadersRecord.resize(std::max(this->m_MissShadersRecord.size(), Offset + this->m_ShaderRecordStride), Uint8{EmptyElem});
 
         this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_MissShadersRecord.data() + Offset, this->m_ShaderRecordStride);
         std::memcpy(this->m_MissShadersRecord.data() + Offset + GroupSize, Data, DataSize);
@@ -156,11 +155,12 @@ public:
         const Uint32 InstanceIndex = Desc.ContributionToHitGroupIndex;
         const Uint32 GeometryIndex = Desc.pBLAS->GetGeometryIndex(GeometryName);
         VERIFY_EXPR(GeometryIndex != ~0u);
+
         const Uint32 Index     = InstanceIndex + GeometryIndex * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
-        const Uint32 Offset    = Index * this->m_ShaderRecordStride;
+        const size_t Offset    = Index * this->m_ShaderRecordStride;
         const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
 
-        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), size_t{Offset} + size_t{this->m_ShaderRecordStride}), Uint8{EmptyElem});
+        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), Offset + this->m_ShaderRecordStride), Uint8{EmptyElem});
 
         this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_HitGroupsRecord.data() + Offset, this->m_ShaderRecordStride);
         std::memcpy(this->m_HitGroupsRecord.data() + Offset + GroupSize, Data, DataSize);
@@ -199,11 +199,11 @@ public:
         VERIFY_EXPR((Data == nullptr) || (DataSize == this->m_ShaderRecordSize * GeometryCount));
 
         const Uint32 BeginIndex = InstanceIndex + 0 * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
-        const Uint32 EndIndex   = InstanceIndex + GeometryCount * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
+        const size_t EndIndex   = InstanceIndex + GeometryCount * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
         const Uint32 GroupSize  = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const auto*  DataPtr    = static_cast<const Uint8*>(Data);
 
-        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), size_t{EndIndex} * size_t{this->m_ShaderRecordStride}), Uint8{EmptyElem});
+        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), EndIndex * this->m_ShaderRecordStride), Uint8{EmptyElem});
 
         for (Uint32 i = 0; i < GeometryCount; ++i)
         {
@@ -225,8 +225,8 @@ public:
         VERIFY_EXPR((Data == nullptr) || (DataSize == this->m_ShaderRecordSize));
 
         const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
-        const Uint32 Offset    = CallableIndex * this->m_ShaderRecordStride;
-        this->m_CallableShadersRecord.resize(std::max(this->m_CallableShadersRecord.size(), size_t{Offset} + size_t{this->m_ShaderRecordStride}), Uint8{EmptyElem});
+        const size_t Offset    = CallableIndex * this->m_ShaderRecordStride;
+        this->m_CallableShadersRecord.resize(std::max(this->m_CallableShadersRecord.size(), Offset + this->m_ShaderRecordStride), Uint8{EmptyElem});
 
         this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_CallableShadersRecord.data() + Offset, this->m_ShaderRecordStride);
         std::memcpy(this->m_CallableShadersRecord.data() + Offset + GroupSize, Data, DataSize);

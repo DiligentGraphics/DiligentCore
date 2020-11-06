@@ -58,6 +58,7 @@ struct BLASTriangleDesc
     Uint32                    MaxVertexCount        DEFAULT_INITIALIZER(0);
 
     /// The type of vertices in this geometry, see Diligent::VALUE_TYPE.
+    /// Integer types converted to normalized types.
     VALUE_TYPE                VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// The number of components in the vertex.
@@ -170,6 +171,7 @@ struct ScratchBufferSizes
     Uint32 Build  DEFAULT_INITIALIZER(0);
 
     /// AZ TODO: not supported yet
+    /// May be zero if acceleration structure created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
     Uint32 Update DEFAULT_INITIALIZER(0);
     
 #if DILIGENT_CPP_INTERFACE
@@ -199,7 +201,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     /// Returns the geometry index that can be used in a shader binding table.
     
     /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
-    /// \return Geometry index.
+    /// \return Geometry index or UINT32_MAX if geometry does not exist.
     VIRTUAL Uint32 METHOD(GetGeometryIndex)(THIS_
                                             const char* Name) CONST PURE;
 
@@ -211,7 +213,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     /// Returns the native acceleration structure handle specific to the underlying graphics API
 
     /// \return pointer to ID3D12Resource interface, for D3D12 implementation\n
-    ///         VkAccelerationStructureKHR handle, for Vulkan implementation
+    ///         VkAccelerationStructure handle, for Vulkan implementation
     VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
 
     /// Sets the acceleration structure usage state.

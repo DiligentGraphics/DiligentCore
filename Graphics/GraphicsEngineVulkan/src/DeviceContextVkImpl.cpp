@@ -3036,7 +3036,7 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
 
     // Dst BLAS description has specified CompactedSize, but doesn't have specified pTriangles and pBoxes.
     // We should copy geometries because it required for SBT to map geometry name to hit group.
-    pDstVk->CopyDescription(*pSrcVk);
+    pDstVk->CopyGeometryDescription(*pSrcVk);
 
     VkCopyAccelerationStructureInfoKHR Info = {};
 
