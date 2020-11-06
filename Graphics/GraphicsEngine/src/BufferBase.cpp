@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "Buffer.h"
 #include "GraphicsAccessories.hpp"
 

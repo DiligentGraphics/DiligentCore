@@ -25,11 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "ResourceMappingImpl.hpp"
 #include "DeviceObjectBase.hpp"
-
-using namespace std;
 
 namespace Diligent
 {
@@ -57,8 +54,8 @@ void ResourceMappingImpl::AddResourceArray(const Char* Name, Uint32 StartIndex, 
         // Try to construct new element in place
         auto Elems =
             m_HashTable.emplace(
-                make_pair(Diligent::ResMappingHashKey(Name, true, StartIndex + Elem), // Make a copy of the source string
-                          Diligent::RefCntAutoPtr<IDeviceObject>(pObject)));
+                std::make_pair(Diligent::ResMappingHashKey(Name, true, StartIndex + Elem), // Make a copy of the source string
+                               Diligent::RefCntAutoPtr<IDeviceObject>(pObject)));
         // If there is already element with the same name, replace it
         if (!Elems.second && Elems.first->second != pObject)
         {

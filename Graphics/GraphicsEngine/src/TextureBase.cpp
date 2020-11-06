@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "Texture.h"
+#include "DeviceContext.h"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent

@@ -30,11 +30,13 @@
 /// \file
 /// Declaration of the Diligent::ResourceMappingImpl class
 
+#include <unordered_map>
+
 #include "ResourceMapping.h"
 #include "ObjectBase.hpp"
-#include <unordered_map>
 #include "HashUtils.hpp"
 #include "STDAllocator.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {

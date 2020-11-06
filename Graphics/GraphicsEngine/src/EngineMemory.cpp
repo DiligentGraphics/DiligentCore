@@ -29,9 +29,9 @@
 // RenderEngine.pch will be the pre-compiled header
 // stdafx.obj will contain the pre-compiled type information
 
-#include "pch.h"
 #include "EngineMemory.h"
 #include "DefaultRawMemoryAllocator.hpp"
+#include "Errors.hpp"
 
 namespace Diligent
 {

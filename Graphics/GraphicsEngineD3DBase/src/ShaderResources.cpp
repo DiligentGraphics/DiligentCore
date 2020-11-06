@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 #include "ShaderResources.hpp"

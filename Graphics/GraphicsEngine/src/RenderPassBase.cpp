@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "RenderPassBase.hpp"
 #include "GraphicsAccessories.hpp"
 #include "Align.hpp"

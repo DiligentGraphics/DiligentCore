@@ -32,6 +32,7 @@
 
 #include <array>
 #include <vector>
+#include <unordered_map>
 
 #include "PipelineState.h"
 #include "DeviceObjectBase.hpp"
