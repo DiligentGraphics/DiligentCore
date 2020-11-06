@@ -128,7 +128,7 @@ protected:
         return ResLayoutInd;
     }
 
-    Int8 GetVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex)
+    Int8 GetVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
         const auto PipelineType = m_pPSO->GetDesc().PipelineType;
         if (!IsConsistentShaderType(ShaderType, PipelineType))

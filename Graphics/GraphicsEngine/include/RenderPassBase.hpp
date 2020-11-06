@@ -40,7 +40,7 @@
 namespace Diligent
 {
 
-void ValidateRenderPassDesc(const RenderPassDesc& Desc);
+void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false);
 
 template <typename RenderDeviceImplType>
 void _CorrectAttachmentState(RESOURCE_STATE& State) {}

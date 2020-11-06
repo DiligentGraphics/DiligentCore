@@ -74,6 +74,7 @@ set(SOURCE
     src/FramebufferBase.cpp
     src/PipelineStateBase.cpp
     src/ResourceMappingBase.cpp
+    src/ShaderBindingTableBase.cpp
     src/RenderPassBase.cpp
     src/TextureBase.cpp
     src/TopLevelASBase.cpp
