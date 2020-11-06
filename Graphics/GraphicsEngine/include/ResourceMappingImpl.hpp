@@ -40,60 +40,7 @@
 
 namespace Diligent
 {
-struct ResMappingHashKey
-{
-    ResMappingHashKey(const Char* Str, bool bMakeCopy, Uint32 ArrInd) :
-        StrKey{Str, bMakeCopy},
-        ArrayIndex{ArrInd}
-    {
-    }
 
-    ResMappingHashKey(ResMappingHashKey&& rhs) :
-        StrKey{std::move(rhs.StrKey)},
-        ArrayIndex{rhs.ArrayIndex}
-    {}
-
-    bool operator==(const ResMappingHashKey& RHS) const
-    {
-        return StrKey == RHS.StrKey && ArrayIndex == RHS.ArrayIndex;
-    }
-
-    size_t GetHash() const
-    {
-        if (Hash == 0)
-        {
-            Hash = ComputeHash(StrKey.GetHash(), ArrayIndex);
-        }
-
-        return Hash;
-    }
-
-    // clang-format off
-    ResMappingHashKey             ( const ResMappingHashKey& ) = delete;
-    ResMappingHashKey& operator = ( const ResMappingHashKey& ) = delete;
-    ResMappingHashKey& operator = ( ResMappingHashKey&& )      = delete;
-    // clang-format on
-
-    HashMapStringKey StrKey;
-    Uint32           ArrayIndex;
-    mutable size_t   Hash = 0;
-};
-} // namespace Diligent
-
-namespace std
-{
-template <>
-struct hash<Diligent::ResMappingHashKey>
-{
-    size_t operator()(const Diligent::ResMappingHashKey& Key) const
-    {
-        return Key.GetHash();
-    }
-};
-} // namespace std
-
-namespace Diligent
-{
 class FixedBlockMemoryAllocator;
 
 /// Implementation of the resource mapping
@@ -105,13 +52,13 @@ public:
     /// \param pRefCounters - reference counters object that controls the lifetime of this resource mapping
     /// \param RawMemAllocator - raw memory allocator that is used by the m_HashTable member
     ResourceMappingImpl(IReferenceCounters* pRefCounters, IMemoryAllocator& RawMemAllocator) :
-        TObjectBase(pRefCounters),
-        m_HashTable(STD_ALLOCATOR_RAW_MEM(HashTableElem, RawMemAllocator, "Allocator for unordered_map< ResMappingHashKey, RefCntAutoPtr<IDeviceObject> >"))
+        TObjectBase{pRefCounters},
+        m_HashTable{STD_ALLOCATOR_RAW_MEM(HashTableElem, RawMemAllocator, "Allocator for unordered_map<ResMappingHashKey, RefCntAutoPtr<IDeviceObject>>")}
     {}
 
     ~ResourceMappingImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ResourceMapping, TObjectBase)
 
     /// Implementation of IResourceMapping::AddResource()
     virtual void DILIGENT_CALL_TYPE AddResource(const Char*    Name,
@@ -137,10 +84,47 @@ public:
     virtual size_t DILIGENT_CALL_TYPE GetSize() override final;
 
 private:
+    struct ResMappingHashKey : public HashMapStringKey
+    {
+        using TBase = HashMapStringKey;
+
+        ResMappingHashKey(const Char* Str, bool bMakeCopy, Uint32 ArrInd) :
+            HashMapStringKey{Str, bMakeCopy},
+            ArrayIndex{ArrInd}
+        {
+            Ownership_Hash = (ComputeHash(GetHash(), ArrInd) & HashMask) | (Ownership_Hash & StrOwnershipMask);
+        }
+
+        ResMappingHashKey(ResMappingHashKey&& rhs) :
+            HashMapStringKey{std::move(rhs)},
+            ArrayIndex{rhs.ArrayIndex}
+        {}
+
+        // clang-format off
+        ResMappingHashKey             ( const ResMappingHashKey& ) = delete;
+        ResMappingHashKey& operator = ( const ResMappingHashKey& ) = delete;
+        ResMappingHashKey& operator = ( ResMappingHashKey&& )      = delete;
+        // clang-format on
+
+        bool operator==(const ResMappingHashKey& RHS) const
+        {
+            return static_cast<const TBase&>(*this) == static_cast<const TBase&>(RHS) && ArrayIndex == RHS.ArrayIndex;
+        }
+
+        const Uint32 ArrayIndex;
+    };
+
     ThreadingTools::LockHelper Lock();
 
-    ThreadingTools::LockFlag                                                                                                                                               m_LockFlag;
-    typedef std::pair<const ResMappingHashKey, RefCntAutoPtr<IDeviceObject>>                                                                                               HashTableElem;
-    std::unordered_map<ResMappingHashKey, RefCntAutoPtr<IDeviceObject>, std::hash<ResMappingHashKey>, std::equal_to<ResMappingHashKey>, STDAllocatorRawMem<HashTableElem>> m_HashTable;
+    ThreadingTools::LockFlag m_LockFlag;
+
+    using HashTableElem = std::pair<const ResMappingHashKey, RefCntAutoPtr<IDeviceObject>>;
+    std::unordered_map<ResMappingHashKey,
+                       RefCntAutoPtr<IDeviceObject>,
+                       ResMappingHashKey::Hasher,
+                       std::equal_to<ResMappingHashKey>,
+                       STDAllocatorRawMem<HashTableElem>>
+        m_HashTable;
 };
+
 } // namespace Diligent

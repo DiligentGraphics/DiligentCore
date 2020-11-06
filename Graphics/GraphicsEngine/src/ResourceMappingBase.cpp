@@ -30,11 +30,10 @@
 
 namespace Diligent
 {
+
 ResourceMappingImpl::~ResourceMappingImpl()
 {
 }
-
-IMPLEMENT_QUERY_INTERFACE(ResourceMappingImpl, IID_ResourceMapping, TObjectBase)
 
 ThreadingTools::LockHelper ResourceMappingImpl::Lock()
 {
@@ -52,10 +51,7 @@ void ResourceMappingImpl::AddResourceArray(const Char* Name, Uint32 StartIndex, 
         auto* pObject = ppObjects[Elem];
 
         // Try to construct new element in place
-        auto Elems =
-            m_HashTable.emplace(
-                std::make_pair(Diligent::ResMappingHashKey(Name, true, StartIndex + Elem), // Make a copy of the source string
-                               Diligent::RefCntAutoPtr<IDeviceObject>(pObject)));
+        auto Elems = m_HashTable.emplace(ResMappingHashKey{Name, true /*Make copy*/, StartIndex + Elem}, pObject);
         // If there is already element with the same name, replace it
         if (!Elems.second && Elems.first->second != pObject)
         {
@@ -85,7 +81,7 @@ void ResourceMappingImpl::RemoveResourceByName(const Char* Name, Uint32 ArrayInd
     auto LockHelper = Lock();
     // Remove object with the given name
     // Name will be implicitly converted to HashMapStringKey without making a copy
-    m_HashTable.erase(ResMappingHashKey(Name, false, ArrayIndex));
+    m_HashTable.erase(ResMappingHashKey{Name, false, ArrayIndex});
 }
 
 void ResourceMappingImpl::GetResource(const Char* Name, IDeviceObject** ppResource, Uint32 ArrayIndex)
@@ -105,7 +101,7 @@ void ResourceMappingImpl::GetResource(const Char* Name, IDeviceObject** ppResour
 
     // Find an object with the requested name
     // Name will be implicitly converted to HashMapStringKey without making a copy
-    auto It = m_HashTable.find(ResMappingHashKey(Name, false, ArrayIndex));
+    auto It = m_HashTable.find(ResMappingHashKey{Name, false, ArrayIndex});
     if (It != m_HashTable.end())
     {
         *ppResource = It->second.RawPtr();
@@ -118,4 +114,5 @@ size_t ResourceMappingImpl::GetSize()
 {
     return m_HashTable.size();
 }
+
 } // namespace Diligent
