@@ -58,15 +58,24 @@ struct BLASTriangleDesc
     Uint32                    MaxVertexCount        DEFAULT_INITIALIZER(0);
 
     /// The type of vertices in this geometry, see Diligent::VALUE_TYPE.
+
+    /// \remarks Only the following combinations of VertexValueType and VertexComponentCount
+    ///          are allowed:
+    ///          * FLOAT32 x 2 (third component is assumed 0)
+    ///          * FLOAT32 x 3
+    ///          * FLOAT16 x 2 (third component is assumed 0)
+    ///          * FLOAT16 x 4 (fourth component is ignored)
+    ///          * INT16   x 2 (16-bit signed-normalized, third component is assumed 0)
+    ///          * INT16   x 4 (16-bit signed-normalized, fourth component is ignored)
     VALUE_TYPE                VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// The number of components in the vertex.
-    /// 2 and 3 are supported.
+    /// See VertexValueType for the list of allowed VertexValueType and VertexComponentCount combinations.
     Uint8                     VertexComponentCount  DEFAULT_INITIALIZER(0);
 
     /// The maximum primitive count in this geometry.
     /// The current number of primitives is defined in BLASBuildTriangleData::PrimitiveCount.
-    Uint32                    MaxPrimitiveCount         DEFAULT_INITIALIZER(0);
+    Uint32                    MaxPrimitiveCount     DEFAULT_INITIALIZER(0);
 
     /// Index type of this geometry, see Diligent::VALUE_TYPE.
     /// Must be VT_UINT16, VT_UINT32 or VT_UNDEFINED.

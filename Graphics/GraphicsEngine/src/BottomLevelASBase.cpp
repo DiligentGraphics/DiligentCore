@@ -63,11 +63,11 @@ void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false)
             if (tri.GeometryName == nullptr)
                 LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].GeometryName must not be null");
 
-            if (tri.VertexValueType >= VT_NUM_TYPES)
-                LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].VertexValueType must be a valid type");
-
-            if (tri.VertexComponentCount != 2 && tri.VertexComponentCount != 3)
-                LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].VertexComponentCount must be 2 or 3");
+            if (!((tri.VertexValueType == VT_FLOAT32 && (tri.VertexComponentCount == 2 || tri.VertexComponentCount == 3)) ||
+                  (tri.VertexValueType == VT_FLOAT16 && (tri.VertexComponentCount == 2 || tri.VertexComponentCount == 4)) ||
+                  (tri.VertexValueType == VT_INT16 && (tri.VertexComponentCount == 2 || tri.VertexComponentCount == 4))))
+                LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].VertexValueType (", GetValueTypeString(tri.VertexValueType),
+                                         ") and .VertexComponentCount (", tri.VertexComponentCount, ") is not a valid combination");
 
             if (tri.MaxVertexCount == 0)
                 LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].MaxVertexCount must be greater than 0");

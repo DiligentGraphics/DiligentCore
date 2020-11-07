@@ -68,12 +68,25 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
                 dst.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
                 dst.Triangles.VertexBuffer.StartAddress  = 0;
                 dst.Triangles.VertexBuffer.StrideInBytes = 0;
-                dst.Triangles.VertexFormat               = TypeToDXGI_Format(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
-                dst.Triangles.VertexCount                = src.MaxVertexCount;
-                dst.Triangles.IndexCount                 = src.IndexType == VT_UNDEFINED ? 0 : src.MaxPrimitiveCount * 3;
-                dst.Triangles.IndexFormat                = ValueTypeToIndexType(src.IndexType);
-                dst.Triangles.IndexBuffer                = 0;
-                dst.Triangles.Transform3x4               = 0;
+
+                // Vertex format must be one of the following (https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_raytracing_geometry_triangles_desc):
+                //  * DXGI_FORMAT_R32G32_FLOAT       - third component is assumed 0
+                //  * DXGI_FORMAT_R32G32B32_FLOAT
+                //  * DXGI_FORMAT_R16G16_FLOAT       - third component is assumed 0
+                //  * DXGI_FORMAT_R16G16B16A16_FLOAT - A16 component is ignored, other data can be packed there, such as setting vertex stride to 6 bytes.
+                //  * DXGI_FORMAT_R16G16_SNORM       - third component is assumed 0
+                //  * DXGI_FORMAT_R16G16B16A16_SNORM - A16 component is ignored, other data can be packed there, such as setting vertex stride to 6 bytes.
+                dst.Triangles.VertexFormat = TypeToDXGI_Format(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
+                VERIFY(dst.Triangles.VertexFormat == DXGI_FORMAT_R32G32_FLOAT || dst.Triangles.VertexFormat == DXGI_FORMAT_R32G32B32_FLOAT ||
+                           dst.Triangles.VertexFormat == DXGI_FORMAT_R16G16_FLOAT || dst.Triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_FLOAT ||
+                           dst.Triangles.VertexFormat == DXGI_FORMAT_R16G16_SNORM || dst.Triangles.VertexFormat == DXGI_FORMAT_R16G16B16A16_SNORM,
+                       "Unsupported vertex format");
+
+                dst.Triangles.VertexCount  = src.MaxVertexCount;
+                dst.Triangles.IndexCount   = src.IndexType == VT_UNDEFINED ? 0 : src.MaxPrimitiveCount * 3;
+                dst.Triangles.IndexFormat  = ValueTypeToIndexType(src.IndexType);
+                dst.Triangles.IndexBuffer  = 0;
+                dst.Triangles.Transform3x4 = 0;
 
                 MaxPrimitiveCount += src.MaxPrimitiveCount;
             }
