@@ -68,48 +68,8 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
                 dst.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
                 dst.Triangles.VertexBuffer.StartAddress  = 0;
                 dst.Triangles.VertexBuffer.StrideInBytes = 0;
-
-                // Vertex format must be one of the following (https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_raytracing_geometry_triangles_desc):
-                //  * DXGI_FORMAT_R32G32_FLOAT       - third component is assumed 0
-                //  * DXGI_FORMAT_R32G32B32_FLOAT
-                //  * DXGI_FORMAT_R16G16_FLOAT       - third component is assumed 0
-                //  * DXGI_FORMAT_R16G16B16A16_FLOAT - A16 component is ignored, other data can be packed there, such as setting vertex stride to 6 bytes.
-                //  * DXGI_FORMAT_R16G16_SNORM       - third component is assumed 0
-                //  * DXGI_FORMAT_R16G16B16A16_SNORM - A16 component is ignored, other data can be packed there, such as setting vertex stride to 6 bytes.
-                // Note that DXGI_FORMAT_R16G16B16A16_FLOAT and DXGI_FORMAT_R16G16B16A16_SNORM are workarounds for missing 16-bit 3-component DXGI formats
-                switch (src.VertexValueType)
-                {
-                    case VT_FLOAT16:
-                        switch (src.VertexComponentCount)
-                        {
-                            case 2: dst.Triangles.VertexFormat = DXGI_FORMAT_R16G16_FLOAT; break;
-                            case 3: dst.Triangles.VertexFormat = DXGI_FORMAT_R16G16B16A16_FLOAT; break;
-                            default: UNEXPECTED("Only 2 and 3 component vertex formats are expected");
-                        }
-                        break;
-
-                    case VT_FLOAT32:
-                        switch (src.VertexComponentCount)
-                        {
-                            case 2: dst.Triangles.VertexFormat = DXGI_FORMAT_R32G32_FLOAT; break;
-                            case 3: dst.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT; break;
-                            default: UNEXPECTED("Only 2 and 3 component vertex formats are expected");
-                        }
-                        break;
-
-                    case VT_INT16:
-                        switch (src.VertexComponentCount)
-                        {
-                            case 2: dst.Triangles.VertexFormat = DXGI_FORMAT_R16G16_SNORM; break;
-                            case 3: dst.Triangles.VertexFormat = DXGI_FORMAT_R16G16B16A16_SNORM; break;
-                            default: UNEXPECTED("Only 2 and 3 component vertex formats are expected");
-                        }
-                        break;
-
-                    default:
-                        UNEXPECTED(GetValueTypeString(src.VertexValueType), " is not a valid vertex component type");
-                }
-
+                dst.Triangles.VertexFormat               = TypeToRayTracingVertexFormat(src.VertexValueType, src.VertexComponentCount);
+                VERIFY(dst.Triangles.VertexFormat != DXGI_FORMAT_UNKNOWN, "Unsupported combination of vertex value type and component count");
                 dst.Triangles.VertexCount  = src.MaxVertexCount;
                 dst.Triangles.IndexCount   = src.IndexType == VT_UNDEFINED ? 0 : src.MaxPrimitiveCount * 3;
                 dst.Triangles.IndexFormat  = ValueTypeToIndexType(src.IndexType);

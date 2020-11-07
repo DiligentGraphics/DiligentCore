@@ -2315,7 +2315,8 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
             auto* const pVB = ValidatedCast<BufferD3D12Impl>(SrcTris.pVertexBuffer);
 
             // vertex format in SrcTris may be undefined, so use vertex format from description
-            d3d12Tris.VertexFormat               = TypeToDXGI_Format(TriDesc.VertexValueType, TriDesc.VertexComponentCount, TriDesc.VertexValueType < VT_FLOAT16);
+            d3d12Tris.VertexFormat = TypeToRayTracingVertexFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount);
+            VERIFY(d3d12Tris.VertexFormat != DXGI_FORMAT_UNKNOWN, "Unsupported combination of vertex value type and component count");
             d3d12Tris.VertexCount                = SrcTris.VertexCount;
             d3d12Tris.VertexBuffer.StartAddress  = pVB->GetGPUAddress() + SrcTris.VertexOffset;
             d3d12Tris.VertexBuffer.StrideInBytes = SrcTris.VertexStride;

@@ -695,4 +695,58 @@ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE CopyASModeToD3D12ASCopyMode(CO
     }
 }
 
+DXGI_FORMAT TypeToRayTracingVertexFormat(VALUE_TYPE ValueType, Uint32 ComponentCount)
+{
+    // Vertex format must be one of the following (https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_raytracing_geometry_triangles_desc):
+    //  * DXGI_FORMAT_R32G32_FLOAT       - third component is assumed 0
+    //  * DXGI_FORMAT_R32G32B32_FLOAT
+    //  * DXGI_FORMAT_R16G16_FLOAT       - third component is assumed 0
+    //  * DXGI_FORMAT_R16G16B16A16_FLOAT - A16 component is ignored, other data can be packed there, such as setting vertex stride to 6 bytes.
+    //  * DXGI_FORMAT_R16G16_SNORM       - third component is assumed 0
+    //  * DXGI_FORMAT_R16G16B16A16_SNORM - A16 component is ignored, other data can be packed there, such as setting vertex stride to 6 bytes.
+    // Note that DXGI_FORMAT_R16G16B16A16_FLOAT and DXGI_FORMAT_R16G16B16A16_SNORM are merely workarounds for missing 16-bit 3-component DXGI formats
+    switch (ValueType)
+    {
+        case VT_FLOAT16:
+            switch (ComponentCount)
+            {
+                case 2: return DXGI_FORMAT_R16G16_FLOAT;
+                case 3: return DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+                default:
+                    UNEXPECTED("Only 2 and 3 component vertex formats are expected");
+                    return DXGI_FORMAT_UNKNOWN;
+            }
+            break;
+
+        case VT_FLOAT32:
+            switch (ComponentCount)
+            {
+                case 2: return DXGI_FORMAT_R32G32_FLOAT;
+                case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
+
+                default:
+                    UNEXPECTED("Only 2 and 3 component vertex formats are expected");
+                    return DXGI_FORMAT_UNKNOWN;
+            }
+            break;
+
+        case VT_INT16:
+            switch (ComponentCount)
+            {
+                case 2: return DXGI_FORMAT_R16G16_SNORM;
+                case 3: return DXGI_FORMAT_R16G16B16A16_SNORM;
+
+                default:
+                    UNEXPECTED("Only 2 and 3 component vertex formats are expected");
+                    return DXGI_FORMAT_UNKNOWN;
+            }
+            break;
+
+        default:
+            UNEXPECTED(GetValueTypeString(ValueType), " is not a valid vertex component type");
+            return DXGI_FORMAT_UNKNOWN;
+    }
+}
+
 } // namespace Diligent
