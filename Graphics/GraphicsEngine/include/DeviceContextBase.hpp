@@ -1198,6 +1198,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::BeginQuery(I
         return false;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
     if (m_bIsDeferred)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BeginQuery: Deferred contexts do not support queries");
@@ -1209,6 +1210,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::BeginQuery(I
         LOG_ERROR_MESSAGE("BeginQuery() is disabled for timestamp queries. Call EndQuery() to set the timestamp.");
         return false;
     }
+#endif
 
     if (!ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(this))
         return false;
@@ -1225,11 +1227,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::EndQuery(IQu
         return false;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
     if (m_bIsDeferred)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::EndQuery: Deferred contexts do not support queries");
         return false;
     }
+#endif
 
     if (!ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(this))
         return false;
@@ -1442,6 +1446,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResolveTextureSubre
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
 {
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
@@ -1454,12 +1459,17 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const Bui
         return false;
     }
 
-    return VerifyBuildBLASAttribs(Attribs);
+    if (!VerifyBuildBLASAttribs(Attribs))
+        return false;
+#endif
+
+    return true;
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
 {
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
@@ -1472,7 +1482,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const Bui
         return false;
     }
 
-#ifdef DILIGENT_DEVELOPMENT
     if (!VerifyBuildTLASAttribs(Attribs))
         return false;
 
@@ -1492,6 +1501,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const Bui
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
 {
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
@@ -1504,7 +1514,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
         return false;
     }
 
-#ifdef DILIGENT_DEVELOPMENT
     if (!VerifyCopyBLASAttribs(Attribs))
         return false;
 
@@ -1521,6 +1530,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
 {
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
@@ -1533,7 +1543,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
         return false;
     }
 
-#ifdef DILIGENT_DEVELOPMENT
     if (!VerifyCopyTLASAttribs(Attribs))
         return false;
 
@@ -1550,6 +1559,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
 {
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
@@ -1562,7 +1572,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteBLASCompactedS
         return false;
     }
 
-#ifdef DILIGENT_DEVELOPMENT
     if (!VerifyWriteBLASCompactedSizeAttribs(m_pDevice, Attribs))
         return false;
 #endif
@@ -1573,6 +1582,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteBLASCompactedS
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
 {
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
@@ -1585,7 +1595,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteTLASCompactedS
         return false;
     }
 
-#ifdef DILIGENT_DEVELOPMENT
     if (!VerifyWriteTLASCompactedSizeAttribs(m_pDevice, Attribs))
         return false;
 #endif
@@ -1596,6 +1605,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteTLASCompactedS
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
 {
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: ray tracing is not supported by this device");
@@ -1614,7 +1624,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const Tra
         return false;
     }
 
-#ifdef DILIGENT_DEVELOPMENT
     if (!VerifyTraceRaysAttribs(Attribs))
         return false;
 #endif
