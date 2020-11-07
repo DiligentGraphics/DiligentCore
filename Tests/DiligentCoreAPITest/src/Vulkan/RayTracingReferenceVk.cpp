@@ -164,7 +164,9 @@ struct RTGroupsHelper
             case SHADER_TYPE_RAY_ANY_HIT:      Stages[StageIndex].stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;      break;
             case SHADER_TYPE_RAY_INTERSECTION: Stages[StageIndex].stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR; break;
             case SHADER_TYPE_CALLABLE:         Stages[StageIndex].stage = VK_SHADER_STAGE_CALLABLE_BIT_KHR;     break;
-                // clang-format on
+            // clang-format on
+            default:
+                UNEXPECTED("Unexpected ray tracing shader type");
         }
     }
 
