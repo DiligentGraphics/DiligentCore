@@ -47,8 +47,12 @@ public:
 
     TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
                      RenderDeviceVkImpl*   pRenderDeviceVk,
-                     const TopLevelASDesc& Desc,
-                     bool                  bIsDeviceInternal = false);
+                     const TopLevelASDesc& Desc);
+    TopLevelASVkImpl(IReferenceCounters*        pRefCounters,
+                     RenderDeviceVkImpl*        pRenderDeviceVk,
+                     const TopLevelASDesc&      Desc,
+                     RESOURCE_STATE             InitialState,
+                     VkAccelerationStructureKHR vkTLAS);
     ~TopLevelASVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelASVk, TTopLevelASBase);

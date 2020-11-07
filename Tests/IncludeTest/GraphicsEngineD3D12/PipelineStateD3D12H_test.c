@@ -31,7 +31,9 @@
 void TestPipelineStateD3D12CInterface(struct IPipelineStateD3D12* pPSO)
 {
     ID3D12PipelineState* pd3d12PSO = IPipelineStateD3D12_GetD3D12PipelineState(pPSO);
+    ID3D12StateObject*   pd3d12SO  = IPipelineStateD3D12_GetD3D12StateObject(pPSO);
     ID3D12RootSignature* pd3d12RS  = IPipelineStateD3D12_GetD3D12RootSignature(pPSO);
     (void)pd3d12PSO;
+    (void)pd3d12SO;
     (void)pd3d12RS;
 }

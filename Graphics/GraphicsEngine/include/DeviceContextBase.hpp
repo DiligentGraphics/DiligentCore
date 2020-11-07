@@ -66,8 +66,8 @@ bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs);
 bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier);
 
 bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs);
-bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs);
-bool VerifyCopyBLASAttribs(const CopyBLASAttribs& Attribs);
+bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstanceCount);
+bool VerifyCopyBLASAttribs(const IRenderDevice* pDevice, const CopyBLASAttribs& Attribs);
 bool VerifyCopyTLASAttribs(const CopyTLASAttribs& Attribs);
 bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteBLASCompactedSizeAttribs& Attribs);
 bool VerifyWriteTLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteTLASCompactedSizeAttribs& Attribs);
@@ -1482,17 +1482,10 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const Bui
         return false;
     }
 
-    if (!VerifyBuildTLASAttribs(Attribs))
-        return false;
+    const Uint32 InstCount = Attribs.pTLAS ? ValidatedCast<TopLevelASType>(Attribs.pTLAS)->GetInstanceCount() : 0;
 
-    for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
-    {
-        if (!ValidatedCast<BottomLevelASType>(Attribs.pInstances[i].pBLAS)->ValidateContent())
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].pBLAS is not valid");
-            return false;
-        }
-    }
+    if (!VerifyBuildTLASAttribs(Attribs, InstCount))
+        return false;
 #endif
 
     return true;
@@ -1514,14 +1507,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
         return false;
     }
 
-    if (!VerifyCopyBLASAttribs(Attribs))
+    if (!VerifyCopyBLASAttribs(m_pDevice, Attribs))
         return false;
-
-    if (!ValidatedCast<BottomLevelASType>(Attribs.pSrc)->ValidateContent())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pSrc acceleration structure is not valid");
-        return false;
-    }
 #endif
 
     return true;

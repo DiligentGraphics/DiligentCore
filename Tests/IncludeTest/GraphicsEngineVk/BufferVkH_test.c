@@ -35,4 +35,6 @@ void TestBufferVk_CInterface(IBufferVk* pView)
     IBufferVk_SetAccessFlags(pView, VK_ACCESS_HOST_READ_BIT);
     VkAccessFlags vkAccessFlag = IBufferVk_GetAccessFlags(pView);
     (void)vkAccessFlag;
+    VkDeviceAddress vkAddr = IBufferVk_GetVkDeviceAddress(pView);
+    (void)vkAddr;
 }

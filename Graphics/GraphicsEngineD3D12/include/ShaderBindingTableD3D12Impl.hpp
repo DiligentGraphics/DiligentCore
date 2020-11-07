@@ -33,6 +33,7 @@
 #include "ShaderBindingTableD3D12.h"
 #include "RenderDeviceD3D12.h"
 #include "ShaderBindingTableBase.hpp"
+#include "TopLevelASD3D12Impl.hpp"
 #include "D3D12ResourceBase.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
@@ -41,10 +42,10 @@ namespace Diligent
 {
 
 /// Shader binding table object implementation in Direct3D12 backend.
-class ShaderBindingTableD3D12Impl final : public ShaderBindingTableBase<IShaderBindingTableD3D12, PipelineStateD3D12Impl, RenderDeviceD3D12Impl>, public D3D12ResourceBase
+class ShaderBindingTableD3D12Impl final : public ShaderBindingTableBase<IShaderBindingTableD3D12, PipelineStateD3D12Impl, TopLevelASD3D12Impl, RenderDeviceD3D12Impl>, public D3D12ResourceBase
 {
 public:
-    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableD3D12, PipelineStateD3D12Impl, RenderDeviceD3D12Impl>;
+    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableD3D12, PipelineStateD3D12Impl, TopLevelASD3D12Impl, RenderDeviceD3D12Impl>;
 
     ShaderBindingTableD3D12Impl(IReferenceCounters*           pRefCounters,
                                 class RenderDeviceD3D12Impl*  pDeviceD3D12,
@@ -53,10 +54,6 @@ public:
     ~ShaderBindingTableD3D12Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
-
-    virtual void DILIGENT_CALL_TYPE ResetHitGroups(Uint32 HitShadersPerInstance) override;
-
-    virtual void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override;
 };
 
 } // namespace Diligent

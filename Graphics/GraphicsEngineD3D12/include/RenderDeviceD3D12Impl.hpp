@@ -133,6 +133,18 @@ public:
                                                                 RESOURCE_STATE    InitialState,
                                                                 IBuffer**         ppBuffer) override final;
 
+    /// Implementation of IRenderDeviceD3D12::CreateBLASFromD3DResource().
+    virtual void DILIGENT_CALL_TYPE CreateBLASFromD3DResource(ID3D12Resource*          pd3d12BLAS,
+                                                              const BottomLevelASDesc& Desc,
+                                                              RESOURCE_STATE           InitialState,
+                                                              IBottomLevelAS**         ppBLAS) override final;
+
+    /// Implementation of IRenderDeviceD3D12::CreateTLASFromD3DResource().
+    virtual void DILIGENT_CALL_TYPE CreateTLASFromD3DResource(ID3D12Resource*       pd3d12TLAS,
+                                                              const TopLevelASDesc& Desc,
+                                                              RESOURCE_STATE        InitialState,
+                                                              ITopLevelAS**         ppTLAS) override final;
+
     DescriptorHeapAllocation AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
     DescriptorHeapAllocation AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
 
@@ -180,7 +192,7 @@ public:
         const Uint32 ShaderGroupHandleSize    = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
         const Uint32 MaxShaderRecordStride    = D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE;
         const Uint32 ShaderGroupBaseAlignment = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
-        const Uint32 MaxDrawMeshTasksCount    = 64000;
+        const Uint32 MaxDrawMeshTasksCount    = 64000; // from specs: https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
 
         ShaderVersion MaxShaderVersion;
     };

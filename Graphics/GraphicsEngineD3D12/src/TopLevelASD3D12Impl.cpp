@@ -38,9 +38,8 @@ namespace Diligent
 
 TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
                                          class RenderDeviceD3D12Impl* pDeviceD3D12,
-                                         const TopLevelASDesc&        Desc,
-                                         bool                         bIsDeviceInternal) :
-    TTopLevelASBase{pRefCounters, pDeviceD3D12, Desc, bIsDeviceInternal}
+                                         const TopLevelASDesc&        Desc) :
+    TTopLevelASBase{pRefCounters, pDeviceD3D12, Desc}
 {
     auto*  pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
     UINT64 ResultDataMaxSizeInBytes = 0;
@@ -113,6 +112,17 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounte
     DEV_CHECK_ERR(GetGPUAddress() % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0, "GPU virtual address is expect to be at least 256-byte aligned");
 
     SetState(RESOURCE_STATE_BUILD_AS_READ);
+}
+
+TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
+                                         class RenderDeviceD3D12Impl* pDeviceD3D12,
+                                         const TopLevelASDesc&        Desc,
+                                         RESOURCE_STATE               InitialState,
+                                         ID3D12Resource*              pd3d12TLAS) :
+    TTopLevelASBase{pRefCounters, pDeviceD3D12, Desc}
+{
+    m_pd3d12Resource = pd3d12TLAS;
+    SetState(InitialState);
 }
 
 TopLevelASD3D12Impl::~TopLevelASD3D12Impl()

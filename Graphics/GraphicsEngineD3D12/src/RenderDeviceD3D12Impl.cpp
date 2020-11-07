@@ -724,6 +724,19 @@ void RenderDeviceD3D12Impl::CreateFramebuffer(const FramebufferDesc& Desc, IFram
                        });
 }
 
+void RenderDeviceD3D12Impl::CreateBLASFromD3DResource(ID3D12Resource*          pd3d12BLAS,
+                                                      const BottomLevelASDesc& Desc,
+                                                      RESOURCE_STATE           InitialState,
+                                                      IBottomLevelAS**         ppBLAS)
+{
+    CreateDeviceObject("buffer", Desc, ppBLAS,
+                       [&]() //
+                       {
+                           BottomLevelASD3D12Impl* pBottomLevelASD3D12{NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASD3D12Impl instance", BottomLevelASD3D12Impl)(this, Desc, InitialState, pd3d12BLAS)};
+                           pBottomLevelASD3D12->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           OnCreateDeviceObject(pBottomLevelASD3D12);
+                       });
+}
 
 void RenderDeviceD3D12Impl::CreateBLAS(const BottomLevelASDesc& Desc,
                                        IBottomLevelAS**         ppBLAS)
@@ -731,9 +744,23 @@ void RenderDeviceD3D12Impl::CreateBLAS(const BottomLevelASDesc& Desc,
     CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
                        [&]() //
                        {
-                           BottomLevelASD3D12Impl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASD3D12Impl instance", BottomLevelASD3D12Impl)(this, Desc));
-                           pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
-                           OnCreateDeviceObject(pBottomLevelASVk);
+                           BottomLevelASD3D12Impl* pBottomLevelASD3D12(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASD3D12Impl instance", BottomLevelASD3D12Impl)(this, Desc));
+                           pBottomLevelASD3D12->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           OnCreateDeviceObject(pBottomLevelASD3D12);
+                       });
+}
+
+void RenderDeviceD3D12Impl::CreateTLASFromD3DResource(ID3D12Resource*       pd3d12TLAS,
+                                                      const TopLevelASDesc& Desc,
+                                                      RESOURCE_STATE        InitialState,
+                                                      ITopLevelAS**         ppTLAS)
+{
+    CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+                       [&]() //
+                       {
+                           TopLevelASD3D12Impl* pTopLevelASD3D12{NEW_RC_OBJ(m_TLASAllocator, "TopLevelASD3D12Impl instance", TopLevelASD3D12Impl)(this, Desc, InitialState, pd3d12TLAS)};
+                           pTopLevelASD3D12->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           OnCreateDeviceObject(pTopLevelASD3D12);
                        });
 }
 
@@ -743,9 +770,9 @@ void RenderDeviceD3D12Impl::CreateTLAS(const TopLevelASDesc& Desc,
     CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
                        [&]() //
                        {
-                           TopLevelASD3D12Impl* pTopLevelASVk(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASD3D12Impl instance", TopLevelASD3D12Impl)(this, Desc));
-                           pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
-                           OnCreateDeviceObject(pTopLevelASVk);
+                           TopLevelASD3D12Impl* pTopLevelASD3D12(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASD3D12Impl instance", TopLevelASD3D12Impl)(this, Desc));
+                           pTopLevelASD3D12->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           OnCreateDeviceObject(pTopLevelASD3D12);
                        });
 }
 
@@ -755,9 +782,9 @@ void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
     CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
                        [&]() //
                        {
-                           ShaderBindingTableD3D12Impl* pSBTVk(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableD3D12Impl instance", ShaderBindingTableD3D12Impl)(this, Desc));
-                           pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
-                           OnCreateDeviceObject(pSBTVk);
+                           ShaderBindingTableD3D12Impl* pSBTD3D12(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableD3D12Impl instance", ShaderBindingTableD3D12Impl)(this, Desc));
+                           pSBTD3D12->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
+                           OnCreateDeviceObject(pSBTD3D12);
                        });
 }
 

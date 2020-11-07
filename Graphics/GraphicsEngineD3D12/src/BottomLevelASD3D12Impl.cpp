@@ -38,9 +38,8 @@ namespace Diligent
 
 BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
                                                class RenderDeviceD3D12Impl* pDeviceD3D12,
-                                               const BottomLevelASDesc&     Desc,
-                                               bool                         bIsDeviceInternal) :
-    TBottomLevelASBase{pRefCounters, pDeviceD3D12, Desc, bIsDeviceInternal}
+                                               const BottomLevelASDesc&     Desc) :
+    TBottomLevelASBase{pRefCounters, pDeviceD3D12, Desc}
 {
     auto*  pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
     UINT64 ResultDataMaxSizeInBytes = 0;
@@ -66,15 +65,15 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
 
                 dst.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
                 dst.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+                dst.Triangles.IndexCount                 = src.IndexType == VT_UNDEFINED ? 0 : src.MaxPrimitiveCount * 3;
+                dst.Triangles.IndexFormat                = ValueTypeToIndexType(src.IndexType);
+                dst.Triangles.IndexBuffer                = 0;
+                dst.Triangles.Transform3x4               = 0;
                 dst.Triangles.VertexBuffer.StartAddress  = 0;
                 dst.Triangles.VertexBuffer.StrideInBytes = 0;
+                dst.Triangles.VertexCount                = src.MaxVertexCount;
                 dst.Triangles.VertexFormat               = TypeToRayTracingVertexFormat(src.VertexValueType, src.VertexComponentCount);
                 VERIFY(dst.Triangles.VertexFormat != DXGI_FORMAT_UNKNOWN, "Unsupported combination of vertex value type and component count");
-                dst.Triangles.VertexCount  = src.MaxVertexCount;
-                dst.Triangles.IndexCount   = src.IndexType == VT_UNDEFINED ? 0 : src.MaxPrimitiveCount * 3;
-                dst.Triangles.IndexFormat  = ValueTypeToIndexType(src.IndexType);
-                dst.Triangles.IndexBuffer  = 0;
-                dst.Triangles.Transform3x4 = 0;
 
                 MaxPrimitiveCount += src.MaxPrimitiveCount;
             }
@@ -155,6 +154,17 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
     VERIFY_EXPR(GetGPUAddress() % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0);
 
     SetState(RESOURCE_STATE_BUILD_AS_READ);
+}
+
+BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
+                                               class RenderDeviceD3D12Impl* pDeviceD3D12,
+                                               const BottomLevelASDesc&     Desc,
+                                               RESOURCE_STATE               InitialState,
+                                               ID3D12Resource*              pd3d12BLAS) :
+    TBottomLevelASBase{pRefCounters, pDeviceD3D12, Desc}
+{
+    m_pd3d12Resource = pd3d12BLAS;
+    SetState(InitialState);
 }
 
 BottomLevelASD3D12Impl::~BottomLevelASD3D12Impl()

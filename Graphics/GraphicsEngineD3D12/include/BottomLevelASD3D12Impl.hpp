@@ -47,8 +47,12 @@ public:
 
     BottomLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
                            class RenderDeviceD3D12Impl* pDeviceD3D12,
+                           const BottomLevelASDesc&     Desc);
+    BottomLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
+                           class RenderDeviceD3D12Impl* pDeviceD3D12,
                            const BottomLevelASDesc&     Desc,
-                           bool                         bIsDeviceInternal = false);
+                           RESOURCE_STATE               InitialState,
+                           ID3D12Resource*              pd3d12BLAS);
     ~BottomLevelASD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASD3D12, TBottomLevelASBase);

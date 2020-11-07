@@ -754,6 +754,22 @@ void RenderDeviceVkImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebu
                        });
 }
 
+void RenderDeviceVkImpl::CreateBLASFromVulkanResource(VkAccelerationStructureKHR vkBLAS,
+                                                      const BottomLevelASDesc&   Desc,
+                                                      RESOURCE_STATE             InitialState,
+                                                      IBottomLevelAS**           ppBLAS)
+{
+    CreateDeviceObject(
+        "BottomLevelAS", Desc, ppBLAS,
+        [&]() //
+        {
+            BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc, InitialState, vkBLAS));
+            pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+            OnCreateDeviceObject(pBottomLevelASVk);
+        } //
+    );
+}
+
 void RenderDeviceVkImpl::CreateBLAS(const BottomLevelASDesc& Desc,
                                     IBottomLevelAS**         ppBLAS)
 {
@@ -764,6 +780,22 @@ void RenderDeviceVkImpl::CreateBLAS(const BottomLevelASDesc& Desc,
                            pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
                            OnCreateDeviceObject(pBottomLevelASVk);
                        });
+}
+
+void RenderDeviceVkImpl::CreateTLASFromVulkanResource(VkAccelerationStructureKHR vkTLAS,
+                                                      const TopLevelASDesc&      Desc,
+                                                      RESOURCE_STATE             InitialState,
+                                                      ITopLevelAS**              ppTLAS)
+{
+    CreateDeviceObject(
+        "TopLevelAS", Desc, ppTLAS,
+        [&]() //
+        {
+            TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc, InitialState, vkTLAS));
+            pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+            OnCreateDeviceObject(pTopLevelASVk);
+        } //
+    );
 }
 
 void RenderDeviceVkImpl::CreateTLAS(const TopLevelASDesc& Desc,

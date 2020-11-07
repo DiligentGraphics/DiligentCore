@@ -151,6 +151,18 @@ public:
                                                                    RESOURCE_STATE    InitialState,
                                                                    IBuffer**         ppBuffer) override final;
 
+    /// Implementation of IRenderDeviceVk::CreateBLASFromVulkanResource().
+    virtual void DILIGENT_CALL_TYPE CreateBLASFromVulkanResource(VkAccelerationStructureKHR vkBLAS,
+                                                                 const BottomLevelASDesc&   Desc,
+                                                                 RESOURCE_STATE             InitialState,
+                                                                 IBottomLevelAS**           ppBLAS) override final;
+
+    /// Implementation of IRenderDeviceVk::CreateTLASFromVulkanResource().
+    virtual void DILIGENT_CALL_TYPE CreateTLASFromVulkanResource(VkAccelerationStructureKHR vkTLAS,
+                                                                 const TopLevelASDesc&      Desc,
+                                                                 RESOURCE_STATE             InitialState,
+                                                                 ITopLevelAS**              ppTLAS) override final;
+
     /// Implementation of IRenderDevice::IdleGPU() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 

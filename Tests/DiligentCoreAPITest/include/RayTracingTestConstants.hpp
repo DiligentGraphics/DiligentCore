@@ -132,7 +132,7 @@ namespace TestingConstants
             uint   GeometryID;
             uint   padding[3];
 
-            ShaderRecord(const float4& w, uint id) {}
+            ShaderRecord(const float4& w, uint id): Weight{w}, GeometryID{id} {}
         };
         static const ShaderRecord Weights[] =
         {

@@ -29,15 +29,13 @@
 
 void TestShaderBindingTable_CInterface(IShaderBindingTable* pSBT)
 {
-    IShaderBindingTable_Verify(pSBT);
-
-    ShaderBindingTableDesc SBTDesc = {0};
-    IShaderBindingTable_Reset(pSBT, &SBTDesc);
-
-    IShaderBindingTable_ResetHitGroups(pSBT, 0);
+    IShaderBindingTable_Verify(pSBT, SHADER_BINDING_VALIDATION_ALL);
+    IShaderBindingTable_Reset(pSBT, (IPipelineState*)NULL);
+    IShaderBindingTable_ResetHitGroups(pSBT);
     IShaderBindingTable_BindRayGenShader(pSBT, "Group name", (const void*)NULL, 0);
     IShaderBindingTable_BindMissShader(pSBT, "Group name", 0, (const void*)NULL, 0);
     IShaderBindingTable_BindHitGroup(pSBT, (ITopLevelAS*)NULL, "Instance name", "Geometry name", 0, "Shader group name", (const void*)NULL, 0);
+    IShaderBindingTable_BindHitGroupForAll(pSBT, (ITopLevelAS*)NULL, 0, "Shader group name", (const void*)NULL, 0);
     IShaderBindingTable_BindHitGroups(pSBT, (ITopLevelAS*)NULL, "Instance name", 0, "Shader group name", (const void*)NULL, 0);
     IShaderBindingTable_BindCallableShader(pSBT, "Shader group name", 0, (const void*)NULL, 0);
     IShaderBindingTable_BindAll(pSBT, (BindAllAttribs*)NULL);

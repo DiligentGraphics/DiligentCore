@@ -297,6 +297,8 @@ public:
 
     SHADER_TYPE GetShaderType() const { return m_ShaderType; }
 
+    bool IsCompatibleWith(const ShaderResourceLayoutD3D12& ResLayout) const;
+
 private:
     const D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv) const;
     D3D12Resource&       GetAssignedSampler(const D3D12Resource& TexSrv);

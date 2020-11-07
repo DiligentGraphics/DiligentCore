@@ -2277,14 +2277,14 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
     if (!TDeviceContextBase::BuildBLAS(Attribs, 0))
         return;
 
-    auto* const pBLASD12    = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pBLAS);
-    auto* const pScratchD12 = ValidatedCast<BufferD3D12Impl>(Attribs.pScratchBuffer);
-    const auto& BLASDesc    = pBLASD12->GetDesc();
+    auto* const pBLASD3D12    = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pBLAS);
+    auto* const pScratchD3D12 = ValidatedCast<BufferD3D12Impl>(Attribs.pScratchBuffer);
+    const auto& BLASDesc      = pBLASD3D12->GetDesc();
 
     auto&       CmdCtx = GetCmdContext();
     const char* OpName = "Build BottomLevelAS (DeviceContextD3D12Impl::BuildBLAS)";
-    TransitionOrVerifyBLASState(CmdCtx, *pBLASD12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
-    TransitionOrVerifyBufferState(CmdCtx, *pScratchD12, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
+    TransitionOrVerifyBLASState(CmdCtx, *pBLASD3D12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
+    TransitionOrVerifyBufferState(CmdCtx, *pScratchD3D12, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
 
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC    d3d12BuildASDesc   = {};
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& d3d12BuildASInputs = d3d12BuildASDesc.Inputs;
@@ -2293,19 +2293,21 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
     if (Attribs.pTriangleData != nullptr)
     {
         Geometries.resize(Attribs.TriangleDataCount);
+        pBLASD3D12->SetActualGeometryCount(Attribs.TriangleDataCount);
 
         for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
         {
             const auto& SrcTris = Attribs.pTriangleData[i];
-            Uint32      GeoIdx  = pBLASD12->GetGeometryIndex(SrcTris.GeometryName);
+            Uint32      Idx     = i;
+            Uint32      GeoIdx  = pBLASD3D12->UpdateGeometryIndex(SrcTris.GeometryName, Idx, Attribs.Update);
 
-            if (GeoIdx >= Geometries.size())
+            if (GeoIdx == INVALID_INDEX || Idx == INVALID_INDEX)
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
 
-            auto&       d3d12Geo  = Geometries[GeoIdx];
+            auto&       d3d12Geo  = Geometries[Idx];
             auto&       d3d12Tris = d3d12Geo.Triangles;
             const auto& TriDesc   = BLASDesc.pTriangles[GeoIdx];
 
@@ -2315,11 +2317,11 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
             auto* const pVB = ValidatedCast<BufferD3D12Impl>(SrcTris.pVertexBuffer);
 
             // vertex format in SrcTris may be undefined, so use vertex format from description
-            d3d12Tris.VertexFormat = TypeToRayTracingVertexFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount);
-            VERIFY(d3d12Tris.VertexFormat != DXGI_FORMAT_UNKNOWN, "Unsupported combination of vertex value type and component count");
-            d3d12Tris.VertexCount                = SrcTris.VertexCount;
             d3d12Tris.VertexBuffer.StartAddress  = pVB->GetGPUAddress() + SrcTris.VertexOffset;
             d3d12Tris.VertexBuffer.StrideInBytes = SrcTris.VertexStride;
+            d3d12Tris.VertexCount                = SrcTris.VertexCount;
+            d3d12Tris.VertexFormat               = TypeToRayTracingVertexFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount);
+            VERIFY(d3d12Tris.VertexFormat != DXGI_FORMAT_UNKNOWN, "Unsupported combination of vertex value type and component count");
 
             TransitionOrVerifyBufferState(CmdCtx, *pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
 
@@ -2358,19 +2360,21 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
     else if (Attribs.pBoxData != nullptr)
     {
         Geometries.resize(Attribs.BoxDataCount);
+        pBLASD3D12->SetActualGeometryCount(Attribs.BoxDataCount);
 
         for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
         {
             const auto& SrcBoxes = Attribs.pBoxData[i];
-            Uint32      GeoIdx   = pBLASD12->GetGeometryIndex(SrcBoxes.GeometryName);
+            Uint32      Idx      = i;
+            Uint32      GeoIdx   = pBLASD3D12->UpdateGeometryIndex(SrcBoxes.GeometryName, Idx, Attribs.Update);
 
-            if (GeoIdx >= Geometries.size())
+            if (GeoIdx == INVALID_INDEX || Idx == INVALID_INDEX)
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
 
-            auto& d3d12Geo  = Geometries[GeoIdx];
+            auto& d3d12Geo  = Geometries[Idx];
             auto& d3d12AABs = d3d12Geo.AABBs;
 
             d3d12Geo.Type  = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
@@ -2393,9 +2397,15 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
     d3d12BuildASInputs.NumDescs       = static_cast<UINT>(Geometries.size());
     d3d12BuildASInputs.pGeometryDescs = Geometries.data();
 
-    d3d12BuildASDesc.DestAccelerationStructureData    = pBLASD12->GetGPUAddress();
-    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress() + Attribs.ScratchBufferOffset;
+    d3d12BuildASDesc.DestAccelerationStructureData    = pBLASD3D12->GetGPUAddress();
+    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD3D12->GetGPUAddress() + Attribs.ScratchBufferOffset;
     d3d12BuildASDesc.SourceAccelerationStructureData  = 0;
+
+    if (Attribs.Update)
+    {
+        d3d12BuildASInputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+        d3d12BuildASDesc.SourceAccelerationStructureData = d3d12BuildASDesc.DestAccelerationStructureData;
+    }
 
     DEV_CHECK_ERR(d3d12BuildASDesc.ScratchAccelerationStructureData % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0,
                   "Scratch data address is not properly aligned");
@@ -2404,7 +2414,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
     ++m_State.NumCommands;
 
 #ifdef DILIGENT_DEVELOPMENT
-    pBLASD12->UpdateVersion();
+    pBLASD3D12->UpdateVersion();
 #endif
 }
 
@@ -2415,16 +2425,25 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
     static_assert(TLAS_INSTANCE_DATA_SIZE == sizeof(D3D12_RAYTRACING_INSTANCE_DESC), "Value in TLAS_INSTANCE_DATA_SIZE doesn't match the actual instance description size");
 
-    auto* pTLASD12      = ValidatedCast<TopLevelASD3D12Impl>(Attribs.pTLAS);
-    auto* pScratchD12   = ValidatedCast<BufferD3D12Impl>(Attribs.pScratchBuffer);
-    auto* pInstancesD12 = ValidatedCast<BufferD3D12Impl>(Attribs.pInstanceBuffer);
+    auto* pTLASD3D12      = ValidatedCast<TopLevelASD3D12Impl>(Attribs.pTLAS);
+    auto* pScratchD3D12   = ValidatedCast<BufferD3D12Impl>(Attribs.pScratchBuffer);
+    auto* pInstancesD3D12 = ValidatedCast<BufferD3D12Impl>(Attribs.pInstanceBuffer);
 
     auto&       CmdCtx = GetCmdContext();
     const char* OpName = "Build TopLevelAS (DeviceContextD3D12Impl::BuildTLAS)";
-    TransitionOrVerifyTLASState(CmdCtx, *pTLASD12, Attribs.TLASTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
-    TransitionOrVerifyBufferState(CmdCtx, *pScratchD12, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
+    TransitionOrVerifyTLASState(CmdCtx, *pTLASD3D12, Attribs.TLASTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
+    TransitionOrVerifyBufferState(CmdCtx, *pScratchD3D12, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
 
-    pTLASD12->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.HitShadersPerInstance);
+    if (Attribs.Update)
+    {
+        if (!pTLASD3D12->UpdateInstances(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitShadersPerInstance, Attribs.BindingMode))
+            return;
+    }
+    else
+    {
+        if (!pTLASD3D12->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitShadersPerInstance, Attribs.BindingMode))
+            return;
+    }
 
     // copy instance data into instance buffer
     {
@@ -2433,37 +2452,51 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
-            const auto& Inst      = Attribs.pInstances[i];
-            auto&       d3d12Inst = static_cast<D3D12_RAYTRACING_INSTANCE_DESC*>(TmpSpace.CPUAddress)[i];
-            auto* const pBLASD12  = ValidatedCast<BottomLevelASD3D12Impl>(Inst.pBLAS);
+            const auto& Inst     = Attribs.pInstances[i];
+            const auto  InstDesc = pTLASD3D12->GetInstanceDesc(Inst.InstanceName);
+
+            if (InstDesc.InstanceIndex >= Attribs.InstanceCount)
+            {
+                UNEXPECTED("Failed to find instance by name");
+                return;
+            }
+
+            auto& d3d12Inst  = static_cast<D3D12_RAYTRACING_INSTANCE_DESC*>(TmpSpace.CPUAddress)[InstDesc.InstanceIndex];
+            auto* pBLASD3D12 = ValidatedCast<BottomLevelASD3D12Impl>(Inst.pBLAS);
 
             static_assert(sizeof(d3d12Inst.Transform) == sizeof(Inst.Transform), "size mismatch");
             std::memcpy(&d3d12Inst.Transform, Inst.Transform.data, sizeof(d3d12Inst.Transform));
 
             d3d12Inst.InstanceID                          = Inst.CustomId;
-            d3d12Inst.InstanceContributionToHitGroupIndex = pTLASD12->GetInstanceDesc(Inst.InstanceName).ContributionToHitGroupIndex;
+            d3d12Inst.InstanceContributionToHitGroupIndex = InstDesc.ContributionToHitGroupIndex;
             d3d12Inst.InstanceMask                        = Inst.Mask;
             d3d12Inst.Flags                               = InstanceFlagsToD3D12RTInstanceFlags(Inst.Flags);
-            d3d12Inst.AccelerationStructure               = pBLASD12->GetGPUAddress();
+            d3d12Inst.AccelerationStructure               = pBLASD3D12->GetGPUAddress();
 
-            TransitionOrVerifyBLASState(CmdCtx, *pBLASD12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+            TransitionOrVerifyBLASState(CmdCtx, *pBLASD3D12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }
-        UpdateBufferRegion(pInstancesD12, TmpSpace, Attribs.InstanceBufferOffset, Size, Attribs.InstanceBufferTransitionMode);
+        UpdateBufferRegion(pInstancesD3D12, TmpSpace, Attribs.InstanceBufferOffset, Size, Attribs.InstanceBufferTransitionMode);
     }
-    TransitionOrVerifyBufferState(CmdCtx, *pInstancesD12, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+    TransitionOrVerifyBufferState(CmdCtx, *pInstancesD3D12, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
 
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC    d3d12BuildASDesc   = {};
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& d3d12BuildASInputs = d3d12BuildASDesc.Inputs;
 
     d3d12BuildASInputs.Type          = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-    d3d12BuildASInputs.Flags         = BuildASFlagsToD3D12ASBuildFlags(pTLASD12->GetDesc().Flags);
+    d3d12BuildASInputs.Flags         = BuildASFlagsToD3D12ASBuildFlags(pTLASD3D12->GetDesc().Flags);
     d3d12BuildASInputs.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY;
     d3d12BuildASInputs.NumDescs      = Attribs.InstanceCount;
-    d3d12BuildASInputs.InstanceDescs = pInstancesD12->GetGPUAddress() + Attribs.InstanceBufferOffset;
+    d3d12BuildASInputs.InstanceDescs = pInstancesD3D12->GetGPUAddress() + Attribs.InstanceBufferOffset;
 
-    d3d12BuildASDesc.DestAccelerationStructureData    = pTLASD12->GetGPUAddress();
-    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress() + Attribs.ScratchBufferOffset;
+    d3d12BuildASDesc.DestAccelerationStructureData    = pTLASD3D12->GetGPUAddress();
+    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD3D12->GetGPUAddress() + Attribs.ScratchBufferOffset;
     d3d12BuildASDesc.SourceAccelerationStructureData  = 0;
+
+    if (Attribs.Update)
+    {
+        d3d12BuildASInputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+        d3d12BuildASDesc.SourceAccelerationStructureData = d3d12BuildASDesc.DestAccelerationStructureData;
+    }
 
     DEV_CHECK_ERR(d3d12BuildASInputs.InstanceDescs % D3D12_RAYTRACING_INSTANCE_DESCS_BYTE_ALIGNMENT == 0,
                   "Instance data address is not properly aligned");
@@ -2486,7 +2519,8 @@ void DeviceContextD3D12Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
 
     // Dst BLAS description has specified CompactedSize, but doesn't have specified pTriangles and pBoxes.
     // We should copy geometries because it required for SBT to map geometry name to hit group.
-    pDstD3D12->CopyDescription(*pSrcD3D12);
+    pDstD3D12->CopyGeometryDescription(*pSrcD3D12);
+    pDstD3D12->SetActualGeometryCount(pSrcD3D12->GetActualGeometryCount());
 
     const char* OpName = "Copy BottomLevelAS (DeviceContextD3D12Impl::CopyBLAS)";
     TransitionOrVerifyBLASState(CmdCtx, *pSrcD3D12, Attribs.SrcTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
@@ -2579,16 +2613,16 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
 
     VERIFY_EXPR((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) <= D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS);
 
-    auto&    CmdCtx  = GetCmdContext().AsGraphicsContext4();
-    auto*    pSBTD12 = ValidatedCast<ShaderBindingTableD3D12Impl>(Attribs.pSBT);
-    IBuffer* pBuffer = nullptr;
+    auto&    CmdCtx    = GetCmdContext().AsGraphicsContext4();
+    auto*    pSBTD3D12 = ValidatedCast<ShaderBindingTableD3D12Impl>(Attribs.pSBT);
+    IBuffer* pBuffer   = nullptr;
 
     ShaderBindingTableD3D12Impl::BindingTable RayGenShaderRecord  = {};
     ShaderBindingTableD3D12Impl::BindingTable MissShaderTable     = {};
     ShaderBindingTableD3D12Impl::BindingTable HitGroupTable       = {};
     ShaderBindingTableD3D12Impl::BindingTable CallableShaderTable = {};
 
-    pSBTD12->GetData(pBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
+    pSBTD3D12->GetData(pBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
 
     auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
 

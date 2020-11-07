@@ -2815,21 +2815,23 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
     {
         Geometries.resize(Attribs.TriangleDataCount);
         Offsets.resize(Attribs.TriangleDataCount);
+        pBLASVk->SetActualGeometryCount(Attribs.TriangleDataCount);
 
         for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
         {
             const auto& SrcTris = Attribs.pTriangleData[i];
-            Uint32      GeoIdx  = pBLASVk->GetGeometryIndex(SrcTris.GeometryName);
+            Uint32      Idx     = i;
+            Uint32      GeoIdx  = pBLASVk->UpdateGeometryIndex(SrcTris.GeometryName, Idx, Attribs.Update);
 
-            if (GeoIdx >= Geometries.size())
+            if (GeoIdx == INVALID_INDEX || Idx == INVALID_INDEX)
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
 
-            auto&       vkGeo   = Geometries[GeoIdx];
+            auto&       vkGeo   = Geometries[Idx];
             auto&       vkTris  = vkGeo.geometry.triangles;
-            auto&       off     = Offsets[GeoIdx];
+            auto&       off     = Offsets[Idx];
             const auto& TriDesc = BLASDesc.pTriangles[GeoIdx];
 
             vkGeo.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -2886,21 +2888,23 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
     {
         Geometries.resize(Attribs.BoxDataCount);
         Offsets.resize(Attribs.BoxDataCount);
+        pBLASVk->SetActualGeometryCount(Attribs.BoxDataCount);
 
         for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
         {
             const auto& SrcBoxes = Attribs.pBoxData[i];
-            Uint32      GeoIdx   = pBLASVk->GetGeometryIndex(SrcBoxes.GeometryName);
+            Uint32      Idx      = i;
+            Uint32      GeoIdx   = pBLASVk->UpdateGeometryIndex(SrcBoxes.GeometryName, Idx, Attribs.Update);
 
-            if (GeoIdx >= Geometries.size())
+            if (GeoIdx == INVALID_INDEX || Idx == INVALID_INDEX)
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
 
-            auto& vkGeo   = Geometries[GeoIdx];
+            auto& vkGeo   = Geometries[Idx];
             auto& vkAABBs = vkGeo.geometry.aabbs;
-            auto& off     = Offsets[GeoIdx];
+            auto& off     = Offsets[Idx];
 
             vkGeo.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
             vkGeo.pNext        = nullptr;
@@ -2928,8 +2932,8 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
     Info.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
     Info.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;                 // type must be compatible with create info
     Info.flags                     = BuildASFlagsToVkBuildAccelerationStructureFlags(BLASDesc.Flags); // flags must be compatible with create info
-    Info.update                    = VK_FALSE;
-    Info.srcAccelerationStructure  = VK_NULL_HANDLE;
+    Info.update                    = Attribs.Update;
+    Info.srcAccelerationStructure  = Attribs.Update ? pBLASVk->GetVkBLAS() : VK_NULL_HANDLE;
     Info.dstAccelerationStructure  = pBLASVk->GetVkBLAS();
     Info.geometryArrayOfPointers   = VK_FALSE;
     Info.geometryCount             = static_cast<uint32_t>(Geometries.size());
@@ -2963,7 +2967,16 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
     TransitionOrVerifyTLASState(*pTLASVk, Attribs.TLASTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
     TransitionOrVerifyBufferState(*pScratchVk, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, OpName);
 
-    pTLASVk->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.HitShadersPerInstance);
+    if (Attribs.Update)
+    {
+        if (!pTLASVk->UpdateInstances(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitShadersPerInstance, Attribs.BindingMode))
+            return;
+    }
+    else
+    {
+        if (!pTLASVk->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitShadersPerInstance, Attribs.BindingMode))
+            return;
+    }
 
     // copy instance data into instance buffer
     {
@@ -2973,14 +2986,22 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
             const auto& Inst     = Attribs.pInstances[i];
-            auto&       vkASInst = static_cast<VkAccelerationStructureInstanceKHR*>(TmpSpace.CPUAddress)[i];
-            auto* const pBLASVk  = ValidatedCast<BottomLevelASVkImpl>(Inst.pBLAS);
+            const auto  InstDesc = pTLASVk->GetInstanceDesc(Inst.InstanceName);
+
+            if (InstDesc.InstanceIndex >= Attribs.InstanceCount)
+            {
+                UNEXPECTED("Failed to find instance by name");
+                return;
+            }
+
+            auto& vkASInst = static_cast<VkAccelerationStructureInstanceKHR*>(TmpSpace.CPUAddress)[InstDesc.InstanceIndex];
+            auto* pBLASVk  = ValidatedCast<BottomLevelASVkImpl>(Inst.pBLAS);
 
             static_assert(sizeof(vkASInst.transform) == sizeof(Inst.Transform), "size mismatch");
             std::memcpy(&vkASInst.transform, Inst.Transform.data, sizeof(vkASInst.transform));
 
             vkASInst.instanceCustomIndex                    = Inst.CustomId;
-            vkASInst.instanceShaderBindingTableRecordOffset = pTLASVk->GetInstanceDesc(Inst.InstanceName).ContributionToHitGroupIndex;
+            vkASInst.instanceShaderBindingTableRecordOffset = InstDesc.ContributionToHitGroupIndex;
             vkASInst.mask                                   = Inst.Mask;
             vkASInst.flags                                  = InstanceFlagsToVkGeometryInstanceFlags(Inst.Flags);
             vkASInst.accelerationStructureReference         = pBLASVk->GetVkDeviceAddress();
@@ -3014,8 +3035,8 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
     vkASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
     vkASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;                    // type must be compatible with create info
     vkASBuildInfo.flags                     = BuildASFlagsToVkBuildAccelerationStructureFlags(TLASDesc.Flags); // flags must be compatible with create info
-    vkASBuildInfo.update                    = VK_FALSE;
-    vkASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
+    vkASBuildInfo.update                    = Attribs.Update;
+    vkASBuildInfo.srcAccelerationStructure  = Attribs.Update ? pTLASVk->GetVkTLAS() : VK_NULL_HANDLE;
     vkASBuildInfo.dstAccelerationStructure  = pTLASVk->GetVkTLAS();
     vkASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
     vkASBuildInfo.geometryCount             = 1;
@@ -3036,7 +3057,8 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
 
     // Dst BLAS description has specified CompactedSize, but doesn't have specified pTriangles and pBoxes.
     // We should copy geometries because it required for SBT to map geometry name to hit group.
-    pDstVk->CopyDescription(*pSrcVk);
+    pDstVk->CopyGeometryDescription(*pSrcVk);
+    pDstVk->SetActualGeometryCount(pSrcVk->GetActualGeometryCount());
 
     VkCopyAccelerationStructureInfoKHR Info = {};
 
