@@ -39,7 +39,7 @@
 namespace Diligent
 {
 
-void ValidateFramebufferDesc(const FramebufferDesc& Desc);
+void ValidateFramebufferDesc(const FramebufferDesc& Desc) noexcept(false);
 
 /// Template class implementing base functionality for the framebuffer object.
 

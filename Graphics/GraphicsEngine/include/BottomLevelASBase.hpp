@@ -93,8 +93,6 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
 
-    static constexpr Uint32 InvalidGeometryIndex = ~0u;
-
     virtual Uint32 DILIGENT_CALL_TYPE GetGeometryIndex(const char* Name) const override final
     {
         VERIFY_EXPR(Name != nullptr && Name[0] != '\0');

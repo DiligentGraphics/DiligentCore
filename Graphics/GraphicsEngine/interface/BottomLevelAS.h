@@ -178,6 +178,7 @@ struct ScratchBufferSizes
 };
 typedef struct ScratchBufferSizes ScratchBufferSizes;
 
+static const Uint32 InvalidGeometryIndex = ~0u;
 
 #define DILIGENT_INTERFACE_NAME IBottomLevelAS
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"

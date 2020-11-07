@@ -45,6 +45,36 @@
 namespace Diligent
 {
 
+// clang-format off
+bool VerifyDrawAttribs               (const DrawAttribs&                Attribs);
+bool VerifyDrawIndexedAttribs        (const DrawIndexedAttribs&         Attribs);
+bool VerifyDrawIndirectAttribs       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer);
+bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer);
+
+bool VerifyDispatchComputeAttribs        (const DispatchComputeAttribs&         Attribs);
+bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer);
+// clang-format on
+
+bool VerifyDrawMeshAttribs(Uint32 MaxDrawMeshTasksCount, const DrawMeshAttribs& Attribs);
+bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer);
+
+bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttribs& ResolveAttribs,
+                                            const TextureDesc&                      SrcTexDesc,
+                                            const TextureDesc&                      DstTexDesc);
+
+bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs);
+bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier);
+
+bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs);
+bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs);
+bool VerifyCopyBLASAttribs(const CopyBLASAttribs& Attribs);
+bool VerifyCopyTLASAttribs(const CopyTLASAttribs& Attribs);
+bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteBLASCompactedSizeAttribs& Attribs);
+bool VerifyWriteTLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteTLASCompactedSizeAttribs& Attribs);
+bool VerifyTraceRaysAttribs(const TraceRaysAttribs& Attribs);
+
+
+
 /// Describes input vertex stream
 template <typename BufferImplType>
 struct VertexStreamInfo
@@ -53,7 +83,9 @@ struct VertexStreamInfo
 
     /// Strong reference to the buffer object
     RefCntAutoPtr<BufferImplType> pBuffer;
-    Uint32                        Offset = 0; ///< Offset in bytes
+
+    /// Offset in bytes
+    Uint32 Offset = 0;
 };
 
 /// Base implementation of the device context.
@@ -62,7 +94,7 @@ struct VertexStreamInfo
 /// \tparam ImplementationTraits  - implementation traits that define specific implementation details
 ///                                 (texture implemenation type, buffer implementation type, etc.)
 /// \remarks Device context keeps strong references to all objects currently bound to
-///          the pipeline: buffers, states, samplers, shaders, etc.
+///          the pipeline: buffers, tetxures, states, SRBs, etc.
 ///          The context also keeps strong references to the device and
 ///          the swap chain.
 template <typename BaseInterface, typename ImplementationTraits>
@@ -81,9 +113,9 @@ public:
     using BottomLevelASType     = typename ImplementationTraits::BottomLevelASType;
     using TopLevelASType        = typename ImplementationTraits::TopLevelASType;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
+    /// \param pRefCounters  - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
-    /// \param bIsDeferred - flag indicating if this instance is a deferred context
+    /// \param bIsDeferred   - flag indicating if this instance is a deferred context
     DeviceContextBase(IReferenceCounters* pRefCounters, DeviceImplType* pRenderDevice, bool bIsDeferred) :
         // clang-format off
         TObjectBase  {pRefCounters },
@@ -116,7 +148,9 @@ public:
                                       int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
-    inline virtual void DILIGENT_CALL_TYPE SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
+    inline virtual void DILIGENT_CALL_TYPE SetIndexBuffer(IBuffer*                       pIndexBuffer,
+                                                          Uint32                         ByteOffset,
+                                                          RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
 
     /// Caches the viewports
     inline void SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight);
@@ -243,22 +277,22 @@ protected:
 
 #ifdef DILIGENT_DEVELOPMENT
     // clang-format off
-    bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const;
-    bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const;
-    bool DvpVerifyDrawMeshArguments           (const DrawMeshAttribs&            Attribs)const;
-    bool DvpVerifyDrawIndirectArguments       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer)const;
-    bool DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const;
-    bool DvpVerifyDrawMeshIndirectArguments   (const DrawMeshIndirectAttribs&    Attribs, const IBuffer* pAttribsBuffer)const;
+    bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs) const;
+    bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs) const;
+    bool DvpVerifyDrawMeshArguments           (const DrawMeshAttribs&            Attribs) const;
+    bool DvpVerifyDrawIndirectArguments       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer) const;
+    bool DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
+    bool DvpVerifyDrawMeshIndirectArguments   (const DrawMeshIndirectAttribs&    Attribs, const IBuffer* pAttribsBuffer) const;
 
-    bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const;
-    bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const;
+    bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
+    bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
 
-    void DvpVerifyRenderTargets()const;
-    void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const;
-    bool DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName)const;
-    bool DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const;
-    bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const;
-    bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const;
+    bool DvpVerifyRenderTargets() const;
+    bool DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const;
+    bool DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName) const;
+    bool DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName) const;
+    bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
+    bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
 #else
     bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const {return true;}
     bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const {return true;}
@@ -270,8 +304,8 @@ protected:
     bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {return true;}
     bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {return true;}
 
-    void DvpVerifyRenderTargets()const {}
-    void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const {}
+    bool DvpVerifyRenderTargets()const {return true;}
+    bool DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const {return true;}
     bool DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
     bool DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
     bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
@@ -368,13 +402,13 @@ protected:
 
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    SetVertexBuffers(Uint32                         StartSlot,
-                     Uint32                         NumBuffersSet,
-                     IBuffer**                      ppBuffers,
-                     Uint32*                        pOffsets,
-                     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                     SET_VERTEX_BUFFERS_FLAGS       Flags)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetVertexBuffers(
+    Uint32                         StartSlot,
+    Uint32                         NumBuffersSet,
+    IBuffer**                      ppBuffers,
+    Uint32*                        pOffsets,
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+    SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (StartSlot >= MAX_BUFFER_SLOTS)
@@ -429,15 +463,18 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    SetPipelineState(PipelineStateImplType* pPipelineState, int /*Dummy*/)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetPipelineState(
+    PipelineStateImplType* pPipelineState,
+    int /*Dummy*/)
 {
     m_pPipelineState = pPipelineState;
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode, int)
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::CommitShaderResources(
+    IShaderResourceBinding*        pShaderResourceBinding,
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+    int)
 {
 #ifdef DILIGENT_DEVELOPMENT
     VERIFY(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
@@ -459,6 +496,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         }
     }
 #endif
+
     return true;
 }
 
@@ -472,8 +510,10 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::InvalidateSt
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetIndexBuffer(
+    IBuffer*                       pIndexBuffer,
+    Uint32                         ByteOffset,
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     m_pIndexBuffer         = ValidatedCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
@@ -538,8 +578,11 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetStencilRe
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetViewports(
+    Uint32          NumViewports,
+    const Viewport* pViewports,
+    Uint32&         RTWidth,
+    Uint32&         RTHeight)
 {
     if (RTWidth == 0 || RTHeight == 0)
     {
@@ -578,8 +621,11 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetViewports
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetScissorRects(
+    Uint32      NumRects,
+    const Rect* pRects,
+    Uint32&     RTWidth,
+    Uint32&     RTHeight)
 {
     if (RTWidth == 0 || RTHeight == 0)
     {
@@ -599,8 +645,10 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil)
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTargets(
+    Uint32        NumRenderTargets,
+    ITextureView* ppRenderTargets[],
+    ITextureView* pDepthStencil)
 {
     if (NumRenderTargets == 0 && pDepthStencil == nullptr)
     {
@@ -752,8 +800,10 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRe
 
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    GetRenderTargets(Uint32& NumRenderTargets, ITextureView** ppRTVs, ITextureView** ppDSV)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetRenderTargets(
+    Uint32&        NumRenderTargets,
+    ITextureView** ppRTVs,
+    ITextureView** ppDSV)
 {
     NumRenderTargets = m_NumBoundRenderTargets;
 
@@ -931,33 +981,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
 {
     VERIFY(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
     VERIFY(m_pBoundFramebuffer == nullptr, "Attempting to begin render pass while another framebuffer ('", m_pBoundFramebuffer->GetDesc().Name, "') is bound.");
-    VERIFY(Attribs.pRenderPass != nullptr, "Render pass must not be null");
-    VERIFY(Attribs.pFramebuffer != nullptr, "Framebuffer must not be null");
-#ifdef DILIGENT_DEBUG
-    {
-        const auto& RPDesc = Attribs.pRenderPass->GetDesc();
 
-        Uint32 NumRequiredClearValues = 0;
-        for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
-        {
-            const auto& Attchmnt = RPDesc.pAttachments[i];
-            if (Attchmnt.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
-                NumRequiredClearValues = i + 1;
-
-            const auto& FmtAttribs = GetTextureFormatAttribs(Attchmnt.Format);
-            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-            {
-                if (Attchmnt.StencilLoadOp == ATTACHMENT_LOAD_OP_CLEAR)
-                    NumRequiredClearValues = i + 1;
-            }
-        }
-        VERIFY(Attribs.ClearValueCount >= NumRequiredClearValues,
-               "Begin render pass operation requiers at least ", NumRequiredClearValues,
-               " clear values, but only ", Attribs.ClearValueCount, " are given.");
-        VERIFY(Attribs.ClearValueCount == 0 || Attribs.pClearValues != nullptr,
-               "pClearValues must not be null when ClearValueCount is not zero");
-    }
-#endif
+    VerifyBeginRenderPassAttribs(Attribs);
 
     // Reset current render targets (in Vulkan backend, this may end current render pass).
     ResetRenderTargets();
@@ -998,6 +1023,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
     m_pBoundFramebuffer                   = pNewFramebuffer;
     m_SubpassIndex                        = 0;
     m_RenderPassAttachmentsTransitionMode = Attribs.StateTransitionMode;
+
     UpdateAttachmentStates(m_SubpassIndex);
     SetSubpassRenderTargets();
 }
@@ -1212,8 +1238,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::EndQuery(IQu
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const void* pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateBuffer(
+    IBuffer*                       pBuffer,
+    Uint32                         Offset,
+    Uint32                         Size,
+    const void*                    pData,
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     VERIFY(pBuffer != nullptr, "Buffer must not be null");
     VERIFY(m_pActiveRenderPass == nullptr, "UpdateBuffer command must be used outside of render pass.");
@@ -1228,14 +1258,14 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    CopyBuffer(IBuffer*                       pSrcBuffer,
-               Uint32                         SrcOffset,
-               RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
-               IBuffer*                       pDstBuffer,
-               Uint32                         DstOffset,
-               Uint32                         Size,
-               RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBuffer(
+    IBuffer*                       pSrcBuffer,
+    Uint32                         SrcOffset,
+    RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+    IBuffer*                       pDstBuffer,
+    Uint32                         DstOffset,
+    Uint32                         Size,
+    RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
 {
     VERIFY(pSrcBuffer != nullptr, "Source buffer must not be null");
     VERIFY(pDstBuffer != nullptr, "Destination buffer must not be null");
@@ -1251,8 +1281,11 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::MapBuffer(
+    IBuffer*  pBuffer,
+    MAP_TYPE  MapType,
+    MAP_FLAGS MapFlags,
+    PVoid&    pMappedData)
 {
     VERIFY(pBuffer, "pBuffer must not be null");
 
@@ -1306,8 +1339,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     VERIFY(pBuffer, "pBuffer must not be null");
 #ifdef DILIGENT_DEBUG
@@ -1322,41 +1354,50 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData, RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode, RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateTexture(
+    ITexture*                      pTexture,
+    Uint32                         MipLevel,
+    Uint32                         Slice,
+    const Box&                     DstBox,
+    const TextureSubResData&       SubresData,
+    RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+    RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
 {
     VERIFY(pTexture != nullptr, "pTexture must not be null");
     VERIFY(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
+
     ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    CopyTexture(const CopyTextureAttribs& CopyAttribs)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
     VERIFY(CopyAttribs.pSrcTexture, "Src texture must not be null");
     VERIFY(CopyAttribs.pDstTexture, "Dst texture must not be null");
     VERIFY(m_pActiveRenderPass == nullptr, "CopyTexture command must be used outside of render pass.");
+
     ValidateCopyTextureParams(CopyAttribs);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    MapTextureSubresource(ITexture*                 pTexture,
-                          Uint32                    MipLevel,
-                          Uint32                    ArraySlice,
-                          MAP_TYPE                  MapType,
-                          MAP_FLAGS                 MapFlags,
-                          const Box*                pMapRegion,
-                          MappedTextureSubresource& MappedData)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::MapTextureSubresource(
+    ITexture*                 pTexture,
+    Uint32                    MipLevel,
+    Uint32                    ArraySlice,
+    MAP_TYPE                  MapType,
+    MAP_FLAGS                 MapFlags,
+    const Box*                pMapRegion,
+    MappedTextureSubresource& MappedData)
 {
     VERIFY(pTexture, "pTexture must not be null");
     ValidateMapTextureParams(pTexture->GetDesc(), MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UnmapTextureSubresource(
+    ITexture* pTexture,
+    Uint32    MipLevel,
+    Uint32    ArraySlice)
 {
     VERIFY(pTexture, "pTexture must not be null");
     DEV_CHECK_ERR(MipLevel < pTexture->GetDesc().MipLevels, "Mip level is out of range");
@@ -1364,8 +1405,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    GenerateMips(ITextureView* pTexView)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GenerateMips(ITextureView* pTexView)
 {
     VERIFY(pTexView != nullptr, "pTexView must not be null");
     VERIFY(m_pActiveRenderPass == nullptr, "GenerateMips command must be used outside of render pass.");
@@ -1382,57 +1422,213 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 
 
 template <typename BaseInterface, typename ImplementationTraits>
-void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    ResolveTextureSubresource(ITexture*                               pSrcTexture,
-                              ITexture*                               pDstTexture,
-                              const ResolveTextureSubresourceAttribs& ResolveAttribs)
+void DeviceContextBase<BaseInterface, ImplementationTraits>::ResolveTextureSubresource(
+    ITexture*                               pSrcTexture,
+    ITexture*                               pDstTexture,
+    const ResolveTextureSubresourceAttribs& ResolveAttribs)
 {
 #ifdef DILIGENT_DEVELOPMENT
+    VERIFY(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource command must be used outside of render pass.");
+
     VERIFY_EXPR(pSrcTexture != nullptr && pDstTexture != nullptr);
     const auto& SrcTexDesc = pSrcTexture->GetDesc();
     const auto& DstTexDesc = pDstTexture->GetDesc();
-    DEV_CHECK_ERR(SrcTexDesc.SampleCount > 1,
-                  "Source texture '", SrcTexDesc.Name, "' of a resolve operation is not multi-sampled");
-    DEV_CHECK_ERR(DstTexDesc.SampleCount == 1,
-                  "Destination texture '", DstTexDesc.Name, "' of a resolve operation is multi-sampled");
-    auto SrcMipLevelProps = GetMipLevelProperties(SrcTexDesc, ResolveAttribs.SrcMipLevel);
-    auto DstMipLevelProps = GetMipLevelProperties(DstTexDesc, ResolveAttribs.DstMipLevel);
-    DEV_CHECK_ERR(SrcMipLevelProps.LogicalWidth == DstMipLevelProps.LogicalWidth && SrcMipLevelProps.LogicalHeight == DstMipLevelProps.LogicalHeight,
-                  "The size (", SrcMipLevelProps.LogicalWidth, "x", SrcMipLevelProps.LogicalHeight,
-                  ") of the source subresource of a resolve operation (texture '",
-                  SrcTexDesc.Name, "', mip ", ResolveAttribs.SrcMipLevel, ", slice ", ResolveAttribs.SrcSlice,
-                  ") does not match the size (", DstMipLevelProps.LogicalWidth, "x", DstMipLevelProps.LogicalHeight,
-                  ") of the destination subresource (texture '", DstTexDesc.Name, "', mip ", ResolveAttribs.DstMipLevel, ", slice ",
-                  ResolveAttribs.DstSlice, ")");
 
-    const auto& SrcFmtAttribs     = GetTextureFormatAttribs(SrcTexDesc.Format);
-    const auto& DstFmtAttribs     = GetTextureFormatAttribs(DstTexDesc.Format);
-    const auto& ResolveFmtAttribs = GetTextureFormatAttribs(ResolveAttribs.Format);
-    if (!SrcFmtAttribs.IsTypeless && !DstFmtAttribs.IsTypeless)
-    {
-        DEV_CHECK_ERR(SrcTexDesc.Format == DstTexDesc.Format,
-                      "Source (", SrcFmtAttribs.Name, ") and destination (", DstFmtAttribs.Name,
-                      ") texture formats of a resolve operation must match exaclty or be compatible typeless formats");
-        DEV_CHECK_ERR(ResolveAttribs.Format == TEX_FORMAT_UNKNOWN || SrcTexDesc.Format == ResolveAttribs.Format, "Invalid format of a resolve operation");
-    }
-    if (SrcFmtAttribs.IsTypeless && DstFmtAttribs.IsTypeless)
-    {
-        DEV_CHECK_ERR(ResolveAttribs.Format != TEX_FORMAT_UNKNOWN,
-                      "Format of a resolve operation must not be unknown when both src and dst texture formats are typeless");
-    }
-    if (SrcFmtAttribs.IsTypeless || DstFmtAttribs.IsTypeless)
-    {
-        DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless,
-                      "Format of a resolve operation must not be typeless when one of the texture formats is typeless");
-    }
-    VERIFY(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource command must be used outside of render pass.");
+    VerifyResolveTextureSubresourceAttribs(ResolveAttribs, SrcTexDesc, DstTexDesc);
 #endif
 }
 
-#ifdef DILIGENT_DEVELOPMENT
+
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDrawArguments(const DrawAttribs& Attribs) const
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS command must be performed outside of render pass");
+        return false;
+    }
+
+    return VerifyBuildBLASAttribs(Attribs);
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS command must be performed outside of render pass");
+        return false;
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (!VerifyBuildTLASAttribs(Attribs))
+        return false;
+
+    for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
+    {
+        if (!ValidatedCast<BottomLevelASType>(Attribs.pInstances[i].pBLAS)->ValidateContent())
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].pBLAS is not valid");
+            return false;
+        }
+    }
+#endif
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS command must be performed outside of render pass");
+        return false;
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (!VerifyCopyBLASAttribs(Attribs))
+        return false;
+
+    if (!ValidatedCast<BottomLevelASType>(Attribs.pSrc)->ValidateContent())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pSrc acceleration structure is not valid");
+        return false;
+    }
+#endif
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS command must be performed outside of render pass");
+        return false;
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (!VerifyCopyTLASAttribs(Attribs))
+        return false;
+
+    if (!ValidatedCast<TopLevelASType>(Attribs.pSrc)->ValidateContent())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
+        return false;
+    }
+#endif
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: command must be performed outside of render pass");
+        return false;
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (!VerifyWriteBLASCompactedSizeAttribs(m_pDevice, Attribs))
+        return false;
+#endif
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: command must be performed outside of render pass");
+        return false;
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (!VerifyWriteTLASCompactedSizeAttribs(m_pDevice, Attribs))
+        return false;
+#endif
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (!m_pPipelineState->GetDesc().IsRayTracingPipeline())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a ray tracing pipeline.");
+        return false;
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (!VerifyTraceRaysAttribs(Attribs))
+        return false;
+#endif
+
+    return true;
+}
+
+
+
+
+#ifdef DILIGENT_DEVELOPMENT
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawArguments(const DrawAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1449,17 +1645,11 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (Attribs.NumVertices == 0)
-    {
-        LOG_WARNING_MESSAGE("Draw command arguments are invalid: number of vertices to draw is zero.");
-    }
-
-    return true;
+    return VerifyDrawAttribs(Attribs);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDrawIndexedArguments(const DrawIndexedAttribs& Attribs) const
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawIndexedArguments(const DrawIndexedAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1477,30 +1667,17 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (Attribs.IndexType != VT_UINT16 && Attribs.IndexType != VT_UINT32)
-    {
-        LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: IndexType (",
-                          GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
-        return false;
-    }
-
     if (!m_pIndexBuffer)
     {
         LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: no index buffer is bound.");
         return false;
     }
 
-    if (Attribs.NumIndices == 0)
-    {
-        LOG_WARNING_MESSAGE("DrawIndexed command arguments are invalid: number of indices to draw is zero.");
-    }
-
-    return true;
+    return VerifyDrawIndexedAttribs(Attribs);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs) const
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1524,22 +1701,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (Attribs.ThreadGroupCount == 0)
-    {
-        LOG_WARNING_MESSAGE("DrawMesh command arguments are invalid: number of groups to dispatch is zero.");
-    }
-
-    if (Attribs.ThreadGroupCount > m_pDevice->GetProperties().MaxDrawMeshTasksCount)
-    {
-        LOG_WARNING_MESSAGE("DrawMesh command arguments are invalid: number of groups to dispatch must be less then ", m_pDevice->GetProperties().MaxDrawMeshTasksCount);
-    }
-
-    return true;
+    return VerifyDrawMeshAttribs(m_pDevice->GetProperties().MaxDrawMeshTasksCount, Attribs);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDrawIndirectArguments(const DrawIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawIndirectArguments(
+    const DrawIndirectAttribs& Attribs,
+    const IBuffer*             pAttribsBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1558,21 +1726,6 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (pAttribsBuffer != nullptr)
-    {
-        if ((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) == 0)
-        {
-            LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: indirect draw arguments buffer '",
-                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-            return false;
-        }
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: indirect draw arguments buffer is null.");
-        return false;
-    }
-
     if (m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         LOG_ERROR_MESSAGE("Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
@@ -1580,12 +1733,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    return true;
+    return VerifyDrawIndirectAttribs(Attribs, pAttribsBuffer);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawIndexedIndirectArguments(
+    const DrawIndexedIndirectAttribs& Attribs,
+    const IBuffer*                    pAttribsBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1603,31 +1757,9 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (Attribs.IndexType != VT_UINT16 && Attribs.IndexType != VT_UINT32)
-    {
-        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: IndexType (",
-                          GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
-        return false;
-    }
-
     if (!m_pIndexBuffer)
     {
         LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: no index buffer is bound.");
-        return false;
-    }
-
-    if (pAttribsBuffer != nullptr)
-    {
-        if ((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) == 0)
-        {
-            LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: indirect draw arguments buffer '",
-                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-            return false;
-        }
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: indirect draw arguments buffer is null.");
         return false;
     }
 
@@ -1638,12 +1770,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    return true;
+    return VerifyDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDrawMeshIndirectArguments(const DrawMeshIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawMeshIndirectArguments(
+    const DrawMeshIndirectAttribs& Attribs,
+    const IBuffer*                 pAttribsBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1667,39 +1800,23 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (pAttribsBuffer != nullptr)
-    {
-        if ((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) == 0)
-        {
-            LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: indirect draw arguments buffer '",
-                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-            return false;
-        }
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: indirect draw arguments buffer is null.");
-        return false;
-    }
-
-    return true;
+    return VerifyDrawMeshIndirectAttribs(Attribs, pAttribsBuffer);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyRenderTargets() const
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyRenderTargets() const
 {
     if (!m_pPipelineState)
     {
         LOG_ERROR_MESSAGE("No pipeline state is bound");
-        return;
+        return false;
     }
 
     const auto& PSODesc = m_pPipelineState->GetDesc();
     if (!PSODesc.IsAnyGraphicsPipeline())
     {
         LOG_ERROR_MESSAGE("Pipeline state '", PSODesc.Name, "' is not a graphics pipeline");
-        return;
+        return false;
     }
 
     TEXTURE_FORMAT BoundRTVFormats[8] = {TEX_FORMAT_UNKNOWN};
@@ -1741,13 +1858,14 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
                                 "' (", GetTextureFormatAttribs(PSOFmt).Name, ").");
         }
     }
+
+    return true;
 }
 
 
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDispatchArguments(const DispatchComputeAttribs& Attribs) const
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDispatchArguments(const DispatchComputeAttribs& Attribs) const
 {
     if (!m_pPipelineState)
     {
@@ -1768,21 +1886,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (Attribs.ThreadGroupCountX == 0)
-        LOG_WARNING_MESSAGE("DispatchCompute command arguments are invalid: ThreadGroupCountX is zero.");
-
-    if (Attribs.ThreadGroupCountY == 0)
-        LOG_WARNING_MESSAGE("DispatchCompute command arguments are invalid: ThreadGroupCountY is zero.");
-
-    if (Attribs.ThreadGroupCountZ == 0)
-        LOG_WARNING_MESSAGE("DispatchCompute command arguments are invalid: ThreadGroupCountZ is zero.");
-
-    return true;
+    return VerifyDispatchComputeAttribs(Attribs);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDispatchIndirectArguments(
+    const DispatchComputeIndirectAttribs& Attribs,
+    const IBuffer*                        pAttribsBuffer) const
 {
     if (!m_pPipelineState)
     {
@@ -1803,114 +1913,21 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (pAttribsBuffer != nullptr)
-    {
-        if ((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) == 0)
-        {
-            LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: indirect dispatch arguments buffer '",
-                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
-            return false;
-        }
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: indirect dispatch arguments buffer is null.");
-        return false;
-    }
-
-    return true;
+    return VerifyDispatchComputeIndirectAttribs(Attribs, pAttribsBuffer);
 }
 
 
 template <typename BaseInterface, typename ImplementationTraits>
-void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
 {
-    DEV_CHECK_ERR(Barrier.pResource != nullptr, "pResource must not be null");
-    DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
-    RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN;
-
-    if (RefCntAutoPtr<ITexture> pTexture{Barrier.pResource, IID_Texture})
-    {
-        const auto& TexDesc = pTexture->GetDesc();
-
-        DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, true), "Invlaid new state specified for texture '", TexDesc.Name, "'");
-        OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTexture->GetState();
-        DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN,
-                      "The state of texture '", TexDesc.Name,
-                      "' is unknown to the engine and is not explicitly specified in the barrier");
-        DEV_CHECK_ERR(VerifyResourceStates(OldState, true), "Invlaid old state specified for texture '", TexDesc.Name, "'");
-
-        DEV_CHECK_ERR(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level (", Barrier.FirstMipLevel,
-                      ") specified by the barrier is out of range. Texture '",
-                      TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s)");
-        DEV_CHECK_ERR(Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || Barrier.FirstMipLevel + Barrier.MipLevelsCount <= TexDesc.MipLevels,
-                      "Mip level range ", Barrier.FirstMipLevel, "..", Barrier.FirstMipLevel + Barrier.MipLevelsCount - 1,
-                      " specified by the barrier is out of range. Texture '",
-                      TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s)");
-
-        DEV_CHECK_ERR(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice (", Barrier.FirstArraySlice,
-                      ") specified by the barrier is out of range. Array size of texture '",
-                      TexDesc.Name, "' is ", TexDesc.ArraySize);
-        DEV_CHECK_ERR(Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
-                      "Array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice + Barrier.ArraySliceCount - 1,
-                      " specified by the barrier is out of range. Array size of texture '",
-                      TexDesc.Name, "' is ", TexDesc.ArraySize);
-
-        auto DevType = m_pDevice->GetDeviceCaps().DevType;
-        if (DevType != RENDER_DEVICE_TYPE_D3D12 && DevType != RENDER_DEVICE_TYPE_VULKAN)
-        {
-            DEV_CHECK_ERR(Barrier.FirstMipLevel == 0 && (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || Barrier.MipLevelsCount == TexDesc.MipLevels),
-                          "Failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device");
-            DEV_CHECK_ERR(Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.ArraySliceCount == TexDesc.ArraySize),
-                          "Failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device");
-        }
-    }
-    else if (RefCntAutoPtr<IBuffer> pBuffer{Barrier.pResource, IID_Buffer})
-    {
-        const auto& BuffDesc = pBuffer->GetDesc();
-        DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, false), "Invlaid new state specified for buffer '", BuffDesc.Name, "'");
-        OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBuffer->GetState();
-        DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
-        DEV_CHECK_ERR(VerifyResourceStates(OldState, false), "Invlaid old state specified for buffer '", BuffDesc.Name, "'");
-    }
-    else if (RefCntAutoPtr<IBottomLevelAS> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
-    {
-        const auto& BLASDesc = pBottomLevelAS->GetDesc();
-        OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBottomLevelAS->GetState();
-        DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of BLAS '", BLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
-        DEV_CHECK_ERR(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE,
-                      "Invlaid new state specified for BLAS '", BLASDesc.Name, "'");
-        DEV_CHECK_ERR(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "Split barriers are not supported for BLAS");
-    }
-    else if (RefCntAutoPtr<ITopLevelAS> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
-    {
-        const auto& TLASDesc = pTopLevelAS->GetDesc();
-        OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTopLevelAS->GetState();
-        DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of TLAS '", TLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
-        DEV_CHECK_ERR(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE || Barrier.NewState == RESOURCE_STATE_RAY_TRACING,
-                      "Invlaid new state specified for TLAS '", TLASDesc.Name, "'");
-        DEV_CHECK_ERR(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "Split barriers are not supported for TLAS");
-    }
-    else
-    {
-        UNEXPECTED("unsupported resource type");
-    }
-
-    if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
-    {
-        DEV_CHECK_ERR(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "For UAV barriers, transition type must be STATE_TRANSITION_TYPE_IMMEDIATE");
-    }
-
-    if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
-    {
-        DEV_CHECK_ERR(!Barrier.UpdateResourceState, "Resource state can't be updated in begin-split barrier");
-    }
+    return VerifyStateTransitionDesc(m_pDevice, Barrier);
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName) const
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyTextureState(
+    const TextureImplType& Texture,
+    RESOURCE_STATE         RequiredState,
+    const char*            OperationName) const
 {
     if (Texture.IsInKnownState() && !Texture.CheckState(RequiredState))
     {
@@ -1924,8 +1941,10 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyBufferState(const BufferImplType& Buffer, RESOURCE_STATE RequiredState, const char* OperationName) const
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyBufferState(
+    const BufferImplType& Buffer,
+    RESOURCE_STATE        RequiredState,
+    const char*           OperationName) const
 {
     if (Buffer.IsInKnownState() && !Buffer.CheckState(RequiredState))
     {
@@ -1939,8 +1958,10 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyBLASState(const BottomLevelASType& BLAS, RESOURCE_STATE RequiredState, const char* OperationName) const
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyBLASState(
+    const BottomLevelASType& BLAS,
+    RESOURCE_STATE           RequiredState,
+    const char*              OperationName) const
 {
     if (BLAS.IsInKnownState() && !BLAS.CheckState(RequiredState))
     {
@@ -1954,8 +1975,10 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyTLASState(const TopLevelASType& TLAS, RESOURCE_STATE RequiredState, const char* OperationName) const
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyTLASState(
+    const TopLevelASType& TLAS,
+    RESOURCE_STATE        RequiredState,
+    const char*           OperationName) const
 {
     if (TLAS.IsInKnownState() && !TLAS.CheckState(RequiredState))
     {
@@ -1967,723 +1990,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 
     return true;
 }
+
 #endif // DILIGENT_DEVELOPMENT
-
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
-{
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS command must be performed outside of render pass");
-        return false;
-    }
-
-    if (Attribs.pBLAS == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBLAS must not be null");
-        return false;
-    }
-
-    if (Attribs.pScratchBuffer == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pScratchBuffer must not be null");
-        return false;
-    }
-
-    if (!((Attribs.pTriangleData != nullptr) ^ (Attribs.pBoxData != nullptr)))
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: exactly one of pTriangles and pBoxes must be defined");
-        return false;
-    }
-
-    if (Attribs.pBoxData == nullptr && Attribs.BoxDataCount > 0)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData is null but BoxDataCount is not 0");
-        return false;
-    }
-
-    if (Attribs.pTriangleData == nullptr && Attribs.TriangleDataCount > 0)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData is null but TriangleDataCount is not 0");
-        return false;
-    }
-
-    const auto& BLASDesc = Attribs.pBLAS->GetDesc();
-
-    if (Attribs.BoxDataCount > BLASDesc.BoxCount)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: BoxDataCount must be less than or equal to pBLAS->GetDesc().BoxCount");
-        return false;
-    }
-
-    if (Attribs.TriangleDataCount > BLASDesc.TriangleCount)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: TriangleDataCount must be less than or equal to pBLAS->GetDesc().TriangleCount");
-        return false;
-    }
-
-#ifdef DILIGENT_DEVELOPMENT
-    for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
-    {
-        const auto&  tri            = Attribs.pTriangleData[i];
-        const Uint32 VertexSize     = GetValueSize(tri.VertexValueType) * tri.VertexComponentCount;
-        const Uint32 VertexDataSize = tri.VertexStride * tri.VertexCount;
-        const Uint32 GeomIndex      = Attribs.pBLAS->GetGeometryIndex(tri.GeometryName);
-
-        if (GeomIndex == BottomLevelASType::InvalidGeometryIndex)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].GeometryName not found in BLAS description");
-            return false;
-        }
-
-        const auto& TriDesc = BLASDesc.pTriangles[GeomIndex];
-
-        if (tri.VertexValueType != VT_UNDEFINED && tri.VertexValueType != TriDesc.VertexValueType)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexValueType must be undefined or match the VertexValueType in geometry description");
-            return false;
-        }
-
-        if (tri.VertexComponentCount != 0 && tri.VertexComponentCount != TriDesc.VertexComponentCount)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexComponentCount must be 0 or match the VertexComponentCount in geometry description");
-            return false;
-        }
-
-        if (tri.VertexCount > TriDesc.MaxVertexCount)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexCount must not be greater then MaxVertexCount(", TriDesc.MaxVertexCount, ")");
-            return false;
-        }
-
-        if (tri.VertexStride < VertexSize)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexStride must be at least ", VertexSize, " bytes");
-            return false;
-        }
-
-        if (tri.pVertexBuffer == nullptr)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pVertexBuffer must not be null");
-            return false;
-        }
-
-        if ((tri.pVertexBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pVertexBuffer must be created with BIND_RAY_TRACING flag");
-            return false;
-        }
-
-        if (tri.VertexOffset + VertexDataSize > tri.pVertexBuffer->GetDesc().uiSizeInBytes)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pVertexBuffer is too small for specified VertexStride and VertexCount");
-            return false;
-        }
-
-        if (tri.IndexType != VT_UNDEFINED && tri.IndexType != TriDesc.IndexType)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].IndexType must match the IndexType in geometry description");
-            return false;
-        }
-
-        if (tri.PrimitiveCount > TriDesc.MaxPrimitiveCount)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].PrimitiveCount must not be greater then MaxPrimitiveCount(", TriDesc.MaxPrimitiveCount, ")");
-            return false;
-        }
-
-        if (TriDesc.IndexType != VT_UNDEFINED)
-        {
-            if (tri.pIndexBuffer == nullptr)
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer must not be null");
-                return false;
-            }
-
-            if ((tri.pIndexBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer must be created with BIND_RAY_TRACING flag");
-                return false;
-            }
-
-            const Uint32 IndexDataSize = tri.PrimitiveCount * 3 * GetValueSize(tri.IndexType);
-            if (tri.IndexOffset + IndexDataSize > tri.pIndexBuffer->GetDesc().uiSizeInBytes)
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer is too small for specified IndexType and IndexCount");
-                return false;
-            }
-        }
-        else
-        {
-            if (tri.VertexCount != tri.PrimitiveCount * 3)
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexCount must equal to (PrimitiveCount * 3)");
-                return false;
-            }
-
-            VERIFY(tri.pIndexBuffer == nullptr,
-                   "IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer must be null if IndexType is VT_UNDEFINED");
-        }
-
-        if (tri.pTransformBuffer != nullptr)
-        {
-            if ((tri.pTransformBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pTransformBuffer must be created with BIND_RAY_TRACING flag");
-                return false;
-            }
-
-            if (!TriDesc.AllowsTransforms)
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "] use transform buffer but AllowsTransforms is false");
-                return false;
-            }
-        }
-    }
-
-    for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
-    {
-        const auto&  box       = Attribs.pBoxData[i];
-        const Uint32 BoxSize   = sizeof(float) * 6;
-        const Uint32 GeomIndex = Attribs.pBLAS->GetGeometryIndex(box.GeometryName);
-
-        if (GeomIndex == BottomLevelASType::InvalidGeometryIndex)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].GeometryName not found in BLAS description");
-            return false;
-        }
-
-        const auto& BoxDesc = BLASDesc.pBoxes[GeomIndex];
-
-        if (box.BoxCount > BoxDesc.MaxBoxCount)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].BoxCount must not be greated then MaxBoxCount (", BoxDesc.MaxBoxCount, ")");
-            return false;
-        }
-
-        if (box.BoxStride < BoxSize)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].BoxStride must be at least ", BoxSize, " bytes");
-            return false;
-        }
-
-        if (box.pBoxBuffer == nullptr)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].pBoxBuffer must not be null");
-            return false;
-        }
-
-        if ((box.pBoxBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].pBoxBuffer must be created with BIND_RAY_TRACING flag");
-            return false;
-        }
-    }
-#endif // DILIGENT_DEVELOPMENT
-
-    const auto& ScratchDesc = Attribs.pScratchBuffer->GetDesc();
-
-    if (Attribs.ScratchBufferOffset > ScratchDesc.uiSizeInBytes)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: ScratchBufferOffset is greater than buffer size");
-        return false;
-    }
-
-    if (ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset < Attribs.pBLAS->GetScratchBufferSizes().Build)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Build to get required size for scratch buffer");
-        return false;
-    }
-
-    if ((ScratchDesc.BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer must be created with BIND_RAY_TRACING flag");
-        return false;
-    }
-
-    return true;
-}
-
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
-{
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS command must be performed outside of render pass");
-        return false;
-    }
-
-    if (Attribs.pTLAS == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pTLAS must not be null");
-        return false;
-    }
-
-    if (Attribs.pScratchBuffer == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer must not be null");
-        return false;
-    }
-
-    if (Attribs.pInstances == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances must not be null");
-        return false;
-    }
-
-    if (Attribs.pInstanceBuffer == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceBuffer must not be null");
-        return false;
-    }
-
-    if (Attribs.HitShadersPerInstance == 0)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: HitShadersPerInstance must be greater than 0");
-        return false;
-    }
-
-    const auto& TLASDesc = Attribs.pTLAS->GetDesc();
-
-    if (Attribs.InstanceCount > TLASDesc.MaxInstanceCount)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: InstanceCount must be less than or equal to Attribs.pTLAS->GetDesc().MaxInstanceCount");
-        return false;
-    }
-
-    const auto&  InstDesc     = Attribs.pInstanceBuffer->GetDesc();
-    const size_t InstDataSize = Attribs.InstanceCount * TLAS_INSTANCE_DATA_SIZE;
-
-#ifdef DILIGENT_DEVELOPMENT
-    Uint32 AutoOffsetCounter = 0;
-
-    // calculate instance data size
-    for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
-    {
-        VERIFY((Attribs.pInstances[i].CustomId & ~0x00FFFFFF) == 0, "Only the lower 24 bits are used");
-
-        VERIFY(Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO ||
-                   (Attribs.pInstances[i].ContributionToHitGroupIndex & ~0x00FFFFFF) == 0,
-               "Only the lower 24 bits are used");
-
-        if (Attribs.pInstances[i].InstanceName == nullptr)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].InstanceName must not be null");
-            return false;
-        }
-
-        if (Attribs.pInstances[i].pBLAS == nullptr)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].pBLAS must not be null");
-            return false;
-        }
-
-        if (!ValidatedCast<BottomLevelASType>(Attribs.pInstances[i].pBLAS)->ValidateContent())
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].pBLAS is not valid");
-            return false;
-        }
-
-        if (Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
-            ++AutoOffsetCounter;
-
-
-        if (TLASDesc.BindingMode != SHADER_BINDING_USER_DEFINED && Attribs.pInstances[i].ContributionToHitGroupIndex != TLAS_INSTANCE_OFFSET_AUTO)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i,
-                              "].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO "
-                              "if TLAS created with BindingMode that is not SHADER_BINDING_USER_DEFINED");
-            return false;
-        }
-    }
-
-    if (AutoOffsetCounter != 0 && AutoOffsetCounter != Attribs.InstanceCount)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: exactly all pInstances[i].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO or not");
-        return false;
-    }
-#endif // DILIGENT_DEVELOPMENT
-
-    if (Attribs.InstanceBufferOffset > InstDesc.uiSizeInBytes)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: InstanceBufferOffset is greater than buffer size");
-        return false;
-    }
-
-    if (InstDesc.uiSizeInBytes - Attribs.InstanceBufferOffset < InstDataSize)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceBuffer size is too small, ...");
-        return false;
-    }
-
-    if ((InstDesc.BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceBuffer must be created with BIND_RAY_TRACING flag");
-        return false;
-    }
-
-    const auto& ScratchDesc = Attribs.pScratchBuffer->GetDesc();
-
-    if (Attribs.ScratchBufferOffset > ScratchDesc.uiSizeInBytes)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: ScratchBufferOffset is greater than buffer size");
-        return false;
-    }
-
-    if (ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset < Attribs.pTLAS->GetScratchBufferSizes().Build)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Build to get required size for scratch buffer");
-        return false;
-    }
-
-    if ((ScratchDesc.BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer must be created with BIND_RAY_TRACING flag");
-        return false;
-    }
-
-    return true;
-}
-
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
-{
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (Attribs.pSrc == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pSrc must not be null");
-        return false;
-    }
-
-    if (Attribs.pDst == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pDst must not be null");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS command must be performed outside of render pass");
-        return false;
-    }
-
-#ifdef DILIGENT_DEVELOPMENT
-    if (!ValidatedCast<BottomLevelASType>(Attribs.pSrc)->ValidateContent())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pSrc acceleration structure is not valid");
-        return false;
-    }
-
-    if (Attribs.Mode == COPY_AS_MODE_CLONE)
-    {
-        auto& SrcDesc = Attribs.pSrc->GetDesc();
-        auto& DstDesc = Attribs.pDst->GetDesc();
-
-        if (SrcDesc.TriangleCount != DstDesc.TriangleCount)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different TriangleCount, pDst must have been created with the same parameters as pSrc");
-            return false;
-        }
-
-        if (SrcDesc.BoxCount != DstDesc.BoxCount)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different BoxCount, pDst must have been created with the same parameters as pSrc");
-            return false;
-        }
-
-        if (SrcDesc.Flags != DstDesc.Flags)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different Flags, pDst must have been created with the same parameters as pSrc");
-            return false;
-        }
-
-        for (Uint32 i = 0; i < SrcDesc.TriangleCount; ++i)
-        {
-            auto& SrcTri = SrcDesc.pTriangles[i];
-            auto& DstTri = DstDesc.pTriangles[i];
-
-            // clang-format off
-            if (SrcTri.MaxVertexCount       != DstTri.MaxVertexCount       ||
-                SrcTri.VertexValueType      != DstTri.VertexValueType      ||
-                SrcTri.VertexComponentCount != DstTri.VertexComponentCount ||
-                SrcTri.MaxPrimitiveCount    != DstTri.MaxPrimitiveCount    ||
-                SrcTri.IndexType            != DstTri.IndexType            ||
-                SrcTri.AllowsTransforms     != DstTri.AllowsTransforms)
-            // clang-format on
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different triangle descriptions at index: ", i, ", pDst must have been created with the same parameters as pSrc");
-                return false;
-            }
-        }
-
-        for (Uint32 i = 0; i < SrcDesc.BoxCount; ++i)
-        {
-            if (SrcDesc.pBoxes[i].MaxBoxCount != DstDesc.pBoxes[i].MaxBoxCount)
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different box descriptions at index: ", i, ", pDst must have been created with the same parameters as pSrc");
-                return false;
-            }
-        }
-    }
-    else if (Attribs.Mode == COPY_AS_MODE_COMPACT)
-    {
-        auto& SrcDesc = Attribs.pSrc->GetDesc();
-        auto& DstDesc = Attribs.pDst->GetDesc();
-
-        if (!(SrcDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_COMPACTION))
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pSrc must be create with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
-            return false;
-        }
-
-        if (DstDesc.CompactedSize == 0)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pDst must be create with defined CompactedSize");
-            return false;
-        }
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: unknown Mode");
-        return false;
-    }
-#endif // DILIGENT_DEVELOPMENT
-
-    return true;
-}
-
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
-{
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (Attribs.pSrc == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc must not be null");
-        return false;
-    }
-
-    if (Attribs.pDst == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pDst must not be null");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS command must be performed outside of render pass");
-        return false;
-    }
-
-#ifdef DILIGENT_DEVELOPMENT
-    if (!ValidatedCast<TopLevelASType>(Attribs.pSrc)->ValidateContent())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
-        return false;
-    }
-
-    if (Attribs.Mode == COPY_AS_MODE_CLONE)
-    {
-        auto& SrcDesc = Attribs.pSrc->GetDesc();
-        auto& DstDesc = Attribs.pDst->GetDesc();
-
-        if (SrcDesc.MaxInstanceCount != DstDesc.MaxInstanceCount ||
-            SrcDesc.Flags != DstDesc.Flags)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pDst must have been created with the same parameters as pSrc");
-            return false;
-        }
-    }
-    else if (Attribs.Mode == COPY_AS_MODE_COMPACT)
-    {
-        auto& SrcDesc = Attribs.pSrc->GetDesc();
-        auto& DstDesc = Attribs.pDst->GetDesc();
-
-        if (!(SrcDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_COMPACTION))
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc must be create with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
-            return false;
-        }
-
-        if (DstDesc.CompactedSize == 0)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pDst must be create with defined CompactedSize");
-            return false;
-        }
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: unknown Mode");
-        return false;
-    }
-#endif // DILIGENT_DEVELOPMENT
-
-    return true;
-}
-
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
-{
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (Attribs.pBLAS == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pBLAS must not be null");
-        return false;
-    }
-    if (!(Attribs.pBLAS->GetDesc().Flags & RAYTRACING_BUILD_AS_ALLOW_COMPACTION))
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pBLAS must be created with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
-        return false;
-    }
-
-    if (Attribs.pDestBuffer == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pDestBuffer must not be null");
-        return false;
-    }
-    if (Attribs.DestBufferOffset + sizeof(Uint64) > Attribs.pDestBuffer->GetDesc().uiSizeInBytes)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pDestBuffer is too small");
-        return false;
-    }
-    if (m_pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12 &&
-        !(Attribs.pDestBuffer->GetDesc().BindFlags & BIND_UNORDERED_ACCESS))
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pDestBuffer must be created with BIND_UNORDERED_ACCESS flag");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: command must be performed outside of render pass");
-        return false;
-    }
-    return true;
-}
-
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
-{
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (Attribs.pTLAS == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pTLAS must not be null");
-        return false;
-    }
-    if (!(Attribs.pTLAS->GetDesc().Flags & RAYTRACING_BUILD_AS_ALLOW_COMPACTION))
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pTLAS must be created with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
-        return false;
-    }
-
-    if (Attribs.pDestBuffer == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pDestBuffer must not be null");
-        return false;
-    }
-    if (Attribs.DestBufferOffset + sizeof(Uint64) > Attribs.pDestBuffer->GetDesc().uiSizeInBytes)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pDestBuffer is too small");
-        return false;
-    }
-    if (m_pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12 &&
-        !(Attribs.pDestBuffer->GetDesc().BindFlags & BIND_UNORDERED_ACCESS))
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pDestBuffer must be created with BIND_UNORDERED_ACCESS flag");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: command must be performed outside of render pass");
-        return false;
-    }
-    return true;
-}
-
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
-{
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (Attribs.pSBT == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: pSBT must not be null");
-        return false;
-    }
-
-#ifdef DILIGENT_DEVELOPMENT
-    if (!Attribs.pSBT->Verify())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: pSBT content is not valid");
-        return false;
-    }
-#endif // DILIGENT_DEVELOPMENT
-
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
-
-    if (!m_pPipelineState->GetDesc().IsRayTracingPipeline())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a ray tracing pipeline.");
-        return false;
-    }
-
-    if (Attribs.pSBT->GetDesc().pPSO != m_pPipelineState.RawPtr())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline ", m_pPipelineState->GetDesc().Name,
-                          "doesn't match the pipeline ", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, " that was used in ShaderBindingTable");
-        return false;
-    }
-
-    if (Attribs.DimensionX == 0)
-        LOG_WARNING_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: DimensionX is zero.");
-
-    if (Attribs.DimensionY == 0)
-        LOG_WARNING_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: DimensionY is zero.");
-
-    if (Attribs.DimensionZ == 0)
-        LOG_WARNING_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: DimensionZ is zero.");
-
-    return true;
-}
 
 } // namespace Diligent

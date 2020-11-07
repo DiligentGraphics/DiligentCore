@@ -70,6 +70,7 @@ set(SOURCE
     src/BottomLevelASBase.cpp
     src/BufferBase.cpp
     src/DefaultShaderSourceStreamFactory.cpp
+    src/DeviceContextBase.cpp
     src/EngineMemory.cpp
     src/FramebufferBase.cpp
     src/PipelineStateBase.cpp
