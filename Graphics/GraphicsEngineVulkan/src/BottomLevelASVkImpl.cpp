@@ -43,7 +43,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
     const auto& Limits         = PhysicalDevice.GetExtProperties().RayTracing;
 
     VkAccelerationStructureCreateInfoKHR                          CreateInfo = {};
-    std::vector<VkAccelerationStructureCreateGeometryTypeInfoKHR> Geometries;
+    std::vector<VkAccelerationStructureCreateGeometryTypeInfoKHR> vkGeometries;
 
     CreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
     CreateInfo.type  = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
@@ -56,8 +56,8 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
     else
     {
         CreateInfo.maxGeometryCount = m_Desc.TriangleCount + m_Desc.BoxCount;
-        Geometries.resize(CreateInfo.maxGeometryCount);
-        CreateInfo.pGeometryInfos = Geometries.data();
+        vkGeometries.resize(CreateInfo.maxGeometryCount);
+        CreateInfo.pGeometryInfos = vkGeometries.data();
 
         VERIFY_EXPR(CreateInfo.maxGeometryCount <= Limits.maxGeometryCount);
 
@@ -68,7 +68,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
             for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
             {
                 auto& src = m_Desc.pTriangles[i];
-                auto& dst = Geometries[i];
+                auto& dst = vkGeometries[i];
 
                 dst.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
                 dst.pNext             = nullptr;
@@ -89,7 +89,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
             for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
             {
                 auto& src = m_Desc.pBoxes[i];
-                auto& dst = Geometries[i];
+                auto& dst = vkGeometries[i];
 
                 dst.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
                 dst.pNext             = nullptr;

@@ -28,11 +28,9 @@
 #include "pch.h"
 #include "TopLevelASD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "DeviceContextD3D12Impl.hpp"
 #include "D3D12TypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 #include "DXGITypeConversions.hpp"
-#include "EngineMemory.h"
 #include "StringTools.hpp"
 
 namespace Diligent
@@ -123,7 +121,5 @@ TopLevelASD3D12Impl::~TopLevelASD3D12Impl()
     auto* pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
     pDeviceD3D12Impl->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
 }
-
-IMPLEMENT_QUERY_INTERFACE(TopLevelASD3D12Impl, IID_TopLevelASD3D12, TTopLevelASBase)
 
 } // namespace Diligent

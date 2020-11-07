@@ -51,10 +51,7 @@ public:
                            bool                         bIsDeviceInternal = false);
     ~BottomLevelASD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
-
-    /// Implementation of IBottomLevelAS::GetScratchBufferSizes() in DirectX 12 backend.
-    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override { return m_ScratchSize; }
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASD3D12, TBottomLevelASBase);
 
     /// Implementation of IBottomLevelASD3D12::GetD3D12BLAS().
     virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12BLAS() override final { return GetD3D12Resource(); }
@@ -66,9 +63,6 @@ public:
     {
         return GetD3D12Resource()->GetGPUVirtualAddress();
     }
-
-private:
-    ScratchBufferSizes m_ScratchSize;
 };
 
 } // namespace Diligent

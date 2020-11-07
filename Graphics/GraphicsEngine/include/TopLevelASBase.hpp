@@ -185,6 +185,12 @@ public:
         return this->m_State;
     }
 
+    /// Implementation of ITopLevelAS::GetScratchBufferSizes().
+    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override
+    {
+        return m_ScratchSize;
+    }
+
     bool IsInKnownState() const
     {
         return this->m_State != RESOURCE_STATE_UNKNOWN;
@@ -247,6 +253,8 @@ private:
 protected:
     RESOURCE_STATE m_State                 = RESOURCE_STATE_UNKNOWN;
     Uint32         m_HitShadersPerInstance = 0;
+
+    ScratchBufferSizes m_ScratchSize;
 
     StringPool m_StringPool;
 

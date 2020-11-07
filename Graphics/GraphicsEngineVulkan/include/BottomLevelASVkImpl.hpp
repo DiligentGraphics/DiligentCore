@@ -50,9 +50,6 @@ public:
                         bool                     bIsDeviceInternal = false);
     ~BottomLevelASVkImpl();
 
-    /// Implementation of IBottomLevelAS::GetScratchBufferSizes() in Vulkan backend.
-    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override { return m_ScratchSize; }
-
     /// Implementation of IBottomLevelAS::GetNativeHandle() in Vulkan backend.
     virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
     {
@@ -73,7 +70,6 @@ private:
     VulkanUtilities::AccelStructWrapper     m_VulkanBLAS;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     VkDeviceSize                            m_MemoryAlignedOffset = 0;
-    ScratchBufferSizes                      m_ScratchSize;
 };
 
 } // namespace Diligent

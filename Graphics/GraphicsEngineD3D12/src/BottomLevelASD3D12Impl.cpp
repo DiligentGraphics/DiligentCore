@@ -28,11 +28,9 @@
 #include "pch.h"
 #include "BottomLevelASD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "DeviceContextD3D12Impl.hpp"
 #include "D3D12TypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 #include "DXGITypeConversions.hpp"
-#include "EngineMemory.h"
 #include "StringTools.hpp"
 
 namespace Diligent
@@ -55,16 +53,16 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
     {
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO d3d12BottomLevelPrebuildInfo = {};
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  d3d12BottomLevelInputs       = {};
-        std::vector<D3D12_RAYTRACING_GEOMETRY_DESC>           Geometries;
+        std::vector<D3D12_RAYTRACING_GEOMETRY_DESC>           d3d12Geometries;
 
         if (m_Desc.pTriangles != nullptr)
         {
-            Geometries.resize(m_Desc.TriangleCount);
+            d3d12Geometries.resize(m_Desc.TriangleCount);
             Uint32 MaxPrimitiveCount = 0;
             for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
             {
                 auto& src = m_Desc.pTriangles[i];
-                auto& dst = Geometries[i];
+                auto& dst = d3d12Geometries[i];
 
                 dst.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
                 dst.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
@@ -83,12 +81,12 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
         }
         else if (m_Desc.pBoxes != nullptr)
         {
-            Geometries.resize(m_Desc.BoxCount);
+            d3d12Geometries.resize(m_Desc.BoxCount);
             Uint32 MaxBoxCount = 0;
             for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
             {
                 auto& src = m_Desc.pBoxes[i];
-                auto& dst = Geometries[i];
+                auto& dst = d3d12Geometries[i];
 
                 dst.Type                      = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
                 dst.Flags                     = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
@@ -105,13 +103,13 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
             UNEXPECTED("Either pTriangles or pBoxes must not be null");
         }
 
-        VERIFY_EXPR(Geometries.size() <= D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
+        VERIFY_EXPR(d3d12Geometries.size() <= D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
 
         d3d12BottomLevelInputs.Type           = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
         d3d12BottomLevelInputs.Flags          = BuildASFlagsToD3D12ASBuildFlags(m_Desc.Flags);
         d3d12BottomLevelInputs.DescsLayout    = D3D12_ELEMENTS_LAYOUT_ARRAY;
-        d3d12BottomLevelInputs.pGeometryDescs = Geometries.data();
-        d3d12BottomLevelInputs.NumDescs       = static_cast<UINT>(Geometries.size());
+        d3d12BottomLevelInputs.pGeometryDescs = d3d12Geometries.data();
+        d3d12BottomLevelInputs.NumDescs       = static_cast<UINT>(d3d12Geometries.size());
 
         pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12BottomLevelInputs, &d3d12BottomLevelPrebuildInfo);
         if (d3d12BottomLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)
@@ -164,7 +162,5 @@ BottomLevelASD3D12Impl::~BottomLevelASD3D12Impl()
     auto* pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
     pDeviceD3D12Impl->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
 }
-
-IMPLEMENT_QUERY_INTERFACE(BottomLevelASD3D12Impl, IID_BottomLevelASD3D12, TBottomLevelASBase)
 
 } // namespace Diligent

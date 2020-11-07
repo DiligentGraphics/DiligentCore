@@ -117,6 +117,12 @@ public:
         return this->m_State;
     }
 
+    /// Implementation of IBottomLevelAS::GetScratchBufferSizes()
+    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override
+    {
+        return this->m_ScratchSize;
+    }
+
     bool IsInKnownState() const
     {
         return this->m_State != RESOURCE_STATE_UNKNOWN;
@@ -191,6 +197,8 @@ protected:
     std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher> m_NameToIndex;
 
     void* m_pRawPtr = nullptr;
+
+    ScratchBufferSizes m_ScratchSize;
 
 #ifdef DILIGENT_DEVELOPMENT
     std::atomic<Uint32> m_Version{0};
