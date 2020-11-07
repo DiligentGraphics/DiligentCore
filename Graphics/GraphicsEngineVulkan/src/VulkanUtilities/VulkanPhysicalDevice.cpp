@@ -189,7 +189,6 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         // Emulate KHR extension
         if (m_ExtFeatures.RayTracingNV)
         {
-            //m_ExtFeatures.RayTracing.rayTracingPrimitiveCulling = true; // AZ TODO
             m_ExtFeatures.RayTracing.rayTracing = VK_TRUE;
 
             m_ExtProperties.RayTracing.shaderGroupHandleSize                  = RayTracingNV.shaderGroupHandleSize;

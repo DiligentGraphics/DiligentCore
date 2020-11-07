@@ -75,6 +75,7 @@ DILIGENT_END_INTERFACE
 // clang-format off
 
 #    define IPipelineStateD3D12_GetD3D12PipelineState(This) CALL_IFACE_METHOD(PipelineStateD3D12, GetD3D12PipelineState, This)
+#    define IPipelineStateD3D12_GetD3D12StateObject(This)   CALL_IFACE_METHOD(PipelineStateD3D12, GetD3D12StateObject,   This)
 #    define IPipelineStateD3D12_GetD3D12RootSignature(This) CALL_IFACE_METHOD(PipelineStateD3D12, GetD3D12RootSignature, This)
 
 // clang-format on

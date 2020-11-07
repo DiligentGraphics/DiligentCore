@@ -236,15 +236,16 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
         std::string ShadersStr;
         while (ShaderStages != SHADER_TYPE_UNKNOWN)
         {
-            const auto  ShaderType = ShaderStages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(ShaderStages) - 1));
-            const char* ShaderName = nullptr;
+            const auto ShaderType = ShaderStages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(ShaderStages) - 1));
+            String     ShaderName;
             for (Uint32 s = 0; s < NumShaders; ++s)
             {
                 const auto& Resources = *pShaderResources[s];
                 if ((ShaderStages & Resources.GetShaderType()) != 0)
                 {
-                    ShaderName = Resources.GetShaderName();
-                    break;
+                    if (ShaderName.size())
+                        ShaderName += ", ";
+                    ShaderName += Resources.GetShaderName();
                 }
             }
 
@@ -252,10 +253,10 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
                 ShadersStr.append(", ");
             ShadersStr.append(GetShaderTypeLiteralName(ShaderType));
             ShadersStr.append(" (");
-            if (ShaderName)
+            if (ShaderName.size())
             {
                 ShadersStr.push_back('\'');
-                ShadersStr.append(ShaderName ? ShaderName : "<Not enabled in PSO>");
+                ShadersStr.append(ShaderName);
                 ShadersStr.push_back('\'');
             }
             else

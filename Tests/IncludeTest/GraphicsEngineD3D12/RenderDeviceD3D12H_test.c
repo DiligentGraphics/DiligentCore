@@ -43,4 +43,6 @@ void TestRenderDeviceD3D12CInterface(IRenderDeviceD3D12* pDevice)
 
     IRenderDeviceD3D12_CreateTextureFromD3DResource(pDevice, (ID3D12Resource*)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
     IRenderDeviceD3D12_CreateBufferFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
+    IRenderDeviceD3D12_CreateBLASFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BottomLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (IBottomLevelAS**)NULL);
+    IRenderDeviceD3D12_CreateTLASFromD3DResource(pDevice, (ID3D12Resource*)NULL, (TopLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (ITopLevelAS**)NULL);
 }

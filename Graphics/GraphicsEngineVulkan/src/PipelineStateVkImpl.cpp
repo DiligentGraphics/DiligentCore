@@ -851,7 +851,7 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
         return false;
 
     auto IsSamePipelineLayout = m_PipelineLayout.IsSameAs(pPSOVk->m_PipelineLayout);
-#if 0 //def DILIGENT_DEBUG // AZ TODO
+#ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
         if (GetNumShaderStages() != pPSOVk->GetNumShaderStages())
@@ -867,8 +867,8 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
                     break;
                 }
 
-                const auto& Res0 = GetShaderResLayout(s).GetResources();
-                const auto& Res1 = pPSOVk->GetShaderResLayout(s).GetResources();
+                const auto& Res0 = GetShaderResLayout(s);
+                const auto& Res1 = pPSOVk->GetShaderResLayout(s);
                 if (!Res0.IsCompatibleWith(Res1))
                 {
                     IsCompatibleShaders = false;

@@ -29,8 +29,14 @@
 
 void TestBottomLevelAS_CInterface(IBottomLevelAS* pBLAS)
 {
+    Uint32 GeomDescIndex = IBottomLevelAS_GetGeometryDescIndex(pBLAS, "Name");
+    (void)GeomDescIndex;
+
     Uint32 GeomIndex = IBottomLevelAS_GetGeometryIndex(pBLAS, "Name");
     (void)GeomIndex;
+
+    Uint32 GeomCount = IBottomLevelAS_GetActualGeometryCount(pBLAS);
+    (void)GeomCount;
 
     ScratchBufferSizes ScratchSizes = IBottomLevelAS_GetScratchBufferSizes(pBLAS);
     (void)ScratchSizes;

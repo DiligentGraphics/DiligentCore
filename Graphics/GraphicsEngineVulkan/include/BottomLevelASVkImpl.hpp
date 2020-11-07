@@ -46,8 +46,12 @@ public:
 
     BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                         RenderDeviceVkImpl*      pRenderDeviceVk,
-                        const BottomLevelASDesc& Desc,
-                        bool                     bIsDeviceInternal = false);
+                        const BottomLevelASDesc& Desc);
+    BottomLevelASVkImpl(IReferenceCounters*        pRefCounters,
+                        RenderDeviceVkImpl*        pRenderDeviceVk,
+                        const BottomLevelASDesc&   Desc,
+                        RESOURCE_STATE             InitialState,
+                        VkAccelerationStructureKHR vkBLAS);
     ~BottomLevelASVkImpl();
 
     /// Implementation of IBottomLevelAS::GetNativeHandle() in Vulkan backend.

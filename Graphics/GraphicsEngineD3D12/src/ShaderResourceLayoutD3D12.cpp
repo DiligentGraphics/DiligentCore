@@ -1104,4 +1104,21 @@ bool ShaderResourceLayoutD3D12::dvpVerifyBindings(const ShaderResourceCacheD3D12
 }
 #endif
 
+bool ShaderResourceLayoutD3D12::IsCompatibleWith(const ShaderResourceLayoutD3D12& ResLayout) const
+{
+    if (GetTotalResourceCount() != ResLayout.GetTotalResourceCount())
+        return false;
+
+    for (Uint32 i = 0; i < GetTotalResourceCount(); ++i)
+    {
+        const auto& lRes = GetResource(i);
+        const auto& rRes = ResLayout.GetResource(i);
+
+        if (!lRes.Attribs.IsCompatibleWith(rRes.Attribs))
+            return false;
+    }
+
+    return true;
+}
+
 } // namespace Diligent

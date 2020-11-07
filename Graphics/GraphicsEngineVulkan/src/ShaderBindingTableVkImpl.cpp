@@ -45,16 +45,4 @@ ShaderBindingTableVkImpl::~ShaderBindingTableVkImpl()
 {
 }
 
-void ShaderBindingTableVkImpl::ResetHitGroups(Uint32 HitShadersPerInstance)
-{
-    // AZ TODO
-
-    m_Changed = true;
-}
-
-void ShaderBindingTableVkImpl::BindAll(const BindAllAttribs& Attribs)
-{
-    // AZ TODO
-}
-
 } // namespace Diligent

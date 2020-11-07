@@ -52,14 +52,4 @@ ShaderBindingTableD3D12Impl::~ShaderBindingTableD3D12Impl()
 
 IMPLEMENT_QUERY_INTERFACE(ShaderBindingTableD3D12Impl, IID_ShaderBindingTableD3D12, TShaderBindingTableBase)
 
-void ShaderBindingTableD3D12Impl::ResetHitGroups(Uint32 HitShadersPerInstance)
-{
-    // AZ TODO
-}
-
-void ShaderBindingTableD3D12Impl::BindAll(const BindAllAttribs& Attribs)
-{
-    // AZ TODO
-}
-
 } // namespace Diligent

@@ -34,25 +34,23 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "ShaderBindingTableVk.h"
 #include "ShaderBindingTableBase.hpp"
+#include "TopLevelASVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent
 {
 
-class ShaderBindingTableVkImpl final : public ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, RenderDeviceVkImpl>
+class ShaderBindingTableVkImpl final : public ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, TopLevelASVkImpl, RenderDeviceVkImpl>
 {
 public:
-    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, RenderDeviceVkImpl>;
+    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, TopLevelASVkImpl, RenderDeviceVkImpl>;
 
     ShaderBindingTableVkImpl(IReferenceCounters*           pRefCounters,
                              RenderDeviceVkImpl*           pRenderDeviceVk,
                              const ShaderBindingTableDesc& Desc,
                              bool                          bIsDeviceInternal = false);
     ~ShaderBindingTableVkImpl();
-
-    virtual void DILIGENT_CALL_TYPE ResetHitGroups(Uint32 HitShadersPerInstance) override;
-    virtual void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override;
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableVk, TShaderBindingTableBase);
 };

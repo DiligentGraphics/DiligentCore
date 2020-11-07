@@ -472,12 +472,15 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
     
     /// Direct3D12 only: the name of the constant buffer that will be used by the local root signature.
     /// Ignored if RayTracingPipelineDesc::ShaderRecordSize is zero.
+    /// In Vulkan backend in HLSL add [[vk::shader_record_nv]] attribute to the constant buffer, in GLSL add shaderRecord layout to buffer.
     const char*                               pShaderRecordName        DEFAULT_INITIALIZER(nullptr);
     
     /// Direct3D12 only: the maximum hit shader attribute size in bytes.
+    /// If zero then maximum allowed size will be used.
     Uint32                                    MaxAttributeSize         DEFAULT_INITIALIZER(0);
     
     /// Direct3D12 only: the maximum payload size in bytes.
+    /// If zero then maximum allowed size will be used.
     Uint32                                    MaxPayloadSize           DEFAULT_INITIALIZER(0);
 };
 typedef struct RayTracingPipelineStateCreateInfo RayTracingPipelineStateCreateInfo;
@@ -595,12 +598,9 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// This method must only be called for a ray tracing pipeline.
 
     /// \param [in] Name - Shader group name.
+    /// \return Shader group index or UINT32_MAX if group does not exist.
     VIRTUAL Uint32 METHOD(GetShaderGroupIndex)(THIS_
                                                const char* Name) CONST PURE;
-    
-
-    /// AZ TODO: remove ?
-    VIRTUAL Uint32 METHOD(GetShaderGroupCount)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -621,7 +621,6 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_CreateShaderResourceBinding(This, ...) CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding, This, __VA_ARGS__)
 #    define IPipelineState_IsCompatibleWith(This, ...)            CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,            This, __VA_ARGS__)
 #    define IPipelineState_GetShaderGroupIndex(This, ...)         CALL_IFACE_METHOD(PipelineState, GetShaderGroupIndex,         This, __VA_ARGS__)
-#    define IPipelineState_GetShaderGroupCount(This)              CALL_IFACE_METHOD(PipelineState, GetShaderGroupCount,         This)
 
 // clang-format on
 

@@ -49,4 +49,6 @@ void TestRenderDeviceVkCInterface(IRenderDeviceVk* pDevice)
 
     IRenderDeviceVk_CreateTextureFromVulkanImage(pDevice, (VkImage)NULL, (TextureDesc*)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
     IRenderDeviceVk_CreateBufferFromVulkanResource(pDevice, (VkBuffer)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
+    IRenderDeviceVk_CreateBLASFromVulkanResource(pDevice, (VkAccelerationStructureKHR)NULL, (BottomLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (IBottomLevelAS**)NULL);
+    IRenderDeviceVk_CreateTLASFromVulkanResource(pDevice, (VkAccelerationStructureKHR)NULL, (TopLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (ITopLevelAS**)NULL);
 }

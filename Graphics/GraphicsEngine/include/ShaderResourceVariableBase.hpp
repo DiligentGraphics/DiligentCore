@@ -364,6 +364,58 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
     return BindingOK;
 }
 
+template <typename ResourceAttribsType>
+bool VerifyTLASResourceBinding(const ResourceAttribsType&    Attribs,
+                               SHADER_RESOURCE_VARIABLE_TYPE VarType,
+                               Uint32                        ArrayIndex,
+                               const ITopLevelAS*            pTLAS,
+                               const IDeviceObject*          pCachedAS,
+                               const char*                   ShaderName = nullptr)
+{
+    if (!pTLAS)
+    {
+        std::stringstream ss;
+        ss << "Failed to bind resource '" << pTLAS->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        if (ShaderName != nullptr)
+        {
+            ss << " in shader '" << ShaderName << '\'';
+        }
+        ss << ". Invalid resource type: TLAS is expected.";
+        LOG_ERROR_MESSAGE(ss.str());
+        return false;
+    }
+
+    bool BindingOK = true;
+
+    if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedAS != nullptr && pCachedAS != pTLAS)
+    {
+        const auto* VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
+
+        std::stringstream ss;
+        ss << "Non-null resource '" << pCachedAS->GetDesc().Name << "' is already bound to " << VarTypeStr
+           << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        if (ShaderName != nullptr)
+        {
+            ss << " in shader '" << ShaderName << '\'';
+        }
+        ss << ". Attempting to bind ";
+        if (pTLAS)
+        {
+            ss << "another resource ('" << pTLAS->GetDesc().Name << "')";
+        }
+        else
+        {
+            ss << "null";
+        }
+        ss << " is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.";
+        LOG_ERROR_MESSAGE(ss.str());
+
+        BindingOK = false;
+    }
+
+    return BindingOK;
+}
+
 inline void VerifyAndCorrectSetArrayArguments(const char* Name, Uint32 ArraySize, Uint32& FirstElement, Uint32& NumElements)
 {
     if (FirstElement >= ArraySize)

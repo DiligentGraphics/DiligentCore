@@ -32,6 +32,8 @@ void TestTopLevelAS_CInterface(ITopLevelAS* pTLAS)
     TLASInstanceDesc InstDesc = ITopLevelAS_GetInstanceDesc(pTLAS, "Name");
     (void)InstDesc;
 
+    ITopLevelAS_GetContributionToHitGroupIndex(pTLAS, (Uint32*)NULL, (Uint32*)NULL);
+
     ScratchBufferSizes ScratchSizes = ITopLevelAS_GetScratchBufferSizes(pTLAS);
     (void)ScratchSizes;
 

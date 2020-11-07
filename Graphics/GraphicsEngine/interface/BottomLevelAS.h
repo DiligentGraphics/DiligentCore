@@ -112,12 +112,15 @@ DILIGENT_TYPED_ENUM(RAYTRACING_BUILD_AS_FLAGS, Uint8)
 {
     RAYTRACING_BUILD_AS_NONE              = 0,
         
-    /// AZ TODO: not supported yet
+    /// Indicates that the specified acceleration structure can be updated
+    /// via IDeviceContext::BuildBLAS() or IDeviceContext::BuildTLAS().
+    /// With this flag acculeration structure may allocate more memory and take more time on build.
     RAYTRACING_BUILD_AS_ALLOW_UPDATE      = 0x01,
 
     /// Indicates that the specified acceleration structure can act as the source for
     /// a copy acceleration structure command IDeviceContext::CopyBLAS() or IDeviceContext::CopyTLAS()
     /// with COPY_AS_MODE_COMPACT mode to produce a compacted acceleration structure.
+    /// With this flag acculeration structure may allocate more memory and take more time on build.
     RAYTRACING_BUILD_AS_ALLOW_COMPACTION  = 0x02,
 
     /// Indicates that the given acceleration structure build should prioritize trace performance over build time.
@@ -170,10 +173,15 @@ typedef struct BottomLevelASDesc BottomLevelASDesc;
 /// Defines the scratch buffer info for acceleration structure.
 struct ScratchBufferSizes
 {
-    /// Scratch buffer size for acceleration structure building.
+    /// Scratch buffer size for acceleration structure building,
+    /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
+    /// May be zero if acceleration structure created with non-zero CompactedSize.
     Uint32 Build  DEFAULT_INITIALIZER(0);
-
-    /// AZ TODO: not supported yet
+    
+    /// Scratch buffer size for acceleration structure updating,
+    /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
+    /// May be zero if acceleration structure created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
+    /// May be zero if acceleration structure created with non-zero CompactedSize.
     Uint32 Update DEFAULT_INITIALIZER(0);
     
 #if DILIGENT_CPP_INTERFACE
@@ -182,7 +190,6 @@ struct ScratchBufferSizes
 };
 typedef struct ScratchBufferSizes ScratchBufferSizes;
 
-static const Uint32 InvalidGeometryIndex = ~0u;
 
 #define DILIGENT_INTERFACE_NAME IBottomLevelAS
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
@@ -201,23 +208,45 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     virtual const BottomLevelASDesc& DILIGENT_CALL_TYPE GetDesc() const override = 0;
 #endif
 
+    /// Returns the geometry description index in BottomLevelASDesc::pTriangles or BottomLevelASDesc::pBoxes.
+    
+    /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
+    /// \return Geometry index or UINT32_MAX if geometry does not exist.
+    /// 
+    /// \note Access to the BLAS must be externally synchronized.
+    VIRTUAL Uint32 METHOD(GetGeometryDescIndex)(THIS_
+                                                const char* Name) CONST PURE;
+    
+
     /// Returns the geometry index that can be used in a shader binding table.
     
     /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
-    /// \return Geometry index.
+    /// \return Geometry index or UINT32_MAX if geometry does not exist.
+    /// 
+    /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetGeometryIndex)(THIS_
                                             const char* Name) CONST PURE;
+
+
+    /// Returns the geometry count that was used to build AS.
+    /// Same as BuildBLASAttribs::TriangleDataCount or BuildBLASAttribs::BoxDataCount.
+    
+    /// \note Access to the BLAS must be externally synchronized.
+    VIRTUAL Uint32 METHOD(GetActualGeometryCount)(THIS) CONST PURE;
+
 
     /// Returns the scratch buffer info for the current acceleration structure.
     
     /// \return ScratchBufferSizes object, see Diligent::ScratchBufferSizes.
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
 
+
     /// Returns the native acceleration structure handle specific to the underlying graphics API
 
     /// \return pointer to ID3D12Resource interface, for D3D12 implementation\n
-    ///         VkAccelerationStructureKHR handle, for Vulkan implementation
+    ///         VkAccelerationStructure handle, for Vulkan implementation
     VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
+
 
     /// Sets the acceleration structure usage state.
 
@@ -228,6 +257,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     ///       state management back to the engine.
     VIRTUAL void METHOD(SetState)(THIS_
                                   RESOURCE_STATE State) PURE;
+
 
     /// Returns the internal acceleration structure state
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
@@ -240,11 +270,13 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IBottomLevelAS_GetGeometryIndex(This, ...) CALL_IFACE_METHOD(BottomLevelAS, GetGeometryIndex,      This, __VA_ARGS__)
-#    define IBottomLevelAS_GetScratchBufferSizes(This) CALL_IFACE_METHOD(BottomLevelAS, GetScratchBufferSizes, This)
-#    define IBottomLevelAS_GetNativeHandle(This)       CALL_IFACE_METHOD(BottomLevelAS, GetNativeHandle,       This)
-#    define IBottomLevelAS_SetState(This, ...)         CALL_IFACE_METHOD(BottomLevelAS, SetState,              This, __VA_ARGS__)
-#    define IBottomLevelAS_GetState(This)              CALL_IFACE_METHOD(BottomLevelAS, GetState,              This)
+#    define IBottomLevelAS_GetGeometryDescIndex(This, ...)  CALL_IFACE_METHOD(BottomLevelAS, GetGeometryDescIndex,   This, __VA_ARGS__)
+#    define IBottomLevelAS_GetGeometryIndex(This, ...)      CALL_IFACE_METHOD(BottomLevelAS, GetGeometryIndex,       This, __VA_ARGS__)
+#    define IBottomLevelAS_GetActualGeometryCount(This)     CALL_IFACE_METHOD(BottomLevelAS, GetActualGeometryCount, This)
+#    define IBottomLevelAS_GetScratchBufferSizes(This)      CALL_IFACE_METHOD(BottomLevelAS, GetScratchBufferSizes,  This)
+#    define IBottomLevelAS_GetNativeHandle(This)            CALL_IFACE_METHOD(BottomLevelAS, GetNativeHandle,        This)
+#    define IBottomLevelAS_SetState(This, ...)              CALL_IFACE_METHOD(BottomLevelAS, SetState,               This, __VA_ARGS__)
+#    define IBottomLevelAS_GetState(This)                   CALL_IFACE_METHOD(BottomLevelAS, GetState,               This)
 
 // clang-format on
 

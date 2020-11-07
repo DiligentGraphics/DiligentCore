@@ -112,6 +112,44 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
                                                         const BufferDesc REF BuffDesc,
                                                         RESOURCE_STATE       InitialState,
                                                         IBuffer**            ppBuffer) PURE;
+    
+    /// Creates a bottom-level AS object from native Vulkan resource
+
+    /// \param [in]  vkBLAS       - Vulkan acceleration structure handle.
+    /// \param [in]  Desc         - Bottom-level AS description.
+    /// \param [in]  InitialState - Initial BLAS state. Can be RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_BUILD_AS_READ, RESOURCE_STATE_BUILD_AS_WRITE.
+    ///                             See Diligent::RESOURCE_STATE.
+    /// \param [out] ppBLAS       - Address of the memory location where the pointer to the
+    ///                             bottom-level AS interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
+    ///                             one reference.
+    /// \note  Created bottom-level AS object does not take ownership of the Vulkan acceleration structure and will not
+    ///        destroy it once released. The application must not destroy Vulkan acceleration structure while it is
+    ///        in use by the engine.
+    VIRTUAL void METHOD(CreateBLASFromVulkanResource)(THIS_
+                                                        VkAccelerationStructureKHR  vkBLAS,
+                                                        const BottomLevelASDesc REF Desc,
+                                                        RESOURCE_STATE              InitialState,
+                                                        IBottomLevelAS**            ppBLAS) PURE;
+    
+    /// Creates a top-level AS object from native Vulkan resource
+
+    /// \param [in]  vkTLAS       - Vulkan acceleration structure handle.
+    /// \param [in]  Desc         - Bottom-level AS description.
+    /// \param [in]  InitialState - Initial TLAS state. Can be RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_BUILD_AS_READ, RESOURCE_STATE_BUILD_AS_WRITE, RESOURCE_STATE_RAY_TRACING.
+    ///                             See Diligent::RESOURCE_STATE.
+    /// \param [out] ppTLAS       - Address of the memory location where the pointer to the
+    ///                             top-level AS interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
+    ///                             one reference.
+    /// \note  Created top-level AS object does not take ownership of the Vulkan acceleration structure and will not
+    ///        destroy it once released. The application must not destroy Vulkan acceleration structure while it is
+    ///        in use by the engine.
+    VIRTUAL void METHOD(CreateTLASFromVulkanResource)(THIS_
+                                                        VkAccelerationStructureKHR vkTLAS,
+                                                        const TopLevelASDesc REF   Desc,
+                                                        RESOURCE_STATE             InitialState,
+                                                        ITopLevelAS**              ppTLAS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -129,6 +167,8 @@ DILIGENT_END_INTERFACE
 #    define IRenderDeviceVk_IsFenceSignaled(This, ...)                CALL_IFACE_METHOD(RenderDeviceVk, IsFenceSignaled,                This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateTextureFromVulkanImage(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateTextureFromVulkanImage,   This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateBufferFromVulkanResource(This, ...) CALL_IFACE_METHOD(RenderDeviceVk, CreateBufferFromVulkanResource, This, __VA_ARGS__)
+#    define IRenderDeviceVk_CreateBLASFromVulkanResource(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateBLASFromVulkanResource,   This, __VA_ARGS__)
+#    define IRenderDeviceVk_CreateTLASFromVulkanResource(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateTLASFromVulkanResource,   This, __VA_ARGS__)
 
 // clang-format on
 

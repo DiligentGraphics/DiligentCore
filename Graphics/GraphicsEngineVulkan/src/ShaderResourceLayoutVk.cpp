@@ -374,27 +374,26 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const TShaderStages&   
         std::string ShadersStr;
         while (Stages != SHADER_TYPE_UNKNOWN)
         {
-            const auto  ShaderType = Stages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(Stages) - 1));
-            const char* ShaderName = nullptr;
+            const auto ShaderType = Stages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(Stages) - 1));
+            String     ShaderName;
 
-            // AZ TODO
-            /*for (const auto& StageInfo : ShaderStages)
+            for (const auto& StageInfo : ShaderStages)
             {
                 if ((Stages & StageInfo.Type) != 0)
                 {
-                    ShaderName = StageInfo.pShader->GetDesc().Name;
+                    ShaderName = GetShaderGroupName(StageInfo.Shaders);
                     break;
                 }
-            }*/
+            }
 
             if (!ShadersStr.empty())
                 ShadersStr.append(", ");
             ShadersStr.append(GetShaderTypeLiteralName(ShaderType));
             ShadersStr.append(" (");
-            if (ShaderName)
+            if (ShaderName.size())
             {
                 ShadersStr.push_back('\'');
-                ShadersStr.append(ShaderName ? ShaderName : "<Not enabled in PSO>");
+                ShadersStr.append(ShaderName);
                 ShadersStr.push_back('\'');
             }
             else
@@ -829,10 +828,10 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
 
     if (pBufferVk->GetDesc().uiSizeInBytes < BufferStaticSize)
     {
-        std::stringstream ss;
-        ss << "The size of buffer '" << pBufferVk->GetDesc().Name << "' (" << pBufferVk->GetDesc().uiSizeInBytes
-           << ") is not large enough for what the shader expects (" << BufferStaticSize << ")";
-        LOG_ERROR_MESSAGE(ss.str());
+        // It is OK if enabled robustBufferAccess feature, otherwise access outside of buffer range may lead to crash or undefined behavior.
+        LOG_WARNING_MESSAGE("Error binding uniform buffer '", pBufferVk->GetDesc().Name, "' to shader variable '",
+                            Name, "' in shader '", ParentResLayout.GetShaderName(), "': buffer size in the shader (",
+                            BufferStaticSize, ") is incompatible with the actual buffer size (", pBufferVk->GetDesc().uiSizeInBytes, ").");
     }
 #endif
 
@@ -888,11 +887,22 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
                                   Name, "' in shader '", ParentResLayout.GetShaderName(), "': structured buffer view is expected.");
             }
 
-            if (ViewDesc.ByteWidth < BufferStaticSize || (ViewDesc.ByteWidth - BufferStaticSize) % BufferStride != 0)
+            if (BufferStride == 0 && ViewDesc.ByteWidth < BufferStaticSize)
             {
-                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                  Name, "' in shader '", ParentResLayout.GetShaderName(), "': static buffer size in the shader (",
-                                  BufferStaticSize, ") and array element stride (", BufferStride, ") are incompatible with the actual buffer size (", ViewDesc.ByteWidth, ").");
+                // It is OK if enabled robustBufferAccess feature, otherwise access outside of buffer range may lead to crash or undefined behavior.
+                LOG_WARNING_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                    Name, "' in shader '", ParentResLayout.GetShaderName(), "': buffer size in the shader (",
+                                    BufferStaticSize, ") is incompatible with the actual buffer view size (", ViewDesc.ByteWidth, ").");
+            }
+
+            if (BufferStride > 0 && (ViewDesc.ByteWidth < BufferStaticSize || (ViewDesc.ByteWidth - BufferStaticSize) % BufferStride != 0))
+            {
+                // For buffers with dynamic arrays we know only static part size and array element stride.
+                // Element stride in shader may be differ than in code. Here we check that buffer size is exactly match to the array with N elements.
+                LOG_WARNING_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                    Name, "' in shader '", ParentResLayout.GetShaderName(), "': static buffer size in the shader (",
+                                    BufferStaticSize, ") and array element stride (", BufferStride, ") are incompatible with the actual buffer view size (", ViewDesc.ByteWidth, "),",
+                                    " this may be result of array element size mismatch.");
             }
         }
     }
@@ -1117,7 +1127,7 @@ void ShaderResourceLayoutVk::VkResource::CacheAccelerationStructure(IDeviceObjec
     VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure, "Acceleration Structure resource is expected");
     RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
 #ifdef DILIGENT_DEVELOPMENT
-    // AZ TODO
+    VerifyTLASResourceBinding(*this, GetVariableType(), ArrayInd, pTLASVk.RawPtr(), DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
 #endif
     if (UpdateCachedResource(DstRes, std::move(pTLASVk), [](const TopLevelASVkImpl*, const TopLevelASVkImpl*) {}))
     {
@@ -1534,6 +1544,30 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
             WriteDescrSetIt = WriteDescrSetArr.begin();
         }
     }
+}
+
+bool ShaderResourceLayoutVk::IsCompatibleWith(const ShaderResourceLayoutVk& ResLayout) const
+{
+    if (m_NumResources != ResLayout.m_NumResources)
+        return false;
+
+    bool IsCompatible = true;
+    for (Uint32 i = 0, Cnt = GetTotalResourceCount(); i < Cnt; ++i)
+    {
+        const auto& lhs = this->GetResource(i);
+        const auto& rhs = ResLayout.GetResource(i);
+
+        // clang-format off
+        if (lhs.ArraySize  != rhs.ArraySize || 
+            lhs.Type       != rhs.Type      ||
+            lhs.SamplerInd != rhs.SamplerInd)
+        // clang-format on
+        {
+            IsCompatible = false;
+        }
+    }
+
+    return IsCompatible;
 }
 
 } // namespace Diligent

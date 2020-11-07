@@ -805,10 +805,11 @@ struct BLASBuildTriangleData
     Uint32      VertexCount           DEFAULT_INITIALIZER(0);
     
     /// The type of the vertex components.
-    /// This is an optional values. Must be undefined or same as in BLASTriangleDesc. 
+    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc. 
     VALUE_TYPE  VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
-    /// The number of vertex components
+    /// The number of vertex components.
+    /// This is an optional value. Must be undefined or same as in BLASTriangleDesc. 
     Uint8       VertexComponentCount  DEFAULT_INITIALIZER(0);
     
     /// The number of triangles.
@@ -881,6 +882,7 @@ typedef struct BLASBuildBoundingBoxData BLASBuildBoundingBoxData;
 struct BuildBLASAttribs
 {
     /// Target bottom-level AS.
+    /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*                 pBLAS                       DEFAULT_INITIALIZER(nullptr);
     
     /// Bottom-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
@@ -890,17 +892,27 @@ struct BuildBLASAttribs
     RESOURCE_STATE_TRANSITION_MODE  GeometryTransitionMode      DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// A pointer to an array of TriangleDataCount BLASBuildTriangleData structures that contains triangle geometry data.
+    /// If Update is true:
+    ///     - Only vertex positions (in pVertexBuffer) and transformation (in pTransformBuffer) can be changed.
+    ///     - All other content in BLASBuildTriangleData and buffers must be same as used to build BLAS.
+    ///     - To disable geometry make all triangles inactive, see BLASBuildTriangleData::pVertexBuffer description.
     BLASBuildTriangleData const*    pTriangleData               DEFAULT_INITIALIZER(nullptr);
     
     /// The number of triangle grometries.
     /// Must be less than or equal to BottomLevelASDesc::TriangleCount.
+    /// If Update is true then count must be the same as used to build BLAS.
     Uint32                          TriangleDataCount           DEFAULT_INITIALIZER(0);
     
     /// A pointer to an array of BoxDataCount BLASBuildBoundingBoxData structures that contain AABB geometry data.
+    /// If Update is true:
+    ///     - AABB coordinates (in pBoxBuffer) can be changed.
+    ///     - All other content in BLASBuildBoundingBoxData must be same as used to build BLAS.
+    ///     - To disable geometry make all AAABBs inactive, see BLASBuildBoundingBoxData::pBoxBuffer description.
     BLASBuildBoundingBoxData const* pBoxData                    DEFAULT_INITIALIZER(nullptr);
     
     /// The number of AABB geometries.
     /// Must be less than or equal to BottomLevelASDesc::BoxCount.
+    /// If Update is true then count must be the same as used to build BLAS.
     Uint32                          BoxDataCount                DEFAULT_INITIALIZER(0);
     
     /// The buffer that is used for acceleration structure building.
@@ -914,6 +926,12 @@ struct BuildBLASAttribs
     /// Scratch buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
+    /// if false then BLAS will be built from scratch.
+    /// If true then previous content of BLAS will be updated.
+    /// pBLAS must be created with RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
+    /// An update will be faster than building an acceleration structure from scratch.
+    Bool                            Update                      DEFAULT_INITIALIZER(False);
+
 #if DILIGENT_CPP_INTERFACE
     BuildBLASAttribs() noexcept {}
 #endif
@@ -921,10 +939,11 @@ struct BuildBLASAttribs
 typedef struct BuildBLASAttribs BuildBLASAttribs;
 
 
-/// Can be used in TLASBuildInstanceData::ContributionToHitGroupIndex to calculate the index
-/// depending on geometry count in TLASBuildInstanceData::pBLAS and shader binding mode in TopLevelASDesc::BindingMode.
+/// Can be used to calculate the TLASBuildInstanceData::ContributionToHitGroupIndex depending on instance count,
+/// geometry count in each instance (in TLASBuildInstanceData::pBLAS) and shader binding mode in BuildTLASAttribs::BindingMode.
 /// 
 /// Example:
+///  InstanceOffset = BaseContributionToHitGroupIndex;
 ///  For each instance in TLAS
 ///     if (Instance.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
 ///         Instance.ContributionToHitGroupIndex = InstanceOffset;
@@ -981,6 +1000,8 @@ struct TLASBuildInstanceData
     const char*               InstanceName    DEFAULT_INITIALIZER(nullptr);
     
     /// Bottom-level AS that represents instance geometry.
+    /// Once built, TLAS will hold strong reference to pBLAS until next build or copy operation.
+    /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*           pBLAS           DEFAULT_INITIALIZER(nullptr);
     
     /// Instace to world transformation.
@@ -994,12 +1015,11 @@ struct TLASBuildInstanceData
     RAYTRACING_INSTANCE_FLAGS Flags           DEFAULT_INITIALIZER(RAYTRACING_INSTANCE_NONE);
 
     /// Visibility mask for the geometry, the instance may only be hit if rayMask & instance.Mask != 0.
-    /// (rayMask in GLSL is a cullMask argument of traceRayEXT(), rayMask in HLSL is an InstanceInclusionMask argument of TraceRay()).
+    /// ('rayMask' in GLSL is a 'cullMask' argument of traceRay(), 'rayMask' in HLSL is an 'InstanceInclusionMask' argument of TraceRay()).
     Uint8                     Mask            DEFAULT_INITIALIZER(0xFF);
     
     /// The index used to calculate the hit group location in the shader binding table.
-    /// Must be TLAS_INSTANCE_OFFSET_AUTO if TLAS is created with BindingMode SHADER_BINDING_MODE_PER_GEOMETRY,
-    /// or SHADER_BINDING_MODE_PER_INSTANCE otherwise.
+    /// Must be TLAS_INSTANCE_OFFSET_AUTO if BuildTLASAttribs::BindingMode that is not a SHADER_BINDING_USER_DEFINED.
     /// Only the lower 24 bits are used.
     Uint32                    ContributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO);
     
@@ -1010,15 +1030,38 @@ struct TLASBuildInstanceData
 typedef struct TLASBuildInstanceData TLASBuildInstanceData;
 
 
-/// Instance size in GPU side.
+/// Top-level AS instance size in bytes in GPU side.
 /// Used to calculate size of BuildTLASAttribs::pInstanceBuffer.
 static const Uint32 TLAS_INSTANCE_DATA_SIZE = 64;
+
+
+/// Defines shader binding mode.
+DILIGENT_TYPED_ENUM(SHADER_BINDING_MODE, Uint8)
+{
+    /// Each geometry in each instance can have a unique hit shader.
+    /// See IShaderBindingTable::BindHitGroup().
+    SHADER_BINDING_MODE_PER_GEOMETRY = 0,
+
+    /// Each instance can have a unique hit shader. In this mode SBT buffer will use less memory.
+    /// See IShaderBindingTable::BindHitGroups().
+    SHADER_BINDING_MODE_PER_INSTANCE,
+        
+    /// Single hit shader for top-level acceleration structure.
+    /// See IShaderBindingTable::BindHitGroupForAll().
+    SHADER_BINDING_MODE_PER_ACCEL_STRUCT,
+
+    /// The user must specify TLASBuildInstanceData::ContributionToHitGroupIndex and only use IShaderBindingTable::BindAll().
+    SHADER_BINDING_USER_DEFINED,
+
+    SHADER_BINDING_MODE_LAST = SHADER_BINDING_USER_DEFINED,
+};
 
 
 /// This structure is used by IDeviceContext::BuildTLAS().
 struct BuildTLASAttribs
 {
     /// Target top-level AS.
+    /// Access to the TLAS must be externally synchronized.
     ITopLevelAS*                    pTLAS                         DEFAULT_INITIALIZER(nullptr);
     
     /// Top-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
@@ -1028,10 +1071,14 @@ struct BuildTLASAttribs
     RESOURCE_STATE_TRANSITION_MODE  BLASTransitionMode            DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
     /// A pointer to an array of InstanceCount TLASBuildInstanceData structures that contain instance data.
+    /// If Update is true:
+    ///     - Any instance data can be changed.
+    ///     - To disable instance set pBLAS to null.
     TLASBuildInstanceData const*    pInstances                    DEFAULT_INITIALIZER(nullptr);
     
     /// The number of instances.
     /// Must be less than or equal to TopLevelASDesc::MaxInstanceCount.
+    /// If Update is true then count must be the same as used to build TLAS.
     Uint32                          InstanceCount                 DEFAULT_INITIALIZER(0);
     
     /// The buffer that will be used to store instance data during AS building.
@@ -1044,13 +1091,28 @@ struct BuildTLASAttribs
     
     /// Instance buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  InstanceBufferTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// AZ TODO
+    
+    /// The number of hit shaders that can be binded for single geometry or instance (depend on BindingMode).
+    /// Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
+    /// Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
+    /// You should use the same value in shader:
+    /// 'MultiplierForGeometryContributionToHitGroupIndex' argument in TraceRay() in HLSL, 'sbtRecordStride' argument in traceRay() in GLSL.
     Uint32                          HitShadersPerInstance         DEFAULT_INITIALIZER(1);
+    
+    /// Base offset for hit group location.
+    /// Can be used to bind hit shaders for multiple acceleration structures, see IShaderBindingTable::BindHitGroup().
+    /// Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
+    /// Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
+    Uint32                          BaseContributionToHitGroupIndex DEFAULT_INITIALIZER(0);
+
+    /// Hit shader binding mode, see Diligent::SHADER_BINDING_MODE.
+    /// Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
+    SHADER_BINDING_MODE             BindingMode                   DEFAULT_INITIALIZER(SHADER_BINDING_MODE_PER_GEOMETRY);
     
     /// Buffer that is used for acceleration structure building.
     /// Must be created with BIND_RAY_TRACING.
     /// Call ITopLevelAS::GetScratchBufferSizes().Build to get the minimal size for the scratch buffer.
+    /// Access to the TLAS must be externally synchronized.
     IBuffer*                        pScratchBuffer                DEFAULT_INITIALIZER(nullptr);
     
     /// Offset from the beginning of the buffer.
@@ -1058,6 +1120,12 @@ struct BuildTLASAttribs
     
     /// Scratch buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+    /// if false then TLAS will be built from scratch.
+    /// If true then previous content of TLAS will be updated.
+    /// pTLAS must be created with RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
+    /// An update will be faster than building an acceleration structure from scratch.
+    Bool                            Update                        DEFAULT_INITIALIZER(False);
     
 #if DILIGENT_CPP_INTERFACE
     BuildTLASAttribs() noexcept {}
@@ -1070,11 +1138,13 @@ typedef struct BuildTLASAttribs BuildTLASAttribs;
 struct CopyBLASAttribs
 {
     /// Source bottom-level AS.
+    /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*                pSrc              DEFAULT_INITIALIZER(nullptr);
     
     /// Destination bottom-level AS.
     /// If Mode is COPY_AS_MODE_COMPACT then pDst must be created with CompactedSize
     /// that is greater or equal to the size returned by IDeviceContext::WriteBLASCompactedSize.
+    /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*                pDst              DEFAULT_INITIALIZER(nullptr);
     
     /// Acceleration structure copy mode, see Diligent::COPY_AS_MODE.
@@ -1097,11 +1167,13 @@ typedef struct CopyBLASAttribs CopyBLASAttribs;
 struct CopyTLASAttribs
 {
     /// Source top-level AS.
+    /// Access to the TLAS must be externally synchronized.
     ITopLevelAS*                   pSrc              DEFAULT_INITIALIZER(nullptr);
     
     /// Destination top-level AS.
     /// If Mode is COPY_AS_MODE_COMPACT then pDst must be created with CompactedSize
     /// that is greater or equal to size that returned by IDeviceContext::WriteTLASCompactedSize.
+    /// Access to the TLAS must be externally synchronized.
     ITopLevelAS*                   pDst              DEFAULT_INITIALIZER(nullptr);
     
     /// Acceleration structure copy mode, see Diligent::COPY_AS_MODE.

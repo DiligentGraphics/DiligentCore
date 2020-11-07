@@ -137,8 +137,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
     try
     {
+        Uint32 Version = VK_API_VERSION_1_0;
+        if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
+            Version = VK_API_VERSION_1_2;
+
         auto Instance = VulkanUtilities::VulkanInstance::Create(
-            VK_API_VERSION_1_2, // AZ TODO: use 1.2 only for ray tracing, wave ops extensions
+            Version,
             EngineCI.EnableValidation,
             EngineCI.GlobalExtensionCount,
             EngineCI.ppGlobalExtensionNames,

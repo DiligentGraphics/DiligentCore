@@ -103,16 +103,12 @@ void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false)
 #undef LOG_BLAS_ERROR_AND_THROW
 }
 
-void CopyBottomLevelASDesc(const BottomLevelASDesc&                                                SrcDesc,
-                           BottomLevelASDesc&                                                      DstDesc,
-                           LinearAllocator&                                                        MemPool,
-                           std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToIndex) noexcept(false)
+void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
+                          BottomLevelASDesc&       DstDesc,
+                          LinearAllocator&         MemPool,
+                          const BLASNameToIndex*   pSrcNameToIndex,
+                          BLASNameToIndex&         DstNameToIndex) noexcept(false)
 {
-    // Preserve original name
-    const auto* Name = DstDesc.Name;
-    DstDesc          = SrcDesc;
-    DstDesc.Name     = Name;
-
     if (SrcDesc.pTriangles != nullptr)
     {
         MemPool.AddSpace<decltype(*SrcDesc.pTriangles)>(SrcDesc.TriangleCount);
@@ -129,13 +125,24 @@ void CopyBottomLevelASDesc(const BottomLevelASDesc&                             
         {
             const auto* SrcGeoName     = SrcDesc.pTriangles[i].GeometryName;
             pTriangles[i].GeometryName = MemPool.CopyString(SrcGeoName);
-            bool IsUniqueName          = NameToIndex.emplace(SrcGeoName, i).second;
+            Uint32 ActualIndex         = ~0u;
+
+            if (pSrcNameToIndex)
+            {
+                auto iter = pSrcNameToIndex->find(SrcGeoName);
+                VERIFY_EXPR(iter != pSrcNameToIndex->end());
+                ActualIndex = iter->second.ActualIndex;
+            }
+
+            bool IsUniqueName = DstNameToIndex.emplace(SrcGeoName, BLASGeomIndex{i, ActualIndex}).second;
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Geometry name '", SrcGeoName, "' is not unique");
         }
-        DstDesc.pTriangles = pTriangles;
-        DstDesc.pBoxes     = nullptr;
-        DstDesc.BoxCount   = 0;
+
+        DstDesc.pTriangles    = pTriangles;
+        DstDesc.TriangleCount = SrcDesc.TriangleCount;
+        DstDesc.pBoxes        = nullptr;
+        DstDesc.BoxCount      = 0;
     }
     else if (SrcDesc.pBoxes != nullptr)
     {
@@ -153,11 +160,22 @@ void CopyBottomLevelASDesc(const BottomLevelASDesc&                             
         {
             const auto* SrcGeoName = SrcDesc.pBoxes[i].GeometryName;
             pBoxes[i].GeometryName = MemPool.CopyString(SrcGeoName);
-            bool IsUniqueName      = NameToIndex.emplace(SrcGeoName, i).second;
+            Uint32 ActualIndex     = ~0u;
+
+            if (pSrcNameToIndex)
+            {
+                auto iter = pSrcNameToIndex->find(SrcGeoName);
+                VERIFY_EXPR(iter != pSrcNameToIndex->end());
+                ActualIndex = iter->second.ActualIndex;
+            }
+
+            bool IsUniqueName = DstNameToIndex.emplace(SrcGeoName, BLASGeomIndex{i, ActualIndex}).second;
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Geometry name '", SrcGeoName, "' is not unique");
         }
+
         DstDesc.pBoxes        = pBoxes;
+        DstDesc.BoxCount      = SrcDesc.BoxCount;
         DstDesc.pTriangles    = nullptr;
         DstDesc.TriangleCount = 0;
     }

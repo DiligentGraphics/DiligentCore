@@ -34,9 +34,8 @@ namespace Diligent
 
 TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
                                    RenderDeviceVkImpl*   pRenderDeviceVk,
-                                   const TopLevelASDesc& Desc,
-                                   bool                  bIsDeviceInternal) :
-    TTopLevelASBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal}
+                                   const TopLevelASDesc& Desc) :
+    TTopLevelASBase{pRefCounters, pRenderDeviceVk, Desc}
 {
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
@@ -102,6 +101,17 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
     }
 
     SetState(RESOURCE_STATE_BUILD_AS_READ);
+}
+
+TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*        pRefCounters,
+                                   RenderDeviceVkImpl*        pRenderDeviceVk,
+                                   const TopLevelASDesc&      Desc,
+                                   RESOURCE_STATE             InitialState,
+                                   VkAccelerationStructureKHR vkTLAS) :
+    TTopLevelASBase{pRefCounters, pRenderDeviceVk, Desc},
+    m_VulkanTLAS{vkTLAS}
+{
+    SetState(InitialState);
 }
 
 TopLevelASVkImpl::~TopLevelASVkImpl()

@@ -42,14 +42,26 @@
 namespace Diligent
 {
 
+struct BLASGeomIndex
+{
+    Uint32 IndexInDesc = ~0u; // geometry index in description
+    Uint32 ActualIndex = ~0u; // geometry index in build operation
+
+    BLASGeomIndex() {}
+    BLASGeomIndex(Uint32 _IndexInDesc, Uint32 _ActualIndex) :
+        IndexInDesc{_IndexInDesc}, ActualIndex{_ActualIndex} {}
+};
+using BLASNameToIndex = std::unordered_map<HashMapStringKey, BLASGeomIndex, HashMapStringKey::Hasher>;
+
 /// Validates bottom-level AS description and throws and exception in case of an error.
 void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false);
 
-/// Copies bottom-level AS description (except for the Name) using MemPool to allocate required dynamic space.
-void CopyBottomLevelASDesc(const BottomLevelASDesc&                                                SrcDesc,
-                           BottomLevelASDesc&                                                      DstDesc,
-                           LinearAllocator&                                                        MemPool,
-                           std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToIndex) noexcept(false);
+/// Copies bottom-level AS geometry description using MemPool to allocate required dynamic space.
+void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
+                          BottomLevelASDesc&       DstDesc,
+                          LinearAllocator&         MemPool,
+                          const BLASNameToIndex*   pSrcNameToIndex,
+                          BLASNameToIndex&         DstNameToIndex) noexcept(false);
 
 
 /// Template class implementing base functionality for a bottom-level acceleration structure object.
@@ -82,16 +94,47 @@ public:
         }
         else
         {
-            CopyDescriptionUnsafe(Desc);
+            CopyGeometryDescriptionUnsafe(Desc, nullptr);
         }
     }
 
     ~BottomLevelASBase()
     {
-        Clear();
+        ClearGeometry();
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
+
+    // Map geometry that used in build operation to geometry description.
+    // Returns geometry index in geometry description.
+    Uint32 UpdateGeometryIndex(const char* Name, Uint32& ActualIndex, bool OnUpdate)
+    {
+        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+
+        auto iter = m_NameToIndex.find(Name);
+        if (iter != m_NameToIndex.end())
+        {
+            if (OnUpdate)
+                ActualIndex = iter->second.ActualIndex;
+            else
+                iter->second.ActualIndex = ActualIndex;
+            return iter->second.IndexInDesc;
+        }
+        LOG_ERROR_MESSAGE("Can't find geometry with name '", Name, '\'');
+        return ~0u;
+    }
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetGeometryDescIndex(const char* Name) const override final
+    {
+        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+
+        auto iter = m_NameToIndex.find(Name);
+        if (iter != m_NameToIndex.end())
+            return iter->second.IndexInDesc;
+
+        LOG_ERROR_MESSAGE("Can't find geometry with name '", Name, '\'');
+        return ~0u;
+    }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetGeometryIndex(const char* Name) const override final
     {
@@ -99,15 +142,17 @@ public:
 
         auto iter = m_NameToIndex.find(Name);
         if (iter != m_NameToIndex.end())
-            return iter->second;
-
+        {
+            VERIFY(iter->second.ActualIndex != ~0u, "Geometry exists but not enabled during last build");
+            return iter->second.ActualIndex;
+        }
         LOG_ERROR_MESSAGE("Can't find geometry with name '", Name, '\'');
-        return InvalidGeometryIndex;
+        return ~0u;
     }
 
     virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
     {
-        VERIFY(State == RESOURCE_STATE_BUILD_AS_READ || State == RESOURCE_STATE_BUILD_AS_WRITE,
+        VERIFY(State == RESOURCE_STATE_UNKNOWN || State == RESOURCE_STATE_BUILD_AS_READ || State == RESOURCE_STATE_BUILD_AS_WRITE,
                "Unsupported state for a bottom-level acceleration structure");
         this->m_State = State;
     }
@@ -118,7 +163,7 @@ public:
     }
 
     /// Implementation of IBottomLevelAS::GetScratchBufferSizes()
-    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override
+    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override final
     {
         return this->m_ScratchSize;
     }
@@ -138,44 +183,48 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
     void UpdateVersion()
     {
-        m_Version.fetch_add(1);
+        this->m_DbgVersion.fetch_add(1);
     }
 
     Uint32 GetVersion() const
     {
-        return m_Version.load();
-    }
-
-    bool ValidateContent() const
-    {
-        // AZ TODO
-        return true;
+        return this->m_DbgVersion.load();
     }
 #endif // DILIGENT_DEVELOPMENT
 
-    void CopyDescription(const BottomLevelASBase& SrcBLAS) noexcept
+    void CopyGeometryDescription(const BottomLevelASBase& SrcBLAS) noexcept
     {
-        Clear();
+        ClearGeometry();
 
         try
         {
-            CopyDescriptionUnsafe(SrcBLAS.GetDesc());
+            CopyGeometryDescriptionUnsafe(SrcBLAS.GetDesc(), &SrcBLAS.m_NameToIndex);
         }
         catch (...)
         {
-            Clear();
+            ClearGeometry();
         }
     }
 
+    void SetActualGeometryCount(Uint32 Count)
+    {
+        m_GeometryCount = Count;
+    }
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetActualGeometryCount() const override final
+    {
+        return m_GeometryCount;
+    }
+
 private:
-    void CopyDescriptionUnsafe(const BottomLevelASDesc& SrcDesc) noexcept(false)
+    void CopyGeometryDescriptionUnsafe(const BottomLevelASDesc& SrcDesc, const BLASNameToIndex* pSrcNameToIndex) noexcept(false)
     {
         LinearAllocator MemPool{GetRawAllocator()};
-        CopyBottomLevelASDesc(SrcDesc, this->m_Desc, MemPool, m_NameToIndex);
+        CopyBLASGeometryDesc(SrcDesc, this->m_Desc, MemPool, pSrcNameToIndex, this->m_NameToIndex);
         this->m_pRawPtr = MemPool.Release();
     }
 
-    void Clear() noexcept
+    void ClearGeometry() noexcept
     {
         if (this->m_pRawPtr != nullptr)
         {
@@ -183,25 +232,24 @@ private:
             this->m_pRawPtr = nullptr;
         }
 
-        // Preserve original name - it was allocated by DeviceObjectBase
-        auto* Name        = this->m_Desc.Name;
-        this->m_Desc      = BottomLevelASDesc{};
-        this->m_Desc.Name = Name;
+        // keep Name, Flags, CompactedSize, CommandQueueMask
+        this->m_Desc.pTriangles    = nullptr;
+        this->m_Desc.TriangleCount = 0;
+        this->m_Desc.pBoxes        = nullptr;
+        this->m_Desc.BoxCount      = 0;
 
         m_NameToIndex.clear();
     }
 
 protected:
-    RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
-
-    std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher> m_NameToIndex;
-
-    void* m_pRawPtr = nullptr;
-
+    RESOURCE_STATE     m_State = RESOURCE_STATE_UNKNOWN;
+    BLASNameToIndex    m_NameToIndex;
+    void*              m_pRawPtr       = nullptr;
+    Uint32             m_GeometryCount = 0;
     ScratchBufferSizes m_ScratchSize;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic<Uint32> m_Version{0};
+    std::atomic<Uint32> m_DbgVersion{0};
 #endif
 };
 

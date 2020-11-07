@@ -349,14 +349,26 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.BoxDataCount <= BLASDesc.BoxCount, "BoxDataCount must be less than or equal to pBLAS->GetDesc().BoxCount");
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.TriangleDataCount <= BLASDesc.TriangleCount, "TriangleDataCount must be less than or equal to pBLAS->GetDesc().TriangleCount");
 
+    if (Attribs.Update)
+    {
+        CHECK_BUILD_BLAS_ATTRIBS((BLASDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_UPDATE) == RAYTRACING_BUILD_AS_ALLOW_UPDATE,
+                                 "Update is true, but BLAS created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag");
+
+        const Uint32 GeomCount = Attribs.pBLAS->GetActualGeometryCount();
+        CHECK_BUILD_BLAS_ATTRIBS(Attribs.BoxDataCount == 0 || Attribs.BoxDataCount == GeomCount,
+                                 "Update is true, but BoxDataCount does not match with a previous value (", GeomCount, ")");
+        CHECK_BUILD_BLAS_ATTRIBS(Attribs.TriangleDataCount == 0 || Attribs.TriangleDataCount == GeomCount,
+                                 "Update is true, but TriangleDataCount does not match with a previous value (", GeomCount, ")");
+    }
+
     for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
     {
         const auto&  tri            = Attribs.pTriangleData[i];
         const Uint32 VertexSize     = GetValueSize(tri.VertexValueType) * tri.VertexComponentCount;
         const Uint32 VertexDataSize = tri.VertexStride * tri.VertexCount;
-        const Uint32 GeomIndex      = Attribs.pBLAS->GetGeometryIndex(tri.GeometryName);
+        const Uint32 GeomIndex      = Attribs.pBLAS->GetGeometryDescIndex(tri.GeometryName);
 
-        CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != InvalidGeometryIndex,
+        CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != ~0u,
                                  "pTriangleData[", i, "].GeometryName (", tri.GeometryName, ") is not found in BLAS description");
 
         const auto& TriDesc = BLASDesc.pTriangles[GeomIndex];
@@ -376,10 +388,11 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
 
         CHECK_BUILD_BLAS_ATTRIBS(tri.pVertexBuffer != nullptr, "pTriangleData[", i, "].pVertexBuffer must not be null");
 
-        CHECK_BUILD_BLAS_ATTRIBS((tri.pVertexBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
+        const BufferDesc& VertBufDesc = tri.pVertexBuffer->GetDesc();
+        CHECK_BUILD_BLAS_ATTRIBS((VertBufDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                                  "pTriangleData[", i, "].pVertexBuffer was not created with BIND_RAY_TRACING flag");
 
-        CHECK_BUILD_BLAS_ATTRIBS(tri.VertexOffset + VertexDataSize <= tri.pVertexBuffer->GetDesc().uiSizeInBytes,
+        CHECK_BUILD_BLAS_ATTRIBS(tri.VertexOffset + VertexDataSize <= VertBufDesc.uiSizeInBytes,
                                  "pTriangleData[", i, "].pVertexBuffer is too small for the specified VertexStride (", tri.VertexStride, ") and VertexCount (",
                                  tri.VertexCount, "): at least ", tri.VertexOffset + VertexDataSize, " bytes are required");
 
@@ -395,11 +408,13 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
         {
             CHECK_BUILD_BLAS_ATTRIBS(tri.pIndexBuffer != nullptr, "pTriangleData[", i, "].pIndexBuffer must not be null");
 
-            CHECK_BUILD_BLAS_ATTRIBS((tri.pIndexBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
+            const BufferDesc& InstBufDesc   = tri.pIndexBuffer->GetDesc();
+            const Uint32      IndexDataSize = tri.PrimitiveCount * 3 * GetValueSize(tri.IndexType);
+
+            CHECK_BUILD_BLAS_ATTRIBS((InstBufDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                                      "pTriangleData[", i, "].pIndexBuffer was not created with BIND_RAY_TRACING flag");
 
-            const Uint32 IndexDataSize = tri.PrimitiveCount * 3 * GetValueSize(tri.IndexType);
-            CHECK_BUILD_BLAS_ATTRIBS(tri.IndexOffset + IndexDataSize <= tri.pIndexBuffer->GetDesc().uiSizeInBytes,
+            CHECK_BUILD_BLAS_ATTRIBS(tri.IndexOffset + IndexDataSize <= InstBufDesc.uiSizeInBytes,
                                      "pTriangleData[", i, "].pIndexBuffer is too small for specified IndexType and IndexCount: at least",
                                      tri.IndexOffset + IndexDataSize, " bytes are required");
         }
@@ -425,9 +440,9 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
     {
         const auto&  box       = Attribs.pBoxData[i];
         const Uint32 BoxSize   = sizeof(float) * 6;
-        const Uint32 GeomIndex = Attribs.pBLAS->GetGeometryIndex(box.GeometryName);
+        const Uint32 GeomIndex = Attribs.pBLAS->GetGeometryDescIndex(box.GeometryName);
 
-        CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != InvalidGeometryIndex,
+        CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != ~0u,
                                  "pBoxData[", i, "].GeometryName (", box.GeometryName, ") is not found in BLAS description");
 
         const auto& BoxDesc = BLASDesc.pBoxes[GeomIndex];
@@ -449,8 +464,12 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.ScratchBufferOffset <= ScratchDesc.uiSizeInBytes,
                              "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.uiSizeInBytes, ")");
 
-    CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Build,
-                             "pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Build to get the required size for the scratch buffer");
+    if (Attribs.Update)
+        CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Update,
+                                 "pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Update to get the required size for the scratch buffer");
+    else
+        CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Build,
+                                 "pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Build to get the required size for the scratch buffer");
 
     CHECK_BUILD_BLAS_ATTRIBS((ScratchDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                              "pScratchBuffer was not created with BIND_RAY_TRACING flag");
@@ -461,7 +480,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
 }
 
 
-bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
+bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstanceCount)
 {
 #define CHECK_BUILD_TLAS_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Build TLAS attribs are invalid: ", __VA_ARGS__)
 
@@ -469,7 +488,9 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.pScratchBuffer != nullptr, "pScratchBuffer must not be null");
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.pInstances != nullptr, "pInstances must not be null");
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.pInstanceBuffer != nullptr, "pInstanceBuffer must not be null");
-    CHECK_BUILD_TLAS_ATTRIBS(Attribs.HitShadersPerInstance != 0, "HitShadersPerInstance must be greater than 0");
+
+    CHECK_BUILD_TLAS_ATTRIBS(Attribs.BindingMode == SHADER_BINDING_USER_DEFINED || Attribs.HitShadersPerInstance != 0,
+                             "HitShadersPerInstance must be greater than 0 if BindingMode is not SHADER_BINDING_USER_DEFINED");
 
     const auto& TLASDesc = Attribs.pTLAS->GetDesc();
 
@@ -477,30 +498,49 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
                              "InstanceCount (", Attribs.InstanceCount, ") must be less than or equal to pTLAS->GetDesc().MaxInstanceCount (",
                              TLASDesc.MaxInstanceCount, ")");
 
-    const auto& InstDesc     = Attribs.pInstanceBuffer->GetDesc();
-    const auto  InstDataSize = size_t{Attribs.InstanceCount} * size_t{TLAS_INSTANCE_DATA_SIZE};
+    if (Attribs.Update)
+    {
+        CHECK_BUILD_TLAS_ATTRIBS((TLASDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_UPDATE) == RAYTRACING_BUILD_AS_ALLOW_UPDATE,
+                                 "Update is true, but TLAS created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag");
+        CHECK_BUILD_TLAS_ATTRIBS(PrevInstanceCount == Attribs.InstanceCount,
+                                 "Update is true, but InstanceCount (", Attribs.InstanceCount, ") does not match with the previous value (", PrevInstanceCount, ")");
+    }
 
-    Uint32 AutoOffsetCounter = 0;
+    const auto& InstDesc          = Attribs.pInstanceBuffer->GetDesc();
+    const auto  InstDataSize      = size_t{Attribs.InstanceCount} * size_t{TLAS_INSTANCE_DATA_SIZE};
+    Uint32      AutoOffsetCounter = 0;
 
     // Calculate instance data size
     for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
     {
-        VERIFY((Attribs.pInstances[i].CustomId & ~0x00FFFFFF) == 0, "Only the lower 24 bits are used");
+        constexpr Uint32 BitMask = (1u << 24) - 1;
+        const auto&      Inst    = Attribs.pInstances[i];
 
-        VERIFY(Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO ||
-                   (Attribs.pInstances[i].ContributionToHitGroupIndex & ~0x00FFFFFF) == 0,
+        VERIFY((Inst.CustomId & ~BitMask) == 0, "Only the lower 24 bits are used");
+
+        VERIFY(Inst.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO ||
+                   (Inst.ContributionToHitGroupIndex & ~BitMask) == 0,
                "Only the lower 24 bits are used");
 
-        CHECK_BUILD_TLAS_ATTRIBS(Attribs.pInstances[i].InstanceName != nullptr, "pInstances[", i, "].InstanceName must not be null");
-        CHECK_BUILD_TLAS_ATTRIBS(Attribs.pInstances[i].pBLAS != nullptr, "pInstances[", i, "].pBLAS must not be null");
+        CHECK_BUILD_TLAS_ATTRIBS(Inst.InstanceName != nullptr, "pInstances[", i, "].InstanceName must not be null");
 
-        if (Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
+        if (Attribs.Update)
+        {
+            const TLASInstanceDesc IDesc = Attribs.pTLAS->GetInstanceDesc(Inst.InstanceName);
+            CHECK_BUILD_TLAS_ATTRIBS(IDesc.InstanceIndex != ~0u, "Update is true, but pInstances[", i, "].InstanceName does not exists");
+        }
+        else
+        {
+            CHECK_BUILD_TLAS_ATTRIBS(Inst.pBLAS != nullptr, "pInstances[", i, "].pBLAS must not be null");
+        }
+
+        if (Inst.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
             ++AutoOffsetCounter;
 
-        CHECK_BUILD_TLAS_ATTRIBS(TLASDesc.BindingMode == SHADER_BINDING_USER_DEFINED || Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO,
+        CHECK_BUILD_TLAS_ATTRIBS(Attribs.BindingMode == SHADER_BINDING_USER_DEFINED || Inst.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO,
                                  "pInstances[", i,
                                  "].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO "
-                                 "if TLAS is created with BindingMode that is not SHADER_BINDING_USER_DEFINED");
+                                 "if BindingMode is not SHADER_BINDING_USER_DEFINED");
     }
 
     CHECK_BUILD_TLAS_ATTRIBS(AutoOffsetCounter == 0 || AutoOffsetCounter == Attribs.InstanceCount,
@@ -521,8 +561,12 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.ScratchBufferOffset <= ScratchDesc.uiSizeInBytes,
                              "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.uiSizeInBytes, ")");
 
-    CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Build,
-                             "pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Build to get the required size for scratch buffer");
+    if (Attribs.Update)
+        CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Update,
+                                 "pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Update to get the required size for scratch buffer");
+    else
+        CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Build,
+                                 "pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Build to get the required size for scratch buffer");
 
     CHECK_BUILD_TLAS_ATTRIBS((ScratchDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                              "pScratchBuffer was not created with BIND_RAY_TRACING flag");
@@ -532,7 +576,7 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
 }
 
 
-bool VerifyCopyBLASAttribs(const CopyBLASAttribs& Attribs)
+bool VerifyCopyBLASAttribs(const IRenderDevice* pDevice, const CopyBLASAttribs& Attribs)
 {
 #define CHECK_COPY_BLAS_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Copy BLAS attribs are invalid: ", __VA_ARGS__)
 
@@ -541,48 +585,66 @@ bool VerifyCopyBLASAttribs(const CopyBLASAttribs& Attribs)
 
     if (Attribs.Mode == COPY_AS_MODE_CLONE)
     {
-        auto& SrcDesc = Attribs.pSrc->GetDesc();
-        auto& DstDesc = Attribs.pDst->GetDesc();
-
-        CHECK_COPY_BLAS_ATTRIBS(SrcDesc.TriangleCount == DstDesc.TriangleCount,
-                                "Src BLAS triangle count (", SrcDesc.TriangleCount, ") must be equal to the dst BLAS triangle count (", DstDesc.TriangleCount, ")");
-
-        CHECK_COPY_BLAS_ATTRIBS(SrcDesc.BoxCount == DstDesc.BoxCount,
-                                "Src BLAS box count (", SrcDesc.BoxCount, ") must be equal to the dst BLAS box count (", DstDesc.BoxCount, ")");
-
-        CHECK_COPY_BLAS_ATTRIBS(SrcDesc.Flags == DstDesc.Flags,
-                                "Source and destination BLASes must have been created with the same flags");
-
-        for (Uint32 i = 0; i < SrcDesc.TriangleCount; ++i)
+        if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN)
         {
-            auto& SrcTri = SrcDesc.pTriangles[i];
-            auto& DstTri = DstDesc.pTriangles[i];
+            auto& SrcDesc = Attribs.pSrc->GetDesc();
+            auto& DstDesc = Attribs.pDst->GetDesc();
 
-            CHECK_COPY_BLAS_ATTRIBS(SrcTri.MaxVertexCount == DstTri.MaxVertexCount,
-                                    "MaxVertexCount value (", SrcTri.MaxVertexCount, ") in source triangle description at index ", i,
-                                    " does not match MaxVertexCount value (", DstTri.MaxVertexCount, ") in the destination description");
-            CHECK_COPY_BLAS_ATTRIBS(SrcTri.VertexValueType == DstTri.VertexValueType,
-                                    "VertexValueType value (", GetValueTypeString(SrcTri.VertexValueType), ") in source triangle description at index ", i,
-                                    " does not match VertexValueType value (", GetValueTypeString(DstTri.VertexValueType), ") in destination description");
-            CHECK_COPY_BLAS_ATTRIBS(SrcTri.VertexComponentCount == DstTri.VertexComponentCount,
-                                    "VertexComponentCount value (", Uint32{SrcTri.VertexComponentCount}, ") in source triangle description at index ", i,
-                                    " does not match VertexComponentCount value (", Uint32{DstTri.VertexComponentCount}, ") in destination description");
-            CHECK_COPY_BLAS_ATTRIBS(SrcTri.MaxPrimitiveCount == DstTri.MaxPrimitiveCount,
-                                    "MaxPrimitiveCount value (", SrcTri.MaxPrimitiveCount, ") in source triangle description at index ", i,
-                                    " does not match MaxPrimitiveCount value (", DstTri.MaxPrimitiveCount, ") in destination description");
-            CHECK_COPY_BLAS_ATTRIBS(SrcTri.IndexType == DstTri.IndexType,
-                                    "IndexType value (", GetValueTypeString(SrcTri.IndexType), ") in source triangle description at index ", i,
-                                    " does not match IndexType value (", GetValueTypeString(DstTri.IndexType), ") in destination description");
-            CHECK_COPY_BLAS_ATTRIBS(SrcTri.AllowsTransforms == DstTri.AllowsTransforms,
-                                    "AllowsTransforms value (", (SrcTri.AllowsTransforms ? "true" : "false"), ") in source triangle description at index ", i,
-                                    " does not match AllowsTransforms value (", (DstTri.AllowsTransforms ? "true" : "false"), ") in destination description");
-        }
+            CHECK_COPY_BLAS_ATTRIBS(SrcDesc.TriangleCount == DstDesc.TriangleCount,
+                                    "Src BLAS triangle count (", SrcDesc.TriangleCount, ") must be equal to the dst BLAS triangle count (", DstDesc.TriangleCount, ")");
 
-        for (Uint32 i = 0; i < SrcDesc.BoxCount; ++i)
-        {
-            CHECK_COPY_BLAS_ATTRIBS(SrcDesc.pBoxes[i].MaxBoxCount == DstDesc.pBoxes[i].MaxBoxCount,
-                                    "MaxBoxCountt value (", SrcDesc.pBoxes[i].MaxBoxCount, ") in source box description at index ", i,
-                                    " does not match MaxBoxCount value (", DstDesc.pBoxes[i].MaxBoxCount, ") in destination description");
+            CHECK_COPY_BLAS_ATTRIBS(SrcDesc.BoxCount == DstDesc.BoxCount,
+                                    "Src BLAS box count (", SrcDesc.BoxCount, ") must be equal to the dst BLAS box count (", DstDesc.BoxCount, ")");
+
+            CHECK_COPY_BLAS_ATTRIBS(SrcDesc.Flags == DstDesc.Flags,
+                                    "Source and destination BLASes must have been created with the same flags");
+
+            for (Uint32 i = 0; i < SrcDesc.TriangleCount; ++i)
+            {
+                const BLASTriangleDesc& SrcTri = SrcDesc.pTriangles[i];
+                const Uint32            Index  = Attribs.pDst->GetGeometryDescIndex(SrcTri.GeometryName);
+                if (Index == ~0u)
+                {
+                    LOG_ERROR_MESSAGE("Copy BLAS attribs are invalid: pSrc->GetDesc().pTriangles[", i, "].GeometryName ('", SrcTri.GeometryName, "') is not found in pDst");
+                    return false;
+                }
+                const BLASTriangleDesc& DstTri = DstDesc.pTriangles[Index];
+
+                CHECK_COPY_BLAS_ATTRIBS(SrcTri.MaxVertexCount == DstTri.MaxVertexCount,
+                                        "MaxVertexCount value (", SrcTri.MaxVertexCount, ") in source triangle description at index ", i,
+                                        " does not match MaxVertexCount value (", DstTri.MaxVertexCount, ") in the destination description");
+                CHECK_COPY_BLAS_ATTRIBS(SrcTri.VertexValueType == DstTri.VertexValueType,
+                                        "VertexValueType value (", GetValueTypeString(SrcTri.VertexValueType), ") in source triangle description at index ", i,
+                                        " does not match VertexValueType value (", GetValueTypeString(DstTri.VertexValueType), ") in destination description");
+                CHECK_COPY_BLAS_ATTRIBS(SrcTri.VertexComponentCount == DstTri.VertexComponentCount,
+                                        "VertexComponentCount value (", Uint32{SrcTri.VertexComponentCount}, ") in source triangle description at index ", i,
+                                        " does not match VertexComponentCount value (", Uint32{DstTri.VertexComponentCount}, ") in destination description");
+                CHECK_COPY_BLAS_ATTRIBS(SrcTri.MaxPrimitiveCount == DstTri.MaxPrimitiveCount,
+                                        "MaxPrimitiveCount value (", SrcTri.MaxPrimitiveCount, ") in source triangle description at index ", i,
+                                        " does not match MaxPrimitiveCount value (", DstTri.MaxPrimitiveCount, ") in destination description");
+                CHECK_COPY_BLAS_ATTRIBS(SrcTri.IndexType == DstTri.IndexType,
+                                        "IndexType value (", GetValueTypeString(SrcTri.IndexType), ") in source triangle description at index ", i,
+                                        " does not match IndexType value (", GetValueTypeString(DstTri.IndexType), ") in destination description");
+                CHECK_COPY_BLAS_ATTRIBS(SrcTri.AllowsTransforms == DstTri.AllowsTransforms,
+                                        "AllowsTransforms value (", (SrcTri.AllowsTransforms ? "true" : "false"), ") in source triangle description at index ", i,
+                                        " does not match AllowsTransforms value (", (DstTri.AllowsTransforms ? "true" : "false"), ") in destination description");
+            }
+
+            for (Uint32 i = 0; i < SrcDesc.BoxCount; ++i)
+            {
+                const BLASBoundingBoxDesc& SrcBox = SrcDesc.pBoxes[i];
+                const Uint32               Index  = Attribs.pDst->GetGeometryDescIndex(SrcBox.GeometryName);
+                if (Index == ~0u)
+                {
+                    LOG_ERROR_MESSAGE("Copy BLAS attribs are invalid: pSrc->GetDesc().pBoxes[", i, "].GeometryName ('", SrcBox.GeometryName, "') is not found in pDst");
+                    return false;
+                }
+                const BLASBoundingBoxDesc& DstBox = DstDesc.pBoxes[Index];
+
+                CHECK_COPY_BLAS_ATTRIBS(SrcBox.MaxBoxCount == DstBox.MaxBoxCount,
+                                        "MaxBoxCountt value (", SrcBox.MaxBoxCount, ") in source box description at index ", i,
+                                        " does not match MaxBoxCount value (", DstBox.MaxBoxCount, ") in destination description");
+            }
         }
     }
     else if (Attribs.Mode == COPY_AS_MODE_COMPACT)
@@ -617,7 +679,7 @@ bool VerifyCopyTLASAttribs(const CopyTLASAttribs& Attribs)
         auto& SrcDesc = Attribs.pSrc->GetDesc();
         auto& DstDesc = Attribs.pDst->GetDesc();
 
-        CHECK_COPY_TLAS_ATTRIBS(SrcDesc.MaxInstanceCount == DstDesc.MaxInstanceCount || SrcDesc.Flags == DstDesc.Flags,
+        CHECK_COPY_TLAS_ATTRIBS(SrcDesc.MaxInstanceCount == DstDesc.MaxInstanceCount && SrcDesc.Flags == DstDesc.Flags,
                                 "pDst must have been created with the same parameters as pSrc");
     }
     else if (Attribs.Mode == COPY_AS_MODE_COMPACT)
@@ -647,12 +709,13 @@ bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const Wri
                                   "pBLAS was not created with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
 
     CHECK_WRITE_BLAS_SIZE_ATTRIBS(Attribs.pDestBuffer != nullptr, "pDestBuffer must not be null");
-    CHECK_WRITE_BLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= Attribs.pDestBuffer->GetDesc().uiSizeInBytes,
-                                  "pDestBuffer is too small");
+
+    const BufferDesc& DstDesc = Attribs.pDestBuffer->GetDesc();
+    CHECK_WRITE_BLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= DstDesc.uiSizeInBytes, "pDestBuffer is too small");
 
     if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
     {
-        CHECK_WRITE_BLAS_SIZE_ATTRIBS((Attribs.pDestBuffer->GetDesc().BindFlags & BIND_UNORDERED_ACCESS) == BIND_UNORDERED_ACCESS,
+        CHECK_WRITE_BLAS_SIZE_ATTRIBS((DstDesc.BindFlags & BIND_UNORDERED_ACCESS) == BIND_UNORDERED_ACCESS,
                                       "pDestBuffer must have been created with BIND_UNORDERED_ACCESS flag in Direct3D12");
     }
 
@@ -670,11 +733,13 @@ bool VerifyWriteTLASCompactedSizeAttribs(const IRenderDevice* pDevice, const Wri
                                   "pTLAS was not created with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
 
     CHECK_WRITE_TLAS_SIZE_ATTRIBS(Attribs.pDestBuffer != nullptr, "pDestBuffer must not be null");
-    CHECK_WRITE_TLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= Attribs.pDestBuffer->GetDesc().uiSizeInBytes, "pDestBuffer is too small");
+
+    const BufferDesc& DstDesc = Attribs.pDestBuffer->GetDesc();
+    CHECK_WRITE_TLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= DstDesc.uiSizeInBytes, "pDestBuffer is too small");
 
     if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
     {
-        CHECK_WRITE_TLAS_SIZE_ATTRIBS((Attribs.pDestBuffer->GetDesc().BindFlags & BIND_UNORDERED_ACCESS) == BIND_UNORDERED_ACCESS,
+        CHECK_WRITE_TLAS_SIZE_ATTRIBS((DstDesc.BindFlags & BIND_UNORDERED_ACCESS) == BIND_UNORDERED_ACCESS,
                                       "pDestBuffer must have been created with BIND_UNORDERED_ACCESS flag");
     }
 
@@ -689,7 +754,8 @@ bool VerifyTraceRaysAttribs(const TraceRaysAttribs& Attribs)
     CHECK_TRACE_RAYS_ATTRIBS(Attribs.pSBT != nullptr, "pSBT must not be null");
 
 #ifdef DILIGENT_DEVELOPMENT
-    CHECK_TRACE_RAYS_ATTRIBS(Attribs.pSBT->Verify(), "pSBT content is not valid");
+    CHECK_TRACE_RAYS_ATTRIBS(Attribs.pSBT->Verify(SHADER_BINDING_VALIDATION_SHADER_ONLY | SHADER_BINDING_VALIDATION_TLAS),
+                             "pSBT not all shaders are binded or instance to shader mapping are incorrect");
 #endif // DILIGENT_DEVELOPMENT
 
     CHECK_TRACE_RAYS_ATTRIBS(Attribs.DimensionX != 0, "DimensionX must not be zero.");

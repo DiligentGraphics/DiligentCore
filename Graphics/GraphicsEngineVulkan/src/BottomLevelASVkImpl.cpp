@@ -34,9 +34,8 @@ namespace Diligent
 
 BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                                          RenderDeviceVkImpl*      pRenderDeviceVk,
-                                         const BottomLevelASDesc& Desc,
-                                         bool                     bIsDeviceInternal) :
-    TBottomLevelASBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal}
+                                         const BottomLevelASDesc& Desc) :
+    TBottomLevelASBase{pRefCounters, pRenderDeviceVk, Desc}
 {
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
@@ -150,6 +149,18 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
     }
 
     SetState(RESOURCE_STATE_BUILD_AS_READ);
+}
+
+BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*        pRefCounters,
+                                         RenderDeviceVkImpl*        pRenderDeviceVk,
+                                         const BottomLevelASDesc&   Desc,
+                                         RESOURCE_STATE             InitialState,
+                                         VkAccelerationStructureKHR vkBLAS) :
+    TBottomLevelASBase{pRefCounters, pRenderDeviceVk, Desc},
+    m_VulkanBLAS{vkBLAS}
+{
+    SetState(InitialState);
+    m_DeviceAddress = pRenderDeviceVk->GetLogicalDevice().GetAccelerationStructureDeviceAddress(m_VulkanBLAS);
 }
 
 BottomLevelASVkImpl::~BottomLevelASVkImpl()

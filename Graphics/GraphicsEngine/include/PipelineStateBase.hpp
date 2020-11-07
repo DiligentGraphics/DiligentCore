@@ -205,15 +205,6 @@ public:
         return m_pRayTracingPipelineData->Desc;
     }
 
-    virtual Uint32 DILIGENT_CALL_TYPE GetShaderGroupCount() const override final
-    {
-        VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
-        VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
-        return static_cast<Uint32>(m_pRayTracingPipelineData->NameToGroupIndex.size());
-    }
-
-    static constexpr Uint32 InvalidShaderGroupIndex = ~0u;
-
     virtual Uint32 DILIGENT_CALL_TYPE GetShaderGroupIndex(const char* Name) const override final
     {
         VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
@@ -225,10 +216,10 @@ public:
             return iter->second;
 
         UNEXPECTED("Can't find shader group with specified name");
-        return InvalidShaderGroupIndex;
+        return ~0u;
     }
 
-    inline void CopyShaderHandle(const char* Name, void* pData, Uint32 DataSize) const
+    inline void CopyShaderHandle(const char* Name, void* pData, size_t DataSize) const
     {
         VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
         VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);

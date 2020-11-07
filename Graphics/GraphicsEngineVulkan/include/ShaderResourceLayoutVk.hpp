@@ -396,6 +396,8 @@ public:
 
     bool IsUsingSeparateSamplers() const { return m_IsUsingSeparateSamplers; }
 
+    bool IsCompatibleWith(const ShaderResourceLayoutVk& ResLayout) const;
+
 private:
     Uint32 GetResourceOffset(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r) const
     {

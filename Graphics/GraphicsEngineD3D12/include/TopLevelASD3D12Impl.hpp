@@ -48,8 +48,12 @@ public:
 
     TopLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
                         class RenderDeviceD3D12Impl* pDeviceD3D12,
+                        const TopLevelASDesc&        Desc);
+    TopLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
+                        class RenderDeviceD3D12Impl* pDeviceD3D12,
                         const TopLevelASDesc&        Desc,
-                        bool                         bIsDeviceInternal = false);
+                        RESOURCE_STATE               InitialState,
+                        ID3D12Resource*              pd3d12TLAS);
     ~TopLevelASD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelASD3D12, TTopLevelASBase);

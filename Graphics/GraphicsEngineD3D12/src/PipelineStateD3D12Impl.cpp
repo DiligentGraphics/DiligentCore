@@ -729,16 +729,17 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     auto        pd3d12Device   = GetDevice()->GetD3D12Device();
     const auto& ResourceLayout = m_Desc.ResourceLayout;
 
-    // AZ TODO
-#if 0 //def DILIGENT_DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
-        const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
+        std::vector<const ShaderResources*> Resources;
         for (size_t s = 0; s < ShaderStages.size(); ++s)
         {
-            const auto* pShader = ShaderStages[s].Shaders[0];
-            pResources[s]       = &(*pShader->GetShaderResources());
+            for (auto* pShader : ShaderStages[s].Shaders)
+            {
+                Resources.push_back(&(*pShader->GetShaderResources()));
+            }
         }
-        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderStages(),
+        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, Resources.data(), static_cast<Uint32>(Resources.size()),
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS) == 0);
     }
@@ -832,8 +833,7 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
 
     auto IsSameRootSignature = m_RootSig.IsSameAs(pPSOD3D12->m_RootSig);
 
-    // AZ TODO
-#if 0 //def DILIGENT_DEBUG
+#ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
         if (GetNumShaderStages() != pPSOD3D12->GetNumShaderStages())
@@ -849,8 +849,8 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
                     break;
                 }
 
-                const auto& Res0 = GetShaderResLayout(s).GetResources();
-                const auto& Res1 = pPSOD3D12->GetShaderResLayout(s).GetResources();
+                const auto& Res0 = GetShaderResLayout(s);
+                const auto& Res1 = pPSOD3D12->GetShaderResLayout(s);
                 if (!Res0.IsCompatibleWith(Res1))
                 {
                     IsCompatibleShaders = false;
