@@ -125,7 +125,7 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
         {
             const auto* SrcGeoName     = SrcDesc.pTriangles[i].GeometryName;
             pTriangles[i].GeometryName = MemPool.CopyString(SrcGeoName);
-            Uint32 ActualIndex         = ~0u;
+            Uint32 ActualIndex         = INVALID_INDEX;
 
             if (pSrcNameToIndex)
             {
@@ -160,7 +160,7 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
         {
             const auto* SrcGeoName = SrcDesc.pBoxes[i].GeometryName;
             pBoxes[i].GeometryName = MemPool.CopyString(SrcGeoName);
-            Uint32 ActualIndex     = ~0u;
+            Uint32 ActualIndex     = INVALID_INDEX;
 
             if (pSrcNameToIndex)
             {

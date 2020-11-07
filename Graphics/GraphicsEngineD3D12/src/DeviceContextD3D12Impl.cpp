@@ -2301,7 +2301,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
             Uint32      Idx     = i;
             Uint32      GeoIdx  = pBLASD3D12->UpdateGeometryIndex(SrcTris.GeometryName, Idx, Attribs.Update);
 
-            if (GeoIdx == ~0u || Idx == ~0u)
+            if (GeoIdx == INVALID_INDEX || Idx == INVALID_INDEX)
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
@@ -2368,7 +2368,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
             Uint32      Idx      = i;
             Uint32      GeoIdx   = pBLASD3D12->UpdateGeometryIndex(SrcBoxes.GeometryName, Idx, Attribs.Update);
 
-            if (GeoIdx == ~0u || Idx == ~0u)
+            if (GeoIdx == INVALID_INDEX || Idx == INVALID_INDEX)
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;

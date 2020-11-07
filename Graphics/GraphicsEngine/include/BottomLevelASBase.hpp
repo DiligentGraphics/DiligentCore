@@ -44,8 +44,8 @@ namespace Diligent
 
 struct BLASGeomIndex
 {
-    Uint32 IndexInDesc = ~0u; // geometry index in description
-    Uint32 ActualIndex = ~0u; // geometry index in build operation
+    Uint32 IndexInDesc = INVALID_INDEX; // geometry index in description
+    Uint32 ActualIndex = INVALID_INDEX; // geometry index in build operation
 
     BLASGeomIndex() {}
     BLASGeomIndex(Uint32 _IndexInDesc, Uint32 _ActualIndex) :
@@ -121,7 +121,7 @@ public:
             return iter->second.IndexInDesc;
         }
         LOG_ERROR_MESSAGE("Can't find geometry with name '", Name, '\'');
-        return ~0u;
+        return INVALID_INDEX;
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetGeometryDescIndex(const char* Name) const override final
@@ -133,7 +133,7 @@ public:
             return iter->second.IndexInDesc;
 
         LOG_ERROR_MESSAGE("Can't find geometry with name '", Name, '\'');
-        return ~0u;
+        return INVALID_INDEX;
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetGeometryIndex(const char* Name) const override final
@@ -143,11 +143,11 @@ public:
         auto iter = m_NameToIndex.find(Name);
         if (iter != m_NameToIndex.end())
         {
-            VERIFY(iter->second.ActualIndex != ~0u, "Geometry exists but not enabled during last build");
+            VERIFY(iter->second.ActualIndex != INVALID_INDEX, "Geometry exists but not enabled during last build");
             return iter->second.ActualIndex;
         }
         LOG_ERROR_MESSAGE("Can't find geometry with name '", Name, '\'');
-        return ~0u;
+        return INVALID_INDEX;
     }
 
     virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final

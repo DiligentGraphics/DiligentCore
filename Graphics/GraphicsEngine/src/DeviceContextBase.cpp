@@ -368,7 +368,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
         const Uint32 VertexDataSize = tri.VertexStride * tri.VertexCount;
         const Uint32 GeomIndex      = Attribs.pBLAS->GetGeometryDescIndex(tri.GeometryName);
 
-        CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != ~0u,
+        CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != INVALID_INDEX,
                                  "pTriangleData[", i, "].GeometryName (", tri.GeometryName, ") is not found in BLAS description");
 
         const auto& TriDesc = BLASDesc.pTriangles[GeomIndex];
@@ -442,7 +442,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
         const Uint32 BoxSize   = sizeof(float) * 6;
         const Uint32 GeomIndex = Attribs.pBLAS->GetGeometryDescIndex(box.GeometryName);
 
-        CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != ~0u,
+        CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != INVALID_INDEX,
                                  "pBoxData[", i, "].GeometryName (", box.GeometryName, ") is not found in BLAS description");
 
         const auto& BoxDesc = BLASDesc.pBoxes[GeomIndex];
@@ -527,7 +527,7 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstance
         if (Attribs.Update)
         {
             const TLASInstanceDesc IDesc = Attribs.pTLAS->GetInstanceDesc(Inst.InstanceName);
-            CHECK_BUILD_TLAS_ATTRIBS(IDesc.InstanceIndex != ~0u, "Update is true, but pInstances[", i, "].InstanceName does not exists");
+            CHECK_BUILD_TLAS_ATTRIBS(IDesc.InstanceIndex != INVALID_INDEX, "Update is true, but pInstances[", i, "].InstanceName does not exists");
         }
         else
         {
@@ -603,11 +603,8 @@ bool VerifyCopyBLASAttribs(const IRenderDevice* pDevice, const CopyBLASAttribs& 
             {
                 const BLASTriangleDesc& SrcTri = SrcDesc.pTriangles[i];
                 const Uint32            Index  = Attribs.pDst->GetGeometryDescIndex(SrcTri.GeometryName);
-                if (Index == ~0u)
-                {
-                    LOG_ERROR_MESSAGE("Copy BLAS attribs are invalid: pSrc->GetDesc().pTriangles[", i, "].GeometryName ('", SrcTri.GeometryName, "') is not found in pDst");
-                    return false;
-                }
+                CHECK_COPY_BLAS_ATTRIBS(Index != INVALID_INDEX,
+                                        "Src GeometryName ('", SrcTri.GeometryName, "') at index ", i, " is not found in pDst");
                 const BLASTriangleDesc& DstTri = DstDesc.pTriangles[Index];
 
                 CHECK_COPY_BLAS_ATTRIBS(SrcTri.MaxVertexCount == DstTri.MaxVertexCount,
@@ -634,7 +631,7 @@ bool VerifyCopyBLASAttribs(const IRenderDevice* pDevice, const CopyBLASAttribs& 
             {
                 const BLASBoundingBoxDesc& SrcBox = SrcDesc.pBoxes[i];
                 const Uint32               Index  = Attribs.pDst->GetGeometryDescIndex(SrcBox.GeometryName);
-                if (Index == ~0u)
+                if (Index == INVALID_INDEX)
                 {
                     LOG_ERROR_MESSAGE("Copy BLAS attribs are invalid: pSrc->GetDesc().pBoxes[", i, "].GeometryName ('", SrcBox.GeometryName, "') is not found in pDst");
                     return false;

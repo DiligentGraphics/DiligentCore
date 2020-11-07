@@ -2823,7 +2823,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             Uint32      Idx     = i;
             Uint32      GeoIdx  = pBLASVk->UpdateGeometryIndex(SrcTris.GeometryName, Idx, Attribs.Update);
 
-            if (GeoIdx == ~0u || Idx == ~0u)
+            if (GeoIdx == INVALID_INDEX || Idx == INVALID_INDEX)
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
@@ -2896,7 +2896,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             Uint32      Idx      = i;
             Uint32      GeoIdx   = pBLASVk->UpdateGeometryIndex(SrcBoxes.GeometryName, Idx, Attribs.Update);
 
-            if (GeoIdx == ~0u || Idx == ~0u)
+            if (GeoIdx == INVALID_INDEX || Idx == INVALID_INDEX)
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;

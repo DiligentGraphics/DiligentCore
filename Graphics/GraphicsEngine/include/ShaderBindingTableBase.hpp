@@ -176,14 +176,14 @@ public:
 
         VERIFY_EXPR(pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_GEOMETRY);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < pTLASImpl->GetHitShadersPerInstance());
-        VERIFY_EXPR(Desc.ContributionToHitGroupIndex != ~0u);
+        VERIFY_EXPR(Desc.ContributionToHitGroupIndex != INVALID_INDEX);
 
         if (Desc.pBLAS == nullptr)
             return; // this is disabled instance
 
         const Uint32 InstanceIndex = Desc.ContributionToHitGroupIndex;
         const Uint32 GeometryIndex = Desc.pBLAS->GetGeometryIndex(pGeometryName);
-        VERIFY_EXPR(GeometryIndex != ~0u);
+        VERIFY_EXPR(GeometryIndex != INVALID_INDEX);
 
         const Uint32 Index     = InstanceIndex + GeometryIndex * pTLASImpl->GetHitShadersPerInstance() + RayOffsetInHitGroupIndex;
         const size_t Stride    = this->m_ShaderRecordStride;
@@ -218,7 +218,7 @@ public:
         VERIFY_EXPR(pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_GEOMETRY ||
                     pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_INSTANCE);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < pTLASImpl->GetHitShadersPerInstance());
-        VERIFY_EXPR(Desc.ContributionToHitGroupIndex != ~0u);
+        VERIFY_EXPR(Desc.ContributionToHitGroupIndex != INVALID_INDEX);
 
         const Uint32 InstanceIndex = Desc.ContributionToHitGroupIndex;
         Uint32       GeometryCount = 0;
@@ -380,10 +380,10 @@ public:
 #endif
 
         bool valid = true;
-        valid &= FindPattern(m_RayGenShaderRecord, "ray generation");
-        valid &= FindPattern(m_MissShadersRecord, "miss");
-        valid &= FindPattern(m_CallableShadersRecord, "callable");
-        valid &= FindPattern(m_HitGroupsRecord, "hit groups");
+        valid      = valid && FindPattern(m_RayGenShaderRecord, "ray generation");
+        valid      = valid && FindPattern(m_MissShadersRecord, "miss");
+        valid      = valid && FindPattern(m_CallableShadersRecord, "callable");
+        valid      = valid && FindPattern(m_HitGroupsRecord, "hit groups");
         return valid;
     }
 

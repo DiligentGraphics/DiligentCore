@@ -216,7 +216,7 @@ public:
             return iter->second;
 
         UNEXPECTED("Can't find shader group with specified name");
-        return ~0u;
+        return INVALID_INDEX;
     }
 
     inline void CopyShaderHandle(const char* Name, void* pData, size_t DataSize) const

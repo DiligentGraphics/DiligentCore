@@ -44,6 +44,9 @@ static const INTERFACE_ID IID_BottomLevelAS =
 
 // clang-format off
 
+static const Uint32 INVALID_INDEX = ~0u;
+
+
 /// Defines bottom level acceleration structure triangles description.
 
 /// Triangle geometry description.
@@ -211,7 +214,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     /// Returns the geometry description index in BottomLevelASDesc::pTriangles or BottomLevelASDesc::pBoxes.
     
     /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
-    /// \return Geometry index or UINT32_MAX if geometry does not exist.
+    /// \return Geometry index or INVALID_INDEX if geometry does not exist.
     /// 
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetGeometryDescIndex)(THIS_
@@ -221,7 +224,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     /// Returns the geometry index that can be used in a shader binding table.
     
     /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
-    /// \return Geometry index or UINT32_MAX if geometry does not exist.
+    /// \return Geometry index or INVALID_INDEX if geometry does not exist.
     /// 
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetGeometryIndex)(THIS_
@@ -231,6 +234,8 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     /// Returns the geometry count that was used to build AS.
     /// Same as BuildBLASAttribs::TriangleDataCount or BuildBLASAttribs::BoxDataCount.
     
+    /// \return The number of geometries that was used to build AS.
+    /// 
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetActualGeometryCount)(THIS) CONST PURE;
 

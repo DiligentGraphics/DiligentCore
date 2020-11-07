@@ -179,22 +179,22 @@ public:
 
             Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(Inst.pBLAS);
             Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
-            //Desc.InstanceIndex                = i; // keep Desc.InstanceIndex unmodified
+            //Desc.InstanceIndex             = i; // keep Desc.InstanceIndex unmodified
             CalculateHitGroupIndex(Desc, InstanceOffset, HitShadersPerInstance, BindingMode);
 
 #ifdef DILIGENT_DEVELOPMENT
-            Changed |= (pPrevBLAS != Inst.pBLAS);
-            Changed |= (Desc.pBLAS ? Desc.Version != Desc.pBLAS->GetVersion() : false);
-            Changed |= (PrevIndex != Desc.ContributionToHitGroupIndex);
+            Changed      = Changed || (pPrevBLAS != Inst.pBLAS);
+            Changed      = Changed || (Desc.pBLAS ? Desc.Version != Desc.pBLAS->GetVersion() : false);
+            Changed      = Changed || (PrevIndex != Desc.ContributionToHitGroupIndex);
             Desc.Version = Desc.pBLAS ? Desc.pBLAS->GetVersion() : ~0u;
 #endif
         }
 
 #ifdef DILIGENT_DEVELOPMENT
-        Changed |= (this->m_HitShadersPerInstance != HitShadersPerInstance);
-        Changed |= (this->m_FirstContributionToHitGroupIndex != BaseContributionToHitGroupIndex);
-        Changed |= (this->m_LastContributionToHitGroupIndex != InstanceOffset);
-        Changed |= (this->m_BindingMode != BindingMode);
+        Changed = Changed || (this->m_HitShadersPerInstance != HitShadersPerInstance);
+        Changed = Changed || (this->m_FirstContributionToHitGroupIndex != BaseContributionToHitGroupIndex);
+        Changed = Changed || (this->m_LastContributionToHitGroupIndex != InstanceOffset);
+        Changed = Changed || (this->m_BindingMode != BindingMode);
         if (Changed)
             this->m_DbgVersion.fetch_add(1);
 #endif
@@ -260,8 +260,8 @@ public:
         }
         else
         {
-            Result.ContributionToHitGroupIndex = ~0u;
-            Result.InstanceIndex               = ~0u;
+            Result.ContributionToHitGroupIndex = INVALID_INDEX;
+            Result.InstanceIndex               = INVALID_INDEX;
             LOG_ERROR_MESSAGE("Can't find instance with the specified name ('", Name, "')");
         }
 
@@ -358,8 +358,8 @@ private:
 
         this->m_BindingMode                      = SHADER_BINDING_MODE_LAST;
         this->m_HitShadersPerInstance            = 0;
-        this->m_FirstContributionToHitGroupIndex = ~0u;
-        this->m_LastContributionToHitGroupIndex  = ~0u;
+        this->m_FirstContributionToHitGroupIndex = INVALID_INDEX;
+        this->m_LastContributionToHitGroupIndex  = INVALID_INDEX;
     }
 
     static void CalculateHitGroupIndex(InstanceDesc& Desc, Uint32& InstanceOffset, const Uint32 HitShadersPerInstance, const SHADER_BINDING_MODE BindingMode)
@@ -393,8 +393,8 @@ protected:
     RESOURCE_STATE      m_State                            = RESOURCE_STATE_UNKNOWN;
     SHADER_BINDING_MODE m_BindingMode                      = SHADER_BINDING_MODE_LAST;
     Uint32              m_HitShadersPerInstance            = 0;
-    Uint32              m_FirstContributionToHitGroupIndex = ~0u;
-    Uint32              m_LastContributionToHitGroupIndex  = ~0u;
+    Uint32              m_FirstContributionToHitGroupIndex = INVALID_INDEX;
+    Uint32              m_LastContributionToHitGroupIndex  = INVALID_INDEX;
     ScratchBufferSizes  m_ScratchSize;
 
     std::unordered_map<HashMapStringKey, InstanceDesc, HashMapStringKey::Hasher> m_Instances;

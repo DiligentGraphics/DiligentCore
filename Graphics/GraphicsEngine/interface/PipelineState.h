@@ -598,7 +598,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// This method must only be called for a ray tracing pipeline.
 
     /// \param [in] Name - Shader group name.
-    /// \return Shader group index or UINT32_MAX if group does not exist.
+    /// \return Shader group index or INVALID_INDEX if group does not exist.
     VIRTUAL Uint32 METHOD(GetShaderGroupIndex)(THIS_
                                                const char* Name) CONST PURE;
 };

@@ -282,7 +282,7 @@ DILIGENT_END_INTERFACE
 
 #    define IShaderBindingTable_Verify(This, ...)              CALL_IFACE_METHOD(ShaderBindingTable, Verify,             This, __VA_ARGS__)
 #    define IShaderBindingTable_Reset(This, ...)               CALL_IFACE_METHOD(ShaderBindingTable, Reset,              This, __VA_ARGS__)
-#    define IShaderBindingTable_ResetHitGroups(This, ...)      CALL_IFACE_METHOD(ShaderBindingTable, ResetHitGroups,     This, __VA_ARGS__)
+#    define IShaderBindingTable_ResetHitGroups(This)           CALL_IFACE_METHOD(ShaderBindingTable, ResetHitGroups,     This)
 #    define IShaderBindingTable_BindRayGenShader(This, ...)    CALL_IFACE_METHOD(ShaderBindingTable, BindRayGenShader,   This, __VA_ARGS__)
 #    define IShaderBindingTable_BindMissShader(This, ...)      CALL_IFACE_METHOD(ShaderBindingTable, BindMissShader,     This, __VA_ARGS__)
 #    define IShaderBindingTable_BindHitGroup(This, ...)        CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroup,       This, __VA_ARGS__)
