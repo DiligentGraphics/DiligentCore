@@ -35,14 +35,21 @@ using namespace Diligent::Testing;
 namespace
 {
 
-static const char g_BrokenShaderSource[] = R"(
+static const char g_BrokenHLSL[] = R"(
 void VSMain(out float4 pos : SV_POSITION)
 {
     pos = float3(0.0, 0.0, 0.0, 0.0);
 }
 )";
 
-TEST(Shader, CompilationFailure)
+static const char g_BrokenGLSL[] = R"(
+void VSMain()
+{
+    gl_Position = vec3(0.0, 0.0, 0.0);
+}
+)";
+
+void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUAGE SourceLanguage, int ErrorAllowance)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -50,18 +57,18 @@ TEST(Shader, CompilationFailure)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ShaderCreateInfo Attrs;
-    Attrs.Source                     = g_BrokenShaderSource;
+    Attrs.Source                     = Source;
     Attrs.EntryPoint                 = "VSMain";
     Attrs.Desc.ShaderType            = SHADER_TYPE_VERTEX;
-    Attrs.Desc.Name                  = "Broken shader test";
-    Attrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    Attrs.Desc.Name                  = Name;
+    Attrs.SourceLanguage             = SourceLanguage;
     Attrs.ShaderCompiler             = pEnv->GetDefaultCompiler(Attrs.SourceLanguage);
     Attrs.UseCombinedTextureSamplers = true;
 
     IDataBlob* pErrors     = nullptr;
     Attrs.ppCompilerOutput = &pErrors;
 
-    pEnv->SetErrorAllowance(pDevice->GetDeviceCaps().IsVulkanDevice() ? 3 : 2, "\n\nNo worries, testing broken shader...\n\n");
+    pEnv->SetErrorAllowance(ErrorAllowance, "\n\nNo worries, testing broken shader...\n\n");
     RefCntAutoPtr<IShader> pBrokenShader;
     pDevice->CreateShader(Attrs, &pBrokenShader);
     EXPECT_FALSE(pBrokenShader);
@@ -69,6 +76,26 @@ TEST(Shader, CompilationFailure)
     const char* Msg = reinterpret_cast<const char*>(pErrors->GetDataPtr());
     LOG_INFO_MESSAGE("Compiler output:\n", Msg);
     pErrors->Release();
+}
+
+TEST(Shader, BrokenHLSL)
+{
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    // HLSL is supported in all backends
+    TestBrokenShader(g_BrokenHLSL, "Broken HLSL test", SHADER_SOURCE_LANGUAGE_HLSL,
+                     deviceCaps.IsGLDevice() || deviceCaps.IsD3DDevice() ? 2 : 3);
+}
+
+TEST(Shader, BrokenGLSL)
+{
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    if (deviceCaps.IsD3DDevice())
+    {
+        GTEST_SKIP() << "GLSL is not supported in Direct3D";
+    }
+
+    TestBrokenShader(g_BrokenGLSL, "Broken GLSL test", SHADER_SOURCE_LANGUAGE_GLSL,
+                     deviceCaps.IsGLDevice() ? 2 : 3);
 }
 
 } // namespace
