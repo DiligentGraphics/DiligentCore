@@ -71,6 +71,9 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     /// The source language is GLSL
     SHADER_SOURCE_LANGUAGE_GLSL,
 
+    /// The source language is Metal shading language (MSL)
+    SHADER_SOURCE_LANGUAGE_MSL,
+
     /// The source language is GLSL that should be compiled verbatim
 
     /// By default the engine prepends GLSL shader source code with platform-specific

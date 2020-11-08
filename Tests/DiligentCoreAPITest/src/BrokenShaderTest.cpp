@@ -49,6 +49,25 @@ void VSMain()
 }
 )";
 
+static const char g_BrokenMSL[] = R"(
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct VSOut
+{
+    float4 pos [[position]];
+};
+
+vertex VSOut vs_main()
+{
+    VSOut out = {};
+    out.pos = float3(0.0, 0.0, 0.0);
+    return out;
+}
+)";
+
 void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUAGE SourceLanguage, int ErrorAllowance)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
@@ -96,6 +115,17 @@ TEST(Shader, BrokenGLSL)
 
     TestBrokenShader(g_BrokenGLSL, "Broken GLSL test", SHADER_SOURCE_LANGUAGE_GLSL,
                      deviceCaps.IsGLDevice() ? 2 : 3);
+}
+
+TEST(Shader, BrokenMSL)
+{
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    if (!deviceCaps.IsMetalDevice())
+    {
+        GTEST_SKIP() << "MSL is only supported in Metal";
+    }
+
+    TestBrokenShader(g_BrokenMSL, "Broken MSL test", SHADER_SOURCE_LANGUAGE_MSL, 2);
 }
 
 } // namespace
