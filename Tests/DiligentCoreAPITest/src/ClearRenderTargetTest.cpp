@@ -58,7 +58,7 @@ void ClearRenderTargetReferenceVk(ISwapChain* pSwapChain, const float ClearColor
 #endif
 
 #if METAL_SUPPORTED
-
+void ClearRenderTargetReferenceMtl(ISwapChain* pSwapChain, const float ClearColor[]);
 #endif
 
 } // namespace Testing
@@ -102,7 +102,12 @@ void ClearRenderTargetReference(IRenderDevice* pDevice,
         case RENDER_DEVICE_TYPE_VULKAN:
             ClearRenderTargetReferenceVk(pSwapChain, ClearColor);
             break;
+#endif
 
+#if METAL_SUPPORTED
+        case RENDER_DEVICE_TYPE_METAL:
+            ClearRenderTargetReferenceMtl(pSwapChain, ClearColor);
+            break;
 #endif
 
         default:
