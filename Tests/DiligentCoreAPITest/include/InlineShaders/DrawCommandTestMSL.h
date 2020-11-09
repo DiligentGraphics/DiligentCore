@@ -25,33 +25,73 @@
  *  of the possibility of such damages.
  */
 
-#include <Metal/MTLBuffer.h>
+#include <string>
 
-#include "TestingSwapChainBase.hpp"
-
-namespace Diligent
+namespace
 {
 
-namespace Testing
+namespace MSL
 {
 
-class TestingEnvironmentMtl;
+// clang-format off
 
-class TestingSwapChainMtl : public TestingSwapChainBase<ISwapChain>
+const std::string DrawTestFunctions{
+R"(
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct VSOut
 {
-public:
-    using TBase = TestingSwapChainBase<ISwapChain>;
-    TestingSwapChainMtl(IReferenceCounters*    pRefCounters,
-                        TestingEnvironmentMtl* pEnv,
-                        const SwapChainDesc&   SCDesc);
-    ~TestingSwapChainMtl();
-
-    virtual void TakeSnapshot() override final;
-
-private:
-    id<MTLBuffer> m_MtlStagingBuffer;
+    float3 Color [[user(locn0)]];
+    float4 Position [[position]];
 };
 
-} // namespace Testing
+vertex VSOut QuadVS(uint VertexId [[vertex_id]])
+{
+    float4 Pos[6] =
+    {
+        float4(-1.0, -0.5, 0.0, 1.0),
+        float4(-0.5, 0.5, 0.0, 1.0),
+        float4(0.0, -0.5, 0.0, 1.0),
+        float4(0.0, -0.5, 0.0, 1.0),
+        float4(0.5, 0.5, 0.0, 1.0),
+        float4(1.0, -0.5, 0.0, 1.0)
+    };
+    float3 Col[6] =
+    {
+        float3(1.0, 0.0, 0.0),
+        float3(0.0, 1.0, 0.0),
+        float3(0.0, 0.0, 1.0),
+        float3(1.0, 0.0, 0.0),
+        float3(0.0, 1.0, 0.0),
+        float3(0.0, 0.0, 1.0)
+    };
 
-} // namespace Diligent
+    VSOut out = {};
+    out.Position = Pos[VertexId];
+    out.Color    = Col[VertexId];
+    return out;
+}
+
+struct PSOut
+{
+    float4 Color [[color(0)]];
+};
+
+fragment PSOut QuadPS(VSOut in [[stage_in]])
+{
+    PSOut out = {float4(in.Color.rgb, 1.0)};
+    return out;
+}
+
+)"
+};
+
+// clang-format on
+
+} // namespace MSL
+
+} // namespace

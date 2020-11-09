@@ -287,12 +287,14 @@ protected:
             ASSERT_NE(pPS, nullptr);
         }
 
-        PSODesc.Name = "Draw command test";
+        PSODesc.Name = "Draw command test - procedural tris";
 
         PSOCreateInfo.pVS = pProceduralVS;
         PSOCreateInfo.pPS = pPS;
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawProceduralPSO);
         ASSERT_NE(sm_pDrawProceduralPSO, nullptr);
+
+        PSODesc.Name = "Draw command test";
 
         InputLayoutDesc LayoutDesc;
         // clang-format off
@@ -302,6 +304,7 @@ protected:
             LayoutElement{ 1, 0, 3, VT_FLOAT32}
         };
         // clang-format on
+
         GraphicsPipeline.InputLayout.LayoutElements = Elems;
         GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
 
@@ -309,13 +312,14 @@ protected:
         PSOCreateInfo.pPS                  = pPS;
         GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawPSO);
+        ASSERT_NE(sm_pDrawPSO, nullptr);
 
 
-        PSODesc.Name = "Draw command test - 2x stride";
+        PSODesc.Name = "Draw command test - 2x VB stride";
 
         Elems[0].Stride = sizeof(Vertex) * 2;
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDraw_2xStride_PSO);
-
+        ASSERT_NE(sm_pDraw_2xStride_PSO, nullptr);
 
         PSODesc.Name = "Instanced draw command test";
         // clang-format off
@@ -326,11 +330,13 @@ protected:
             LayoutElement{ 2, 1, 4, VT_FLOAT32, false, INPUT_ELEMENT_FREQUENCY_PER_INSTANCE}
         };
         // clang-format on
+
         GraphicsPipeline.InputLayout.LayoutElements = InstancedElems;
         GraphicsPipeline.InputLayout.NumElements    = _countof(InstancedElems);
 
         PSOCreateInfo.pVS = pInstancedVS;
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawInstancedPSO);
+        ASSERT_NE(sm_pDrawInstancedPSO, nullptr);
     }
 
     static void TearDownTestSuite()
