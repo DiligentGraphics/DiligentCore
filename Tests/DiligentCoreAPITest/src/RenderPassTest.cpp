@@ -65,7 +65,9 @@ void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* p
 #endif
 
 #if METAL_SUPPORTED
-
+void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassMSResolveReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 } // namespace Testing
@@ -472,17 +474,19 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     RPBeginInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     pContext->BeginRenderPass(RPBeginInfo);
 
-    if (DeviceType != RENDER_DEVICE_TYPE_D3D12)
+    if (DeviceType != RENDER_DEVICE_TYPE_D3D12 &&
+        DeviceType != RENDER_DEVICE_TYPE_METAL)
     {
-        // ClearDepthStencil is not allowed inside a render pass in Direct3D12
+        // ClearDepthStencil is not allowed inside a render pass in Direct3D12 and Metal
         pContext->ClearDepthStencil(pTexViews[3], CLEAR_DEPTH_FLAG, 1.0, 0, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
     }
 
     pContext->NextSubpass();
 
-    if (DeviceType != RENDER_DEVICE_TYPE_D3D12)
+    if (DeviceType != RENDER_DEVICE_TYPE_D3D12 &&
+        DeviceType != RENDER_DEVICE_TYPE_METAL)
     {
-        // ClearRenderTarget is not allowed inside a render pass in Direct3D12
+        // ClearRenderTarget is not allowed inside a render pass in Direct3D12 and Metal
         float ClearColor[] = {0, 0, 0, 0};
         pContext->ClearRenderTarget(pTexViews[4], ClearColor, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
     }
@@ -531,6 +535,12 @@ TEST_F(RenderPassTest, Draw)
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 RenderDrawCommandReferenceVk(pSwapChain, ClearColor);
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                RenderDrawCommandReferenceMtl(pSwapChain, ClearColor);
                 break;
 #endif
 
@@ -634,6 +644,12 @@ TEST_F(RenderPassTest, MSResolve)
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 RenderPassMSResolveReferenceVk(pSwapChain, ClearColor);
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                RenderPassMSResolveReferenceMtl(pSwapChain, ClearColor);
                 break;
 #endif
 
@@ -771,6 +787,12 @@ TEST_F(RenderPassTest, InputAttachment)
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 RenderPassInputAttachmentReferenceVk(pSwapChain, ClearColor);
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                RenderPassInputAttachmentReferenceMtl(pSwapChain, ClearColor);
                 break;
 #endif
 
