@@ -49,7 +49,7 @@ struct VSOut
     float4 Position [[position]];
 };
 
-vertex VSOut QuadVS(uint VertexId [[vertex_id]])
+vertex VSOut TrisVS(uint VertexId [[vertex_id]])
 {
     float4 Pos[6] =
     {
@@ -76,14 +76,26 @@ vertex VSOut QuadVS(uint VertexId [[vertex_id]])
     return out;
 }
 
-struct PSOut
+struct FSOut
 {
     float4 Color [[color(0)]];
 };
 
-fragment PSOut QuadPS(VSOut in [[stage_in]])
+fragment FSOut TrisFS(VSOut in [[stage_in]])
 {
-    PSOut out = {float4(in.Color.rgb, 1.0)};
+    FSOut out = {float4(in.Color.rgb, 1.0)};
+    return out;
+}
+
+fragment FSOut InptAttFS(VSOut            in           [[stage_in]],
+                         texture2d<float> SubpassInput [[texture(0)]])
+{
+    FSOut out;
+
+    out.Color.rgb = in.Color.rgb * 0.125;
+    out.Color.rgb += (float3(1.0, 1.0, 1.0) - SubpassInput.read(uint2(in.Position.xy)).brg) * 0.875;
+    out.Color.a = 1.0;
+
     return out;
 }
 
