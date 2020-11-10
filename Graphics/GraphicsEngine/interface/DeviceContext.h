@@ -884,25 +884,25 @@ struct BuildBLASAttribs
     /// Target bottom-level AS.
     /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*                 pBLAS                       DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Bottom-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  BLASTransitionMode          DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
     /// Geometry data source buffers state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  GeometryTransitionMode      DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// A pointer to an array of TriangleDataCount BLASBuildTriangleData structures that contains triangle geometry data.
     /// If Update is true:
     ///     - Only vertex positions (in pVertexBuffer) and transformation (in pTransformBuffer) can be changed.
-    ///     - All other content in BLASBuildTriangleData and buffers must be same as used to build BLAS.
-    ///     - To disable geometry make all triangles inactive, see BLASBuildTriangleData::pVertexBuffer description.
+    ///     - All other content in BLASBuildTriangleData and buffers must be the same as what was used to build BLAS.
+    ///     - To disable geometry, make all triangles inactive, see BLASBuildTriangleData::pVertexBuffer description.
     BLASBuildTriangleData const*    pTriangleData               DEFAULT_INITIALIZER(nullptr);
-    
+
     /// The number of triangle grometries.
     /// Must be less than or equal to BottomLevelASDesc::TriangleCount.
-    /// If Update is true then count must be the same as used to build BLAS.
+    /// If Update is true then the count must be the same as the one used to build BLAS.
     Uint32                          TriangleDataCount           DEFAULT_INITIALIZER(0);
-    
+
     /// A pointer to an array of BoxDataCount BLASBuildBoundingBoxData structures that contain AABB geometry data.
     /// If Update is true:
     ///     - AABB coordinates (in pBoxBuffer) can be changed.
@@ -912,7 +912,7 @@ struct BuildBLASAttribs
     
     /// The number of AABB geometries.
     /// Must be less than or equal to BottomLevelASDesc::BoxCount.
-    /// If Update is true then count must be the same as used to build BLAS.
+    /// If Update is true then the count must be the same as the one used to build BLAS.
     Uint32                          BoxDataCount                DEFAULT_INITIALIZER(0);
     
     /// The buffer that is used for acceleration structure building.
@@ -1019,7 +1019,7 @@ struct TLASBuildInstanceData
     Uint8                     Mask            DEFAULT_INITIALIZER(0xFF);
     
     /// The index used to calculate the hit group location in the shader binding table.
-    /// Must be TLAS_INSTANCE_OFFSET_AUTO if BuildTLASAttribs::BindingMode that is not a SHADER_BINDING_USER_DEFINED.
+    /// Must be TLAS_INSTANCE_OFFSET_AUTO if BuildTLASAttribs::BindingMode is not SHADER_BINDING_USER_DEFINED.
     /// Only the lower 24 bits are used.
     Uint32                    ContributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO);
     
@@ -1045,7 +1045,7 @@ DILIGENT_TYPED_ENUM(SHADER_BINDING_MODE, Uint8)
     /// Each instance can have a unique hit shader. In this mode SBT buffer will use less memory.
     /// See IShaderBindingTable::BindHitGroups().
     SHADER_BINDING_MODE_PER_INSTANCE,
-        
+
     /// Single hit shader for top-level acceleration structure.
     /// See IShaderBindingTable::BindHitGroupForAll().
     SHADER_BINDING_MODE_PER_ACCEL_STRUCT,
@@ -1073,7 +1073,7 @@ struct BuildTLASAttribs
     /// A pointer to an array of InstanceCount TLASBuildInstanceData structures that contain instance data.
     /// If Update is true:
     ///     - Any instance data can be changed.
-    ///     - To disable instance set pBLAS to null.
+    ///     - To disable an instance, set pBLAS to null.
     TLASBuildInstanceData const*    pInstances                    DEFAULT_INITIALIZER(nullptr);
     
     /// The number of instances.
@@ -1092,17 +1092,17 @@ struct BuildTLASAttribs
     /// Instance buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  InstanceBufferTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
-    /// The number of hit shaders that can be binded for single geometry or instance (depend on BindingMode).
-    /// Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
-    /// Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
-    /// You should use the same value in shader:
+    /// The number of hit shaders that can be bound for a single geometry or an instance (depends on BindingMode).
+    ///   - Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
+    ///   - Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
+    /// You should use the same value in a shader:
     /// 'MultiplierForGeometryContributionToHitGroupIndex' argument in TraceRay() in HLSL, 'sbtRecordStride' argument in traceRay() in GLSL.
     Uint32                          HitShadersPerInstance         DEFAULT_INITIALIZER(1);
     
     /// Base offset for hit group location.
     /// Can be used to bind hit shaders for multiple acceleration structures, see IShaderBindingTable::BindHitGroup().
-    /// Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
-    /// Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
+    ///   - Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
+    ///   - Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
     Uint32                          BaseContributionToHitGroupIndex DEFAULT_INITIALIZER(0);
 
     /// Hit shader binding mode, see Diligent::SHADER_BINDING_MODE.

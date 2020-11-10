@@ -127,10 +127,10 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     ///        destroy it once released. The application must not destroy Vulkan acceleration structure while it is
     ///        in use by the engine.
     VIRTUAL void METHOD(CreateBLASFromVulkanResource)(THIS_
-                                                        VkAccelerationStructureKHR  vkBLAS,
-                                                        const BottomLevelASDesc REF Desc,
-                                                        RESOURCE_STATE              InitialState,
-                                                        IBottomLevelAS**            ppBLAS) PURE;
+                                                      VkAccelerationStructureKHR  vkBLAS,
+                                                      const BottomLevelASDesc REF Desc,
+                                                      RESOURCE_STATE              InitialState,
+                                                      IBottomLevelAS**            ppBLAS) PURE;
     
     /// Creates a top-level AS object from native Vulkan resource
 
@@ -146,10 +146,10 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     ///        destroy it once released. The application must not destroy Vulkan acceleration structure while it is
     ///        in use by the engine.
     VIRTUAL void METHOD(CreateTLASFromVulkanResource)(THIS_
-                                                        VkAccelerationStructureKHR vkTLAS,
-                                                        const TopLevelASDesc REF   Desc,
-                                                        RESOURCE_STATE             InitialState,
-                                                        ITopLevelAS**              ppTLAS) PURE;
+                                                      VkAccelerationStructureKHR vkTLAS,
+                                                      const TopLevelASDesc REF   Desc,
+                                                      RESOURCE_STATE             InitialState,
+                                                      ITopLevelAS**              ppTLAS) PURE;
 };
 DILIGENT_END_INTERFACE
 

@@ -171,15 +171,15 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto*      pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
-        const auto Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
+        auto* const pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
+        const auto& Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
         VERIFY_EXPR(pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_GEOMETRY);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < pTLASImpl->GetHitShadersPerInstance());
         VERIFY_EXPR(Desc.ContributionToHitGroupIndex != INVALID_INDEX);
 
         if (Desc.pBLAS == nullptr)
-            return; // this is disabled instance
+            return; // this is a disabled instance
 
         const Uint32 InstanceIndex = Desc.ContributionToHitGroupIndex;
         const Uint32 GeometryIndex = Desc.pBLAS->GetGeometryIndex(pGeometryName);
@@ -212,8 +212,8 @@ public:
         VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto*      pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
-        const auto Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
+        auto* const pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
+        const auto& Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
         VERIFY_EXPR(pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_GEOMETRY ||
                     pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_INSTANCE);

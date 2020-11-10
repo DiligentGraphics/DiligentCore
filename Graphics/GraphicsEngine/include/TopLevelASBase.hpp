@@ -169,7 +169,7 @@ public:
 
             if (Iter == this->m_Instances.end())
             {
-                UNEXPECTED("Failed to find instance with name '", Inst.InstanceName, "' in instances from previous build");
+                UNEXPECTED("Failed to find instance with name '", Inst.InstanceName, "' in instances from the previous build");
                 return false;
             }
 

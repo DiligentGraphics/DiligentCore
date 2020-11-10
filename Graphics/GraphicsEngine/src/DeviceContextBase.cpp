@@ -352,13 +352,13 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
     if (Attribs.Update)
     {
         CHECK_BUILD_BLAS_ATTRIBS((BLASDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_UPDATE) == RAYTRACING_BUILD_AS_ALLOW_UPDATE,
-                                 "Update is true, but BLAS created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag");
+                                 "Update is true, but BLAS was created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag");
 
         const Uint32 GeomCount = Attribs.pBLAS->GetActualGeometryCount();
         CHECK_BUILD_BLAS_ATTRIBS(Attribs.BoxDataCount == 0 || Attribs.BoxDataCount == GeomCount,
-                                 "Update is true, but BoxDataCount does not match with a previous value (", GeomCount, ")");
+                                 "Update is true, but BoxDataCount (", Attribs.BoxDataCount, ") does not match the previous value (", GeomCount, ")");
         CHECK_BUILD_BLAS_ATTRIBS(Attribs.TriangleDataCount == 0 || Attribs.TriangleDataCount == GeomCount,
-                                 "Update is true, but TriangleDataCount does not match with a previous value (", GeomCount, ")");
+                                 "Update is true, but TriangleDataCount (", Attribs.TriangleDataCount, ") does not match the previous value (", GeomCount, ")");
     }
 
     for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
@@ -465,11 +465,15 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
                              "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.uiSizeInBytes, ")");
 
     if (Attribs.Update)
+    {
         CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Update,
                                  "pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Update to get the required size for the scratch buffer");
+    }
     else
+    {
         CHECK_BUILD_BLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pBLAS->GetScratchBufferSizes().Build,
                                  "pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Build to get the required size for the scratch buffer");
+    }
 
     CHECK_BUILD_BLAS_ATTRIBS((ScratchDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                              "pScratchBuffer was not created with BIND_RAY_TRACING flag");
@@ -490,7 +494,7 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstance
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.pInstanceBuffer != nullptr, "pInstanceBuffer must not be null");
 
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.BindingMode == SHADER_BINDING_USER_DEFINED || Attribs.HitShadersPerInstance != 0,
-                             "HitShadersPerInstance must be greater than 0 if BindingMode is not SHADER_BINDING_USER_DEFINED");
+                             "HitShadersPerInstance must be greater than 0, if BindingMode is not SHADER_BINDING_USER_DEFINED");
 
     const auto& TLASDesc = Attribs.pTLAS->GetDesc();
 
@@ -501,9 +505,9 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstance
     if (Attribs.Update)
     {
         CHECK_BUILD_TLAS_ATTRIBS((TLASDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_UPDATE) == RAYTRACING_BUILD_AS_ALLOW_UPDATE,
-                                 "Update is true, but TLAS created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag");
+                                 "Update is true, but TLAS was created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag");
         CHECK_BUILD_TLAS_ATTRIBS(PrevInstanceCount == Attribs.InstanceCount,
-                                 "Update is true, but InstanceCount (", Attribs.InstanceCount, ") does not match with the previous value (", PrevInstanceCount, ")");
+                                 "Update is true, but InstanceCount (", Attribs.InstanceCount, ") does not match the previous value (", PrevInstanceCount, ")");
     }
 
     const auto& InstDesc          = Attribs.pInstanceBuffer->GetDesc();
@@ -562,11 +566,15 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstance
                              "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.uiSizeInBytes, ")");
 
     if (Attribs.Update)
+    {
         CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Update,
                                  "pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Update to get the required size for scratch buffer");
+    }
     else
+    {
         CHECK_BUILD_TLAS_ATTRIBS(ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset >= Attribs.pTLAS->GetScratchBufferSizes().Build,
                                  "pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Build to get the required size for scratch buffer");
+    }
 
     CHECK_BUILD_TLAS_ATTRIBS((ScratchDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                              "pScratchBuffer was not created with BIND_RAY_TRACING flag");
@@ -752,7 +760,7 @@ bool VerifyTraceRaysAttribs(const TraceRaysAttribs& Attribs)
 
 #ifdef DILIGENT_DEVELOPMENT
     CHECK_TRACE_RAYS_ATTRIBS(Attribs.pSBT->Verify(SHADER_BINDING_VALIDATION_SHADER_ONLY | SHADER_BINDING_VALIDATION_TLAS),
-                             "pSBT not all shaders are binded or instance to shader mapping are incorrect");
+                             "not all shaders in SBT are bound or instance to shader mapping is incorrect");
 #endif // DILIGENT_DEVELOPMENT
 
     CHECK_TRACE_RAYS_ATTRIBS(Attribs.DimensionX != 0, "DimensionX must not be zero.");

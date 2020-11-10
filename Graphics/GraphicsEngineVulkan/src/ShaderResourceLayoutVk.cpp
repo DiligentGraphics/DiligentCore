@@ -828,7 +828,7 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
 
     if (pBufferVk->GetDesc().uiSizeInBytes < BufferStaticSize)
     {
-        // It is OK if enabled robustBufferAccess feature, otherwise access outside of buffer range may lead to crash or undefined behavior.
+        // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
         LOG_WARNING_MESSAGE("Error binding uniform buffer '", pBufferVk->GetDesc().Name, "' to shader variable '",
                             Name, "' in shader '", ParentResLayout.GetShaderName(), "': buffer size in the shader (",
                             BufferStaticSize, ") is incompatible with the actual buffer size (", pBufferVk->GetDesc().uiSizeInBytes, ").");
@@ -889,7 +889,7 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
 
             if (BufferStride == 0 && ViewDesc.ByteWidth < BufferStaticSize)
             {
-                // It is OK if enabled robustBufferAccess feature, otherwise access outside of buffer range may lead to crash or undefined behavior.
+                // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                 LOG_WARNING_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
                                     Name, "' in shader '", ParentResLayout.GetShaderName(), "': buffer size in the shader (",
                                     BufferStaticSize, ") is incompatible with the actual buffer view size (", ViewDesc.ByteWidth, ").");
@@ -898,11 +898,11 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
             if (BufferStride > 0 && (ViewDesc.ByteWidth < BufferStaticSize || (ViewDesc.ByteWidth - BufferStaticSize) % BufferStride != 0))
             {
                 // For buffers with dynamic arrays we know only static part size and array element stride.
-                // Element stride in shader may be differ than in code. Here we check that buffer size is exactly match to the array with N elements.
+                // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.
                 LOG_WARNING_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
                                     Name, "' in shader '", ParentResLayout.GetShaderName(), "': static buffer size in the shader (",
                                     BufferStaticSize, ") and array element stride (", BufferStride, ") are incompatible with the actual buffer view size (", ViewDesc.ByteWidth, "),",
-                                    " this may be result of array element size mismatch.");
+                                    " this may be the result of the array element size mismatch.");
             }
         }
     }
@@ -1551,23 +1551,16 @@ bool ShaderResourceLayoutVk::IsCompatibleWith(const ShaderResourceLayoutVk& ResL
     if (m_NumResources != ResLayout.m_NumResources)
         return false;
 
-    bool IsCompatible = true;
     for (Uint32 i = 0, Cnt = GetTotalResourceCount(); i < Cnt; ++i)
     {
         const auto& lhs = this->GetResource(i);
         const auto& rhs = ResLayout.GetResource(i);
 
-        // clang-format off
-        if (lhs.ArraySize  != rhs.ArraySize || 
-            lhs.Type       != rhs.Type      ||
-            lhs.SamplerInd != rhs.SamplerInd)
-        // clang-format on
-        {
-            IsCompatible = false;
-        }
+        if (!lhs.IsCompatibleWith(rhs))
+            return false;
     }
 
-    return IsCompatible;
+    return true;
 }
 
 } // namespace Diligent

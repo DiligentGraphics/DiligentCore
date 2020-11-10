@@ -114,10 +114,10 @@ typedef struct BLASBoundingBoxDesc BLASBoundingBoxDesc;
 DILIGENT_TYPED_ENUM(RAYTRACING_BUILD_AS_FLAGS, Uint8)
 {
     RAYTRACING_BUILD_AS_NONE              = 0,
-        
+
     /// Indicates that the specified acceleration structure can be updated
     /// via IDeviceContext::BuildBLAS() or IDeviceContext::BuildTLAS().
-    /// With this flag acculeration structure may allocate more memory and take more time on build.
+    /// With this flag, the acceleration structure may allocate more memory and take more time to build.
     RAYTRACING_BUILD_AS_ALLOW_UPDATE      = 0x01,
 
     /// Indicates that the specified acceleration structure can act as the source for
@@ -178,13 +178,13 @@ struct ScratchBufferSizes
 {
     /// Scratch buffer size for acceleration structure building,
     /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
-    /// May be zero if acceleration structure created with non-zero CompactedSize.
+    /// May be zero if the structure was created with non-zero CompactedSize.
     Uint32 Build  DEFAULT_INITIALIZER(0);
     
     /// Scratch buffer size for acceleration structure updating,
     /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
-    /// May be zero if acceleration structure created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
-    /// May be zero if acceleration structure created with non-zero CompactedSize.
+    /// May be zero if acceleration structure was created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
+    /// May be zero if acceleration structure was created with non-zero CompactedSize.
     Uint32 Update DEFAULT_INITIALIZER(0);
     
 #if DILIGENT_CPP_INTERFACE
@@ -212,14 +212,14 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
 #endif
 
     /// Returns the geometry description index in BottomLevelASDesc::pTriangles or BottomLevelASDesc::pBoxes.
-    
+
     /// \param [in] Name - Geometry name that is specified in BLASTriangleDesc or BLASBoundingBoxDesc.
     /// \return Geometry index or INVALID_INDEX if geometry does not exist.
     /// 
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetGeometryDescIndex)(THIS_
                                                 const char* Name) CONST PURE;
-    
+
 
     /// Returns the geometry index that can be used in a shader binding table.
     
@@ -233,7 +233,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
 
     /// Returns the geometry count that was used to build AS.
     /// Same as BuildBLASAttribs::TriangleDataCount or BuildBLASAttribs::BoxDataCount.
-    
+
     /// \return The number of geometries that was used to build AS.
     /// 
     /// \note Access to the BLAS must be externally synchronized.

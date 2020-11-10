@@ -110,7 +110,7 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
     /// \param [in] Name - Instance name that is specified in TLASBuildInstanceData::InstanceName.
     /// \return TLASInstanceDesc object, see Diligent::TLASInstanceDesc.
     ///         If instance does not exist then TLASInstanceDesc::ContributionToHitGroupIndex
-    ///         and TLASInstanceDesc::InstanceIndex set to INVALID_INDEX.
+    ///         and TLASInstanceDesc::InstanceIndex are set to INVALID_INDEX.
     /// 
     /// \note Access to the TLAS must be externally synchronized.
     VIRTUAL TLASInstanceDesc METHOD(GetInstanceDesc)(THIS_

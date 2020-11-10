@@ -111,11 +111,11 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
     VIRTUAL void METHOD(CreateBLASFromD3DResource)(THIS_
-                                                     ID3D12Resource*             pd3d12BLAS,
-                                                     const BottomLevelASDesc REF Desc,
-                                                     RESOURCE_STATE              InitialState,
-                                                     IBottomLevelAS**            ppBLAS) PURE;
-    
+                                                   ID3D12Resource*             pd3d12BLAS,
+                                                   const BottomLevelASDesc REF Desc,
+                                                   RESOURCE_STATE              InitialState,
+                                                   IBottomLevelAS**            ppBLAS) PURE;
+
     /// Creates a top-level AS object from native d3d12 resoruce
 
     /// \param [in]  pd3d12TLAS   - Pointer to the native d3d12 acceleration structure resource
@@ -127,10 +127,10 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
     VIRTUAL void METHOD(CreateTLASFromD3DResource)(THIS_
-                                                     ID3D12Resource*          pd3d12TLAS,
-                                                     const TopLevelASDesc REF Desc,
-                                                     RESOURCE_STATE           InitialState,
-                                                     ITopLevelAS**            ppTLAS) PURE;
+                                                   ID3D12Resource*          pd3d12TLAS,
+                                                   const TopLevelASDesc REF Desc,
+                                                   RESOURCE_STATE           InitialState,
+                                                   ITopLevelAS**            ppTLAS) PURE;
 };
 DILIGENT_END_INTERFACE
 

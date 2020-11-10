@@ -32,8 +32,8 @@ namespace Diligent
 
 namespace TestingConstants
 {
-// clang-format off
 
+// clang-format off
     namespace TriangleClosestHit
     {
         static const float3 Vertices[] =
@@ -128,8 +128,9 @@ namespace TestingConstants
 
         struct ShaderRecord
         {
-            float4 Weight;
-            uint   GeometryID;
+            const float4 Weight;
+            const uint   GeometryID;
+
             uint   padding[3];
 
             ShaderRecord(const float4& w, uint id): Weight{w}, GeometryID{id} {}

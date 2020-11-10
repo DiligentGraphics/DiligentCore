@@ -307,6 +307,16 @@ public:
             return IsMS != 0;
         }
 
+        bool IsCompatibleWith(const VkResource& rhs) const
+        {
+            // clang-format off
+            return Binding       == rhs.Binding       &&
+                   DescriptorSet == rhs.DescriptorSet &&
+                   ArraySize     == rhs.ArraySize     &&
+                   Type          == rhs.Type;
+            // clang-format on
+        }
+
     private:
         void CacheUniformBuffer(IDeviceObject*                   pBuffer,
                                 ShaderResourceCacheVk::Resource& DstRes,

@@ -105,8 +105,8 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
 
-    // Map geometry that used in build operation to geometry description.
-    // Returns geometry index in geometry description.
+    // Maps geometry that was used in build operation to geometry description.
+    // Returns the geometry index in geometry description.
     Uint32 UpdateGeometryIndex(const char* Name, Uint32& ActualIndex, bool OnUpdate)
     {
         VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
@@ -143,7 +143,7 @@ public:
         auto iter = m_NameToIndex.find(Name);
         if (iter != m_NameToIndex.end())
         {
-            VERIFY(iter->second.ActualIndex != INVALID_INDEX, "Geometry exists but not enabled during last build");
+            VERIFY(iter->second.ActualIndex != INVALID_INDEX, "Geometry with name '", Name, "', exists but was not enabled during last build");
             return iter->second.ActualIndex;
         }
         LOG_ERROR_MESSAGE("Can't find geometry with name '", Name, '\'');
@@ -232,7 +232,7 @@ private:
             this->m_pRawPtr = nullptr;
         }
 
-        // keep Name, Flags, CompactedSize, CommandQueueMask
+        // Keep Name, Flags, CompactedSize, CommandQueueMask
         this->m_Desc.pTriangles    = nullptr;
         this->m_Desc.TriangleCount = 0;
         this->m_Desc.pBoxes        = nullptr;

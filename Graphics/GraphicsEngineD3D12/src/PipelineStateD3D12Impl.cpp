@@ -208,9 +208,9 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     VERIFY_EXPR(Uint32{CreateInfo.GeneralShaderCount} + Uint32{CreateInfo.TriangleHitShaderCount} + Uint32{CreateInfo.ProceduralHitShaderCount} == GroupIndex);
 
-    const Uint32 RecursionDepthLimit = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH - 1;
+    constexpr Uint32 RecursionDepthLimit = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH - 1;
     if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > RecursionDepthLimit)
-        LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth must be less than or equal to ", RecursionDepthLimit);
+        LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth (", CreateInfo.RayTracingPipeline.MaxRecursionDepth, ") must be <= ", RecursionDepthLimit);
 
     auto& PipelineConfig = *TempPool.Construct<D3D12_RAYTRACING_PIPELINE_CONFIG>();
     // For compatibility with Vulkan set minimal recursion depth to one, zero means no tracing of rays at all.
