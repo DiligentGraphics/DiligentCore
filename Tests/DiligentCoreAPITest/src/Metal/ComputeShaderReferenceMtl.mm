@@ -29,8 +29,9 @@
 #include "Metal/TestingSwapChainMtl.hpp"
 
 #include "DeviceContextMtl.h"
+#include "TextureViewMtl.h"
 
-//#include "InlineShaders/ComputeShaderTestGLSL.h"
+#include "InlineShaders/ComputeShaderTestMSL.h"
 
 namespace Diligent
 {
@@ -40,9 +41,37 @@ namespace Testing
 
 void ComputeShaderReferenceMtl(ISwapChain* pSwapChain)
 {
-    //auto* pEnv     = TestingEnvironmentMtl::GetInstance();
-    //auto  vkDevice = pEnv->GetVkDevice();
-    //auto* pContext = pEnv->GetDeviceContext();
+    auto* const pEnv      = TestingEnvironmentMtl::GetInstance();
+    auto const  mtlDevice = pEnv->GetMtlDevice();
+
+    auto* progSrc = [NSString stringWithUTF8String:MSL::FillTextureCS.c_str()];
+    NSError *errors = nil;
+    id <MTLLibrary> library = [mtlDevice newLibraryWithSource:progSrc
+                               options:nil
+                               error:&errors];
+    ASSERT_TRUE(library != nil);
+    id <MTLFunction> computeFunc = [library newFunctionWithName:@"CSMain"];
+    ASSERT_TRUE(computeFunc != nil);
+    auto* computePipeline = [mtlDevice newComputePipelineStateWithFunction:computeFunc error:&errors];
+    ASSERT_TRUE(computePipeline != nil);
+
+    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    auto* pUAV = pTestingSwapChainMtl->GetCurrentBackBufferUAV();
+    auto* mtlTexture = ValidatedCast<ITextureViewMtl>(pUAV)->GetMtlTexture();
+    const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
+
+    auto* mtlCommandQueue = pEnv->GetMtlCommandQueue();
+    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
+    auto* cmdEncoder = [mtlCommandBuffer computeCommandEncoder];
+    ASSERT_TRUE(cmdEncoder != nil);
+
+    [cmdEncoder setComputePipelineState:computePipeline];
+    [cmdEncoder setTexture:mtlTexture atIndex:0];
+    [cmdEncoder dispatchThreadgroups:MTLSizeMake((SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1)
+               threadsPerThreadgroup:MTLSizeMake(16, 16, 1)];
+
+    [cmdEncoder endEncoding];
+    [mtlCommandBuffer commit];
 }
 
 } // namespace Testing

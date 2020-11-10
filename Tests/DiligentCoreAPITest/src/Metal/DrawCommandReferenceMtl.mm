@@ -25,10 +25,14 @@
  *  of the possibility of such damages.
  */
 
+#include <Metal/Metal.h>
+
 #include "Metal/TestingEnvironmentMtl.hpp"
 #include "Metal/TestingSwapChainMtl.hpp"
 
-//#include "InlineShaders/DrawCommandTestMSL.h"
+#include "TextureViewMtl.h"
+
+#include "InlineShaders/DrawCommandTestMSL.h"
 
 namespace Diligent
 {
@@ -43,110 +47,195 @@ class TriangleRenderer
 {
 
 public:
-    TriangleRenderer(const std::string& FSSource)
+    TriangleRenderer(NSString* fragEntry, Uint32 SampleCount = 1)
     {
-        auto* pEnv = TestingEnvironmentMtl::GetInstance();
+        auto* const pEnv      = TestingEnvironmentMtl::GetInstance();
+        auto* const mtlDevice = pEnv->GetMtlDevice();
+
+        auto* progSrc = [NSString stringWithUTF8String:MSL::DrawTestFunctions.c_str()];
+        NSError *errors = nil;
+        id <MTLLibrary> library = [mtlDevice newLibraryWithSource:progSrc
+                                   options:nil
+                                   error:&errors];
+        if (library == nil)
+        {
+            LOG_ERROR_AND_THROW("Failed to create Metal library: ", [errors.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding]);
+        }
+        id <MTLFunction> vertFunc = [library newFunctionWithName:@"TrisVS"];
+        id <MTLFunction> fragFunc = [library newFunctionWithName:fragEntry];
+        MTLRenderPipelineDescriptor* renderPipelineDesc =
+            [[MTLRenderPipelineDescriptor alloc] init];
+        renderPipelineDesc.vertexFunction   = vertFunc;
+        renderPipelineDesc.fragmentFunction = fragFunc;
+        const auto& SCDesc = pEnv->GetSwapChain()->GetDesc();
+        MTLPixelFormat pixelFormat = MTLPixelFormatInvalid;
+        switch (SCDesc.ColorBufferFormat)
+        {
+            case TEX_FORMAT_RGBA8_UNORM:
+                pixelFormat = MTLPixelFormatRGBA8Unorm;
+                break;
+
+            default:
+                UNSUPPORTED("Unexpected swap chain color format");
+        }
+        renderPipelineDesc.sampleCount = SampleCount;
+        renderPipelineDesc.colorAttachments[0].pixelFormat = pixelFormat;
+        m_MtlPipeline = [mtlDevice
+                         newRenderPipelineStateWithDescriptor:renderPipelineDesc error:&errors];
     }
 
     ~TriangleRenderer()
     {
     }
 
-    void Draw(Uint32 Width, Uint32 Height, const float* pClearColor)
+    void Draw(id <MTLRenderCommandEncoder> renderEncoder)
     {
-        //auto* pEnv = TestingEnvironmentGL::GetInstance();
-        /*
-        id <MTLDevice> device = MTLCreateSystemDefaultDevice();
-         
-        id <MTLCommandQueue> commandQueue = [device newCommandQueue];
-        id <MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-         
-        MTLRenderPassDescriptor *renderPassDesc
-                                       = [MTLRenderPassDescriptor renderPassDescriptor];
-        renderPassDesc.colorAttachments[0].texture = currentTexture;
-        renderPassDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
-        renderPassDesc.colorAttachments[0].clearColor = MTLClearColorMake(0.0,1.0,1.0,1.0);
-        id <MTLRenderCommandEncoder> renderEncoder =
-                   [commandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
-         
-        static const float posData[] = {
-                0.0f, 0.33f, 0.0f, 1.f,
-                -0.33f, -0.33f, 0.0f, 1.f,
-                0.33f, -0.33f, 0.0f, 1.f,
-        };
-        static const float colData[] = {
-                1.f, 0.f, 0.f, 1.f,
-                0.f, 1.f, 0.f, 1.f,
-                0.f, 0.f, 1.f, 1.f,
-        };
-        id <MTLBuffer> posBuf = [device newBufferWithBytes:posData
-                length:sizeof(posData) options:nil];
-        id <MTLBuffer> colBuf = [device newBufferWithBytes:colorData
-                length:sizeof(colData) options:nil];
-        [renderEncoder setVertexBuffer:posBuf offset:0 atIndex:0];
-        [renderEncoder setVertexBuffer:colBuf offset:0 atIndex:1];
-         
-        NSError *errors;
-        id <MTLLibrary> library = [device newLibraryWithSource:progSrc options:nil
-                                   error:&errors];
-        id <MTLFunction> vertFunc = [library newFunctionWithName:@"hello_vertex"];
-        id <MTLFunction> fragFunc = [library newFunctionWithName:@"hello_fragment"];
-        MTLRenderPipelineDescriptor *renderPipelineDesc
-                                           = [[MTLRenderPipelineDescriptor alloc] init];
-        renderPipelineDesc.vertexFunction = vertFunc;
-        renderPipelineDesc.fragmentFunction = fragFunc;
-        renderPipelineDesc.colorAttachments[0].pixelFormat = currentTexture.pixelFormat;
-        id <MTLRenderPipelineState> pipeline = [device
-                     newRenderPipelineStateWithDescriptor:renderPipelineDesc error:&errors];
-        [renderEncoder setRenderPipelineState:pipeline];
+        [renderEncoder setRenderPipelineState:m_MtlPipeline];
         [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-                       vertexStart:0 vertexCount:3];
+                       vertexStart:0 vertexCount:6];
         [renderEncoder endEncoding];
-        [commandBuffer commit];
-        */
     }
 
 private:
+    id<MTLRenderPipelineState> m_MtlPipeline;
 };
 
 } // namespace
 
 void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor)
 {
-    //auto* pEnv                = TestingEnvironmentMtl::GetInstance();
-    //auto* pContext            = pEnv->GetDeviceContext();
-    //auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    auto* const pEnv            = TestingEnvironmentMtl::GetInstance();
+    auto* const mtlCommandQueue = pEnv->GetMtlCommandQueue();
 
-    //TriRenderer.Draw(SCDesc.Width, SCDesc.Height, pClearColor);
+    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
-    // Make sure Diligent Engine will reset all GL states
-    //pContext->InvalidateState();
+    auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
+    auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+
+    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
+
+    constexpr float Zero[4] = {};
+    if (pClearColor == nullptr)
+        pClearColor = Zero;
+
+    MTLRenderPassDescriptor* renderPassDesc =
+        [MTLRenderPassDescriptor renderPassDescriptor];
+    renderPassDesc.colorAttachments[0].texture     = mtlBackBuffer;
+    renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+    renderPassDesc.colorAttachments[0].clearColor  = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
+    renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
+    id <MTLRenderCommandEncoder> renderEncoder =
+        [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
+    [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+
+    TriangleRenderer TriRenderer{@"TrisFS"};
+    TriRenderer.Draw(renderEncoder);
+
+    [mtlCommandBuffer commit];
 }
 
 void RenderPassMSResolveReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor)
 {
-    //auto* pEnv                = TestingEnvironmentMtl:GetInstance();
-    //auto* pContext            = pEnv->GetDeviceContext();
-    //auto* pTestingSwapChainGL = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    auto* const pEnv            = TestingEnvironmentMtl::GetInstance();
+    auto* const mtlCommandQueue = pEnv->GetMtlCommandQueue();
+    auto* const mtlDevice       = pEnv->GetMtlDevice();
 
-    //const auto& SCDesc = pTestingSwapChainGL->GetDesc();
+    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
-    //TriangleRenderer TriRenderer{GLSL::DrawTest_FS};
+    auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
+    auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
-    // Make sure Diligent Engine will reset all GL states
-    //pContext->InvalidateState();
+    constexpr Uint32 SampleCount = 4;
+
+    MTLTextureDescriptor* msTextureDescriptor = [[MTLTextureDescriptor alloc] init];
+    msTextureDescriptor.textureType = MTLTextureType2DMultisample;
+    msTextureDescriptor.width       = SCDesc.Width;
+    msTextureDescriptor.height      = SCDesc.Height;
+    msTextureDescriptor.sampleCount = SampleCount;
+    msTextureDescriptor.pixelFormat = mtlBackBuffer.pixelFormat;
+    msTextureDescriptor.arrayLength = 1;
+    msTextureDescriptor.mipmapLevelCount = 1;
+    msTextureDescriptor.storageMode = MTLStorageModePrivate;
+    msTextureDescriptor.allowGPUOptimizedContents = true;
+    msTextureDescriptor.usage = MTLTextureUsageRenderTarget;
+    auto mtlMSTexture = [mtlDevice newTextureWithDescriptor:msTextureDescriptor];
+    ASSERT_TRUE(mtlMSTexture != nil);
+
+    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
+
+    MTLRenderPassDescriptor* renderPassDesc =
+        [MTLRenderPassDescriptor renderPassDescriptor];
+    renderPassDesc.colorAttachments[0].texture        = mtlMSTexture;
+    renderPassDesc.colorAttachments[0].loadAction     = MTLLoadActionClear;
+    renderPassDesc.colorAttachments[0].clearColor     = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
+    renderPassDesc.colorAttachments[0].storeAction    = MTLStoreActionMultisampleResolve;
+    renderPassDesc.colorAttachments[0].resolveTexture = mtlBackBuffer;
+    id <MTLRenderCommandEncoder> renderEncoder =
+        [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
+    [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+
+    TriangleRenderer TriRenderer{@"TrisFS", SampleCount};
+    TriRenderer.Draw(renderEncoder);
+
+    [mtlCommandBuffer commit];
 }
 
 void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor)
 {
-    //auto* pEnv                = TestingEnvironmentMtl::GetInstance();
-    //auto* pContext            = pEnv->GetDeviceContext();
-    //auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    auto* const pEnv            = TestingEnvironmentMtl::GetInstance();
+    auto* const mtlCommandQueue = pEnv->GetMtlCommandQueue();
+    auto* const mtlDevice       = pEnv->GetMtlDevice();
 
-    //const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
+    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    const auto& SCDesc = pTestingSwapChainMtl->GetDesc();
 
-    // Make sure Diligent Engine will reset all GL states
-    //pContext->InvalidateState();
+    auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
+    auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+
+    MTLTextureDescriptor* inptAttTextureDescriptor = [[MTLTextureDescriptor alloc] init];
+    inptAttTextureDescriptor.textureType = MTLTextureType2D;
+    inptAttTextureDescriptor.width       = SCDesc.Width;
+    inptAttTextureDescriptor.height      = SCDesc.Height;
+    inptAttTextureDescriptor.pixelFormat = mtlBackBuffer.pixelFormat;
+    inptAttTextureDescriptor.arrayLength = 1;
+    inptAttTextureDescriptor.mipmapLevelCount = 1;
+    inptAttTextureDescriptor.storageMode = MTLStorageModePrivate;
+    inptAttTextureDescriptor.allowGPUOptimizedContents = true;
+    inptAttTextureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+    auto mtlInputAttachment = [mtlDevice newTextureWithDescriptor:inptAttTextureDescriptor];
+    ASSERT_TRUE(mtlInputAttachment != nil);
+
+    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
+
+    MTLRenderPassDescriptor* subpass0Desc =
+        [MTLRenderPassDescriptor renderPassDescriptor];
+    subpass0Desc.colorAttachments[0].texture     = mtlInputAttachment;
+    subpass0Desc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+    subpass0Desc.colorAttachments[0].clearColor  = MTLClearColorMake(0, 0, 0, 0);
+    subpass0Desc.colorAttachments[0].storeAction = MTLStoreActionStore;
+    id <MTLRenderCommandEncoder> renderEncoder =
+        [mtlCommandBuffer renderCommandEncoderWithDescriptor:subpass0Desc];
+    [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+
+    TriangleRenderer TriRenderer{@"TrisFS"};
+    TriRenderer.Draw(renderEncoder);
+
+    MTLRenderPassDescriptor* subpass1Desc =
+        [MTLRenderPassDescriptor renderPassDescriptor];
+    subpass1Desc.colorAttachments[0].texture     = mtlBackBuffer;
+    subpass1Desc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+    subpass1Desc.colorAttachments[0].clearColor  = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
+    subpass1Desc.colorAttachments[0].storeAction = MTLStoreActionStore;
+    renderEncoder = [mtlCommandBuffer renderCommandEncoderWithDescriptor:subpass1Desc];
+    [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+
+    TriangleRenderer TriRendererInptAtt{@"InptAttFS"};
+    [renderEncoder setFragmentTexture:mtlInputAttachment atIndex:0];
+    TriRendererInptAtt.Draw(renderEncoder);
+    
+    [mtlCommandBuffer commit];
 }
 
 } // namespace Testing

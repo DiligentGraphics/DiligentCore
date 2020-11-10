@@ -25,6 +25,8 @@
  *  of the possibility of such damages.
  */
 
+#include <Metal/MTLBuffer.h>
+
 #include "TestingSwapChainBase.hpp"
 
 namespace Diligent
@@ -47,6 +49,7 @@ public:
     virtual void TakeSnapshot() override final;
 
 private:
+    id<MTLBuffer> m_MtlStagingBuffer;
 };
 
 } // namespace Testing

@@ -29,6 +29,7 @@
 #include "Metal/TestingSwapChainMtl.hpp"
 
 #include "DeviceContextMtl.h"
+#include "TextureViewMtl.h"
 
 namespace Diligent
 {
@@ -38,8 +39,27 @@ namespace Testing
 
 void ClearRenderTargetReferenceMtl(ISwapChain* pSwapChain, const float ClearColor[])
 {
-    //auto* pEnv     = TestingEnvironmentMtl::GetInstance();
-    //auto* pContext = pEnv->GetDeviceContext();
+    auto* const pEnv            = TestingEnvironmentMtl::GetInstance();
+    auto const mtlCommandQueue = pEnv->GetMtlCommandQueue();
+
+    auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
+    
+    auto* pRTV       = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
+    auto* mtlTexture = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
+
+    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
+
+    MTLRenderPassDescriptor* renderPassDesc =
+        [MTLRenderPassDescriptor renderPassDescriptor];
+    renderPassDesc.colorAttachments[0].texture = mtlTexture;
+    renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+    renderPassDesc.colorAttachments[0].clearColor  =
+        MTLClearColorMake(ClearColor[0], ClearColor[1], ClearColor[2], ClearColor[3]);
+    renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
+    id <MTLRenderCommandEncoder> renderEncoder =
+        [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
+    [renderEncoder endEncoding];
+    [mtlCommandBuffer commit];
 }
 
 } // namespace Testing

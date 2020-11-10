@@ -33,7 +33,7 @@
 void TestEngineFactoryGL_CInterface()
 {
 #if EXPLICITLY_LOAD_ENGINE_GL_DLL
-    GetEngineFactoryOpenGLType GetEngineFactoryGL = LoadGraphicsEngineOpenGL();
+    GetEngineFactoryOpenGLType GetEngineFactoryGL = Diligent_LoadGraphicsEngineOpenGL();
     IEngineFactoryOpenGL*      pFactory           = GetEngineFactoryGL();
 #else
     IEngineFactoryOpenGL* pFactory = Diligent_GetEngineFactoryOpenGL();

@@ -117,7 +117,7 @@ DILIGENT_END_INTERFACE
 
 typedef struct IEngineFactoryVk* (*GetEngineFactoryVkType)();
 
-inline GetEngineFactoryVkType LoadGraphicsEngineVk()
+inline GetEngineFactoryVkType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineVk)()
 {
     return (GetEngineFactoryVkType)LoadEngineDll("GraphicsEngineVk", "GetEngineFactoryVk");
 }

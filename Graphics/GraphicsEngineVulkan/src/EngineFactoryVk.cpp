@@ -636,3 +636,12 @@ IEngineFactoryVk* GetEngineFactoryVk()
 }
 
 } // namespace Diligent
+
+extern "C"
+{
+    API_QUALIFIER
+    Diligent::IEngineFactoryVk* Diligent_GetEngineFactoryVk()
+    {
+        return Diligent::GetEngineFactoryVk();
+    }
+}

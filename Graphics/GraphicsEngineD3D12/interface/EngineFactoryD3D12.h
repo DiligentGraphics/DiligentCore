@@ -198,7 +198,7 @@ DILIGENT_END_INTERFACE
 
 typedef struct IEngineFactoryD3D12* (*GetEngineFactoryD3D12Type)();
 
-inline GetEngineFactoryD3D12Type LoadGraphicsEngineD3D12()
+inline GetEngineFactoryD3D12Type DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineD3D12)()
 {
     return (GetEngineFactoryD3D12Type)LoadEngineDll("GraphicsEngineD3D12", "GetEngineFactoryD3D12");
 }

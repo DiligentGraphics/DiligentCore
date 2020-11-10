@@ -302,3 +302,12 @@ Diligent::IEngineFactoryOpenGL* GetEngineFactoryOpenGL()
 }
 
 } // namespace Diligent
+
+extern "C"
+{
+    API_QUALIFIER
+    Diligent::IEngineFactoryOpenGL* Diligent_GetEngineFactoryOpenGL()
+    {
+        return Diligent::GetEngineFactoryOpenGL();
+    }
+}

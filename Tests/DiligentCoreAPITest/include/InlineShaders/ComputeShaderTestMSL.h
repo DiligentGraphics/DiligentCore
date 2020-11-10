@@ -14,9 +14,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including neVkigence), 
+ *  In no event and under no legal theory, whether in tort (including negligence), 
  *  contract, or otherwise, unless required by applicable law (such as deliberate 
- *  and grossly neVkigent acts) or agreed to in writing, shall any Contributor be
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
  *  liable for any damages, including any direct, indirect, special, incidental, 
  *  or consequential damages of any character arising as a result of this License or 
  *  out of the use or inability to use the software (including but not limited to damages 
@@ -25,32 +25,37 @@
  *  of the possibility of such damages.
  */
 
-#ifndef ENGINE_DLL
-#    define ENGINE_DLL 1
-#endif
+#include <string>
 
-#include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/EngineFactoryVk.h"
-
-#include <string.h>
-
-void TestEngineFactoryVk_CInterface()
+namespace
 {
-#if EXPLICITLY_LOAD_ENGINE_VK_DLL
-    GetEngineFactoryVkType GetEngineFactoryVk = Diligent_LoadGraphicsEngineVk();
-    IEngineFactoryVk*      pFactory           = GetEngineFactoryVk();
-#else
-    IEngineFactoryVk* pFactory = Diligent_GetEngineFactoryVk();
-#endif
 
-    EngineVkCreateInfo EngineCI;
-    memset(&EngineCI, 0, sizeof(EngineCI));
-    IRenderDevice*  pDevice = NULL;
-    IDeviceContext* pCtx    = NULL;
-    IEngineFactoryVk_CreateDeviceAndContextsVk(pFactory, &EngineCI, &pDevice, &pCtx);
+namespace MSL
+{
 
-    SwapChainDesc SCDesc;
-    memset(&SCDesc, 0, sizeof(SCDesc));
-    void*       pNativeWndHandle = NULL;
-    ISwapChain* pSwapChain       = NULL;
-    IEngineFactoryVk_CreateSwapChainVk(pFactory, pDevice, pCtx, &SCDesc, pNativeWndHandle, &pSwapChain);
+// clang-format off
+const std::string FillTextureCS{
+R"(
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+kernel void CSMain(texture2d<float, access::write> g_tex2DUAV            [[texture(0)]],
+                   uint3                           gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    if (gl_GlobalInvocationID.x < g_tex2DUAV.get_width() &&
+        gl_GlobalInvocationID.y < g_tex2DUAV.get_height())
+    {
+        g_tex2DUAV.write(float4(float2(gl_GlobalInvocationID.xy % uint2(256u)) / 256.0, 0.0, 1.0),
+                         uint2(gl_GlobalInvocationID.xy));
+
+    }
 }
+)"
+};
+// clang-format on
+
+} // namespace MSL
+
+} // namespace
