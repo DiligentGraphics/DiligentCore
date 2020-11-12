@@ -78,38 +78,6 @@ DILIGENT_TYPED_ENUM(SHADER_BINDING_VALIDATION_FLAGS, Uint8)
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_BINDING_VALIDATION_FLAGS)
 
 
-/// AZ TODO
-struct BindAllAttribs
-{
-    /// AZ TODO
-    Uint32        RayGenShader        DEFAULT_INITIALIZER(~0u);
-    const void*   RayGenSRData        DEFAULT_INITIALIZER(nullptr);  // optional, can be null
-    Uint32        RayGenSRDataSize    DEFAULT_INITIALIZER(0);
-    
-    /// AZ TODO
-    const Uint32* MissShaders         DEFAULT_INITIALIZER(nullptr);
-    Uint32        MissShaderCount     DEFAULT_INITIALIZER(0);
-    const void*   MissSRData          DEFAULT_INITIALIZER(nullptr);  // optional, can be null
-    Uint32        MissSRDataSize      DEFAULT_INITIALIZER(0);        // stride will be calculated as (MissSRDataSize / MissShaderCount)
-    
-    /// AZ TODO
-    const Uint32* CallableShaders     DEFAULT_INITIALIZER(nullptr);
-    Uint32        CallableShaderCount DEFAULT_INITIALIZER(0);
-    const void*   CallableSRData      DEFAULT_INITIALIZER(nullptr);  // optional, can be null
-    Uint32        CallableSRDataSize  DEFAULT_INITIALIZER(0);        // stride will be calculated as (CallableSRDataSize / CallableShaderCount)
-    
-    /// AZ TODO
-    const Uint32* HitGroups           DEFAULT_INITIALIZER(nullptr);  // optional, can be null
-    Uint32        HitGroupCount       DEFAULT_INITIALIZER(0);
-    const void*   HitSRData           DEFAULT_INITIALIZER(nullptr);  // optional, can be null
-    Uint32        HitSRDataSize       DEFAULT_INITIALIZER(0);        // stride will be calculated as (HitSRDataSize / HitGroupCount)
-    
-#if DILIGENT_CPP_INTERFACE
-    BindAllAttribs() noexcept {}
-#endif
-};
-typedef struct BindAllAttribs BindAllAttribs;
-
 #define DILIGENT_INTERFACE_NAME IShaderBindingTable
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -207,6 +175,24 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                       Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
     
 
+    /// Bind hit group to specified location.
+    
+    /// \param [in] BindingIndex     - location of the hit group. 
+    /// \param [in] pShaderGroupName - hit group name that specified in RayTracingTriangleHitShaderGroup::Name and RayTracingProceduralHitShaderGroup::Name,
+    ///                                can be null to make shader inactive.
+    /// \param [in] pData            - shader record data, can be null.
+    /// \param [in] DataSize         - shader record data size, should equal to RayTracingPipelineDesc::ShaderRecordSize.
+    /// 
+    /// \note Access to the SBT must be externally synchronized.
+    /// 
+    /// \remarks Use IBottomLevelAS::GetGeometryIndex(), ITopLevelAS::GetBuildInfo(), ITopLevelAS::GetInstanceDesc().ContributionToHitGroupIndex to calculate binding index.
+    VIRTUAL void METHOD(BindHitGroupByIndex)(THIS_
+                                             Uint32      BindingIndex,
+                                             const char* pShaderGroupName,
+                                             const void* pData            DEFAULT_INITIALIZER(nullptr),
+                                             Uint32      DataSize         DEFAULT_INITIALIZER(0)) PURE;
+
+
     /// Bind hit group for each geometries in specified instance.
     
     /// \param [in] pTLAS                    - Top-level AS, used to calculate offset for instance.
@@ -266,11 +252,6 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                             Uint32      CallableIndex,
                                             const void* pData           DEFAULT_INITIALIZER(nullptr),
                                             Uint32      DataSize        DEFAULT_INITIALIZER(0)) PURE;
-    
-
-    /// AZ TODO
-    VIRTUAL void METHOD(BindAll)(THIS_
-                                 const BindAllAttribs REF Attribs) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -280,16 +261,16 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IShaderBindingTable_Verify(This, ...)              CALL_IFACE_METHOD(ShaderBindingTable, Verify,             This, __VA_ARGS__)
-#    define IShaderBindingTable_Reset(This, ...)               CALL_IFACE_METHOD(ShaderBindingTable, Reset,              This, __VA_ARGS__)
-#    define IShaderBindingTable_ResetHitGroups(This)           CALL_IFACE_METHOD(ShaderBindingTable, ResetHitGroups,     This)
-#    define IShaderBindingTable_BindRayGenShader(This, ...)    CALL_IFACE_METHOD(ShaderBindingTable, BindRayGenShader,   This, __VA_ARGS__)
-#    define IShaderBindingTable_BindMissShader(This, ...)      CALL_IFACE_METHOD(ShaderBindingTable, BindMissShader,     This, __VA_ARGS__)
-#    define IShaderBindingTable_BindHitGroup(This, ...)        CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroup,       This, __VA_ARGS__)
-#    define IShaderBindingTable_BindHitGroups(This, ...)       CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroups,      This, __VA_ARGS__)
-#    define IShaderBindingTable_BindHitGroupForAll(This, ...)  CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupForAll, This, __VA_ARGS__)
-#    define IShaderBindingTable_BindCallableShader(This, ...)  CALL_IFACE_METHOD(ShaderBindingTable, BindCallableShader, This, __VA_ARGS__)
-#    define IShaderBindingTable_BindAll(This, ...)             CALL_IFACE_METHOD(ShaderBindingTable, BindAll,            This, __VA_ARGS__)
+#    define IShaderBindingTable_Verify(This, ...)              CALL_IFACE_METHOD(ShaderBindingTable, Verify,              This, __VA_ARGS__)
+#    define IShaderBindingTable_Reset(This, ...)               CALL_IFACE_METHOD(ShaderBindingTable, Reset,               This, __VA_ARGS__)
+#    define IShaderBindingTable_ResetHitGroups(This, ...)      CALL_IFACE_METHOD(ShaderBindingTable, ResetHitGroups,      This, __VA_ARGS__)
+#    define IShaderBindingTable_BindRayGenShader(This, ...)    CALL_IFACE_METHOD(ShaderBindingTable, BindRayGenShader,    This, __VA_ARGS__)
+#    define IShaderBindingTable_BindMissShader(This, ...)      CALL_IFACE_METHOD(ShaderBindingTable, BindMissShader,      This, __VA_ARGS__)
+#    define IShaderBindingTable_BindHitGroupByIndex(This, ...) CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupByIndex, This, __VA_ARGS__)
+#    define IShaderBindingTable_BindHitGroup(This, ...)        CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroup,        This, __VA_ARGS__)
+#    define IShaderBindingTable_BindHitGroups(This, ...)       CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroups,       This, __VA_ARGS__)
+#    define IShaderBindingTable_BindHitGroupForAll(This, ...)  CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupForAll,  This, __VA_ARGS__)
+#    define IShaderBindingTable_BindCallableShader(This, ...)  CALL_IFACE_METHOD(ShaderBindingTable, BindCallableShader,  This, __VA_ARGS__)
 
 // clang-format on
 

@@ -92,8 +92,8 @@ public:
     bool SetInstanceData(const TLASBuildInstanceData* pInstances,
                          const Uint32                 InstanceCount,
                          const Uint32                 BaseContributionToHitGroupIndex,
-                         const Uint32                 HitShadersPerInstance,
-                         const SHADER_BINDING_MODE    BindingMode) noexcept
+                         const Uint32                 HitGroupStride,
+                         const HIT_GROUP_BINDING_MODE BindingMode) noexcept
     {
         try
         {
@@ -119,7 +119,7 @@ public:
                 Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(Inst.pBLAS);
                 Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
                 Desc.InstanceIndex               = i;
-                CalculateHitGroupIndex(Desc, InstanceOffset, HitShadersPerInstance, BindingMode);
+                CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);
 
 #ifdef DILIGENT_DEVELOPMENT
                 Desc.Version = Desc.pBLAS ? Desc.pBLAS->GetVersion() : ~0u;
@@ -131,10 +131,13 @@ public:
 
             VERIFY_EXPR(this->m_StringPool.GetRemainingSize() == 0);
 
-            this->m_HitShadersPerInstance            = HitShadersPerInstance;
-            this->m_FirstContributionToHitGroupIndex = BaseContributionToHitGroupIndex;
-            this->m_LastContributionToHitGroupIndex  = InstanceOffset;
-            this->m_BindingMode                      = BindingMode;
+            InstanceOffset = InstanceOffset + (BindingMode == HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT ? HitGroupStride : 0) - 1;
+
+            this->m_BuildInfo.HitGroupStride                   = HitGroupStride;
+            this->m_BuildInfo.FirstContributionToHitGroupIndex = BaseContributionToHitGroupIndex;
+            this->m_BuildInfo.LastContributionToHitGroupIndex  = InstanceOffset;
+            this->m_BuildInfo.BindingMode                      = BindingMode;
+            this->m_BuildInfo.InstanceCount                    = InstanceCount;
 
 #ifdef DILIGENT_DEVELOPMENT
             this->m_DbgVersion.fetch_add(1);
@@ -154,9 +157,10 @@ public:
     bool UpdateInstances(const TLASBuildInstanceData* pInstances,
                          const Uint32                 InstanceCount,
                          const Uint32                 BaseContributionToHitGroupIndex,
-                         const Uint32                 HitShadersPerInstance,
-                         const SHADER_BINDING_MODE    BindingMode) noexcept
+                         const Uint32                 HitGroupStride,
+                         const HIT_GROUP_BINDING_MODE BindingMode) noexcept
     {
+        VERIFY_EXPR(this->m_BuildInfo.InstanceCount == InstanceCount);
 #ifdef DILIGENT_DEVELOPMENT
         bool Changed = false;
 #endif
@@ -180,7 +184,7 @@ public:
             Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(Inst.pBLAS);
             Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
             //Desc.InstanceIndex             = i; // keep Desc.InstanceIndex unmodified
-            CalculateHitGroupIndex(Desc, InstanceOffset, HitShadersPerInstance, BindingMode);
+            CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);
 
 #ifdef DILIGENT_DEVELOPMENT
             Changed      = Changed || (pPrevBLAS != Inst.pBLAS);
@@ -190,18 +194,20 @@ public:
 #endif
         }
 
+        InstanceOffset = InstanceOffset + (BindingMode == HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT ? HitGroupStride : 0) - 1;
+
 #ifdef DILIGENT_DEVELOPMENT
-        Changed = Changed || (this->m_HitShadersPerInstance != HitShadersPerInstance);
-        Changed = Changed || (this->m_FirstContributionToHitGroupIndex != BaseContributionToHitGroupIndex);
-        Changed = Changed || (this->m_LastContributionToHitGroupIndex != InstanceOffset);
-        Changed = Changed || (this->m_BindingMode != BindingMode);
+        Changed = Changed || (this->m_BuildInfo.HitGroupStride != HitGroupStride);
+        Changed = Changed || (this->m_BuildInfo.FirstContributionToHitGroupIndex != BaseContributionToHitGroupIndex);
+        Changed = Changed || (this->m_BuildInfo.LastContributionToHitGroupIndex != InstanceOffset);
+        Changed = Changed || (this->m_BuildInfo.BindingMode != BindingMode);
         if (Changed)
             this->m_DbgVersion.fetch_add(1);
 #endif
-        this->m_HitShadersPerInstance            = HitShadersPerInstance;
-        this->m_FirstContributionToHitGroupIndex = BaseContributionToHitGroupIndex;
-        this->m_LastContributionToHitGroupIndex  = InstanceOffset;
-        this->m_BindingMode                      = BindingMode;
+        this->m_BuildInfo.HitGroupStride                   = HitGroupStride;
+        this->m_BuildInfo.FirstContributionToHitGroupIndex = BaseContributionToHitGroupIndex;
+        this->m_BuildInfo.LastContributionToHitGroupIndex  = InstanceOffset;
+        this->m_BuildInfo.BindingMode                      = BindingMode;
 
         return true;
     }
@@ -211,10 +217,7 @@ public:
         ClearInstanceData();
 
         this->m_StringPool.Reserve(Src.m_StringPool.GetReservedSize(), GetRawAllocator());
-        this->m_HitShadersPerInstance            = Src.m_HitShadersPerInstance;
-        this->m_FirstContributionToHitGroupIndex = Src.m_FirstContributionToHitGroupIndex;
-        this->m_LastContributionToHitGroupIndex  = Src.m_LastContributionToHitGroupIndex;
-        this->m_BindingMode                      = Src.m_BindingMode;
+        this->m_BuildInfo = Src.m_BuildInfo;
 
         for (auto& SrcInst : Src.m_Instances)
         {
@@ -227,21 +230,6 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
         this->m_DbgVersion.fetch_add(1);
 #endif
-    }
-
-    Uint32 GetInstanceCount() const
-    {
-        return static_cast<Uint32>(this->m_Instances.size());
-    }
-
-    Uint32 GetHitShadersPerInstance() const
-    {
-        return this->m_HitShadersPerInstance;
-    }
-
-    SHADER_BINDING_MODE GetBindingMode() const
-    {
-        return this->m_BindingMode;
     }
 
     virtual TLASInstanceDesc DILIGENT_CALL_TYPE GetInstanceDesc(const char* Name) const override final
@@ -268,13 +256,9 @@ public:
         return Result;
     }
 
-    virtual void DILIGENT_CALL_TYPE GetContributionToHitGroupIndex(Uint32& FirstContributionToHitGroupIndex,
-                                                                   Uint32& LastContributionToHitGroupIndex) const override final
+    virtual TLASBuildInfo DILIGENT_CALL_TYPE GetBuildInfo() const override final
     {
-        FirstContributionToHitGroupIndex = this->m_FirstContributionToHitGroupIndex;
-        LastContributionToHitGroupIndex  = this->m_LastContributionToHitGroupIndex;
-
-        VERIFY_EXPR(FirstContributionToHitGroupIndex <= LastContributionToHitGroupIndex);
+        return m_BuildInfo;
     }
 
     virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
@@ -356,15 +340,15 @@ private:
         this->m_Instances.clear();
         this->m_StringPool.Clear();
 
-        this->m_BindingMode                      = SHADER_BINDING_MODE_LAST;
-        this->m_HitShadersPerInstance            = 0;
-        this->m_FirstContributionToHitGroupIndex = INVALID_INDEX;
-        this->m_LastContributionToHitGroupIndex  = INVALID_INDEX;
+        this->m_BuildInfo.BindingMode                      = HIT_GROUP_BINDING_MODE_LAST;
+        this->m_BuildInfo.HitGroupStride                   = 0;
+        this->m_BuildInfo.FirstContributionToHitGroupIndex = INVALID_INDEX;
+        this->m_BuildInfo.LastContributionToHitGroupIndex  = INVALID_INDEX;
     }
 
-    static void CalculateHitGroupIndex(InstanceDesc& Desc, Uint32& InstanceOffset, const Uint32 HitShadersPerInstance, const SHADER_BINDING_MODE BindingMode)
+    static void CalculateHitGroupIndex(InstanceDesc& Desc, Uint32& InstanceOffset, const Uint32 HitGroupStride, const HIT_GROUP_BINDING_MODE BindingMode)
     {
-        static_assert(SHADER_BINDING_MODE_LAST == SHADER_BINDING_USER_DEFINED, "Please update the switch below to handle the new shader binding mode");
+        static_assert(HIT_GROUP_BINDING_MODE_LAST == HIT_GROUP_BINDING_MODE_USER_DEFINED, "Please update the switch below to handle the new shader binding mode");
 
         if (Desc.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
         {
@@ -372,17 +356,18 @@ private:
             switch (BindingMode)
             {
                 // clang-format off
-                case SHADER_BINDING_MODE_PER_GEOMETRY:     InstanceOffset += Desc.pBLAS ? Desc.pBLAS->GetActualGeometryCount() * HitShadersPerInstance : 0; break;
-                case SHADER_BINDING_MODE_PER_INSTANCE:     InstanceOffset += HitShadersPerInstance;                                                         break;
-                case SHADER_BINDING_MODE_PER_ACCEL_STRUCT: /* InstanceOffset is a constant */                                                               break;
-                case SHADER_BINDING_USER_DEFINED:          UNEXPECTED("TLAS_INSTANCE_OFFSET_AUTO is not compatible with SHADER_BINDING_USER_DEFINED");      break;
-                default:                                   UNEXPECTED("Unknown ray tracing shader binding mode");
+                case HIT_GROUP_BINDING_MODE_PER_GEOMETRY:     InstanceOffset += Desc.pBLAS ? Desc.pBLAS->GetActualGeometryCount() * HitGroupStride : 0;           break;
+                case HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY: InstanceOffset += Desc.pBLAS ? Desc.pBLAS->GetMaxGeometryCount() * HitGroupStride : 0;              break;
+                case HIT_GROUP_BINDING_MODE_PER_INSTANCE:     InstanceOffset += HitGroupStride;                                                                   break;
+                case HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT: /* InstanceOffset is a constant */                                                                  break;
+                case HIT_GROUP_BINDING_MODE_USER_DEFINED:     UNEXPECTED("TLAS_INSTANCE_OFFSET_AUTO is not compatible with HIT_GROUP_BINDING_MODE_USER_DEFINED"); break;
+                default:                                      UNEXPECTED("Unknown ray tracing shader binding mode");
                     // clang-format on
             }
         }
         else
         {
-            VERIFY(BindingMode == SHADER_BINDING_USER_DEFINED, "BindingMode must be SHADER_BINDING_USER_DEFINED");
+            VERIFY(BindingMode == HIT_GROUP_BINDING_MODE_USER_DEFINED, "BindingMode must be HIT_GROUP_BINDING_MODE_USER_DEFINED");
         }
 
         constexpr Uint32 MaxIndex = (1u << 24);
@@ -390,12 +375,9 @@ private:
     }
 
 protected:
-    RESOURCE_STATE      m_State                            = RESOURCE_STATE_UNKNOWN;
-    SHADER_BINDING_MODE m_BindingMode                      = SHADER_BINDING_MODE_LAST;
-    Uint32              m_HitShadersPerInstance            = 0;
-    Uint32              m_FirstContributionToHitGroupIndex = INVALID_INDEX;
-    Uint32              m_LastContributionToHitGroupIndex  = INVALID_INDEX;
-    ScratchBufferSizes  m_ScratchSize;
+    RESOURCE_STATE     m_State = RESOURCE_STATE_UNKNOWN;
+    TLASBuildInfo      m_BuildInfo;
+    ScratchBufferSizes m_ScratchSize;
 
     std::unordered_map<HashMapStringKey, InstanceDesc, HashMapStringKey::Hasher> m_Instances;
     StringPool                                                                   m_StringPool;

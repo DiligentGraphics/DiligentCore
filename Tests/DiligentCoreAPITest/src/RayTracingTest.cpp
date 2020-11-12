@@ -211,7 +211,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBound
     }
 }
 
-void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitShadersPerInstance, bool Update, RefCntAutoPtr<ITopLevelAS>& pTLAS)
+void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitGroupStride, bool Update, RefCntAutoPtr<ITopLevelAS>& pTLAS)
 {
     // Create TLAS
     TopLevelASDesc TLASDesc;
@@ -252,8 +252,8 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInsta
     Attribs.pTLAS                        = pTLAS;
     Attribs.pInstances                   = pInstances;
     Attribs.InstanceCount                = InstanceCount;
-    Attribs.HitShadersPerInstance        = HitShadersPerInstance;
-    Attribs.BindingMode                  = SHADER_BINDING_MODE_PER_GEOMETRY;
+    Attribs.HitGroupStride               = HitGroupStride;
+    Attribs.BindingMode                  = HIT_GROUP_BINDING_MODE_PER_GEOMETRY;
     Attribs.TLASTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     Attribs.BLASTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     Attribs.pInstanceBuffer              = InstanceBuffer;
@@ -406,20 +406,35 @@ void ASCompaction(IRenderDevice*             pDevice,
     CompareGeometryDesc(pSrcAS, pDstAS);
 }
 
+enum TestMode
+{
+    BeginRange = 0,
+    Default    = BeginRange,
+    CopiedBLAS,
+    CopiedTLAS,
+    CopiedBLAS_CopiedTLAS,
+    CompactedBLAS,
+    CompactedTLAS,
+    CompactedBLAS_CompactedTLAS,
+    UpdateBLAS,
+    UpdateTLAS,
+    EndRange
+};
+
 void BLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pContext, IBottomLevelAS* pSrcBLAS, RefCntAutoPtr<IBottomLevelAS>& pDstBLAS)
 {
     switch (TestId)
     {
-        case 0:
-        case 2:
-        case 5:
-        case 7:
-        case 8:
+        case Default:
+        case CopiedTLAS:
+        case CompactedTLAS:
+        case UpdateBLAS:
+        case UpdateTLAS:
             pDstBLAS = pSrcBLAS;
             break;
 
-        case 1:
-        case 3:
+        case CopiedBLAS:
+        case CopiedBLAS_CopiedTLAS:
         {
             std::vector<BLASTriangleDesc>    TriangleInfos;
             std::vector<BLASBoundingBoxDesc> BoxInfos;
@@ -453,8 +468,8 @@ void BLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pCont
             CompareGeometryDesc(pSrcBLAS, pDstBLAS);
             break;
         }
-        case 4:
-        case 6:
+        case CompactedBLAS:
+        case CompactedBLAS_CompactedTLAS:
             ASCompaction<WriteBLASCompactedSizeAttribs, BottomLevelASDesc, CopyBLASAttribs>(
                 pDevice, pContext, pSrcBLAS, pDstBLAS,
                 &IDeviceContext::WriteBLASCompactedSize,
@@ -473,16 +488,16 @@ void TLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pCont
 {
     switch (TestId)
     {
-        case 0:
-        case 1:
-        case 4:
-        case 7:
-        case 8:
+        case Default:
+        case CopiedBLAS:
+        case CompactedBLAS:
+        case UpdateBLAS:
+        case UpdateTLAS:
             pDstTLAS = pSrcTLAS;
             break;
 
-        case 2:
-        case 3:
+        case CopiedTLAS:
+        case CopiedBLAS_CopiedTLAS:
         {
             TopLevelASDesc ASDesc = pSrcTLAS->GetDesc();
             ASDesc.Name           = "TLAS copy";
@@ -500,8 +515,8 @@ void TLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pCont
             ASSERT_EQ(pDstTLAS->GetDesc().Flags, ASDesc.Flags);
             break;
         }
-        case 5:
-        case 6:
+        case CompactedTLAS:
+        case CompactedBLAS_CompactedTLAS:
             ASCompaction<WriteTLASCompactedSizeAttribs, TopLevelASDesc, CopyTLASAttribs>(
                 pDevice, pContext, pSrcTLAS, pDstTLAS,
                 &IDeviceContext::WriteTLASCompactedSize,
@@ -521,31 +536,33 @@ std::string TestIdToString(const testing::TestParamInfo<int>& info)
     std::string name;
     switch (info.param)
     {
-        case 0: name = "default"; break;
-        case 1: name = "copiedBLAS"; break;
-        case 2: name = "copiedTLAS"; break;
-        case 3: name = "copiedBLAS_copiedTLAS"; break;
-        case 4: name = "compactedBLAS"; break;
-        case 5: name = "compactedTLAS"; break;
-        case 6: name = "compactedBLAS_compactedTLAS"; break;
-        case 7: name = "updateBLAS"; break;
-        case 8: name = "updateTLAS"; break;
-        default: name = std::to_string(info.param); UNEXPECTED("unsupported TestId");
+        // clang-format off
+        case Default:                     name = "default";                     break;
+        case CopiedBLAS:                  name = "copiedBLAS";                  break;
+        case CopiedTLAS:                  name = "copiedTLAS";                  break;
+        case CopiedBLAS_CopiedTLAS:       name = "copiedBLAS_copiedTLAS";       break;
+        case CompactedBLAS:               name = "compactedBLAS";               break;
+        case CompactedTLAS:               name = "compactedTLAS";               break;
+        case CompactedBLAS_CompactedTLAS: name = "compactedBLAS_compactedTLAS"; break;
+        case UpdateBLAS:                  name = "updateBLAS";                  break;
+        case UpdateTLAS:                  name = "updateTLAS";                  break;
+        default:                          name = std::to_string(info.param); UNEXPECTED("unsupported TestId");
+            // clang-format off
     }
     return name;
 }
 
 bool TestBLASUpdate(Uint32 TestId)
 {
-    return TestId == 7;
+    return TestId == UpdateBLAS;
 }
 
 bool TestTLASUpdate(Uint32 TestId)
 {
-    return TestId == 8;
+    return TestId == UpdateTLAS;
 }
 
-const auto TestParamRange = testing::Range(0, 9);
+const auto TestParamRange = testing::Range(int{BeginRange}, int{EndRange});
 
 
 class RT1 : public testing::TestWithParam<int>
@@ -691,8 +708,8 @@ TEST_P(RT1, TriangleClosestHitShader)
     Instance.Flags        = RAYTRACING_INSTANCE_NONE;
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
-    const Uint32               HitShadersPerInstance = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitShadersPerInstance, TestTLASUpdate(TestId), pTempTLAS);
+    const Uint32               HitGroupStride = 1;
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -883,8 +900,8 @@ TEST_P(RT2, TriangleAnyHitShader)
     Instance.Flags        = RAYTRACING_INSTANCE_NONE;
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
-    const Uint32               HitShadersPerInstance = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitShadersPerInstance, TestTLASUpdate(TestId), pTempTLAS);
+    const Uint32               HitGroupStride = 1;
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -1073,8 +1090,8 @@ TEST_P(RT3, ProceduralIntersection)
     Instance.Flags        = RAYTRACING_INSTANCE_NONE;
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
-    const Uint32               HitShadersPerInstance = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitShadersPerInstance, TestTLASUpdate(TestId), pTempTLAS);
+    const Uint32               HitGroupStride = 1;
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -1329,8 +1346,8 @@ TEST_P(RT4, MultiGeometry)
     Instances[1].Transform.SetTranslation(0.1f, 0.5f, 0.0f);
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
-    const Uint32               HitShadersPerInstance = 1;
-    CreateTLAS(pDevice, pContext, Instances, _countof(Instances), HitShadersPerInstance, TestTLASUpdate(TestId), pTempTLAS);
+    const Uint32               HitGroupStride = 1;
+    CreateTLAS(pDevice, pContext, Instances, _countof(Instances), HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);

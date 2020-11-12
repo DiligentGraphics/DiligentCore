@@ -178,7 +178,7 @@ struct ScratchBufferSizes
 {
     /// Scratch buffer size for acceleration structure building,
     /// see IDeviceContext::BuildBLAS(), IDeviceContext::BuildTLAS().
-    /// May be zero if the structure was created with non-zero CompactedSize.
+    /// May be zero if the acceleration structure was created with non-zero CompactedSize.
     Uint32 Build  DEFAULT_INITIALIZER(0);
     
     /// Scratch buffer size for acceleration structure updating,

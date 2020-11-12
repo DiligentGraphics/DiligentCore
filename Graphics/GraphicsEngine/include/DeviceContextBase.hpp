@@ -66,7 +66,7 @@ bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs);
 bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier);
 
 bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs);
-bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstanceCount);
+bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs);
 bool VerifyCopyBLASAttribs(const IRenderDevice* pDevice, const CopyBLASAttribs& Attribs);
 bool VerifyCopyTLASAttribs(const CopyTLASAttribs& Attribs);
 bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteBLASCompactedSizeAttribs& Attribs);
@@ -1482,9 +1482,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const Bui
         return false;
     }
 
-    const Uint32 InstCount = Attribs.pTLAS ? ValidatedCast<TopLevelASType>(Attribs.pTLAS)->GetInstanceCount() : 0;
-
-    if (!VerifyBuildTLASAttribs(Attribs, InstCount))
+    if (!VerifyBuildTLASAttribs(Attribs))
         return false;
 #endif
 

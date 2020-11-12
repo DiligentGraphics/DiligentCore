@@ -2436,12 +2436,12 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
     if (Attribs.Update)
     {
-        if (!pTLASD3D12->UpdateInstances(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitShadersPerInstance, Attribs.BindingMode))
+        if (!pTLASD3D12->UpdateInstances(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitGroupStride, Attribs.BindingMode))
             return;
     }
     else
     {
-        if (!pTLASD3D12->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitShadersPerInstance, Attribs.BindingMode))
+        if (!pTLASD3D12->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitGroupStride, Attribs.BindingMode))
             return;
     }
 
@@ -2471,9 +2471,13 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
             d3d12Inst.InstanceContributionToHitGroupIndex = InstDesc.ContributionToHitGroupIndex;
             d3d12Inst.InstanceMask                        = Inst.Mask;
             d3d12Inst.Flags                               = InstanceFlagsToD3D12RTInstanceFlags(Inst.Flags);
-            d3d12Inst.AccelerationStructure               = pBLASD3D12->GetGPUAddress();
+            d3d12Inst.AccelerationStructure               = 0;
 
-            TransitionOrVerifyBLASState(CmdCtx, *pBLASD3D12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+            if (pBLASD3D12)
+            {
+                d3d12Inst.AccelerationStructure = pBLASD3D12->GetGPUAddress();
+                TransitionOrVerifyBLASState(CmdCtx, *pBLASD3D12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+            }
         }
         UpdateBufferRegion(pInstancesD3D12, TmpSpace, Attribs.InstanceBufferOffset, Size, Attribs.InstanceBufferTransitionMode);
     }

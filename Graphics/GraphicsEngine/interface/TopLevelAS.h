@@ -68,6 +68,56 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 typedef struct TopLevelASDesc TopLevelASDesc;
 
 
+/// Defines shader binding mode.
+DILIGENT_TYPED_ENUM(HIT_GROUP_BINDING_MODE, Uint8)
+{
+    /// Reserve space for actual geometry count for each instance in TLAS.
+    /// Each geometry can have unique hit shader group.
+    /// See IShaderBindingTable::BindHitGroup().
+    HIT_GROUP_BINDING_MODE_PER_GEOMETRY = 0,
+        
+    /// Same as HIT_GROUP_BINDING_MODE_PER_GEOMETRY but space reserved for maximum number of geometries in instance.
+    /// This may be useful if you update instance with new BLAS with different number of geometries but with
+    /// same maximum geometry count that defined in BottomLevelASDesc::TriangleCount or BottomLevelASDesc::BoxCount.
+    /// See IShaderBindingTable::BindHitGroup().
+    HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY,
+
+    /// Reserve space for each instance in TLAS so each instance can have a unique hit shader group.
+    /// In this mode SBT buffer will use less memory. See IShaderBindingTable::BindHitGroups().
+    HIT_GROUP_BINDING_MODE_PER_INSTANCE,
+        
+    /// Reserve space for single hit group for each TLAS.
+    /// See IShaderBindingTable::BindHitGroupForAll().
+    HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT,
+
+    /// The user must specify TLASBuildInstanceData::ContributionToHitGroupIndex and only use IShaderBindingTable::BindHitGroupByIndex().
+    HIT_GROUP_BINDING_MODE_USER_DEFINED,
+
+    HIT_GROUP_BINDING_MODE_LAST = HIT_GROUP_BINDING_MODE_USER_DEFINED,
+};
+
+
+/// Defines TLAS state that was used in the last build.
+struct TLASBuildInfo
+{
+    /// The number of instances, same as BuildTLASAttribs::InstanceCount.
+    Uint32                 InstanceCount                    DEFAULT_INITIALIZER(0);
+    
+    /// The number of hit shader groups, same as BuildTLASAttribs::HitGroupStride.
+    Uint32                 HitGroupStride            DEFAULT_INITIALIZER(0);
+    
+    /// Hit shader binding mode, same as BuildTLASAttribs::BindingMode.
+    HIT_GROUP_BINDING_MODE BindingMode                      DEFAULT_INITIALIZER(HIT_GROUP_BINDING_MODE_PER_GEOMETRY);
+
+    /// First hit group location, same as BuildTLASAttribs::BaseContributionToHitGroupIndex.
+    Uint32                 FirstContributionToHitGroupIndex DEFAULT_INITIALIZER(0);
+
+    /// Last hit group location.
+    Uint32                 LastContributionToHitGroupIndex  DEFAULT_INITIALIZER(0);
+};
+typedef struct TLASBuildInfo TLASBuildInfo;
+
+
 /// Top-level AS instance description.
 struct TLASInstanceDesc
 {
@@ -117,23 +167,19 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
                                                      const char* Name) CONST PURE;
     
 
-    /// Returns the first and last hit group location that is calculated during build or update operation,
-    /// see IDeviceContext::BuildTLAS().
+    /// Returns TLAS state after the last build or update operation.
     
-    /// \param [out] FirstContributionToHitGroupIndex - Returns the BuildTLASAttribs::BaseContributionToHitGroupIndex value
-    ///                                                 as used in last build or copy operation.
-    /// \param [out] LastContributionToHitGroupIndex  - Returns the maximum value that used in hit group shader location calculation.
+    /// \return TLASBuildInfo object, see Diligent::TLASBuildInfo.
     /// 
     /// \note Access to the TLAS must be externally synchronized.
-    VIRTUAL void METHOD(GetContributionToHitGroupIndex)(THIS_
-                                                        Uint32 REF FirstContributionToHitGroupIndex,
-                                                        Uint32 REF LastContributionToHitGroupIndex) CONST PURE;
+    VIRTUAL TLASBuildInfo METHOD(GetBuildInfo)(THIS) CONST PURE;
 
     
     /// Returns scratch buffer info for the current acceleration structure.
     
     /// \return ScratchBufferSizes object, see Diligent::ScratchBufferSizes.
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
+
 
     /// Returns native acceleration structure handle specific to the underlying graphics API
 
@@ -164,12 +210,12 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define ITopLevelAS_GetInstanceDesc(This, ...)                CALL_IFACE_METHOD(TopLevelAS, GetInstanceDesc,                This, __VA_ARGS__)
-#    define ITopLevelAS_GetContributionToHitGroupIndex(This, ...) CALL_IFACE_METHOD(TopLevelAS, GetContributionToHitGroupIndex, This, __VA_ARGS__)
-#    define ITopLevelAS_GetScratchBufferSizes(This)               CALL_IFACE_METHOD(TopLevelAS, GetScratchBufferSizes,          This)
-#    define ITopLevelAS_GetNativeHandle(This)                     CALL_IFACE_METHOD(TopLevelAS, GetNativeHandle,                This)
-#    define ITopLevelAS_SetState(This, ...)                       CALL_IFACE_METHOD(TopLevelAS, SetState,                       This, __VA_ARGS__)
-#    define ITopLevelAS_GetState(This)                            CALL_IFACE_METHOD(TopLevelAS, GetState,                       This)
+#    define ITopLevelAS_GetInstanceDesc(This, ...)  CALL_IFACE_METHOD(TopLevelAS, GetInstanceDesc,       This, __VA_ARGS__)
+#    define ITopLevelAS_GetBuildInfo(This)          CALL_IFACE_METHOD(TopLevelAS, GetBuildInfo,          This)
+#    define ITopLevelAS_GetScratchBufferSizes(This) CALL_IFACE_METHOD(TopLevelAS, GetScratchBufferSizes, This)
+#    define ITopLevelAS_GetNativeHandle(This)       CALL_IFACE_METHOD(TopLevelAS, GetNativeHandle,       This)
+#    define ITopLevelAS_SetState(This, ...)         CALL_IFACE_METHOD(TopLevelAS, SetState,              This, __VA_ARGS__)
+#    define ITopLevelAS_GetState(This)              CALL_IFACE_METHOD(TopLevelAS, GetState,              This)
 
 // clang-format on
 

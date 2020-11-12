@@ -484,7 +484,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
 }
 
 
-bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstanceCount)
+bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
 {
 #define CHECK_BUILD_TLAS_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Build TLAS attribs are invalid: ", __VA_ARGS__)
 
@@ -493,8 +493,8 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstance
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.pInstances != nullptr, "pInstances must not be null");
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.pInstanceBuffer != nullptr, "pInstanceBuffer must not be null");
 
-    CHECK_BUILD_TLAS_ATTRIBS(Attribs.BindingMode == SHADER_BINDING_USER_DEFINED || Attribs.HitShadersPerInstance != 0,
-                             "HitShadersPerInstance must be greater than 0, if BindingMode is not SHADER_BINDING_USER_DEFINED");
+    CHECK_BUILD_TLAS_ATTRIBS(Attribs.BindingMode == HIT_GROUP_BINDING_MODE_USER_DEFINED || Attribs.HitGroupStride != 0,
+                             "HitGroupStride must be greater than 0 if BindingMode is not HIT_GROUP_BINDING_MODE_USER_DEFINED");
 
     const auto& TLASDesc = Attribs.pTLAS->GetDesc();
 
@@ -505,9 +505,11 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstance
     if (Attribs.Update)
     {
         CHECK_BUILD_TLAS_ATTRIBS((TLASDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_UPDATE) == RAYTRACING_BUILD_AS_ALLOW_UPDATE,
-                                 "Update is true, but TLAS was created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag");
+                                 "Update is true, but TLAS created without RAYTRACING_BUILD_AS_ALLOW_UPDATE flag");
+
+        const Uint32 PrevInstanceCount = Attribs.pTLAS->GetBuildInfo().InstanceCount;
         CHECK_BUILD_TLAS_ATTRIBS(PrevInstanceCount == Attribs.InstanceCount,
-                                 "Update is true, but InstanceCount (", Attribs.InstanceCount, ") does not match the previous value (", PrevInstanceCount, ")");
+                                 "Update is true, but InstanceCount (", Attribs.InstanceCount, ") does not match with the previous value (", PrevInstanceCount, ")");
     }
 
     const auto& InstDesc          = Attribs.pInstanceBuffer->GetDesc();
@@ -533,18 +535,14 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, Uint32 PrevInstance
             const TLASInstanceDesc IDesc = Attribs.pTLAS->GetInstanceDesc(Inst.InstanceName);
             CHECK_BUILD_TLAS_ATTRIBS(IDesc.InstanceIndex != INVALID_INDEX, "Update is true, but pInstances[", i, "].InstanceName does not exists");
         }
-        else
-        {
-            CHECK_BUILD_TLAS_ATTRIBS(Inst.pBLAS != nullptr, "pInstances[", i, "].pBLAS must not be null");
-        }
 
         if (Inst.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
             ++AutoOffsetCounter;
 
-        CHECK_BUILD_TLAS_ATTRIBS(Attribs.BindingMode == SHADER_BINDING_USER_DEFINED || Inst.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO,
+        CHECK_BUILD_TLAS_ATTRIBS(Attribs.BindingMode == HIT_GROUP_BINDING_MODE_USER_DEFINED || Inst.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO,
                                  "pInstances[", i,
                                  "].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO "
-                                 "if BindingMode is not SHADER_BINDING_USER_DEFINED");
+                                 "if BindingMode is not HIT_GROUP_BINDING_MODE_USER_DEFINED");
     }
 
     CHECK_BUILD_TLAS_ATTRIBS(AutoOffsetCounter == 0 || AutoOffsetCounter == Attribs.InstanceCount,

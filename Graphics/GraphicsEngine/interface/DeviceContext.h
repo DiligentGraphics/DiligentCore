@@ -947,8 +947,8 @@ typedef struct BuildBLASAttribs BuildBLASAttribs;
 ///  For each instance in TLAS
 ///     if (Instance.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
 ///         Instance.ContributionToHitGroupIndex = InstanceOffset;
-///         if (BindingMode == SHADER_BINDING_MODE_PER_GEOMETRY) InstanceOffset += Instance.pBLAS->GeometryCount() * HitShadersPerInstance;
-///         if (BindingMode == SHADER_BINDING_MODE_PER_INSTANCE) InstanceOffset += HitShadersPerInstance;
+///         if (BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY) InstanceOffset += Instance.pBLAS->GeometryCount() * HitGroupStride;
+///         if (BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE) InstanceOffset += HitGroupStride;
 static const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
 
 
@@ -1001,6 +1001,7 @@ struct TLASBuildInstanceData
     
     /// Bottom-level AS that represents instance geometry.
     /// Once built, TLAS will hold strong reference to pBLAS until next build or copy operation.
+    /// Can be null to disable instance.
     /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*           pBLAS           DEFAULT_INITIALIZER(nullptr);
     
@@ -1033,28 +1034,6 @@ typedef struct TLASBuildInstanceData TLASBuildInstanceData;
 /// Top-level AS instance size in bytes in GPU side.
 /// Used to calculate size of BuildTLASAttribs::pInstanceBuffer.
 static const Uint32 TLAS_INSTANCE_DATA_SIZE = 64;
-
-
-/// Defines shader binding mode.
-DILIGENT_TYPED_ENUM(SHADER_BINDING_MODE, Uint8)
-{
-    /// Each geometry in each instance can have a unique hit shader.
-    /// See IShaderBindingTable::BindHitGroup().
-    SHADER_BINDING_MODE_PER_GEOMETRY = 0,
-
-    /// Each instance can have a unique hit shader. In this mode SBT buffer will use less memory.
-    /// See IShaderBindingTable::BindHitGroups().
-    SHADER_BINDING_MODE_PER_INSTANCE,
-
-    /// Single hit shader for top-level acceleration structure.
-    /// See IShaderBindingTable::BindHitGroupForAll().
-    SHADER_BINDING_MODE_PER_ACCEL_STRUCT,
-
-    /// The user must specify TLASBuildInstanceData::ContributionToHitGroupIndex and only use IShaderBindingTable::BindAll().
-    SHADER_BINDING_USER_DEFINED,
-
-    SHADER_BINDING_MODE_LAST = SHADER_BINDING_USER_DEFINED,
-};
 
 
 /// This structure is used by IDeviceContext::BuildTLAS().
@@ -1097,7 +1076,7 @@ struct BuildTLASAttribs
     ///   - Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
     /// You should use the same value in a shader:
     /// 'MultiplierForGeometryContributionToHitGroupIndex' argument in TraceRay() in HLSL, 'sbtRecordStride' argument in traceRay() in GLSL.
-    Uint32                          HitShadersPerInstance         DEFAULT_INITIALIZER(1);
+    Uint32                          HitGroupStride         DEFAULT_INITIALIZER(1);
     
     /// Base offset for hit group location.
     /// Can be used to bind hit shaders for multiple acceleration structures, see IShaderBindingTable::BindHitGroup().
@@ -1107,7 +1086,7 @@ struct BuildTLASAttribs
 
     /// Hit shader binding mode, see Diligent::SHADER_BINDING_MODE.
     /// Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
-    SHADER_BINDING_MODE             BindingMode                   DEFAULT_INITIALIZER(SHADER_BINDING_MODE_PER_GEOMETRY);
+    HIT_GROUP_BINDING_MODE          BindingMode                   DEFAULT_INITIALIZER(HIT_GROUP_BINDING_MODE_PER_GEOMETRY);
     
     /// Buffer that is used for acceleration structure building.
     /// Must be created with BIND_RAY_TRACING.
@@ -2160,6 +2139,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Builds a bottom-level acceleration structure with the specified geometries.
 
     /// \param [in] Attribs - Structure describing build BLAS command attributes, see Diligent::BuildBLASAttribs for details.
+    /// 
+    /// \note Don't call build or copy operation on the same BLAS in a different contexts, because BLAS has CPU-side data
+    ///       that will not match with GPU-side, so shader binding were incorrect.
     VIRTUAL void METHOD(BuildBLAS)(THIS_
                                    const BuildBLASAttribs REF Attribs) PURE;
     
@@ -2167,6 +2149,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Builds a top-level acceleration structure with the specified instances.
 
     /// \param [in] Attribs - Structure describing build TLAS command attributes, see Diligent::BuildTLASAttribs for details.
+    /// 
+    /// \note Don't call build or copy operation on the same TLAS in a different contexts, because TLAS has CPU-side data
+    ///       that will not match with GPU-side, so shader binding were incorrect.
     VIRTUAL void METHOD(BuildTLAS)(THIS_
                                    const BuildTLASAttribs REF Attribs) PURE;
     
@@ -2174,6 +2159,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Copies data from one acceleration structure to another.
 
     /// \param [in] Attribs - Structure describing copy BLAS command attributes, see Diligent::CopyBLASAttribs for details.
+    /// 
+    /// \note Don't call build or copy operation on the same BLAS in a different contexts, because BLAS has CPU-side data
+    ///       that will not match with GPU-side, so shader binding were incorrect.
     VIRTUAL void METHOD(CopyBLAS)(THIS_
                                   const CopyBLASAttribs REF Attribs) PURE;
     
@@ -2181,6 +2169,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Copies data from one acceleration structure to another.
 
     /// \param [in] Attribs - Structure describing copy TLAS command attributes, see Diligent::CopyTLASAttribs for details.
+    /// 
+    /// \note Don't call build or copy operation on the same TLAS in a different contexts, because TLAS has CPU-side data
+    ///       that will not match with GPU-side, so shader binding were incorrect.
     VIRTUAL void METHOD(CopyTLAS)(THIS_
                                   const CopyTLASAttribs REF Attribs) PURE;
     

@@ -120,7 +120,7 @@ struct RTSubobjectsHelper
     void SetDxilLibrary(Uint32 Index, const String& Source, const wchar_t* ExportName)
     {
         auto* pEnv = TestingEnvironmentD3D12::GetInstance();
-        auto  hr   = pEnv->CompileDXILShader(Source, L"main", nullptr, 0, L"lib_6_5", &ShadersByteCode[Index]);
+        auto  hr   = pEnv->CompileDXILShader(Source, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[Index]);
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray tracing shader";
 
         D3D12_EXPORT_DESC&       RGExportDesc = ExportDescs[Index];

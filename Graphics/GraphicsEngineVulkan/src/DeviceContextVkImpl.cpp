@@ -2969,12 +2969,12 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
     if (Attribs.Update)
     {
-        if (!pTLASVk->UpdateInstances(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitShadersPerInstance, Attribs.BindingMode))
+        if (!pTLASVk->UpdateInstances(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitGroupStride, Attribs.BindingMode))
             return;
     }
     else
     {
-        if (!pTLASVk->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitShadersPerInstance, Attribs.BindingMode))
+        if (!pTLASVk->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.BaseContributionToHitGroupIndex, Attribs.HitGroupStride, Attribs.BindingMode))
             return;
     }
 
@@ -3004,9 +3004,13 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
             vkASInst.instanceShaderBindingTableRecordOffset = InstDesc.ContributionToHitGroupIndex;
             vkASInst.mask                                   = Inst.Mask;
             vkASInst.flags                                  = InstanceFlagsToVkGeometryInstanceFlags(Inst.Flags);
-            vkASInst.accelerationStructureReference         = pBLASVk->GetVkDeviceAddress();
+            vkASInst.accelerationStructureReference         = 0;
 
-            TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+            if (pBLASVk)
+            {
+                vkASInst.accelerationStructureReference = pBLASVk->GetVkDeviceAddress();
+                TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+            }
         }
 
         UpdateBufferRegion(pInstancesVk, Attribs.InstanceBufferOffset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset, Attribs.InstanceBufferTransitionMode);

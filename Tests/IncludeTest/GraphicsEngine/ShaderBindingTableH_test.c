@@ -38,5 +38,5 @@ void TestShaderBindingTable_CInterface(IShaderBindingTable* pSBT)
     IShaderBindingTable_BindHitGroupForAll(pSBT, (ITopLevelAS*)NULL, 0, "Shader group name", (const void*)NULL, 0);
     IShaderBindingTable_BindHitGroups(pSBT, (ITopLevelAS*)NULL, "Instance name", 0, "Shader group name", (const void*)NULL, 0);
     IShaderBindingTable_BindCallableShader(pSBT, "Shader group name", 0, (const void*)NULL, 0);
-    IShaderBindingTable_BindAll(pSBT, (BindAllAttribs*)NULL);
+    IShaderBindingTable_BindHitGroupByIndex(pSBT, 0, "Shader group name", (const void*)NULL, 0);
 }

@@ -123,12 +123,6 @@ public:
     }
 
 
-    void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override final
-    {
-        // AZ TODO
-    }
-
-
     void DILIGENT_CALL_TYPE BindRayGenShader(const char* pShaderGroupName, const void* pData, Uint32 DataSize) override final
     {
         VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
@@ -159,6 +153,30 @@ public:
     }
 
 
+    void DILIGENT_CALL_TYPE BindHitGroupByIndex(Uint32      BindingIndex,
+                                                const char* pShaderGroupName,
+                                                const void* pData,
+                                                Uint32      DataSize) override final
+    {
+        VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
+        VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
+
+        const size_t Stride    = this->m_ShaderRecordStride;
+        const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
+        const size_t Offset    = BindingIndex * Stride;
+
+        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), Offset + Stride), Uint8{EmptyElem});
+
+        this->m_pPSO->CopyShaderHandle(pShaderGroupName, this->m_HitGroupsRecord.data() + Offset, Stride);
+        std::memcpy(this->m_HitGroupsRecord.data() + Offset + GroupSize, pData, DataSize);
+        this->m_Changed = true;
+
+#ifdef DILIGENT_DEVELOPMENT
+        OnBindHitGroup(nullptr, BindingIndex);
+#endif
+    }
+
+
     void DILIGENT_CALL_TYPE BindHitGroup(ITopLevelAS* pTLAS,
                                          const char*  pInstanceName,
                                          const char*  pGeometryName,
@@ -172,20 +190,22 @@ public:
         VERIFY_EXPR(pTLAS != nullptr);
 
         auto* const pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
-        const auto& Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
+        const auto  Info      = pTLASImpl->GetBuildInfo();
+        const auto  Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
-        VERIFY_EXPR(pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_GEOMETRY);
-        VERIFY_EXPR(RayOffsetInHitGroupIndex < pTLASImpl->GetHitShadersPerInstance());
-        VERIFY_EXPR(Desc.ContributionToHitGroupIndex != INVALID_INDEX);
+        VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
+                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY);
+        VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
+        VERIFY_EXPR(Desc.ContributionToHitGroupIndex != ~0u);
 
         if (Desc.pBLAS == nullptr)
             return; // this is a disabled instance
 
-        const Uint32 InstanceIndex = Desc.ContributionToHitGroupIndex;
-        const Uint32 GeometryIndex = Desc.pBLAS->GetGeometryIndex(pGeometryName);
+        const Uint32 InstanceOffset = Desc.ContributionToHitGroupIndex;
+        const Uint32 GeometryIndex  = Desc.pBLAS->GetGeometryIndex(pGeometryName);
         VERIFY_EXPR(GeometryIndex != INVALID_INDEX);
 
-        const Uint32 Index     = InstanceIndex + GeometryIndex * pTLASImpl->GetHitShadersPerInstance() + RayOffsetInHitGroupIndex;
+        const Uint32 Index     = InstanceOffset + GeometryIndex * Info.HitGroupStride + RayOffsetInHitGroupIndex;
         const size_t Stride    = this->m_ShaderRecordStride;
         const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const size_t Offset    = Index * Stride;
@@ -197,6 +217,7 @@ public:
         this->m_Changed = true;
 
 #ifdef DILIGENT_DEVELOPMENT
+        VERIFY_EXPR(Index >= Info.FirstContributionToHitGroupIndex && Index <= Info.LastContributionToHitGroupIndex);
         OnBindHitGroup(pTLASImpl, Index);
 #endif
     }
@@ -210,51 +231,53 @@ public:
                                           Uint32       DataSize) override final
     {
         VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
+        VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
         auto* const pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
-        const auto& Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
+        const auto  Info      = pTLASImpl->GetBuildInfo();
+        const auto  Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
-        VERIFY_EXPR(pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_GEOMETRY ||
-                    pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_INSTANCE);
-        VERIFY_EXPR(RayOffsetInHitGroupIndex < pTLASImpl->GetHitShadersPerInstance());
+        VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
+                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY ||
+                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE);
+        VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
         VERIFY_EXPR(Desc.ContributionToHitGroupIndex != INVALID_INDEX);
 
-        const Uint32 InstanceIndex = Desc.ContributionToHitGroupIndex;
-        Uint32       GeometryCount = 0;
+        const Uint32 InstanceOffset = Desc.ContributionToHitGroupIndex;
+        Uint32       GeometryCount  = 0;
 
-        switch (pTLASImpl->GetBindingMode())
+        switch (Info.BindingMode)
         {
             // clang-format off
-            case SHADER_BINDING_MODE_PER_GEOMETRY: GeometryCount = Desc.pBLAS ? Desc.pBLAS->GetActualGeometryCount() : 0; break;
-            case SHADER_BINDING_MODE_PER_INSTANCE: GeometryCount = 1;                                                     break;
-            default:                               UNEXPECTED("unknown binding mode");
+            case HIT_GROUP_BINDING_MODE_PER_GEOMETRY:     GeometryCount = Desc.pBLAS ? Desc.pBLAS->GetActualGeometryCount() : 0;                                break;
+            case HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY: GeometryCount = Desc.pBLAS ? Desc.pBLAS->GetDesc().TriangleCount + Desc.pBLAS->GetDesc().BoxCount: 0; break;
+            case HIT_GROUP_BINDING_MODE_PER_INSTANCE:     GeometryCount = 1;                                                                                    break;
+            default:                                      UNEXPECTED("unknown binding mode");
                 // clang-format on
         }
 
-        VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize * GeometryCount));
-
-        const Uint32 BeginIndex = InstanceIndex + RayOffsetInHitGroupIndex;
-        const size_t EndIndex   = InstanceIndex + GeometryCount * pTLASImpl->GetHitShadersPerInstance() + RayOffsetInHitGroupIndex;
+        const Uint32 BeginIndex = InstanceOffset;
+        const size_t EndIndex   = InstanceOffset + GeometryCount * Info.HitGroupStride;
         const Uint32 GroupSize  = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const size_t Stride     = this->m_ShaderRecordStride;
-        const auto*  DataPtr    = static_cast<const Uint8*>(pData);
 
         this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), EndIndex * Stride), Uint8{EmptyElem});
+        this->m_Changed = true;
 
         for (Uint32 i = 0; i < GeometryCount; ++i)
         {
-            size_t Offset = (BeginIndex + i) * Stride;
+            Uint32 Index  = BeginIndex + i * Info.HitGroupStride + RayOffsetInHitGroupIndex;
+            size_t Offset = Index * Stride;
             this->m_pPSO->CopyShaderHandle(pShaderGroupName, this->m_HitGroupsRecord.data() + Offset, Stride);
 
-            std::memcpy(this->m_HitGroupsRecord.data() + Offset + GroupSize, DataPtr, this->m_ShaderRecordSize);
-            DataPtr += this->m_ShaderRecordSize;
+            std::memcpy(this->m_HitGroupsRecord.data() + Offset + GroupSize, pData, DataSize);
 
 #ifdef DILIGENT_DEVELOPMENT
+            VERIFY_EXPR(Index >= Info.FirstContributionToHitGroupIndex && Index <= Info.LastContributionToHitGroupIndex);
             OnBindHitGroup(pTLASImpl, BeginIndex + i);
 #endif
         }
-        this->m_Changed = true;
     }
 
 
@@ -268,21 +291,22 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto* pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
-        VERIFY_EXPR(pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_GEOMETRY ||
-                    pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_INSTANCE ||
-                    pTLASImpl->GetBindingMode() == SHADER_BINDING_MODE_PER_ACCEL_STRUCT);
-        VERIFY_EXPR(RayOffsetInHitGroupIndex < pTLASImpl->GetHitShadersPerInstance());
-
-        Uint32 FirstContributionToHitGroupIndex, LastContributionToHitGroupIndex;
-        pTLASImpl->GetContributionToHitGroupIndex(FirstContributionToHitGroupIndex, LastContributionToHitGroupIndex);
+        auto*      pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
+        const auto Info      = pTLASImpl->GetBuildInfo();
+        VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
+                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY ||
+                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE ||
+                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT);
+        VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
 
         const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const size_t Stride    = this->m_ShaderRecordStride;
-        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), (LastContributionToHitGroupIndex + 1) * Stride), Uint8{EmptyElem});
+        this->m_HitGroupsRecord.resize(std::max(this->m_HitGroupsRecord.size(), (Info.LastContributionToHitGroupIndex + 1) * Stride), Uint8{EmptyElem});
         this->m_Changed = true;
 
-        for (Uint32 Index = FirstContributionToHitGroupIndex; Index <= LastContributionToHitGroupIndex; ++Index)
+        for (Uint32 Index = RayOffsetInHitGroupIndex + Info.FirstContributionToHitGroupIndex;
+             Index <= Info.LastContributionToHitGroupIndex;
+             Index += Info.HitGroupStride)
         {
             const size_t Offset = Index * Stride;
             this->m_pPSO->CopyShaderHandle(pShaderGroupName, this->m_HitGroupsRecord.data() + Offset, Stride);
@@ -315,6 +339,9 @@ public:
 
     Bool DILIGENT_CALL_TYPE Verify(SHADER_BINDING_VALIDATION_FLAGS Flags) const override final
     {
+#ifdef DILIGENT_DEVELOPMENT
+        static_assert(EmptyElem != 0, "must not be zero");
+
         const auto Stride      = this->m_ShaderRecordStride;
         const auto ShSize      = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const auto FindPattern = [&](const std::vector<Uint8>& Data, const char* GroupName) -> bool //
@@ -357,13 +384,17 @@ public:
             return false;
         }
 
-#ifdef DILIGENT_DEVELOPMENT
         if (Flags & SHADER_BINDING_VALIDATION_TLAS)
         {
             for (size_t i = 0; i < m_DbgHitGroupBindings.size(); ++i)
             {
                 auto& Binding = m_DbgHitGroupBindings[i];
                 auto  pTLAS   = Binding.pTLAS.Lock();
+                if (!Binding.IsBound)
+                {
+                    LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: hit group at index (", i, ") is not bound");
+                    return false;
+                }
                 if (!pTLAS)
                 {
                     LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: TLAS that was used to bind hit group at index (", i, ") was deleted");
@@ -377,7 +408,6 @@ public:
                 }
             }
         }
-#endif
 
         bool valid = true;
         valid      = valid && FindPattern(m_RayGenShaderRecord, "ray generation");
@@ -385,6 +415,10 @@ public:
         valid      = valid && FindPattern(m_CallableShadersRecord, "callable");
         valid      = valid && FindPattern(m_HitGroupsRecord, "hit groups");
         return valid;
+#else
+        return true;
+
+#endif // DILIGENT_DEVELOPMENT
     }
 
 
@@ -486,7 +520,13 @@ protected:
     Uint32 m_ShaderRecordStride = 0;
     bool   m_Changed            = true;
 
+#ifdef DILIGENT_DEVELOPMENT
     static constexpr Uint8 EmptyElem = 0xA7;
+#else
+    // In release mode clear uninitialized data by zeros.
+    // This makes shader inactive, wich hides errors but prevents crashes.
+    static constexpr Uint8 EmptyElem = 0;
+#endif
 
 private:
 #ifdef DILIGENT_DEVELOPMENT
@@ -494,16 +534,18 @@ private:
     {
         RefCntWeakPtr<TopLevelASImplType> pTLAS;
         Uint32                            Version = ~0u;
+        bool                              IsBound = false;
     };
     mutable std::vector<HitGroupBinding> m_DbgHitGroupBindings;
 
-    void OnBindHitGroup(TopLevelASImplType* pTLAS, Uint32 Index)
+    void OnBindHitGroup(TopLevelASImplType* pTLAS, size_t Index)
     {
-        this->m_DbgHitGroupBindings.resize(Index + 1);
+        this->m_DbgHitGroupBindings.resize(std::max(this->m_DbgHitGroupBindings.size(), Index + 1));
 
         auto& Binding   = this->m_DbgHitGroupBindings[Index];
         Binding.pTLAS   = pTLAS;
-        Binding.Version = pTLAS->GetVersion();
+        Binding.Version = pTLAS ? pTLAS->GetVersion() : ~0u;
+        Binding.IsBound = true;
     }
 #endif
 };
