@@ -91,7 +91,9 @@ StringPool ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&          
                                                      size_t                                                             StringPoolSize)
 {
     m_CbvSrvUavOffsets[0] = 0;
-    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+         VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES;
+         VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
         VERIFY(m_CbvSrvUavOffsets[VarType] + CbvSrvUavCount[VarType] <= std::numeric_limits<Uint16>::max(), "Offset is not representable in 16 bits");
         m_CbvSrvUavOffsets[VarType + 1] = static_cast<Uint16>(m_CbvSrvUavOffsets[VarType] + CbvSrvUavCount[VarType]);
@@ -99,7 +101,9 @@ StringPool ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&          
     }
 
     m_SamplersOffsets[0] = m_CbvSrvUavOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
-    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+         VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES;
+         VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
         VERIFY(m_SamplersOffsets[VarType] + SamplerCount[VarType] <= std::numeric_limits<Uint16>::max(), "Offset is not representable in 16 bits");
         m_SamplersOffsets[VarType + 1] = static_cast<Uint16>(m_SamplersOffsets[VarType] + SamplerCount[VarType]);
@@ -254,13 +258,15 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
         {
             Uint32 RootIndex = D3D12Resource::InvalidRootIndex;
             Uint32 Offset    = D3D12Resource::InvalidOffset;
+            Uint32 BindPoint = D3DShaderResourceAttribs::InvalidBindPoint;
 
             D3D12_DESCRIPTOR_RANGE_TYPE DescriptorRangeType = GetDescriptorRangeType(ResType);
 
             if (pRootSig)
             {
-                pRootSig->AllocateResourceSlot(GetShaderType(), PipelineType, Attribs, VarType, DescriptorRangeType, RootIndex, Offset);
+                pRootSig->AllocateResourceSlot(GetShaderType(), PipelineType, Attribs, VarType, DescriptorRangeType, BindPoint, RootIndex, Offset);
                 VERIFY(RootIndex <= D3D12Resource::MaxRootIndex, "Root index excceeds allowed limit");
+                VERIFY(BindPoint <= D3DShaderResourceAttribs::MaxBindPoint, "Bind point excceeds allowed limit");
             }
             else
             {
@@ -277,6 +283,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
 
                 RootIndex = DescriptorRangeType;
                 Offset    = Attribs.BindPoint;
+                BindPoint = Attribs.BindPoint;
                 // Resources in the static resource cache are indexed by the bind point
                 StaticResCacheTblSizes[RootIndex] = std::max(StaticResCacheTblSizes[RootIndex], Offset + Attribs.BindCount);
             }
@@ -297,6 +304,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
                     SamplerId,
                     VarType,
                     ResType,
+                    BindPoint,
                     RootIndex,
                     Offset //
                 };
@@ -307,7 +315,10 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
             auto& ExistingRes = GetResource(ResIter->second);
             VERIFY_EXPR(ExistingRes.VariableType == VarType);
             VERIFY_EXPR(ExistingRes.Attribs.GetInputType() == Attribs.GetInputType());
+            VERIFY_EXPR(ExistingRes.Attribs.GetSRVDimension() == Attribs.GetSRVDimension());
             VERIFY_EXPR(ExistingRes.Attribs.BindCount == Attribs.BindCount);
+            VERIFY_EXPR(ExistingRes.Attribs.BindPoint == Attribs.BindPoint ||
+                        Attribs.BindPoint == D3DShaderResourceAttribs::InvalidBindPoint);
         }
     };
 

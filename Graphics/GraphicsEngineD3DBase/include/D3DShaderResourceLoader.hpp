@@ -94,6 +94,9 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
         D3D_SHADER_INPUT_BIND_DESC BindingDesc = {};
         pShaderReflection->GetResourceBindingDesc(Res, &BindingDesc);
 
+        if (BindingDesc.BindPoint == UINT32_MAX)
+            BindingDesc.BindPoint = D3DShaderResourceAttribs::InvalidBindPoint;
+
         std::string Name(BindingDesc.Name);
 
         SkipCount = 1;

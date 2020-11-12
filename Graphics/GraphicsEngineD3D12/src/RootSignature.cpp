@@ -39,6 +39,7 @@
 
 namespace Diligent
 {
+static constexpr auto RayTracingMask = SHADER_TYPE_RAY_GEN | SHADER_TYPE_RAY_MISS | SHADER_TYPE_RAY_CLOSEST_HIT | SHADER_TYPE_RAY_ANY_HIT | SHADER_TYPE_RAY_INTERSECTION | SHADER_TYPE_CALLABLE;
 
 RootSignature::RootParamsManager::RootParamsManager(IMemoryAllocator& MemAllocator) :
     m_MemAllocator{MemAllocator},
@@ -218,6 +219,13 @@ void RootSignature::InitImmutableSampler(SHADER_TYPE                     ShaderT
             ImtblSmplr.ShaderRegister = SamplerAttribs.BindPoint;
             ImtblSmplr.ArraySize      = SamplerAttribs.BindCount;
             ImtblSmplr.RegisterSpace  = 0;
+            ImtblSmplr.Name           = SamplerName;
+
+            if (ShaderType & RayTracingMask)
+            {
+                ImtblSmplr.ShaderRegister = m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER];
+                m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER] += SamplerAttribs.BindCount;
+            }
 
             SamplerFound = true;
             break;
@@ -236,11 +244,22 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
                                          const D3DShaderResourceAttribs& ShaderResAttribs,
                                          SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
                                          D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
+                                         Uint32&                         BindPoint,           // in/out parameter
                                          Uint32&                         RootIndex,           // Output parameter
                                          Uint32&                         OffsetFromTableStart // Output parameter
 )
 {
     const auto ShaderVisibility = ShaderTypeToD3D12ShaderVisibility(ShaderType);
+
+    // update resource binding for ray tracing
+    if (ShaderType & RayTracingMask)
+    {
+        BindPoint = m_NumResources[RangeType];
+        m_NumResources[RangeType] += ShaderResAttribs.BindCount;
+    }
+    else
+        BindPoint = ShaderResAttribs.BindPoint;
+
     if (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV && ShaderResAttribs.BindCount == 1)
     {
         // Allocate single CBV directly in the root signature
@@ -250,7 +269,7 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
         OffsetFromTableStart = 0;
 
         // Add new root view to existing root parameters
-        m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, ShaderResAttribs.BindPoint, ShaderVisibility, VariableType);
+        m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, BindPoint, ShaderVisibility, VariableType);
     }
     else
     {
@@ -293,7 +312,7 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
         Uint32 NewDescriptorRangeIndex = d3d12RootParam.DescriptorTable.NumDescriptorRanges - 1;
         CurrParam.SetDescriptorRange(NewDescriptorRangeIndex,
                                      RangeType,                  // Range type (CBV, SRV, UAV or SAMPLER)
-                                     ShaderResAttribs.BindPoint, // Shader register
+                                     BindPoint,                  // Shader register
                                      ShaderResAttribs.BindCount, // Number of registers used (1 for non-array resources)
                                      0,                          // Register space. Always 0 for now
                                      OffsetFromTableStart        // Offset in descriptors from the table start
@@ -376,11 +395,11 @@ void RootSignature::AllocateImmutableSamplers(const PipelineResourceLayoutDesc& 
         for (Uint32 sam = 0; sam < ResourceLayout.NumImmutableSamplers; ++sam)
         {
             const auto& ImtblSamDesc = ResourceLayout.ImmutableSamplers[sam];
-            Uint32      ShaderStages = ImtblSamDesc.ShaderStages;
+            SHADER_TYPE ShaderStages = ImtblSamDesc.ShaderStages;
             while (ShaderStages != 0)
             {
-                auto Stage = ShaderStages & ~(ShaderStages - 1);
-                m_ImmutableSamplers.emplace_back(ImtblSamDesc, ShaderTypeToD3D12ShaderVisibility(static_cast<SHADER_TYPE>(Stage)));
+                auto Stage = ShaderStages & ~static_cast<SHADER_TYPE>(ShaderStages - 1);
+                m_ImmutableSamplers.emplace_back(ImtblSamDesc, ShaderTypeToD3D12ShaderVisibility(Stage), Stage);
                 ShaderStages &= ~Stage;
             }
         }
@@ -475,8 +494,8 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
         rootSignatureDesc.pStaticSamplers = D3D12StaticSamplers.data();
 
         // Release immutable samplers array, we no longer need it
-        std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> EmptySamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerAttribs, GetRawAllocator(), "Allocator for vector<ImmutableSamplerAttribs>"));
-        m_ImmutableSamplers.swap(EmptySamplers);
+        //std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> EmptySamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerAttribs, GetRawAllocator(), "Allocator for vector<ImmutableSamplerAttribs>"));
+        //m_ImmutableSamplers.swap(EmptySamplers);
 
         VERIFY_EXPR(D3D12StaticSamplers.size() == TotalD3D12StaticSamplers);
     }

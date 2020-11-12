@@ -38,6 +38,8 @@
 #include "StringTools.hpp"
 #include "ShaderVariableD3D12.hpp"
 #include "DynamicLinearAllocator.hpp"
+#include "DXCompiler.hpp"
+#include "dxc/dxcapi.h"
 
 namespace Diligent
 {
@@ -279,6 +281,90 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
             LOG_ERROR_AND_THROW("Failed to get shader identifier for procedural hit shader group '", ProcHitShader.Name, "'");
 
         std::memcpy(&ShaderData[ShaderIdentifierSize * iter->second], ShaderID, ShaderIdentifierSize);
+    }
+}
+
+void RemapResourceBinding(IDXCompiler*                                     compiler,
+                          const RootSignature&                             RootSig,
+                          const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex,
+                          const ShaderResourceLayoutD3D12*                 pResourceLayouts,
+                          const ShaderResourceLayoutD3D12*                 pStaticLayouts,
+                          Uint32                                           NumStages,
+                          std::vector<D3D12_STATE_SUBOBJECT>&              Subobjects,
+                          std::vector<CComPtr<IDxcBlob>>&                  ShaderBlobs) noexcept(false)
+{
+    IDXCompiler::TBindingMapPerStage BindingMapPerStage;
+    String                           EntryPoint;
+
+    const auto ExtractResources = [&](const ShaderResourceLayoutD3D12* pLayouts) //
+    {
+        for (Uint32 ShaderIdx = 0; ShaderIdx < ResourceLayoutIndex.size(); ++ShaderIdx)
+        {
+            const Int8 LayoutIdx = ResourceLayoutIndex[ShaderIdx];
+            if (LayoutIdx < 0)
+                continue;
+
+            auto&       BindingMap = BindingMapPerStage[ShaderIdx];
+            const auto& ResLayout  = pLayouts[LayoutIdx];
+            for (Uint32 v = 0; v < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++v)
+            {
+                auto   VarType   = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(v);
+                Uint32 ResCount  = ResLayout.GetCbvSrvUavCount(VarType);
+                Uint32 SampCount = ResLayout.GetSamplerCount(VarType);
+
+                for (Uint32 i = 0; i < ResCount; ++i)
+                {
+                    const auto& Attribs = ResLayout.GetSrvCbvUav(VarType, i).Attribs;
+                    auto        Iter    = BindingMap.emplace(HashMapStringKey{Attribs.Name}, Attribs.BindPoint).first;
+                    VERIFY_EXPR(Iter->second == Attribs.BindPoint);
+                }
+                for (Uint32 i = 0; i < SampCount; ++i)
+                {
+                    const auto& Attribs = ResLayout.GetSampler(VarType, i).Attribs;
+                    auto        Iter    = BindingMap.emplace(HashMapStringKey{Attribs.Name}, Attribs.BindPoint).first;
+                    VERIFY_EXPR(Iter->second == Attribs.BindPoint);
+                }
+            }
+        }
+    };
+    ExtractResources(pResourceLayouts);
+    ExtractResources(pStaticLayouts);
+
+    for (size_t i = 0; i < RootSig.GetImmutableSamplerCount(); ++i)
+    {
+        const auto&  ImtblSmplr = RootSig.GetImmutableSamplers()[i];
+        const Uint32 ShaderIdx  = GetShaderTypePipelineIndex(ImtblSmplr.ShaderType, PIPELINE_TYPE_RAY_TRACING);
+        const Int8   LayoutIdx  = ResourceLayoutIndex[ShaderIdx];
+        if (LayoutIdx < 0)
+            continue;
+
+        auto& BindingMap = BindingMapPerStage[ShaderIdx];
+        BindingMap.emplace(HashMapStringKey{ImtblSmplr.Name.c_str()}, ImtblSmplr.ShaderRegister);
+    }
+
+    for (auto& SubObj : Subobjects)
+    {
+        if (SubObj.Type == D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY)
+        {
+            auto& DxilLib = *reinterpret_cast<D3D12_DXIL_LIBRARY_DESC*>(const_cast<void*>(SubObj.pDesc));
+            VERIFY_EXPR(DxilLib.NumExports == 1);
+
+            const auto& Export = *DxilLib.pExports;
+            EntryPoint.resize(wcslen(Export.ExportToRename));
+            for (size_t i = 0; i < EntryPoint.size(); ++i)
+                EntryPoint[i] = static_cast<char>(Export.ExportToRename[i]);
+
+            CComPtr<IDxcBlob> pBlob;
+            compiler->RemapResourceBinding(BindingMapPerStage, EntryPoint.c_str(), DxilLib.DXILLibrary.pShaderBytecode, DxilLib.DXILLibrary.BytecodeLength, &pBlob);
+
+            if (!pBlob)
+                LOG_ERROR_AND_THROW("Failed to remap resource bindings");
+
+            DxilLib.DXILLibrary.pShaderBytecode = pBlob->GetBufferPointer();
+            DxilLib.DXILLibrary.BytecodeLength  = pBlob->GetBufferSize();
+
+            ShaderBlobs.push_back(pBlob);
+        }
     }
 }
 
@@ -649,6 +735,11 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         D3D12_LOCAL_ROOT_SIGNATURE LocalRoot = {LocalRootSig.Create(pd3d12Device)};
         if (LocalRoot.pLocalRootSignature)
             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &LocalRoot});
+
+        std::vector<CComPtr<IDxcBlob>> ShaderBlobs;
+        RemapResourceBinding(pDeviceD3D12->GetDxCompiler(), m_RootSig, m_ResourceLayoutIndex,
+                             &m_pShaderResourceLayouts[0], &m_pShaderResourceLayouts[GetNumShaderStages()], GetNumShaderStages(),
+                             Subobjects, ShaderBlobs);
 
         D3D12_STATE_OBJECT_DESC RTPipelineDesc = {};
         RTPipelineDesc.Type                    = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;

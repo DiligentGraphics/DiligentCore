@@ -190,6 +190,7 @@ public:
                       Uint32                           _SamplerId,
                       SHADER_RESOURCE_VARIABLE_TYPE    _VariableType,
                       CachedResourceType               _ResType,
+                      Uint32                           _BindPoint,
                       Uint32                           _RootIndex,
                       Uint32                           _OffsetFromTableStart) noexcept :
             // clang-format off
@@ -198,7 +199,8 @@ public:
             {
                 _StringPool,
                 _Attribs,
-                _SamplerId
+                _SamplerId,
+                _BindPoint
             },
             ResourceType        {static_cast<Uint32>(_ResType)     },
             VariableType        {static_cast<Uint32>(_VariableType)},

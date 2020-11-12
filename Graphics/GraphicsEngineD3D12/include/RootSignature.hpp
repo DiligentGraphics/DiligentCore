@@ -321,6 +321,7 @@ public:
                               const D3DShaderResourceAttribs& ShaderResAttribs,
                               SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
                               D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
+                              Uint32&                         BindPoint,
                               Uint32&                         RootIndex,
                               Uint32&                         OffsetFromTableStart);
 
@@ -372,6 +373,27 @@ public:
     {
         return m_RootParams.GetHash();
     }
+
+    // Note: sizeof(m_ImmutableSamplers) == 56 (MS compiler, release x64)
+    struct ImmutableSamplerAttribs
+    {
+        ImmutableSamplerDesc    SamplerDesc;
+        UINT                    ShaderRegister   = static_cast<UINT>(-1);
+        UINT                    ArraySize        = 0;
+        UINT                    RegisterSpace    = 0;
+        D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
+        String                  Name;
+        SHADER_TYPE             ShaderType = SHADER_TYPE_UNKNOWN;
+
+        ImmutableSamplerAttribs() noexcept {}
+        ImmutableSamplerAttribs(const ImmutableSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility, SHADER_TYPE Stage) noexcept :
+            SamplerDesc(SamDesc),
+            ShaderVisibility(Visibility),
+            ShaderType{Stage}
+        {}
+    };
+    const ImmutableSamplerAttribs* GetImmutableSamplers() const { return m_ImmutableSamplers.data(); }
+    size_t                         GetImmutableSamplerCount() const { return m_ImmutableSamplers.size(); }
 
 private:
 #ifdef DILIGENT_DEBUG
@@ -478,23 +500,10 @@ private:
     // This array contains the same data for Sampler root table
     std::array<Uint8, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES* MAX_SHADERS_IN_PIPELINE> m_SamplerRootTablesMap = {};
 
+    std::array<Uint16, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> m_NumResources = {};
+
     RootParamsManager m_RootParams;
 
-    struct ImmutableSamplerAttribs
-    {
-        ImmutableSamplerDesc    SamplerDesc;
-        UINT                    ShaderRegister   = static_cast<UINT>(-1);
-        UINT                    ArraySize        = 0;
-        UINT                    RegisterSpace    = 0;
-        D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
-
-        ImmutableSamplerAttribs() noexcept {}
-        ImmutableSamplerAttribs(const ImmutableSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility) noexcept :
-            SamplerDesc(SamDesc),
-            ShaderVisibility(Visibility)
-        {}
-    };
-    // Note: sizeof(m_ImmutableSamplers) == 56 (MS compiler, release x64)
     std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> m_ImmutableSamplers;
 
     IMemoryAllocator& m_MemAllocator;

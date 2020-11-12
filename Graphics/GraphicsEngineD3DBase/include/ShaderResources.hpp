@@ -146,20 +146,20 @@ public:
 #endif
     }
 
-    D3DShaderResourceAttribs(StringPool& NamesPool, const D3DShaderResourceAttribs& rhs, Uint32 SamplerId) noexcept :
+    D3DShaderResourceAttribs(StringPool& NamesPool, const D3DShaderResourceAttribs& rhs, Uint32 _SamplerId, Uint32 _BindPoint) noexcept :
         // clang-format off
         D3DShaderResourceAttribs
         {
             NamesPool.CopyString(rhs.Name),
-            rhs.BindPoint,
+            _BindPoint,
             rhs.BindCount,
             rhs.GetInputType(),
             rhs.GetSRVDimension(),
-            SamplerId
+            _SamplerId
         }
     // clang-format on
     {
-        VERIFY(SamplerId == InvalidSamplerId || (GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER),
+        VERIFY(_SamplerId == InvalidSamplerId || (GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER),
                "Only texture SRV can be assigned a valid texture sampler");
     }
 
@@ -552,7 +552,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
             VERIFY(CurrSampler == GetNumSamplers(), "All samplers must be initialized before texture SRVs");
 
             auto  SamplerId  = CombinedSamplerSuffix != nullptr ? FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : D3DShaderResourceAttribs::InvalidSamplerId;
-            auto* pNewTexSRV = new (&GetTexSRV(CurrTexSRV)) D3DShaderResourceAttribs{ResourceNamesPool, TexAttribs, SamplerId};
+            auto* pNewTexSRV = new (&GetTexSRV(CurrTexSRV)) D3DShaderResourceAttribs{ResourceNamesPool, TexAttribs, SamplerId, TexAttribs.BindPoint};
             if (SamplerId != D3DShaderResourceAttribs::InvalidSamplerId)
             {
                 GetSampler(SamplerId).SetTexSRVId(CurrTexSRV);

@@ -42,6 +42,8 @@
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ShaderToolsCommon.hpp"
+#include "PlatformMisc.hpp"
+#include "GraphicsAccessories.hpp"
 
 #if D3D12_SUPPORTED
 #    include <d3d12shader.h>
@@ -92,6 +94,12 @@ public:
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) override final;
 
+    virtual bool RemapResourceBinding(const TBindingMapPerStage& BindingMapPerStage,
+                                      const char*                EntryPoint,
+                                      const void*                pBytecode,
+                                      size_t                     BytecodeSize,
+                                      IDxcBlob**                 ppByteCodeBlob) override final;
+
 private:
     DxcCreateInstanceProc Load()
     {
@@ -132,6 +140,10 @@ private:
 
         return m_pCreateInstance;
     }
+
+    bool        ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const;
+    bool        PatchDXIL(const TResourceBindingMap& ResourceMap, String& DXIL) const;
+    SHADER_TYPE GetEntryShaderType(const String& EntryPoint, const String& DXIL) const;
 
 private:
     DxcCreateInstanceProc  m_pCreateInstance = nullptr;
@@ -327,55 +339,60 @@ bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
     // validate and sign
     if (m_Target == DXCompilerTarget::Direct3D12)
     {
-        CComPtr<IDxcValidator> validator;
-        hr = CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
-        if (FAILED(hr))
-        {
-            LOG_ERROR("Failed to create  DXC Validator");
-            return false;
-        }
-
-        CComPtr<IDxcOperationResult> validationResult;
-        hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
-
-        if (validationResult == nullptr || FAILED(hr))
-        {
-            LOG_ERROR("Failed to validate shader bytecode");
-            return false;
-        }
-
-        HRESULT status = E_FAIL;
-        validationResult->GetStatus(&status);
-
-        if (SUCCEEDED(status))
-        {
-            CComPtr<IDxcBlob> validated;
-            hr = validationResult->GetResult(&validated);
-            if (FAILED(hr))
-                return false;
-
-            *Attribs.ppBlobOut = validated ? validated.Detach() : compiled.Detach();
-            return true;
-        }
-        else
-        {
-            CComPtr<IDxcBlobEncoding> validationOutput;
-            CComPtr<IDxcBlobEncoding> validationOutputUtf8;
-            validationResult->GetErrorBuffer(&validationOutput);
-            library->GetBlobAsUtf8(validationOutput, &validationOutputUtf8);
-
-            size_t      ValidationMsgLen = validationOutputUtf8 ? validationOutputUtf8->GetBufferSize() : 0;
-            const char* ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(validationOutputUtf8->GetBufferPointer()) : "";
-
-            LOG_ERROR("Shader validation failed: ", ValidationMsg);
-            return false;
-        }
+        return ValidateAndSign(CreateInstance, library, compiled, Attribs.ppBlobOut);
     }
 
     *Attribs.ppBlobOut = compiled.Detach();
     return true;
 }
 
+bool DXCompilerImpl::ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const
+{
+    HRESULT                hr;
+    CComPtr<IDxcValidator> validator;
+    hr = CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create  DXC Validator");
+        return false;
+    }
+
+    CComPtr<IDxcOperationResult> validationResult;
+    hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
+
+    if (validationResult == nullptr || FAILED(hr))
+    {
+        LOG_ERROR("Failed to validate shader bytecode");
+        return false;
+    }
+
+    HRESULT status = E_FAIL;
+    validationResult->GetStatus(&status);
+
+    if (SUCCEEDED(status))
+    {
+        CComPtr<IDxcBlob> validated;
+        hr = validationResult->GetResult(&validated);
+        if (FAILED(hr))
+            return false;
+
+        *ppBlobOut = validated ? validated.Detach() : compiled.Detach();
+        return true;
+    }
+    else
+    {
+        CComPtr<IDxcBlobEncoding> validationOutput;
+        CComPtr<IDxcBlobEncoding> validationOutputUtf8;
+        validationResult->GetErrorBuffer(&validationOutput);
+        library->GetBlobAsUtf8(validationOutput, &validationOutputUtf8);
+
+        size_t      ValidationMsgLen = validationOutputUtf8 ? validationOutputUtf8->GetBufferSize() : 0;
+        const char* ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(validationOutputUtf8->GetBufferPointer()) : "";
+
+        LOG_ERROR("Shader validation failed: ", ValidationMsg);
+        return false;
+    }
+}
 
 #if D3D12_SUPPORTED
 class ShaderReflectionViaLibraryReflection final : public ID3D12ShaderReflection
@@ -746,6 +763,212 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
         if (ppByteCodeBlob != nullptr)
             *ppByteCodeBlob = pDXIL.Detach();
     }
+}
+
+bool DXCompilerImpl::RemapResourceBinding(const TBindingMapPerStage& BindingMapPerStage,
+                                          const char*                EntryPoint,
+                                          const void*                pBytecode,
+                                          size_t                     BytecodeSize,
+                                          IDxcBlob**                 ppByteCodeBlob)
+{
+    auto CreateInstance = GetCreateInstaceProc();
+
+    if (CreateInstance == nullptr)
+    {
+        LOG_ERROR("Failed to load DXCompiler");
+        return false;
+    }
+
+    HRESULT              hr;
+    CComPtr<IDxcLibrary> library;
+    hr = CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC Library");
+        return false;
+    }
+
+    CComPtr<IDxcAssembler> assembler;
+    hr = CreateInstance(CLSID_DxcAssembler, IID_PPV_ARGS(&assembler));
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC assembler");
+        return false;
+    }
+
+    CComPtr<IDxcCompiler> compiler;
+    hr = CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC Compiler");
+        return false;
+    }
+
+    CComPtr<IDxcBlobEncoding> srcBytecode;
+    hr = library->CreateBlobWithEncodingFromPinned(pBytecode, static_cast<Uint32>(BytecodeSize), 0, &srcBytecode);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create bytecode blob");
+        return false;
+    }
+
+    CComPtr<IDxcBlobEncoding> disasm;
+    hr = compiler->Disassemble(srcBytecode, &disasm);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to disassemble bytecode");
+        return false;
+    }
+
+    String dxilAsm;
+    dxilAsm.assign(static_cast<const char*>(disasm->GetBufferPointer()), disasm->GetBufferSize());
+
+    SHADER_TYPE  shaderType  = GetEntryShaderType(EntryPoint, dxilAsm);
+    const Uint32 shaderIndex = GetShaderTypePipelineIndex(shaderType, PIPELINE_TYPE_RAY_TRACING);
+    const auto&  ResourceMap = BindingMapPerStage[shaderIndex];
+
+    if (!PatchDXIL(ResourceMap, dxilAsm))
+    {
+        LOG_ERROR("Failed to patch resource bindings");
+        return false;
+    }
+
+    CComPtr<IDxcBlobEncoding> patchedDisasm;
+    hr = library->CreateBlobWithEncodingFromPinned(dxilAsm.data(), static_cast<UINT32>(dxilAsm.size()), 0, &patchedDisasm);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create disassemble blob");
+        return false;
+    }
+
+    CComPtr<IDxcOperationResult> dxilResult;
+    hr = assembler->AssembleToContainer(patchedDisasm, &dxilResult);
+    if (FAILED(hr) || dxilResult == nullptr)
+    {
+        LOG_ERROR("Failed to create DXIL container");
+        return false;
+    }
+
+    HRESULT status = E_FAIL;
+    dxilResult->GetStatus(&status);
+
+    if (FAILED(status))
+    {
+        CComPtr<IDxcBlobEncoding> errorsBlob;
+        CComPtr<IDxcBlobEncoding> errorsBlobUtf8;
+        if (SUCCEEDED(dxilResult->GetErrorBuffer(&errorsBlob)) && SUCCEEDED(library->GetBlobAsUtf8(errorsBlob, &errorsBlobUtf8)))
+        {
+            String errorLog;
+            errorLog.assign(static_cast<const char*>(errorsBlobUtf8->GetBufferPointer()), errorsBlobUtf8->GetBufferSize());
+            LOG_ERROR_MESSAGE("Compilation message: ", errorLog);
+        }
+        else
+            LOG_ERROR("Failed to compile patched asm");
+
+        return false;
+    }
+
+    CComPtr<IDxcBlob> compiled;
+    hr = dxilResult->GetResult(static_cast<IDxcBlob**>(&compiled));
+    if (FAILED(hr))
+        return false;
+
+    return ValidateAndSign(CreateInstance, library, compiled, ppByteCodeBlob);
+}
+
+bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& DXIL) const
+{
+    String     ResName;
+    char       BindPointStr[256];
+    const char Zero[] = "0";
+
+    for (auto& ResPair : ResourceMap)
+    {
+        // [res name], i32 [space], i32 [bind point]
+
+        const auto& Name      = ResPair.first;
+        const auto& BindPoint = ResPair.second;
+
+        ResName = String{"!\""} + Name.GetStr() + "\", ";
+
+        size_t pos = DXIL.find(ResName);
+        if (pos == String::npos)
+            continue;
+
+        Uint32 Part      = 0;
+        size_t PartStart = pos + ResName.length();
+
+        for (size_t i = PartStart; i < DXIL.size(); ++i)
+        {
+            const char c = DXIL[i];
+            if (c == ' ')
+            {
+                const char* str = &DXIL[PartStart];
+
+                if (Part == 0 || Part == 2)
+                {
+                    VERIFY_EXPR(std::memcmp(str, "i32", i - PartStart) == 0);
+                }
+                else if (Part == 1) // space
+                {
+                    DXIL.replace(PartStart, i - PartStart - 1, Zero);
+                    i = PartStart + strlen(Zero) + 1;
+                }
+                else if (Part == 3) // bind point
+                {
+                    _itoa_s(BindPoint, BindPointStr, 10);
+                    DXIL.replace(PartStart, i - PartStart - 1, BindPointStr);
+                    i = PartStart + strlen(BindPointStr) + 1;
+                }
+                else
+                    break;
+
+                PartStart = i + 1;
+                ++Part;
+            }
+        }
+    }
+    return true;
+}
+
+template <Uint32 S>
+bool ReverseCmp(const char* lhsRev, const char (&rhs)[S])
+{
+    const Uint32 count = S - 1;
+    const char*  lhs   = lhsRev - count;
+    return std::memcmp(lhs, rhs, count) == 0;
+}
+
+SHADER_TYPE DXCompilerImpl::GetEntryShaderType(const String& EntryPoint, const String& DXIL) const
+{
+    const String Pattern              = "void " + EntryPoint + "(";
+    const char   ShaderTypeStart[]    = "[shader(\\22";
+    const char   ShaderTypeEnd[]      = "\\22)]";
+    const char   RayGenShader[]       = "raygeneration";
+    const char   MissShader[]         = "miss";
+    const char   AnyHitShader[]       = "anyhit";
+    const char   ClosestHitShader[]   = "closesthit";
+    const char   IntersectionShader[] = "intersection";
+    const char   CallableShader[]     = "callable";
+
+    size_t pos = DXIL.find(Pattern);
+    if (pos == String::npos)
+        return SHADER_TYPE_UNKNOWN;
+
+    size_t endPos = DXIL.rfind(ShaderTypeEnd, pos);
+    if (endPos == String::npos)
+        return SHADER_TYPE_UNKNOWN;
+
+    const char* str = &DXIL[endPos];
+    // clang-format off
+    if (ReverseCmp(str, RayGenShader      )) return SHADER_TYPE_RAY_GEN;
+    if (ReverseCmp(str, MissShader        )) return SHADER_TYPE_RAY_MISS;
+    if (ReverseCmp(str, AnyHitShader      )) return SHADER_TYPE_RAY_ANY_HIT;
+    if (ReverseCmp(str, ClosestHitShader  )) return SHADER_TYPE_RAY_CLOSEST_HIT;
+    if (ReverseCmp(str, IntersectionShader)) return SHADER_TYPE_RAY_INTERSECTION;
+    if (ReverseCmp(str, CallableShader    )) return SHADER_TYPE_CALLABLE;
+    // clang-format on
+    return SHADER_TYPE_UNKNOWN;
 }
 
 } // namespace Diligent
