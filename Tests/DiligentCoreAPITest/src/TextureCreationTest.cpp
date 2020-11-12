@@ -46,6 +46,10 @@
 #    include "Vulkan/CreateObjFromNativeResVK.hpp"
 #endif
 
+#if METAL_SUPPORTED
+#    include "Metal/CreateObjFromNativeResMtl.hpp"
+#endif
+
 #include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
@@ -111,6 +115,12 @@ protected:
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResVK(pDevice));
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResMtl(pDevice));
                 break;
 #endif
 
