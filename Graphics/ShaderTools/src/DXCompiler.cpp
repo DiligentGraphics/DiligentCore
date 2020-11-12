@@ -771,6 +771,7 @@ bool DXCompilerImpl::RemapResourceBinding(const TBindingMapPerStage& BindingMapP
                                           size_t                     BytecodeSize,
                                           IDxcBlob**                 ppByteCodeBlob)
 {
+#if D3D12_SUPPORTED
     auto CreateInstance = GetCreateInstaceProc();
 
     if (CreateInstance == nullptr)
@@ -874,13 +875,28 @@ bool DXCompilerImpl::RemapResourceBinding(const TBindingMapPerStage& BindingMapP
         return false;
 
     return ValidateAndSign(CreateInstance, library, compiled, ppByteCodeBlob);
+#else
+
+    return false;
+#endif // D3D12_SUPPORTED
 }
 
 bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& DXIL) const
 {
     String     ResName;
-    char       BindPointStr[256];
-    const char Zero[] = "0";
+    char       BindPointStr[32];
+    const char Zero[]   = "0";
+    const auto IntToStr = [&BindPointStr](int val) //
+    {
+        char* str = &BindPointStr[_countof(BindPointStr) - 1];
+        *(str--)  = 0;
+        do
+        {
+            *(str--) = "0123456789"[val % 10];
+            val /= 10;
+        } while (val);
+        return ++str;
+    };
 
     for (auto& ResPair : ResourceMap)
     {
@@ -903,10 +919,9 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
             const char c = DXIL[i];
             if (c == ' ')
             {
-                const char* str = &DXIL[PartStart];
-
                 if (Part == 0 || Part == 2)
                 {
+                    const char* str = &DXIL[PartStart];
                     VERIFY_EXPR(std::memcmp(str, "i32", i - PartStart) == 0);
                 }
                 else if (Part == 1) // space
@@ -916,9 +931,9 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
                 }
                 else if (Part == 3) // bind point
                 {
-                    _itoa_s(BindPoint, BindPointStr, 10);
-                    DXIL.replace(PartStart, i - PartStart - 1, BindPointStr);
-                    i = PartStart + strlen(BindPointStr) + 1;
+                    const char* str = IntToStr(BindPoint);
+                    DXIL.replace(PartStart, i - PartStart - 1, str);
+                    i = PartStart + strlen(str) + 1;
                 }
                 else
                     break;
@@ -931,13 +946,16 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
     return true;
 }
 
+namespace
+{
 template <Uint32 S>
-bool ReverseCmp(const char* lhsRev, const char (&rhs)[S])
+inline bool ReverseCmp(const char* lhsRev, const char (&rhs)[S])
 {
     const Uint32 count = S - 1;
     const char*  lhs   = lhsRev - count;
     return std::memcmp(lhs, rhs, count) == 0;
 }
+} // namespace
 
 SHADER_TYPE DXCompilerImpl::GetEntryShaderType(const String& EntryPoint, const String& DXIL) const
 {
