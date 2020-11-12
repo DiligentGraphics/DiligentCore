@@ -452,6 +452,8 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
 
         CHECK_BUILD_BLAS_ATTRIBS(box.BoxStride >= BoxSize,
                                  "pBoxData[", i, "].BoxStride (", box.BoxStride, ") must be at least ", BoxSize, " bytes");
+        CHECK_BUILD_BLAS_ATTRIBS(box.BoxStride % 8 == 0,
+                                 "pBoxData[", i, "].BoxStride (", box.BoxStride, ") must be aligned to 8 bytes");
 
         CHECK_BUILD_BLAS_ATTRIBS(box.pBoxBuffer != nullptr, "pBoxData[", i, "].pBoxBuffer must not be null");
 

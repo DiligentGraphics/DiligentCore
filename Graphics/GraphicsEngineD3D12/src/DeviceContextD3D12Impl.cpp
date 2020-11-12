@@ -2323,6 +2323,9 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
             d3d12Tris.VertexFormat               = TypeToRayTracingVertexFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount);
             VERIFY(d3d12Tris.VertexFormat != DXGI_FORMAT_UNKNOWN, "Unsupported combination of vertex value type and component count");
 
+            VERIFY(d3d12Tris.VertexBuffer.StartAddress % GetValueSize(TriDesc.VertexValueType) == 0, "Vertex start address is not properly aligned");
+            VERIFY(d3d12Tris.VertexBuffer.StrideInBytes % GetValueSize(TriDesc.VertexValueType) == 0, "Vertex stride is not properly aligned");
+
             TransitionOrVerifyBufferState(CmdCtx, *pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
 
             if (SrcTris.pIndexBuffer)
@@ -2333,6 +2336,8 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
                 d3d12Tris.IndexFormat = ValueTypeToIndexType(TriDesc.IndexType);
                 d3d12Tris.IndexBuffer = pIB->GetGPUAddress() + SrcTris.IndexOffset;
                 d3d12Tris.IndexCount  = SrcTris.PrimitiveCount * 3;
+
+                VERIFY(d3d12Tris.IndexBuffer % GetValueSize(TriDesc.IndexType) == 0, "Index start address is not properly aligned");
 
                 TransitionOrVerifyBufferState(CmdCtx, *pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
             }
@@ -2347,7 +2352,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
                 auto* const pTB        = ValidatedCast<BufferD3D12Impl>(SrcTris.pTransformBuffer);
                 d3d12Tris.Transform3x4 = pTB->GetGPUAddress() + SrcTris.TransformBufferOffset;
 
-                VERIFY_EXPR(d3d12Tris.Transform3x4 % D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT == 0);
+                VERIFY(d3d12Tris.Transform3x4 % D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT == 0, "Transform start address is not properly aligned");
 
                 TransitionOrVerifyBufferState(CmdCtx, *pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
             }
@@ -2386,6 +2391,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
             d3d12AABs.AABBs.StrideInBytes = SrcBoxes.BoxStride;
 
             DEV_CHECK_ERR(d3d12AABs.AABBs.StartAddress % D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT == 0, "AABB start address is not properly aligned");
+            DEV_CHECK_ERR(d3d12AABs.AABBs.StrideInBytes % D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT == 0, "AABB stride is not properly aligned");
 
             TransitionOrVerifyBufferState(CmdCtx, *pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }

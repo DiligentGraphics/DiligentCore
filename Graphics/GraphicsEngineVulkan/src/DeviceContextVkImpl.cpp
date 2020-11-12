@@ -2917,6 +2917,8 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             vkAABBs.stride             = SrcBoxes.BoxStride;
             vkAABBs.data.deviceAddress = pBB->GetVkDeviceAddress() + SrcBoxes.BoxOffset;
 
+            VERIFY(vkAABBs.data.deviceAddress % 8 == 0, "AABB start address is not properly aligned");
+
             TransitionOrVerifyBufferState(*pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
 
             off.firstVertex     = 0;
@@ -3035,6 +3037,8 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
     vkASInst.pNext              = nullptr;
     vkASInst.arrayOfPointers    = VK_FALSE;
     vkASInst.data.deviceAddress = pInstancesVk->GetVkDeviceAddress() + Attribs.InstanceBufferOffset;
+
+    VERIFY(vkASInst.data.deviceAddress % 16 == 0, "Instance data address is not properly aligned");
 
     vkASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
     vkASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;                    // type must be compatible with create info
