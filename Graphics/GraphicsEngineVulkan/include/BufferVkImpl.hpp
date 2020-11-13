@@ -127,6 +127,8 @@ private:
     Uint32       m_DynamicOffsetAlignment    = 0;
     VkDeviceSize m_BufferMemoryAlignedOffset = 0;
 
+    // TODO (assiduous): improve cache performance, move dynamic allocations to
+    // device context.
     std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation>> m_DynamicAllocations;
 
     VulkanUtilities::BufferWrapper          m_VulkanBuffer;
