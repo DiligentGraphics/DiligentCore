@@ -531,6 +531,7 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
                "Only the lower 24 bits are used");
 
         CHECK_BUILD_TLAS_ATTRIBS(Inst.InstanceName != nullptr, "pInstances[", i, "].InstanceName must not be null");
+        CHECK_BUILD_TLAS_ATTRIBS(Inst.pBLAS != nullptr, "pInstances[", i, "].pBLAS must not be null");
 
         if (Attribs.Update)
         {

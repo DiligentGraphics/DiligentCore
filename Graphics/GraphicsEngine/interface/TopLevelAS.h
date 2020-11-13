@@ -75,12 +75,6 @@ DILIGENT_TYPED_ENUM(HIT_GROUP_BINDING_MODE, Uint8)
     /// Each geometry can have unique hit shader group.
     /// See IShaderBindingTable::BindHitGroup().
     HIT_GROUP_BINDING_MODE_PER_GEOMETRY = 0,
-        
-    /// Same as HIT_GROUP_BINDING_MODE_PER_GEOMETRY but space reserved for maximum number of geometries in instance.
-    /// This may be useful if you update instance with new BLAS with different number of geometries but with
-    /// same maximum geometry count that defined in BottomLevelASDesc::TriangleCount or BottomLevelASDesc::BoxCount.
-    /// See IShaderBindingTable::BindHitGroup().
-    HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY,
 
     /// Reserve space for each instance in TLAS so each instance can have a unique hit shader group.
     /// In this mode SBT buffer will use less memory. See IShaderBindingTable::BindHitGroups().

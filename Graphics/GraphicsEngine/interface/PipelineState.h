@@ -592,15 +592,6 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///             into account vertex shader input layout, number of outputs, etc.
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineState* pPSO) CONST PURE;
-    
-
-    /// Returns index of shader group that is used by shader binding table.
-    /// This method must only be called for a ray tracing pipeline.
-
-    /// \param [in] Name - Shader group name.
-    /// \return Shader group index or INVALID_INDEX if group does not exist.
-    VIRTUAL Uint32 METHOD(GetShaderGroupIndex)(THIS_
-                                               const char* Name) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -620,7 +611,6 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_GetStaticVariableByIndex(This, ...)    CALL_IFACE_METHOD(PipelineState, GetStaticVariableByIndex,    This, __VA_ARGS__)
 #    define IPipelineState_CreateShaderResourceBinding(This, ...) CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding, This, __VA_ARGS__)
 #    define IPipelineState_IsCompatibleWith(This, ...)            CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,            This, __VA_ARGS__)
-#    define IPipelineState_GetShaderGroupIndex(This, ...)         CALL_IFACE_METHOD(PipelineState, GetShaderGroupIndex,         This, __VA_ARGS__)
 
 // clang-format on
 

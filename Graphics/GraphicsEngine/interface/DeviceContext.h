@@ -1001,7 +1001,6 @@ struct TLASBuildInstanceData
     
     /// Bottom-level AS that represents instance geometry.
     /// Once built, TLAS will hold strong reference to pBLAS until next build or copy operation.
-    /// Can be null to disable instance.
     /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*           pBLAS           DEFAULT_INITIALIZER(nullptr);
     
@@ -1052,7 +1051,7 @@ struct BuildTLASAttribs
     /// A pointer to an array of InstanceCount TLASBuildInstanceData structures that contain instance data.
     /// If Update is true:
     ///     - Any instance data can be changed.
-    ///     - To disable an instance, set pBLAS to null.
+    ///     - To disable an instance set TLASBuildInstanceData::Mask to zero or set empty TLASBuildInstanceData::BLAS to pBLAS.
     TLASBuildInstanceData const*    pInstances                    DEFAULT_INITIALIZER(nullptr);
     
     /// The number of instances.

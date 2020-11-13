@@ -205,20 +205,6 @@ public:
         return m_pRayTracingPipelineData->Desc;
     }
 
-    virtual Uint32 DILIGENT_CALL_TYPE GetShaderGroupIndex(const char* Name) const override final
-    {
-        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
-        VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
-        VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
-
-        auto iter = m_pRayTracingPipelineData->NameToGroupIndex.find(Name);
-        if (iter != m_pRayTracingPipelineData->NameToGroupIndex.end())
-            return iter->second;
-
-        UNEXPECTED("Can't find shader group with specified name");
-        return INVALID_INDEX;
-    }
-
     inline void CopyShaderHandle(const char* Name, void* pData, size_t DataSize) const
     {
         VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());

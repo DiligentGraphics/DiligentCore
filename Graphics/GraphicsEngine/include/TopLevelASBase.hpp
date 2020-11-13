@@ -122,7 +122,7 @@ public:
                 CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);
 
 #ifdef DILIGENT_DEVELOPMENT
-                Desc.Version = Desc.pBLAS ? Desc.pBLAS->GetVersion() : ~0u;
+                Desc.Version = Desc.pBLAS->GetVersion();
 #endif
                 bool IsUniqueName = this->m_Instances.emplace(NameCopy, Desc).second;
                 if (!IsUniqueName)
@@ -177,9 +177,9 @@ public:
                 return false;
             }
 
-            auto&       Desc      = Iter->second;
-            const auto  PrevIndex = Desc.ContributionToHitGroupIndex;
-            const auto* pPrevBLAS = Desc.pBLAS.template RawPtr<IBottomLevelAS>();
+            auto&      Desc      = Iter->second;
+            const auto PrevIndex = Desc.ContributionToHitGroupIndex;
+            const auto pPrevBLAS = Desc.pBLAS;
 
             Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(Inst.pBLAS);
             Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
@@ -187,10 +187,9 @@ public:
             CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);
 
 #ifdef DILIGENT_DEVELOPMENT
-            Changed      = Changed || (pPrevBLAS != Inst.pBLAS);
-            Changed      = Changed || (Desc.pBLAS ? Desc.Version != Desc.pBLAS->GetVersion() : false);
+            Changed      = Changed || (pPrevBLAS != Desc.pBLAS);
             Changed      = Changed || (PrevIndex != Desc.ContributionToHitGroupIndex);
-            Desc.Version = Desc.pBLAS ? Desc.pBLAS->GetVersion() : ~0u;
+            Desc.Version = Desc.pBLAS->GetVersion();
 #endif
         }
 
@@ -307,9 +306,6 @@ public:
         {
             const InstanceDesc& Inst = NameAndInst.second;
 
-            if (Inst.pBLAS == nullptr)
-                continue;
-
             if (Inst.Version != Inst.pBLAS->GetVersion())
             {
                 LOG_ERROR_MESSAGE("Instance with name ('", NameAndInst.first.GetStr(), "') has BLAS with name ('", Inst.pBLAS->GetDesc().Name,
@@ -356,8 +352,7 @@ private:
             switch (BindingMode)
             {
                 // clang-format off
-                case HIT_GROUP_BINDING_MODE_PER_GEOMETRY:     InstanceOffset += Desc.pBLAS ? Desc.pBLAS->GetActualGeometryCount() * HitGroupStride : 0;           break;
-                case HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY: InstanceOffset += Desc.pBLAS ? Desc.pBLAS->GetMaxGeometryCount() * HitGroupStride : 0;              break;
+                case HIT_GROUP_BINDING_MODE_PER_GEOMETRY:     InstanceOffset += Desc.pBLAS->GetActualGeometryCount() * HitGroupStride;                            break;
                 case HIT_GROUP_BINDING_MODE_PER_INSTANCE:     InstanceOffset += HitGroupStride;                                                                   break;
                 case HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT: /* InstanceOffset is a constant */                                                                  break;
                 case HIT_GROUP_BINDING_MODE_USER_DEFINED:     UNEXPECTED("TLAS_INSTANCE_OFFSET_AUTO is not compatible with HIT_GROUP_BINDING_MODE_USER_DEFINED"); break;

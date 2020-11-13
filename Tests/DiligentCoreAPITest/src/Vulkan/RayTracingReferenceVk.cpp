@@ -150,7 +150,7 @@ struct RTGroupsHelper
     void SetStage(Uint32 StageIndex, SHADER_TYPE ShaderType, const String& Source)
     {
         auto* pEnv                = TestingEnvironmentVk::GetInstance();
-        Modules[StageIndex]       = pEnv->CreateShaderModule(ShaderType, Source);
+        Modules[StageIndex]       = pEnv->CreateShaderModule(ShaderType, (pEnv->IsUsedRayTracingNV() ? GLSL::RayTracingTest_NVviaKHRHeader : GLSL::RayTracingTest_Header) + Source);
         Stages[StageIndex].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         Stages[StageIndex].module = Modules[StageIndex];
         Stages[StageIndex].pName  = "main";
@@ -227,12 +227,34 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
     Ctx.vkRenderTarget     = pTestingSwapChainVk->GetVkRenderTargetImage();
     Ctx.vkRenderTargetView = pTestingSwapChainVk->GetVkRenderTargetImageView();
 
-    VkPhysicalDeviceProperties2 Props2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-    Props2.pNext                       = &Ctx.RayTracingProps;
-    Ctx.RayTracingProps.sType          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
-    vkGetPhysicalDeviceProperties2KHR(pEnv->GetVkPhysicalDevice(), &Props2);
+    // add emulation via NV extension
+    if (pEnv->IsUsedRayTracingNV())
+    {
+        VkPhysicalDeviceProperties2            Props2            = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+        VkPhysicalDeviceRayTracingPropertiesNV RayTracingNVProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV};
 
-    Ctx.DeviceLimits = Props2.properties.limits;
+        Props2.pNext = &RayTracingNVProps;
+        vkGetPhysicalDeviceProperties2KHR(pEnv->GetVkPhysicalDevice(), &Props2);
+        Ctx.DeviceLimits = Props2.properties.limits;
+
+        Ctx.RayTracingProps.shaderGroupHandleSize                  = RayTracingNVProps.shaderGroupHandleSize;
+        Ctx.RayTracingProps.maxRecursionDepth                      = RayTracingNVProps.maxRecursionDepth;
+        Ctx.RayTracingProps.maxShaderGroupStride                   = RayTracingNVProps.maxShaderGroupStride;
+        Ctx.RayTracingProps.shaderGroupBaseAlignment               = RayTracingNVProps.shaderGroupBaseAlignment;
+        Ctx.RayTracingProps.maxGeometryCount                       = RayTracingNVProps.maxGeometryCount;
+        Ctx.RayTracingProps.maxInstanceCount                       = RayTracingNVProps.maxInstanceCount;
+        Ctx.RayTracingProps.maxPrimitiveCount                      = RayTracingNVProps.maxTriangleCount;
+        Ctx.RayTracingProps.maxDescriptorSetAccelerationStructures = RayTracingNVProps.maxDescriptorSetAccelerationStructures;
+        Ctx.RayTracingProps.shaderGroupHandleCaptureReplaySize     = 0;
+    }
+    else
+    {
+        VkPhysicalDeviceProperties2 Props2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+        Props2.pNext                       = &Ctx.RayTracingProps;
+        Ctx.RayTracingProps.sType          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
+        vkGetPhysicalDeviceProperties2KHR(pEnv->GetVkPhysicalDevice(), &Props2);
+        Ctx.DeviceLimits = Props2.properties.limits;
+    }
 
     // Create ray tracing pipeline
     {
@@ -1308,7 +1330,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         GeometryCI[2].allowsTransforms  = VK_FALSE;
 
         CreateBLAS(Ctx, GeometryCI, _countof(GeometryCI), Ctx.BLAS);
-        CreateTLAS(Ctx, 1, Ctx.TLAS);
+        CreateTLAS(Ctx, InstanceCount, Ctx.TLAS);
         CreateRTBuffers(Ctx, sizeof(Vertices), sizeof(Indices), InstanceCount, 1, HitGroupCount, TestingConstants::MultiGeometry::ShaderRecordSize);
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkVertexBuffer, 0, sizeof(Vertices), Vertices);

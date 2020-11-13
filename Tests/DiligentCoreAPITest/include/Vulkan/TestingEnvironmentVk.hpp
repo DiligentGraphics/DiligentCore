@@ -78,6 +78,11 @@ public:
         return m_vkPhysicalDevice;
     }
 
+    bool IsUsedRayTracingNV() const
+    {
+        return m_UsedRayTracingNV;
+    }
+
     VkShaderModule CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource);
 
     static VkRenderPassCreateInfo GetRenderPassCreateInfo(
@@ -111,6 +116,8 @@ private:
     VkFence          m_vkFence          = VK_NULL_HANDLE;
 
     VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
+
+    bool m_UsedRayTracingNV = false;
 };
 
 } // namespace Testing

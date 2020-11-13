@@ -216,11 +216,6 @@ public:
         return m_GeometryCount;
     }
 
-    Uint32 GetMaxGeometryCount() const
-    {
-        return this->m_Desc.TriangleCount + this->m_Desc.BoxCount;
-    }
-
 private:
     void CopyGeometryDescriptionUnsafe(const BottomLevelASDesc& SrcDesc, const BLASNameToIndex* pSrcNameToIndex) noexcept(false)
     {

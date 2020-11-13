@@ -45,8 +45,6 @@ void TestPipelineState_CInterface(IPipelineState* pPSO)
 
     IPipelineState_CreateShaderResourceBinding(pPSO, (IShaderResourceBinding**)NULL, true);
 
-    bool   Compatible = IPipelineState_IsCompatibleWith(pPSO, (IPipelineState*)NULL);
-    Uint32 Index      = IPipelineState_GetShaderGroupIndex(pPSO, "Group name");
+    bool Compatible = IPipelineState_IsCompatibleWith(pPSO, (IPipelineState*)NULL);
     (void)Compatible;
-    (void)Index;
 }

@@ -38,6 +38,8 @@
 #include "InlineShaders/RayTracingTestHLSL.h"
 #include "RayTracingTestConstants.hpp"
 
+#include "Vulkan/TestingEnvironmentVk.hpp"
+
 namespace Diligent
 {
 
@@ -68,13 +70,18 @@ using namespace Diligent::Testing;
 namespace
 {
 
+bool EnableShuffling = true;
+
 template <typename It>
 void Shuffle(It first, It last)
 {
-    std::random_device rd;
-    std::mt19937       g{rd()};
+    if (EnableShuffling)
+    {
+        std::random_device rd;
+        std::mt19937       g{rd()};
 
-    std::shuffle(first, last, g);
+        std::shuffle(first, last, g);
+    }
 }
 
 void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTriangleData* pTriangles, Uint32 TriangleCount, bool Update, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
@@ -118,7 +125,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTrian
     ASDesc.TriangleCount = static_cast<Uint32>(TriangleInfos.size());
 
     pDevice->CreateBLAS(ASDesc, &pBLAS);
-    VERIFY_EXPR(pBLAS != nullptr);
+    ASSERT_NE(pBLAS, nullptr);
 
     // Create scratch buffer
     RefCntAutoPtr<IBuffer> ScratchBuffer;
@@ -130,7 +137,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTrian
     BuffDesc.uiSizeInBytes = std::max(pBLAS->GetScratchBufferSizes().Build, pBLAS->GetScratchBufferSizes().Update);
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &ScratchBuffer);
-    VERIFY_EXPR(ScratchBuffer != nullptr);
+    ASSERT_NE(ScratchBuffer, nullptr);
 
     // Build
     BuildBLASAttribs Attribs;
@@ -176,7 +183,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBound
     ASDesc.BoxCount = static_cast<Uint32>(BoxInfos.size());
 
     pDevice->CreateBLAS(ASDesc, &pBLAS);
-    VERIFY_EXPR(pBLAS != nullptr);
+    ASSERT_NE(pBLAS, nullptr);
 
     // Create scratch buffer
     RefCntAutoPtr<IBuffer> ScratchBuffer;
@@ -188,7 +195,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBound
     BuffDesc.uiSizeInBytes = std::max(pBLAS->GetScratchBufferSizes().Build, pBLAS->GetScratchBufferSizes().Update);
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &ScratchBuffer);
-    VERIFY_EXPR(ScratchBuffer != nullptr);
+    ASSERT_NE(ScratchBuffer, nullptr);
 
     // Build
     BuildBLASAttribs Attribs;
@@ -220,7 +227,7 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInsta
     TLASDesc.Flags            = RAYTRACING_BUILD_AS_ALLOW_COMPACTION | (Update ? RAYTRACING_BUILD_AS_ALLOW_UPDATE : RAYTRACING_BUILD_AS_NONE);
 
     pDevice->CreateTLAS(TLASDesc, &pTLAS);
-    VERIFY_EXPR(pTLAS != nullptr);
+    ASSERT_NE(pTLAS, nullptr);
 
     // Create scratch buffer
     RefCntAutoPtr<IBuffer> ScratchBuffer;
@@ -232,7 +239,7 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInsta
     BuffDesc.uiSizeInBytes = std::max(pTLAS->GetScratchBufferSizes().Build, pTLAS->GetScratchBufferSizes().Update);
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &ScratchBuffer);
-    VERIFY_EXPR(ScratchBuffer != nullptr);
+    ASSERT_NE(ScratchBuffer, nullptr);
 
     // create instance buffer
     RefCntAutoPtr<IBuffer> InstanceBuffer;
@@ -243,7 +250,7 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInsta
     BuffDesc.uiSizeInBytes = TLAS_INSTANCE_DATA_SIZE * InstanceCount;
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &InstanceBuffer);
-    VERIFY_EXPR(InstanceBuffer != nullptr);
+    ASSERT_NE(InstanceBuffer, nullptr);
 
     Shuffle(pInstances, pInstances + InstanceCount);
 
@@ -350,7 +357,7 @@ void ASCompaction(IRenderDevice*             pDevice,
     BuffDesc.uiSizeInBytes = sizeof(Uint64);
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &pCompactedSizeBuffer);
-    VERIFY_EXPR(pCompactedSizeBuffer != nullptr);
+    ASSERT_NE(pCompactedSizeBuffer, nullptr);
 
     BuffDesc.Name           = "Compacted size readback Buffer";
     BuffDesc.Usage          = USAGE_STAGING;
@@ -359,7 +366,7 @@ void ASCompaction(IRenderDevice*             pDevice,
     BuffDesc.CPUAccessFlags = CPU_ACCESS_READ;
 
     pDevice->CreateBuffer(BuffDesc, nullptr, &pReadbackBuffer);
-    VERIFY_EXPR(pReadbackBuffer != nullptr);
+    ASSERT_NE(pReadbackBuffer, nullptr);
 
     WriteASCompactedSizeAttribs Attribs;
     Attribs.*ASField                = pSrcAS;
@@ -390,7 +397,7 @@ void ASCompaction(IRenderDevice*             pDevice,
     }
 
     (pDevice->*CreateASFn)(ASDesc, &pDstAS);
-    VERIFY_EXPR(pDstAS != nullptr);
+    ASSERT_NE(pDstAS, nullptr);
 
     CopyASAttribsType CopyAttribs;
     CopyAttribs.pSrc              = pSrcAS;
@@ -454,7 +461,7 @@ void BLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pCont
                 ASDesc.pBoxes = BoxInfos.data();
             }
             pDevice->CreateBLAS(ASDesc, &pDstBLAS);
-            VERIFY_EXPR(pDstBLAS != nullptr);
+            ASSERT_NE(pDstBLAS, nullptr);
 
             CopyBLASAttribs CopyAttribs;
             CopyAttribs.pSrc              = pSrcBLAS;
@@ -502,7 +509,7 @@ void TLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pCont
             TopLevelASDesc ASDesc = pSrcTLAS->GetDesc();
             ASDesc.Name           = "TLAS copy";
             pDevice->CreateTLAS(ASDesc, &pDstTLAS);
-            VERIFY_EXPR(pDstTLAS != nullptr);
+            ASSERT_NE(pDstTLAS, nullptr);
 
             CopyTLASAttribs CopyAttribs;
             CopyAttribs.pSrc              = pSrcTLAS;
@@ -547,7 +554,7 @@ std::string TestIdToString(const testing::TestParamInfo<int>& info)
         case UpdateBLAS:                  name = "updateBLAS";                  break;
         case UpdateTLAS:                  name = "updateTLAS";                  break;
         default:                          name = std::to_string(info.param); UNEXPECTED("unsupported TestId");
-            // clang-format off
+            // clang-format on
     }
     return name;
 }
@@ -576,6 +583,11 @@ TEST_P(RT1, TriangleClosestHitShader)
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
+    }
+    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        auto* pEnvVk    = TestingEnvironmentVk::GetInstance();
+        EnableShuffling = !pEnvVk->IsUsedRayTracingNV();
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -627,7 +639,7 @@ TEST_P(RT1, TriangleClosestHitShader)
         ShaderCI.Desc.Name       = "Ray tracing RG";
         ShaderCI.Source          = HLSL::RayTracingTest1_RG.c_str();
         pDevice->CreateShader(ShaderCI, &pRG);
-        VERIFY_EXPR(pRG != nullptr);
+        ASSERT_NE(pRG, nullptr);
     }
 
     // Create ray miss shader.
@@ -637,7 +649,7 @@ TEST_P(RT1, TriangleClosestHitShader)
         ShaderCI.Desc.Name       = "Miss shader";
         ShaderCI.Source          = HLSL::RayTracingTest1_RM.c_str();
         pDevice->CreateShader(ShaderCI, &pRMiss);
-        VERIFY_EXPR(pRMiss != nullptr);
+        ASSERT_NE(pRMiss, nullptr);
     }
 
     // Create ray closest hit shader.
@@ -647,7 +659,7 @@ TEST_P(RT1, TriangleClosestHitShader)
         ShaderCI.Desc.Name       = "Ray closest hit shader";
         ShaderCI.Source          = HLSL::RayTracingTest1_RCH.c_str();
         pDevice->CreateShader(ShaderCI, &pClosestHit);
-        VERIFY_EXPR(pClosestHit != nullptr);
+        ASSERT_NE(pClosestHit, nullptr);
     }
 
     const RayTracingGeneralShaderGroup     GeneralShaders[]     = {{"Main", pRG}, {"Miss", pRMiss}};
@@ -663,11 +675,11 @@ TEST_P(RT1, TriangleClosestHitShader)
 
     RefCntAutoPtr<IPipelineState> pRayTracingPSO;
     pDevice->CreateRayTracingPipelineState(PSOCreateInfo, &pRayTracingPSO);
-    VERIFY_EXPR(pRayTracingPSO != nullptr);
+    ASSERT_NE(pRayTracingPSO, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pRayTracingSRB;
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
-    VERIFY_EXPR(pRayTracingSRB != nullptr);
+    ASSERT_NE(pRayTracingSRB, nullptr);
 
     const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
 
@@ -684,7 +696,7 @@ TEST_P(RT1, TriangleClosestHitShader)
         BufData.DataSize = sizeof(Vertices);
 
         pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
-        VERIFY_EXPR(pVertexBuffer != nullptr);
+        ASSERT_NE(pVertexBuffer, nullptr);
     }
 
     BLASBuildTriangleData Triangle;
@@ -720,7 +732,7 @@ TEST_P(RT1, TriangleClosestHitShader)
 
     RefCntAutoPtr<IShaderBindingTable> pSBT;
     pDevice->CreateSBT(SBTDesc, &pSBT);
-    VERIFY_EXPR(pSBT != nullptr);
+    ASSERT_NE(pSBT, nullptr);
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
@@ -758,6 +770,11 @@ TEST_P(RT2, TriangleAnyHitShader)
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
+    }
+    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        auto* pEnvVk    = TestingEnvironmentVk::GetInstance();
+        EnableShuffling = !pEnvVk->IsUsedRayTracingNV();
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -809,7 +826,7 @@ TEST_P(RT2, TriangleAnyHitShader)
         ShaderCI.Desc.Name       = "Ray tracing RG";
         ShaderCI.Source          = HLSL::RayTracingTest2_RG.c_str();
         pDevice->CreateShader(ShaderCI, &pRG);
-        VERIFY_EXPR(pRG != nullptr);
+        ASSERT_NE(pRG, nullptr);
     }
 
     // Create ray miss shader.
@@ -819,7 +836,7 @@ TEST_P(RT2, TriangleAnyHitShader)
         ShaderCI.Desc.Name       = "Miss shader";
         ShaderCI.Source          = HLSL::RayTracingTest2_RM.c_str();
         pDevice->CreateShader(ShaderCI, &pRMiss);
-        VERIFY_EXPR(pRMiss != nullptr);
+        ASSERT_NE(pRMiss, nullptr);
     }
 
     // Create ray closest hit shader.
@@ -829,7 +846,7 @@ TEST_P(RT2, TriangleAnyHitShader)
         ShaderCI.Desc.Name       = "Ray closest hit shader";
         ShaderCI.Source          = HLSL::RayTracingTest2_RCH.c_str();
         pDevice->CreateShader(ShaderCI, &pClosestHit);
-        VERIFY_EXPR(pClosestHit != nullptr);
+        ASSERT_NE(pClosestHit, nullptr);
     }
 
     // Create ray any hit shader.
@@ -839,7 +856,7 @@ TEST_P(RT2, TriangleAnyHitShader)
         ShaderCI.Desc.Name       = "Ray any hit shader";
         ShaderCI.Source          = HLSL::RayTracingTest2_RAH.c_str();
         pDevice->CreateShader(ShaderCI, &pAnyHit);
-        VERIFY_EXPR(pAnyHit != nullptr);
+        ASSERT_NE(pAnyHit, nullptr);
     }
 
     const RayTracingGeneralShaderGroup     GeneralShaders[]     = {{"Main", pRG}, {"Miss", pRMiss}};
@@ -855,11 +872,11 @@ TEST_P(RT2, TriangleAnyHitShader)
 
     RefCntAutoPtr<IPipelineState> pRayTracingPSO;
     pDevice->CreateRayTracingPipelineState(PSOCreateInfo, &pRayTracingPSO);
-    VERIFY_EXPR(pRayTracingPSO != nullptr);
+    ASSERT_NE(pRayTracingPSO, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pRayTracingSRB;
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
-    VERIFY_EXPR(pRayTracingSRB != nullptr);
+    ASSERT_NE(pRayTracingSRB, nullptr);
 
     const auto& Vertices = TestingConstants::TriangleAnyHit::Vertices;
 
@@ -876,7 +893,7 @@ TEST_P(RT2, TriangleAnyHitShader)
         BufData.DataSize = sizeof(Vertices);
 
         pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
-        VERIFY_EXPR(pVertexBuffer != nullptr);
+        ASSERT_NE(pVertexBuffer, nullptr);
     }
 
     BLASBuildTriangleData Triangle;
@@ -912,7 +929,7 @@ TEST_P(RT2, TriangleAnyHitShader)
 
     RefCntAutoPtr<IShaderBindingTable> pSBT;
     pDevice->CreateSBT(SBTDesc, &pSBT);
-    VERIFY_EXPR(pSBT != nullptr);
+    ASSERT_NE(pSBT, nullptr);
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
@@ -950,6 +967,11 @@ TEST_P(RT3, ProceduralIntersection)
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
+    }
+    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        auto* pEnvVk    = TestingEnvironmentVk::GetInstance();
+        EnableShuffling = !pEnvVk->IsUsedRayTracingNV();
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -1001,7 +1023,7 @@ TEST_P(RT3, ProceduralIntersection)
         ShaderCI.Desc.Name       = "Ray tracing RG";
         ShaderCI.Source          = HLSL::RayTracingTest3_RG.c_str();
         pDevice->CreateShader(ShaderCI, &pRG);
-        VERIFY_EXPR(pRG != nullptr);
+        ASSERT_NE(pRG, nullptr);
     }
 
     // Create ray miss shader.
@@ -1011,7 +1033,7 @@ TEST_P(RT3, ProceduralIntersection)
         ShaderCI.Desc.Name       = "Miss shader";
         ShaderCI.Source          = HLSL::RayTracingTest3_RM.c_str();
         pDevice->CreateShader(ShaderCI, &pRMiss);
-        VERIFY_EXPR(pRMiss != nullptr);
+        ASSERT_NE(pRMiss, nullptr);
     }
 
     // Create ray closest hit shader.
@@ -1021,7 +1043,7 @@ TEST_P(RT3, ProceduralIntersection)
         ShaderCI.Desc.Name       = "Ray closest hit shader";
         ShaderCI.Source          = HLSL::RayTracingTest3_RCH.c_str();
         pDevice->CreateShader(ShaderCI, &pClosestHit);
-        VERIFY_EXPR(pClosestHit != nullptr);
+        ASSERT_NE(pClosestHit, nullptr);
     }
 
     // Create ray intersection shader.
@@ -1031,7 +1053,7 @@ TEST_P(RT3, ProceduralIntersection)
         ShaderCI.Desc.Name       = "Ray intersection shader";
         ShaderCI.Source          = HLSL::RayTracingTest3_RI.c_str();
         pDevice->CreateShader(ShaderCI, &pIntersection);
-        VERIFY_EXPR(pIntersection != nullptr);
+        ASSERT_NE(pIntersection, nullptr);
     }
 
     const RayTracingGeneralShaderGroup       GeneralShaders[]       = {{"Main", pRG}, {"Miss", pRMiss}};
@@ -1047,11 +1069,11 @@ TEST_P(RT3, ProceduralIntersection)
 
     RefCntAutoPtr<IPipelineState> pRayTracingPSO;
     pDevice->CreateRayTracingPipelineState(PSOCreateInfo, &pRayTracingPSO);
-    VERIFY_EXPR(pRayTracingPSO != nullptr);
+    ASSERT_NE(pRayTracingPSO, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pRayTracingSRB;
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
-    VERIFY_EXPR(pRayTracingSRB != nullptr);
+    ASSERT_NE(pRayTracingSRB, nullptr);
 
     const auto& Boxes = TestingConstants::ProceduralIntersection::Boxes;
 
@@ -1068,7 +1090,7 @@ TEST_P(RT3, ProceduralIntersection)
         BufData.DataSize = sizeof(Boxes);
 
         pDevice->CreateBuffer(BuffDesc, &BufData, &pBoxBuffer);
-        VERIFY_EXPR(pBoxBuffer != nullptr);
+        ASSERT_NE(pBoxBuffer, nullptr);
     }
 
     BLASBuildBoundingBoxData Box;
@@ -1102,7 +1124,7 @@ TEST_P(RT3, ProceduralIntersection)
 
     RefCntAutoPtr<IShaderBindingTable> pSBT;
     pDevice->CreateSBT(SBTDesc, &pSBT);
-    VERIFY_EXPR(pSBT != nullptr);
+    ASSERT_NE(pSBT, nullptr);
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
@@ -1140,6 +1162,11 @@ TEST_P(RT4, MultiGeometry)
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
+    }
+    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        auto* pEnvVk    = TestingEnvironmentVk::GetInstance();
+        EnableShuffling = !pEnvVk->IsUsedRayTracingNV();
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -1191,7 +1218,7 @@ TEST_P(RT4, MultiGeometry)
         ShaderCI.Desc.Name       = "Ray tracing RG";
         ShaderCI.Source          = HLSL::RayTracingTest4_RG.c_str();
         pDevice->CreateShader(ShaderCI, &pRG);
-        VERIFY_EXPR(pRG != nullptr);
+        ASSERT_NE(pRG, nullptr);
     }
 
     // Create ray miss shader.
@@ -1201,26 +1228,23 @@ TEST_P(RT4, MultiGeometry)
         ShaderCI.Desc.Name       = "Miss shader";
         ShaderCI.Source          = HLSL::RayTracingTest4_RM.c_str();
         pDevice->CreateShader(ShaderCI, &pRMiss);
-        VERIFY_EXPR(pRMiss != nullptr);
+        ASSERT_NE(pRMiss, nullptr);
     }
 
     // Create ray closest hit shader.
     RefCntAutoPtr<IShader> pClosestHit1;
+    RefCntAutoPtr<IShader> pClosestHit2;
     {
         ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;
         ShaderCI.Desc.Name       = "Ray closest hit shader 1";
         ShaderCI.Source          = HLSL::RayTracingTest4_RCH1.c_str();
         pDevice->CreateShader(ShaderCI, &pClosestHit1);
-        VERIFY_EXPR(pClosestHit1 != nullptr);
-    }
+        ASSERT_NE(pClosestHit1, nullptr);
 
-    RefCntAutoPtr<IShader> pClosestHit2;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;
-        ShaderCI.Desc.Name       = "Ray closest hit shader 2";
-        ShaderCI.Source          = HLSL::RayTracingTest4_RCH2.c_str();
+        ShaderCI.Desc.Name = "Ray closest hit shader 2";
+        ShaderCI.Source    = HLSL::RayTracingTest4_RCH2.c_str();
         pDevice->CreateShader(ShaderCI, &pClosestHit2);
-        VERIFY_EXPR(pClosestHit2 != nullptr);
+        ASSERT_NE(pClosestHit2, nullptr);
     }
 
     const RayTracingGeneralShaderGroup     GeneralShaders[]     = {{"Main", pRG}, {"Miss", pRMiss}};
@@ -1240,11 +1264,11 @@ TEST_P(RT4, MultiGeometry)
 
     RefCntAutoPtr<IPipelineState> pRayTracingPSO;
     pDevice->CreateRayTracingPipelineState(PSOCreateInfo, &pRayTracingPSO);
-    VERIFY_EXPR(pRayTracingPSO != nullptr);
+    ASSERT_NE(pRayTracingPSO, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pRayTracingSRB;
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
-    VERIFY_EXPR(pRayTracingSRB != nullptr);
+    ASSERT_NE(pRayTracingSRB, nullptr);
 
     const auto& Vertices         = TestingConstants::MultiGeometry::Vertices;
     const auto& Indices          = TestingConstants::MultiGeometry::Indices;
@@ -1264,7 +1288,7 @@ TEST_P(RT4, MultiGeometry)
         BuffDesc.uiSizeInBytes = sizeof(Indices);
         BufferData BufData     = {Indices, sizeof(Indices)};
         pDevice->CreateBuffer(BuffDesc, &BufData, &pIndexBuffer);
-        VERIFY_EXPR(pIndexBuffer != nullptr);
+        ASSERT_NE(pIndexBuffer, nullptr);
 
         BuffDesc.Name              = "Vertices";
         BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
@@ -1273,7 +1297,7 @@ TEST_P(RT4, MultiGeometry)
         BuffDesc.ElementByteStride = sizeof(Vertices[0]);
         BufData                    = {Vertices, sizeof(Vertices)};
         pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
-        VERIFY_EXPR(pVertexBuffer != nullptr);
+        ASSERT_NE(pVertexBuffer, nullptr);
 
         BuffDesc.Name              = "PerInstanceData";
         BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
@@ -1281,14 +1305,14 @@ TEST_P(RT4, MultiGeometry)
         BuffDesc.ElementByteStride = sizeof(PrimitiveOffsets[0]);
         BufData                    = {PrimitiveOffsets, sizeof(PrimitiveOffsets)};
         pDevice->CreateBuffer(BuffDesc, &BufData, &pPerInstanceBuffer);
-        VERIFY_EXPR(pPerInstanceBuffer != nullptr);
+        ASSERT_NE(pPerInstanceBuffer, nullptr);
 
         BuffDesc.Name              = "PrimitiveData";
         BuffDesc.uiSizeInBytes     = sizeof(Primitives);
         BuffDesc.ElementByteStride = sizeof(Primitives[0]);
         BufData                    = {Primitives, sizeof(Primitives)};
         pDevice->CreateBuffer(BuffDesc, &BufData, &pPrimitiveBuffer);
-        VERIFY_EXPR(pPrimitiveBuffer != nullptr);
+        ASSERT_NE(pPrimitiveBuffer, nullptr);
     }
 
     BLASBuildTriangleData Triangles[3] = {};
@@ -1358,7 +1382,7 @@ TEST_P(RT4, MultiGeometry)
 
     RefCntAutoPtr<IShaderBindingTable> pSBT;
     pDevice->CreateSBT(SBTDesc, &pSBT);
-    VERIFY_EXPR(pSBT != nullptr);
+    ASSERT_NE(pSBT, nullptr);
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
@@ -1395,5 +1419,102 @@ TEST_P(RT4, MultiGeometry)
     pSwapChain->Present();
 }
 INSTANTIATE_TEST_SUITE_P(RayTracingTest, RT4, TestParamRange, TestIdToString);
+
+
+TEST(RayTracingTest, ResourceBinding)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceCaps().Features.RayTracing)
+    {
+        GTEST_SKIP() << "Ray tracing is not supported by this device";
+    }
+
+    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+
+    RayTracingPipelineStateCreateInfo PSOCreateInfo;
+
+    PSOCreateInfo.PSODesc.Name         = "Ray tracing PSO";
+    PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_RAY_TRACING;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.UseCombinedTextureSamplers = true;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = SHADER_COMPILER_DXC;
+    ShaderCI.EntryPoint                 = "main";
+
+    // Create ray generation shader.
+    RefCntAutoPtr<IShader> pRG;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_GEN;
+        ShaderCI.Desc.Name       = "Ray tracing RG";
+        ShaderCI.Source          = HLSL::RayTracingTest5_RG.c_str();
+        pDevice->CreateShader(ShaderCI, &pRG);
+        ASSERT_NE(pRG, nullptr);
+    }
+
+    // Create ray miss shader.
+    RefCntAutoPtr<IShader> pRMiss;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_MISS;
+        ShaderCI.Desc.Name       = "Miss shader";
+        ShaderCI.Source          = HLSL::RayTracingTest5_RM.c_str();
+        pDevice->CreateShader(ShaderCI, &pRMiss);
+        ASSERT_NE(pRMiss, nullptr);
+    }
+
+    // Create ray closest hit shader.
+    RefCntAutoPtr<IShader> pClosestHit1;
+    RefCntAutoPtr<IShader> pClosestHit2;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;
+        ShaderCI.Desc.Name       = "Ray closest hit shader 1";
+        ShaderCI.Source          = HLSL::RayTracingTest5_RCH1.c_str();
+        pDevice->CreateShader(ShaderCI, &pClosestHit1);
+        ASSERT_NE(pClosestHit1, nullptr);
+
+        ShaderCI.Desc.Name = "Ray closest hit shader 2";
+        ShaderCI.Source    = HLSL::RayTracingTest5_RCH2.c_str();
+        pDevice->CreateShader(ShaderCI, &pClosestHit2);
+        ASSERT_NE(pClosestHit2, nullptr);
+    }
+
+    const RayTracingGeneralShaderGroup     GeneralShaders[]     = {{"Main", pRG}, {"Miss", pRMiss}};
+    const RayTracingTriangleHitShaderGroup TriangleHitShaders[] = {{"HitGroup1", pClosestHit1}, {"HitGroup2", pClosestHit2}};
+
+    PSOCreateInfo.pGeneralShaders        = GeneralShaders;
+    PSOCreateInfo.GeneralShaderCount     = _countof(GeneralShaders);
+    PSOCreateInfo.pTriangleHitShaders    = TriangleHitShaders;
+    PSOCreateInfo.TriangleHitShaderCount = _countof(TriangleHitShaders);
+
+    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth = 2;
+
+    SamplerDesc SamLinearWrapDesc{
+        FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
+        TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
+    ImmutableSamplerDesc ImmutableSamplers[] = //
+        {
+            {SHADER_TYPE_RAY_CLOSEST_HIT, "g_Texture1", SamLinearWrapDesc},
+            {SHADER_TYPE_RAY_CLOSEST_HIT, "g_Texture2", SamLinearWrapDesc} //
+        };
+
+    PSOCreateInfo.PSODesc.ResourceLayout.ImmutableSamplers    = ImmutableSamplers;
+    PSOCreateInfo.PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImmutableSamplers);
+    PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType  = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+
+    RefCntAutoPtr<IPipelineState> pRayTracingPSO;
+    pDevice->CreateRayTracingPipelineState(PSOCreateInfo, &pRayTracingPSO);
+    ASSERT_NE(pRayTracingPSO, nullptr);
+
+    RefCntAutoPtr<IShaderResourceBinding> pRayTracingSRB;
+    pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
+    ASSERT_NE(pRayTracingSRB, nullptr);
+
+    ASSERT_NE(pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_TLAS"), nullptr);
+    ASSERT_NE(pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_CLOSEST_HIT, "g_TLAS"), nullptr);
+    ASSERT_NE(pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_ColorBuffer"), nullptr);
+    ASSERT_NE(pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_CLOSEST_HIT, "g_Texture1"), nullptr);
+    ASSERT_NE(pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_CLOSEST_HIT, "g_Texture2"), nullptr);
+}
 
 } // namespace

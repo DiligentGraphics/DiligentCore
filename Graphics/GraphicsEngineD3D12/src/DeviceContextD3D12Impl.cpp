@@ -2477,13 +2477,9 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
             d3d12Inst.InstanceContributionToHitGroupIndex = InstDesc.ContributionToHitGroupIndex;
             d3d12Inst.InstanceMask                        = Inst.Mask;
             d3d12Inst.Flags                               = InstanceFlagsToD3D12RTInstanceFlags(Inst.Flags);
-            d3d12Inst.AccelerationStructure               = 0;
+            d3d12Inst.AccelerationStructure               = pBLASD3D12->GetGPUAddress();
 
-            if (pBLASD3D12)
-            {
-                d3d12Inst.AccelerationStructure = pBLASD3D12->GetGPUAddress();
-                TransitionOrVerifyBLASState(CmdCtx, *pBLASD3D12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
-            }
+            TransitionOrVerifyBLASState(CmdCtx, *pBLASD3D12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }
         UpdateBufferRegion(pInstancesD3D12, TmpSpace, Attribs.InstanceBufferOffset, Size, Attribs.InstanceBufferTransitionMode);
     }

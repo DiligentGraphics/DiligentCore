@@ -339,6 +339,95 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
 )hlsl";
 // clang-format on
 
+
+// clang-format off
+const std::string RayTracingTest5_RG = RayTracingTest_Payload +
+R"hlsl(
+RaytracingAccelerationStructure g_TLAS;
+RWTexture2D<float4>             g_ColorBuffer;
+
+[shader("raygeneration")]
+void main()
+{
+    const float2 uv = float2(DispatchRaysIndex().xy) / float2(DispatchRaysDimensions().xy - 1);
+
+    RayDesc ray;
+    ray.Origin    = float3(uv.x, 1.0 - uv.y, -1.0);
+    ray.Direction = float3(0.0, 0.0, 1.0);
+    ray.TMin      = 0.01;
+    ray.TMax      = 10.0;
+
+    RTPayload payload = {float4(0, 0, 0, 0)};
+    TraceRay(g_TLAS,         // Acceleration Structure
+             RAY_FLAG_NONE,  // Ray Flags
+             ~0,             // Instance Inclusion Mask
+             0,              // Ray Contribution To Hit Group Index
+             1,              // Multiplier For Geometry Contribution To Hit Group Index
+             0,              // Miss Shader Index
+             ray,
+             payload);
+
+    g_ColorBuffer[DispatchRaysIndex().xy] = payload.Color;
+}
+)hlsl";
+
+const std::string RayTracingTest5_RM = RayTracingTest_Payload +
+R"hlsl(
+[shader("miss")]
+void main(inout RTPayload payload)
+{
+    payload.Color = float4(1.0, 0.0, 0.0, 1.0);
+}
+)hlsl";
+
+const std::string RayTracingTest5_RCH1 = RayTracingTest_Payload + 
+R"hlsl(
+Texture2D     g_Texture1;
+SamplerState  g_Texture1_sampler;
+
+[shader("closesthit")]
+void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
+{
+    float2 uv = attr.barycentrics.xy;
+    payload.Color = g_Texture1.SampleLevel(g_Texture1_sampler, uv, 0);
+}
+)hlsl";
+
+const std::string RayTracingTest5_RCH2 = RayTracingTest_Payload + 
+R"hlsl(
+RaytracingAccelerationStructure g_TLAS;
+
+Texture2D     g_Texture2;
+SamplerState  g_Texture2_sampler;
+
+[shader("closesthit")]
+void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
+{
+    float2 uv = attr.barycentrics.xy;
+    payload.Color = g_Texture2.SampleLevel(g_Texture2_sampler, uv, 0);
+
+    RayDesc ray;
+    ray.Origin    = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+    ray.Direction = WorldRayDirection();
+    ray.TMin      = 0.01;
+    ray.TMax      = 10.0;
+
+    RTPayload payload2 = {float4(0, 0, 0, 0)};
+    TraceRay(g_TLAS,         // Acceleration Structure
+             RAY_FLAG_NONE,  // Ray Flags
+             ~0,             // Instance Inclusion Mask
+             0,              // Ray Contribution To Hit Group Index
+             1,              // Multiplier For Geometry Contribution To Hit Group Index
+             0,              // Miss Shader Index
+             ray,
+             payload2);
+
+    payload.Color += payload2.Color;
+}
+)hlsl";
+// clang-format on
+
+
 } // namespace HLSL
 
 } // namespace

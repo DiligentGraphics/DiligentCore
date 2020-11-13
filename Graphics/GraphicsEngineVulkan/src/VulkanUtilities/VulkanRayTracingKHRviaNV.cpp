@@ -33,8 +33,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "VulkanErrors.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "../../include/VulkanErrors.hpp"
+#include "../../include/VulkanUtilities/VulkanLogicalDevice.hpp"
 
 namespace VulkanUtilities
 {
@@ -46,16 +46,33 @@ static_assert(sizeof(VkDeviceAddress) == 8, "KHR is incompatible with NV extensi
 namespace
 {
 
-std::mutex                                    g_BufferDeviceAddressGuard;
-std::unordered_map<VkDeviceAddress, VkBuffer> g_DeviceAddressToBuffer;
-std::unordered_map<VkBuffer, VkDeviceAddress> g_BufferToDeviceAddress;
-uint32_t                                      g_BufferDeviceAddressCounter = 0;
-constexpr VkDeviceAddress                     g_BufferMask                 = 0xFFFFFFFF00000000ull;
-
 PFN_vkCreateBuffer              Origin_vkCreateBuffer              = nullptr;
 PFN_vkDestroyBuffer             Origin_vkDestroyBuffer             = nullptr;
 PFN_vkGetBufferDeviceAddressKHR Origin_vkGetBufferDeviceAddressKHR = nullptr;
 PFN_vkAllocateMemory            Origin_vkAllocateMemory            = nullptr;
+
+struct DeviceAddressEmulator
+{
+    std::mutex                                    Guard;
+    std::unordered_map<VkDeviceAddress, VkBuffer> AddrToBuffer;
+    std::unordered_map<VkBuffer, VkDeviceAddress> BufferToAddr;
+    uint32_t                                      Counter    = 0;
+    static constexpr VkDeviceAddress              BufferMask = 0xFFFFFFFF00000000ull;
+
+    static DeviceAddressEmulator* GetInstance()
+    {
+        static DeviceAddressEmulator inst;
+        return &inst;
+    }
+
+    ~DeviceAddressEmulator()
+    {
+        vkGetBufferDeviceAddressKHR = Origin_vkGetBufferDeviceAddressKHR;
+        vkCreateBuffer              = Origin_vkCreateBuffer;
+        vkDestroyBuffer             = Origin_vkDestroyBuffer;
+        vkAllocateMemory            = Origin_vkAllocateMemory;
+    }
+};
 
 
 VKAPI_ATTR VkResult VKAPI_CALL Wrap_vkCreateBuffer(VkDevice                     device,
@@ -72,13 +89,13 @@ VKAPI_ATTR VkResult VKAPI_PTR Wrap_vkAllocateMemory(VkDevice device, const VkMem
 {
     VkMemoryAllocateInfo AllocInfo = *pAllocateInfo;
 
-    for (auto* pNext = static_cast<VkBaseOutStructure*>(const_cast<void*>(AllocInfo.pNext)); pNext;)
+    for (auto** ppNext = reinterpret_cast<VkBaseOutStructure**>(const_cast<void**>(&AllocInfo.pNext)); *ppNext;)
     {
         // remove VkMemoryAllocateFlagsInfo because VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT is removed from buffer create info.
-        if (pNext->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO)
-            pNext->pNext = pNext->pNext;
-
-        pNext = pNext->pNext;
+        if ((*ppNext)->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO)
+            *ppNext = (*ppNext)->pNext;
+        else
+            ppNext = &((*ppNext)->pNext);
     }
 
     return Origin_vkAllocateMemory(device, &AllocInfo, pAllocator, pMemory);
@@ -90,13 +107,15 @@ VKAPI_ATTR void VKAPI_CALL Wrap_vkDestroyBuffer(VkDevice                     dev
 {
     Origin_vkDestroyBuffer(device, buffer, pAllocator);
 
-    std::unique_lock<std::mutex> lock{g_BufferDeviceAddressGuard};
+    auto* inst = DeviceAddressEmulator::GetInstance();
 
-    auto iter = g_BufferToDeviceAddress.find(buffer);
-    if (iter != g_BufferToDeviceAddress.end())
+    std::unique_lock<std::mutex> lock{inst->Guard};
+
+    auto iter = inst->BufferToAddr.find(buffer);
+    if (iter != inst->BufferToAddr.end())
     {
-        g_DeviceAddressToBuffer.erase(iter->second);
-        g_BufferToDeviceAddress.erase(iter);
+        inst->AddrToBuffer.erase(iter->second);
+        inst->BufferToAddr.erase(iter);
     }
 }
 
@@ -106,17 +125,19 @@ VKAPI_ATTR VkDeviceAddress VKAPI_CALL Wrap_vkGetBufferDeviceAddressKHR(VkDevice 
     VERIFY_EXPR(pInfo->sType == VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR);
     VERIFY_EXPR(pInfo->pNext == nullptr);
 
-    std::unique_lock<std::mutex> lock{g_BufferDeviceAddressGuard};
+    auto* inst = DeviceAddressEmulator::GetInstance();
+
+    std::unique_lock<std::mutex> lock{inst->Guard};
 
     // find in existing buffers
-    auto iter = g_BufferToDeviceAddress.find(pInfo->buffer);
-    if (iter != g_BufferToDeviceAddress.end())
+    auto iter = inst->BufferToAddr.find(pInfo->buffer);
+    if (iter != inst->BufferToAddr.end())
         return iter->second;
 
     // create new device address
-    VkDeviceAddress Addr                   = VkDeviceAddress{++g_BufferDeviceAddressCounter} << 32;
-    g_BufferToDeviceAddress[pInfo->buffer] = Addr;
-    g_DeviceAddressToBuffer[Addr]          = pInfo->buffer;
+    VkDeviceAddress Addr              = VkDeviceAddress{++inst->Counter} << 32;
+    inst->BufferToAddr[pInfo->buffer] = Addr;
+    inst->AddrToBuffer[Addr]          = pInfo->buffer;
     return Addr;
 }
 
@@ -130,16 +151,18 @@ BufferAndOffset DeviceAddressToBuffer(VkDeviceAddress Addr)
     if (Addr == 0)
         return {VK_NULL_HANDLE, 0};
 
-    std::unique_lock<std::mutex> lock{g_BufferDeviceAddressGuard};
+    auto* inst = DeviceAddressEmulator::GetInstance();
 
-    auto iter = g_DeviceAddressToBuffer.find(Addr & g_BufferMask);
-    if (iter == g_DeviceAddressToBuffer.end())
+    std::unique_lock<std::mutex> lock{inst->Guard};
+
+    auto iter = inst->AddrToBuffer.find(Addr & DeviceAddressEmulator::BufferMask);
+    if (iter == inst->AddrToBuffer.end())
     {
         UNEXPECTED("Failed to map device address to buffer");
         return {VK_NULL_HANDLE, 0};
     }
 
-    return {iter->second, Addr & ~g_BufferMask};
+    return {iter->second, Addr & ~DeviceAddressEmulator::BufferMask};
 }
 
 BufferAndOffset DeviceAddressToBuffer(const VkDeviceOrHostAddressConstKHR& Addr)
@@ -173,9 +196,13 @@ VKAPI_ATTR VkResult VKAPI_CALL Redirect_vkCreateAccelerationStructureKHR(VkDevic
 
     if (CreateInfo.info.type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
     {
-        VERIFY_EXPR(pCreateInfo->maxGeometryCount == 1);
+        VERIFY_EXPR(pCreateInfo->maxGeometryCount == 1 || pCreateInfo->compactedSize > 0);
 
-        CreateInfo.info.instanceCount = pCreateInfo->pGeometryInfos->maxPrimitiveCount;
+        if (pCreateInfo->pGeometryInfos && pCreateInfo->maxGeometryCount == 1)
+        {
+            VERIFY_EXPR(pCreateInfo->pGeometryInfos->geometryType == VK_GEOMETRY_TYPE_INSTANCES_KHR);
+            CreateInfo.info.instanceCount = pCreateInfo->pGeometryInfos->maxPrimitiveCount;
+        }
     }
     else if (CreateInfo.info.type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR)
     {
@@ -234,7 +261,7 @@ VKAPI_ATTR VkResult VKAPI_CALL Redirect_vkCreateAccelerationStructureKHR(VkDevic
         }
 
         CreateInfo.info.geometryCount = static_cast<uint32_t>(Geometries.size());
-        CreateInfo.info.pGeometries   = Geometries.data();
+        CreateInfo.info.pGeometries   = CreateInfo.info.geometryCount ? Geometries.data() : nullptr;
     }
     else
     {
@@ -423,6 +450,16 @@ VKAPI_ATTR void VKAPI_CALL Redirect_vkCmdCopyAccelerationStructureKHR(VkCommandB
     vkCmdCopyAccelerationStructureNV(commandBuffer, pInfo->dst, pInfo->src, pInfo->mode);
 }
 
+VKAPI_ATTR void VKAPI_CALL Redirect_vkCmdWriteAccelerationStructuresPropertiesKHR(VkCommandBuffer                   commandBuffer,
+                                                                                  uint32_t                          accelerationStructureCount,
+                                                                                  const VkAccelerationStructureKHR* pAccelerationStructures,
+                                                                                  VkQueryType                       queryType,
+                                                                                  VkQueryPool                       queryPool,
+                                                                                  uint32_t                          firstQuery)
+{
+    vkCmdWriteAccelerationStructuresPropertiesNV(commandBuffer, accelerationStructureCount, pAccelerationStructures, queryType, queryPool, firstQuery);
+}
+
 VKAPI_ATTR void VKAPI_CALL Redirect_vkCmdTraceRaysKHR(VkCommandBuffer                 commandBuffer,
                                                       const VkStridedBufferRegionKHR* pRaygenShaderBindingTable,
                                                       const VkStridedBufferRegionKHR* pMissShaderBindingTable,
@@ -536,6 +573,7 @@ void EnableRayTracingKHRviaNV()
     vkGetAccelerationStructureDeviceAddressKHR      = &Redirect_vkGetAccelerationStructureDeviceAddressKHR;
     vkCmdBuildAccelerationStructureKHR              = &Redirect_vkCmdBuildAccelerationStructureKHR;
     vkCmdCopyAccelerationStructureKHR               = &Redirect_vkCmdCopyAccelerationStructureKHR;
+    vkCmdWriteAccelerationStructuresPropertiesKHR   = &Redirect_vkCmdWriteAccelerationStructuresPropertiesKHR;
     vkGetRayTracingShaderGroupHandlesKHR            = &Redirect_vkGetRayTracingShaderGroupHandlesKHR;
     vkCreateRayTracingPipelinesKHR                  = &Redirect_vkCreateRayTracingPipelinesKHR;
     vkCmdTraceRaysKHR                               = &Redirect_vkCmdTraceRaysKHR;

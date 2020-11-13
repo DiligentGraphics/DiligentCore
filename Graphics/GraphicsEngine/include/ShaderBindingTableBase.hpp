@@ -193,13 +193,10 @@ public:
         const auto  Info      = pTLASImpl->GetBuildInfo();
         const auto  Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
-        VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
-                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY);
+        VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
         VERIFY_EXPR(Desc.ContributionToHitGroupIndex != ~0u);
-
-        if (Desc.pBLAS == nullptr)
-            return; // this is a disabled instance
+        VERIFY_EXPR(Desc.pBLAS != nullptr);
 
         const Uint32 InstanceOffset = Desc.ContributionToHitGroupIndex;
         const Uint32 GeometryIndex  = Desc.pBLAS->GetGeometryIndex(pGeometryName);
@@ -239,10 +236,10 @@ public:
         const auto  Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
-                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
         VERIFY_EXPR(Desc.ContributionToHitGroupIndex != INVALID_INDEX);
+        VERIFY_EXPR(Desc.pBLAS != nullptr);
 
         const Uint32 InstanceOffset = Desc.ContributionToHitGroupIndex;
         Uint32       GeometryCount  = 0;
@@ -250,9 +247,8 @@ public:
         switch (Info.BindingMode)
         {
             // clang-format off
-            case HIT_GROUP_BINDING_MODE_PER_GEOMETRY:     GeometryCount = Desc.pBLAS ? Desc.pBLAS->GetActualGeometryCount() : 0;                                break;
-            case HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY: GeometryCount = Desc.pBLAS ? Desc.pBLAS->GetDesc().TriangleCount + Desc.pBLAS->GetDesc().BoxCount: 0; break;
-            case HIT_GROUP_BINDING_MODE_PER_INSTANCE:     GeometryCount = 1;                                                                                    break;
+            case HIT_GROUP_BINDING_MODE_PER_GEOMETRY:     GeometryCount = Desc.pBLAS->GetActualGeometryCount(); break;
+            case HIT_GROUP_BINDING_MODE_PER_INSTANCE:     GeometryCount = 1;                                    break;
             default:                                      UNEXPECTED("unknown binding mode");
                 // clang-format on
         }
@@ -294,7 +290,6 @@ public:
         auto*      pTLASImpl = ValidatedCast<TopLevelASImplType>(pTLAS);
         const auto Info      = pTLASImpl->GetBuildInfo();
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
-                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_MAX_GEOMETRY ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);

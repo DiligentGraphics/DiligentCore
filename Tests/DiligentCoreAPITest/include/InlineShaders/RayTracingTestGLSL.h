@@ -34,11 +34,45 @@ namespace GLSL
 {
 
 // clang-format off
-const std::string RayTracingTest1_RG{
+const std::string RayTracingTest_NVviaKHRHeader{
+R"glsl(
+#version 460
+#extension GL_NV_ray_tracing : require
+
+#define accelerationStructureEXT            accelerationStructureNV
+#define rayPayloadEXT                       rayPayloadNV
+#define rayPayloadInEXT                     rayPayloadInNV
+#define hitAttributeEXT                     hitAttributeNV
+#define traceRayEXT                         traceNV
+#define ignoreIntersectionEXT               ignoreIntersectionNV
+#define reportIntersectionEXT               reportIntersectionNV
+#define shaderRecordEXT                     shaderRecordNV
+#define gl_LaunchIDEXT                      gl_LaunchIDNV
+#define gl_LaunchSizeEXT                    gl_LaunchSizeNV
+#define gl_HitTEXT                          gl_HitTNV
+#define gl_HitKindEXT                       gl_HitKindNV
+#define gl_WorldRayOriginEXT                gl_WorldRayOriginNV
+#define gl_WorldRayDirectionEXT             gl_WorldRayDirectionNV
+#define gl_RayFlagsNoneEXT                  gl_RayFlagsNoneNV
+#define gl_RayFlagsSkipClosestHitShaderEXT  gl_RayFlagsSkipClosestHitShaderNV
+
+// only for RayTracingTest4_Uniforms
+#define gl_GeometryIndexEXT  GeometryID
+)glsl"
+};
+
+const std::string RayTracingTest_Header{
 R"glsl(
 #version 460
 #extension GL_EXT_ray_tracing : require
+)glsl"
+};
+// clang-format on
 
+
+// clang-format off
+const std::string RayTracingTest1_RG{
+R"glsl(
 layout(set=0, binding=0) uniform accelerationStructureEXT  g_TLAS;
 layout(set=0, binding=1, rgba8) uniform image2D  g_ColorBuffer;
 
@@ -70,9 +104,6 @@ void main()
 
 const std::string RayTracingTest1_RM{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(location=0) rayPayloadInEXT vec4  payload;
 
 void main()
@@ -84,9 +115,6 @@ void main()
 
 const std::string RayTracingTest1_RCH{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(location=0) rayPayloadInEXT vec4  payload;
 hitAttributeEXT vec2  hitAttribs;
 
@@ -103,9 +131,6 @@ void main()
 // clang-format off
 const std::string RayTracingTest2_RG{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(set=0, binding=0) uniform accelerationStructureEXT  g_TLAS;
 layout(set=0, binding=1, rgba8) uniform image2D  g_ColorBuffer;
 
@@ -137,9 +162,6 @@ void main()
 
 const std::string RayTracingTest2_RM{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(location=0) rayPayloadInEXT vec4  payload;
 
 void main()
@@ -151,8 +173,6 @@ void main()
 
 const std::string RayTracingTest2_RCH{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
 hitAttributeEXT vec2  hitAttribs;
 
 layout(location=0) rayPayloadInEXT vec4  payload;
@@ -166,9 +186,6 @@ void main()
 
 const std::string RayTracingTest2_RAH{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(location=0) rayPayloadInEXT vec4  payload;
 hitAttributeEXT vec2  hitAttribs;
 
@@ -188,9 +205,6 @@ void main()
 // clang-format off
 const std::string RayTracingTest3_RG{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(set=0, binding=0) uniform accelerationStructureEXT  g_TLAS;
 layout(set=0, binding=1, rgba8) uniform image2D  g_ColorBuffer;
 
@@ -222,9 +236,6 @@ void main()
 
 const std::string RayTracingTest3_RM{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(location=0) rayPayloadInEXT vec4  payload;
 
 void main()
@@ -236,9 +247,6 @@ void main()
 
 const std::string RayTracingTest3_RCH{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(location=0) rayPayloadInEXT vec4  payload;
 hitAttributeEXT vec3  hitAttribs;
 
@@ -251,9 +259,6 @@ void main()
 
 const std::string RayTracingTest3_RI{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 hitAttributeEXT vec3  out_hitAttribs;
 
 void main()
@@ -283,9 +288,6 @@ void main()
 // clang-format off
 const std::string RayTracingTest4_RG{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(set=0, binding=0) uniform accelerationStructureEXT  g_TLAS;
 layout(set=0, binding=1, rgba8) uniform image2D  g_ColorBuffer;
 
@@ -317,9 +319,6 @@ void main()
 
 const std::string RayTracingTest4_RM{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(location=0) rayPayloadInEXT vec4  payload;
 
 void main()
@@ -331,9 +330,6 @@ void main()
 
 const std::string RayTracingTest4_Uniforms{
 R"glsl(
-#version 460
-#extension GL_EXT_ray_tracing : require
-
 layout(shaderRecordEXT) buffer ShaderRecord
 {
     vec4 Weights;

@@ -36,6 +36,11 @@
 #define VK_ENABLE_BETA_EXTENSIONS // for ray tracing
 #include "volk/volk.h"
 
+namespace VulkanUtilities
+{
+void EnableRayTracingKHRviaNV();
+}
+
 namespace Diligent
 {
 
@@ -92,6 +97,30 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     if (m_pSwapChain == nullptr)
     {
         CreateTestingSwapChainVk(this, SCDesc, &m_pSwapChain);
+    }
+
+    // find ray tracing extension
+    {
+        uint32_t extCount = 0;
+        vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, nullptr, &extCount, nullptr);
+
+        std::vector<VkExtensionProperties> devExtensions;
+        devExtensions.resize(extCount);
+        vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, nullptr, &extCount, devExtensions.data());
+
+        for (auto& ext : devExtensions)
+        {
+            if (strcmp(ext.extensionName, VK_KHR_RAY_TRACING_EXTENSION_NAME) == 0)
+                break;
+
+            if (strcmp(ext.extensionName, VK_NV_RAY_TRACING_EXTENSION_NAME) == 0)
+            {
+                // fallback to NV extension
+                VulkanUtilities::EnableRayTracingKHRviaNV();
+                m_UsedRayTracingNV = true;
+                break;
+            }
+        }
     }
 }
 
@@ -698,3 +727,6 @@ TestingEnvironment* CreateTestingEnvironmentVk(const TestingEnvironment::CreateI
 } // namespace Testing
 
 } // namespace Diligent
+
+#define DILIGENT_USE_VOLK 1
+#include "../../DiligentCore/Graphics/GraphicsEngineVulkan/src/VulkanUtilities/VulkanRayTracingKHRviaNV.cpp"

@@ -3006,13 +3006,9 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
             vkASInst.instanceShaderBindingTableRecordOffset = InstDesc.ContributionToHitGroupIndex;
             vkASInst.mask                                   = Inst.Mask;
             vkASInst.flags                                  = InstanceFlagsToVkGeometryInstanceFlags(Inst.Flags);
-            vkASInst.accelerationStructureReference         = 0;
+            vkASInst.accelerationStructureReference         = pBLASVk->GetVkDeviceAddress();
 
-            if (pBLASVk)
-            {
-                vkASInst.accelerationStructureReference = pBLASVk->GetVkDeviceAddress();
-                TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
-            }
+            TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }
 
         UpdateBufferRegion(pInstancesVk, Attribs.InstanceBufferOffset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset, Attribs.InstanceBufferTransitionMode);
