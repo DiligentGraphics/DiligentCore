@@ -32,6 +32,8 @@
 /// \file
 /// Definition input layout
 
+#include <string.h>
+
 #include "GraphicsTypes.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
