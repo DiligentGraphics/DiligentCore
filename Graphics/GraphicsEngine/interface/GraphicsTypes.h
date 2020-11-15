@@ -2073,8 +2073,8 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     Uint32 NumCommandsToFlushCmdList DEFAULT_INITIALIZER(256);
 
     /// A device context uses dynamic heap when it needs to allocate temporary
-    /// CPU-accessible memory to update a resource via IBufer::UpdateData() or
-    /// ITexture::UpdateData(), or to map dynamic resources.
+    /// CPU-accessible memory to update a resource via IDeviceContext::UpdateBuffer() or
+    /// IDeviceContext::UpdateTexture(), or to map dynamic resources.
     /// Device contexts first request a chunk of memory from global dynamic
     /// resource manager and then suballocate from this chunk in a lock-free
     /// fashion. DynamicHeapPageSize defines the size of this chunk.
@@ -2215,7 +2215,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Page size of the upload heap that is allocated by immediate/deferred
     /// contexts from the global memory manager to perform lock-free dynamic
     /// suballocations.
-    /// Upload heap is used to update resources with UpdateData()
+    /// Upload heap is used to update resources with IDeviceContext::UpdateBuffer()
+    /// and IDeviceContext::UpdateTexture().
     Uint32 UploadHeapPageSize               DEFAULT_INITIALIZER(1 << 20);
 
     /// Size of the dynamic heap (the buffer that is used to suballocate 
@@ -2250,6 +2251,13 @@ typedef struct EngineVkCreateInfo EngineVkCreateInfo;
 /// Attributes of the Metal-based engine implementation
 struct EngineMtlCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
+    /// A device context uses dynamic heap when it needs to allocate temporary
+    /// CPU-accessible memory to update a resource via IDeviceContext::UpdateBuffer() or
+    /// IDeviceContext::UpdateTexture(), or to map dynamic resources.
+    /// Device contexts first request a chunk of memory from global dynamic
+    /// resource manager and then suballocate from this chunk in a lock-free
+    /// fashion. DynamicHeapPageSize defines the size of this chunk.
+    Uint32 DynamicHeapPageSize       DEFAULT_INITIALIZER(4 << 20);
 };
 typedef struct EngineMtlCreateInfo EngineMtlCreateInfo;
 
