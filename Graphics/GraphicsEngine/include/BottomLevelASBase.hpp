@@ -36,7 +36,7 @@
 #include "BottomLevelAS.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
-#include "LinearAllocator.hpp"
+#include "FixedLinearAllocator.hpp"
 #include "HashUtils.hpp"
 
 namespace Diligent
@@ -59,7 +59,7 @@ void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false);
 /// Copies bottom-level AS geometry description using MemPool to allocate required dynamic space.
 void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
                           BottomLevelASDesc&       DstDesc,
-                          LinearAllocator&         MemPool,
+                          FixedLinearAllocator&    MemPool,
                           const BLASNameToIndex*   pSrcNameToIndex,
                           BLASNameToIndex&         DstNameToIndex) noexcept(false);
 
@@ -219,7 +219,7 @@ public:
 private:
     void CopyGeometryDescriptionUnsafe(const BottomLevelASDesc& SrcDesc, const BLASNameToIndex* pSrcNameToIndex) noexcept(false)
     {
-        LinearAllocator MemPool{GetRawAllocator()};
+        FixedLinearAllocator MemPool{GetRawAllocator()};
         CopyBLASGeometryDesc(SrcDesc, this->m_Desc, MemPool, pSrcNameToIndex, this->m_NameToIndex);
         this->m_pRawPtr = MemPool.Release();
     }

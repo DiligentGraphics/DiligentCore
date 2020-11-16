@@ -309,6 +309,35 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, const RayTraci
     }
 }
 
+void CopyRayTracingShaderGroups(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
+                                const RayTracingPipelineStateCreateInfo&                                CreateInfo,
+                                FixedLinearAllocator&                                                   MemPool) noexcept(false)
+{
+    const auto& PSODesc    = CreateInfo.PSODesc;
+    Uint32      GroupIndex = 0;
+
+    for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
+    {
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pGeneralShaders[i].Name)}, GroupIndex++).second;
+        if (!IsUniqueName)
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must be unique");
+    }
+    for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
+    {
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pTriangleHitShaders[i].Name)}, GroupIndex++).second;
+        if (!IsUniqueName)
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must be unique");
+    }
+    for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
+    {
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pProceduralHitShaders[i].Name)}, GroupIndex++).second;
+        if (!IsUniqueName)
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must be unique");
+    }
+
+    VERIFY_EXPR(Uint32{CreateInfo.GeneralShaderCount} + Uint32{CreateInfo.TriangleHitShaderCount} + Uint32{CreateInfo.ProceduralHitShaderCount} == GroupIndex);
+}
+
 #undef VALIDATE_SHADER_TYPE
 #undef LOG_PSO_ERROR_AND_THROW
 

@@ -28,7 +28,7 @@
 #pragma once
 
 /// \file
-/// Defines Diligent::LinearAllocator class
+/// Defines Diligent::FixedLinearAllocator class
 
 #include <vector>
 
@@ -42,20 +42,20 @@ namespace Diligent
 {
 
 /// Implementation of a linear allocator on a fixed-size memory page
-class LinearAllocator
+class FixedLinearAllocator
 {
 public:
     // clang-format off
-    LinearAllocator           (const LinearAllocator&) = delete;
-    LinearAllocator& operator=(const LinearAllocator&) = delete;
-    LinearAllocator& operator=(LinearAllocator&&)      = delete;
+    FixedLinearAllocator           (const FixedLinearAllocator&) = delete;
+    FixedLinearAllocator& operator=(const FixedLinearAllocator&) = delete;
+    FixedLinearAllocator& operator=(FixedLinearAllocator&&)      = delete;
     // clang-format on
 
-    explicit LinearAllocator(IMemoryAllocator& Allocator) noexcept :
+    explicit FixedLinearAllocator(IMemoryAllocator& Allocator) noexcept :
         m_pAllocator{&Allocator}
     {}
 
-    LinearAllocator(LinearAllocator&& Other) noexcept :
+    FixedLinearAllocator(FixedLinearAllocator&& Other) noexcept :
         // clang-format off
         m_pDataStart   {Other.m_pDataStart   },
         m_pCurrPtr     {Other.m_pCurrPtr     },
@@ -67,7 +67,7 @@ public:
         Other.Reset();
     }
 
-    ~LinearAllocator()
+    ~FixedLinearAllocator()
     {
         Free();
     }

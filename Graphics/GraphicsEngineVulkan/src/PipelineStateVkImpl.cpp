@@ -382,15 +382,12 @@ static void CreateRayTracingPipeline(RenderDeviceVkImpl*                        
 
 template <typename TNameToGroupIndexMap>
 void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&           CreateInfo,
-                                TNameToGroupIndexMap&                              NameToGroupIndex,
+                                const TNameToGroupIndexMap&                        NameToGroupIndex,
                                 std::vector<VkRayTracingShaderGroupCreateInfoKHR>& ShaderGroups,
-                                const ShaderResourceLayoutVk::TShaderStages&       ShaderStages,
-                                LinearAllocator&                                   MemPool)
+                                const ShaderResourceLayoutVk::TShaderStages&       ShaderStages)
 {
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", CreateInfo.PSODesc.Name, "' is invalid: ", ##__VA_ARGS__)
     ShaderGroups.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
-
-    Uint32 GroupIndex = 0;
 
     std::array<Uint32, MAX_SHADERS_IN_PIPELINE> ShaderIndices = {};
     std::unordered_map<const IShader*, Uint32>  UniqueShaders;
@@ -429,9 +426,11 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
         Group.anyHitShader       = VK_SHADER_UNUSED_KHR;
         Group.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(GeneralShader.Name)}, GroupIndex++).second;
-        if (!IsUniqueName)
-            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must be unique");
+#ifdef DILIGENT_DEVELOPMENT
+        auto Iter = NameToGroupIndex.find(GeneralShader.Name);
+        CHECK_THROW(Iter != NameToGroupIndex.end());
+        CHECK_THROW(Iter->second == ShaderGroups.size());
+#endif
 
         ShaderGroups.push_back(Group);
     }
@@ -449,9 +448,11 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
         Group.anyHitShader       = ShaderToIndex(TriHitShader.pAnyHitShader);
         Group.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(TriHitShader.Name)}, GroupIndex++).second;
-        if (!IsUniqueName)
-            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must be unique");
+#ifdef DILIGENT_DEVELOPMENT
+        auto Iter = NameToGroupIndex.find(TriHitShader.Name);
+        CHECK_THROW(Iter != NameToGroupIndex.end());
+        CHECK_THROW(Iter->second == ShaderGroups.size());
+#endif
 
         ShaderGroups.push_back(Group);
     }
@@ -469,14 +470,14 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
         Group.closestHitShader   = ShaderToIndex(ProcHitShader.pClosestHitShader);
         Group.anyHitShader       = ShaderToIndex(ProcHitShader.pAnyHitShader);
 
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(ProcHitShader.Name)}, GroupIndex++).second;
-        if (!IsUniqueName)
-            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must be unique");
+#ifdef DILIGENT_DEVELOPMENT
+        auto Iter = NameToGroupIndex.find(ProcHitShader.Name);
+        CHECK_THROW(Iter != NameToGroupIndex.end());
+        CHECK_THROW(Iter->second == ShaderGroups.size());
+#endif
 
         ShaderGroups.push_back(Group);
     }
-
-    VERIFY_EXPR(Uint32{CreateInfo.GeneralShaderCount} + Uint32{CreateInfo.TriangleHitShaderCount} + Uint32{CreateInfo.ProceduralHitShaderCount} == GroupIndex);
 
 #ifdef DILIGENT_DEVELOPMENT
     Uint32 ShaderIndex2 = 0;
@@ -655,7 +656,7 @@ void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&          
     TShaderStages ShaderStages;
     ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
 
-    LinearAllocator MemPool{GetRawAllocator()};
+    FixedLinearAllocator MemPool{GetRawAllocator()};
 
     const auto NumShaderStages = GetNumShaderStages();
     VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
@@ -707,7 +708,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
-                            [this](const GraphicsPipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool, TShaderStages /*ShaderStages*/) //
+                            [this](const GraphicsPipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool, TShaderStages /*ShaderStages*/) //
                             {
                                 InitializePipelineDesc(CreateInfo, MemPool);
                             } //
@@ -735,7 +736,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   p
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
-                            [this](const ComputePipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool, TShaderStages /*ShaderStages*/) //
+                            [this](const ComputePipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool, TShaderStages /*ShaderStages*/) //
                             {
                                 InitializePipelineDesc(CreateInfo, MemPool);
                             } //
@@ -766,11 +767,10 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
         std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
-                            [&](const RayTracingPipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool, TShaderStages& ShaderStages) //
+                            [&](const RayTracingPipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool, TShaderStages& ShaderStages) //
                             {
-                                TNameToGroupIndexMap NameToGroupIndex;
-                                BuildRTPipelineDescription(CreateInfo, NameToGroupIndex, ShaderGroups, ShaderStages, MemPool);
-                                InitializePipelineDesc(CreateInfo, std::move(NameToGroupIndex), MemPool);
+                                InitializePipelineDesc(CreateInfo, MemPool);
+                                BuildRTPipelineDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderGroups, ShaderStages);
                             } //
         );
 

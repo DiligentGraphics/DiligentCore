@@ -85,13 +85,10 @@ public:
                          IDataBlob**             ppCompilerOutput) noexcept(false) = 0;
 
     using TResourceBindingMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
-    using TBindingMapPerStage = std::array<TResourceBindingMap, MAX_SHADERS_IN_PIPELINE>;
 
-    virtual bool RemapResourceBinding(const TBindingMapPerStage& BindingMapPerStage,
-                                      const char*                EntryPoint,
-                                      const void*                pBytecode,
-                                      size_t                     BytecodeSize,
-                                      IDxcBlob**                 ppByteCodeBlob) = 0;
+    virtual bool RemapResourceBinding(const TResourceBindingMap& ResourceMap,
+                                      IDxcBlob*                  pSrcBytecode,
+                                      IDxcBlob**                 ppDstByteCode) = 0;
 
     // Attempts to extract shader reflection from the bytecode using DXC.
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,

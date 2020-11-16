@@ -193,7 +193,7 @@ StringPool ShaderResourceLayoutVk::AllocateMemory(const std::vector<const Shader
         }
     }
 
-    LinearAllocator MemPool{Allocator};
+    FixedLinearAllocator MemPool{Allocator};
 
     MemPool.AddSpace<VkResource>(TotalResources);
     MemPool.AddSpace<ImmutableSamplerPtrType>(m_NumImmutableSamplers);

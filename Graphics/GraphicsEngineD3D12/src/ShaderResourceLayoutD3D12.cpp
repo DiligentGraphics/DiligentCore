@@ -39,7 +39,7 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderResourceVariableBase.hpp"
 #include "ShaderVariableD3DBase.hpp"
-#include "LinearAllocator.hpp"
+#include "FixedLinearAllocator.hpp"
 #include "TopLevelASD3D12.h"
 
 namespace Diligent
@@ -110,7 +110,7 @@ StringPool ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&          
         VERIFY_EXPR(GetSamplerCount(VarType) == SamplerCount[VarType]);
     }
 
-    LinearAllocator MemPool{Allocator};
+    FixedLinearAllocator MemPool{Allocator};
     MemPool.AddSpace<D3D12Resource>(GetTotalResourceCount());
     MemPool.AddSpace<char>(StringPoolSize);
 

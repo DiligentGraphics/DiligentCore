@@ -31,7 +31,7 @@
 #include "DeviceContextD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
 #include "ShaderD3D11Impl.hpp"
-#include "LinearAllocator.hpp"
+#include "FixedLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -55,7 +55,7 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
         m_ResourceLayoutIndex.fill(-1);
         m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaderStages());
 
-        LinearAllocator MemPool{GetRawAllocator()};
+        FixedLinearAllocator MemPool{GetRawAllocator()};
         MemPool.AddSpace<ShaderResourceCacheD3D11>(m_NumActiveShaders);
         MemPool.AddSpace<ShaderResourceLayoutD3D11>(m_NumActiveShaders);
 

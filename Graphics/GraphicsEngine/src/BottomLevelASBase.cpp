@@ -105,7 +105,7 @@ void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false)
 
 void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
                           BottomLevelASDesc&       DstDesc,
-                          LinearAllocator&         MemPool,
+                          FixedLinearAllocator&    MemPool,
                           const BLASNameToIndex*   pSrcNameToIndex,
                           BLASNameToIndex&         DstNameToIndex) noexcept(false)
 {

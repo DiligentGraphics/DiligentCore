@@ -46,7 +46,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
     const auto NumShaderStages = GetNumShaderStages();
     VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
 
-    LinearAllocator MemPool{GetRawAllocator()};
+    FixedLinearAllocator MemPool{GetRawAllocator()};
 
     MemPool.AddSpace<ShaderResourceCacheD3D11>(NumShaderStages);
     MemPool.AddSpace<ShaderResourceLayoutD3D11>(NumShaderStages);

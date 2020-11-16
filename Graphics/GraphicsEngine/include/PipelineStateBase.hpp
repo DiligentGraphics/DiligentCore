@@ -40,7 +40,7 @@
 #include "STDAllocator.hpp"
 #include "EngineMemory.h"
 #include "GraphicsAccessories.hpp"
-#include "LinearAllocator.hpp"
+#include "FixedLinearAllocator.hpp"
 #include "HashUtils.hpp"
 
 namespace Diligent
@@ -49,6 +49,10 @@ namespace Diligent
 void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false);
 void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false);
 void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
+
+void CopyRayTracingShaderGroups(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
+                                const RayTracingPipelineStateCreateInfo&                                CreateInfo,
+                                FixedLinearAllocator&                                                   MemPool) noexcept(false);
 
 void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept;
 
@@ -295,7 +299,7 @@ protected:
 
 
     void ReserveSpaceForPipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
-                                     LinearAllocator&                       MemPool) noexcept
+                                     FixedLinearAllocator&                  MemPool) noexcept
     {
         MemPool.AddSpace<GraphicsPipelineDesc>();
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
@@ -315,13 +319,13 @@ protected:
     }
 
     void ReserveSpaceForPipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
-                                     LinearAllocator&                      MemPool) const noexcept
+                                     FixedLinearAllocator&                 MemPool) const noexcept
     {
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
     }
 
     void ReserveSpaceForPipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
-                                     LinearAllocator&                         MemPool) const noexcept
+                                     FixedLinearAllocator&                    MemPool) const noexcept
     {
         for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
         {
@@ -478,7 +482,7 @@ protected:
 
 
     void InitializePipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
-                                LinearAllocator&                       MemPool)
+                                FixedLinearAllocator&                  MemPool)
     {
         this->m_pGraphicsPipelineDesc = MemPool.Copy(CreateInfo.GraphicsPipeline);
 
@@ -608,15 +612,17 @@ protected:
     }
 
     void InitializePipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
-                                LinearAllocator&                      MemPool)
+                                FixedLinearAllocator&                 MemPool)
     {
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
     }
 
     void InitializePipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
-                                TNameToGroupIndexMap&&                   NameToGroupIndex,
-                                LinearAllocator&                         MemPool) noexcept
+                                FixedLinearAllocator&                    MemPool) noexcept
     {
+        TNameToGroupIndexMap NameToGroupIndex;
+        CopyRayTracingShaderGroups(NameToGroupIndex, CreateInfo, MemPool);
+
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
@@ -636,7 +642,7 @@ protected:
     }
 
 private:
-    static void ReserveResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, LinearAllocator& MemPool) noexcept
+    static void ReserveResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, FixedLinearAllocator& MemPool) noexcept
     {
         if (SrcLayout.Variables != nullptr)
         {
@@ -662,7 +668,7 @@ private:
         static_assert(std::is_trivially_destructible<decltype(*SrcLayout.ImmutableSamplers)>::value, "Add destructor for this object to Destruct()");
     }
 
-    static void CopyResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, PipelineResourceLayoutDesc& DstLayout, LinearAllocator& MemPool)
+    static void CopyResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, PipelineResourceLayoutDesc& DstLayout, FixedLinearAllocator& MemPool)
     {
         if (SrcLayout.Variables != nullptr)
         {

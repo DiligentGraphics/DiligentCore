@@ -42,8 +42,6 @@
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ShaderToolsCommon.hpp"
-#include "PlatformMisc.hpp"
-#include "GraphicsAccessories.hpp"
 
 #if D3D12_SUPPORTED
 #    include <d3d12shader.h>
@@ -94,11 +92,9 @@ public:
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) override final;
 
-    virtual bool RemapResourceBinding(const TBindingMapPerStage& BindingMapPerStage,
-                                      const char*                EntryPoint,
-                                      const void*                pBytecode,
-                                      size_t                     BytecodeSize,
-                                      IDxcBlob**                 ppByteCodeBlob) override final;
+    virtual bool RemapResourceBinding(const TResourceBindingMap& ResourceMap,
+                                      IDxcBlob*                  pSrcBytecode,
+                                      IDxcBlob**                 ppDstByteCode) override final;
 
 private:
     DxcCreateInstanceProc Load()
@@ -141,9 +137,8 @@ private:
         return m_pCreateInstance;
     }
 
-    bool        ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const;
-    bool        PatchDXIL(const TResourceBindingMap& ResourceMap, String& DXIL) const;
-    SHADER_TYPE GetEntryShaderType(const String& EntryPoint, const String& DXIL) const;
+    bool ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const;
+    bool PatchDXIL(const TResourceBindingMap& ResourceMap, String& DXIL) const;
 
 private:
     DxcCreateInstanceProc  m_pCreateInstance = nullptr;
@@ -765,11 +760,9 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     }
 }
 
-bool DXCompilerImpl::RemapResourceBinding(const TBindingMapPerStage& BindingMapPerStage,
-                                          const char*                EntryPoint,
-                                          const void*                pBytecode,
-                                          size_t                     BytecodeSize,
-                                          IDxcBlob**                 ppByteCodeBlob)
+bool DXCompilerImpl::RemapResourceBinding(const TResourceBindingMap& ResourceMap,
+                                          IDxcBlob*                  pSrcBytecode,
+                                          IDxcBlob**                 ppDstByteCode)
 {
 #if D3D12_SUPPORTED
     auto CreateInstance = GetCreateInstaceProc();
@@ -805,16 +798,8 @@ bool DXCompilerImpl::RemapResourceBinding(const TBindingMapPerStage& BindingMapP
         return false;
     }
 
-    CComPtr<IDxcBlobEncoding> srcBytecode;
-    hr = library->CreateBlobWithEncodingFromPinned(pBytecode, static_cast<Uint32>(BytecodeSize), 0, &srcBytecode);
-    if (FAILED(hr))
-    {
-        LOG_ERROR("Failed to create bytecode blob");
-        return false;
-    }
-
     CComPtr<IDxcBlobEncoding> disasm;
-    hr = compiler->Disassemble(srcBytecode, &disasm);
+    hr = compiler->Disassemble(pSrcBytecode, &disasm);
     if (FAILED(hr))
     {
         LOG_ERROR("Failed to disassemble bytecode");
@@ -823,10 +808,6 @@ bool DXCompilerImpl::RemapResourceBinding(const TBindingMapPerStage& BindingMapP
 
     String dxilAsm;
     dxilAsm.assign(static_cast<const char*>(disasm->GetBufferPointer()), disasm->GetBufferSize());
-
-    SHADER_TYPE  shaderType  = GetEntryShaderType(EntryPoint, dxilAsm);
-    const Uint32 shaderIndex = GetShaderTypePipelineIndex(shaderType, PIPELINE_TYPE_RAY_TRACING);
-    const auto&  ResourceMap = BindingMapPerStage[shaderIndex];
 
     if (!PatchDXIL(ResourceMap, dxilAsm))
     {
@@ -874,7 +855,7 @@ bool DXCompilerImpl::RemapResourceBinding(const TBindingMapPerStage& BindingMapP
     if (FAILED(hr))
         return false;
 
-    return ValidateAndSign(CreateInstance, library, compiled, ppByteCodeBlob);
+    return ValidateAndSign(CreateInstance, library, compiled, ppDstByteCode);
 #else
 
     return false;
@@ -944,49 +925,6 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
         }
     }
     return true;
-}
-
-namespace
-{
-template <Uint32 S>
-inline bool ReverseCmp(const char* lhsRev, const char (&rhs)[S])
-{
-    const Uint32 count = S - 1;
-    const char*  lhs   = lhsRev - count;
-    return std::memcmp(lhs, rhs, count) == 0;
-}
-} // namespace
-
-SHADER_TYPE DXCompilerImpl::GetEntryShaderType(const String& EntryPoint, const String& DXIL) const
-{
-    const String Pattern              = "void " + EntryPoint + "(";
-    const char   ShaderTypeStart[]    = "[shader(\\22";
-    const char   ShaderTypeEnd[]      = "\\22)]";
-    const char   RayGenShader[]       = "raygeneration";
-    const char   MissShader[]         = "miss";
-    const char   AnyHitShader[]       = "anyhit";
-    const char   ClosestHitShader[]   = "closesthit";
-    const char   IntersectionShader[] = "intersection";
-    const char   CallableShader[]     = "callable";
-
-    size_t pos = DXIL.find(Pattern);
-    if (pos == String::npos)
-        return SHADER_TYPE_UNKNOWN;
-
-    size_t endPos = DXIL.rfind(ShaderTypeEnd, pos);
-    if (endPos == String::npos)
-        return SHADER_TYPE_UNKNOWN;
-
-    const char* str = &DXIL[endPos];
-    // clang-format off
-    if (ReverseCmp(str, RayGenShader      )) return SHADER_TYPE_RAY_GEN;
-    if (ReverseCmp(str, MissShader        )) return SHADER_TYPE_RAY_MISS;
-    if (ReverseCmp(str, AnyHitShader      )) return SHADER_TYPE_RAY_ANY_HIT;
-    if (ReverseCmp(str, ClosestHitShader  )) return SHADER_TYPE_RAY_CLOSEST_HIT;
-    if (ReverseCmp(str, IntersectionShader)) return SHADER_TYPE_RAY_INTERSECTION;
-    if (ReverseCmp(str, CallableShader    )) return SHADER_TYPE_CALLABLE;
-    // clang-format on
-    return SHADER_TYPE_UNKNOWN;
 }
 
 } // namespace Diligent
