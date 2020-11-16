@@ -205,7 +205,9 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
         Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
     }
 
+    constexpr Uint32 MaxPayloadSize      = sizeof(float) * 8;
     constexpr Uint32 RecursionDepthLimit = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH - 1;
+
     if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > RecursionDepthLimit)
         LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth (", CreateInfo.RayTracingPipeline.MaxRecursionDepth, ") must be <= ", RecursionDepthLimit);
 
@@ -216,7 +218,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     auto& ShaderConfig                   = *TempPool.Construct<D3D12_RAYTRACING_SHADER_CONFIG>();
     ShaderConfig.MaxAttributeSizeInBytes = CreateInfo.MaxAttributeSize == 0 ? D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES : CreateInfo.MaxAttributeSize;
-    ShaderConfig.MaxPayloadSizeInBytes   = CreateInfo.MaxPayloadSize == 0 ? 32 : CreateInfo.MaxPayloadSize;
+    ShaderConfig.MaxPayloadSizeInBytes   = CreateInfo.MaxPayloadSize == 0 ? MaxPayloadSize : CreateInfo.MaxPayloadSize;
     Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &ShaderConfig});
 #undef LOG_PSO_ERROR_AND_THROW
 }

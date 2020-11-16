@@ -428,8 +428,8 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
 
 #ifdef DILIGENT_DEVELOPMENT
         auto Iter = NameToGroupIndex.find(GeneralShader.Name);
-        CHECK_THROW(Iter != NameToGroupIndex.end());
-        CHECK_THROW(Iter->second == ShaderGroups.size());
+        LOG_PSO_ERROR_AND_THROW(Iter != NameToGroupIndex.end(), "Can't find general shader '", GeneralShader.Name, "'");
+        LOG_PSO_ERROR_AND_THROW(Iter->second == ShaderGroups.size(), "General shader group '", GeneralShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
 #endif
 
         ShaderGroups.push_back(Group);
@@ -450,8 +450,8 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
 
 #ifdef DILIGENT_DEVELOPMENT
         auto Iter = NameToGroupIndex.find(TriHitShader.Name);
-        CHECK_THROW(Iter != NameToGroupIndex.end());
-        CHECK_THROW(Iter->second == ShaderGroups.size());
+        LOG_PSO_ERROR_AND_THROW(Iter != NameToGroupIndex.end(), "Can't find triangle hit group '", TriHitShader.Name, "'");
+        LOG_PSO_ERROR_AND_THROW(Iter->second == ShaderGroups.size(), "Triangle hit group '", TriHitShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
 #endif
 
         ShaderGroups.push_back(Group);
@@ -472,8 +472,8 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
 
 #ifdef DILIGENT_DEVELOPMENT
         auto Iter = NameToGroupIndex.find(ProcHitShader.Name);
-        CHECK_THROW(Iter != NameToGroupIndex.end());
-        CHECK_THROW(Iter->second == ShaderGroups.size());
+        LOG_PSO_ERROR_AND_THROW(Iter != NameToGroupIndex.end(), "Can't find procedural hit group '", ProcHitShader.Name, "'");
+        LOG_PSO_ERROR_AND_THROW(Iter->second == ShaderGroups.size(), "Procedural hit group '", ProcHitShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
 #endif
 
         ShaderGroups.push_back(Group);
