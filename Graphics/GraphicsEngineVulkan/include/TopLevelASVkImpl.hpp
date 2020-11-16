@@ -61,7 +61,7 @@ public:
     virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
     {
         auto Handle = GetVkTLAS();
-        return reinterpret_cast<void*>(Handle); // AZ TODO: fix for 32 bit platform
+        return reinterpret_cast<void*>(Handle);
     }
 
     /// Implementation of ITopLevelASVk::GetVkTLAS().

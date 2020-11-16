@@ -65,12 +65,14 @@ DILIGENT_TYPED_ENUM(SHADER_BINDING_VALIDATION_FLAGS, Uint8)
     /// Checks that all shaders are bound or inactive.
     SHADER_BINDING_VALIDATION_SHADER_ONLY   = 0x1,
 
-    /// AZ TODO
+    /// Checks that shader record data are initialized.
     SHADER_BINDING_VALIDATION_SHADER_RECORD = 0x2,
-
-    /// AZ TODO
+        
+    /// Checks that all TLAS that used in IShaderBindingTable::BindHitGroup() are alive and
+    /// shader binding indices have not changed.
     SHADER_BINDING_VALIDATION_TLAS          = 0x4,
 
+    // Enable all validations.
     SHADER_BINDING_VALIDATION_ALL           = SHADER_BINDING_VALIDATION_SHADER_ONLY   |
                                               SHADER_BINDING_VALIDATION_SHADER_RECORD |
                                               SHADER_BINDING_VALIDATION_TLAS
@@ -101,6 +103,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \return     True if SBT content is valid.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       This method implemented only for development build and has no effect in release build.
     VIRTUAL Bool METHOD(Verify)(THIS_
                                 SHADER_BINDING_VALIDATION_FLAGS Flags) CONST PURE;
     
