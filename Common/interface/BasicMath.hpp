@@ -975,6 +975,70 @@ template <class T> struct Matrix3x3
             };
     }
 
+    static Matrix3x3 Scale(T x, T y, T z)
+    {
+        return Matrix3x3 //
+            {
+                x,
+                0,
+                0,
+                0,
+                y,
+                0,
+                0,
+                0,
+                z,
+            };
+    }
+
+    // D3D-style left-handed matrix that rotates a point around the x axis. Angle (in radians)
+    // is measured clockwise when looking along the rotation axis toward the origin:
+    // (x' y' z') = (x y z) * RotationX
+    static Matrix3x3 RotationX(T angleInRadians)
+    {
+        auto s = std::sin(angleInRadians);
+        auto c = std::cos(angleInRadians);
+
+        return Matrix3x3 // clang-format off
+            {
+                1,  0,  0,
+                0,  c,  s,
+                0, -s,  c // clang-format on
+            };
+    }
+
+    // D3D-style left-handed matrix that rotates a point around the y axis. Angle (in radians)
+    // is measured clockwise when looking along the rotation axis toward the origin:
+    // (x' y' z' 1) = (x y z 1) * RotationY
+    static Matrix3x3 RotationY(T angleInRadians)
+    {
+        auto s = std::sin(angleInRadians);
+        auto c = std::cos(angleInRadians);
+
+        return Matrix3x3 // clang-format off
+            {
+                c,  0, -s,
+                0,  1,  0,
+                s,  0,  c // clang-format on
+            };
+    }
+
+    // D3D-style left-handed matrix that rotates a point around the z axis. Angle (in radians)
+    // is measured clockwise when looking along the rotation axis toward the origin:
+    // (x' y' z' 1) = (x y z 1) * RotationZ
+    static Matrix3x3 RotationZ(T angleInRadians)
+    {
+        auto s = std::sin(angleInRadians);
+        auto c = std::cos(angleInRadians);
+
+        return Matrix3x3 // clang-format off
+            {
+                 c,  s,  0,
+                -s,  c,  0,
+                 0,  0,  1 // clang-format on
+            };
+    }
+
     static Matrix3x3 Mul(const Matrix3x3& m1, const Matrix3x3& m2)
     {
         Matrix3x3 mOut;

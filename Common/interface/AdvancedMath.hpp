@@ -79,6 +79,13 @@ struct ViewFrustum
         const Plane3D* Planes = reinterpret_cast<const Plane3D*>(this);
         return Planes[static_cast<size_t>(Idx)];
     }
+
+    Plane3D& GetPlane(PLANE_IDX Idx)
+    {
+        VERIFY_EXPR(Idx < NUM_PLANES);
+        Plane3D* Planes = reinterpret_cast<Plane3D*>(this);
+        return Planes[static_cast<size_t>(Idx)];
+    }
 };
 
 struct ViewFrustumExt : public ViewFrustum
