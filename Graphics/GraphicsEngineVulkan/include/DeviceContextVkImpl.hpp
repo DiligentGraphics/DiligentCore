@@ -387,20 +387,6 @@ private:
     inline void DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
     inline void DisposeCurrentCmdBuffer(Uint32 CmdQueue, Uint64 FenceValue);
 
-    struct BufferToTextureCopyInfo
-    {
-        Uint32 RowSize        = 0;
-        Uint32 Stride         = 0;
-        Uint32 StrideInTexels = 0;
-        Uint32 DepthStride    = 0;
-        Uint32 MemorySize     = 0;
-        Uint32 RowCount       = 0;
-        Box    Region;
-    };
-    BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
-                                                       Uint32             MipLevel,
-                                                       const Box&         Region) const;
-
     void CopyBufferToTexture(VkBuffer                       vkSrcBuffer,
                              Uint32                         SrcBufferOffset,
                              Uint32                         SrcBufferRowStrideInTexels,
