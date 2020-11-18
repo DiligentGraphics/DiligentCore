@@ -101,6 +101,6 @@ namespace Diligent
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()
     {
         NSOpenGLContext* CurrentCtx = [NSOpenGLContext currentContext];
-        return CurrentCtx;
+        return (__bridge void*) CurrentCtx;
     }
 }

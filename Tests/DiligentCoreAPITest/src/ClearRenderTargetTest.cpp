@@ -153,9 +153,10 @@ TEST(ClearRenderTargetTest, AsAttachment)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12 ||
+        pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_METAL)
     {
-        GTEST_SKIP() << "D3D12 does not allow render target clears within render pass";
+        GTEST_SKIP() << "D3D12 and Metal do not allow render target clears within render pass";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();

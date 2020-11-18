@@ -1741,64 +1741,6 @@ void DeviceContextVkImpl::CopyTextureRegion(TextureVkImpl*                 pSrcT
     ++m_State.NumCommands;
 }
 
-DeviceContextVkImpl::BufferToTextureCopyInfo DeviceContextVkImpl::GetBufferToTextureCopyInfo(
-    const TextureDesc& TexDesc,
-    Uint32             MipLevel,
-    const Box&         Region) const
-{
-    BufferToTextureCopyInfo CopyInfo;
-    const auto&             FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-    VERIFY_EXPR(Region.MaxX > Region.MinX && Region.MaxY > Region.MinY && Region.MaxZ > Region.MinZ);
-    auto UpdateRegionWidth  = Region.MaxX - Region.MinX;
-    auto UpdateRegionHeight = Region.MaxY - Region.MinY;
-    auto UpdateRegionDepth  = Region.MaxZ - Region.MinZ;
-    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
-    {
-        // Align update region size by the block size. This is only necessary when updating
-        // coarse mip levels. Otherwise UpdateRegionWidth/Height should be multiples of block size
-        VERIFY_EXPR((FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth - 1)) == 0);
-        VERIFY_EXPR((FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight - 1)) == 0);
-        const auto BlockAlignedRegionWidth  = (UpdateRegionWidth + (FmtAttribs.BlockWidth - 1)) & ~(FmtAttribs.BlockWidth - 1);
-        const auto BlockAlignedRegionHeight = (UpdateRegionHeight + (FmtAttribs.BlockHeight - 1)) & ~(FmtAttribs.BlockHeight - 1);
-        CopyInfo.RowSize                    = BlockAlignedRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
-        CopyInfo.RowCount                   = BlockAlignedRegionHeight / FmtAttribs.BlockHeight;
-
-        // (imageExtent.width + imageOffset.x) must be less than or equal to the image subresource width, and
-        // (imageExtent.height + imageOffset.y) must be less than or equal to the image subresource height (18.4),
-        // so we need to clamp UpdateRegionWidth and Height
-        const Uint32 MipWidth  = std::max(TexDesc.Width >> MipLevel, 1u);
-        const Uint32 MipHeight = std::max(TexDesc.Height >> MipLevel, 1u);
-        VERIFY_EXPR(MipWidth > Region.MinX);
-        UpdateRegionWidth = std::min(UpdateRegionWidth, MipWidth - Region.MinX);
-        VERIFY_EXPR(MipHeight > Region.MinY);
-        UpdateRegionHeight = std::min(UpdateRegionHeight, MipHeight - Region.MinY);
-    }
-    else
-    {
-        CopyInfo.RowSize  = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-        CopyInfo.RowCount = UpdateRegionHeight;
-    }
-
-    const auto& DeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
-    CopyInfo.Stride          = Align(CopyInfo.RowSize, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
-    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
-    {
-        // If the calling command's VkImage parameter is a compressed image,
-        // bufferRowLength must be a multiple of the compressed texel block width
-        // In texels (not even in compressed blocks!)
-        CopyInfo.StrideInTexels = CopyInfo.Stride / Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.BlockWidth};
-    }
-    else
-    {
-        CopyInfo.StrideInTexels = CopyInfo.Stride / (Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents});
-    }
-    CopyInfo.DepthStride = CopyInfo.RowCount * CopyInfo.Stride;
-    CopyInfo.MemorySize  = UpdateRegionDepth * CopyInfo.DepthStride;
-    CopyInfo.Region      = Region;
-    return CopyInfo;
-}
-
-
 void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSrcData,
                                               Uint32                         SrcStride,
                                               Uint32                         SrcDepthStride,
@@ -1810,11 +1752,12 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
 {
     const auto& TexDesc = TextureVk.GetDesc();
     VERIFY(TexDesc.SampleCount == 1, "Only single-sample textures can be updated with vkCmdCopyBufferToImage()");
-    auto       CopyInfo          = GetBufferToTextureCopyInfo(TexDesc, MipLevel, DstBox);
-    const auto UpdateRegionDepth = CopyInfo.Region.MaxZ - CopyInfo.Region.MinZ;
+
+    const auto& DeviceLimits      = m_pDevice->GetPhysicalDevice().GetProperties().limits;
+    const auto  CopyInfo          = GetBufferToTextureCopyInfo(TexDesc, MipLevel, DstBox, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
+    const auto  UpdateRegionDepth = CopyInfo.Region.MaxZ - CopyInfo.Region.MinZ;
 
     // For UpdateTextureRegion(), use UploadHeap, not dynamic heap
-    const auto& DeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
     // Source buffer offset must be multiple of 4 (18.4)
     auto BufferOffsetAlignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
     // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of
@@ -1847,7 +1790,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
                 + DepthSlice * SrcDepthStride;
             auto* pDstPtr =
                 reinterpret_cast<Uint8*>(Allocation.CPUAddress)
-                + row        * CopyInfo.Stride
+                + row        * CopyInfo.RowStride
                 + DepthSlice * CopyInfo.DepthStride;
             // clang-format on
 
@@ -1856,7 +1799,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
     }
     CopyBufferToTexture(Allocation.vkBuffer,
                         static_cast<Uint32>(Allocation.AlignedOffset),
-                        CopyInfo.StrideInTexels,
+                        CopyInfo.RowStrideInTexels,
                         TextureVk,
                         CopyInfo.Region,
                         MipLevel,
@@ -2007,7 +1950,7 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
     {
         if (MapType != MAP_WRITE)
         {
-            LOG_ERROR("Textures can currently only be mapped for writing in Vulkan backend");
+            LOG_ERROR("Dynamic textures can be mapped for writing only in Vulkan backend");
             MappedData = MappedTextureSubresource{};
             return;
         }
@@ -2015,8 +1958,8 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
         if ((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0)
             LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE has no effect in Vulkan backend");
 
-        auto        CopyInfo     = GetBufferToTextureCopyInfo(TexDesc, MipLevel, *pMapRegion);
         const auto& DeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
+        const auto  CopyInfo     = GetBufferToTextureCopyInfo(TexDesc, MipLevel, *pMapRegion, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
         // Source buffer offset must be multiple of 4 (18.4)
         auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
         // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of
@@ -2028,7 +1971,7 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
         auto Allocation = AllocateDynamicSpace(CopyInfo.MemorySize, static_cast<Uint32>(Alignment));
 
         MappedData.pData       = reinterpret_cast<Uint8*>(Allocation.pDynamicMemMgr->GetCPUAddress()) + Allocation.AlignedOffset;
-        MappedData.Stride      = CopyInfo.Stride;
+        MappedData.Stride      = CopyInfo.RowStride;
         MappedData.DepthStride = CopyInfo.DepthStride;
 
         auto it = m_MappedTextures.emplace(MappedTextureKey{&TextureVk, MipLevel, ArraySlice}, MappedTexture{CopyInfo, std::move(Allocation)});
@@ -2101,7 +2044,7 @@ void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
             auto& MappedTex = UploadSpaceIt->second;
             CopyBufferToTexture(MappedTex.Allocation.pDynamicMemMgr->GetVkBuffer(),
                                 static_cast<Uint32>(MappedTex.Allocation.AlignedOffset),
-                                MappedTex.CopyInfo.StrideInTexels,
+                                MappedTex.CopyInfo.RowStrideInTexels,
                                 TextureVk,
                                 MappedTex.CopyInfo.Region,
                                 MipLevel,

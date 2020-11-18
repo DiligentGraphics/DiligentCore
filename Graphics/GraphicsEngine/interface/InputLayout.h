@@ -32,6 +32,8 @@
 /// \file
 /// Definition input layout
 
+#include <string.h>
+
 #include "GraphicsTypes.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -60,7 +62,6 @@ enum INPUT_ELEMENT_FREQUENCY
 /// Description of a single element of the input layout
 struct LayoutElement
 {
-
     /// HLSL semantic. Default value ("ATTRIB") allows HLSL shaders to be converted
     /// to GLSL and used in OpenGL backend as well as compiled to SPIRV and used
     /// in Vulkan backend.
@@ -172,6 +173,25 @@ struct LayoutElement
         Frequency           {_Frequency                    },
         InstanceDataStepRate{_InstanceDataStepRate         }
     {}
+
+    bool operator == (const LayoutElement& rhs) const
+    {
+        return strcmp(HLSLSemantic, rhs.HLSLSemantic) == 0 &&
+               InputIndex           == rhs.InputIndex      &&
+               BufferSlot           == rhs.BufferSlot      &&
+               NumComponents        == rhs.NumComponents   &&
+               ValueType            == rhs.ValueType       &&
+               IsNormalized         == rhs.IsNormalized    &&
+               RelativeOffset       == rhs.RelativeOffset  &&
+               Stride               == rhs.Stride          &&
+               Frequency            == rhs.Frequency       &&
+               InstanceDataStepRate == rhs.InstanceDataStepRate;
+    }
+
+    bool operator != (const LayoutElement& rhs) const
+    {
+        return !(*this == rhs);
+    }
 #endif
 };
 typedef struct LayoutElement LayoutElement;
@@ -195,6 +215,25 @@ struct InputLayoutDesc
         LayoutElements{_LayoutElements},
         NumElements   {_NumElements   }
     {}
+
+    bool operator == (const InputLayoutDesc& rhs) const
+    {
+        if (NumElements != rhs.NumElements)
+            return false;
+
+        for (Uint32 i=0; i < NumElements; ++i)
+        {
+            if (LayoutElements[i] != rhs.LayoutElements[i])
+                return false;
+        }
+
+        return true;
+    }
+
+    bool operator != (const InputLayoutDesc& rhs) const
+    {
+        return !(*this == rhs);
+    }
 #endif
 };
 typedef struct InputLayoutDesc InputLayoutDesc;

@@ -510,7 +510,7 @@ SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineTy
 ///       |________________|       Subres 1
 ///       |                |        stride
 ///       |                |     |<------->|
-//        |                |     |_________|
+///       |                |     |_________|
 ///       |    Subres 0    |     |         |
 ///       |                |     | Subres 1|
 ///       |                |     |         |                     _
@@ -539,5 +539,38 @@ inline Uint32 GetStagingTextureSubresourceOffset(const TextureDesc& TexDesc,
 {
     return GetStagingTextureLocationOffset(TexDesc, ArraySlice, MipLevel, Alignment, 0, 0, 0);
 }
+
+
+/// Information required to perform a copy operation between a buffer and a texture
+struct BufferToTextureCopyInfo
+{
+    /// Texture region row size, in bytes. For compressed formats,
+    /// this is the size of one row of compressed blocks.
+    Uint32 RowSize = 0;
+
+    /// Row stride, in bytes. The stride is computed by
+    /// aligning the RowSize, and is thus always >= RowSize.
+    Uint32 RowStride = 0;
+
+    /// Row stride in texels.
+    Uint32 RowStrideInTexels = 0;
+
+    /// The number of rows in the region. For compressed formats,
+    /// this is the number of compressed-block rows.
+    Uint32 RowCount = 0;
+
+    /// Depth stride (RowStride * RowCount)
+    Uint32 DepthStride = 0;
+
+    /// Total memory size required to store the pixels in the region.
+    Uint32 MemorySize = 0;
+
+    /// Texture region
+    Box Region;
+};
+BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
+                                                   Uint32             MipLevel,
+                                                   const Box&         Region,
+                                                   Uint32             RowStrideAlignment);
 
 } // namespace Diligent

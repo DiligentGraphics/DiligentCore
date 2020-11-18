@@ -46,6 +46,10 @@
 #    include "Vulkan/CreateObjFromNativeResVK.hpp"
 #endif
 
+#if METAL_SUPPORTED
+#    include "Metal/CreateObjFromNativeResMtl.hpp"
+#endif
+
 #include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
@@ -111,6 +115,12 @@ protected:
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResVK(pDevice));
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResMtl(pDevice));
                 break;
 #endif
 
@@ -205,6 +215,12 @@ protected:
         }
 
         TexDesc.MipLevels = SampleCount == 1 ? 0 : 1;
+        if ((TexDesc.Type == RESOURCE_DIM_TEX_1D || TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY) && deviceCaps.IsMetalDevice())
+        {
+            // 1D textures in Metal must have 1 mip level
+            TexDesc.MipLevels = 1;
+        }
+
         TexDesc.Format    = TextureFormat;
         TexDesc.Usage     = USAGE_DEFAULT;
         TexDesc.BindFlags = BindFlags;
@@ -269,7 +285,7 @@ protected:
             TextureViewDesc ViewDesc;
             ViewDesc.TextureDim = TexDesc.Type;
 
-            if (SampleCount > 1)
+            if (TexDesc.MipLevels == 1)
             {
                 ViewDesc.MostDetailedMip = 0;
                 ViewDesc.NumMipLevels    = 1;

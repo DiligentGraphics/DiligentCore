@@ -1507,5 +1507,49 @@ Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
     return Offset;
 }
 
+BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
+                                                   Uint32             MipLevel,
+                                                   const Box&         Region,
+                                                   Uint32             RowStrideAlignment)
+{
+    BufferToTextureCopyInfo CopyInfo;
+
+    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+    VERIFY_EXPR(Region.MaxX > Region.MinX && Region.MaxY > Region.MinY && Region.MaxZ > Region.MinZ);
+    const auto UpdateRegionWidth  = Region.MaxX - Region.MinX;
+    const auto UpdateRegionHeight = Region.MaxY - Region.MinY;
+    const auto UpdateRegionDepth  = Region.MaxZ - Region.MinZ;
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        // Align update region size by the block size
+        VERIFY_EXPR(IsPowerOfTwo(FmtAttribs.BlockWidth));
+        VERIFY_EXPR(IsPowerOfTwo(FmtAttribs.BlockHeight));
+        const auto BlockAlignedRegionWidth  = Align(UpdateRegionWidth, Uint32{FmtAttribs.BlockWidth});
+        const auto BlockAlignedRegionHeight = Align(UpdateRegionHeight, Uint32{FmtAttribs.BlockHeight});
+
+        CopyInfo.RowSize  = BlockAlignedRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
+        CopyInfo.RowCount = BlockAlignedRegionHeight / FmtAttribs.BlockHeight;
+    }
+    else
+    {
+        CopyInfo.RowSize  = UpdateRegionWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        CopyInfo.RowCount = UpdateRegionHeight;
+    }
+
+    VERIFY_EXPR(IsPowerOfTwo(RowStrideAlignment));
+    CopyInfo.RowStride = Align(CopyInfo.RowSize, RowStrideAlignment);
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        CopyInfo.RowStrideInTexels = CopyInfo.RowStride / Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.BlockWidth};
+    }
+    else
+    {
+        CopyInfo.RowStrideInTexels = CopyInfo.RowStride / (Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents});
+    }
+    CopyInfo.DepthStride = CopyInfo.RowCount * CopyInfo.RowStride;
+    CopyInfo.MemorySize  = UpdateRegionDepth * CopyInfo.DepthStride;
+    CopyInfo.Region      = Region;
+    return CopyInfo;
+}
 
 } // namespace Diligent
