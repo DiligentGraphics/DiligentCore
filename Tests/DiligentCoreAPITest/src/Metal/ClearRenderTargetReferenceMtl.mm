@@ -47,19 +47,26 @@ void ClearRenderTargetReferenceMtl(ISwapChain* pSwapChain, const float ClearColo
     auto* pRTV       = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
     auto* mtlTexture = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
-    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
+    @autoreleasepool
+    {
+        // Autoreleased
+        id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
 
-    MTLRenderPassDescriptor* renderPassDesc =
-        [MTLRenderPassDescriptor renderPassDescriptor];
-    renderPassDesc.colorAttachments[0].texture = mtlTexture;
-    renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionClear;
-    renderPassDesc.colorAttachments[0].clearColor  =
-        MTLClearColorMake(ClearColor[0], ClearColor[1], ClearColor[2], ClearColor[3]);
-    renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
-    id <MTLRenderCommandEncoder> renderEncoder =
-        [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
-    [renderEncoder endEncoding];
-    [mtlCommandBuffer commit];
+        // Autoreleased
+        MTLRenderPassDescriptor* renderPassDesc =
+            [MTLRenderPassDescriptor renderPassDescriptor];
+        renderPassDesc.colorAttachments[0].texture = mtlTexture;
+        renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+        renderPassDesc.colorAttachments[0].clearColor  =
+            MTLClearColorMake(ClearColor[0], ClearColor[1], ClearColor[2], ClearColor[3]);
+        renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+        // Autoreleased
+        id <MTLRenderCommandEncoder> renderEncoder =
+            [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
+        [renderEncoder endEncoding];
+        [mtlCommandBuffer commit];
+    }
 }
 
 } // namespace Testing

@@ -59,6 +59,7 @@ TestingSwapChainMtl::TestingSwapChainMtl(IReferenceCounters*    pRefCounters,
 
 TestingSwapChainMtl::~TestingSwapChainMtl()
 {
+    [m_MtlStagingBuffer release];
 }
 
 void TestingSwapChainMtl::TakeSnapshot()
@@ -72,22 +73,27 @@ void TestingSwapChainMtl::TakeSnapshot()
     m_ReferenceDataPitch = m_SwapChainDesc.Height * 4;
     m_ReferenceData.resize(m_SwapChainDesc.Width * m_ReferenceDataPitch);
 
-    auto commandBuffer = [mtlCommandQueue commandBuffer];
-    auto blitEncoder   = [commandBuffer blitCommandEncoder];
-    [blitEncoder copyFromTexture:mtlTexture
-        sourceSlice:0
-        sourceLevel:0
-        sourceOrigin:MTLOrigin{0,0,0}
-        sourceSize:MTLSize{m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1}
-        toBuffer:m_MtlStagingBuffer
-        destinationOffset:0
-        destinationBytesPerRow:m_ReferenceDataPitch
-        destinationBytesPerImage:0];
-    [blitEncoder synchronizeResource:m_MtlStagingBuffer];
-    [blitEncoder endEncoding];
-    [commandBuffer commit];
-    [commandBuffer waitUntilCompleted];
-    memcpy(m_ReferenceData.data(), [m_MtlStagingBuffer contents], m_ReferenceData.size());
+    @autoreleasepool
+    {
+        // Command buffer is autoreleased
+        auto commandBuffer = [mtlCommandQueue commandBuffer];
+        // Command encoder is autoreleased
+        auto blitEncoder   = [commandBuffer blitCommandEncoder];
+        [blitEncoder copyFromTexture:mtlTexture
+            sourceSlice:0
+            sourceLevel:0
+            sourceOrigin:MTLOrigin{0,0,0}
+            sourceSize:MTLSize{m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1}
+            toBuffer:m_MtlStagingBuffer
+            destinationOffset:0
+            destinationBytesPerRow:m_ReferenceDataPitch
+            destinationBytesPerImage:0];
+        [blitEncoder synchronizeResource:m_MtlStagingBuffer];
+        [blitEncoder endEncoding];
+        [commandBuffer commit];
+        [commandBuffer waitUntilCompleted];
+        memcpy(m_ReferenceData.data(), [m_MtlStagingBuffer contents], m_ReferenceData.size());
+    }
 }
 
 void CreateTestingSwapChainMtl(TestingEnvironmentMtl* pEnv,
