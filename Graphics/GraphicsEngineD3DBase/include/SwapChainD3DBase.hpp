@@ -157,6 +157,7 @@ protected:
         swapChainDesc.SampleDesc.Quality = 0;
 
         DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
+        static_assert(SWAP_CHAIN_USAGE_LAST == SWAP_CHAIN_USAGE_COPY_SOURCE, "Please update this function to handle the new swapchain usage");
         swapChainDesc.BufferUsage = 0;
         if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET)
             swapChainDesc.BufferUsage |= DXGI_USAGE_RENDER_TARGET_OUTPUT;

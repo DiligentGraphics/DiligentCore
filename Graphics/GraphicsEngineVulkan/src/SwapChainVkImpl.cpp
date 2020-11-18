@@ -423,26 +423,13 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     swapchain_ci.imageColorSpace    = ColorSpace;
 
     DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
-    static_assert(SWAP_CHAIN_USAGE_LAST == SWAP_CHAIN_USAGE_UNORDERED_ACCESS, "Please update this function to handle the new swapchain usage");
-
-    {
-        auto SCUsage = m_SwapChainDesc.Usage;
-        while (SCUsage != SWAP_CHAIN_USAGE_NONE)
-        {
-            auto UsageBit = static_cast<SWAP_CHAIN_USAGE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{SCUsage}));
-            switch (UsageBit)
-            {
-                // clang-format off
-                case SWAP_CHAIN_USAGE_RENDER_TARGET:    swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; break;
-                case SWAP_CHAIN_USAGE_SHADER_INPUT:     swapchain_ci.imageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;                                            break;
-                case SWAP_CHAIN_USAGE_COPY_SOURCE:      swapchain_ci.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;                                       break;
-                case SWAP_CHAIN_USAGE_UNORDERED_ACCESS: swapchain_ci.imageUsage |= VK_IMAGE_USAGE_STORAGE_BIT;                                            break;
-                // clang-format on
-                default: UNEXPECTED("unknown swapchain usage flag");
-            }
-            SCUsage &= ~UsageBit;
-        }
-    }
+    static_assert(SWAP_CHAIN_USAGE_LAST == SWAP_CHAIN_USAGE_COPY_SOURCE, "Please update this function to handle the new swapchain usage");
+    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET)
+        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_SHADER_INPUT)
+        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_COPY_SOURCE)
+        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
     // vkCmdClearColorImage() command requires the image to use VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL layout
     // that requires  VK_IMAGE_USAGE_TRANSFER_DST_BIT to be set

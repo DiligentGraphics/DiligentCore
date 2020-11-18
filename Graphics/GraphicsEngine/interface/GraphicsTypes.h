@@ -1261,12 +1261,8 @@ DILIGENT_TYPED_ENUM(SWAP_CHAIN_USAGE_FLAGS, Uint32)
 
     /// Swap chain images can be used as source of copy operation
     SWAP_CHAIN_USAGE_COPY_SOURCE      = 0x04L,
-        
-    /// Swap chain images will define an unordered access view that will be used
-    /// for unordered read/write operations from the shaders
-    SWAP_CHAIN_USAGE_UNORDERED_ACCESS = 0x08L,
 
-    SWAP_CHAIN_USAGE_LAST             = SWAP_CHAIN_USAGE_UNORDERED_ACCESS,
+    SWAP_CHAIN_USAGE_LAST             = SWAP_CHAIN_USAGE_COPY_SOURCE,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SWAP_CHAIN_USAGE_FLAGS)
 
