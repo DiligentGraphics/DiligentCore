@@ -86,7 +86,7 @@
 #include "RenderDeviceGL.h"
 #include "TextureGL.h"
 #include "BufferGL.h"
-#include "GraphicsAccessories.hpp"
+#include "TestingEnvironment.hpp"
 
 #include "GL/CreateObjFromNativeResGL.hpp"
 
@@ -128,8 +128,7 @@ void TestCreateObjFromNativeResGL::CreateTexture(Diligent::ITexture* pTexture)
     if (m_pDevice->GetTextureFormatInfo(SrcTexDesc.Format).IsTypeless)
         TestTexDesc.Format = SrcTexDesc.Format;
 
-    EXPECT_EQ(TestTexDesc, SrcTexDesc) << "Src tex desc:  " << GetObjectDescString(SrcTexDesc)
-                                       << "\nTest tex desc: " << GetObjectDescString(TestTexDesc);
+    EXPECT_EQ(TestTexDesc, SrcTexDesc);
 
     RefCntAutoPtr<ITextureGL> pAttachedTextureGL(pAttachedTexture, IID_TextureGL);
     ASSERT_NE(pAttachedTextureGL, nullptr);
@@ -156,8 +155,7 @@ void TestCreateObjFromNativeResGL::CreateBuffer(Diligent::IBuffer* pBuffer)
     ASSERT_NE(pBufferFromNativeGLHandle, nullptr);
 
     const auto& TestBufferDesc = pBufferFromNativeGLHandle->GetDesc();
-    EXPECT_EQ(TestBufferDesc, SrcBuffDesc) << "Src buff desc:  " << GetObjectDescString(SrcBuffDesc)
-                                           << "\nTest buff desc: " << GetObjectDescString(TestBufferDesc);
+    EXPECT_EQ(TestBufferDesc, SrcBuffDesc);
 
     RefCntAutoPtr<IBufferGL> pTestBufferGL(pBufferFromNativeGLHandle, IID_BufferGL);
     ASSERT_NE(pTestBufferGL, nullptr);

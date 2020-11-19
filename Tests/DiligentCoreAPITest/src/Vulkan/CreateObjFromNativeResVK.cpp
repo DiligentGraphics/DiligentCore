@@ -33,7 +33,7 @@
 #include "RenderDeviceVk.h"
 #include "TextureVk.h"
 #include "BufferVk.h"
-#include "GraphicsAccessories.hpp"
+#include "TestingEnvironment.hpp"
 
 #include "Vulkan/CreateObjFromNativeResVK.hpp"
 
@@ -65,8 +65,7 @@ void TestCreateObjFromNativeResVK::CreateTexture(Diligent::ITexture* pTexture)
     ASSERT_NE(pAttachedTexture, nullptr);
 
     const auto& TestTexDesc = pAttachedTexture->GetDesc();
-    EXPECT_EQ(TestTexDesc, SrcTexDesc) << "Src tex desc:  " << GetObjectDescString(SrcTexDesc)
-                                       << "\nTest tex desc: " << GetObjectDescString(TestTexDesc);
+    EXPECT_EQ(TestTexDesc, SrcTexDesc);
 
     RefCntAutoPtr<ITextureVk> pAttachedTextureVk(pAttachedTexture, IID_TextureVk);
     ASSERT_NE(pAttachedTextureVk, nullptr);
@@ -93,8 +92,7 @@ void TestCreateObjFromNativeResVK::CreateBuffer(Diligent::IBuffer* pBuffer)
     ASSERT_NE(pBufferFromNativeVkHandle, nullptr);
 
     const auto& TestBufferDesc = pBufferFromNativeVkHandle->GetDesc();
-    EXPECT_EQ(TestBufferDesc, SrcBuffDesc) << "Src buff desc:  " << GetObjectDescString(SrcBuffDesc)
-                                           << "\nTest buff desc: " << GetObjectDescString(TestBufferDesc);
+    EXPECT_EQ(TestBufferDesc, SrcBuffDesc);
 
     RefCntAutoPtr<IBufferVk> pTestBufferVk(pBufferFromNativeVkHandle, IID_BufferVk);
     ASSERT_NE(pTestBufferVk, nullptr);

@@ -25,10 +25,12 @@
  *  of the possibility of such damages.
  */
 
+#include <Metal/Metal.h>
+
 #include "RenderDeviceMtl.h"
 #include "TextureMtl.h"
 #include "BufferMtl.h"
-#include "GraphicsAccessories.hpp"
+#include "TestingEnvironment.hpp"
 
 #include "Metal/CreateObjFromNativeResMtl.hpp"
 
@@ -42,60 +44,62 @@ namespace Testing
 
 void TestCreateObjFromNativeResMtl::CreateTexture(Diligent::ITexture* pTexture)
 {
-#if 0
-    RefCntAutoPtr<IRenderDeviceVk> pDeviceVk(m_pDevice, IID_RenderDeviceVk);
-    RefCntAutoPtr<ITextureVk>      pTextureVk(pTexture, IID_TextureVk);
-    ASSERT_NE(pDeviceVk, nullptr);
-    ASSERT_NE(pTextureVk, nullptr);
+    RefCntAutoPtr<IRenderDeviceMtl> pDeviceMtl{m_pDevice, IID_RenderDeviceMtl};
+    RefCntAutoPtr<ITextureMtl>      pTextureMtl{pTexture, IID_TextureMtl};
+    ASSERT_NE(pDeviceMtl, nullptr);
+    ASSERT_NE(pTextureMtl, nullptr);
 
     const auto& SrcTexDesc = pTexture->GetDesc();
-    if (SrcTexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-        return;
 
-    auto VkHandle = pTextureVk->GetVkImage();
-    ASSERT_NE(VkHandle, (VkImage)VK_NULL_HANDLE);
+    auto mtlHandle = (id<MTLTexture>) pTextureMtl->GetMtlResource();
+    ASSERT_NE(mtlHandle, nil);
 
     RefCntAutoPtr<ITexture> pAttachedTexture;
-    pDeviceVk->CreateTextureFromVulkanImage(VkHandle, SrcTexDesc, RESOURCE_STATE_UNKNOWN, &pAttachedTexture);
+    pDeviceMtl->CreateTextureFromMtlResource(mtlHandle, RESOURCE_STATE_UNKNOWN, &pAttachedTexture);
     ASSERT_NE(pAttachedTexture, nullptr);
 
-    const auto& TestTexDesc = pAttachedTexture->GetDesc();
-    EXPECT_EQ(TestTexDesc, SrcTexDesc) << "Src tex desc:  " << GetObjectDescString(SrcTexDesc)
-                                       << "\nTest tex desc: " << GetObjectDescString(TestTexDesc);
+    auto TestTexDesc = pAttachedTexture->GetDesc();
 
-    RefCntAutoPtr<ITextureVk> pAttachedTextureVk(pAttachedTexture, IID_TextureVk);
-    ASSERT_NE(pAttachedTextureVk, nullptr);
-    EXPECT_EQ(pAttachedTextureVk->GetVkImage(), VkHandle);
-    EXPECT_EQ(reinterpret_cast<VkImage>(pAttachedTextureVk->GetNativeHandle()), VkHandle);
-#endif
+    const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+    if (SrcFmtAttribs.IsTypeless)
+    {
+        const auto& TestFmtAttribs = GetTextureFormatAttribs(TestTexDesc.Format);
+        EXPECT_EQ(TestFmtAttribs.NumComponents, SrcFmtAttribs.NumComponents);
+        EXPECT_EQ(TestFmtAttribs.ComponentSize, SrcFmtAttribs.ComponentSize);
+        TestTexDesc.Format = SrcTexDesc.Format;
+    }
+    EXPECT_EQ(TestTexDesc, SrcTexDesc);
+    EXPECT_STREQ(TestTexDesc.Name, SrcTexDesc.Name);
+    RefCntAutoPtr<ITextureMtl> pAttachedTextureMtl(pAttachedTexture, IID_TextureMtl);
+    ASSERT_NE(pAttachedTextureMtl, nullptr);
+    EXPECT_EQ(pAttachedTextureMtl->GetMtlResource(), mtlHandle);
+    EXPECT_EQ((id<MTLTexture>) pAttachedTextureMtl->GetNativeHandle(), mtlHandle);
 }
 
 void TestCreateObjFromNativeResMtl::CreateBuffer(Diligent::IBuffer* pBuffer)
 {
-#if 0
-    RefCntAutoPtr<IRenderDeviceVk> pDeviceVk(m_pDevice, IID_RenderDeviceVk);
-    RefCntAutoPtr<IBufferVk>       pBufferVk(pBuffer, IID_BufferVk);
-    ASSERT_NE(pDeviceVk, nullptr);
-    ASSERT_NE(pBufferVk, nullptr);
+    RefCntAutoPtr<IRenderDeviceMtl> pDeviceMtl{m_pDevice, IID_RenderDeviceMtl};
+    RefCntAutoPtr<IBufferMtl>       pBufferMtl{pBuffer, IID_BufferMtl};
+    ASSERT_NE(pDeviceMtl, nullptr);
+    ASSERT_NE(pBufferMtl, nullptr);
 
-    auto VkBufferHandle = pBufferVk->GetVkBuffer();
-    ASSERT_NE(VkBufferHandle, (VkBuffer)VK_NULL_HANDLE);
+    auto mtlBufferHandle = pBufferMtl->GetMtlResource();
+    ASSERT_NE(mtlBufferHandle, nil);
 
     const auto& SrcBuffDesc = pBuffer->GetDesc();
 
-    RefCntAutoPtr<IBuffer> pBufferFromNativeVkHandle;
-    pDeviceVk->CreateBufferFromVulkanResource(VkBufferHandle, SrcBuffDesc, RESOURCE_STATE_UNKNOWN, &pBufferFromNativeVkHandle);
-    ASSERT_NE(pBufferFromNativeVkHandle, nullptr);
+    RefCntAutoPtr<IBuffer> pBufferFromNativeMtlHandle;
+    pDeviceMtl->CreateBufferFromMtlResource(mtlBufferHandle, SrcBuffDesc, RESOURCE_STATE_UNKNOWN, &pBufferFromNativeMtlHandle);
+    ASSERT_NE(pBufferFromNativeMtlHandle, nullptr);
 
-    const auto& TestBufferDesc = pBufferFromNativeVkHandle->GetDesc();
-    EXPECT_EQ(TestBufferDesc, SrcBuffDesc) << "Src buff desc:  " << GetObjectDescString(SrcBuffDesc)
-                                           << "\nTest buff desc: " << GetObjectDescString(TestBufferDesc);
+    const auto& TestBufferDesc = pBufferFromNativeMtlHandle->GetDesc();
+    EXPECT_EQ(TestBufferDesc, SrcBuffDesc);
+    EXPECT_STREQ(TestBufferDesc.Name, SrcBuffDesc.Name);
 
-    RefCntAutoPtr<IBufferVk> pTestBufferVk(pBufferFromNativeVkHandle, IID_BufferVk);
-    ASSERT_NE(pTestBufferVk, nullptr);
-    EXPECT_EQ(pTestBufferVk->GetVkBuffer(), VkBufferHandle);
-    EXPECT_EQ(reinterpret_cast<VkBuffer>(pTestBufferVk->GetNativeHandle()), VkBufferHandle);
-#endif
+    RefCntAutoPtr<IBufferMtl> pTestBufferMtl(pBufferFromNativeMtlHandle, IID_BufferMtl);
+    ASSERT_NE(pTestBufferMtl, nullptr);
+    EXPECT_EQ(pTestBufferMtl->GetMtlResource(), mtlBufferHandle);
+    EXPECT_EQ((id<MTLBuffer>) pTestBufferMtl->GetNativeHandle(), mtlBufferHandle);
 }
 
 } // namespace Testing

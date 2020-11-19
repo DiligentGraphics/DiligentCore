@@ -53,9 +53,10 @@ public:
                                                                  ITexture**     ppTexture) = 0;
 
     /// Creates a buffer from existing Metal resource
-    virtual void DILIGENT_CALL_TYPE CreateBufferFromMtlResource(id<MTLBuffer>  mtlBuffer,
-                                                                RESOURCE_STATE InitialState,
-                                                                IBuffer**      ppBuffer) = 0;
+    virtual void DILIGENT_CALL_TYPE CreateBufferFromMtlResource(id<MTLBuffer>     mtlBuffer,
+                                                                const BufferDesc& BuffDesc,
+                                                                RESOURCE_STATE    InitialState,
+                                                                IBuffer**         ppBuffer) = 0;
 };
 
 } // namespace Diligent
