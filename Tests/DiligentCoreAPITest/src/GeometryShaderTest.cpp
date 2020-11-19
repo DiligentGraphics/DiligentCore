@@ -84,6 +84,8 @@ TEST(GeometryShaderTest, DrawTriangles)
         GTEST_SKIP() << "Geometry shader test requires separable programs";
     }
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pConext    = pEnv->GetDeviceContext();
 
@@ -128,7 +130,6 @@ TEST(GeometryShaderTest, DrawTriangles)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     auto* pContext = pEnv->GetDeviceContext();
 

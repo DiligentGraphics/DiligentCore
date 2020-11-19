@@ -53,6 +53,8 @@ void PSOTestBase::InitResources()
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     ShaderCreateInfo Attrs;
     Attrs.Source                     = g_ShaderSource;
     Attrs.EntryPoint                 = "VSMain";
@@ -89,6 +91,8 @@ RefCntAutoPtr<IPipelineState> PSOTestBase::CreateTestPSO(const GraphicsPipelineS
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     RefCntAutoPtr<IPipelineState> pPSO;
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);

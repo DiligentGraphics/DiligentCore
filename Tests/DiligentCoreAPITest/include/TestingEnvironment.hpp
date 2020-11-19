@@ -71,7 +71,24 @@ public:
 
     void ReleaseResources();
 
-    class ScopedReset
+    class ScopedAutoreleasePool
+    {
+    public:
+        ScopedAutoreleasePool() :
+            AutoRelPool{m_pTheEnvironment ? m_pTheEnvironment->PushAutoreleasePool() : nullptr}
+        {
+        }
+        ~ScopedAutoreleasePool()
+        {
+            if (AutoRelPool)
+                m_pTheEnvironment->PopAutoreleasePool(AutoRelPool);
+        }
+
+    private:
+        void* const AutoRelPool;
+    };
+
+    class ScopedReset : public ScopedAutoreleasePool
     {
     public:
         ScopedReset() = default;
@@ -82,7 +99,7 @@ public:
         }
     };
 
-    class ScopedReleaseResources
+    class ScopedReleaseResources : public ScopedAutoreleasePool
     {
     public:
         ScopedReleaseResources() = default;
@@ -118,6 +135,9 @@ protected:
     static Uint32 FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
                                ADAPTER_TYPE                            AdapterType,
                                Uint32                                  AdapterId);
+
+    virtual void* PushAutoreleasePool() { return nullptr; }
+    virtual void  PopAutoreleasePool(void*) {}
 
     const RENDER_DEVICE_TYPE m_DeviceType;
 

@@ -100,6 +100,8 @@ void TextureUploaderTest(bool IsRenderThread)
         GTEST_SKIP() << "Texture uploader is not currently implemented in Metal";
     }
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     TextureUploaderDesc             UploaderDesc;
     RefCntAutoPtr<ITextureUploader> pTexUploader;
     CreateTextureUploader(pDevice, UploaderDesc, &pTexUploader);

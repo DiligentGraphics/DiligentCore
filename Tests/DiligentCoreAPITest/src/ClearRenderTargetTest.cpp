@@ -123,6 +123,8 @@ TEST(ClearRenderTargetTest, AsRenderTarget)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pConext    = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
 
     constexpr float ClearColor[] = {0.25f, 0.5f, 0.75f, 1.0f};
@@ -134,7 +136,6 @@ TEST(ClearRenderTargetTest, AsRenderTarget)
         ClearRenderTargetReference(pDevice, pSwapChain, ClearColor);
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -159,6 +160,8 @@ TEST(ClearRenderTargetTest, AsAttachment)
         GTEST_SKIP() << "D3D12 and Metal do not allow render target clears within render pass";
     }
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pConext    = pEnv->GetDeviceContext();
 
@@ -172,7 +175,6 @@ TEST(ClearRenderTargetTest, AsAttachment)
         ClearRenderTargetReference(pDevice, pSwapChain, ClearColor);
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RenderPassAttachmentDesc Attachments[1];
     auto*                    pRTV = pSwapChain->GetCurrentBackBufferRTV();
@@ -237,6 +239,8 @@ TEST(ClearRenderTargetTest, LoadOpClear)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pConext    = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     constexpr float ClearColor[] = {0.875f, 0.3125, 0.4375, 1.0f};
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
@@ -247,7 +251,6 @@ TEST(ClearRenderTargetTest, LoadOpClear)
         ClearRenderTargetReference(pDevice, pSwapChain, ClearColor);
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     RenderPassAttachmentDesc Attachments[1];
     auto*                    pRTV = pSwapChain->GetCurrentBackBufferRTV();

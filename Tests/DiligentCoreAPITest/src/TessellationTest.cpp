@@ -84,6 +84,8 @@ TEST(TessellationTest, DrawQuad)
         GTEST_SKIP() << "Tessellation test requires separable programs";
     }
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pConext    = pEnv->GetDeviceContext();
 
@@ -128,7 +130,6 @@ TEST(TessellationTest, DrawQuad)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     auto* pContext = pEnv->GetDeviceContext();
 

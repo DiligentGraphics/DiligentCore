@@ -53,6 +53,8 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
+        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
         ShaderCreateInfo Attrs;
         Attrs.Source                     = g_TrivialVSSource;
         Attrs.EntryPoint                 = "VSMain";
@@ -173,6 +175,8 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 {
     GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(1);
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     PSOCreateInfo.PSODesc.Name = "BlendStateBasicTest";
 
     BlendStateDesc& BSDesc = PSOCreateInfo.GraphicsPipeline.BlendDesc;
@@ -265,6 +269,8 @@ TEST_P(BlendFactorTest, CreatePSO)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& Param = GetParam();
 
@@ -422,6 +428,8 @@ TEST_P(BlendOperationTest, CreatePSO)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& Param = GetParam();
 

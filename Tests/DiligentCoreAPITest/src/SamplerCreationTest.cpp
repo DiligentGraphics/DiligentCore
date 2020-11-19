@@ -59,6 +59,8 @@ TEST_P(FilterTypeTest, CreateSampler)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     SamplerDesc SamplerDesc;
     const auto& Param     = GetParam();
     SamplerDesc.MinFilter = std::get<0>(Param);
@@ -108,6 +110,8 @@ TEST(FilterTypeTest, AnisotropicFilter)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     {
         SamplerDesc SamplerDesc;
         SamplerDesc.MinFilter = FILTER_TYPE_ANISOTROPIC;
@@ -152,6 +156,8 @@ TEST_P(AddressModeTest, CreateSampler)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     SamplerDesc SamplerDesc;
     SamplerDesc.MinFilter = FILTER_TYPE_LINEAR;
     SamplerDesc.MagFilter = FILTER_TYPE_LINEAR;
@@ -161,8 +167,6 @@ TEST_P(AddressModeTest, CreateSampler)
     pDevice->CreateSampler(SamplerDesc, &pSampler);
     ASSERT_TRUE(pSampler);
     EXPECT_EQ(pSampler->GetDesc(), SamplerDesc);
-
-    pEnv->ReleaseResources();
 }
 
 INSTANTIATE_TEST_SUITE_P(AddressModes,
@@ -192,6 +196,8 @@ TEST_P(ComparisonFuncTest, CreateSampler)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     SamplerDesc SamplerDesc;
     SamplerDesc.MinFilter      = FILTER_TYPE_LINEAR;

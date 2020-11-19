@@ -53,6 +53,8 @@ class ShaderResourceLayoutTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
+        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
         auto* pEnv          = TestingEnvironment::GetInstance();
         auto  pRenderTarget = pEnv->CreateTexture("ShaderResourceLayoutTest: test RTV", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 512, 512);
         ASSERT_NE(pRenderTarget, nullptr);
@@ -293,7 +295,7 @@ RefCntAutoPtr<ITextureView> ShaderResourceLayoutTest::pRTV;
 
 void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSamplers)
 {
-    TestingEnvironment::ScopedReset AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -460,7 +462,7 @@ TEST_F(ShaderResourceLayoutTest, ImmutableSamplers)
 
 void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 {
-    TestingEnvironment::ScopedReset AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     static constexpr int StaticBuffArraySize  = 4;
     static constexpr int MutableBuffArraySize = 3;
@@ -645,7 +647,7 @@ TEST_F(ShaderResourceLayoutTest, StructuredBuffers)
 
 void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatted)
 {
-    TestingEnvironment::ScopedReset AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -771,7 +773,7 @@ TEST_F(ShaderResourceLayoutTest, StructuredRWBuffers)
 
 TEST_F(ShaderResourceLayoutTest, RWTextures)
 {
-    TestingEnvironment::ScopedReset AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -872,7 +874,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
 
 TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 {
-    TestingEnvironment::ScopedReset AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -1024,7 +1026,7 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
         GTEST_SKIP() << "OpenGL does not support separate samplers";
     }
 
-    TestingEnvironment::ScopedReset AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     static constexpr Uint32 StaticSamArraySize  = 2;
     static constexpr Uint32 MutableSamArraySize = 4;

@@ -70,6 +70,8 @@ TEST(MeshShaderTest, DrawQuad)
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pConext    = pEnv->GetDeviceContext();
 
@@ -100,7 +102,6 @@ TEST(MeshShaderTest, DrawQuad)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -181,6 +182,8 @@ TEST(MeshShaderTest, DrawQuadIndirect)
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pConext    = pEnv->GetDeviceContext();
 
@@ -215,7 +218,6 @@ TEST(MeshShaderTest, DrawQuadIndirect)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -321,6 +323,8 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pConext    = pEnv->GetDeviceContext();
 
@@ -351,7 +355,6 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     auto* pContext = pEnv->GetDeviceContext();
 

@@ -93,6 +93,8 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
+        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
         TextureDesc TexDesc;
         TexDesc.Name      = "Mips generation test texture";
         TexDesc.Type      = RESOURCE_DIM_TEX_2D;

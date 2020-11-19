@@ -137,6 +137,8 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
             return;
         }
 
+        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
         for (Uint32 i = 0; i < NumBuffersToCreate; ++i)
         {
             BufferDesc BuffDesc;
@@ -302,7 +304,7 @@ TEST_F(MultithreadedResourceCreationTest, CreateResources)
     D3D12DebugLayerSetNameBugWorkaround D3D12DebugLayerBugWorkaround(pDevice);
 #endif
 
-    TestingEnvironment::ScopedReleaseResources AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto numCores = std::thread::hardware_concurrency();
     m_Threads.resize(std::max(numCores, 4u));

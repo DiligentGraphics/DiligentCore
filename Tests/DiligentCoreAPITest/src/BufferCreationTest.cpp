@@ -125,6 +125,8 @@ TEST_F(BufferCreationTest, CreateVertexBuffer)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     BufferDesc BuffDesc;
     BuffDesc.Name          = "Vertex buffer";
     BuffDesc.uiSizeInBytes = 256;
@@ -146,6 +148,8 @@ TEST_F(BufferCreationTest, CreateIndexBuffer)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     BufferDesc BuffDesc;
     BuffDesc.Name          = "Index";
     BuffDesc.uiSizeInBytes = 256;
@@ -164,6 +168,8 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& DevCaps = pDevice->GetDeviceCaps();
     if (!(DevCaps.Features.ComputeShaders && DevCaps.Features.IndirectRendering))
@@ -209,6 +215,8 @@ TEST_F(BufferCreationTest, CreateStructuredBuffer)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     const auto& DevCaps = pDevice->GetDeviceCaps();
     if (!DevCaps.Features.ComputeShaders)
     {
@@ -233,6 +241,8 @@ TEST_F(BufferCreationTest, CreateUniformBuffer)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     BufferDesc BuffDesc;
     BuffDesc.Name          = "Uniform buffer";
     BuffDesc.uiSizeInBytes = 256;
@@ -248,6 +258,8 @@ TEST_F(BufferCreationTest, CreateRawBuffer)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name              = "Raw buffer";
@@ -281,6 +293,8 @@ TEST_F(BufferCreationTest, CreateStagingBuffer)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     auto* pCtx    = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Staging buffer";
@@ -319,6 +333,8 @@ TEST_F(BufferCreationTest, CreateDynamicBuffer)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     auto* pCtx    = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Dynamic vertex buffer";
@@ -365,6 +381,8 @@ TEST_F(BufferCreationTest, CreateUnifiedBuffer)
     {
         GTEST_SKIP() << "Unified memory is not available on this device";
     }
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Unified vertex buffer";

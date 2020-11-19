@@ -179,6 +179,8 @@ protected:
         auto* pSwapChain = pEnv->GetSwapChain();
         auto* pContext   = pEnv->GetDeviceContext();
 
+        TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
         if (pTestingSwapChain)
         {
@@ -226,7 +228,7 @@ protected:
 
             pTestingSwapChain->TakeSnapshot();
         }
-        TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -450,6 +452,8 @@ TEST_F(DrawCommandTest, DrawProcedural)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawProceduralPSO);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -466,6 +470,8 @@ TEST_F(DrawCommandTest, Draw)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -492,6 +498,8 @@ TEST_F(DrawCommandTest, Draw_StartVertex)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -521,6 +529,8 @@ TEST_F(DrawCommandTest, Draw_VBOffset)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawPSO);
 
     // clang-format off
@@ -547,6 +557,8 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -576,6 +588,8 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDraw_2xStride_PSO);
 
@@ -610,6 +624,8 @@ TEST_F(DrawCommandTest, DrawIndexed)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawPSO);
 
     // clang-format off
@@ -641,6 +657,8 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawPSO);
 
     // clang-format off
@@ -671,6 +689,8 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -708,6 +728,8 @@ TEST_F(DrawCommandTest, DrawInstanced)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -740,6 +762,8 @@ TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -775,6 +799,8 @@ TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -814,6 +840,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -848,6 +876,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -886,6 +916,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffs
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -928,6 +960,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -966,6 +1000,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -1003,6 +1039,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1043,6 +1081,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1086,6 +1126,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -1125,6 +1167,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -1163,6 +1207,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1205,6 +1251,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1250,6 +1298,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -1288,6 +1338,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1332,6 +1384,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1384,6 +1438,8 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
 
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -1431,6 +1487,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 

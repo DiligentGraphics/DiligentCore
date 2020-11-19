@@ -91,6 +91,8 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
+        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
+
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
@@ -212,6 +214,8 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     auto*      pDevice    = TestingEnvironment::GetInstance()->GetDevice();
     auto*      pContext   = TestingEnvironment::GetInstance()->GetDeviceContext();
     const auto DeviceType = pDevice->GetDeviceCaps().DevType;
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RenderPassAttachmentDesc Attachments[6];
     Attachments[0].Format       = TEX_FORMAT_RGBA8_UNORM;
@@ -501,6 +505,8 @@ TEST_F(RenderPassTest, Draw)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     constexpr float ClearColor[] = {0.2f, 0.375f, 0.5f, 0.75f};
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
@@ -550,7 +556,6 @@ TEST_F(RenderPassTest, Draw)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     const auto&              SCDesc = pSwapChain->GetDesc();
     RenderPassAttachmentDesc Attachments[1];
@@ -610,6 +615,8 @@ TEST_F(RenderPassTest, MSResolve)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     constexpr float ClearColor[] = {0.25f, 0.5f, 0.375f, 0.5f};
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
@@ -659,7 +666,6 @@ TEST_F(RenderPassTest, MSResolve)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -753,6 +759,8 @@ TEST_F(RenderPassTest, InputAttachment)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     constexpr float ClearColor[] = {0.5f, 0.125f, 0.25f, 0.25f};
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
@@ -802,7 +810,6 @@ TEST_F(RenderPassTest, InputAttachment)
 
         pTestingSwapChain->TakeSnapshot();
     }
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
