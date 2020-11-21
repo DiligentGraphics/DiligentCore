@@ -179,7 +179,7 @@ PUBLIC
 )
 target_compile_definitions(Diligent-GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
 
-if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} STRGREATER_EQUAL "10.0.19041.0")
+if("${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}" STRGREATER_EQUAL "10.0.19041.0")
     set(D3D12_H_HAS_MESH_SHADER ON CACHE INTERNAL "D3D12 headers support mesh shaders" FORCE)
     target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE D3D12_H_HAS_MESH_SHADER=1)
 endif()
