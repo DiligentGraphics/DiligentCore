@@ -1099,14 +1099,17 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
             {
                 TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE;
 
-                if (CreateTestGLTexture(
-                        ContextState, GL_TEXTURE_CUBE_MAP_ARRAY,
-                        [&]() //
-                        {
-                            glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GLFmt, TestTextureDim, TestTextureDim, 6);
-                        }))
+                if (m_DeviceCaps.TexCaps.CubemapArraysSupported)
                 {
-                    TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY;
+                    if (CreateTestGLTexture(
+                            ContextState, GL_TEXTURE_CUBE_MAP_ARRAY,
+                            [&]() //
+                            {
+                                glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GLFmt, TestTextureDim, TestTextureDim, 6);
+                            }))
+                    {
+                        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY;
+                    }
                 }
             }
 
