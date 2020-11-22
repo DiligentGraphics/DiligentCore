@@ -174,12 +174,6 @@ function(set_common_target_properties TARGET)
         endif()
     endif()
 
-    if(PLATFORM_IOS)
-        set_target_properties(${TARGET} PROPERTIES
-            XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 10.0
-        )
-    endif()
-
     if(COMMAND custom_post_configure_target)
         custom_post_configure_target(${TARGET})
     endif()

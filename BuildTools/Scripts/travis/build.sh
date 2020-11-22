@@ -10,7 +10,7 @@ fi
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
   if [ "$IOS" = "true" ]; then 
-    cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -DIOS_ARCH=arm64 -DVULKAN_SDK="$VULKAN_SDK" $1 -G "Xcode" || return
+    cmake .. -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DVULKAN_SDK="$VULKAN_SDK" $1 -G "Xcode" || return
     XCODE_BUILD_SETTINGS="CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO"
   else
     cmake .. $1 -G "Xcode" || return
