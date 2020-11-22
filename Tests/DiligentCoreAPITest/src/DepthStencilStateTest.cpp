@@ -63,8 +63,6 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
     DepthStencilStateDesc& DSSDesc = PSOCreateInfo.GraphicsPipeline.DepthStencilDesc;
 
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     {
         DSSDesc.DepthEnable      = False;
         DSSDesc.DepthWriteEnable = False;

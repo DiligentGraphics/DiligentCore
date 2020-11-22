@@ -49,8 +49,6 @@ namespace
 
 TEST(RenderDevice_CInterface, Misc)
 {
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_Misc(pDevice), 0);
 }
@@ -58,56 +56,42 @@ TEST(RenderDevice_CInterface, Misc)
 
 TEST(RenderDevice_CInterface, CreateBuffer)
 {
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateBuffer(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateShader)
 {
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateShader(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateTexture)
 {
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateTexture(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateSampler)
 {
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateSampler(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateResourceMapping)
 {
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateResourceMapping(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateFence)
 {
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateFence(pDevice), 0);
 }
 
 TEST(RenderDevice_CInterface, CreateQuery)
 {
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
     EXPECT_EQ(TestRenderDeviceCInterface_CreateQuery(pDevice), 0);
 }

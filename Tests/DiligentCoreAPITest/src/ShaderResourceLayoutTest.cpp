@@ -53,8 +53,6 @@ class ShaderResourceLayoutTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
         auto* pEnv          = TestingEnvironment::GetInstance();
         auto  pRenderTarget = pEnv->CreateTexture("ShaderResourceLayoutTest: test RTV", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 512, 512);
         ASSERT_NE(pRenderTarget, nullptr);

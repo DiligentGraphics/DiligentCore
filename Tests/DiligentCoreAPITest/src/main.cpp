@@ -207,11 +207,7 @@ int main(int argc, char** argv)
     pEnv->SetDefaultCompiler(ShCompiler);
     ::testing::AddGlobalTestEnvironment(pEnv);
 
-    int ret_val = 0;
-    {
-        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-        ret_val = RUN_ALL_TESTS();
-    }
+    auto ret_val = RUN_ALL_TESTS();
     std::cout << "\n\n\n";
     return ret_val;
 }

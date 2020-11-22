@@ -103,6 +103,7 @@ public:
     void Draw(id <MTLRenderCommandEncoder> renderEncoder)
     {
         [renderEncoder setRenderPipelineState:m_MtlPipeline];
+        // Note that draw command leaks objects into autorelease pool
         [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
                        vertexStart:0 vertexCount:6];
         [renderEncoder endEncoding];
@@ -147,7 +148,7 @@ void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearCo
         // Render encoder is autoreleased
         id <MTLRenderCommandEncoder> renderEncoder =
             [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
-            
+
         [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
 
         TriRenderer.Draw(renderEncoder);

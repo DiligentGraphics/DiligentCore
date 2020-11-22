@@ -30,9 +30,6 @@
 #include "RenderDeviceMtl.h"
 #include "DeviceContextMtl.h"
 
-extern "C" void* NSPushAutoreleasePool(unsigned);
-extern "C" void NSPopAutoreleasePool(void*);
-
 namespace Diligent
 {
 
@@ -75,16 +72,6 @@ id<MTLDevice> TestingEnvironmentMtl::GetMtlDevice() const
 id<MTLCommandQueue> TestingEnvironmentMtl::GetMtlCommandQueue() const
 {
     return m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlCommandQueue();
-}
-
-void* TestingEnvironmentMtl::PushAutoreleasePool()
-{
-    return NSPushAutoreleasePool(0);
-}
-
-void TestingEnvironmentMtl::PopAutoreleasePool(void* pool)
-{
-    NSPopAutoreleasePool(pool);
 }
 
 } // namespace Testing

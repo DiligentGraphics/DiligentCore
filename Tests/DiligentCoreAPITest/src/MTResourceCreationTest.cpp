@@ -137,8 +137,6 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
             return;
         }
 
-        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
         for (Uint32 i = 0; i < NumBuffersToCreate; ++i)
         {
             BufferDesc BuffDesc;

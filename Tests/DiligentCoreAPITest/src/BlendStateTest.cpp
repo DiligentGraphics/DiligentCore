@@ -53,8 +53,6 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
         ShaderCreateInfo Attrs;
         Attrs.Source                     = g_TrivialVSSource;
         Attrs.EntryPoint                 = "VSMain";

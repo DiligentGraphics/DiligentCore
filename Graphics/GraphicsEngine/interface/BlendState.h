@@ -171,6 +171,9 @@ DILIGENT_TYPED_ENUM(BLEND_OPERATION, Int8)
 /// writable components of the render target
 DILIGENT_TYPED_ENUM(COLOR_MASK, Int8)
 {
+    /// Do not store any components.
+    COLOR_MASK_NONE  = 0,
+
     /// Allow data to be stored in the red component.
     COLOR_MASK_RED   = 1,
 

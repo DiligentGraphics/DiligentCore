@@ -58,8 +58,6 @@ TEST_F(RasterizerStateTest, CreatePSO)
 
     RasterizerStateDesc& RSDesc = PSOCreateInfo.GraphicsPipeline.RasterizerDesc;
 
-    TestingEnvironment::ScopedAutoreleasePool AutoreleasePool;
-
     ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     for (auto FillMode = FILL_MODE_UNDEFINED + 1; FillMode < FILL_MODE_NUM_MODES; ++FillMode)

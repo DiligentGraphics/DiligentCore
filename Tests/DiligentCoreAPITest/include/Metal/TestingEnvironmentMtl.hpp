@@ -51,9 +51,6 @@ public:
 
     id<MTLDevice>       GetMtlDevice() const;
     id<MTLCommandQueue> GetMtlCommandQueue() const;
-
-    virtual void* PushAutoreleasePool() override final;
-    virtual void  PopAutoreleasePool(void*) override final;
 };
 
 } // namespace Testing
