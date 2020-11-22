@@ -12,7 +12,7 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
     install(FILES glew/LICENSE.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME GLEW-License.txt)
 endif()
 
-if(VULKAN_SUPPORTED)
+if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
     # We only need to have SPIRV-Headers folder, but we
     # do not really need any target from the project.
     #add_subdirectory(SPIRV-Headers)
@@ -46,7 +46,7 @@ if(VULKAN_SUPPORTED)
         install(FILES SPIRV-Tools/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Tools-License.txt)
     endif()
 
-    if(NOT ${DILIGENT_NO_GLSLANG})    
+    if(NOT ${DILIGENT_NO_GLSLANG})
         set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
         set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
         set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")
