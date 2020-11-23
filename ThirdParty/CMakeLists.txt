@@ -1,5 +1,11 @@
 cmake_minimum_required (VERSION 3.6)
 
+# cmake_minimum_required(VERSION) resets all policies to their default
+# values for the VERSION, so calling cmake_policy(SET CMP0063 NEW) has
+# no effect on subdirectories. We have to set CMAKE_POLICY_DEFAULT_CMP0063
+# instead:
+set(CMAKE_POLICY_DEFAULT_CMP0063 NEW)
+
 if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
 	add_subdirectory(glew)
     if(DILIGENT_INSTALL_CORE)
@@ -42,7 +48,7 @@ if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
         set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared)
         set_target_properties(${SPIRV_TOOLS_EXCLUDE_TARGETS} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
 
-        set(INSTALL_TARGETS SPIRV-Tools-static SPIRV-Tools-opt)
+        set(THIRD_PARTY_LIBS SPIRV-Tools-static SPIRV-Tools-opt)
         install(FILES SPIRV-Tools/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Tools-License.txt)
     endif()
 
@@ -57,7 +63,7 @@ if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
         # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
         unset(CMAKE_DEBUG_POSTFIX CACHE)
 
-        list(APPEND INSTALL_TARGETS GenericCodeGen glslang OGLCompiler OSDependent SPIRV HLSL)
+        list(APPEND THIRD_PARTY_LIBS GenericCodeGen glslang OGLCompiler OSDependent SPIRV HLSL MachineIndependent)
         install(FILES glslang/LICENSE.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME GLSLang-License.txt)
     endif()
 
@@ -77,11 +83,14 @@ if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
     add_subdirectory(SPIRV-Cross)
     set_directory_root_folder("SPIRV-Cross" "DiligentCore/ThirdParty/SPIRV-Cross")
 
-    list(APPEND INSTALL_TARGETS spirv-cross-core)
+    list(APPEND THIRD_PARTY_LIBS spirv-cross-core)
+    if(METAL_SUPPORTED)
+        list(APPEND THIRD_PARTY_LIBS spirv-cross-msl spirv-cross-glsl)
+    endif()
     install(FILES SPIRV-Cross/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Cross-License.txt)
 
     if(DILIGENT_INSTALL_CORE)
-        install(TARGETS ${INSTALL_TARGETS}
+        install(TARGETS ${THIRD_PARTY_LIBS}
                 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
                 LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
                 RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
@@ -90,11 +99,18 @@ if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
 
     if(${DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF} AND MSVC)
         # Enable function inlining (/Ob1) in Debug build to improve shader compilation performance
-        foreach(TARGET ${INSTALL_TARGETS}) 
+        foreach(TARGET ${THIRD_PARTY_LIBS}) 
             target_compile_options(${TARGET} PRIVATE "$<$<CONFIG:DEBUG>:/Ob1>")
         endforeach()
     endif()
 
+    # Make sure that symbols do not leak out when third-party
+    # libs are linked into shared libraries
+    set_target_properties(${THIRD_PARTY_LIBS} PROPERTIES
+        CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
+        C_VISIBILITY_PRESET hidden # -fvisibility=hidden
+        VISIBILITY_INLINES_HIDDEN TRUE
+     )
 endif()
 
 if(${DILIGENT_BUILD_TESTS})
