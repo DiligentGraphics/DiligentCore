@@ -257,8 +257,10 @@ if(PLATFORM_WIN32)
 elseif(PLATFORM_MACOS)
     # Use Volk
 elseif(PLATFORM_IOS)
-    set(Vulkan_LIBRARY ${MoltenVK_LIBRARY})
-    list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
+    list(APPEND PRIVATE_DEPENDENCIES
+        "${MoltenVK_FRAMEWORK}/ios-arm64/libMoltenVK.a"
+        "${MoltenVK_FRAMEWORK}/ios-x86_64-simulator/libMoltenVK.a"
+    )
 
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(METAL_LIBRARY Metal)
