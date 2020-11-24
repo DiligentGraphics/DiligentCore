@@ -9,8 +9,8 @@ if [ "$TRAVIS_OS_NAME" = "osx" ];  then
   # Download Vulkan SDK
   export VK_SDK_DMG=vulkansdk-macos-$VULKAN_SDK_VER.dmg
   wget -O $VK_SDK_DMG https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VER/mac/$VK_SDK_DMG?Human=true &&
-  hdiutil attach $VK_SDK_DMG -mountpoint $PWD
-  export VULKAN_SDK=$PWD/vulkansdk-macos-$VULKAN_SDK_VER
+  hdiutil attach $VK_SDK_DMG
+  export VULKAN_SDK=/Volumes/vulkansdk-macos-$VULKAN_SDK_VER
 fi
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
