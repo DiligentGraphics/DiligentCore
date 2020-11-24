@@ -7,8 +7,9 @@ if [ "$TRAVIS_OS_NAME" = "osx" ];  then
   export PATH=$PWD/cmake-${CMAKE_VERSION}-Darwin-x86_64/CMake.app/Contents/bin:$PATH
   cmake --version
   # Download Vulkan SDK
-  wget -O vulkansdk-macos-$VULKAN_SDK_VER.tar.gz https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VER/mac/vulkansdk-macos-$VULKAN_SDK_VER.tar.gz?Human=true &&
-  tar -xzf vulkansdk-macos-$VULKAN_SDK_VER.tar.gz
+  export VK_SDK_DMG=vulkansdk-macos-$VULKAN_SDK_VER.dmg
+  wget -O $VK_SDK_DMG https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VER/mac/$VK_SDK_DMG?Human=true &&
+  hdiutil attach $VK_SDK_DMG -mountpoint $PWD
   export VULKAN_SDK=$PWD/vulkansdk-macos-$VULKAN_SDK_VER
 fi
 
