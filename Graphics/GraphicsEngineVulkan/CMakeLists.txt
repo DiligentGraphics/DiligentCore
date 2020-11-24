@@ -257,6 +257,8 @@ if(PLATFORM_WIN32)
 elseif(PLATFORM_MACOS)
     # Use Volk
 elseif(PLATFORM_IOS)
+    # For the apparent lack of a better way, link with both arm64 and x64 libraries.
+    # The linker will issue a warning, but this will work for both device and the simulator.
     list(APPEND PRIVATE_DEPENDENCIES
         "${MoltenVK_FRAMEWORK}/ios-arm64/libMoltenVK.a"
         "${MoltenVK_FRAMEWORK}/ios-x86_64-simulator/libMoltenVK.a"
