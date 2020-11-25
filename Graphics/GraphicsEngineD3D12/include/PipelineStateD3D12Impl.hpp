@@ -139,8 +139,8 @@ private:
     using TShaderStages = std::vector<ShaderStageInfo>;
 
     template <typename PSOCreateInfoType, typename InitPSODescType>
-    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot, InitPSODescType InitPSODesc);
-    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot);
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, RootSignatureBuilder& RootSigBuilder, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot, InitPSODescType InitPSODesc);
+    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo, RootSignatureBuilder& RootSigBuilder, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot);
 
     void Destruct();
 

@@ -718,6 +718,8 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             DxilArgs.push_back(L"-fspv-extension=SPV_NV_ray_tracing");
             DxilArgs.push_back(L"-fspv-extension=SPV_GOOGLE_hlsl_functionality1");
             DxilArgs.push_back(L"-fspv-extension=SPV_GOOGLE_user_type");
+
+            // TODO: SPV_NV_ray_tracing is not compatible with new ray tracing extensions, but the latest DXC does not support shaderRecord, so uncomment this line when will it be fixed
             //DxilArgs.push_back(L"-fspv-target-env=vulkan1.2");
         }
     }

@@ -298,32 +298,14 @@ private:
 /// Implementation of the Diligent::RootSignature class
 class RootSignature
 {
+    friend class RootSignatureBuilder;
+
 public:
     RootSignature();
 
-    void AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
-
-    void Finalize(ID3D12Device* pd3d12Device);
-
     ID3D12RootSignature* GetD3D12RootSignature() const { return m_pd3d12RootSignature; }
 
-    size_t GetResourceCacheRequiredMemSize() const;
-
     void InitResourceCache(class RenderDeviceD3D12Impl* pDeviceD3D12Impl, class ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator& CacheMemAllocator) const;
-
-    void InitImmutableSampler(SHADER_TYPE                     ShaderType,
-                              const char*                     SamplerName,
-                              const char*                     SamplerSuffix,
-                              const D3DShaderResourceAttribs& ShaderResAttribs);
-
-    void AllocateResourceSlot(SHADER_TYPE                     ShaderType,
-                              PIPELINE_TYPE                   PipelineType,
-                              const D3DShaderResourceAttribs& ShaderResAttribs,
-                              SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
-                              D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
-                              Uint32&                         BindPoint,
-                              Uint32&                         RootIndex,
-                              Uint32&                         OffsetFromTableStart);
 
     // This method should be thread-safe as it does not modify any object state
     void (RootSignature::*CommitDescriptorHandles)(class RenderDeviceD3D12Impl* pRenderDeviceD3D12,
@@ -374,32 +356,7 @@ public:
         return m_RootParams.GetHash();
     }
 
-    // Note: sizeof(m_ImmutableSamplers) == 56 (MS compiler, release x64)
-    struct ImmutableSamplerAttribs
-    {
-        ImmutableSamplerDesc    SamplerDesc;
-        UINT                    ShaderRegister   = static_cast<UINT>(-1);
-        UINT                    ArraySize        = 0;
-        UINT                    RegisterSpace    = 0;
-        D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
-        String                  Name;
-        SHADER_TYPE             ShaderType = SHADER_TYPE_UNKNOWN;
-
-        ImmutableSamplerAttribs() noexcept {}
-        ImmutableSamplerAttribs(const ImmutableSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility, SHADER_TYPE Stage) noexcept :
-            SamplerDesc(SamDesc),
-            ShaderVisibility(Visibility),
-            ShaderType{Stage}
-        {}
-    };
-    const ImmutableSamplerAttribs* GetImmutableSamplers() const { return m_ImmutableSamplers.data(); }
-    size_t                         GetImmutableSamplerCount() const { return m_ImmutableSamplers.size(); }
-
 private:
-#ifdef DILIGENT_DEBUG
-    void dbgVerifyRootParameters() const;
-#endif
-
 #ifdef DILIGENT_DEVELOPMENT
     static void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
                                        D3D12_DESCRIPTOR_RANGE_TYPE               RangeType);
@@ -500,11 +457,7 @@ private:
     // This array contains the same data for Sampler root table
     std::array<Uint8, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES* MAX_SHADERS_IN_PIPELINE> m_SamplerRootTablesMap = {};
 
-    std::array<Uint16, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> m_NumResources = {};
-
     RootParamsManager m_RootParams;
-
-    std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> m_ImmutableSamplers;
 
     IMemoryAllocator& m_MemAllocator;
 
@@ -523,6 +476,71 @@ private:
                                              bool                         IsCompute,
                                              bool                         ValidateStates) const;
 };
+
+
+class RootSignatureBuilder
+{
+public:
+    explicit RootSignatureBuilder(RootSignature& RootSig);
+
+    void AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
+
+    void InitImmutableSampler(SHADER_TYPE                     ShaderType,
+                              const char*                     SamplerName,
+                              const char*                     SamplerSuffix,
+                              const D3DShaderResourceAttribs& ShaderResAttribs);
+
+    void AllocateResourceSlot(SHADER_TYPE                     ShaderType,
+                              PIPELINE_TYPE                   PipelineType,
+                              const D3DShaderResourceAttribs& ShaderResAttribs,
+                              SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
+                              D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
+                              Uint32&                         BindPoint,
+                              Uint32&                         RootIndex,
+                              Uint32&                         OffsetFromTableStart);
+
+    void Finalize(ID3D12Device* pd3d12Device);
+
+    size_t GetResourceCacheRequiredMemSize() const;
+
+    size_t GetHash() const
+    {
+        return m_RootSig.GetHash();
+    }
+
+    // Note: sizeof(m_ImmutableSamplers) == 56 (MS compiler, release x64)
+    struct ImmutableSamplerAttribs
+    {
+        ImmutableSamplerDesc    SamplerDesc;
+        UINT                    ShaderRegister   = static_cast<UINT>(-1);
+        UINT                    ArraySize        = 0;
+        UINT                    RegisterSpace    = 0;
+        D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
+        String                  Name;
+        SHADER_TYPE             ShaderType = SHADER_TYPE_UNKNOWN;
+
+        ImmutableSamplerAttribs() noexcept {}
+        ImmutableSamplerAttribs(const ImmutableSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility, SHADER_TYPE Stage) noexcept :
+            SamplerDesc(SamDesc),
+            ShaderVisibility(Visibility),
+            ShaderType{Stage}
+        {}
+    };
+    const ImmutableSamplerAttribs* GetImmutableSamplers() const { return m_ImmutableSamplers.data(); }
+    size_t                         GetImmutableSamplerCount() const { return m_ImmutableSamplers.size(); }
+
+private:
+#ifdef DILIGENT_DEBUG
+    void dbgVerifyRootParameters() const;
+#endif
+
+    RootSignature& m_RootSig;
+
+    std::array<Uint16, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> m_NumResources = {};
+
+    std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> m_ImmutableSamplers;
+};
+
 
 void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
                                     CommandContext&           CmdCtx,

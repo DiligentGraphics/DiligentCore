@@ -177,7 +177,7 @@ void main()
 {
     const vec3 barycentrics = vec3(1.0 - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);
     if (barycentrics.y > barycentrics.x)
-        ignoreIntersectionEXT();
+        ignoreIntersectionEXT;
     else
         payload += vec4(barycentrics, 1.0) / 3.0;
 }

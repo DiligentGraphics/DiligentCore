@@ -139,7 +139,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
                                            const SHADER_RESOURCE_VARIABLE_TYPE* const AllowedVarTypes,
                                            Uint32                                     NumAllowedTypes,
                                            ShaderResourceCacheD3D12*                  pResourceCache,
-                                           RootSignature*                             pRootSig,
+                                           RootSignatureBuilder*                      pRootSig,
                                            LocalRootSignature*                        pLocalRootSig)
 {
     m_pd3d12Device = pd3d12Device;

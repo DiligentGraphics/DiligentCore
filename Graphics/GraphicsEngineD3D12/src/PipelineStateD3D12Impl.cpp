@@ -281,7 +281,7 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
     }
 }
 
-void ExtractResourceBindingMap(const RootSignature&                             RootSig,
+void ExtractResourceBindingMap(const RootSignatureBuilder&                      RootSig,
                                const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex,
                                const ShaderResourceLayoutD3D12*                 pResourceLayouts,
                                const ShaderResourceLayoutD3D12*                 pStaticLayouts,
@@ -364,6 +364,7 @@ size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 
 template <typename PSOCreateInfoType, typename InitPSODescType>
 void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo,
+                                                 RootSignatureBuilder&    RootSigBuilder,
                                                  TShaderStages&           ShaderStages,
                                                  LocalRootSignature*      pLocalRoot,
                                                  InitPSODescType          InitPSODesc)
@@ -400,12 +401,12 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
 
     InitPSODesc(CreateInfo, MemPool);
 
-    m_RootSig.AllocateImmutableSamplers(CreateInfo.PSODesc.ResourceLayout);
+    RootSigBuilder.AllocateImmutableSamplers(CreateInfo.PSODesc.ResourceLayout);
 
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitResourceLayouts(CreateInfo, ShaderStages, pLocalRoot);
+    InitResourceLayouts(CreateInfo, RootSigBuilder, ShaderStages, pLocalRoot);
 }
 
 
@@ -417,8 +418,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 {
     try
     {
-        TShaderStages ShaderStages;
-        InitInternalObjects(CreateInfo, ShaderStages, nullptr,
+        RootSignatureBuilder RootSigBuilder{m_RootSig};
+        TShaderStages        ShaderStages;
+        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, nullptr,
                             [this](const GraphicsPipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool) //
                             {
                                 InitializePipelineDesc(CreateInfo, MemPool);
@@ -628,8 +630,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 {
     try
     {
-        TShaderStages ShaderStages;
-        InitInternalObjects(CreateInfo, ShaderStages, nullptr,
+        RootSignatureBuilder RootSigBuilder{m_RootSig};
+        TShaderStages        ShaderStages;
+        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, nullptr,
                             [this](const ComputePipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool) //
                             {
                                 InitializePipelineDesc(CreateInfo, MemPool);
@@ -690,8 +693,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         LocalRootSignature     LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
         TShaderStages          ShaderStages;
         DynamicLinearAllocator TempPool{GetRawAllocator(), 4 << 10};
+        RootSignatureBuilder   RootSigBuilder{m_RootSig};
 
-        InitInternalObjects(CreateInfo, ShaderStages, &LocalRootSig,
+        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, &LocalRootSig,
                             [&](const RayTracingPipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool) //
                             {
                                 InitializePipelineDesc(CreateInfo, MemPool);
@@ -701,7 +705,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         auto pd3d12Device = pDeviceD3D12->GetD3D12Device5();
 
         TBindingMapPerStage BindingMapPerStage;
-        ExtractResourceBindingMap(m_RootSig, m_ResourceLayoutIndex, &m_pShaderResourceLayouts[0], &m_pShaderResourceLayouts[GetNumShaderStages()], BindingMapPerStage);
+        ExtractResourceBindingMap(RootSigBuilder, m_ResourceLayoutIndex, &m_pShaderResourceLayouts[0], &m_pShaderResourceLayouts[GetNumShaderStages()], BindingMapPerStage);
 
         std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
         std::vector<CComPtr<IDxcBlob>>     ShaderBlobs;
@@ -786,6 +790,7 @@ void PipelineStateD3D12Impl::Destruct()
 IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase)
 
 void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
+                                                 RootSignatureBuilder&          RootSigBuilder,
                                                  TShaderStages&                 ShaderStages,
                                                  LocalRootSignature*            pLocalRoot)
 {
@@ -825,7 +830,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             nullptr,
             0,
             nullptr,
-            &m_RootSig,
+            &RootSigBuilder,
             pLocalRoot //
         );
 
@@ -850,7 +855,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             0 //
         );
     }
-    m_RootSig.Finalize(pd3d12Device);
+    RootSigBuilder.Finalize(pd3d12Device);
 
     if (m_Desc.SRBAllocationGranularity > 1)
     {
@@ -867,11 +872,11 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             ShaderVarMgrDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(m_pShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), NumVariablesUnused);
         }
 
-        auto CacheMemorySize = m_RootSig.GetResourceCacheRequiredMemSize();
+        auto CacheMemorySize = RootSigBuilder.GetResourceCacheRequiredMemSize();
         m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
     }
 
-    m_ShaderResourceLayoutHash = m_RootSig.GetHash();
+    m_ShaderResourceLayoutHash = RootSigBuilder.GetHash();
 }
 
 void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)

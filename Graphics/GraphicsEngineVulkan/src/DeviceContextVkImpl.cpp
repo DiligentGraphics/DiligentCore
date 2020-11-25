@@ -2789,6 +2789,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             // vertex format in SrcTris may be undefined, so use vertex format from description
             vkTris.vertexFormat             = TypeToVkFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount, TriDesc.VertexValueType < VT_FLOAT16);
             vkTris.vertexStride             = SrcTris.VertexStride;
+            vkTris.maxVertex                = SrcTris.VertexCount;
             vkTris.vertexData.deviceAddress = pVB->GetVkDeviceAddress() + SrcTris.VertexOffset;
 
             TransitionOrVerifyBufferState(*pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);

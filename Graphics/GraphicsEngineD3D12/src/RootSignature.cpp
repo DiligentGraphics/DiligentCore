@@ -165,49 +165,18 @@ size_t RootSignature::RootParamsManager::GetHash() const
     return hash;
 }
 
-RootSignature::RootSignature() :
-    m_RootParams{GetRawAllocator()},
-    m_MemAllocator{GetRawAllocator()},
+
+RootSignatureBuilder::RootSignatureBuilder(RootSignature& RootSig) :
+    m_RootSig{RootSig},
     m_ImmutableSamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerAttribs, GetRawAllocator(), "Allocator for vector<ImmutableSamplerAttribs>"))
 {
-    m_SrvCbvUavRootTablesMap.fill(InvalidRootTableIndex);
-    m_SamplerRootTablesMap.fill(InvalidRootTableIndex);
-}
-
-// clang-format off
-static D3D12_DESCRIPTOR_HEAP_TYPE RangeType2HeapTypeMap[]
-{
-    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, //D3D12_DESCRIPTOR_RANGE_TYPE_SRV	  = 0
-    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, //D3D12_DESCRIPTOR_RANGE_TYPE_UAV	  = ( D3D12_DESCRIPTOR_RANGE_TYPE_SRV + 1 )
-    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, //D3D12_DESCRIPTOR_RANGE_TYPE_CBV	  = ( D3D12_DESCRIPTOR_RANGE_TYPE_UAV + 1 )
-    D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER      //D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER = ( D3D12_DESCRIPTOR_RANGE_TYPE_CBV + 1 ) 
-};
-// clang-format on
-D3D12_DESCRIPTOR_HEAP_TYPE HeapTypeFromRangeType(D3D12_DESCRIPTOR_RANGE_TYPE RangeType)
-{
-    VERIFY_EXPR(RangeType >= D3D12_DESCRIPTOR_RANGE_TYPE_SRV && RangeType <= D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
-    auto HeapType = RangeType2HeapTypeMap[RangeType];
-
-#ifdef DILIGENT_DEBUG
-    switch (RangeType)
-    {
-        // clang-format off
-        case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:     VERIFY_EXPR(HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); break;
-        case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:     VERIFY_EXPR(HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); break;
-        case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:     VERIFY_EXPR(HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); break;
-        case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER: VERIFY_EXPR(HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);     break;
-        // clang-format on
-        default: UNEXPECTED("Unexpected descriptor range type"); break;
-    }
-#endif
-    return HeapType;
 }
 
 
-void RootSignature::InitImmutableSampler(SHADER_TYPE                     ShaderType,
-                                         const char*                     SamplerName,
-                                         const char*                     SamplerSuffix,
-                                         const D3DShaderResourceAttribs& SamplerAttribs)
+void RootSignatureBuilder::InitImmutableSampler(SHADER_TYPE                     ShaderType,
+                                                const char*                     SamplerName,
+                                                const char*                     SamplerSuffix,
+                                                const D3DShaderResourceAttribs& SamplerAttribs)
 {
     auto ShaderVisibility = ShaderTypeToD3D12ShaderVisibility(ShaderType);
     auto SamplerFound     = false;
@@ -238,18 +207,20 @@ void RootSignature::InitImmutableSampler(SHADER_TYPE                     ShaderT
     }
 }
 
+
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
-void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderType,
-                                         PIPELINE_TYPE                   PipelineType,
-                                         const D3DShaderResourceAttribs& ShaderResAttribs,
-                                         SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
-                                         D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
-                                         Uint32&                         BindPoint,           // in/out parameter
-                                         Uint32&                         RootIndex,           // Output parameter
-                                         Uint32&                         OffsetFromTableStart // Output parameter
+void RootSignatureBuilder::AllocateResourceSlot(SHADER_TYPE                     ShaderType,
+                                                PIPELINE_TYPE                   PipelineType,
+                                                const D3DShaderResourceAttribs& ShaderResAttribs,
+                                                SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
+                                                D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
+                                                Uint32&                         BindPoint,           // in/out parameter
+                                                Uint32&                         RootIndex,           // Output parameter
+                                                Uint32&                         OffsetFromTableStart // Output parameter
 )
 {
     const auto ShaderVisibility = ShaderTypeToD3D12ShaderVisibility(ShaderType);
+    auto&      RootParams       = m_RootSig.m_RootParams;
 
     // update resource binding for ray tracing
     if (ShaderType & RayTracingMask)
@@ -265,11 +236,11 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
         // Allocate single CBV directly in the root signature
 
         // Get the next available root index past all allocated tables and root views
-        RootIndex            = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
+        RootIndex            = RootParams.GetNumRootTables() + RootParams.GetNumRootViews();
         OffsetFromTableStart = 0;
 
         // Add new root view to existing root parameters
-        m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, BindPoint, ShaderVisibility, VariableType);
+        RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, BindPoint, ShaderVisibility, VariableType);
     }
     else
     {
@@ -278,26 +249,26 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
         const auto RootTableType = (VariableType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) ? SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC : SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
         const auto TableIndKey   = ShaderInd * SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + RootTableType;
         // Get the table array index (this is not the root index!)
-        auto& RootTableArrayInd = ((RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[TableIndKey];
-        if (RootTableArrayInd == InvalidRootTableIndex)
+        auto& RootTableArrayInd = ((RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) ? m_RootSig.m_SamplerRootTablesMap : m_RootSig.m_SrvCbvUavRootTablesMap)[TableIndKey];
+        if (RootTableArrayInd == RootSignature::InvalidRootTableIndex)
         {
             // Root table has not been assigned to this combination yet
 
             // Get the next available root index past all allocated tables and root views
-            RootIndex = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
-            VERIFY_EXPR(m_RootParams.GetNumRootTables() < 255);
-            RootTableArrayInd = static_cast<Uint8>(m_RootParams.GetNumRootTables());
+            RootIndex = RootParams.GetNumRootTables() + RootParams.GetNumRootViews();
+            VERIFY_EXPR(RootParams.GetNumRootTables() < 255);
+            RootTableArrayInd = static_cast<Uint8>(RootParams.GetNumRootTables());
             // Add root table with one single-descriptor range
-            m_RootParams.AddRootTable(RootIndex, ShaderVisibility, RootTableType, 1);
+            RootParams.AddRootTable(RootIndex, ShaderVisibility, RootTableType, 1);
         }
         else
         {
             // Add a new single-descriptor range to the existing table at index RootTableArrayInd
-            m_RootParams.AddDescriptorRanges(RootTableArrayInd, 1);
+            RootParams.AddDescriptorRanges(RootTableArrayInd, 1);
         }
 
         // Reference to either existing or just added table
-        auto& CurrParam = m_RootParams.GetRootTable(RootTableArrayInd);
+        auto& CurrParam = RootParams.GetRootTable(RootTableArrayInd);
         RootIndex       = CurrParam.GetRootIndex();
 
         const auto& d3d12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(CurrParam);
@@ -321,73 +292,7 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
 }
 
 
-#ifdef DILIGENT_DEBUG
-void RootSignature::dbgVerifyRootParameters() const
-{
-    Uint32 dbgTotalSrvCbvUavSlots = 0;
-    Uint32 dbgTotalSamplerSlots   = 0;
-    for (Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
-    {
-        auto& RootTable = m_RootParams.GetRootTable(rt);
-        auto& Param     = static_cast<const D3D12_ROOT_PARAMETER&>(RootTable);
-        VERIFY(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Root parameter is expected to be a descriptor table");
-        auto& Table = Param.DescriptorTable;
-        VERIFY(Table.NumDescriptorRanges > 0, "Descriptor table is expected to be non-empty");
-        VERIFY(Table.pDescriptorRanges[0].OffsetInDescriptorsFromTableStart == 0, "Descriptor table is expected to start at 0 offset");
-        bool IsResourceTable = Table.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        for (Uint32 r = 0; r < Table.NumDescriptorRanges; ++r)
-        {
-            const auto& range = Table.pDescriptorRanges[r];
-            if (IsResourceTable)
-            {
-                // clang-format off
-                VERIFY(range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV ||
-                       range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV ||
-                       range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
-                       "Resource type is expected to be SRV, CBV or UAV");
-                // clang-format on
-                dbgTotalSrvCbvUavSlots += range.NumDescriptors;
-            }
-            else
-            {
-                VERIFY(range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "Resource type is expected to be sampler");
-                dbgTotalSamplerSlots += range.NumDescriptors;
-            }
-
-            if (r > 0)
-            {
-                VERIFY(Table.pDescriptorRanges[r].OffsetInDescriptorsFromTableStart == Table.pDescriptorRanges[r - 1].OffsetInDescriptorsFromTableStart + Table.pDescriptorRanges[r - 1].NumDescriptors, "Ranges in a descriptor table are expected to be consequtive");
-            }
-        }
-    }
-
-    Uint32 dbgTotalRootViews = 0;
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        auto& RootView = m_RootParams.GetRootView(rv);
-        auto& Param    = static_cast<const D3D12_ROOT_PARAMETER&>(RootView);
-        VERIFY(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root parameter is expected to be a CBV");
-        ++dbgTotalRootViews;
-    }
-
-    // clang-format off
-    VERIFY(dbgTotalSrvCbvUavSlots == 
-                m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] + 
-                m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
-                m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of SRV CBV UAV resource slots");
-    VERIFY(dbgTotalSamplerSlots == 
-                m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] +
-                m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
-                m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of sampler slots");
-    VERIFY(dbgTotalRootViews == 
-                m_TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] +
-                m_TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
-                m_TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of root views");
-    // clang-format on
-}
-#endif
-
-void RootSignature::AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout)
+void RootSignatureBuilder::AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout)
 {
     if (ResourceLayout.NumImmutableSamplers > 0)
     {
@@ -406,11 +311,18 @@ void RootSignature::AllocateImmutableSamplers(const PipelineResourceLayoutDesc& 
     }
 }
 
-void RootSignature::Finalize(ID3D12Device* pd3d12Device)
+
+void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
 {
-    for (Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
+    auto& RootParams          = m_RootSig.m_RootParams;
+    auto& TotalSamplerSlots   = m_RootSig.m_TotalSamplerSlots;
+    auto& TotalSrvCbvUavSlots = m_RootSig.m_TotalSrvCbvUavSlots;
+    auto& TotalRootViews      = m_RootSig.m_TotalRootViews;
+    auto& d3d12RootSignature  = m_RootSig.m_pd3d12RootSignature;
+
+    for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
     {
-        const auto& RootTbl        = m_RootParams.GetRootTable(rt);
+        const auto& RootTbl        = RootParams.GetRootTable(rt);
         const auto& d3d12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(RootTbl);
         VERIFY_EXPR(d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 
@@ -418,13 +330,13 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
         VERIFY(d3d12RootParam.DescriptorTable.NumDescriptorRanges > 0 && TableSize > 0, "Unexpected empty descriptor table");
         auto IsSamplerTable = d3d12RootParam.DescriptorTable.pDescriptorRanges[0].RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
         auto VarType        = RootTbl.GetShaderVariableType();
-        (IsSamplerTable ? m_TotalSamplerSlots : m_TotalSrvCbvUavSlots)[VarType] += TableSize;
+        (IsSamplerTable ? TotalSamplerSlots : TotalSrvCbvUavSlots)[VarType] += TableSize;
     }
 
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
+    for (Uint32 rv = 0; rv < RootParams.GetNumRootViews(); ++rv)
     {
-        const auto& RootView = m_RootParams.GetRootView(rv);
-        ++m_TotalRootViews[RootView.GetShaderVariableType()];
+        const auto& RootView = RootParams.GetRootView(rv);
+        ++TotalRootViews[RootView.GetShaderVariableType()];
     }
 
 #ifdef DILIGENT_DEBUG
@@ -434,19 +346,19 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-    auto TotalParams = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
+    auto TotalParams = RootParams.GetNumRootTables() + RootParams.GetNumRootViews();
 
     std::vector<D3D12_ROOT_PARAMETER, STDAllocatorRawMem<D3D12_ROOT_PARAMETER>> D3D12Parameters(TotalParams, D3D12_ROOT_PARAMETER{}, STD_ALLOCATOR_RAW_MEM(D3D12_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<D3D12_ROOT_PARAMETER>"));
-    for (Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
+    for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
     {
-        const auto&                 RootTable = m_RootParams.GetRootTable(rt);
+        const auto&                 RootTable = RootParams.GetRootTable(rt);
         const D3D12_ROOT_PARAMETER& SrcParam  = RootTable;
         VERIFY(SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected");
         D3D12Parameters[RootTable.GetRootIndex()] = SrcParam;
     }
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
+    for (Uint32 rv = 0; rv < RootParams.GetNumRootViews(); ++rv)
     {
-        const auto&                 RootView = m_RootParams.GetRootView(rv);
+        const auto&                 RootView = RootParams.GetRootView(rv);
         const D3D12_ROOT_PARAMETER& SrcParam = RootView;
         VERIFY(SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root CBV is expected");
         D3D12Parameters[RootView.GetRootIndex()] = SrcParam;
@@ -504,28 +416,142 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
     CComPtr<ID3DBlob> signature;
     CComPtr<ID3DBlob> error;
     HRESULT           hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
+    if (error)
+    {
+        LOG_ERROR_MESSAGE("Error: ", (const char*)error->GetBufferPointer());
+    }
     CHECK_D3D_RESULT_THROW(hr, "Failed to serialize root signature");
 
-    hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
+    hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(d3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&d3d12RootSignature)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
 
-    bool bHasDynamicDescriptors = m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] != 0 || m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] != 0;
+    bool bHasDynamicDescriptors = TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] != 0 || TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] != 0;
     if (bHasDynamicDescriptors)
     {
-        CommitDescriptorHandles              = &RootSignature::CommitDescriptorHandlesInternal_SMD<false>;
-        TransitionAndCommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SMD<true>;
+        m_RootSig.CommitDescriptorHandles              = &RootSignature::CommitDescriptorHandlesInternal_SMD<false>;
+        m_RootSig.TransitionAndCommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SMD<true>;
     }
     else
     {
-        CommitDescriptorHandles              = &RootSignature::CommitDescriptorHandlesInternal_SM<false>;
-        TransitionAndCommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SM<true>;
+        m_RootSig.CommitDescriptorHandles              = &RootSignature::CommitDescriptorHandlesInternal_SM<false>;
+        m_RootSig.TransitionAndCommitDescriptorHandles = &RootSignature::CommitDescriptorHandlesInternal_SM<true>;
     }
 }
 
-size_t RootSignature::GetResourceCacheRequiredMemSize() const
+
+#ifdef DILIGENT_DEBUG
+void RootSignatureBuilder::dbgVerifyRootParameters() const
 {
-    auto CacheTableSizes = GetCacheTableSizes();
+    auto& RootParams          = m_RootSig.m_RootParams;
+    auto& TotalSamplerSlots   = m_RootSig.m_TotalSamplerSlots;
+    auto& TotalSrvCbvUavSlots = m_RootSig.m_TotalSrvCbvUavSlots;
+    auto& TotalRootViews      = m_RootSig.m_TotalRootViews;
+
+    Uint32 dbgTotalSrvCbvUavSlots = 0;
+    Uint32 dbgTotalSamplerSlots   = 0;
+    for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
+    {
+        auto& RootTable = RootParams.GetRootTable(rt);
+        auto& Param     = static_cast<const D3D12_ROOT_PARAMETER&>(RootTable);
+        VERIFY(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Root parameter is expected to be a descriptor table");
+        auto& Table = Param.DescriptorTable;
+        VERIFY(Table.NumDescriptorRanges > 0, "Descriptor table is expected to be non-empty");
+        VERIFY(Table.pDescriptorRanges[0].OffsetInDescriptorsFromTableStart == 0, "Descriptor table is expected to start at 0 offset");
+        bool IsResourceTable = Table.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+        for (Uint32 r = 0; r < Table.NumDescriptorRanges; ++r)
+        {
+            const auto& range = Table.pDescriptorRanges[r];
+            if (IsResourceTable)
+            {
+                // clang-format off
+                VERIFY(range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV ||
+                       range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV ||
+                       range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+                       "Resource type is expected to be SRV, CBV or UAV");
+                // clang-format on
+                dbgTotalSrvCbvUavSlots += range.NumDescriptors;
+            }
+            else
+            {
+                VERIFY(range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "Resource type is expected to be sampler");
+                dbgTotalSamplerSlots += range.NumDescriptors;
+            }
+
+            if (r > 0)
+            {
+                VERIFY(Table.pDescriptorRanges[r].OffsetInDescriptorsFromTableStart == Table.pDescriptorRanges[r - 1].OffsetInDescriptorsFromTableStart + Table.pDescriptorRanges[r - 1].NumDescriptors, "Ranges in a descriptor table are expected to be consequtive");
+            }
+        }
+    }
+
+    Uint32 dbgTotalRootViews = 0;
+    for (Uint32 rv = 0; rv < RootParams.GetNumRootViews(); ++rv)
+    {
+        auto& RootView = RootParams.GetRootView(rv);
+        auto& Param    = static_cast<const D3D12_ROOT_PARAMETER&>(RootView);
+        VERIFY(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root parameter is expected to be a CBV");
+        ++dbgTotalRootViews;
+    }
+
+    // clang-format off
+    VERIFY(dbgTotalSrvCbvUavSlots == 
+                TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] + 
+                TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
+                TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of SRV CBV UAV resource slots");
+    VERIFY(dbgTotalSamplerSlots == 
+                TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] +
+                TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
+                TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of sampler slots");
+    VERIFY(dbgTotalRootViews == 
+                TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] +
+                TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] + 
+                TotalRootViews[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC], "Unexpected number of root views");
+    // clang-format on
+}
+#endif
+
+size_t RootSignatureBuilder::GetResourceCacheRequiredMemSize() const
+{
+    auto CacheTableSizes = m_RootSig.GetCacheTableSizes();
     return ShaderResourceCacheD3D12::GetRequiredMemorySize(static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
+}
+
+
+RootSignature::RootSignature() :
+    m_RootParams{GetRawAllocator()},
+    m_MemAllocator{GetRawAllocator()}
+{
+    m_SrvCbvUavRootTablesMap.fill(InvalidRootTableIndex);
+    m_SamplerRootTablesMap.fill(InvalidRootTableIndex);
+}
+
+// clang-format off
+static D3D12_DESCRIPTOR_HEAP_TYPE RangeType2HeapTypeMap[]
+{
+    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, //D3D12_DESCRIPTOR_RANGE_TYPE_SRV	  = 0
+    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, //D3D12_DESCRIPTOR_RANGE_TYPE_UAV	  = ( D3D12_DESCRIPTOR_RANGE_TYPE_SRV + 1 )
+    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, //D3D12_DESCRIPTOR_RANGE_TYPE_CBV	  = ( D3D12_DESCRIPTOR_RANGE_TYPE_UAV + 1 )
+    D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER      //D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER = ( D3D12_DESCRIPTOR_RANGE_TYPE_CBV + 1 ) 
+};
+// clang-format on
+D3D12_DESCRIPTOR_HEAP_TYPE HeapTypeFromRangeType(D3D12_DESCRIPTOR_RANGE_TYPE RangeType)
+{
+    VERIFY_EXPR(RangeType >= D3D12_DESCRIPTOR_RANGE_TYPE_SRV && RangeType <= D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
+    auto HeapType = RangeType2HeapTypeMap[RangeType];
+
+#ifdef DILIGENT_DEBUG
+    switch (RangeType)
+    {
+        // clang-format off
+        case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:     VERIFY_EXPR(HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); break;
+        case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:     VERIFY_EXPR(HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); break;
+        case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:     VERIFY_EXPR(HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); break;
+        case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER: VERIFY_EXPR(HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);     break;
+        // clang-format on
+        default: UNEXPECTED("Unexpected descriptor range type"); break;
+    }
+#endif
+    return HeapType;
 }
 
 std::vector<Uint32, STDAllocatorRawMem<Uint32>> RootSignature::GetCacheTableSizes() const

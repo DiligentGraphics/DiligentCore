@@ -427,6 +427,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 EnabledExtFeats.BufferDeviceAddress = DeviceExtFeatures.BufferDeviceAddress;
                 EnabledExtFeats.DescriptorIndexing  = DeviceExtFeatures.DescriptorIndexing;
 
+                // disable unused features
+                EnabledExtFeats.AccelStruct.accelerationStructureCaptureReplay                    = false;
+                EnabledExtFeats.AccelStruct.accelerationStructureIndirectBuild                    = false;
+                EnabledExtFeats.AccelStruct.accelerationStructureHostCommands                     = false;
+                EnabledExtFeats.AccelStruct.descriptorBindingAccelerationStructureUpdateAfterBind = false;
+
+                EnabledExtFeats.RayTracingPipeline.rayTracingPipelineShaderGroupHandleCaptureReplay      = false;
+                EnabledExtFeats.RayTracingPipeline.rayTracingPipelineShaderGroupHandleCaptureReplayMixed = false;
+                EnabledExtFeats.RayTracingPipeline.rayTracingPipelineTraceRaysIndirect                   = false;
+                EnabledExtFeats.RayTracingPipeline.rayTraversalPrimitiveCulling                          = false; // for GLSL_EXT_ray_flags_primitive_culling
+
                 *NextExt = &EnabledExtFeats.AccelStruct;
                 NextExt  = &EnabledExtFeats.AccelStruct.pNext;
                 *NextExt = &EnabledExtFeats.RayTracingPipeline;
