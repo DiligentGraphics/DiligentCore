@@ -62,7 +62,7 @@ public:
     }
 
     // clang-format off
-    bool IsLayerAvailable    (const char* LayerName)    const;
+    bool IsLayerAvailable    (const char* LayerName, uint32_t& Version) const;
     bool IsExtensionAvailable(const char* ExtensionName)const;
     bool IsExtensionEnabled  (const char* ExtensionName)const;
 

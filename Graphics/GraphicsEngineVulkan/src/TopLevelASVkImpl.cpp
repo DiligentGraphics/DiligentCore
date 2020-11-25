@@ -63,7 +63,7 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
 
         VERIFY_EXPR(MaxPrimitiveCount <= Limits.maxInstanceCount);
 
-        vkGetAccelerationStructureBuildSizesKHR(LogicalDevice.GetVkDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vkBuildInfo, &MaxPrimitiveCount, &vkSizeInfo);
+        LogicalDevice.GetAccelerationStructureBuildSizes(vkBuildInfo, &MaxPrimitiveCount, vkSizeInfo);
 
         AccelStructSize      = static_cast<Uint32>(vkSizeInfo.accelerationStructureSize);
         m_ScratchSize.Build  = static_cast<Uint32>(vkSizeInfo.buildScratchSize);

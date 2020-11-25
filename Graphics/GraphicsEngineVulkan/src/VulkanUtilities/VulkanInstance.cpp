@@ -46,12 +46,16 @@
 namespace VulkanUtilities
 {
 
-bool VulkanInstance::IsLayerAvailable(const char* LayerName) const
+bool VulkanInstance::IsLayerAvailable(const char* LayerName, uint32_t& Version) const
 {
     for (const auto& Layer : m_Layers)
+    {
         if (strcmp(Layer.layerName, LayerName) == 0)
+        {
+            Version = Layer.specVersion;
             return true;
-
+        }
+    }
     return false;
 }
 
@@ -220,11 +224,20 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         bool ValidationLayersPresent = true;
         for (size_t l = 0; l < _countof(VulkanUtilities::ValidationLayerNames); ++l)
         {
-            auto* pLayerName = VulkanUtilities::ValidationLayerNames[l];
-            if (!IsLayerAvailable(pLayerName))
+            auto*    pLayerName = VulkanUtilities::ValidationLayerNames[l];
+            uint32_t LayerVer   = 0;
+            if (!IsLayerAvailable(pLayerName, LayerVer))
             {
                 ValidationLayersPresent = false;
-                LOG_WARNING_MESSAGE("Failed to find ", pLayerName, " layer. Validation will be disabled");
+                LOG_WARNING_MESSAGE("Failed to find '", pLayerName, "' layer. Validation will be disabled");
+            }
+            if (LayerVer < VK_HEADER_VERSION_COMPLETE)
+            {
+                ValidationLayersPresent = false;
+                LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_VERSION_MAJOR(LayerVer), ".", VK_VERSION_MINOR(LayerVer), ".", VK_VERSION_PATCH(LayerVer),
+                                    ") is less than header version (",
+                                    VK_VERSION_MAJOR(VK_HEADER_VERSION_COMPLETE), ".", VK_VERSION_MINOR(VK_HEADER_VERSION_COMPLETE), ".", VK_VERSION_PATCH(VK_HEADER_VERSION_COMPLETE),
+                                    "). Validation will be disabled");
             }
         }
         if (ValidationLayersPresent)

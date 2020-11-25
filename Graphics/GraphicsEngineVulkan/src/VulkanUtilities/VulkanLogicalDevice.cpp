@@ -504,6 +504,16 @@ VkDeviceAddress VulkanLogicalDevice::GetAccelerationStructureDeviceAddress(VkAcc
 #endif
 }
 
+void VulkanLogicalDevice::GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildGeometryInfoKHR& BuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR& SizeInfo) const
+{
+#if DILIGENT_USE_VOLK
+    vkGetAccelerationStructureBuildSizesKHR(m_VkDevice, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &BuildInfo, pMaxPrimitiveCounts, &SizeInfo);
+#else
+    UNSUPPORTED("vkGetAccelerationStructureDeviceAddressKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
+}
+
 VkResult VulkanLogicalDevice::MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const
 {
     return vkMapMemory(m_VkDevice, memory, offset, size, flags, ppData);

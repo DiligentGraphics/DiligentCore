@@ -216,6 +216,8 @@ public:
                                      dataSize, pData, stride, flags);
     }
 
+    void GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildGeometryInfoKHR& BuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR& SizeInfo) const;
+
     VkResult GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const;
 
     VkPipelineStageFlags GetEnabledShaderStages() const { return m_EnabledShaderStages; }
