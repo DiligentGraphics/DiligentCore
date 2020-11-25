@@ -37,7 +37,7 @@ namespace
 
 TEST(GenerateMipsTest, GenerateMips)
 {
-    TestingEnvironment::ScopedReleaseResources AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();

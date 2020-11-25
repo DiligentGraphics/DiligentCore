@@ -226,7 +226,29 @@ if(PLATFORM_WIN32)
             endif()
         endif()
     endif()
-endif(PLATFORM_WIN32)
+elseif(PLATFORM_MACOS)
+    if(NOT VULKAN_SDK AND DEFINED ENV{VULKAN_SDK})
+        set(VULKAN_SDK $ENV{VULKAN_SDK})
+    endif()
+
+    if(VULKAN_SDK)
+        if(EXISTS "${VULKAN_SDK}/lib/libvulkan.dylib")
+            set(VULKAN_LIB_PATH ${VULKAN_SDK}/lib CACHE PATH "Vulkan library path" FORCE)
+        elseif(EXISTS "${VULKAN_SDK}/macOS/lib/libvulkan.dylib")
+            set(VULKAN_LIB_PATH ${VULKAN_SDK}/macOS/lib CACHE PATH "Vulkan library path" FORCE)
+        endif()
+
+        if(NOT VULKAN_LIB_PATH)
+            message(WARNING "Unable to find vulkan library at: " ${VULKAN_SDK})
+        endif()
+    endif()
+
+    if (VULKAN_LIB_PATH)
+        message("Using Vulkan library path: " ${VULKAN_LIB_PATH})
+    else()
+        message(WARNING "Vulkan library is not found. Executables may fail to start bcause the library may not be in rpath. Define VULKAN_SDK environment or CMake variable to specify the SDK path.")
+    endif()
+endif()
 
 if(PLATFORM_LINUX)
     # VulkanSDK installs dxc to this path
@@ -243,11 +265,14 @@ endif()
 if(PLATFORM_WIN32)
     # Use Volk
 elseif(PLATFORM_MACOS)
-    find_library(Vulkan_LIBRARY NAMES vulkan.1 vulkan PATHS "../../ThirdParty/vulkan/libs/macOS")
-    list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
+    # Use Volk
 elseif(PLATFORM_IOS)
-    set(Vulkan_LIBRARY ${MoltenVK_LIBRARY})
-    list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
+    # For the apparent lack of a better way, link with both arm64 and x64 libraries.
+    # The linker will issue a warning, but this will work for both device and the simulator.
+    list(APPEND PRIVATE_DEPENDENCIES
+        "${MoltenVK_FRAMEWORK}/ios-arm64/libMoltenVK.a"
+        "${MoltenVK_FRAMEWORK}/ios-x86_64-simulator/libMoltenVK.a"
+    )
 
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(METAL_LIBRARY Metal)
@@ -316,9 +341,9 @@ endif()
 if(PLATFORM_WIN32)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_WIN32_KHR=1 NOMINMAX DILIGENT_USE_VOLK=1)
 elseif(PLATFORM_LINUX)
-    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_XCB_KHR=1 VK_USE_PLATFORM_XLIB_KHR=1  DILIGENT_USE_VOLK=1)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_XCB_KHR=1 VK_USE_PLATFORM_XLIB_KHR=1 DILIGENT_USE_VOLK=1)
 elseif(PLATFORM_MACOS)
-    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_MACOS_MVK=1)
+    set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_MACOS_MVK=1 DILIGENT_USE_VOLK=1)
 elseif(PLATFORM_IOS)
     set(PRIVATE_COMPILE_DEFINITIONS VK_USE_PLATFORM_IOS_MVK=1)
 elseif(PLATFORM_ANDROID)

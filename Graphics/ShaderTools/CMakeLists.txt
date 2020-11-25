@@ -10,15 +10,25 @@ set(SOURCE
     src/ShaderToolsCommon.cpp
 )
 
-if(VULKAN_SUPPORTED OR GL_SUPPORTED OR GLES_SUPPORTED)
+if(VULKAN_SUPPORTED OR GL_SUPPORTED OR GLES_SUPPORTED OR METAL_SUPPORTED)
+    set(ENABLE_GLSL TRUE)
+endif()
+
+if(ENABLE_GLSL)
     list(APPEND SOURCE src/GLSLUtils.cpp)
     list(APPEND INCLUDE include/GLSLUtils.hpp)
 endif()
 
-if(D3D11_SUPPORTED OR D3D12_SUPPORTED OR VULKAN_SUPPORTED)
+
+if(D3D11_SUPPORTED OR D3D12_SUPPORTED OR VULKAN_SUPPORTED OR METAL_SUPPORTED)
+    set(ENABLE_HLSL TRUE)
+endif()
+
+if(ENABLE_HLSL)
     list(APPEND SOURCE src/HLSLUtils.cpp)
     list(APPEND INCLUDE include/HLSLUtils.hpp)
 endif()
+
 
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX)
     set(DXC_SUPPORTED TRUE)
@@ -51,7 +61,11 @@ else()
     list(APPEND SOURCE src/DXILUtilsStub.cpp)
 endif()
 
-if(VULKAN_SUPPORTED)
+if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
+    set(ENABLE_SPIRV TRUE)
+endif()
+
+if(ENABLE_SPIRV)
     list(APPEND SOURCE src/SPIRVShaderResources.cpp)
     list(APPEND INCLUDE include/SPIRVShaderResources.hpp)
 
@@ -100,7 +114,7 @@ if (VULKAN_SUPPORTED OR GL_SUPPORTED OR GLES_SUPPORTED)
     endif()
 endif()
 
-if(VULKAN_SUPPORTED)
+if(ENABLE_SPIRV)
     target_link_libraries(Diligent-ShaderTools 
     PRIVATE
         spirv-cross-core

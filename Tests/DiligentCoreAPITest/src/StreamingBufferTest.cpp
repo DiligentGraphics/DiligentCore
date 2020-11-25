@@ -42,6 +42,8 @@ TEST(StreamingBufferTest, MapUnamp)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     StreamingBufferCreateInfo CI;
     CI.pDevice = pDevice;
 

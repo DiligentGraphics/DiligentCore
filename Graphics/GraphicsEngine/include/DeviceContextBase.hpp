@@ -370,6 +370,8 @@ protected:
     Uint32 m_FramebufferHeight = 0;
     /// Number of array slices in the currently bound framebuffer
     Uint32 m_FramebufferSlices = 0;
+    /// Number of samples in the currently bound framebuffer
+    Uint32 m_FramebufferSamples = 0;
 
     /// Strong references to the bound depth stencil view.
     /// Use final texture view implementation type to avoid virtual calls to AddRef()/Release()
@@ -660,6 +662,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTar
     m_FramebufferWidth      = 0;
     m_FramebufferHeight     = 0;
     m_FramebufferSlices     = 0;
+    m_FramebufferSamples    = 0;
 
     if (NumRenderTargets != m_NumBoundRenderTargets)
     {
@@ -683,11 +686,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTar
             // Use this RTV to set the render target size
             if (m_FramebufferWidth == 0)
             {
-                auto*       pTex    = pRTView->GetTexture();
-                const auto& TexDesc = pTex->GetDesc();
-                m_FramebufferWidth  = std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U);
-                m_FramebufferHeight = std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U);
-                m_FramebufferSlices = RTVDesc.NumArraySlices;
+                auto*       pTex     = pRTView->GetTexture();
+                const auto& TexDesc  = pTex->GetDesc();
+                m_FramebufferWidth   = std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U);
+                m_FramebufferHeight  = std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U);
+                m_FramebufferSlices  = RTVDesc.NumArraySlices;
+                m_FramebufferSamples = TexDesc.SampleCount;
             }
             else
             {
@@ -699,6 +703,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTar
                     LOG_ERROR_MESSAGE("Render target height (", std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
                 if (m_FramebufferSlices != RTVDesc.NumArraySlices)
                     LOG_ERROR_MESSAGE("Number of slices (", RTVDesc.NumArraySlices, ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
+                if (m_FramebufferSamples != TexDesc.SampleCount)
+                    LOG_ERROR_MESSAGE("Sample count (", TexDesc.SampleCount, ") of RTV '", RTVDesc.Name, "' is inconsistent with the sample count of previously bound render targets (", m_FramebufferSamples, ")");
 #endif
             }
         }
@@ -724,11 +730,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTar
         // Use depth stencil size to set render target size
         if (m_FramebufferWidth == 0)
         {
-            auto*       pTex    = pDepthStencil->GetTexture();
-            const auto& TexDesc = pTex->GetDesc();
-            m_FramebufferWidth  = std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U);
-            m_FramebufferHeight = std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U);
-            m_FramebufferSlices = DSVDesc.NumArraySlices;
+            auto*       pTex     = pDepthStencil->GetTexture();
+            const auto& TexDesc  = pTex->GetDesc();
+            m_FramebufferWidth   = std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U);
+            m_FramebufferHeight  = std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U);
+            m_FramebufferSlices  = DSVDesc.NumArraySlices;
+            m_FramebufferSamples = TexDesc.SampleCount;
         }
         else
         {
@@ -740,6 +747,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTar
                 LOG_ERROR_MESSAGE("Depth-stencil target height (", std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
             if (m_FramebufferSlices != DSVDesc.NumArraySlices)
                 LOG_ERROR_MESSAGE("Number of slices (", DSVDesc.NumArraySlices, ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
+            if (m_FramebufferSamples != TexDesc.SampleCount)
+                LOG_ERROR_MESSAGE("Sample count (", TexDesc.SampleCount, ") of DSV '", DSVDesc.Name, "' is inconsistent with the sample count of previously bound render targets (", m_FramebufferSamples, ")");
 #endif
         }
     }
@@ -751,7 +760,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTar
     }
 
 
-    VERIFY_EXPR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0 && m_FramebufferSlices > 0);
+    VERIFY_EXPR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0 && m_FramebufferSlices > 0 && m_FramebufferSamples > 0);
 
     return bBindRenderTargets;
 }
@@ -767,6 +776,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRe
     VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
     const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
 
+    m_FramebufferSamples = 0;
+
     ITextureView* ppRTVs[MAX_RENDER_TARGETS] = {};
     ITextureView* pDSV                       = nullptr;
     for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
@@ -776,6 +787,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRe
         {
             VERIFY_EXPR(RTAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
             ppRTVs[rt] = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
+            if (ppRTVs[rt] != nullptr)
+            {
+                if (m_FramebufferSamples == 0)
+                    m_FramebufferSamples = ppRTVs[rt]->GetTexture()->GetDesc().SampleCount;
+                else
+                    DEV_CHECK_ERR(m_FramebufferSamples == ppRTVs[rt]->GetTexture()->GetDesc().SampleCount, "Inconsistent sample count");
+            }
         }
     }
 
@@ -786,6 +804,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRe
         {
             VERIFY_EXPR(DSAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
             pDSV = FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex];
+            if (pDSV != nullptr)
+            {
+                if (m_FramebufferSamples == 0)
+                    m_FramebufferSamples = pDSV->GetTexture()->GetDesc().SampleCount;
+                else
+                    DEV_CHECK_ERR(m_FramebufferSamples == pDSV->GetTexture()->GetDesc().SampleCount, "Inconsistent sample count");
+            }
         }
     }
     bool BindRenderTargets = SetRenderTargets(Subpass.RenderTargetAttachmentCount, ppRTVs, pDSV);
@@ -794,6 +819,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRe
     m_FramebufferWidth  = FBDesc.Width;
     m_FramebufferHeight = FBDesc.Height;
     m_FramebufferSlices = FBDesc.NumArraySlices;
+    VERIFY_EXPR(m_FramebufferSamples > 0);
 
     return BindRenderTargets;
 }
@@ -969,6 +995,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets(
     m_FramebufferWidth      = 0;
     m_FramebufferHeight     = 0;
     m_FramebufferSlices     = 0;
+    m_FramebufferSamples    = 0;
 
     m_pBoundDepthStencil.Release();
 

@@ -60,7 +60,7 @@ struct VSOut
     float4 pos [[position]];
 };
 
-vertex VSOut vs_main()
+vertex VSOut VSMain()
 {
     VSOut out = {};
     out.pos = float3(0.0, 0.0, 0.0);
@@ -75,23 +75,26 @@ void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUA
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    ShaderCreateInfo Attrs;
-    Attrs.Source                     = Source;
-    Attrs.EntryPoint                 = "VSMain";
-    Attrs.Desc.ShaderType            = SHADER_TYPE_VERTEX;
-    Attrs.Desc.Name                  = Name;
-    Attrs.SourceLanguage             = SourceLanguage;
-    Attrs.ShaderCompiler             = pEnv->GetDefaultCompiler(Attrs.SourceLanguage);
-    Attrs.UseCombinedTextureSamplers = true;
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Source                     = Source;
+    ShaderCI.EntryPoint                 = "VSMain";
+    ShaderCI.Desc.ShaderType            = SHADER_TYPE_VERTEX;
+    ShaderCI.Desc.Name                  = Name;
+    ShaderCI.SourceLanguage             = SourceLanguage;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.UseCombinedTextureSamplers = true;
 
-    IDataBlob* pErrors     = nullptr;
-    Attrs.ppCompilerOutput = &pErrors;
+    ShaderMacro Macros[] = {{"TEST", "MACRO"}, {}};
+    ShaderCI.Macros      = Macros;
+
+    IDataBlob* pErrors        = nullptr;
+    ShaderCI.ppCompilerOutput = &pErrors;
 
     pEnv->SetErrorAllowance(ErrorAllowance, "\n\nNo worries, testing broken shader...\n\n");
     RefCntAutoPtr<IShader> pBrokenShader;
-    pDevice->CreateShader(Attrs, &pBrokenShader);
+    pDevice->CreateShader(ShaderCI, &pBrokenShader);
     EXPECT_FALSE(pBrokenShader);
-    EXPECT_TRUE(pErrors);
+    ASSERT_NE(pErrors, nullptr);
     const char* Msg = reinterpret_cast<const char*>(pErrors->GetDataPtr());
     LOG_INFO_MESSAGE("Compiler output:\n", Msg);
     pErrors->Release();

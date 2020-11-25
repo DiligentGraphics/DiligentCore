@@ -1,16 +1,16 @@
 CMAKE_VERSION="3.18.2"
-VULKAN_SDK_VER="1.2.135.0"
+VULKAN_SDK_VER="1.2.154.0"
 
 if [ "$TRAVIS_OS_NAME" = "osx" ];  then
   wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz &&
   tar -xzf cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz
   export PATH=$PWD/cmake-${CMAKE_VERSION}-Darwin-x86_64/CMake.app/Contents/bin:$PATH
   cmake --version
-  if [ "$IOS" = "true" ];  then
-    wget -O vulkansdk-macos-$VULKAN_SDK_VER.tar.gz https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VER/mac/vulkansdk-macos-$VULKAN_SDK_VER.tar.gz?Human=true &&
-    tar -xzf vulkansdk-macos-$VULKAN_SDK_VER.tar.gz
-    export VULKAN_SDK=$PWD/vulkansdk-macos-$VULKAN_SDK_VER
-  fi
+  # Download Vulkan SDK
+  export VK_SDK_DMG=vulkansdk-macos-$VULKAN_SDK_VER.dmg
+  wget -O $VK_SDK_DMG https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VER/mac/$VK_SDK_DMG?Human=true &&
+  hdiutil attach $VK_SDK_DMG
+  export VULKAN_SDK=/Volumes/vulkansdk-macos-$VULKAN_SDK_VER
 fi
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then

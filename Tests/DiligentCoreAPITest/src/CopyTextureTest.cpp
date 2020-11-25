@@ -79,10 +79,12 @@ TEST(CopyTexture, Texture2D)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     for (auto f = 0; f < _countof(TestFormats); ++f)
     {
+        TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
+
         auto Format = TestFormats[f];
 
         TextureDesc TexDesc;
@@ -132,8 +134,6 @@ TEST(CopyTexture, Texture2D)
         CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_VERIFY;
         CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_VERIFY;
         pContext->CopyTexture(CopyAttribs);
-
-        pEnv->ReleaseResources();
     }
 }
 
@@ -143,10 +143,12 @@ TEST(CopyTexture, Texture2DArray)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     for (auto f = 0; f < _countof(TestFormats); ++f)
     {
+        TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
+
         auto Format = TestFormats[f];
 
         TextureDesc TexDesc;
@@ -205,8 +207,6 @@ TEST(CopyTexture, Texture2DArray)
         CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_VERIFY;
         CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_VERIFY;
         pContext->CopyTexture(CopyAttribs);
-
-        pEnv->ReleaseResources();
     }
 }
 
@@ -216,10 +216,12 @@ TEST(CopyTexture, Texture3D)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     for (auto f = 0; f < _countof(TestFormats); ++f)
     {
+        TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
+
         auto Format = TestFormats[f];
 
         TextureDesc TexDesc;
@@ -274,8 +276,6 @@ TEST(CopyTexture, Texture3D)
         CopyAttribs.DstY        = 16;
         CopyAttribs.DstZ        = 0;
         pContext->CopyTexture(CopyAttribs);
-
-        pEnv->ReleaseResources();
     }
 }
 

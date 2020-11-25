@@ -80,6 +80,8 @@ TEST(ComputeShaderTest, FillTexture)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (!pTestingSwapChain)
     {
@@ -130,7 +132,6 @@ TEST(ComputeShaderTest, FillTexture)
 
     pTestingSwapChain->TakeSnapshot();
 
-    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;

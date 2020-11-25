@@ -185,6 +185,8 @@ protected:
                                   Uint32             SampleCount,
                                   bool               UploadData)
     {
+        TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
         auto* pEnv = TestingEnvironment::GetInstance();
 
         auto*       pDevice        = pEnv->GetDevice();
@@ -361,15 +363,14 @@ protected:
                 EXPECT_NE(pUAV, nullptr) << GetObjectDescString(TexDesc);
             }
         }
-
-        // Flush, FinishFrame, and ReleaseStaleResources.
-        pEnv->ReleaseResources();
     }
 
     void CreateTestCubemap(TEXTURE_FORMAT TextureFormat,
                            BIND_FLAGS     BindFlags,
                            bool           UploadData)
     {
+        TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
         auto* pEnv = TestingEnvironment::GetInstance();
 
         auto*       pDevice    = pEnv->GetDevice();
@@ -548,9 +549,6 @@ protected:
             EXPECT_NE(pTestCubemapArr, nullptr) << GetObjectDescString(TexDesc);
             pCreateObjFromNativeRes->CreateTexture(pTestCubemapArr);
         }
-
-        // Flush, FinishFrame, and ReleaseStaleResources.
-        pEnv->ReleaseResources();
     }
 
     static std::unique_ptr<CreateObjFromNativeResTestBase> pCreateObjFromNativeRes;

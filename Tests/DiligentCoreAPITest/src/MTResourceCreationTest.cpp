@@ -302,7 +302,7 @@ TEST_F(MultithreadedResourceCreationTest, CreateResources)
     D3D12DebugLayerSetNameBugWorkaround D3D12DebugLayerBugWorkaround(pDevice);
 #endif
 
-    TestingEnvironment::ScopedReleaseResources AutoResetEnvironment;
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto numCores = std::thread::hardware_concurrency();
     m_Threads.resize(std::max(numCores, 4u));

@@ -9,6 +9,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Generate XCode schemes
 set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
+# Make malloc write 0xAA to newly allocated memory and 0x55 to deallocated memory
+set(CMAKE_XCODE_SCHEME_MALLOC_SCRIBBLE YES)
+# Place guard pages on each side of large (4096 bytes or more) buffers
+set(CMAKE_XCODE_SCHEME_MALLOC_GUARD_EDGES YES)
+
+
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
@@ -140,22 +146,19 @@ elseif(PLATFORM_IOS)
     else()
         message("DiligentCorePro module is not found. Metal backend will be disabled")
     endif()
-    if(VULKAN_SDK OR MoltenVK_LIBRARY)
-        if(NOT MoltenVK_LIBRARY)
-            # iOS.toolchain.cmake currently configures cmake to only search iOS SDK for libraries,
-            # thus find_library will be unable to find MoltenVK in VulkanSDK
-            # find_library(MoltenVK_LIBRARY MoltenVK PATHS "${VULKAN_SDK}/MoltenVK/iOS/static")
-            set(MoltenVK_LIBRARY "${VULKAN_SDK}/MoltenVK/iOS/static/libMoltenVK.a" CACHE FILEPATH "MoltenVK library")
+    if(VULKAN_SDK OR MoltenVK_FRAMEWORK)
+        if(NOT MoltenVK_FRAMEWORK)
+            set(MoltenVK_FRAMEWORK "${VULKAN_SDK}/MoltenVK/MoltenVK.xcframework" CACHE PATH "MoltenVK framework")
         endif()
 
-        if(EXISTS ${MoltenVK_LIBRARY})
+        if(EXISTS ${MoltenVK_FRAMEWORK})
             set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is enabled through MoltenVK on iOS platform")
         else()
-            message(WARNING "${MoltenVK_LIBRARY} does not exist. Vulkan backend will be disabled.")
-            unset(MoltenVK_LIBRARY CACHE)
+            message(WARNING "${MoltenVK_FRAMEWORK} does not exist. Vulkan backend will be disabled.")
+            unset(MoltenVK_FRAMEWORK CACHE)
         endif()
     else()
-        message("VULKAN_SDK or MoltenVK_LIBRARY is not defined. Vulkan backend will be disabled.")
+        message("VULKAN_SDK or MoltenVK_FRAMEWORK is not defined. Vulkan backend will be disabled.")
     endif()
     target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_IOS=1)
 else()
@@ -201,12 +204,12 @@ if(NOT (${D3D11_SUPPORTED} OR ${D3D12_SUPPORTED} OR ${GL_SUPPORTED} OR ${GLES_SU
 endif()
 
 
-message("D3D11_SUPPORTED: " ${D3D11_SUPPORTED})
-message("D3D12_SUPPORTED: " ${D3D12_SUPPORTED})
-message("GL_SUPPORTED: " ${GL_SUPPORTED})
-message("GLES_SUPPORTED: " ${GLES_SUPPORTED})
+message("D3D11_SUPPORTED:  " ${D3D11_SUPPORTED})
+message("D3D12_SUPPORTED:  " ${D3D12_SUPPORTED})
+message("GL_SUPPORTED:     " ${GL_SUPPORTED})
+message("GLES_SUPPORTED:   " ${GLES_SUPPORTED})
 message("VULKAN_SUPPORTED: " ${VULKAN_SUPPORTED})
-message("METAL_SUPPORTED: " ${METAL_SUPPORTED})
+message("METAL_SUPPORTED:  " ${METAL_SUPPORTED})
 
 target_compile_definitions(Diligent-BuildSettings 
 INTERFACE 

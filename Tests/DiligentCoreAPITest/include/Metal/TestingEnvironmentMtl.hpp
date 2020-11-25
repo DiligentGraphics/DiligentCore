@@ -51,8 +51,6 @@ public:
 
     id<MTLDevice>       GetMtlDevice() const;
     id<MTLCommandQueue> GetMtlCommandQueue() const;
-
-private:
 };
 
 } // namespace Testing

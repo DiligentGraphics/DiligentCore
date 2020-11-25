@@ -179,6 +179,8 @@ protected:
         auto* pSwapChain = pEnv->GetSwapChain();
         auto* pContext   = pEnv->GetDeviceContext();
 
+        TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
         if (pTestingSwapChain)
         {
@@ -226,7 +228,7 @@ protected:
 
             pTestingSwapChain->TakeSnapshot();
         }
-        TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 

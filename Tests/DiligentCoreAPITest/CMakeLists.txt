@@ -134,6 +134,15 @@ if(VULKAN_SUPPORTED)
             dl # Required by Volk
             xcb
         )
+    elseif(PLATFORM_MACOS)
+        if(VULKAN_LIB_PATH)
+            # Configure rpath so that the executable can find vulkan library
+            set_target_properties(DiligentCoreAPITest PROPERTIES
+                BUILD_RPATH "${VULKAN_LIB_PATH}"
+            )
+        else()
+            message(WARNING "Vulkan lib path is not set. API test will fail to start in Vulkan mode")
+        endif()
     endif()
 endif()
 

@@ -2267,6 +2267,25 @@ struct EngineMtlCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// resource manager and then suballocate from this chunk in a lock-free
     /// fashion. DynamicHeapPageSize defines the size of this chunk.
     Uint32 DynamicHeapPageSize       DEFAULT_INITIALIZER(4 << 20);
+
+
+    /// Indicates if device contexts should automatically manage autorelease pools.
+
+    /// Metal API creates a lot of autoreleased objects. By default, the engine
+    /// will catch all these objects by pushing autorelease pools where necessary.
+    /// When UseAutoreleasePoolsInContexts is set to false, the engine will not use
+    /// autorelease pools in device contexts and the application will be responsible
+    /// for ensuring that all context commands are issued from within an autorelease
+    /// pool to avoid memory leaks.
+    ///
+    /// \note Autorelease pool is pushed by the first command of the device context
+    ///       that needs it and popped by IDeviceContext::FinishFrame().
+    ///       The method must always be called from the same thread that
+    ///       issued the context commands.
+    ///
+    ///       Creating device objects will not leak memory even when
+    ///       UseAutoreleasePoolsInContexts is set to false.
+    bool UseAutoreleasePoolsInContexts  DEFAULT_INITIALIZER(true);
 };
 typedef struct EngineMtlCreateInfo EngineMtlCreateInfo;
 

@@ -47,57 +47,70 @@ class TriangleRenderer
 {
 
 public:
-    TriangleRenderer(NSString* fragEntry, Uint32 SampleCount = 1)
+    TriangleRenderer(NSString* fragEntry, MTLPixelFormat mtlRTFormat, Uint32 SampleCount = 1)
     {
         auto* const pEnv      = TestingEnvironmentMtl::GetInstance();
         auto* const mtlDevice = pEnv->GetMtlDevice();
 
+        id <MTLFunction> vertFunc = nil;
+        id <MTLFunction> fragFunc = nil;
+
+        // Autoreleased
         auto* progSrc = [NSString stringWithUTF8String:MSL::DrawTestFunctions.c_str()];
-        NSError *errors = nil;
-        id <MTLLibrary> library = [mtlDevice newLibraryWithSource:progSrc
-                                   options:nil
-                                   error:&errors];
+        NSError* errors = nil; // Autoreleased
+        id <MTLLibrary> library =
+            [mtlDevice newLibraryWithSource:progSrc
+                                    options:nil
+                                      error:&errors];
         if (library == nil)
         {
             LOG_ERROR_AND_THROW("Failed to create Metal library: ", [errors.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding]);
         }
-        id <MTLFunction> vertFunc = [library newFunctionWithName:@"TrisVS"];
-        id <MTLFunction> fragFunc = [library newFunctionWithName:fragEntry];
+
+        vertFunc = [library newFunctionWithName:@"TrisVS"];
+        fragFunc = [library newFunctionWithName:fragEntry];
+        [library release];
+        if (vertFunc == nil)
+            LOG_ERROR_AND_THROW("Unable to find vertex function");
+        if (fragFunc == nil)
+            LOG_ERROR_AND_THROW("Unable to find fragment function");
+
         MTLRenderPipelineDescriptor* renderPipelineDesc =
             [[MTLRenderPipelineDescriptor alloc] init];
         renderPipelineDesc.vertexFunction   = vertFunc;
         renderPipelineDesc.fragmentFunction = fragFunc;
-        const auto& SCDesc = pEnv->GetSwapChain()->GetDesc();
-        MTLPixelFormat pixelFormat = MTLPixelFormatInvalid;
-        switch (SCDesc.ColorBufferFormat)
-        {
-            case TEX_FORMAT_RGBA8_UNORM:
-                pixelFormat = MTLPixelFormatRGBA8Unorm;
-                break;
+        [vertFunc release];
+        [fragFunc release];
 
-            default:
-                UNSUPPORTED("Unexpected swap chain color format");
-        }
         renderPipelineDesc.sampleCount = SampleCount;
-        renderPipelineDesc.colorAttachments[0].pixelFormat = pixelFormat;
+        renderPipelineDesc.colorAttachments[0].pixelFormat = mtlRTFormat;
+
         m_MtlPipeline = [mtlDevice
                          newRenderPipelineStateWithDescriptor:renderPipelineDesc error:&errors];
+        [renderPipelineDesc release];
+
+        if (m_MtlPipeline == nil)
+        {
+            LOG_ERROR_AND_THROW("Failed to create Metal pipeline: ", [errors.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding]);
+        }
     }
 
     ~TriangleRenderer()
     {
+        [m_MtlPipeline release];
     }
 
     void Draw(id <MTLRenderCommandEncoder> renderEncoder)
     {
         [renderEncoder setRenderPipelineState:m_MtlPipeline];
+        // Note that draw command leaks objects into autorelease pool
         [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
                        vertexStart:0 vertexCount:6];
         [renderEncoder endEncoding];
     }
 
 private:
-    id<MTLRenderPipelineState> m_MtlPipeline;
+    id<MTLRenderPipelineState> m_MtlPipeline = nil;
 };
 
 } // namespace
@@ -113,26 +126,35 @@ void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearCo
     auto* pRTV = pTestingSwapChainMtl->GetCurrentBackBufferRTV();
     auto* mtlBackBuffer = ValidatedCast<ITextureViewMtl>(pRTV)->GetMtlTexture();
 
-    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
-
     constexpr float Zero[4] = {};
     if (pClearColor == nullptr)
         pClearColor = Zero;
 
-    MTLRenderPassDescriptor* renderPassDesc =
-        [MTLRenderPassDescriptor renderPassDescriptor];
-    renderPassDesc.colorAttachments[0].texture     = mtlBackBuffer;
-    renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionClear;
-    renderPassDesc.colorAttachments[0].clearColor  = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
-    renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
-    id <MTLRenderCommandEncoder> renderEncoder =
-        [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
-    [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+    @autoreleasepool
+    {
+        TriangleRenderer TriRenderer{@"TrisFS", mtlBackBuffer.pixelFormat};
 
-    TriangleRenderer TriRenderer{@"TrisFS"};
-    TriRenderer.Draw(renderEncoder);
+        // Command buffer is autoreleased
+        id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
 
-    [mtlCommandBuffer commit];
+        // Render pass descriptor is autoreleased
+        MTLRenderPassDescriptor* renderPassDesc =
+            [MTLRenderPassDescriptor renderPassDescriptor];
+        renderPassDesc.colorAttachments[0].texture     = mtlBackBuffer;
+        renderPassDesc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+        renderPassDesc.colorAttachments[0].clearColor  = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
+        renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+        // Render encoder is autoreleased
+        id <MTLRenderCommandEncoder> renderEncoder =
+            [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
+
+        [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+
+        TriRenderer.Draw(renderEncoder);
+
+        [mtlCommandBuffer commit];
+    }
 }
 
 void RenderPassMSResolveReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor)
@@ -162,24 +184,35 @@ void RenderPassMSResolveReferenceMtl(ISwapChain* pSwapChain, const float* pClear
     msTextureDescriptor.usage = MTLTextureUsageRenderTarget;
     auto mtlMSTexture = [mtlDevice newTextureWithDescriptor:msTextureDescriptor];
     ASSERT_TRUE(mtlMSTexture != nil);
+    [msTextureDescriptor release];
 
-    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
+    @autoreleasepool
+    {
+        TriangleRenderer TriRenderer{@"TrisFS", mtlBackBuffer.pixelFormat, SampleCount};
 
-    MTLRenderPassDescriptor* renderPassDesc =
-        [MTLRenderPassDescriptor renderPassDescriptor];
-    renderPassDesc.colorAttachments[0].texture        = mtlMSTexture;
-    renderPassDesc.colorAttachments[0].loadAction     = MTLLoadActionClear;
-    renderPassDesc.colorAttachments[0].clearColor     = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
-    renderPassDesc.colorAttachments[0].storeAction    = MTLStoreActionMultisampleResolve;
-    renderPassDesc.colorAttachments[0].resolveTexture = mtlBackBuffer;
-    id <MTLRenderCommandEncoder> renderEncoder =
-        [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
-    [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+        // Command buffer is autoreleased
+        id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
 
-    TriangleRenderer TriRenderer{@"TrisFS", SampleCount};
-    TriRenderer.Draw(renderEncoder);
+        // Render pass descriptor is autoreleased
+        MTLRenderPassDescriptor* renderPassDesc =
+            [MTLRenderPassDescriptor renderPassDescriptor];
+        renderPassDesc.colorAttachments[0].texture        = mtlMSTexture;
+        renderPassDesc.colorAttachments[0].loadAction     = MTLLoadActionClear;
+        renderPassDesc.colorAttachments[0].clearColor     = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
+        renderPassDesc.colorAttachments[0].storeAction    = MTLStoreActionMultisampleResolve;
+        renderPassDesc.colorAttachments[0].resolveTexture = mtlBackBuffer;
 
-    [mtlCommandBuffer commit];
+        // Render encoder is autoreleased
+        id <MTLRenderCommandEncoder> renderEncoder =
+            [mtlCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
+
+        [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+
+        TriRenderer.Draw(renderEncoder);
+
+        [mtlCommandBuffer commit];
+    }
+    [mtlMSTexture release];
 }
 
 void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor)
@@ -206,36 +239,49 @@ void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* 
     inptAttTextureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
     auto mtlInputAttachment = [mtlDevice newTextureWithDescriptor:inptAttTextureDescriptor];
     ASSERT_TRUE(mtlInputAttachment != nil);
+    [inptAttTextureDescriptor release];
 
-    id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
+    @autoreleasepool
+    {
+        TriangleRenderer TriRenderer{@"TrisFS", mtlBackBuffer.pixelFormat};
+        TriangleRenderer TriRendererInptAtt{@"InptAttFS", mtlBackBuffer.pixelFormat};
 
-    MTLRenderPassDescriptor* subpass0Desc =
-        [MTLRenderPassDescriptor renderPassDescriptor];
-    subpass0Desc.colorAttachments[0].texture     = mtlInputAttachment;
-    subpass0Desc.colorAttachments[0].loadAction  = MTLLoadActionClear;
-    subpass0Desc.colorAttachments[0].clearColor  = MTLClearColorMake(0, 0, 0, 0);
-    subpass0Desc.colorAttachments[0].storeAction = MTLStoreActionStore;
-    id <MTLRenderCommandEncoder> renderEncoder =
-        [mtlCommandBuffer renderCommandEncoderWithDescriptor:subpass0Desc];
-    [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+        // Command buffer is autoreleased
+        id <MTLCommandBuffer> mtlCommandBuffer = [mtlCommandQueue commandBuffer];
 
-    TriangleRenderer TriRenderer{@"TrisFS"};
-    TriRenderer.Draw(renderEncoder);
+        // Render pass descritor is autoreleased
+        MTLRenderPassDescriptor* subpass0Desc =
+            [MTLRenderPassDescriptor renderPassDescriptor];
+        subpass0Desc.colorAttachments[0].texture     = mtlInputAttachment;
+        subpass0Desc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+        subpass0Desc.colorAttachments[0].clearColor  = MTLClearColorMake(0, 0, 0, 0);
+        subpass0Desc.colorAttachments[0].storeAction = MTLStoreActionStore;
 
-    MTLRenderPassDescriptor* subpass1Desc =
-        [MTLRenderPassDescriptor renderPassDescriptor];
-    subpass1Desc.colorAttachments[0].texture     = mtlBackBuffer;
-    subpass1Desc.colorAttachments[0].loadAction  = MTLLoadActionClear;
-    subpass1Desc.colorAttachments[0].clearColor  = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
-    subpass1Desc.colorAttachments[0].storeAction = MTLStoreActionStore;
-    renderEncoder = [mtlCommandBuffer renderCommandEncoderWithDescriptor:subpass1Desc];
-    [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+        // Render encoder is autoreleased
+        id <MTLRenderCommandEncoder> renderEncoder =
+            [mtlCommandBuffer renderCommandEncoderWithDescriptor:subpass0Desc];
 
-    TriangleRenderer TriRendererInptAtt{@"InptAttFS"};
-    [renderEncoder setFragmentTexture:mtlInputAttachment atIndex:0];
-    TriRendererInptAtt.Draw(renderEncoder);
-    
-    [mtlCommandBuffer commit];
+        [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+
+        TriRenderer.Draw(renderEncoder);
+
+        // Autoreleased
+        MTLRenderPassDescriptor* subpass1Desc =
+            [MTLRenderPassDescriptor renderPassDescriptor];
+        subpass1Desc.colorAttachments[0].texture     = mtlBackBuffer;
+        subpass1Desc.colorAttachments[0].loadAction  = MTLLoadActionClear;
+        subpass1Desc.colorAttachments[0].clearColor  = MTLClearColorMake(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
+        subpass1Desc.colorAttachments[0].storeAction = MTLStoreActionStore;
+        // Autoreleased
+        renderEncoder = [mtlCommandBuffer renderCommandEncoderWithDescriptor:subpass1Desc];
+        [renderEncoder setViewport:MTLViewport{0, 0, (double) SCDesc.Width, (double) SCDesc.Height, 0, 1}];
+
+        [renderEncoder setFragmentTexture:mtlInputAttachment atIndex:0];
+        TriRendererInptAtt.Draw(renderEncoder);
+
+        [mtlCommandBuffer commit];
+    }
+    [mtlInputAttachment release];
 }
 
 } // namespace Testing

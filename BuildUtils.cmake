@@ -174,12 +174,6 @@ function(set_common_target_properties TARGET)
         endif()
     endif()
 
-    if(PLATFORM_IOS)
-        set_target_properties(${TARGET} PROPERTIES
-            XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 10.0
-        )
-    endif()
-
     if(COMMAND custom_post_configure_target)
         custom_post_configure_target(${TARGET})
     endif()
@@ -210,10 +204,8 @@ endfunction()
 
 # Returns default backend library type (static/dynamic) for the current platform
 function(get_backend_libraries_type _LIB_TYPE)
-    if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_ANDROID OR PLATFORM_UNIVERSAL_WINDOWS)
+    if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_ANDROID OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_MACOS)
         set(LIB_TYPE "shared")
-    elseif(PLATFORM_MACOS)
-        set(LIB_TYPE "static")
     elseif(PLATFORM_IOS)
         # Statically link with the engine on iOS.
         # It is also possible to link dynamically by
@@ -396,3 +388,5 @@ function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
     endif()
 
 endfunction()
+
+
