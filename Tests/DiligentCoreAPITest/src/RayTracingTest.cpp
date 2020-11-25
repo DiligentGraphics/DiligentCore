@@ -70,18 +70,13 @@ using namespace Diligent::Testing;
 namespace
 {
 
-bool EnableShuffling = true;
-
 template <typename It>
 void Shuffle(It first, It last)
 {
-    if (EnableShuffling)
-    {
-        std::random_device rd;
-        std::mt19937       g{rd()};
+    std::random_device rd;
+    std::mt19937       g{rd()};
 
-        std::shuffle(first, last, g);
-    }
+    std::shuffle(first, last, g);
 }
 
 void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTriangleData* pTriangles, Uint32 TriangleCount, bool Update, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
@@ -584,11 +579,6 @@ TEST_P(RT1, TriangleClosestHitShader)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
-    if (pDevice->GetDeviceCaps().IsVulkanDevice())
-    {
-        auto* pEnvVk    = TestingEnvironmentVk::GetInstance();
-        EnableShuffling = !pEnvVk->IsUsedRayTracingNV();
-    }
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -770,11 +760,6 @@ TEST_P(RT2, TriangleAnyHitShader)
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
-    }
-    if (pDevice->GetDeviceCaps().IsVulkanDevice())
-    {
-        auto* pEnvVk    = TestingEnvironmentVk::GetInstance();
-        EnableShuffling = !pEnvVk->IsUsedRayTracingNV();
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -968,11 +953,6 @@ TEST_P(RT3, ProceduralIntersection)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
-    if (pDevice->GetDeviceCaps().IsVulkanDevice())
-    {
-        auto* pEnvVk    = TestingEnvironmentVk::GetInstance();
-        EnableShuffling = !pEnvVk->IsUsedRayTracingNV();
-    }
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
@@ -1162,11 +1142,6 @@ TEST_P(RT4, MultiGeometry)
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
-    }
-    if (pDevice->GetDeviceCaps().IsVulkanDevice())
-    {
-        auto* pEnvVk    = TestingEnvironmentVk::GetInstance();
-        EnableShuffling = !pEnvVk->IsUsedRayTracingNV();
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();

@@ -348,10 +348,10 @@ static void CreateRayTracingPipeline(RenderDeviceVkImpl*                        
 {
     const auto& LogicalDevice  = pDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
-    const auto& RTLimits       = PhysicalDevice.GetExtProperties().RayTracing;
+    const auto& RTLimits       = PhysicalDevice.GetExtProperties().RayTracingPipeline;
 
-    DEV_CHECK_ERR(RayTracingPipeline.MaxRecursionDepth <= RTLimits.maxRecursionDepth,
-                  "RayTracingPipeline.MaxRecursionDepth must not exceed ", RTLimits.maxRecursionDepth);
+    DEV_CHECK_ERR(RayTracingPipeline.MaxRecursionDepth <= RTLimits.maxRayRecursionDepth,
+                  "RayTracingPipeline.MaxRecursionDepth must not exceed ", RTLimits.maxRayRecursionDepth);
 
     VkRayTracingPipelineCreateInfoKHR PipelineCI = {};
 
@@ -361,20 +361,17 @@ static void CreateRayTracingPipeline(RenderDeviceVkImpl*                        
     PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif
 
-    PipelineCI.stageCount = static_cast<Uint32>(Stages.size());
-    PipelineCI.pStages    = Stages.data();
-    PipelineCI.layout     = Layout.GetVkPipelineLayout();
-
-    PipelineCI.groupCount             = static_cast<Uint32>(ShaderGroups.size());
-    PipelineCI.pGroups                = ShaderGroups.data();
-    PipelineCI.maxRecursionDepth      = RayTracingPipeline.MaxRecursionDepth;
-    PipelineCI.libraries.sType        = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
-    PipelineCI.libraries.pNext        = nullptr;
-    PipelineCI.libraries.libraryCount = 0;
-    PipelineCI.libraries.pLibraries   = nullptr;
-    PipelineCI.pLibraryInterface      = nullptr;
-    PipelineCI.basePipelineHandle     = VK_NULL_HANDLE; // a pipeline to derive from
-    PipelineCI.basePipelineIndex      = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
+    PipelineCI.stageCount                   = static_cast<Uint32>(Stages.size());
+    PipelineCI.pStages                      = Stages.data();
+    PipelineCI.groupCount                   = static_cast<Uint32>(ShaderGroups.size());
+    PipelineCI.pGroups                      = ShaderGroups.data();
+    PipelineCI.maxPipelineRayRecursionDepth = RayTracingPipeline.MaxRecursionDepth;
+    PipelineCI.pLibraryInfo                 = nullptr;
+    PipelineCI.pLibraryInterface            = nullptr;
+    PipelineCI.pDynamicState                = nullptr;
+    PipelineCI.layout                       = Layout.GetVkPipelineLayout();
+    PipelineCI.basePipelineHandle           = VK_NULL_HANDLE; // a pipeline to derive from
+    PipelineCI.basePipelineIndex            = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
     Pipeline = LogicalDevice.CreateRayTracingPipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
 }

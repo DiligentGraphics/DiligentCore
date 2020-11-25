@@ -605,9 +605,9 @@ public:
                                   dstBuffer, dstOffset, stride, flags);
     }
 
-    __forceinline void BuildAccelerationStructure(uint32_t                                                infoCount,
-                                                  const VkAccelerationStructureBuildGeometryInfoKHR*      pInfos,
-                                                  const VkAccelerationStructureBuildOffsetInfoKHR* const* ppOffsetInfos)
+    __forceinline void BuildAccelerationStructure(uint32_t                                               infoCount,
+                                                  const VkAccelerationStructureBuildGeometryInfoKHR*     pInfos,
+                                                  const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos)
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
@@ -616,7 +616,7 @@ public:
             // Build AS operations must be performed outside of render pass.
             EndRenderPass();
         }
-        vkCmdBuildAccelerationStructureKHR(m_VkCmdBuffer, infoCount, pInfos, ppOffsetInfos);
+        vkCmdBuildAccelerationStructuresKHR(m_VkCmdBuffer, infoCount, pInfos, ppBuildRangeInfos);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
 #endif
@@ -652,13 +652,13 @@ public:
 #endif
     }
 
-    __forceinline void TraceRays(const VkStridedBufferRegionKHR& RaygenShaderBindingTable,
-                                 const VkStridedBufferRegionKHR& MissShaderBindingTable,
-                                 const VkStridedBufferRegionKHR& HitShaderBindingTable,
-                                 const VkStridedBufferRegionKHR& CallableShaderBindingTable,
-                                 uint32_t                        width,
-                                 uint32_t                        height,
-                                 uint32_t                        depth)
+    __forceinline void TraceRays(const VkStridedDeviceAddressRegionKHR& RaygenShaderBindingTable,
+                                 const VkStridedDeviceAddressRegionKHR& MissShaderBindingTable,
+                                 const VkStridedDeviceAddressRegionKHR& HitShaderBindingTable,
+                                 const VkStridedDeviceAddressRegionKHR& CallableShaderBindingTable,
+                                 uint32_t                               width,
+                                 uint32_t                               height,
+                                 uint32_t                               depth)
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);

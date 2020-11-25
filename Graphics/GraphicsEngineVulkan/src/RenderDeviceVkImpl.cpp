@@ -162,9 +162,9 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath)},
     m_Properties
     {
-        m_PhysicalDevice->GetExtProperties().RayTracing.shaderGroupHandleSize,
-        m_PhysicalDevice->GetExtProperties().RayTracing.maxShaderGroupStride,
-        m_PhysicalDevice->GetExtProperties().RayTracing.shaderGroupBaseAlignment,
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupHandleSize,
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxShaderGroupStride,
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupBaseAlignment,
         m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount
     }
 // clang-format on

@@ -63,9 +63,6 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
     // Since we only use one device at this time, load device function entries
     // https://github.com/zeux/volk#optimizing-device-calls
     volkLoadDevice(m_VkDevice);
-
-    if (m_EnabledExtFeatures.RayTracingNV)
-        EnableRayTracingKHRviaNV();
 #endif
 
     m_EnabledShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
@@ -75,7 +72,7 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
         m_EnabledShaderStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
     if (m_EnabledExtFeatures.MeshShader.meshShader != VK_FALSE && m_EnabledExtFeatures.MeshShader.taskShader != VK_FALSE)
         m_EnabledShaderStages |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV | VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
-    if (m_EnabledExtFeatures.RayTracing.rayTracing != VK_FALSE)
+    if (m_EnabledExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE)
         m_EnabledShaderStages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 }
 
@@ -242,7 +239,7 @@ PipelineWrapper VulkanLogicalDevice::CreateRayTracingPipeline(const VkRayTracing
 
     VkPipeline vkPipeline = VK_NULL_HANDLE;
 
-    auto err = vkCreateRayTracingPipelinesKHR(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
+    auto err = vkCreateRayTracingPipelinesKHR(m_VkDevice, VK_NULL_HANDLE, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create ray tracing pipeline '", DebugName, '\'');
 
     if (*DebugName != 0)
@@ -482,18 +479,6 @@ VkMemoryRequirements VulkanLogicalDevice::GetImageMemoryRequirements(VkImage vkI
     return MemReqs;
 }
 
-VkMemoryRequirements VulkanLogicalDevice::GetASMemoryRequirements(const VkAccelerationStructureMemoryRequirementsInfoKHR& Info) const
-{
-    VkMemoryRequirements2 MemReqs = {};
-    MemReqs.sType                 = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-#if DILIGENT_USE_VOLK
-    vkGetAccelerationStructureMemoryRequirementsKHR(m_VkDevice, &Info, &MemReqs);
-#else
-    UNSUPPORTED("vkGetAccelerationStructureMemoryRequirementsKHR is only available through Volk");
-#endif
-    return MemReqs.memoryRequirements;
-}
-
 VkResult VulkanLogicalDevice::BindBufferMemory(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
 {
     return vkBindBufferMemory(m_VkDevice, buffer, memory, memoryOffset);
@@ -502,25 +487,6 @@ VkResult VulkanLogicalDevice::BindBufferMemory(VkBuffer buffer, VkDeviceMemory m
 VkResult VulkanLogicalDevice::BindImageMemory(VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
 {
     return vkBindImageMemory(m_VkDevice, image, memory, memoryOffset);
-}
-
-VkResult VulkanLogicalDevice::BindASMemory(VkAccelerationStructureKHR AS, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
-{
-#if DILIGENT_USE_VOLK
-    VkBindAccelerationStructureMemoryInfoKHR Info = {};
-
-    Info.sType                 = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
-    Info.memory                = memory;
-    Info.memoryOffset          = memoryOffset;
-    Info.deviceIndexCount      = 0;
-    Info.pDeviceIndices        = nullptr;
-    Info.accelerationStructure = AS;
-
-    return vkBindAccelerationStructureMemoryKHR(m_VkDevice, 1, &Info);
-#else
-    UNSUPPORTED("vkBindAccelerationStructureMemoryKHR is only available through Volk");
-    return VK_ERROR_FEATURE_NOT_PRESENT;
-#endif
 }
 
 VkDeviceAddress VulkanLogicalDevice::GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const

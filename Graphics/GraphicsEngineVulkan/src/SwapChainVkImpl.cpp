@@ -642,8 +642,8 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     {
         // Next command in the device context must wait for the next image to be acquired.
         // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2).
-        // Swapchain may be used as UAV in compute or ray tracing shader, so we must wait on all stages.
-        pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        // Swapchain image may be used as render target or as destination for copy command.
+        pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
         if (!m_SwapChainImagesInitialized[m_BackBufferIndex])
         {
             // Vulkan validation layers do not like uninitialized memory.

@@ -52,10 +52,12 @@ struct RTContext
 {
     struct AccelStruct
     {
-        VkDevice                   vkDevice  = VK_NULL_HANDLE;
-        VkDeviceMemory             vkMemory  = VK_NULL_HANDLE;
-        VkAccelerationStructureKHR vkAS      = VK_NULL_HANDLE;
-        VkDeviceAddress            vkAddress = 0;
+        VkDevice                   vkDevice    = VK_NULL_HANDLE;
+        VkDeviceMemory             vkMemory    = VK_NULL_HANDLE;
+        VkBuffer                   vkBuffer    = VK_NULL_HANDLE;
+        VkAccelerationStructureKHR vkAS        = VK_NULL_HANDLE;
+        VkDeviceAddress            vkAddress   = 0;
+        VkDeviceSize               ScratchSize = 0;
 
         AccelStruct()
         {}
@@ -69,29 +71,31 @@ struct RTContext
         }
     };
 
-    VkDevice                                vkDevice           = VK_NULL_HANDLE;
-    VkCommandBuffer                         vkCmdBuffer        = VK_NULL_HANDLE;
-    VkImage                                 vkRenderTarget     = VK_NULL_HANDLE;
-    VkImageView                             vkRenderTargetView = VK_NULL_HANDLE;
-    VkPipelineLayout                        vkLayout           = VK_NULL_HANDLE;
-    VkPipeline                              vkPipeline         = VK_NULL_HANDLE;
-    VkDescriptorSetLayout                   vkSetLayout        = VK_NULL_HANDLE;
-    VkDescriptorPool                        vkDescriptorPool   = VK_NULL_HANDLE;
-    VkDescriptorSet                         vkDescriptorSet    = VK_NULL_HANDLE;
-    AccelStruct                             BLAS;
-    AccelStruct                             TLAS;
-    VkBuffer                                vkSBTBuffer             = VK_NULL_HANDLE;
-    VkBuffer                                vkScratchBuffer         = VK_NULL_HANDLE;
-    VkBuffer                                vkInstanceBuffer        = VK_NULL_HANDLE;
-    VkBuffer                                vkVertexBuffer          = VK_NULL_HANDLE;
-    VkBuffer                                vkIndexBuffer           = VK_NULL_HANDLE;
-    VkDeviceAddress                         vkScratchBufferAddress  = 0;
-    VkDeviceAddress                         vkInstanceBufferAddress = 0;
-    VkDeviceAddress                         vkVertexBufferAddress   = 0;
-    VkDeviceAddress                         vkIndexBufferAddress    = 0;
-    VkDeviceMemory                          vkBufferMemory          = VK_NULL_HANDLE;
-    VkPhysicalDeviceLimits                  DeviceLimits            = {};
-    VkPhysicalDeviceRayTracingPropertiesKHR RayTracingProps         = {};
+    VkDevice                                           vkDevice           = VK_NULL_HANDLE;
+    VkCommandBuffer                                    vkCmdBuffer        = VK_NULL_HANDLE;
+    VkImage                                            vkRenderTarget     = VK_NULL_HANDLE;
+    VkImageView                                        vkRenderTargetView = VK_NULL_HANDLE;
+    VkPipelineLayout                                   vkLayout           = VK_NULL_HANDLE;
+    VkPipeline                                         vkPipeline         = VK_NULL_HANDLE;
+    VkDescriptorSetLayout                              vkSetLayout        = VK_NULL_HANDLE;
+    VkDescriptorPool                                   vkDescriptorPool   = VK_NULL_HANDLE;
+    VkDescriptorSet                                    vkDescriptorSet    = VK_NULL_HANDLE;
+    AccelStruct                                        BLAS;
+    AccelStruct                                        TLAS;
+    VkBuffer                                           vkSBTBuffer             = VK_NULL_HANDLE;
+    VkBuffer                                           vkScratchBuffer         = VK_NULL_HANDLE;
+    VkBuffer                                           vkInstanceBuffer        = VK_NULL_HANDLE;
+    VkBuffer                                           vkVertexBuffer          = VK_NULL_HANDLE;
+    VkBuffer                                           vkIndexBuffer           = VK_NULL_HANDLE;
+    VkDeviceAddress                                    vkScratchBufferAddress  = 0;
+    VkDeviceAddress                                    vkSBTBufferAddress      = 0;
+    VkDeviceAddress                                    vkInstanceBufferAddress = 0;
+    VkDeviceAddress                                    vkVertexBufferAddress   = 0;
+    VkDeviceAddress                                    vkIndexBufferAddress    = 0;
+    VkDeviceMemory                                     vkBufferMemory          = VK_NULL_HANDLE;
+    VkPhysicalDeviceLimits                             DeviceLimits            = {};
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR AccelStructProps        = {};
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR    RayTracingProps         = {};
 
     RTContext()
     {}
@@ -150,7 +154,7 @@ struct RTGroupsHelper
     void SetStage(Uint32 StageIndex, SHADER_TYPE ShaderType, const String& Source)
     {
         auto* pEnv                = TestingEnvironmentVk::GetInstance();
-        Modules[StageIndex]       = pEnv->CreateShaderModule(ShaderType, (pEnv->IsUsedRayTracingNV() ? GLSL::RayTracingTest_NVviaKHRHeader : GLSL::RayTracingTest_Header) + Source);
+        Modules[StageIndex]       = pEnv->CreateShaderModule(ShaderType, Source);
         Stages[StageIndex].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         Stages[StageIndex].module = Modules[StageIndex];
         Stages[StageIndex].pName  = "main";
@@ -227,34 +231,13 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
     Ctx.vkRenderTarget     = pTestingSwapChainVk->GetVkRenderTargetImage();
     Ctx.vkRenderTargetView = pTestingSwapChainVk->GetVkRenderTargetImageView();
 
-    // add emulation via NV extension
-    if (pEnv->IsUsedRayTracingNV())
-    {
-        VkPhysicalDeviceProperties2            Props2            = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-        VkPhysicalDeviceRayTracingPropertiesNV RayTracingNVProps = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV};
-
-        Props2.pNext = &RayTracingNVProps;
-        vkGetPhysicalDeviceProperties2KHR(pEnv->GetVkPhysicalDevice(), &Props2);
-        Ctx.DeviceLimits = Props2.properties.limits;
-
-        Ctx.RayTracingProps.shaderGroupHandleSize                  = RayTracingNVProps.shaderGroupHandleSize;
-        Ctx.RayTracingProps.maxRecursionDepth                      = RayTracingNVProps.maxRecursionDepth;
-        Ctx.RayTracingProps.maxShaderGroupStride                   = RayTracingNVProps.maxShaderGroupStride;
-        Ctx.RayTracingProps.shaderGroupBaseAlignment               = RayTracingNVProps.shaderGroupBaseAlignment;
-        Ctx.RayTracingProps.maxGeometryCount                       = RayTracingNVProps.maxGeometryCount;
-        Ctx.RayTracingProps.maxInstanceCount                       = RayTracingNVProps.maxInstanceCount;
-        Ctx.RayTracingProps.maxPrimitiveCount                      = RayTracingNVProps.maxTriangleCount;
-        Ctx.RayTracingProps.maxDescriptorSetAccelerationStructures = RayTracingNVProps.maxDescriptorSetAccelerationStructures;
-        Ctx.RayTracingProps.shaderGroupHandleCaptureReplaySize     = 0;
-    }
-    else
-    {
-        VkPhysicalDeviceProperties2 Props2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-        Props2.pNext                       = &Ctx.RayTracingProps;
-        Ctx.RayTracingProps.sType          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
-        vkGetPhysicalDeviceProperties2KHR(pEnv->GetVkPhysicalDevice(), &Props2);
-        Ctx.DeviceLimits = Props2.properties.limits;
-    }
+    VkPhysicalDeviceProperties2 Props2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+    Props2.pNext                       = &Ctx.RayTracingProps;
+    Ctx.RayTracingProps.sType          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+    Ctx.RayTracingProps.pNext          = &Ctx.AccelStructProps;
+    Ctx.AccelStructProps.sType         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+    vkGetPhysicalDeviceProperties2KHR(pEnv->GetVkPhysicalDevice(), &Props2);
+    Ctx.DeviceLimits = Props2.properties.limits;
 
     // Create ray tracing pipeline
     {
@@ -283,17 +266,16 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
         vkCreatePipelineLayout(Ctx.vkDevice, &PipelineLayoutCI, nullptr, &Ctx.vkLayout);
         ASSERT_TRUE(Ctx.vkLayout != VK_NULL_HANDLE);
 
-        PipelineCI.sType             = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
-        PipelineCI.stageCount        = static_cast<Uint32>(Helper.Stages.size());
-        PipelineCI.pStages           = Helper.Stages.data();
-        PipelineCI.groupCount        = static_cast<Uint32>(Helper.Groups.size());
-        PipelineCI.pGroups           = Helper.Groups.data();
-        PipelineCI.maxRecursionDepth = 0;
-        PipelineCI.layout            = Ctx.vkLayout;
-        PipelineCI.libraries.sType   = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
+        PipelineCI.sType                        = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+        PipelineCI.stageCount                   = static_cast<Uint32>(Helper.Stages.size());
+        PipelineCI.pStages                      = Helper.Stages.data();
+        PipelineCI.groupCount                   = static_cast<Uint32>(Helper.Groups.size());
+        PipelineCI.pGroups                      = Helper.Groups.data();
+        PipelineCI.maxPipelineRayRecursionDepth = 0;
+        PipelineCI.layout                       = Ctx.vkLayout;
 
-        res = vkCreateRayTracingPipelinesKHR(Ctx.vkDevice, VK_NULL_HANDLE, 1, &PipelineCI, nullptr, &Ctx.vkPipeline);
-        ASSERT_GE(res, 0);
+        res = vkCreateRayTracingPipelinesKHR(Ctx.vkDevice, VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &PipelineCI, nullptr, &Ctx.vkPipeline);
+        ASSERT_GE(res, VK_SUCCESS);
         ASSERT_TRUE(Ctx.vkPipeline != VK_NULL_HANDLE);
 
         for (auto& SM : Helper.Modules)
@@ -370,53 +352,78 @@ void UpdateDescriptorSet(RTContext& Ctx)
     vkUpdateDescriptorSets(Ctx.vkDevice, _countof(DescriptorWrite), DescriptorWrite, 0, nullptr);
 }
 
-void CreateBLAS(const RTContext& Ctx, const VkAccelerationStructureCreateGeometryTypeInfoKHR* pGeometries, Uint32 GeometryCount, RTContext::AccelStruct& BLAS)
+void CreateBLAS(const RTContext&                                Ctx,
+                const VkAccelerationStructureGeometryKHR*       pGeometries,
+                const VkAccelerationStructureBuildRangeInfoKHR* pRanges,
+                Uint32                                          GeometryCount,
+                RTContext::AccelStruct&                         BLAS)
 {
     BLAS.vkDevice = Ctx.vkDevice;
 
-    VkResult res = VK_SUCCESS;
+    VkResult     res             = VK_SUCCESS;
+    VkDeviceSize AccelStructSize = 0;
 
-    VkAccelerationStructureCreateInfoKHR             BLASCI  = {};
-    VkAccelerationStructureMemoryRequirementsInfoKHR MemInfo = {};
-    VkMemoryRequirements2                            MemReqs = {};
+    {
+        VkAccelerationStructureBuildGeometryInfoKHR vkBuildInfo = {};
+        VkAccelerationStructureBuildSizesInfoKHR    vkSizeInfo  = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
+        std::vector<uint32_t>                       MaxPrimitives;
+        MaxPrimitives.resize(GeometryCount);
 
-    BLASCI.sType            = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-    BLASCI.type             = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-    BLASCI.maxGeometryCount = GeometryCount;
-    BLASCI.pGeometryInfos   = pGeometries;
+        for (Uint32 i = 0; i < GeometryCount; ++i)
+        {
+            MaxPrimitives[i] = pRanges[i].primitiveCount;
+        }
 
-    res = vkCreateAccelerationStructureKHR(Ctx.vkDevice, &BLASCI, nullptr, &BLAS.vkAS);
+        vkBuildInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+        vkBuildInfo.flags         = 0;
+        vkBuildInfo.type          = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        vkBuildInfo.pGeometries   = pGeometries;
+        vkBuildInfo.geometryCount = GeometryCount;
+
+        vkGetAccelerationStructureBuildSizesKHR(Ctx.vkDevice, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vkBuildInfo, MaxPrimitives.data(), &vkSizeInfo);
+
+        BLAS.ScratchSize = vkSizeInfo.buildScratchSize;
+        AccelStructSize  = vkSizeInfo.accelerationStructureSize;
+    }
+
+    VkBufferCreateInfo BuffCI = {};
+
+    BuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BuffCI.size  = AccelStructSize;
+    BuffCI.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+
+    res = vkCreateBuffer(Ctx.vkDevice, &BuffCI, nullptr, &BLAS.vkBuffer);
     ASSERT_GE(res, VK_SUCCESS);
-    ASSERT_TRUE(BLAS.vkAS != VK_NULL_HANDLE);
+    ASSERT_TRUE(BLAS.vkBuffer != VK_NULL_HANDLE);
 
-    MemInfo.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-    MemInfo.accelerationStructure = BLAS.vkAS;
-    MemInfo.buildType             = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR;
-    MemInfo.type                  = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
-
-    MemReqs.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-
-    vkGetAccelerationStructureMemoryRequirementsKHR(Ctx.vkDevice, &MemInfo, &MemReqs);
+    VkMemoryRequirements MemReqs = {};
+    vkGetBufferMemoryRequirements(Ctx.vkDevice, BLAS.vkBuffer, &MemReqs);
 
     VkMemoryAllocateInfo MemAlloc = {};
 
     MemAlloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    MemAlloc.allocationSize  = MemReqs.memoryRequirements.size;
-    MemAlloc.memoryTypeIndex = TestingEnvironmentVk::GetInstance()->GetMemoryTypeIndex(MemReqs.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    MemAlloc.allocationSize  = MemReqs.size;
+    MemAlloc.memoryTypeIndex = TestingEnvironmentVk::GetInstance()->GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     ASSERT_TRUE(MemAlloc.memoryTypeIndex != ~0u);
 
     res = vkAllocateMemory(Ctx.vkDevice, &MemAlloc, nullptr, &BLAS.vkMemory);
     ASSERT_GE(res, VK_SUCCESS);
     ASSERT_TRUE(BLAS.vkMemory != VK_NULL_HANDLE);
 
-    VkBindAccelerationStructureMemoryInfoKHR BindInfo = {};
+    vkBindBufferMemory(Ctx.vkDevice, BLAS.vkBuffer, BLAS.vkMemory, 0);
 
-    BindInfo.sType                 = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
-    BindInfo.memory                = BLAS.vkMemory;
-    BindInfo.accelerationStructure = BLAS.vkAS;
+    VkAccelerationStructureCreateInfoKHR vkAccelStrCI = {};
 
-    res = vkBindAccelerationStructureMemoryKHR(Ctx.vkDevice, 1, &BindInfo);
+    vkAccelStrCI.sType       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+    vkAccelStrCI.createFlags = 0;
+    vkAccelStrCI.buffer      = BLAS.vkBuffer;
+    vkAccelStrCI.offset      = 0;
+    vkAccelStrCI.size        = AccelStructSize;
+    vkAccelStrCI.type        = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+
+    res = vkCreateAccelerationStructureKHR(Ctx.vkDevice, &vkAccelStrCI, nullptr, &BLAS.vkAS);
     ASSERT_GE(res, VK_SUCCESS);
+    ASSERT_TRUE(BLAS.vkAS != VK_NULL_HANDLE);
 
     VkAccelerationStructureDeviceAddressInfoKHR AddressInfo = {};
 
@@ -430,111 +437,81 @@ void CreateTLAS(const RTContext& Ctx, Uint32 InstanceCount, RTContext::AccelStru
 {
     TLAS.vkDevice = Ctx.vkDevice;
 
-    VkResult res = VK_SUCCESS;
+    VkResult     res             = VK_SUCCESS;
+    VkDeviceSize AccelStructSize = 0;
 
-    VkAccelerationStructureCreateInfoKHR             TLASCI    = {};
-    VkAccelerationStructureMemoryRequirementsInfoKHR MemInfo   = {};
-    VkMemoryRequirements2                            MemReqs   = {};
-    VkAccelerationStructureCreateGeometryTypeInfoKHR Instances = {};
+    {
+        VkAccelerationStructureBuildGeometryInfoKHR      vkBuildInfo = {};
+        VkAccelerationStructureGeometryKHR               vkGeometry  = {};
+        VkAccelerationStructureGeometryInstancesDataKHR& vkInstances = vkGeometry.geometry.instances;
+        VkAccelerationStructureBuildSizesInfoKHR         vkSizeInfo  = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
 
-    Instances.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-    Instances.geometryType      = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-    Instances.maxPrimitiveCount = InstanceCount;
+        vkGeometry.sType            = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        vkGeometry.geometryType     = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+        vkInstances.sType           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+        vkInstances.arrayOfPointers = VK_FALSE;
 
-    TLASCI.sType            = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-    TLASCI.type             = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-    TLASCI.flags            = 0;
-    TLASCI.compactedSize    = 0;
-    TLASCI.maxGeometryCount = 1;
-    TLASCI.pGeometryInfos   = &Instances;
+        vkBuildInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+        vkBuildInfo.flags         = 0;
+        vkBuildInfo.type          = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+        vkBuildInfo.pGeometries   = &vkGeometry;
+        vkBuildInfo.geometryCount = 1;
 
-    res = vkCreateAccelerationStructureKHR(Ctx.vkDevice, &TLASCI, nullptr, &TLAS.vkAS);
+        vkGetAccelerationStructureBuildSizesKHR(Ctx.vkDevice, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vkBuildInfo, &InstanceCount, &vkSizeInfo);
+
+        TLAS.ScratchSize = vkSizeInfo.buildScratchSize;
+        AccelStructSize  = vkSizeInfo.accelerationStructureSize;
+    }
+
+    VkBufferCreateInfo BuffCI = {};
+
+    BuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BuffCI.size  = AccelStructSize;
+    BuffCI.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+
+    res = vkCreateBuffer(Ctx.vkDevice, &BuffCI, nullptr, &TLAS.vkBuffer);
     ASSERT_GE(res, VK_SUCCESS);
-    ASSERT_TRUE(TLAS.vkAS != VK_NULL_HANDLE);
+    ASSERT_TRUE(TLAS.vkBuffer != VK_NULL_HANDLE);
 
-    MemInfo.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-    MemInfo.accelerationStructure = TLAS.vkAS;
-    MemInfo.buildType             = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR;
-    MemInfo.type                  = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
-
-    MemReqs.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-
-    vkGetAccelerationStructureMemoryRequirementsKHR(Ctx.vkDevice, &MemInfo, &MemReqs);
+    VkMemoryRequirements MemReqs = {};
+    vkGetBufferMemoryRequirements(Ctx.vkDevice, TLAS.vkBuffer, &MemReqs);
 
     VkMemoryAllocateInfo MemAlloc = {};
 
     MemAlloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    MemAlloc.allocationSize  = MemReqs.memoryRequirements.size;
-    MemAlloc.memoryTypeIndex = TestingEnvironmentVk::GetInstance()->GetMemoryTypeIndex(MemReqs.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    MemAlloc.allocationSize  = MemReqs.size;
+    MemAlloc.memoryTypeIndex = TestingEnvironmentVk::GetInstance()->GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     ASSERT_TRUE(MemAlloc.memoryTypeIndex != ~0u);
 
     res = vkAllocateMemory(Ctx.vkDevice, &MemAlloc, nullptr, &TLAS.vkMemory);
     ASSERT_GE(res, VK_SUCCESS);
     ASSERT_TRUE(TLAS.vkMemory != VK_NULL_HANDLE);
 
-    VkBindAccelerationStructureMemoryInfoKHR BindInfo = {};
+    vkBindBufferMemory(Ctx.vkDevice, TLAS.vkBuffer, TLAS.vkMemory, 0);
 
-    BindInfo.sType                 = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
-    BindInfo.memory                = TLAS.vkMemory;
-    BindInfo.memoryOffset          = 0;
-    BindInfo.deviceIndexCount      = 0;
-    BindInfo.pDeviceIndices        = nullptr;
-    BindInfo.accelerationStructure = TLAS.vkAS;
+    VkAccelerationStructureCreateInfoKHR vkAccelStrCI = {};
 
-    res = vkBindAccelerationStructureMemoryKHR(Ctx.vkDevice, 1, &BindInfo);
+    vkAccelStrCI.sType       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+    vkAccelStrCI.createFlags = 0;
+    vkAccelStrCI.buffer      = TLAS.vkBuffer;
+    vkAccelStrCI.offset      = 0;
+    vkAccelStrCI.size        = AccelStructSize;
+    vkAccelStrCI.type        = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+
+    res = vkCreateAccelerationStructureKHR(Ctx.vkDevice, &vkAccelStrCI, nullptr, &TLAS.vkAS);
     ASSERT_GE(res, VK_SUCCESS);
-
-    VkAccelerationStructureDeviceAddressInfoKHR AddressInfo = {};
-
-    AddressInfo.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-    AddressInfo.accelerationStructure = TLAS.vkAS;
-
-    TLAS.vkAddress = vkGetAccelerationStructureDeviceAddressKHR(Ctx.vkDevice, &AddressInfo);
+    ASSERT_TRUE(TLAS.vkAS != VK_NULL_HANDLE);
 }
 
 void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 InstanceCount, Uint32 NumMissShaders, Uint32 NumHitShaders, Uint32 ShaderRecordSize = 0)
 {
     VkResult res = VK_SUCCESS;
 
-    VkDeviceSize ScratchSize = 0;
+    VkDeviceSize ScratchSize = std::max(Ctx.TLAS.ScratchSize, Ctx.BLAS.ScratchSize);
     VkDeviceSize MemSize     = 0;
 
     VkMemoryRequirements2 MemReqs = {};
     MemReqs.sType                 = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-
-    // Get scratch buffer size
-    {
-        VkAccelerationStructureMemoryRequirementsInfoKHR MemInfo = {};
-
-        MemInfo.sType     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-        MemInfo.buildType = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR;
-
-        if (Ctx.BLAS.vkAS)
-        {
-            MemInfo.accelerationStructure = Ctx.BLAS.vkAS;
-
-            MemInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
-            vkGetAccelerationStructureMemoryRequirementsKHR(Ctx.vkDevice, &MemInfo, &MemReqs);
-            ScratchSize = std::max(ScratchSize, MemReqs.memoryRequirements.size);
-
-            MemInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
-            vkGetAccelerationStructureMemoryRequirementsKHR(Ctx.vkDevice, &MemInfo, &MemReqs);
-            ScratchSize = std::max(ScratchSize, MemReqs.memoryRequirements.size);
-        }
-
-        if (Ctx.TLAS.vkAS)
-        {
-            MemInfo.accelerationStructure = Ctx.TLAS.vkAS;
-
-            MemInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
-            vkGetAccelerationStructureMemoryRequirementsKHR(Ctx.vkDevice, &MemInfo, &MemReqs);
-            ScratchSize = std::max(ScratchSize, MemReqs.memoryRequirements.size);
-
-            MemInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
-            vkGetAccelerationStructureMemoryRequirementsKHR(Ctx.vkDevice, &MemInfo, &MemReqs);
-            ScratchSize = std::max(ScratchSize, MemReqs.memoryRequirements.size);
-        }
-    }
 
     VkBufferCreateInfo              BuffCI      = {};
     VkBufferMemoryRequirementsInfo2 MemInfo     = {};
@@ -544,7 +521,7 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR;
 
     BuffCI.sType  = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    BuffCI.usage  = VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    BuffCI.usage  = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
     MemInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
 
     std::vector<std::function<void(VkDeviceMemory Mem, VkDeviceSize & Offset)>> BindMem;
@@ -668,6 +645,9 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
             Offset = Align(Offset, MemReqs.memoryRequirements.alignment);
             vkBindBufferMemory(Ctx.vkDevice, Ctx.vkSBTBuffer, Mem, Offset);
             Offset += MemReqs.memoryRequirements.size;
+            BufferInfo.buffer      = Ctx.vkSBTBuffer;
+            Ctx.vkSBTBufferAddress = vkGetBufferDeviceAddressKHR(Ctx.vkDevice, &BufferInfo);
+            ASSERT_TRUE(Ctx.vkSBTBufferAddress > 0);
         });
     }
 
@@ -777,51 +757,40 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
     {
         const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
 
-        VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
+        VkAccelerationStructureBuildGeometryInfoKHR     ASBuildInfo = {};
+        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {};
+        VkAccelerationStructureGeometryKHR              Geometry    = {};
+        VkAccelerationStructureBuildRangeInfoKHR const* OffsetPtr   = &Offset;
 
-        GeometryCI.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-        GeometryCI.geometryType      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        GeometryCI.maxPrimitiveCount = 1;
-        GeometryCI.indexType         = VK_INDEX_TYPE_NONE_KHR;
-        GeometryCI.maxVertexCount    = _countof(Vertices);
-        GeometryCI.vertexFormat      = VK_FORMAT_R32G32B32_SFLOAT;
-        GeometryCI.allowsTransforms  = VK_FALSE;
+        Geometry.sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        Geometry.flags                           = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        Geometry.geometryType                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        Geometry.geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        Geometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        Geometry.geometry.triangles.maxVertex    = _countof(Vertices);
+        Geometry.geometry.triangles.vertexStride = sizeof(Vertices[0]);
+        Geometry.geometry.triangles.indexType    = VK_INDEX_TYPE_NONE_KHR;
 
-        CreateBLAS(Ctx, &GeometryCI, 1, Ctx.BLAS);
+        CreateBLAS(Ctx, &Geometry, OffsetPtr, 1, Ctx.BLAS);
         CreateTLAS(Ctx, 1, Ctx.TLAS);
         CreateRTBuffers(Ctx, sizeof(Vertices), 0, 1, 1, 1);
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkVertexBuffer, 0, sizeof(Vertices), Vertices);
         AccelStructBarrier(Ctx);
 
-        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
-        VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
-        VkAccelerationStructureGeometryKHR               Geometry    = {};
-        VkAccelerationStructureGeometryKHR const*        GeometryPtr = &Geometry;
-        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr   = &Offset;
-
-        Geometry.sType                                       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        Geometry.flags                                       = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        Geometry.geometryType                                = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        Geometry.geometry.triangles.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        Geometry.geometry.triangles.vertexFormat             = GeometryCI.vertexFormat;
-        Geometry.geometry.triangles.vertexStride             = sizeof(Vertices[0]);
         Geometry.geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
-        Geometry.geometry.triangles.indexType                = VK_INDEX_TYPE_NONE_KHR;
-
-        Offset.primitiveCount = GeometryCI.maxPrimitiveCount;
+        Offset.primitiveCount                                = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        ASBuildInfo.update                    = VK_FALSE;
+        ASBuildInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.BLAS.vkAS;
-        ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometryPtr;
+        ASBuildInfo.pGeometries               = &Geometry;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
-        vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
+        vkCmdBuildAccelerationStructuresKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
 
         VkAccelerationStructureInstanceKHR InstanceData     = {};
         InstanceData.instanceShaderBindingTableRecordOffset = 0;
@@ -845,15 +814,14 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        ASBuildInfo.update                    = VK_FALSE;
+        ASBuildInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.TLAS.vkAS;
-        ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometryPtr;
+        ASBuildInfo.pGeometries               = &Geometry;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
-        vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
+        vkCmdBuildAccelerationStructuresKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
     Ctx.ClearRenderTarget(pTestingSwapChainVk);
@@ -862,38 +830,38 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
 
     // Trace rays
     {
-        VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
-        VkStridedBufferRegionKHR MissShaderBindingTable     = {};
-        VkStridedBufferRegionKHR HitShaderBindingTable      = {};
-        VkStridedBufferRegionKHR CallableShaderBindingTable = {};
-        const Uint32             ShaderGroupHandleSize      = Ctx.RayTracingProps.shaderGroupHandleSize;
-
-        RaygenShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        RaygenShaderBindingTable.offset = 0;
-        RaygenShaderBindingTable.size   = ShaderGroupHandleSize;
-        MissShaderBindingTable.stride   = ShaderGroupHandleSize;
-
-        MissShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        MissShaderBindingTable.offset = Align(RaygenShaderBindingTable.offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        MissShaderBindingTable.size   = ShaderGroupHandleSize;
-        MissShaderBindingTable.stride = ShaderGroupHandleSize;
-
-        HitShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        HitShaderBindingTable.offset = Align(MissShaderBindingTable.offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        HitShaderBindingTable.size   = ShaderGroupHandleSize;
-        HitShaderBindingTable.stride = ShaderGroupHandleSize;
+        VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {};
+        VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {};
+        VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {};
+        VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {};
+        const Uint32                    ShaderGroupHandleSize      = Ctx.RayTracingProps.shaderGroupHandleSize;
+        VkDeviceSize                    Offset                     = 0;
 
         char ShaderHandle[64] = {};
         ASSERT_GE(sizeof(ShaderHandle), ShaderGroupHandleSize);
 
+        RaygenShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress;
+        RaygenShaderBindingTable.size          = ShaderGroupHandleSize;
+        MissShaderBindingTable.stride          = ShaderGroupHandleSize;
+
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, RAYGEN_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, RaygenShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
+
+        Offset                               = Align(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        MissShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
+        MissShaderBindingTable.size          = ShaderGroupHandleSize;
+        MissShaderBindingTable.stride        = ShaderGroupHandleSize;
 
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, MISS_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, MissShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
+
+        Offset                              = Align(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        HitShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
+        HitShaderBindingTable.size          = ShaderGroupHandleSize;
+        HitShaderBindingTable.stride        = ShaderGroupHandleSize;
 
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, HIT_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, HitShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
         PrepareForTraceRays(Ctx);
         vkCmdTraceRaysKHR(Ctx.vkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, SCDesc.Width, SCDesc.Height, 1);
@@ -949,51 +917,39 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
     {
         const auto& Vertices = TestingConstants::TriangleAnyHit::Vertices;
 
-        VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
+        VkAccelerationStructureBuildGeometryInfoKHR     ASBuildInfo = {};
+        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {};
+        VkAccelerationStructureGeometryKHR              Geometry    = {};
+        VkAccelerationStructureBuildRangeInfoKHR const* OffsetPtr   = &Offset;
 
-        GeometryCI.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-        GeometryCI.geometryType      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        GeometryCI.maxPrimitiveCount = 3;
-        GeometryCI.indexType         = VK_INDEX_TYPE_NONE_KHR;
-        GeometryCI.maxVertexCount    = _countof(Vertices);
-        GeometryCI.vertexFormat      = VK_FORMAT_R32G32B32_SFLOAT;
-        GeometryCI.allowsTransforms  = VK_FALSE;
+        Geometry.sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        Geometry.flags                           = 0;
+        Geometry.geometryType                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        Geometry.geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        Geometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        Geometry.geometry.triangles.vertexStride = sizeof(Vertices[0]);
+        Geometry.geometry.triangles.indexType    = VK_INDEX_TYPE_NONE_KHR;
 
-        CreateBLAS(Ctx, &GeometryCI, 1, Ctx.BLAS);
+        CreateBLAS(Ctx, &Geometry, OffsetPtr, 1, Ctx.BLAS);
         CreateTLAS(Ctx, 1, Ctx.TLAS);
         CreateRTBuffers(Ctx, sizeof(Vertices), 0, 1, 1, 1);
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkVertexBuffer, 0, sizeof(Vertices), Vertices);
         AccelStructBarrier(Ctx);
 
-        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
-        VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
-        VkAccelerationStructureGeometryKHR               Geometry    = {};
-        VkAccelerationStructureGeometryKHR const*        GeometryPtr = &Geometry;
-        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr   = &Offset;
-
-        Geometry.sType                                       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        Geometry.flags                                       = 0;
-        Geometry.geometryType                                = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        Geometry.geometry.triangles.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        Geometry.geometry.triangles.vertexFormat             = GeometryCI.vertexFormat;
-        Geometry.geometry.triangles.vertexStride             = sizeof(Vertices[0]);
         Geometry.geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
-        Geometry.geometry.triangles.indexType                = VK_INDEX_TYPE_NONE_KHR;
-
-        Offset.primitiveCount = GeometryCI.maxPrimitiveCount;
+        Offset.primitiveCount                                = 3;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        ASBuildInfo.update                    = VK_FALSE;
+        ASBuildInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.BLAS.vkAS;
-        ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometryPtr;
+        ASBuildInfo.pGeometries               = &Geometry;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
-        vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
+        vkCmdBuildAccelerationStructuresKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
 
         VkAccelerationStructureInstanceKHR InstanceData     = {};
         InstanceData.instanceShaderBindingTableRecordOffset = 0;
@@ -1017,15 +973,14 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        ASBuildInfo.update                    = VK_FALSE;
+        ASBuildInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.TLAS.vkAS;
-        ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometryPtr;
+        ASBuildInfo.pGeometries               = &Geometry;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
-        vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
+        vkCmdBuildAccelerationStructuresKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
     Ctx.ClearRenderTarget(pTestingSwapChainVk);
@@ -1034,38 +989,38 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
 
     // Trace rays
     {
-        VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
-        VkStridedBufferRegionKHR MissShaderBindingTable     = {};
-        VkStridedBufferRegionKHR HitShaderBindingTable      = {};
-        VkStridedBufferRegionKHR CallableShaderBindingTable = {};
-        const Uint32             ShaderGroupHandleSize      = Ctx.RayTracingProps.shaderGroupHandleSize;
-
-        RaygenShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        RaygenShaderBindingTable.offset = 0;
-        RaygenShaderBindingTable.size   = ShaderGroupHandleSize;
-        MissShaderBindingTable.stride   = ShaderGroupHandleSize;
-
-        MissShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        MissShaderBindingTable.offset = Align(RaygenShaderBindingTable.offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        MissShaderBindingTable.size   = ShaderGroupHandleSize;
-        MissShaderBindingTable.stride = ShaderGroupHandleSize;
-
-        HitShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        HitShaderBindingTable.offset = Align(MissShaderBindingTable.offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        HitShaderBindingTable.size   = ShaderGroupHandleSize;
-        HitShaderBindingTable.stride = ShaderGroupHandleSize;
+        VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {};
+        VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {};
+        VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {};
+        VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {};
+        const Uint32                    ShaderGroupHandleSize      = Ctx.RayTracingProps.shaderGroupHandleSize;
+        VkDeviceSize                    Offset                     = 0;
 
         char ShaderHandle[64] = {};
         ASSERT_GE(sizeof(ShaderHandle), ShaderGroupHandleSize);
 
+        RaygenShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress;
+        RaygenShaderBindingTable.size          = ShaderGroupHandleSize;
+        MissShaderBindingTable.stride          = ShaderGroupHandleSize;
+
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, RAYGEN_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, RaygenShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
+
+        Offset                               = Align(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        MissShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
+        MissShaderBindingTable.size          = ShaderGroupHandleSize;
+        MissShaderBindingTable.stride        = ShaderGroupHandleSize;
 
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, MISS_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, MissShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
+
+        Offset                              = Align(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        HitShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
+        HitShaderBindingTable.size          = ShaderGroupHandleSize;
+        HitShaderBindingTable.stride        = ShaderGroupHandleSize;
 
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, HIT_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, HitShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
         PrepareForTraceRays(Ctx);
         vkCmdTraceRaysKHR(Ctx.vkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, SCDesc.Width, SCDesc.Height, 1);
@@ -1121,47 +1076,38 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
     {
         const auto& Boxes = TestingConstants::ProceduralIntersection::Boxes;
 
-        VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
+        VkAccelerationStructureBuildGeometryInfoKHR     ASBuildInfo = {};
+        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {};
+        VkAccelerationStructureGeometryKHR              Geometry    = {};
+        VkAccelerationStructureBuildRangeInfoKHR const* OffsetPtr   = &Offset;
 
-        GeometryCI.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-        GeometryCI.geometryType      = VK_GEOMETRY_TYPE_AABBS_KHR;
-        GeometryCI.maxPrimitiveCount = 1;
-        GeometryCI.indexType         = VK_INDEX_TYPE_NONE_KHR;
+        Geometry.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        Geometry.flags                 = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        Geometry.geometryType          = VK_GEOMETRY_TYPE_AABBS_KHR;
+        Geometry.geometry.aabbs.sType  = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+        Geometry.geometry.aabbs.pNext  = nullptr;
+        Geometry.geometry.aabbs.stride = sizeof(float3) * 2;
 
-        CreateBLAS(Ctx, &GeometryCI, 1, Ctx.BLAS);
+        CreateBLAS(Ctx, &Geometry, OffsetPtr, 1, Ctx.BLAS);
         CreateTLAS(Ctx, 1, Ctx.TLAS);
         CreateRTBuffers(Ctx, sizeof(Boxes), 0, 1, 1, 1);
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkVertexBuffer, 0, sizeof(Boxes), Boxes);
         AccelStructBarrier(Ctx);
 
-        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
-        VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
-        VkAccelerationStructureGeometryKHR               Geometry    = {};
-        VkAccelerationStructureGeometryKHR const*        GeometryPtr = &Geometry;
-        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr   = &Offset;
-
-        Geometry.sType                             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        Geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        Geometry.geometryType                      = VK_GEOMETRY_TYPE_AABBS_KHR;
-        Geometry.geometry.aabbs.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
-        Geometry.geometry.aabbs.pNext              = nullptr;
         Geometry.geometry.aabbs.data.deviceAddress = Ctx.vkVertexBufferAddress;
-        Geometry.geometry.aabbs.stride             = sizeof(float3) * 2;
-
-        Offset.primitiveCount = GeometryCI.maxPrimitiveCount;
+        Offset.primitiveCount                      = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        ASBuildInfo.update                    = VK_FALSE;
+        ASBuildInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.BLAS.vkAS;
-        ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometryPtr;
+        ASBuildInfo.pGeometries               = &Geometry;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
-        vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
+        vkCmdBuildAccelerationStructuresKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
 
         VkAccelerationStructureInstanceKHR InstanceData     = {};
         InstanceData.instanceShaderBindingTableRecordOffset = 0;
@@ -1185,15 +1131,14 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        ASBuildInfo.update                    = VK_FALSE;
+        ASBuildInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.TLAS.vkAS;
-        ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometryPtr;
+        ASBuildInfo.pGeometries               = &Geometry;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
-        vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
+        vkCmdBuildAccelerationStructuresKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
     Ctx.ClearRenderTarget(pTestingSwapChainVk);
@@ -1202,38 +1147,38 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
 
     // Trace rays
     {
-        VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
-        VkStridedBufferRegionKHR MissShaderBindingTable     = {};
-        VkStridedBufferRegionKHR HitShaderBindingTable      = {};
-        VkStridedBufferRegionKHR CallableShaderBindingTable = {};
-        const Uint32             ShaderGroupHandleSize      = Ctx.RayTracingProps.shaderGroupHandleSize;
-
-        RaygenShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        RaygenShaderBindingTable.offset = 0;
-        RaygenShaderBindingTable.size   = ShaderGroupHandleSize;
-        MissShaderBindingTable.stride   = ShaderGroupHandleSize;
-
-        MissShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        MissShaderBindingTable.offset = Align(RaygenShaderBindingTable.offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        MissShaderBindingTable.size   = ShaderGroupHandleSize;
-        MissShaderBindingTable.stride = ShaderGroupHandleSize;
-
-        HitShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        HitShaderBindingTable.offset = Align(MissShaderBindingTable.offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        HitShaderBindingTable.size   = ShaderGroupHandleSize;
-        HitShaderBindingTable.stride = ShaderGroupHandleSize;
+        VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {};
+        VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {};
+        VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {};
+        VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {};
+        const Uint32                    ShaderGroupHandleSize      = Ctx.RayTracingProps.shaderGroupHandleSize;
+        VkDeviceSize                    Offset                     = 0;
 
         char ShaderHandle[64] = {};
         ASSERT_GE(sizeof(ShaderHandle), ShaderGroupHandleSize);
 
+        RaygenShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress;
+        RaygenShaderBindingTable.size          = ShaderGroupHandleSize;
+        MissShaderBindingTable.stride          = ShaderGroupHandleSize;
+
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, RAYGEN_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, RaygenShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
+
+        Offset                               = Align(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        MissShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
+        MissShaderBindingTable.size          = ShaderGroupHandleSize;
+        MissShaderBindingTable.stride        = ShaderGroupHandleSize;
 
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, MISS_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, MissShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
+
+        Offset                              = Align(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        HitShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
+        HitShaderBindingTable.size          = ShaderGroupHandleSize;
+        HitShaderBindingTable.stride        = ShaderGroupHandleSize;
 
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, HIT_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, HitShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
         PrepareForTraceRays(Ctx);
         vkCmdTraceRaysKHR(Ctx.vkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, SCDesc.Width, SCDesc.Height, 1);
@@ -1303,33 +1248,38 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         const auto& Vertices = TestingConstants::MultiGeometry::Vertices;
         const auto& Indices  = TestingConstants::MultiGeometry::Indices;
 
-        VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI[3] = {};
+        VkAccelerationStructureBuildGeometryInfoKHR     ASBuildInfo   = {};
+        VkAccelerationStructureBuildRangeInfoKHR        Offsets[3]    = {};
+        VkAccelerationStructureGeometryKHR              Geometries[3] = {};
+        VkAccelerationStructureBuildRangeInfoKHR const* OffsetPtr     = Offsets;
+        static_assert(_countof(Offsets) == _countof(Geometries), "size mismatch");
+        static_assert(GeometryCount == _countof(Geometries), "size mismatch");
 
-        GeometryCI[0].sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-        GeometryCI[0].geometryType      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        GeometryCI[0].maxPrimitiveCount = PrimitiveOffsets[1];
-        GeometryCI[0].indexType         = VK_INDEX_TYPE_UINT32;
-        GeometryCI[0].maxVertexCount    = _countof(Vertices);
-        GeometryCI[0].vertexFormat      = VK_FORMAT_R32G32B32_SFLOAT;
-        GeometryCI[0].allowsTransforms  = VK_FALSE;
+        Geometries[0].sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        Geometries[0].flags                           = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        Geometries[0].geometryType                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        Geometries[0].geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        Geometries[0].geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        Geometries[0].geometry.triangles.vertexStride = sizeof(Vertices[0]);
+        Geometries[0].geometry.triangles.indexType    = VK_INDEX_TYPE_UINT32;
 
-        GeometryCI[1].sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-        GeometryCI[1].geometryType      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        GeometryCI[1].maxPrimitiveCount = PrimitiveOffsets[2] - PrimitiveOffsets[1];
-        GeometryCI[1].indexType         = VK_INDEX_TYPE_UINT32;
-        GeometryCI[1].maxVertexCount    = _countof(Vertices);
-        GeometryCI[1].vertexFormat      = VK_FORMAT_R32G32B32_SFLOAT;
-        GeometryCI[1].allowsTransforms  = VK_FALSE;
+        Geometries[1].sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        Geometries[1].flags                           = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        Geometries[1].geometryType                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        Geometries[1].geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        Geometries[1].geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        Geometries[1].geometry.triangles.vertexStride = sizeof(Vertices[0]);
+        Geometries[1].geometry.triangles.indexType    = VK_INDEX_TYPE_UINT32;
 
-        GeometryCI[2].sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-        GeometryCI[2].geometryType      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        GeometryCI[2].maxPrimitiveCount = _countof(Primitives) - PrimitiveOffsets[2];
-        GeometryCI[2].indexType         = VK_INDEX_TYPE_UINT32;
-        GeometryCI[2].maxVertexCount    = _countof(Vertices);
-        GeometryCI[2].vertexFormat      = VK_FORMAT_R32G32B32_SFLOAT;
-        GeometryCI[2].allowsTransforms  = VK_FALSE;
+        Geometries[2].sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        Geometries[2].flags                           = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        Geometries[2].geometryType                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        Geometries[2].geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        Geometries[2].geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        Geometries[2].geometry.triangles.vertexStride = sizeof(Vertices[0]);
+        Geometries[2].geometry.triangles.indexType    = VK_INDEX_TYPE_UINT32;
 
-        CreateBLAS(Ctx, GeometryCI, _countof(GeometryCI), Ctx.BLAS);
+        CreateBLAS(Ctx, Geometries, OffsetPtr, _countof(Geometries), Ctx.BLAS);
         CreateTLAS(Ctx, InstanceCount, Ctx.TLAS);
         CreateRTBuffers(Ctx, sizeof(Vertices), sizeof(Indices), InstanceCount, 1, HitGroupCount, TestingConstants::MultiGeometry::ShaderRecordSize);
 
@@ -1337,60 +1287,27 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkIndexBuffer, 0, sizeof(Indices), Indices);
         AccelStructBarrier(Ctx);
 
-        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo   = {};
-        VkAccelerationStructureBuildOffsetInfoKHR        Offsets[3]    = {};
-        VkAccelerationStructureGeometryKHR               Geometries[3] = {};
-        VkAccelerationStructureGeometryKHR const*        GeometriyPtr  = Geometries;
-        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr     = Offsets;
-        static_assert(_countof(Offsets) == _countof(Geometries), "size mismatch");
-        static_assert(_countof(GeometryCI) == _countof(Geometries), "size mismatch");
-        static_assert(GeometryCount == _countof(Geometries), "size mismatch");
-
-        Geometries[0].sType                                       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        Geometries[0].flags                                       = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        Geometries[0].geometryType                                = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        Geometries[0].geometry.triangles.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        Geometries[0].geometry.triangles.vertexFormat             = GeometryCI[0].vertexFormat;
-        Geometries[0].geometry.triangles.vertexStride             = sizeof(Vertices[0]);
         Geometries[0].geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
-        Geometries[0].geometry.triangles.indexType                = GeometryCI[0].indexType;
         Geometries[0].geometry.triangles.indexData.deviceAddress  = Ctx.vkIndexBufferAddress + PrimitiveOffsets[0] * sizeof(uint) * 3;
-
-        Geometries[1].sType                                       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        Geometries[1].flags                                       = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        Geometries[1].geometryType                                = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        Geometries[1].geometry.triangles.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        Geometries[1].geometry.triangles.vertexFormat             = GeometryCI[1].vertexFormat;
-        Geometries[1].geometry.triangles.vertexStride             = sizeof(Vertices[0]);
         Geometries[1].geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
-        Geometries[1].geometry.triangles.indexType                = GeometryCI[1].indexType;
         Geometries[1].geometry.triangles.indexData.deviceAddress  = Ctx.vkIndexBufferAddress + PrimitiveOffsets[1] * sizeof(uint) * 3;
-
-        Geometries[2].sType                                       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        Geometries[2].flags                                       = VK_GEOMETRY_OPAQUE_BIT_KHR;
-        Geometries[2].geometryType                                = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-        Geometries[2].geometry.triangles.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-        Geometries[2].geometry.triangles.vertexFormat             = GeometryCI[2].vertexFormat;
-        Geometries[2].geometry.triangles.vertexStride             = sizeof(Vertices[0]);
         Geometries[2].geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
-        Geometries[2].geometry.triangles.indexType                = GeometryCI[2].indexType;
         Geometries[2].geometry.triangles.indexData.deviceAddress  = Ctx.vkIndexBufferAddress + PrimitiveOffsets[2] * sizeof(uint) * 3;
 
-        Offsets[0].primitiveCount = GeometryCI[0].maxPrimitiveCount;
-        Offsets[1].primitiveCount = GeometryCI[1].maxPrimitiveCount;
-        Offsets[2].primitiveCount = GeometryCI[2].maxPrimitiveCount;
+        Offsets[0].primitiveCount = PrimitiveOffsets[1];
+        Offsets[1].primitiveCount = PrimitiveOffsets[2] - PrimitiveOffsets[1];
+        Offsets[2].primitiveCount = _countof(Primitives) - PrimitiveOffsets[2];
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-        ASBuildInfo.update                    = VK_FALSE;
+        ASBuildInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.BLAS.vkAS;
-        ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = _countof(Geometries);
-        ASBuildInfo.ppGeometries              = &GeometriyPtr;
+        ASBuildInfo.pGeometries               = Geometries;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
-        vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
+        vkCmdBuildAccelerationStructuresKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
 
         VkAccelerationStructureInstanceKHR InstanceData[2] = {};
 
@@ -1414,12 +1331,11 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkInstanceBuffer, 0, sizeof(InstanceData), InstanceData);
         AccelStructBarrier(Ctx);
 
-        VkAccelerationStructureBuildOffsetInfoKHR InstOffsets  = {};
-        VkAccelerationStructureGeometryKHR        Instances[2] = {};
+        VkAccelerationStructureBuildRangeInfoKHR InstOffsets  = {};
+        VkAccelerationStructureGeometryKHR       Instances[2] = {};
         static_assert(_countof(InstanceData) == _countof(Instances), "size mismatch");
         static_assert(InstanceCount == _countof(Instances), "size mismatch");
 
-        GeometriyPtr               = Instances;
         OffsetPtr                  = &InstOffsets;
         InstOffsets.primitiveCount = _countof(Instances);
 
@@ -1435,15 +1351,14 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-        ASBuildInfo.update                    = VK_FALSE;
+        ASBuildInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         ASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
         ASBuildInfo.dstAccelerationStructure  = Ctx.TLAS.vkAS;
-        ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometriyPtr;
+        ASBuildInfo.pGeometries               = Instances;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
-        vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
+        vkCmdBuildAccelerationStructuresKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
     ClearRenderTarget(Ctx, pTestingSwapChainVk);
@@ -1488,44 +1403,44 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
 
     // Trace rays
     {
-        VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
-        VkStridedBufferRegionKHR MissShaderBindingTable     = {};
-        VkStridedBufferRegionKHR HitShaderBindingTable      = {};
-        VkStridedBufferRegionKHR CallableShaderBindingTable = {};
-        const Uint32             ShaderGroupHandleSize      = Ctx.RayTracingProps.shaderGroupHandleSize;
-        const Uint32             ShaderRecordSize           = ShaderGroupHandleSize + TestingConstants::MultiGeometry::ShaderRecordSize;
-        const auto&              Weights                    = TestingConstants::MultiGeometry::Weights;
-
-        RaygenShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        RaygenShaderBindingTable.offset = 0;
-        RaygenShaderBindingTable.size   = ShaderRecordSize;
-        MissShaderBindingTable.stride   = ShaderRecordSize;
-
-        MissShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        MissShaderBindingTable.offset = Align(RaygenShaderBindingTable.offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        MissShaderBindingTable.size   = ShaderRecordSize;
-        MissShaderBindingTable.stride = ShaderRecordSize;
-
-        HitShaderBindingTable.buffer = Ctx.vkSBTBuffer;
-        HitShaderBindingTable.offset = Align(MissShaderBindingTable.offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        HitShaderBindingTable.size   = ShaderRecordSize * HitGroupCount;
-        HitShaderBindingTable.stride = ShaderRecordSize;
+        VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {};
+        VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {};
+        VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {};
+        VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {};
+        const Uint32                    ShaderGroupHandleSize      = Ctx.RayTracingProps.shaderGroupHandleSize;
+        const Uint32                    ShaderRecordSize           = ShaderGroupHandleSize + TestingConstants::MultiGeometry::ShaderRecordSize;
+        const auto&                     Weights                    = TestingConstants::MultiGeometry::Weights;
+        VkDeviceSize                    Offset                     = 0;
 
         char ShaderHandle[64] = {};
         ASSERT_GE(sizeof(ShaderHandle), ShaderGroupHandleSize);
 
+        RaygenShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress;
+        RaygenShaderBindingTable.size          = ShaderRecordSize;
+        MissShaderBindingTable.stride          = ShaderRecordSize;
+
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, RAYGEN_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, RaygenShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
+
+        Offset                               = Align(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        MissShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
+        MissShaderBindingTable.size          = ShaderRecordSize;
+        MissShaderBindingTable.stride        = ShaderRecordSize;
 
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, MISS_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
-        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, MissShaderBindingTable.offset, ShaderGroupHandleSize, ShaderHandle);
+        vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
+
+        Offset                              = Align(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        HitShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
+        HitShaderBindingTable.size          = ShaderRecordSize * HitGroupCount;
+        HitShaderBindingTable.stride        = ShaderRecordSize;
 
         const auto SetHitGroup = [&](Uint32 Index, Uint32 ShaderIndex, const void* ShaderRecord) {
             VERIFY_EXPR(Index < HitGroupCount);
-            VkDeviceSize Offset = HitShaderBindingTable.offset + Index * ShaderRecordSize;
+            VkDeviceSize GroupOffset = Offset + Index * ShaderRecordSize;
             vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, ShaderIndex, 1, ShaderGroupHandleSize, ShaderHandle);
-            vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
-            vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset + ShaderGroupHandleSize, sizeof(Weights[0]), ShaderRecord);
+            vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, GroupOffset, ShaderGroupHandleSize, ShaderHandle);
+            vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, GroupOffset + ShaderGroupHandleSize, sizeof(Weights[0]), ShaderRecord);
         };
         // instance 1
         SetHitGroup(0, HIT_GROUP_1, &Weights[0]); // geometry 1

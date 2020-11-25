@@ -174,13 +174,10 @@ public:
 
     VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer) const;
     VkMemoryRequirements GetImageMemoryRequirements (VkImage  vkImage ) const;
-
-    VkMemoryRequirements GetASMemoryRequirements(const VkAccelerationStructureMemoryRequirementsInfoKHR& Info) const;
     VkDeviceAddress      GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const;
 
     VkResult BindBufferMemory(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset) const;
     VkResult BindImageMemory (VkImage image,   VkDeviceMemory memory, VkDeviceSize memoryOffset) const;
-    VkResult BindASMemory    (VkAccelerationStructureKHR AS, VkDeviceMemory memory, VkDeviceSize memoryOffset) const;
     // clang-format on
 
     VkResult MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const;

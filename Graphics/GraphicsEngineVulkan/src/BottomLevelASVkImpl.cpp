@@ -37,48 +37,44 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                                          const BottomLevelASDesc& Desc) :
     TBottomLevelASBase{pRefCounters, pRenderDeviceVk, Desc}
 {
-    const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
-    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-    const auto& Limits         = PhysicalDevice.GetExtProperties().RayTracing;
+    const auto& LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
+    const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+    const auto& Limits          = PhysicalDevice.GetExtProperties().AccelStruct;
+    Uint32      AccelStructSize = m_Desc.CompactedSize;
 
-    VkAccelerationStructureCreateInfoKHR                          CreateInfo = {};
-    std::vector<VkAccelerationStructureCreateGeometryTypeInfoKHR> vkGeometries;
-
-    CreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-    CreateInfo.type  = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-    CreateInfo.flags = BuildASFlagsToVkBuildAccelerationStructureFlags(m_Desc.Flags);
-
-    if (m_Desc.CompactedSize > 0)
+    if (AccelStructSize == 0)
     {
-        CreateInfo.compactedSize = m_Desc.CompactedSize;
-    }
-    else
-    {
-        CreateInfo.maxGeometryCount = m_Desc.TriangleCount + m_Desc.BoxCount;
-        vkGeometries.resize(CreateInfo.maxGeometryCount);
-        CreateInfo.pGeometryInfos = vkGeometries.data();
+        VkAccelerationStructureBuildGeometryInfoKHR     vkBuildInfo = {};
+        std::vector<VkAccelerationStructureGeometryKHR> vkGeometries;
+        std::vector<uint32_t>                           MaxPrimitiveCounts;
+        VkAccelerationStructureBuildSizesInfoKHR        vkSizeInfo = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
 
-        VERIFY_EXPR(CreateInfo.maxGeometryCount <= Limits.maxGeometryCount);
+        vkGeometries.resize(Desc.TriangleCount + Desc.BoxCount);
+        MaxPrimitiveCounts.resize(vkGeometries.size());
 
         if (m_Desc.pTriangles != nullptr)
         {
-
             Uint32 MaxPrimitiveCount = 0;
             for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
             {
                 auto& src = m_Desc.pTriangles[i];
                 auto& dst = vkGeometries[i];
+                auto& tri = dst.geometry.triangles;
 
-                dst.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-                dst.pNext             = nullptr;
-                dst.geometryType      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-                dst.maxPrimitiveCount = src.MaxPrimitiveCount;
-                dst.indexType         = TypeToVkIndexType(src.IndexType);
-                dst.maxVertexCount    = src.MaxVertexCount;
-                dst.vertexFormat      = TypeToVkFormat(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
-                dst.allowsTransforms  = src.AllowsTransforms;
+                dst.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+                dst.pNext        = nullptr;
+                dst.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+                dst.flags        = VkGeometryFlagsKHR(0);
 
-                MaxPrimitiveCount += dst.maxPrimitiveCount;
+                tri.sType                       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+                tri.pNext                       = nullptr;
+                tri.vertexFormat                = TypeToVkFormat(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
+                tri.maxVertex                   = src.MaxVertexCount;
+                tri.indexType                   = TypeToVkIndexType(src.IndexType);
+                tri.transformData.deviceAddress = src.AllowsTransforms ? 1 : 0;
+                MaxPrimitiveCounts[i]           = src.MaxPrimitiveCount;
+
+                MaxPrimitiveCount += src.MaxPrimitiveCount;
             }
             VERIFY_EXPR(MaxPrimitiveCount <= Limits.maxPrimitiveCount);
         }
@@ -89,17 +85,17 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
             {
                 auto& src = m_Desc.pBoxes[i];
                 auto& dst = vkGeometries[i];
+                auto& box = dst.geometry.aabbs;
 
-                dst.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-                dst.pNext             = nullptr;
-                dst.geometryType      = VK_GEOMETRY_TYPE_AABBS_KHR;
-                dst.maxPrimitiveCount = src.MaxBoxCount;
-                dst.indexType         = VK_INDEX_TYPE_NONE_KHR;
-                dst.maxVertexCount    = 0;
-                dst.vertexFormat      = VK_FORMAT_UNDEFINED;
-                dst.allowsTransforms  = VK_FALSE;
+                dst.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+                dst.pNext        = nullptr;
+                dst.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
 
-                MaxBoxCount += dst.maxPrimitiveCount;
+                box.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+                box.pNext             = nullptr;
+                MaxPrimitiveCounts[i] = src.MaxBoxCount;
+
+                MaxBoxCount += src.MaxBoxCount;
             }
             VERIFY_EXPR(MaxBoxCount <= Limits.maxPrimitiveCount);
         }
@@ -107,46 +103,58 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
         {
             UNEXPECTED("Either pTriangles or pBoxes must not be null");
         }
+
+        vkBuildInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+        vkBuildInfo.flags         = BuildASFlagsToVkBuildAccelerationStructureFlags(m_Desc.Flags);
+        vkBuildInfo.type          = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        vkBuildInfo.pGeometries   = vkGeometries.data();
+        vkBuildInfo.geometryCount = static_cast<uint32_t>(vkGeometries.size());
+
+        VERIFY_EXPR(vkBuildInfo.geometryCount <= Limits.maxGeometryCount);
+
+        vkGetAccelerationStructureBuildSizesKHR(LogicalDevice.GetVkDevice(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vkBuildInfo, MaxPrimitiveCounts.data(), &vkSizeInfo);
+
+        AccelStructSize      = static_cast<Uint32>(vkSizeInfo.accelerationStructureSize);
+        m_ScratchSize.Build  = static_cast<Uint32>(vkSizeInfo.buildScratchSize);
+        m_ScratchSize.Update = static_cast<Uint32>(vkSizeInfo.updateScratchSize);
     }
 
-    m_VulkanBLAS = LogicalDevice.CreateAccelStruct(CreateInfo, m_Desc.Name);
+    VkBufferCreateInfo vkBuffCI = {};
 
-    VkAccelerationStructureMemoryRequirementsInfoKHR MemInfo = {};
-    VkMemoryRequirements                             MemReqs = {};
+    vkBuffCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    vkBuffCI.flags                 = 0;
+    vkBuffCI.size                  = AccelStructSize;
+    vkBuffCI.usage                 = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+    vkBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
+    vkBuffCI.queueFamilyIndexCount = 0;
+    vkBuffCI.pQueueFamilyIndices   = nullptr;
 
-    MemInfo.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR;
-    MemInfo.accelerationStructure = m_VulkanBLAS;
-    MemInfo.buildType             = VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR;
-    MemInfo.type                  = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
+    m_VulkanBuffer = LogicalDevice.CreateBuffer(vkBuffCI, m_Desc.Name);
 
-    MemReqs = LogicalDevice.GetASMemoryRequirements(MemInfo);
-
-    uint32_t MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
-        LOG_ERROR_AND_THROW("Failed to find suitable memory type for BLAS '", m_Desc.Name, '\'');
+    VkMemoryRequirements MemReqs         = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
+    uint32_t             MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
-    m_MemoryAllocation    = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex);
+    m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT);
+
     m_MemoryAlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
     VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_MemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
-
     auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-    auto err    = LogicalDevice.BindASMemory(m_VulkanBLAS, Memory, m_MemoryAlignedOffset);
-    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind AS memory");
+    auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_MemoryAlignedOffset);
+    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
+
+    VkAccelerationStructureCreateInfoKHR vkAccelStrCI = {};
+
+    vkAccelStrCI.sType       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+    vkAccelStrCI.createFlags = 0;
+    vkAccelStrCI.buffer      = m_VulkanBuffer;
+    vkAccelStrCI.offset      = 0;
+    vkAccelStrCI.size        = AccelStructSize;
+    vkAccelStrCI.type        = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+
+    m_VulkanBLAS = LogicalDevice.CreateAccelStruct(vkAccelStrCI, m_Desc.Name);
 
     m_DeviceAddress = LogicalDevice.GetAccelerationStructureDeviceAddress(m_VulkanBLAS);
-
-    if (m_Desc.CompactedSize == 0)
-    {
-        MemInfo.type        = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
-        MemReqs             = LogicalDevice.GetASMemoryRequirements(MemInfo);
-        m_ScratchSize.Build = static_cast<Uint32>(MemReqs.size);
-
-        MemInfo.type         = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
-        MemReqs              = LogicalDevice.GetASMemoryRequirements(MemInfo);
-        m_ScratchSize.Update = static_cast<Uint32>(MemReqs.size);
-    }
 
     SetState(RESOURCE_STATE_BUILD_AS_READ);
 }
@@ -168,6 +176,8 @@ BottomLevelASVkImpl::~BottomLevelASVkImpl()
     // Vk object can only be destroyed when it is no longer used by the GPU
     if (m_VulkanBLAS != VK_NULL_HANDLE)
         m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanBLAS), m_Desc.CommandQueueMask);
+    if (m_VulkanBuffer != VK_NULL_HANDLE)
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanBuffer), m_Desc.CommandQueueMask);
     if (m_MemoryAllocation.Page != nullptr)
         m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
 }

@@ -31,11 +31,7 @@
 #    define VK_NO_PROTOTYPES
 #endif
 
-// TODO: remove when ray tracing is released
-#define VK_ENABLE_BETA_EXTENSIONS
-
 #include "vulkan/vulkan.h"
-#include "vulkan/vulkan_beta.h"
 
 #define VK_FORMAT_RANGE_SIZE (VK_FORMAT_ASTC_12x12_SRGB_BLOCK - VK_FORMAT_UNDEFINED + 1)
 

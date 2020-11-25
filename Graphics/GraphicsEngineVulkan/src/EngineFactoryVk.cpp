@@ -278,7 +278,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         ENABLE_FEATURE(Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE, UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
         // clang-format on
 
-        ENABLE_FEATURE((DeviceExtFeatures.RayTracing.rayTracing != VK_FALSE && DeviceExtFeatures.Spirv14) || DeviceExtFeatures.RayTracingNV, RayTracing, "Ray tracing is");
+        ENABLE_FEATURE(DeviceExtFeatures.AccelStruct.accelerationStructure != VK_FALSE && DeviceExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE, RayTracing, "Ray tracing is");
 #undef FeatureSupport
 
 
@@ -405,40 +405,36 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // Ray tracing
             if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
             {
-                if (DeviceExtFeatures.RayTracingNV)
+                // this extensions added to Vulkan 1.2 core
+                if (!DeviceExtFeatures.Spirv15)
                 {
-                    EnabledExtFeats.RayTracingNV = DeviceExtFeatures.RayTracingNV;
-                    DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
-                    DeviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME); // required for VK_KHR_spirv_1_4
+                    DeviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);             // required for VK_KHR_ray_tracing_pipeline
+                    EnabledExtFeats.Spirv14 = DeviceExtFeatures.Spirv14;
+                    VERIFY_EXPR(DeviceExtFeatures.Spirv14);
                 }
-                else if (DeviceExtFeatures.RayTracing.rayTracing != VK_FALSE)
-                {
-                    DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);              // required for VK_EXT_descriptor_indexing
-                    DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME); // required for VK_KHR_ray_tracing
-                    DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);       // required for VK_KHR_ray_tracing
-                    DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);     // required for VK_KHR_ray_tracing
-                    DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);  // required for VK_KHR_ray_tracing
-                    DeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);          // required for VK_KHR_ray_tracing
-                    DeviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);               // required for VK_KHR_ray_tracing
 
-                    EnabledExtFeats.RayTracing          = DeviceExtFeatures.RayTracing;
-                    EnabledExtFeats.BufferDeviceAddress = DeviceExtFeatures.BufferDeviceAddress;
-                    EnabledExtFeats.DescriptorIndexing  = DeviceExtFeatures.DescriptorIndexing;
+                DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);             // required for VK_EXT_descriptor_indexing
+                DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);      // required for VK_KHR_acceleration_structure
+                DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);    // required for VK_KHR_acceleration_structure
+                DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME); // required for VK_KHR_acceleration_structure
+                DeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);         // required for VK_KHR_ray_tracing_pipeline
+                DeviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);   // required for ray tracing
+                DeviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);     // required for ray tracing
 
-                    if (!DeviceExtFeatures.Spirv15)
-                    {
-                        DeviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME); // required for VK_KHR_spirv_1_4
-                        DeviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);             // required for ray tracing shaders
-                        EnabledExtFeats.Spirv14 = DeviceExtFeatures.Spirv14;
-                    }
+                EnabledExtFeats.AccelStruct         = DeviceExtFeatures.AccelStruct;
+                EnabledExtFeats.RayTracingPipeline  = DeviceExtFeatures.RayTracingPipeline;
+                EnabledExtFeats.BufferDeviceAddress = DeviceExtFeatures.BufferDeviceAddress;
+                EnabledExtFeats.DescriptorIndexing  = DeviceExtFeatures.DescriptorIndexing;
 
-                    *NextExt = &EnabledExtFeats.RayTracing;
-                    NextExt  = &EnabledExtFeats.RayTracing.pNext;
-                    *NextExt = &EnabledExtFeats.DescriptorIndexing;
-                    NextExt  = &EnabledExtFeats.DescriptorIndexing.pNext;
-                    *NextExt = &EnabledExtFeats.BufferDeviceAddress;
-                    NextExt  = &EnabledExtFeats.BufferDeviceAddress.pNext;
-                }
+                *NextExt = &EnabledExtFeats.AccelStruct;
+                NextExt  = &EnabledExtFeats.AccelStruct.pNext;
+                *NextExt = &EnabledExtFeats.RayTracingPipeline;
+                NextExt  = &EnabledExtFeats.RayTracingPipeline.pNext;
+                *NextExt = &EnabledExtFeats.DescriptorIndexing;
+                NextExt  = &EnabledExtFeats.DescriptorIndexing.pNext;
+                *NextExt = &EnabledExtFeats.BufferDeviceAddress;
+                NextExt  = &EnabledExtFeats.BufferDeviceAddress.pNext;
             }
 
             // make sure that last pNext is null

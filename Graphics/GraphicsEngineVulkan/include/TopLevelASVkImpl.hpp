@@ -67,10 +67,15 @@ public:
     /// Implementation of ITopLevelASVk::GetVkTLAS().
     virtual VkAccelerationStructureKHR DILIGENT_CALL_TYPE GetVkTLAS() const override { return m_VulkanTLAS; }
 
+    /// Implementation of ITopLevelASVk::GetVkDeviceAddress().
+    virtual VkDeviceAddress DILIGENT_CALL_TYPE GetVkDeviceAddress() const override { return m_DeviceAddress; }
+
     const VkAccelerationStructureKHR* GetVkTLASPtr() const { return &m_VulkanTLAS; }
 
 private:
+    VkDeviceAddress                         m_DeviceAddress = 0;
     VulkanUtilities::AccelStructWrapper     m_VulkanTLAS;
+    VulkanUtilities::BufferWrapper          m_VulkanBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     VkDeviceSize                            m_MemoryAlignedOffset = 0;
 };

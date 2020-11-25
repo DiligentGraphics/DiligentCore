@@ -32,4 +32,7 @@ void TestTopLevelASVk_CInterface(ITopLevelASVk* pTLASVk)
 {
     VkAccelerationStructureKHR vkAS = ITopLevelASVk_GetVkTLAS(pTLASVk);
     (void)vkAS;
+
+    VkDeviceAddress vkAddress = ITopLevelASVk_GetVkDeviceAddress(pTLASVk);
+    (void)vkAddress;
 }

@@ -2750,14 +2750,14 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
     TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
     TransitionOrVerifyBufferState(*pScratchVk, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, OpName);
 
-    VkAccelerationStructureBuildGeometryInfoKHR            Info = {};
-    std::vector<VkAccelerationStructureBuildOffsetInfoKHR> Offsets;
-    std::vector<VkAccelerationStructureGeometryKHR>        Geometries;
+    VkAccelerationStructureBuildGeometryInfoKHR           vkASBuildInfo = {};
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR> vkRanges;
+    std::vector<VkAccelerationStructureGeometryKHR>       vkGeometries;
 
     if (Attribs.pTriangleData != nullptr)
     {
-        Geometries.resize(Attribs.TriangleDataCount);
-        Offsets.resize(Attribs.TriangleDataCount);
+        vkGeometries.resize(Attribs.TriangleDataCount);
+        vkRanges.resize(Attribs.TriangleDataCount);
         pBLASVk->SetActualGeometryCount(Attribs.TriangleDataCount);
 
         for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
@@ -2772,9 +2772,9 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
                 continue;
             }
 
-            auto&       vkGeo   = Geometries[Idx];
+            auto&       vkGeo   = vkGeometries[Idx];
             auto&       vkTris  = vkGeo.geometry.triangles;
-            auto&       off     = Offsets[Idx];
+            auto&       off     = vkRanges[Idx];
             const auto& TriDesc = BLASDesc.pTriangles[GeoIdx];
 
             vkGeo.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -2829,8 +2829,8 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
     }
     else if (Attribs.pBoxData != nullptr)
     {
-        Geometries.resize(Attribs.BoxDataCount);
-        Offsets.resize(Attribs.BoxDataCount);
+        vkGeometries.resize(Attribs.BoxDataCount);
+        vkRanges.resize(Attribs.BoxDataCount);
         pBLASVk->SetActualGeometryCount(Attribs.BoxDataCount);
 
         for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
@@ -2845,9 +2845,9 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
                 continue;
             }
 
-            auto& vkGeo   = Geometries[Idx];
+            auto& vkGeo   = vkGeometries[Idx];
             auto& vkAABBs = vkGeo.geometry.aabbs;
-            auto& off     = Offsets[Idx];
+            auto& off     = vkRanges[Idx];
 
             vkGeo.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
             vkGeo.pNext        = nullptr;
@@ -2871,22 +2871,21 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
         }
     }
 
-    VkAccelerationStructureGeometryKHR const*        GeometriesPtr = Geometries.data();
-    VkAccelerationStructureBuildOffsetInfoKHR const* OffsetsPtr    = Offsets.data();
+    VkAccelerationStructureBuildRangeInfoKHR const* VkRangePtr = vkRanges.data();
 
-    Info.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-    Info.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;                 // type must be compatible with create info
-    Info.flags                     = BuildASFlagsToVkBuildAccelerationStructureFlags(BLASDesc.Flags); // flags must be compatible with create info
-    Info.update                    = Attribs.Update;
-    Info.srcAccelerationStructure  = Attribs.Update ? pBLASVk->GetVkBLAS() : VK_NULL_HANDLE;
-    Info.dstAccelerationStructure  = pBLASVk->GetVkBLAS();
-    Info.geometryArrayOfPointers   = VK_FALSE;
-    Info.geometryCount             = static_cast<uint32_t>(Geometries.size());
-    Info.ppGeometries              = &GeometriesPtr;
-    Info.scratchData.deviceAddress = pScratchVk->GetVkDeviceAddress() + Attribs.ScratchBufferOffset;
+    vkASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    vkASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;                 // type must be compatible with create info
+    vkASBuildInfo.flags                     = BuildASFlagsToVkBuildAccelerationStructureFlags(BLASDesc.Flags); // flags must be compatible with create info
+    vkASBuildInfo.mode                      = Attribs.Update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    vkASBuildInfo.srcAccelerationStructure  = Attribs.Update ? pBLASVk->GetVkBLAS() : VK_NULL_HANDLE;
+    vkASBuildInfo.dstAccelerationStructure  = pBLASVk->GetVkBLAS();
+    vkASBuildInfo.geometryCount             = static_cast<uint32_t>(vkGeometries.size());
+    vkASBuildInfo.pGeometries               = vkGeometries.data();
+    vkASBuildInfo.ppGeometries              = nullptr;
+    vkASBuildInfo.scratchData.deviceAddress = pScratchVk->GetVkDeviceAddress() + Attribs.ScratchBufferOffset;
 
     EnsureVkCmdBuffer();
-    m_CommandBuffer.BuildAccelerationStructure(1, &Info, &OffsetsPtr);
+    m_CommandBuffer.BuildAccelerationStructure(1, &vkASBuildInfo, &VkRangePtr);
     ++m_State.NumCommands;
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -2958,13 +2957,12 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
     }
     TransitionOrVerifyBufferState(*pInstancesVk, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
 
-    VkAccelerationStructureBuildGeometryInfoKHR      vkASBuildInfo      = {};
-    VkAccelerationStructureBuildOffsetInfoKHR        vkASBuildOffset    = {};
-    VkAccelerationStructureBuildOffsetInfoKHR const* vkASBuildOffsetPtr = &vkASBuildOffset;
-    VkAccelerationStructureGeometryKHR               vkASGeometry       = {};
-    VkAccelerationStructureGeometryKHR const*        vkASGeometriesPtr  = &vkASGeometry;
+    VkAccelerationStructureBuildGeometryInfoKHR     vkASBuildInfo = {};
+    VkAccelerationStructureBuildRangeInfoKHR        vkRange       = {};
+    VkAccelerationStructureBuildRangeInfoKHR const* vkRangePtr    = &vkRange;
+    VkAccelerationStructureGeometryKHR              vkASGeometry  = {};
 
-    vkASBuildOffset.primitiveCount = Attribs.InstanceCount;
+    vkRange.primitiveCount = Attribs.InstanceCount;
 
     vkASGeometry.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
     vkASGeometry.pNext        = nullptr;
@@ -2982,15 +2980,15 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
     vkASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
     vkASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;                    // type must be compatible with create info
     vkASBuildInfo.flags                     = BuildASFlagsToVkBuildAccelerationStructureFlags(TLASDesc.Flags); // flags must be compatible with create info
-    vkASBuildInfo.update                    = Attribs.Update;
+    vkASBuildInfo.mode                      = Attribs.Update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     vkASBuildInfo.srcAccelerationStructure  = Attribs.Update ? pTLASVk->GetVkTLAS() : VK_NULL_HANDLE;
     vkASBuildInfo.dstAccelerationStructure  = pTLASVk->GetVkTLAS();
-    vkASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
     vkASBuildInfo.geometryCount             = 1;
-    vkASBuildInfo.ppGeometries              = &vkASGeometriesPtr;
+    vkASBuildInfo.pGeometries               = &vkASGeometry;
+    vkASBuildInfo.ppGeometries              = nullptr;
     vkASBuildInfo.scratchData.deviceAddress = pScratchVk->GetVkDeviceAddress() + Attribs.ScratchBufferOffset;
 
-    m_CommandBuffer.BuildAccelerationStructure(1, &vkASBuildInfo, &vkASBuildOffsetPtr);
+    m_CommandBuffer.BuildAccelerationStructure(1, &vkASBuildInfo, &vkRangePtr);
     ++m_State.NumCommands;
 }
 
@@ -3150,10 +3148,10 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
     TransitionOrVerifyBufferState(*pBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
 
     // clang-format off
-    VkStridedBufferRegionKHR RaygenShaderBindingTable   = {pBufferVk->GetVkBuffer(), RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
-    VkStridedBufferRegionKHR MissShaderBindingTable     = {pBufferVk->GetVkBuffer(), MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
-    VkStridedBufferRegionKHR HitShaderBindingTable      = {pBufferVk->GetVkBuffer(), HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
-    VkStridedBufferRegionKHR CallableShaderBindingTable = {pBufferVk->GetVkBuffer(), CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
+    VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {pBufferVk->GetVkDeviceAddress() + RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
+    VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {pBufferVk->GetVkDeviceAddress() + MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
+    VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {pBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
+    VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {pBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
     // clang-format on
 
     PrepareForRayTracing();

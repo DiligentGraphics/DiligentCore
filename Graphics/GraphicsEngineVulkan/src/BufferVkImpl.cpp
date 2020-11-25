@@ -159,7 +159,10 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             }
             case BIND_RAY_TRACING:
             {
-                VkBuffCI.usage |= VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+                VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // for scratch buffer
+                VkBuffCI.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+                VkBuffCI.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR; // acceleration structure build inputs such as vertex, index, transform, aabb, and instance data
+                VkBuffCI.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
                 break;
             }
             default:

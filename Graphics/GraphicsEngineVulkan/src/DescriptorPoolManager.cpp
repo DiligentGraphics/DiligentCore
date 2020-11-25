@@ -67,7 +67,7 @@ static std::vector<VkDescriptorPoolSize> PrunePoolSizes(RenderDeviceVkImpl& Devi
         switch (iter->type)
         {
             case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-                if (Feats.RayTracing.rayTracing == VK_FALSE)
+                if (Feats.RayTracingPipeline.rayTracingPipeline == VK_FALSE)
                     iter = PoolSizes.erase(iter);
                 else
                     ++iter;

@@ -72,6 +72,7 @@ public:
 private:
     VkDeviceAddress                         m_DeviceAddress = 0;
     VulkanUtilities::AccelStructWrapper     m_VulkanBLAS;
+    VulkanUtilities::BufferWrapper          m_VulkanBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     VkDeviceSize                            m_MemoryAlignedOffset = 0;
 };
