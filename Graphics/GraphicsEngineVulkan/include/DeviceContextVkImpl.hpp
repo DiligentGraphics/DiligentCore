@@ -414,7 +414,6 @@ private:
 
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
-    const Uint32 m_NumCommandsToFlush = 192;
     struct ContextState
     {
         /// Flag indicating if currently committed vertex buffers are up to date
