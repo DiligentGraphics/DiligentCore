@@ -6,6 +6,7 @@ set(INTERFACE
     interface/ColorConversion.h
     interface/GraphicsAccessories.hpp
     interface/GraphicsTypesOutputInserters.hpp
+    interface/DynamicAtlasManager.hpp
     interface/ResourceReleaseQueue.hpp
     interface/RingBuffer.hpp
     interface/SRBMemoryAllocator.hpp
@@ -15,6 +16,7 @@ set(INTERFACE
 
 set(SOURCE
     src/ColorConversion.cpp
+    src/DynamicAtlasManager.cpp
     src/SRBMemoryAllocator.cpp
     src/GraphicsAccessories.cpp
 )
