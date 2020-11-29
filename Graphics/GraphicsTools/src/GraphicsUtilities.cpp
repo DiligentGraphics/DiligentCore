@@ -136,7 +136,8 @@ void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt
 template <typename ChannelType>
 ChannelType SRGBAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelType c3)
 {
-    static constexpr float MinVal    = static_cast<float>(std::numeric_limits<ChannelType>::min());
+    static_assert(std::numeric_limits<ChannelType>::is_integer && !std::numeric_limits<ChannelType>::is_signed, "Unsigned integers are expected");
+
     static constexpr float MaxVal    = static_cast<float>(std::numeric_limits<ChannelType>::max());
     static constexpr float MaxValInv = 1.f / MaxVal;
 
@@ -148,7 +149,7 @@ ChannelType SRGBAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelT
     float fLinearAverage = (FastSRGBToLinear(fc0) + FastSRGBToLinear(fc1) + FastSRGBToLinear(fc2) + FastSRGBToLinear(fc3)) * 0.25f;
     float fSRGBAverage   = FastLinearToSRGB(fLinearAverage) * MaxVal;
 
-    fSRGBAverage = std::max(fSRGBAverage, MinVal);
+    // Clamping by MaxVal is essential because fast SRGB math is imprecise
     fSRGBAverage = std::min(fSRGBAverage, MaxVal);
 
     return static_cast<ChannelType>(fSRGBAverage);
