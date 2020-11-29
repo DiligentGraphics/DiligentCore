@@ -101,6 +101,13 @@ public:
     DynamicAtlasManager(Uint32 Width, Uint32 Height);
     ~DynamicAtlasManager();
 
+    // clang-format off
+    DynamicAtlasManager             (const DynamicAtlasManager&)  = delete;
+    DynamicAtlasManager& operator = (const DynamicAtlasManager&)  = delete;
+    DynamicAtlasManager             (      DynamicAtlasManager&&) = default;
+    DynamicAtlasManager& operator = (      DynamicAtlasManager&&) = delete;
+    // clang-format on
+
     Region Allocate(Uint32 Width, Uint32 Height);
     void   Free(Region&& R);
 

@@ -27,6 +27,8 @@
 
 #include "DynamicAtlasManager.hpp"
 
+#include <climits>
+
 namespace Diligent
 {
 
