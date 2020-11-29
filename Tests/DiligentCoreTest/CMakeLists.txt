@@ -28,6 +28,7 @@ PRIVATE
     Diligent-TargetPlatform
     Diligent-GraphicsAccessories
     Diligent-Common
+    Diligent-GraphicsTools
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${INCLUDE})

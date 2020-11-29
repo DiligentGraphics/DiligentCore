@@ -53,4 +53,12 @@ void DILIGENT_GLOBAL_FUNCTION(GenerateCheckerBoardPattern)(Uint32         Width,
                                                            Uint8*         pData,
                                                            Uint32         StrideInBytes);
 
+void DILIGENT_GLOBAL_FUNCTION(ComputeMipLevel)(Uint32         FineLevelWidth,
+                                               Uint32         FineLevelHeight,
+                                               TEXTURE_FORMAT Fmt,
+                                               const void*    pFineLevelData,
+                                               Uint32         FineDataStrideInBytes,
+                                               void*          pCoarseLevelData,
+                                               Uint32         CoarseDataStrideInBytes);
+
 DILIGENT_END_NAMESPACE // namespace Diligent
