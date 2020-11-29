@@ -149,7 +149,8 @@ ChannelType SRGBAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelT
     float fLinearAverage = (FastSRGBToLinear(fc0) + FastSRGBToLinear(fc1) + FastSRGBToLinear(fc2) + FastSRGBToLinear(fc3)) * 0.25f;
     float fSRGBAverage   = FastLinearToSRGB(fLinearAverage) * MaxVal;
 
-    // Clamping by MaxVal is essential because fast SRGB math is imprecise
+    // Clamping on both ends is essential because fast SRGB math is imprecise
+    fSRGBAverage = std::max(fSRGBAverage, 0.f);
     fSRGBAverage = std::min(fSRGBAverage, MaxVal);
 
     return static_cast<ChannelType>(fSRGBAverage);

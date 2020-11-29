@@ -488,7 +488,8 @@ TEST(GraphicsTools_CalculateMipLevel, sRGB)
                      FastSRGBToLinear(FineData[((x * 2 + 0) + (y * 2 + 1) * FineWidth) * NumChannels + c] / 255.f) +
                      FastSRGBToLinear(FineData[((x * 2 + 1) + (y * 2 + 1) * FineWidth) * NumChannels + c] / 255.f)) *
                     0.25f;
-                float fSRGB = FastLinearToSRGB(fLinearAverage);
+                fLinearAverage = std::min(std::max(fLinearAverage, 0.f), 255.f);
+                float fSRGB    = FastLinearToSRGB(fLinearAverage);
 
                 RefCoarseData[(x + y * CoarseWidth) * NumChannels + c] = static_cast<Uint8>(fSRGB * 255.f);
             }
