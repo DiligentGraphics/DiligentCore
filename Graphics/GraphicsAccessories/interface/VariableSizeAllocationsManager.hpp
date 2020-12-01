@@ -164,7 +164,7 @@ public:
 
         Allocation() {}
 
-        static constexpr OffsetType InvalidOffset = static_cast<OffsetType>(-1);
+        static constexpr OffsetType InvalidOffset = ~OffsetType{0};
         static Allocation           InvalidAllocation()
         {
             return Allocation{InvalidOffset, 0};
@@ -250,13 +250,14 @@ public:
 
     void Free(Allocation&& allocation)
     {
+        VERIFY_EXPR(allocation.IsValid());
         Free(allocation.UnalignedOffset, allocation.Size);
         allocation = Allocation{};
     }
 
     void Free(OffsetType Offset, OffsetType Size)
     {
-        VERIFY_EXPR(Offset + Size <= m_MaxSize);
+        VERIFY_EXPR(Offset != Allocation::InvalidOffset && Offset + Size <= m_MaxSize);
 
         // Find the first element whose offset is greater than the specified offset.
         // upper_bound() returns an iterator pointing to the first element in the
