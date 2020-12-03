@@ -97,7 +97,7 @@ struct VulkanDynamicAllocation
     size_t                      AlignedOffset  = 0; // Offset from the start of the buffer
     size_t                      Size           = 0; // Reserved size of this allocation
 #ifdef DILIGENT_DEVELOPMENT
-    Int64 dvpFrameNumber = 0;
+    Uint64 dvpFrameNumber = 0;
 #endif
 };
 

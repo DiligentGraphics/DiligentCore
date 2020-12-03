@@ -404,9 +404,9 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDe
 void BufferD3D12Impl::DvpVerifyDynamicAllocation(DeviceContextD3D12Impl* pCtx) const
 {
     auto ContextId    = pCtx->GetContextId();
-    auto CurrentFrame = pCtx->GetCurrentFrameNumber();
+    auto CurrentFrame = pCtx->GetFrameNumber();
     DEV_CHECK_ERR(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
-    DEV_CHECK_ERR(m_DynamicData[ContextId].DvpCtxFrameNumber == static_cast<Uint64>(CurrentFrame), "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
+    DEV_CHECK_ERR(m_DynamicData[ContextId].DvpCtxFrameNumber == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
     VERIFY(GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in RESOURCE_STATE_GENERIC_READ state");
 }
 #endif

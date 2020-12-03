@@ -1448,6 +1448,12 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     VIRTUAL void METHOD(FinishFrame)(THIS) PURE;
 
 
+    /// Returns the current frame number.
+
+    /// \note The frame number is incremented every time FinishFrame() is called.
+    VIRTUAL Uint64 METHOD(GetFrameNumber)(THIS) CONST PURE;
+
+
     /// Transitions resource states.
 
     /// \param [in] BarrierCount      - Number of barriers in pResourceBarriers array
@@ -1537,6 +1543,7 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_UnmapTextureSubresource(This, ...)   CALL_IFACE_METHOD(DeviceContext, UnmapTextureSubresource,   This, __VA_ARGS__)
 #    define IDeviceContext_GenerateMips(This, ...)              CALL_IFACE_METHOD(DeviceContext, GenerateMips,              This, __VA_ARGS__)
 #    define IDeviceContext_FinishFrame(This)                    CALL_IFACE_METHOD(DeviceContext, FinishFrame,               This)
+#    define IDeviceContext_GetFrameNumber(This)                 CALL_IFACE_METHOD(DeviceContext, GetFrameNumber,            This)
 #    define IDeviceContext_TransitionResourceStates(This, ...)  CALL_IFACE_METHOD(DeviceContext, TransitionResourceStates,  This, __VA_ARGS__)
 #    define IDeviceContext_ResolveTextureSubresource(This, ...) CALL_IFACE_METHOD(DeviceContext, ResolveTextureSubresource, This, __VA_ARGS__)
 

@@ -347,8 +347,6 @@ public:
 
     virtual void ResetRenderTargets() override final;
 
-    Int64 GetContextFrameNumber() const { return m_ContextFrameNumber; }
-
     GenerateMipsVkHelper& GetGenerateMipsHelper() { return *m_GenerateMipsHelper; }
     QueryManagerVk*       GetQueryManager() { return m_QueryMgr.get(); }
 

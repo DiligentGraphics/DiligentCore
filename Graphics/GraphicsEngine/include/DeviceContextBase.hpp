@@ -185,6 +185,11 @@ public:
                                                               ITexture*                               pDstTexture,
                                                               const ResolveTextureSubresourceAttribs& ResolveAttribs) override = 0;
 
+    virtual Uint64 DILIGENT_CALL_TYPE GetFrameNumber() const override final
+    {
+        return m_FrameNumber;
+    }
+
     /// Returns currently bound pipeline state and blend factors
     inline void GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef);
 
@@ -238,6 +243,11 @@ protected:
     bool BeginQuery(IQuery* pQuery, int);
 
     bool EndQuery(IQuery* pQuery, int);
+
+    void EndFrame()
+    {
+        ++m_FrameNumber;
+    }
 
 #ifdef DILIGENT_DEVELOPMENT
     // clang-format off
@@ -342,6 +352,8 @@ protected:
     RESOURCE_STATE_TRANSITION_MODE m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     const bool m_bIsDeferred = false;
+
+    Uint64 m_FrameNumber = 0;
 
 #ifdef DILIGENT_DEBUG
     // std::unordered_map is unbelievably slow. Keeping track of mapped buffers

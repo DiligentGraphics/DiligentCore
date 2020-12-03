@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `IDeviceContext::GetFrameNumber` method (API Version 240079)
 * Added `ShaderResourceQueries` device feature and `EngineGLCreateInfo::ForceNonSeparablePrograms` parameter (API Version 240078)
 
 * Renamed `USAGE_STATIC` to `USAGE_IMMUTABLE` (API Version 240077)

@@ -1274,6 +1274,7 @@ void DeviceContextGLImpl::Flush()
 
 void DeviceContextGLImpl::FinishFrame()
 {
+    TDeviceContextBase::EndFrame();
 }
 
 void DeviceContextGLImpl::FinishCommandList(class ICommandList** ppCommandList)

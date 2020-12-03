@@ -312,8 +312,6 @@ public:
 
     size_t GetNumCommandsInCtx() const { return m_State.NumCommands; }
 
-    Int64 GetCurrentFrameNumber() const { return m_ContextFrameNumber; }
-
 private:
     void CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, VALUE_TYPE IndexType);
     void CommitD3D12VertexBuffers(class GraphicsContext& GraphCtx);

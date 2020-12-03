@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include "Atomics.hpp"
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
 #include "RefCntAutoPtr.hpp"
@@ -58,7 +57,6 @@ public:
         m_ContextId                   {ContextId         },
         m_CommandQueueId              {CommandQueueId    },
         m_NumCommandsToFlush          {NumCommandsToFlush},
-        m_ContextFrameNumber          {0},
         m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId}}
     // clang-format on
     {
@@ -106,13 +104,12 @@ protected:
         {
             this->m_pDevice->FlushStaleResources(m_CommandQueueId);
         }
-        Atomics::AtomicIncrement(m_ContextFrameNumber);
+        TBase::EndFrame();
     }
 
-    const Uint32         m_ContextId;
-    const Uint32         m_CommandQueueId;
-    const Uint32         m_NumCommandsToFlush;
-    Atomics::AtomicInt64 m_ContextFrameNumber;
+    const Uint32 m_ContextId;
+    const Uint32 m_CommandQueueId;
+    const Uint32 m_NumCommandsToFlush;
 
     // This mask indicates which command queues command buffers from this context were submitted to.
     // For immediate context, this will always be 1 << m_CommandQueueId.

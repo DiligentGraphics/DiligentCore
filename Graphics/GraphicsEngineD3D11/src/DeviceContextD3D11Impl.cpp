@@ -1187,6 +1187,8 @@ void DeviceContextD3D11Impl::FinishFrame()
         m_ActiveDisjointQuery->IsEnded = true;
         m_ActiveDisjointQuery.reset();
     }
+
+    TDeviceContextBase::EndFrame();
 }
 
 void DeviceContextD3D11Impl::SetVertexBuffers(Uint32                         StartSlot,

@@ -2444,7 +2444,7 @@ VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInB
 {
     auto DynAlloc = m_DynamicHeap.Allocate(SizeInBytes, Alignment);
 #ifdef DILIGENT_DEVELOPMENT
-    DynAlloc.dvpFrameNumber = m_ContextFrameNumber;
+    DynAlloc.dvpFrameNumber = GetFrameNumber();
 #endif
     return DynAlloc;
 }
