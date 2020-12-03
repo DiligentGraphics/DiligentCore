@@ -329,6 +329,9 @@ void ComputeMipLevel(Uint32         FineLevelWidth,
             VERIFY(FmtAttribs.ComponentSize == 4, "Only 32-bit float formats are currently supported");
             ComputeMipHelper.Run<Float32>(LinearAverage<Float32>);
             break;
+
+        default:
+            UNEXPECTED("Unsupported component type");
     }
 }
 
