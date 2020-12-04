@@ -150,7 +150,7 @@ public:
 
 private:
     void InitRegion(const Region& R, bool IsAllocated);
-    void AddFreeRegion(const Region& R);
+    void AddFreeRegion(Region R);
     void RemoveFreeRegion(const Region R);
 
     Region& GetRegion(Uint32 x, Uint32 y)

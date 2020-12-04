@@ -217,6 +217,17 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Allocate)
 
         } while (std::next_permutation(ids.begin(), ids.end()));
     }
+
+    {
+        DynamicAtlasManager Mgr{64, 64};
+
+        auto R0 = Mgr.Allocate(64, 16);
+        auto R1 = Mgr.Allocate(16, 48);
+        Mgr.Free(std::move(R0));
+        auto R2 = Mgr.Allocate(16, 16);
+        Mgr.Free(std::move(R1));
+        Mgr.Free(std::move(R2));
+    }
 }
 
 } // namespace

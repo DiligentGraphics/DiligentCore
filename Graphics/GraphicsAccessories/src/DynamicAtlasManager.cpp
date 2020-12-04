@@ -40,6 +40,15 @@ DynamicAtlasManager::DynamicAtlasManager(Uint32 Width, Uint32 Height) :
     m_Height{Height},
     m_RegionMap{new Region[Width * Height]}
 {
+#ifdef DILIGENT_DEBUG
+    for (Uint32 y = 0; y < m_Height; ++y)
+    {
+        for (Uint32 x = 0; x < m_Width; ++x)
+        {
+            GetRegion(x, y) = InvalidRegion;
+        }
+    }
+#endif
     AddFreeRegion(Region{0, 0, m_Width, m_Height});
 }
 
@@ -169,6 +178,28 @@ void DynamicAtlasManager::Free(Region&& R)
     }
 #endif
 
+    AddFreeRegion(R);
+
+#if DILIGENT_DEBUG
+    DbgVerifyConsistency();
+#endif
+
+    R = InvalidRegion;
+}
+
+void DynamicAtlasManager::AddFreeRegion(Region R)
+{
+#ifdef DILIGENT_DEBUG
+    for (Uint32 y = R.y; y < R.y + R.height; ++y)
+    {
+        for (Uint32 x = R.x; x < R.x + R.width; ++x)
+        {
+            const auto& R1 = GetRegion(x, y);
+            VERIFY_EXPR(R1 == AllocatedRegion || R1 == InvalidRegion);
+        }
+    }
+#endif
+
     bool Merged = false;
     do
     {
@@ -177,7 +208,7 @@ void DynamicAtlasManager::Free(Region&& R)
             if (R.x > 0)
             {
                 const auto& lftR = GetRegion(R.x - 1, R.y);
-                if (lftR != AllocatedRegion)
+                if (lftR != AllocatedRegion && lftR != InvalidRegion)
                 {
                     VERIFY_EXPR(lftR.x + lftR.width == R.x);
                     if (lftR.y == R.y && lftR.height == R.height)
@@ -198,7 +229,7 @@ void DynamicAtlasManager::Free(Region&& R)
             if (R.x + R.width < m_Width)
             {
                 const auto& rgtR = GetRegion(R.x + R.width, R.y);
-                if (rgtR != AllocatedRegion)
+                if (rgtR != AllocatedRegion && rgtR != InvalidRegion)
                 {
                     VERIFY_EXPR(R.x + R.width == rgtR.x);
                     if (rgtR.y == R.y && rgtR.height == R.height)
@@ -223,7 +254,7 @@ void DynamicAtlasManager::Free(Region&& R)
             if (R.y > 0)
             {
                 const auto& btmR = GetRegion(R.x, R.y - 1);
-                if (btmR != AllocatedRegion)
+                if (btmR != AllocatedRegion && btmR != InvalidRegion)
                 {
                     VERIFY_EXPR(btmR.y + btmR.height == R.y);
                     if (btmR.x == R.x && btmR.width == R.width)
@@ -247,7 +278,7 @@ void DynamicAtlasManager::Free(Region&& R)
             if (R.y + R.height < m_Height)
             {
                 const auto& tpR = GetRegion(R.x, R.y + R.height);
-                if (tpR != AllocatedRegion)
+                if (tpR != AllocatedRegion && tpR != InvalidRegion)
                 {
                     VERIFY_EXPR(R.y + R.height == tpR.y);
                     if (tpR.x == R.x && tpR.width == R.width)
@@ -280,17 +311,6 @@ void DynamicAtlasManager::Free(Region&& R)
         }
     } while (Merged);
 
-    AddFreeRegion(R);
-
-#if DILIGENT_DEBUG
-    DbgVerifyConsistency();
-#endif
-
-    R = InvalidRegion;
-}
-
-void DynamicAtlasManager::AddFreeRegion(const Region& R)
-{
     InitRegion(R, false);
 
     {
@@ -328,15 +348,15 @@ void DynamicAtlasManager::RemoveFreeRegion(const Region R)
     m_FreeRegionsByWidth.erase(R);
     m_FreeRegionsByHeight.erase(R);
 
-#if DILIGENT_DEBUG
     for (Uint32 y = R.y; y < R.y + R.height; ++y)
     {
         for (Uint32 x = R.x; x < R.x + R.width; ++x)
         {
+            // Use InvalidRegion to indicate that the region is
+            // neither allocated nor free.
             GetRegion(x, y) = InvalidRegion;
         }
     }
-#endif
 }
 
 void DynamicAtlasManager::InitRegion(const Region& R, bool IsAllocated)
