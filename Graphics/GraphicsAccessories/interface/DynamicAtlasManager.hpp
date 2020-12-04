@@ -149,7 +149,7 @@ public:
 #undef CMP
 
 private:
-    void InitRegion(const Region& R, bool IsAllocated);
+    void InitRegion(const Region R, const Region Val);
     void AddFreeRegion(Region R);
     void RemoveFreeRegion(const Region R);
 

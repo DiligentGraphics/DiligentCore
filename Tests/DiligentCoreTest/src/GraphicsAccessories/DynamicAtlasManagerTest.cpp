@@ -34,6 +34,16 @@
 
 using namespace Diligent;
 
+namespace Diligent
+{
+
+static std::ostream& operator<<(std::ostream& os, const DynamicAtlasManager::Region& R)
+{
+    return os << "[" << R.x << ", " << R.x + R.width << ") x [" << R.y << ", " << R.y + R.height << ")";
+}
+
+} // namespace Diligent
+
 namespace
 {
 
@@ -218,15 +228,195 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Allocate)
         } while (std::next_permutation(ids.begin(), ids.end()));
     }
 
+
+    // Test merging regions while splitting free space
     {
         DynamicAtlasManager Mgr{64, 64};
 
         auto R0 = Mgr.Allocate(64, 16);
         auto R1 = Mgr.Allocate(16, 48);
+        EXPECT_EQ(R0, Region(0, 0, 64, 16));
+        EXPECT_EQ(R1, Region(0, 16, 16, 48));
         Mgr.Free(std::move(R0));
+        //  ____________________
+        // |    |               |
+        // |    |               |
+        // | R1 |     Free      |
+        // |    |               |
+        // |    |               |
+        // |____|_______________|
+        // |        Free        |
+        // |____________________|
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 2U);
+
+
         auto R2 = Mgr.Allocate(16, 16);
+        //  ____________________
+        // |    |               |
+        // |    |               |
+        // | R1 |               |
+        // |    |     Free      |
+        // |    |               |
+        // |____|               |
+        // | R2 |               |
+        // |____|_______________|
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
+        EXPECT_EQ(R2, Region(0, 0, 16, 16));
+
         Mgr.Free(std::move(R1));
         Mgr.Free(std::move(R2));
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
+    }
+
+    {
+        DynamicAtlasManager Mgr{64, 64};
+
+        auto R0 = Mgr.Allocate(16, 64);
+        auto R1 = Mgr.Allocate(48, 16);
+        EXPECT_EQ(R0, Region(0, 0, 16, 64));
+        EXPECT_EQ(R1, Region(16, 0, 48, 16));
+        Mgr.Free(std::move(R0));
+        //  ____________________
+        // |    |               |
+        // |    |               |
+        // | F  |     Free      |
+        // | r  |               |
+        // | e  |               |
+        // | e  |_______________|
+        // |    |      R1       |
+        // |____|_______________|
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 2U);
+
+        auto R2 = Mgr.Allocate(16, 16);
+        //  ____________________
+        // |                    |
+        // |                    |
+        // |       Free         |
+        // |                    |
+        // |                    |
+        // |____________________|
+        // | R2 |      R1       |
+        // |____|_______________|
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
+        EXPECT_EQ(R2, Region(0, 0, 16, 16));
+
+        Mgr.Free(std::move(R1));
+        Mgr.Free(std::move(R2));
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
+    }
+
+    {
+        DynamicAtlasManager Mgr{64, 32};
+
+        auto R0 = Mgr.Allocate(64, 24);
+        auto R1 = Mgr.Allocate(8, 4);
+        auto R2 = Mgr.Allocate(8, 4);
+        EXPECT_EQ(R0, Region(0, 0, 64, 24));
+        EXPECT_EQ(R1, Region(0, 24, 8, 4));
+        EXPECT_EQ(R2, Region(0, 28, 8, 4));
+        Mgr.Free(std::move(R0));
+        Mgr.Free(std::move(R1));
+        //  _________________________________
+        // |  R2  |                          |
+        // |______|        Free              |
+        // | Free |                          |
+        // |______|__________________________|
+        // |                                 |
+        // |                                 |
+        // |            Free                 |
+        // |                                 |
+        // |                                 |
+        // |_________________________________|
+
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 3U);
+        auto R3 = Mgr.Allocate(8, 16);
+        //  _________________________________
+        // |  R2  |                          |
+        // |______|                          |
+        // |      |                          |
+        // | Free |                          |
+        // |      |         Free             |
+        // |______|                          |
+        // |      |                          |
+        // |  R3  |                          |
+        // |      |                          |
+        // |______|__________________________|
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 2U);
+        EXPECT_EQ(R3, Region(0, 0, 8, 16));
+
+        auto R4 = Mgr.Allocate(56, 32);
+        EXPECT_FALSE(R4.IsEmpty());
+
+        auto R5 = Mgr.Allocate(8, 12);
+        EXPECT_FALSE(R5.IsEmpty());
+
+        Mgr.Free(std::move(R4));
+        Mgr.Free(std::move(R2));
+        Mgr.Free(std::move(R3));
+        Mgr.Free(std::move(R5));
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
+    }
+
+    {
+        DynamicAtlasManager Mgr{32, 64};
+
+        auto R0 = Mgr.Allocate(24, 64);
+        auto R1 = Mgr.Allocate(4, 8);
+        auto R2 = Mgr.Allocate(4, 8);
+        EXPECT_EQ(R0, Region(0, 0, 24, 64));
+        EXPECT_EQ(R1, Region(24, 0, 4, 8));
+        EXPECT_EQ(R2, Region(28, 0, 4, 8));
+        Mgr.Free(std::move(R0));
+        Mgr.Free(std::move(R1));
+        //  __________________________
+        // |              |           |
+        // |              |           |
+        // |              |           |
+        // |              |           |
+        // |              |    F      |
+        // |      F       |    R      |
+        // |      R       |    E      |
+        // |      E       |    E      |
+        // |      E       |           |
+        // |              |           |
+        // |              |_____ _____|
+        // |              |  F  |     |
+        // |              |  R  | R2  |
+        // |              |  E  |     |
+        // |______________|__E__|_____|
+
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 3U);
+        auto R3 = Mgr.Allocate(16, 8);
+        //  __________________________
+        // |                          |
+        // |                          |
+        // |                          |
+        // |                          |
+        // |                          |
+        // |         Free             |
+        // |                          |
+        // |                          |
+        // |                          |
+        // |                          |
+        // |_______ ____________ _____|
+        // |       |            |     |
+        // |  R3   |    Free    | R2  |
+        // |       |            |     |
+        // |_______|____________|_____|
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 2U);
+        EXPECT_EQ(R3, Region(0, 0, 16, 8));
+
+        auto R4 = Mgr.Allocate(32, 56);
+        EXPECT_FALSE(R4.IsEmpty());
+
+        auto R5 = Mgr.Allocate(12, 8);
+        EXPECT_FALSE(R5.IsEmpty());
+
+        Mgr.Free(std::move(R4));
+        Mgr.Free(std::move(R2));
+        Mgr.Free(std::move(R3));
+        Mgr.Free(std::move(R5));
+        EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
     }
 }
 
