@@ -263,6 +263,10 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Allocate)
         EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
         EXPECT_EQ(R2, Region(0, 0, 16, 16));
 
+        auto R3 = Mgr.Allocate(48, 64);
+        EXPECT_FALSE(R3.IsEmpty());
+
+        Mgr.Free(std::move(R3));
         Mgr.Free(std::move(R1));
         Mgr.Free(std::move(R2));
         EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
@@ -300,6 +304,10 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Allocate)
         EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
         EXPECT_EQ(R2, Region(0, 0, 16, 16));
 
+        auto R3 = Mgr.Allocate(64, 48);
+        EXPECT_FALSE(R3.IsEmpty());
+
+        Mgr.Free(std::move(R3));
         Mgr.Free(std::move(R1));
         Mgr.Free(std::move(R2));
         EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
