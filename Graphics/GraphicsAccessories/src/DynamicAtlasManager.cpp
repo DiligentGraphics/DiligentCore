@@ -49,14 +49,23 @@ DynamicAtlasManager::DynamicAtlasManager(Uint32 Width, Uint32 Height) :
 
 DynamicAtlasManager::~DynamicAtlasManager()
 {
+    if (m_RegionMap)
+    {
 #if DILIGENT_DEBUG
-    DbgVerifyConsistency();
+        DbgVerifyConsistency();
 #endif
 
-    VERIFY_EXPR(m_FreeRegionsByWidth.size() == m_FreeRegionsByHeight.size());
-    VERIFY(m_dbgRegions.size() == 1 && m_dbgRegions.begin()->R == Region(0, 0, m_Width, m_Height) && !m_dbgRegions.begin()->IsAllocated,
-           "Not all allocations have been freed");
-    DEV_CHECK_ERR(m_FreeRegionsByWidth.size() == 1, "There expected to be a single free region");
+        VERIFY_EXPR(m_FreeRegionsByWidth.size() == m_FreeRegionsByHeight.size());
+        VERIFY(m_dbgRegions.size() == 1 && m_dbgRegions.begin()->R == Region(0, 0, m_Width, m_Height) && !m_dbgRegions.begin()->IsAllocated,
+               "Not all allocations have been freed");
+        DEV_CHECK_ERR(m_FreeRegionsByWidth.size() == 1, "There expected to be a single free region");
+    }
+    else
+    {
+        VERIFY_EXPR(m_FreeRegionsByWidth.empty());
+        VERIFY_EXPR(m_FreeRegionsByHeight.empty());
+        VERIFY_EXPR(m_dbgRegions.empty());
+    }
 }
 
 DynamicAtlasManager::Region DynamicAtlasManager::Allocate(Uint32 Width, Uint32 Height)
