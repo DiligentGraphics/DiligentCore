@@ -4,6 +4,7 @@ project(Diligent-GraphicsTools CXX)
 
 set(INTERFACE
     interface/CommonlyUsedStates.h
+    interface/DynamicBuffer.hpp
     interface/DurationQueryHelper.hpp
     interface/GraphicsUtilities.h
     interface/MapHelper.hpp
@@ -18,6 +19,7 @@ set(INTERFACE
 
 set(SOURCE 
     src/DurationQueryHelper.cpp
+    src/DynamicBuffer.cpp
     src/GraphicsUtilities.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
