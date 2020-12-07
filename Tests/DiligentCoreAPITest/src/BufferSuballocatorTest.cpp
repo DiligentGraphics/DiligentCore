@@ -87,7 +87,7 @@ TEST(BufferSuballocatorTest, Allocate)
                         for (auto& Alloc : Allocs)
                         {
                             Uint32 size = static_cast<Uint32>(rnd());
-                            pAllocator->Allocate(size, 8, nullptr, nullptr, &Alloc);
+                            pAllocator->Allocate(size, 8, &Alloc);
                             ASSERT_TRUE(Alloc);
                             EXPECT_EQ(Alloc->GetSize(), size);
                         }

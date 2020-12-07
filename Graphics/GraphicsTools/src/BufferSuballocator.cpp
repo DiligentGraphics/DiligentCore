@@ -114,13 +114,21 @@ public:
 
     virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
+        Uint32 Size = 0;
+        {
+            std::lock_guard<std::mutex> Lock{m_MgrMtx};
+            Size = static_cast<Uint32>(m_Mgr.GetMaxSize());
+        }
+        if (Size != m_Buffer.GetDesc().uiSizeInBytes)
+        {
+            m_Buffer.Resize(pDevice, pContext, Size);
+        }
+
         return m_Buffer.GetBuffer(pDevice, pContext);
     }
 
     virtual void Allocate(Uint32                 Size,
                           Uint32                 Alignment,
-                          IRenderDevice*         pDevice,
-                          IDeviceContext*        pContext,
                           IBufferSuballocation** ppSuballocation) override final
     {
         if (Size == 0)
@@ -140,7 +148,6 @@ public:
             std::lock_guard<std::mutex> Lock{m_MgrMtx};
             Subregion = m_Mgr.Allocate(Size, Alignment);
 
-            bool WasExpanded = false;
             while (!Subregion.IsValid())
             {
                 auto ExtraSize = m_ExpansionSize != 0 ?
@@ -148,12 +155,7 @@ public:
                     m_Mgr.GetMaxSize();
 
                 m_Mgr.Extend(ExtraSize);
-                WasExpanded = true;
-                Subregion   = m_Mgr.Allocate(Size, Alignment);
-            }
-            if (WasExpanded)
-            {
-                m_Buffer.Resize(pDevice, pContext, static_cast<Uint32>(m_Mgr.GetMaxSize()));
+                Subregion = m_Mgr.Allocate(Size, Alignment);
             }
         }
 

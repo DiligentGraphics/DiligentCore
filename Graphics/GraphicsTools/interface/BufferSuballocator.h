@@ -49,7 +49,7 @@ static const INTERFACE_ID IID_BufferSuballocator =
     {0x71f59b50, 0x7d13, 0x49a7, {0xa4, 0xf7, 0xfc, 0x98, 0x67, 0x15, 0xff, 0xac}};
 
 
-/// Buffer suballocation interface.
+/// Buffer suballocation.
 struct IBufferSuballocation : public IObject
 {
     /// Returns the start offset of the suballocation.
@@ -63,19 +63,20 @@ struct IBufferSuballocation : public IObject
 };
 
 
-/// Buffer suballocator interface.
+/// Buffer suballocator.
 struct IBufferSuballocator : public IObject
 {
     /// Returns the pointer to the internal buffer object.
 
     /// \param[in]  pDevice  - Pointer to the render device that will be used to
-    ///                        create new internal buffer, if necessary.
+    ///                        create a new internal buffer, if necessary.
     /// \param[in]  pContext - Pointer to the device context that will be used to
-    ///                        copy existing buffer contents to the new buffer, if
-    ///                        necessary.
+    ///                        copy existing contents to the new buffer, if necessary.
     ///
     /// \remarks    If the internal buffer needs to be resized, pDevice and pContext will
     ///             be used to create a new buffer and copy existing contents to the new buffer.
+    ///             The method is not thread-safe and an application must externally synchronize the
+    ///             access.
     virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
 
@@ -83,28 +84,12 @@ struct IBufferSuballocator : public IObject
 
     /// \param[in]  Size            - Suballocation size.
     /// \param[in]  Alignment       - Requried alignment.
-    /// \param[in]  pDevice         - Pointer to the render device that will be used to create
-    ///                               new internal buffer, if necessary. May be null (see remarks).
-    /// \param[in]  pContext        - Pointer to the device context that will be used to
-    ///                               copy existing buffer contents to the new buffer, if
-    ///                               necessary. May be null (see remarks).
     /// \param[out] ppSuballocation - Memory location where pointer to the new suballocation will be
     ///                               stored.
     ///
-    /// \remarks    If there is not enough space in the internal buffer, it will need to be expanded.
-    ///             An application may provide non-null pDevice and pContext to resize the buffer
-    ///             immediately. Otherwise the buffer will be resized when GetBuffer() is called.
-    ///             In this case an application must provide non-null pDevice and pContext to GetBuffer().
-    ///
-    ///             The method itself is thread-safe and can be called from multiple threads simultaneously.
-    ///             However, if non-null pDevice and pContext are provided, an appliction must externally
-    ///             synchronize access to these objects.
-    ///
-    ///             Typically pDevice and pContext should be null when the method is called from a worker thread.
+    /// \remarks    The method is thread-safe and can be called from multiple threads simultaneously.
     virtual void Allocate(Uint32                 Size,
                           Uint32                 Alignment,
-                          IRenderDevice*         pDevice,
-                          IDeviceContext*        pContext,
                           IBufferSuballocation** ppSuballocation) = 0;
 
 
@@ -125,7 +110,7 @@ struct BufferSuballocatorCreateInfo
 {
     /// Pointer to the render device.
     /// May be null, in which case internal buffer initialization will
-    /// be postponed.
+    /// be postponed until GetBuffer() is called.
     IRenderDevice* pDevice = nullptr;
 
 
