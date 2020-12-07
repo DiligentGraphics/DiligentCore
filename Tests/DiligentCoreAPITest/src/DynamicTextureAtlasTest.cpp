@@ -39,11 +39,56 @@ using namespace Diligent::Testing;
 namespace
 {
 
+TEST(DynamicTextureAtlas, CreateEmpty)
+{
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    DynamicTextureAtlasCreateInfo CI;
+    CI.ExtraSliceCount    = 2;
+    CI.TextureGranularity = 16;
+    CI.pDevice            = nullptr;
+    CI.Desc.Format        = TEX_FORMAT_RGBA8_UNORM;
+    CI.Desc.Name          = "Dynamic Texture Atlas Test";
+    CI.Desc.Type          = RESOURCE_DIM_TEX_2D_ARRAY;
+    CI.Desc.BindFlags     = BIND_SHADER_RESOURCE;
+    CI.Desc.Width         = 512;
+    CI.Desc.Height        = 512;
+    CI.Desc.ArraySize     = 0;
+
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+        CreateDynamicTextureAtlas(CI, &pAtlas);
+
+        auto* pTexture = pAtlas->GetTexture(nullptr, nullptr);
+        EXPECT_EQ(pTexture, nullptr);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pSuballoc;
+        pAtlas->Allocate(128, 128, &pSuballoc);
+        EXPECT_TRUE(pSuballoc);
+
+        pTexture = pAtlas->GetTexture(pDevice, pContext);
+        EXPECT_NE(pTexture, nullptr);
+    }
+
+    CI.Desc.ArraySize = 2;
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+        CreateDynamicTextureAtlas(CI, &pAtlas);
+
+        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        EXPECT_NE(pTexture, nullptr);
+    }
+}
+
 TEST(DynamicTextureAtlas, Allocate)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -91,7 +136,7 @@ TEST(DynamicTextureAtlas, Allocate)
                         {
                             Uint32 Width  = static_cast<Uint32>(rnd());
                             Uint32 Height = static_cast<Uint32>(rnd());
-                            pAtlas->Allocate(Width, Height, nullptr, nullptr, &Alloc);
+                            pAtlas->Allocate(Width, Height, &Alloc);
                             ASSERT_TRUE(Alloc);
                             EXPECT_EQ(Alloc->GetSize().x, Width);
                             EXPECT_EQ(Alloc->GetSize().y, Height);

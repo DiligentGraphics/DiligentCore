@@ -50,7 +50,7 @@ static const INTERFACE_ID IID_DynamicTextureAtlas =
     {0xe1d6fa, 0x47b4, 0x4062, {0xb9, 0x6c, 0xd3, 0xe1, 0x91, 0xa0, 0x23, 0x51}};
 
 
-/// Texture atlas suballocation interface.
+/// Dynamic texture atlas suballocation.
 struct ITextureAtlasSuballocation : public IObject
 {
     /// Returns the suballocation origin.
@@ -69,19 +69,22 @@ struct ITextureAtlasSuballocation : public IObject
     virtual IDynamicTextureAtlas* GetAtlas() = 0;
 };
 
-/// Dynamic texture atlas interface.
+/// Dynamic texture atlas.
 struct IDynamicTextureAtlas : public IObject
 {
     /// Returns the pointer to the internal texture object.
 
     /// \param[in]  pDevice  - Pointer to the render device that will be used to
-    ///                        create new internal texture array, if necessary.
+    ///                        create a new internal texture array, if necessary.
     /// \param[in]  pContext - Pointer to the device context that will be used to
     ///                        copy existing contents to the new texture array, if
     ///                        necessary.
     ///
     /// \remarks    If the internal texture needs to be resized, pDevice and pContext will
-    ///             be used to create a new texture and copy existing contents to the new texture.
+    ///             be used to create a new texture and copy existing contents to it.
+    ///
+    ///             The method is not thread safe. An application must externally synchronize
+    ///             the access.
     virtual ITexture* GetTexture(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
 
@@ -89,28 +92,16 @@ struct IDynamicTextureAtlas : public IObject
 
     /// \param[in]  Width           - Suballocation width.
     /// \param[in]  Height          - Suballocation height.
-    /// \param[in]  pDevice         - Pointer to the render device that will be used to create
-    ///                               new internal texture array, if necessary. May be null (see remarks).
-    /// \param[in]  pContext        - Pointer to the device context that will be used to
-    ///                               copy existing contents to the new texture array, if
-    ///                               necessary. May be null (see remarks).
     /// \param[out] ppSuballocation - Memory location where pointer to the new suballocation will be
     ///                               stored.
     ///
-    /// \remarks    If there is not enough space in the internal texture array, it will need to be expanded.
-    ///             An application may provide non-null pDevice and pContext to resize the array
-    ///             immediately. Otherwise the texture will be resized when GetTexture() is called.
-    ///             In this case an application must provide non-null pDevice and pContext to GetTexture().
+    /// \remarks    The method is thread-safe and can be called from multiple threads simultaneously.
     ///
-    ///             The method itself is thread-safe and can be called from multiple threads simultaneously.
-    ///             However, if non-null pDevice and pContext are provided, an appliction must externally
-    ///             synchronize access to these objects.
-    ///
-    ///             Typically pDevice and pContext should be null when the method is called from a worker thread.
+    ///             Internal texture array may need to be extended after the allocation happend.
+    ///             An application may call GetTexture() to ensure that the texture is resized and old
+    ///             contents is copied.
     virtual void Allocate(Uint32                       Width,
                           Uint32                       Height,
-                          IRenderDevice*               pDevice,
-                          IDeviceContext*              pContext,
                           ITextureAtlasSuballocation** ppSuballocation) = 0;
 
 
@@ -128,14 +119,14 @@ struct DynamicTextureAtlasCreateInfo
 {
     /// Pointer to the render device.
     /// May be null, in which case internal texture initialization will
-    /// be postponed.
+    /// be postponed until GetTexture() is called.
     IRenderDevice* pDevice = nullptr;
 
 
     /// Texture description
 
     /// Texture type must be 2D or 2D array. When the type is
-    /// texture 2D, resizes will be disallowed
+    /// texture 2D, resizes will be disabled.
     TextureDesc Desc;
 
 

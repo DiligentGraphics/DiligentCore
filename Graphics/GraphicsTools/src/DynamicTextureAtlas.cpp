@@ -52,7 +52,7 @@ public:
                                   DynamicTextureAtlasImpl*      pParentAtlas,
                                   DynamicAtlasManager::Region&& Subregion,
                                   Uint32                        Slice,
-                                  const uint2&                  Size) :
+                                  const uint2&                  Size) noexcept :
         // clang-format off
         TBase         {pRefCounters},
         m_pParentAtlas{pParentAtlas},
@@ -69,10 +69,7 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureAtlasSuballocation, TBase)
 
-    virtual uint2 GetOrigin() const override final
-    {
-        return uint2{m_Subregion.x, m_Subregion.y};
-    }
+    virtual uint2 GetOrigin() const override final;
 
     virtual Uint32 GetSlice() const override final
     {
@@ -86,7 +83,6 @@ public:
 
     virtual float4 GetUVScaleBias() const override final;
 
-    /// Returns the pointer to the parent texture atlas.
     virtual IDynamicTextureAtlas* GetAtlas() override final;
 
 private:
@@ -104,13 +100,12 @@ class DynamicTextureAtlasImpl final : public ObjectBase<IDynamicTextureAtlas>
 public:
     using TBase = ObjectBase<IDynamicTextureAtlas>;
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DynamicTextureAtlas, TBase)
-
     DynamicTextureAtlasImpl(IReferenceCounters*            pRefCounters,
                             DynamicTextureAtlasCreateInfo& CreateInfo) :
         // clang-format off
         TBase             {pRefCounters},
         m_Desc            {CreateInfo.Desc},
+        m_Name            {CreateInfo.Desc.Name != nullptr ? CreateInfo.Desc.Name : "Dynamic texture atlas"},
         m_Granularity     {CreateInfo.TextureGranularity},
         m_ExtraSliceCount {CreateInfo.ExtraSliceCount},
         m_MaxSliceCount   {CreateInfo.Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY ? std::min(CreateInfo.MaxSliceCount, Uint32{2048}) : 1},
@@ -141,12 +136,11 @@ public:
             LOG_ERROR_AND_THROW("Texture height must not be zero");
 
         if ((m_Desc.Width % m_Granularity) != 0)
-            LOG_ERROR_AND_THROW("Texture width (", m_Desc.Width, ") is not multiple of granularity (", m_Granularity, ")");
+            LOG_ERROR_AND_THROW("Texture width (", m_Desc.Width, ") is not a multiple of granularity (", m_Granularity, ")");
 
         if ((m_Desc.Height % m_Granularity) != 0)
-            LOG_ERROR_AND_THROW("Texture height (", m_Desc.Height, ") is not multiple of granularity (", m_Granularity, ")");
+            LOG_ERROR_AND_THROW("Texture height (", m_Desc.Height, ") is not a multiple of granularity (", m_Granularity, ")");
 
-        m_Name      = m_Desc.Name;
         m_Desc.Name = m_Name.c_str();
 
         for (Uint32 slice = 0; slice < m_Desc.ArraySize; ++slice)
@@ -154,7 +148,9 @@ public:
             m_Slices.emplace_back(new SliceManager{m_Desc.Width / m_Granularity, m_Desc.Height / m_Granularity});
         }
 
-        if (m_Desc.ArraySize > 0 && CreateInfo.pDevice != nullptr)
+        if (CreateInfo.pDevice == nullptr)
+            m_Desc.ArraySize = 0;
+        if (m_Desc.ArraySize > 0)
         {
             CreateInfo.pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
             if (!m_pTexture)
@@ -164,18 +160,62 @@ public:
         m_Version.store(0);
     }
 
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DynamicTextureAtlas, TBase)
 
     virtual ITexture* GetTexture(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
-        CommitResize(pDevice, pContext);
+        Uint32 ArraySize = 0;
+        {
+            std::lock_guard<std::mutex> Lock{m_SlicesMtx};
+            ArraySize = static_cast<Uint32>(m_Slices.size());
+        }
+        if (m_Desc.ArraySize != ArraySize)
+        {
+            DEV_CHECK_ERR(pDevice != nullptr && pContext != nullptr,
+                          "Texture atlas must be resized, but pDevice or pContext is null");
+
+            m_Desc.ArraySize = ArraySize;
+            RefCntAutoPtr<ITexture> pNewTexture;
+            pDevice->CreateTexture(m_Desc, nullptr, &pNewTexture);
+            VERIFY_EXPR(pNewTexture);
+            m_Version.fetch_add(1);
+
+            LOG_INFO_MESSAGE("Dynamic texture atlas: expanding texture array '", m_Desc.Name,
+                             "' (", m_Desc.Width, " x ", m_Desc.Height, " ", m_Desc.MipLevels, "-mip ",
+                             GetTextureFormatAttribs(m_Desc.Format).Name, ") to ",
+                             m_Desc.ArraySize, " slices. Version: ", GetVersion());
+
+            if (m_pTexture)
+            {
+                const auto& StaleTexDesc = m_pTexture->GetDesc();
+
+                CopyTextureAttribs CopyAttribs;
+                CopyAttribs.pSrcTexture              = m_pTexture;
+                CopyAttribs.pDstTexture              = pNewTexture;
+                CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+                CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
+                for (Uint32 slice = 0; slice < StaleTexDesc.ArraySize; ++slice)
+                {
+                    for (Uint32 mip = 0; mip < StaleTexDesc.MipLevels; ++mip)
+                    {
+                        CopyAttribs.SrcSlice    = slice;
+                        CopyAttribs.DstSlice    = slice;
+                        CopyAttribs.SrcMipLevel = mip;
+                        CopyAttribs.DstMipLevel = mip;
+                        pContext->CopyTexture(CopyAttribs);
+                    }
+                }
+            }
+
+            m_pTexture = std::move(pNewTexture);
+        }
 
         return m_pTexture;
     }
 
     virtual void Allocate(Uint32                       Width,
                           Uint32                       Height,
-                          IRenderDevice*               pDevice,
-                          IDeviceContext*              pContext,
                           ITextureAtlasSuballocation** ppSuballocation) override final
     {
         if (Width == 0 || Height == 0)
@@ -186,7 +226,7 @@ public:
 
         if (Width > m_Desc.Width || Height > m_Desc.Height)
         {
-            LOG_ERROR_MESSAGE("Requested size ", Width, " x ", Height, " exceeds the atlas dimensions ", m_Desc.Width, " x ", m_Desc.Height);
+            LOG_ERROR_MESSAGE("Requested region size ", Width, " x ", Height, " exceeds atlas dimensions ", m_Desc.Width, " x ", m_Desc.Height);
             return;
         }
 
@@ -198,27 +238,18 @@ public:
             SliceManager* pSliceMgr = nullptr;
             {
                 std::lock_guard<std::mutex> Lock{m_SlicesMtx};
-                if (Slice == m_Slices.size() && Slice + 1 < m_MaxSliceCount)
+                if (Slice == m_Slices.size())
                 {
                     const auto ExtraSliceCount = m_ExtraSliceCount != 0 ?
                         m_ExtraSliceCount :
                         static_cast<Uint32>(m_Slices.size());
 
-                    for (Uint32 ExtraSlice = 1; ExtraSlice <= ExtraSliceCount && Slice + ExtraSlice < m_MaxSliceCount; ++ExtraSlice)
+                    for (Uint32 ExtraSlice = 0; ExtraSlice < ExtraSliceCount && Slice + ExtraSlice < m_MaxSliceCount; ++ExtraSlice)
                     {
                         m_Slices.emplace_back(new SliceManager{m_Desc.Width / m_Granularity, m_Desc.Height / m_Granularity});
                     }
                 }
                 pSliceMgr = m_Slices[Slice].get();
-
-                if (m_Slices.size() > m_Desc.ArraySize)
-                {
-                    m_Desc.ArraySize = static_cast<Uint32>(m_Slices.size());
-                    if (pDevice != nullptr && pContext != nullptr)
-                    {
-                        CommitResize(pDevice, pContext);
-                    }
-                }
             }
 
             Subregion = pSliceMgr->Allocate((Width + m_Granularity - 1) / m_Granularity,
@@ -234,11 +265,6 @@ public:
             LOG_ERROR_MESSAGE("Failed to suballocate texture subregion ", Width, " x ", Height, " from texture atlas");
             return;
         }
-
-        Subregion.x *= m_Granularity;
-        Subregion.y *= m_Granularity;
-        Subregion.width *= m_Granularity;
-        Subregion.height *= m_Granularity;
 
         // clang-format off
         TextureAtlasSuballocationImpl* pSuballocation{
@@ -257,16 +283,6 @@ public:
 
     virtual void Free(Uint32 Slice, DynamicAtlasManager::Region&& Subregion)
     {
-        VERIFY((Subregion.x % m_Granularity) == 0, "Subregion x (", Subregion.x, ") is not multiple of granularity (", m_Granularity, ")");
-        VERIFY((Subregion.y % m_Granularity) == 0, "Subregion y (", Subregion.y, ") is not multiple of granularity (", m_Granularity, ")");
-        VERIFY((Subregion.width % m_Granularity) == 0, "Subregion width (", Subregion.width, ") is not multiple of granularity (", m_Granularity, ")");
-        VERIFY((Subregion.height % m_Granularity) == 0, "Subregion height (", Subregion.height, ") is not multiple of granularity (", m_Granularity, ")");
-
-        Subregion.x /= m_Granularity;
-        Subregion.y /= m_Granularity;
-        Subregion.width /= m_Granularity;
-        Subregion.height /= m_Granularity;
-
         SliceManager* pSliceMgr = nullptr;
         {
             std::lock_guard<std::mutex> Lock{m_SlicesMtx};
@@ -285,53 +301,14 @@ public:
         return m_Version.load();
     }
 
-private:
-    void CommitResize(IRenderDevice*  pDevice,
-                      IDeviceContext* pContext)
+    Uint32 GetGranularity() const
     {
-        VERIFY_EXPR(pDevice != nullptr && pContext != nullptr);
-
-        if (m_pTexture->GetDesc().ArraySize == m_Desc.ArraySize)
-            return;
-
-        RefCntAutoPtr<ITexture> pNewTexture;
-        pDevice->CreateTexture(m_Desc, nullptr, &pNewTexture);
-        VERIFY_EXPR(pNewTexture);
-        m_Version.fetch_add(1);
-
-        LOG_INFO_MESSAGE("Dynamic texture atlas: expanding texture array '", m_Desc.Name,
-                         "' (", m_Desc.Width, " x ", m_Desc.Height, " ", m_Desc.MipLevels, "-mip ",
-                         GetTextureFormatAttribs(m_Desc.Format).Name, ") to ",
-                         m_Desc.ArraySize, " slices. Version: ", GetVersion());
-
-        const auto& StaleTexDesc = m_pTexture->GetDesc();
-
-        if (m_pTexture)
-        {
-            CopyTextureAttribs CopyAttribs;
-            CopyAttribs.pSrcTexture              = m_pTexture;
-            CopyAttribs.pDstTexture              = pNewTexture;
-            CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-            CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-
-            for (Uint32 slice = 0; slice < StaleTexDesc.ArraySize; ++slice)
-            {
-                for (Uint32 mip = 0; mip < StaleTexDesc.MipLevels; ++mip)
-                {
-                    CopyAttribs.SrcSlice    = slice;
-                    CopyAttribs.DstSlice    = slice;
-                    CopyAttribs.SrcMipLevel = mip;
-                    CopyAttribs.DstMipLevel = mip;
-                    pContext->CopyTexture(CopyAttribs);
-                }
-            }
-        }
-
-        m_pTexture = std::move(pNewTexture);
+        return m_Granularity;
     }
 
-    TextureDesc m_Desc;
-    std::string m_Name;
+private:
+    TextureDesc       m_Desc;
+    const std::string m_Name;
 
     const Uint32 m_Granularity;
     const Uint32 m_ExtraSliceCount;
@@ -373,6 +350,16 @@ private:
 TextureAtlasSuballocationImpl::~TextureAtlasSuballocationImpl()
 {
     m_pParentAtlas->Free(m_Slice, std::move(m_Subregion));
+}
+
+uint2 TextureAtlasSuballocationImpl::GetOrigin() const
+{
+    const auto Granularity = m_pParentAtlas->GetGranularity();
+    return uint2 //
+        {
+            m_Subregion.x * Granularity,
+            m_Subregion.y * Granularity //
+        };
 }
 
 IDynamicTextureAtlas* TextureAtlasSuballocationImpl::GetAtlas()
