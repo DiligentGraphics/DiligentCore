@@ -99,6 +99,8 @@ struct IBufferSuballocator : public IObject
     ///             The method itself is thread-safe and can be called from multiple threads simultaneously.
     ///             However, if non-null pDevice and pContext are provided, an appliction must externally
     ///             synchronize access to these objects.
+    ///
+    ///             Typically pDevice and pContext should be null when the method is called from a worker thread.
     virtual void Allocate(Uint32                 Size,
                           Uint32                 Alignment,
                           IRenderDevice*         pDevice,

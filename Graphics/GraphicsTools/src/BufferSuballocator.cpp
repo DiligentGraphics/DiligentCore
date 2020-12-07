@@ -83,10 +83,10 @@ public:
 private:
     RefCntAutoPtr<BufferSuballocatorImpl> m_pParentAllocator;
 
+    VariableSizeAllocationsManager::Allocation m_Subregion;
+
     const Uint32 m_Offset;
     const Uint32 m_Size;
-
-    VariableSizeAllocationsManager::Allocation m_Subregion;
 };
 
 class BufferSuballocatorImpl final : public ObjectBase<IBufferSuballocator>
@@ -117,11 +117,11 @@ public:
         return m_Buffer.GetBuffer(pDevice, pContext);
     }
 
-    void Allocate(Uint32                 Size,
-                  Uint32                 Alignment,
-                  IRenderDevice*         pDevice,
-                  IDeviceContext*        pContext,
-                  IBufferSuballocation** ppSuballocation)
+    virtual void Allocate(Uint32                 Size,
+                          Uint32                 Alignment,
+                          IRenderDevice*         pDevice,
+                          IDeviceContext*        pContext,
+                          IBufferSuballocation** ppSuballocation) override final
     {
         if (Size == 0)
         {

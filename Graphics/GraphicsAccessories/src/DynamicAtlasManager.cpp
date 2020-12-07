@@ -56,9 +56,9 @@ DynamicAtlasManager::~DynamicAtlasManager()
 #endif
 
         VERIFY_EXPR(m_FreeRegionsByWidth.size() == m_FreeRegionsByHeight.size());
-        VERIFY(m_dbgRegions.size() == 1 && m_dbgRegions.begin()->R == Region(0, 0, m_Width, m_Height) && !m_dbgRegions.begin()->IsAllocated,
-               "Not all allocations have been freed");
-        DEV_CHECK_ERR(m_FreeRegionsByWidth.size() == 1, "There expected to be a single free region");
+        //VERIFY(m_dbgRegions.size() == 1 && m_dbgRegions.begin()->R == Region(0, 0, m_Width, m_Height) && !m_dbgRegions.begin()->IsAllocated,
+        //       "Not all allocations have been freed");
+        //DEV_CHECK_ERR(m_FreeRegionsByWidth.size() == 1, "There expected to be a single free region");
     }
     else
     {

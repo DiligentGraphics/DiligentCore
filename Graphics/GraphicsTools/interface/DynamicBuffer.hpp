@@ -81,6 +81,8 @@ public:
     ///               An application must provide non-null device and device context when calling
     ///               GetBuffer().
     ///
+    ///             Typically pDevice and pContext should be null when the method is called from a worker thread.
+    ///
     ///             If NewSize is zero, internal buffer will be released.
     IBuffer* Resize(IRenderDevice*  pDevice,
                     IDeviceContext* pContext,
