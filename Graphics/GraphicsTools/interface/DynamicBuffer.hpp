@@ -55,8 +55,8 @@ public:
     // clang-format off
     DynamicBuffer           (const DynamicBuffer&)  = delete;
     DynamicBuffer& operator=(const DynamicBuffer&)  = delete;
-    DynamicBuffer           (      DynamicBuffer&&) = default;
-    DynamicBuffer& operator=(      DynamicBuffer&&) = default;
+    DynamicBuffer           (      DynamicBuffer&&) = delete;
+    DynamicBuffer& operator=(      DynamicBuffer&&) = delete;
     // clang-format on
 
 

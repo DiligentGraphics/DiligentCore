@@ -52,7 +52,7 @@ public:
                    const FenceDesc&       Desc);
     ~FenceD3D11Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceD3D11, TFenceBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceD3D11, TFenceBase)
 
     /// Implementation of IFence::GetCompletedValue() in Direct3D11 backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;

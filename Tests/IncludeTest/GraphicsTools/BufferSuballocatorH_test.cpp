@@ -25,47 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Declaration of Diligent::QueryGLImpl class
-
-#include "QueryGL.h"
-#include "RenderDeviceGL.h"
-#include "QueryBase.hpp"
-#include "GLObjectWrapper.hpp"
-#include "RenderDeviceGLImpl.hpp"
-
-namespace Diligent
-{
-
-class FixedBlockMemoryAllocator;
-
-/// Query object implementation in OpenGL backend.
-class QueryGLImpl final : public QueryBase<IQueryGL, RenderDeviceGLImpl>
-{
-public:
-    using TQueryBase = QueryBase<IQueryGL, RenderDeviceGLImpl>;
-
-    QueryGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const QueryDesc&    Desc);
-    ~QueryGLImpl();
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryGL, TQueryBase)
-
-    /// Implementation of IQuery::GetData() in OpenGL backend.
-    virtual bool DILIGENT_CALL_TYPE GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
-
-
-    /// Implementation of IQueryGL::GetGlQueryHandle().
-    virtual GLuint DILIGENT_CALL_TYPE GetGlQueryHandle() const override final
-    {
-        return m_GlQuery;
-    }
-
-private:
-    GLObjectWrappers::GLQueryObj m_GlQuery;
-};
-
-} // namespace Diligent
+#include "DiligentCore/Graphics/GraphicsTools/interface/BufferSuballocator.h"

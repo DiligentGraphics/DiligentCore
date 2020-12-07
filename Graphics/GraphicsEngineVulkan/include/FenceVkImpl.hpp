@@ -53,7 +53,7 @@ public:
                 bool                IsDeviceInternal = false);
     ~FenceVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceVk, TFenceBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceVk, TFenceBase)
 
     /// Implementation of IFence::GetCompletedValue() in Vulkan backend.
     /// Note that this method is not thread-safe. The reason is that VulkanFencePool is not thread

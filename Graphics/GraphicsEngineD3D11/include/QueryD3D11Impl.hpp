@@ -53,7 +53,7 @@ public:
                    const QueryDesc&       Desc);
     ~QueryD3D11Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryD3D11, TQueryBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryD3D11, TQueryBase)
 
     /// Implementation of IQuery::GetData().
     virtual bool DILIGENT_CALL_TYPE GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;

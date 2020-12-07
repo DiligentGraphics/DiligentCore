@@ -41,6 +41,8 @@ TEST(DynamicBufferTest, Create)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
     {
         BufferDesc BuffDesc;
         BuffDesc.Name          = "Dynamic buffer create test 0";
@@ -91,6 +93,8 @@ TEST(DynamicBufferTest, Resize)
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     {
         BufferDesc BuffDesc;

@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.6)
 project(Diligent-GraphicsTools CXX)
 
 set(INTERFACE
+    interface/BufferSuballocator.h
     interface/CommonlyUsedStates.h
     interface/DynamicBuffer.hpp
     interface/DurationQueryHelper.hpp
@@ -18,6 +19,7 @@ set(INTERFACE
 )
 
 set(SOURCE 
+    src/BufferSuballocator.cpp
     src/DurationQueryHelper.cpp
     src/DynamicBuffer.cpp
     src/GraphicsUtilities.cpp

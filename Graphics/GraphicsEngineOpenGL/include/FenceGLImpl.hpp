@@ -53,7 +53,7 @@ public:
                 const FenceDesc&    Desc);
     ~FenceGLImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase)
 
     /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;

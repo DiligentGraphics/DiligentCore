@@ -1,0 +1,149 @@
+/*
+ *  Copyright 2019-2020 Diligent Graphics LLC
+ *  Copyright 2015-2019 Egor Yusov
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *  
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#pragma once
+
+/// \file
+/// Declaration of BufferSuballocator interface and related data structures
+
+#include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/Buffer.h"
+
+namespace Diligent
+{
+
+struct IBufferSuballocator;
+
+// {562552DA-67F0-40C2-A4AF-F286DFCA1626}
+static const INTERFACE_ID IID_BufferSuballocation =
+    {0x562552da, 0x67f0, 0x40c2, {0xa4, 0xaf, 0xf2, 0x86, 0xdf, 0xca, 0x16, 0x26}};
+
+
+// {71F59B50-7D13-49A7-A4F7-FC986715FFAC}
+static const INTERFACE_ID IID_BufferSuballocator =
+    {0x71f59b50, 0x7d13, 0x49a7, {0xa4, 0xf7, 0xfc, 0x98, 0x67, 0x15, 0xff, 0xac}};
+
+
+/// Buffer suballocation interface.
+struct IBufferSuballocation : public IObject
+{
+    /// Returns the start offset of the suballocation.
+    virtual Uint32 GetOffset() const = 0;
+
+    /// Returns the suballocation size.
+    virtual Uint32 GetSize() const = 0;
+
+    /// Returns the pointer to the parent allocator.
+    virtual IBufferSuballocator* GetAllocator() = 0;
+};
+
+
+/// Buffer suballocator interface.
+struct IBufferSuballocator : public IObject
+{
+    /// Returns the pointer to the internal buffer object.
+
+    /// \param[in]  pDevice  - Pointer to the render device that will be used to
+    ///                        create new internal buffer, if necessary.
+    /// \param[in]  pContext - Pointer to the device context that will be used to
+    ///                        copy existing buffer contents to the new buffer, if
+    ///                        necessary.
+    ///
+    /// \remarks    If the internal buffer needs to be resized, pDevice and pContext will
+    ///             be used to create a new buffer and copy existing contents to the new buffer.
+    virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+
+
+    /// Performs suballocation from the buffer.
+
+    /// \param[in]  Size            - Suballocation size.
+    /// \param[in]  Alignment       - Requried alignment.
+    /// \param[in]  pDevice         - Pointer to the render device that will be used to create
+    ///                               new internal buffer, if necessary. May be null (see remarks).
+    /// \param[in]  pContext        - Pointer to the device context that will be used to
+    ///                               copy existing buffer contents to the new buffer, if
+    ///                               necessary. May be null (see remarks).
+    /// \param[out] ppSuballocation - Memory location where pointer to the new suballocation will be
+    ///                               stored.
+    ///
+    /// \remarks    If there is not enough space in the internal buffer, it will need to be expanded.
+    ///             An application may provide non-null pDevice and pContext to resize the buffer
+    ///             immediately. Otherwise the buffer will be resized when GetBuffer() is called.
+    ///             In this case an application must provide non-null pDevice and pContext to GetBuffer().
+    ///
+    ///             The method itself is thread-safe and can be called from multiple threads simultaneously.
+    ///             However, if non-null pDevice and pContext are provided, an appliction must externally
+    ///             synchronize access to these objects.
+    virtual void Allocate(Uint32                 Size,
+                          Uint32                 Alignment,
+                          IRenderDevice*         pDevice,
+                          IDeviceContext*        pContext,
+                          IBufferSuballocation** ppSuballocation) = 0;
+
+
+    /// Returns the total remaining free size.
+
+    /// \note   Due to fragmentation total free size may be split between
+    ///         mutliple free chunks.
+    virtual Uint32 GetFreeSize() = 0;
+
+
+    /// Returns internal buffer version. The version is incremented every time
+    /// the buffer is expanded.
+    virtual Uint32 GetVersion() const = 0;
+};
+
+/// Buffer suballocator create information.
+struct BufferSuballocatorCreateInfo
+{
+    /// Pointer to the render device.
+    /// May be null, in which case internal buffer initialization will
+    /// be postponed.
+    IRenderDevice* pDevice = nullptr;
+
+
+    /// Buffer description
+    BufferDesc Desc;
+
+
+    /// Buffer expansion size, in bytes.
+
+    /// When non-zero, the buffer will be expanded by the specified amount every time
+    /// there is insufficient space. If zero, the buffer size will be doubled when
+    /// more space is needed.
+    Uint32 ExpansionSize = 0;
+
+
+    /// Allocation granularity for IBufferSuballocator objects.
+    Uint32 SuballocationObjAllocationGranularity = 64;
+};
+
+/// Creates a new buffer suballocator.
+void CreateBufferSuballocator(BufferSuballocatorCreateInfo& CreateInfo, IBufferSuballocator** ppBufferSuballocator);
+
+} // namespace Diligent
