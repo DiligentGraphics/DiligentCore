@@ -51,13 +51,12 @@ TEST(BufferSuballocatorTest, Create)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferSuballocatorCreateInfo CI;
-    CI.pDevice            = pDevice;
     CI.Desc.Name          = "Buffer Suballocator Test";
     CI.Desc.BindFlags     = BIND_VERTEX_BUFFER;
     CI.Desc.uiSizeInBytes = 1024;
 
     RefCntAutoPtr<IBufferSuballocator> pAllocator;
-    CreateBufferSuballocator(CI, &pAllocator);
+    CreateBufferSuballocator(pDevice, CI, &pAllocator);
 
     auto* pBuffer = pAllocator->GetBuffer(pDevice, pContext);
     EXPECT_NE(pBuffer, nullptr);
@@ -78,13 +77,12 @@ TEST(BufferSuballocatorTest, Allocate)
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     BufferSuballocatorCreateInfo CI;
-    CI.pDevice            = pDevice;
     CI.Desc.Name          = "Buffer Suballocator Test";
     CI.Desc.BindFlags     = BIND_VERTEX_BUFFER;
     CI.Desc.uiSizeInBytes = 1024;
 
     RefCntAutoPtr<IBufferSuballocator> pAllocator;
-    CreateBufferSuballocator(CI, &pAllocator);
+    CreateBufferSuballocator(pDevice, CI, &pAllocator);
 
 #ifdef _DEBUG
     constexpr size_t NumIterations = 8;

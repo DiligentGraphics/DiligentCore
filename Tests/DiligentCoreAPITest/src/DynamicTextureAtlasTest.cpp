@@ -50,7 +50,6 @@ TEST(DynamicTextureAtlas, Create)
     DynamicTextureAtlasCreateInfo CI;
     CI.ExtraSliceCount    = 2;
     CI.TextureGranularity = 16;
-    CI.pDevice            = nullptr;
     CI.Desc.Format        = TEX_FORMAT_RGBA8_UNORM;
     CI.Desc.Name          = "Dynamic Texture Atlas Test";
     CI.Desc.Type          = RESOURCE_DIM_TEX_2D_ARRAY;
@@ -61,7 +60,7 @@ TEST(DynamicTextureAtlas, Create)
 
     {
         RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
-        CreateDynamicTextureAtlas(CI, &pAtlas);
+        CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
 
         auto* pTexture = pAtlas->GetTexture(nullptr, nullptr);
         EXPECT_EQ(pTexture, nullptr);
@@ -77,16 +76,15 @@ TEST(DynamicTextureAtlas, Create)
     CI.Desc.ArraySize = 2;
     {
         RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
-        CreateDynamicTextureAtlas(CI, &pAtlas);
+        CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
 
         auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
     }
 
-    CI.pDevice = pDevice;
     {
         RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
-        CreateDynamicTextureAtlas(CI, &pAtlas);
+        CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
 
         auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
@@ -112,7 +110,6 @@ TEST(DynamicTextureAtlas, Allocate)
     DynamicTextureAtlasCreateInfo CI;
     CI.ExtraSliceCount    = 2;
     CI.TextureGranularity = 16;
-    CI.pDevice            = pDevice;
     CI.Desc.Format        = TEX_FORMAT_RGBA8_UNORM;
     CI.Desc.Name          = "Dynamic Texture Atlas Test";
     CI.Desc.Type          = RESOURCE_DIM_TEX_2D_ARRAY;
@@ -122,7 +119,7 @@ TEST(DynamicTextureAtlas, Allocate)
     CI.Desc.ArraySize     = 1;
 
     RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
-    CreateDynamicTextureAtlas(CI, &pAtlas);
+    CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
 
 #ifdef _DEBUG
     constexpr size_t NumIterations = 8;

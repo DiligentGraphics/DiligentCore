@@ -108,12 +108,6 @@ struct IBufferSuballocator : public IObject
 /// Buffer suballocator create information.
 struct BufferSuballocatorCreateInfo
 {
-    /// Pointer to the render device.
-    /// May be null, in which case internal buffer initialization will
-    /// be postponed until GetBuffer() is called.
-    IRenderDevice* pDevice = nullptr;
-
-
     /// Buffer description
     BufferDesc Desc;
 
@@ -131,6 +125,14 @@ struct BufferSuballocatorCreateInfo
 };
 
 /// Creates a new buffer suballocator.
-void CreateBufferSuballocator(BufferSuballocatorCreateInfo& CreateInfo, IBufferSuballocator** ppBufferSuballocator);
+
+/// \param[in]  pDevice              - Pointer to the render device that will be used to initialize
+///                                    internal buffer object. If this parameter is null, the
+///                                    buffer will be created when GetBuffer() is called.
+/// \param[in]  CreateInfo           - Suballocator create info, see Diligent::BufferSuballocatorCreateInfo.
+/// \param[in]  ppBufferSuballocator - Memory location where pointer to the buffer suballocator will be stored.
+void CreateBufferSuballocator(IRenderDevice*                pDevice,
+                              BufferSuballocatorCreateInfo& CreateInfo,
+                              IBufferSuballocator**         ppBufferSuballocator);
 
 } // namespace Diligent

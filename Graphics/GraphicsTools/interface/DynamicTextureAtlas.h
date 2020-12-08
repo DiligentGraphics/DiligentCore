@@ -117,12 +117,6 @@ struct IDynamicTextureAtlas : public IObject
 /// Dynamic texture atlas create information.
 struct DynamicTextureAtlasCreateInfo
 {
-    /// Pointer to the render device.
-    /// May be null, in which case internal texture initialization will
-    /// be postponed until GetTexture() is called.
-    IRenderDevice* pDevice = nullptr;
-
-
     /// Texture description
 
     /// Texture type must be 2D or 2D array. When the type is
@@ -154,6 +148,14 @@ struct DynamicTextureAtlasCreateInfo
 };
 
 /// Creates a new dynamic texture atlas.
-void CreateDynamicTextureAtlas(DynamicTextureAtlasCreateInfo& CreateInfo, IDynamicTextureAtlas** ppAtlas);
+
+/// \param[in] pDevice    - Pointer to the render device that will be used to create internal
+///                         texture array. If this parameter is null, the texture will be created
+///                         when GetTexture() is called.
+/// \param[in] CreateInfo - Atlas create info, see Diligent::DynamicTextureAtlasCreateInfo.
+/// \param[in] ppAtlas    - Memory location where pointer to the texture atlas object will be written.
+void CreateDynamicTextureAtlas(IRenderDevice*                 pDevice,
+                               DynamicTextureAtlasCreateInfo& CreateInfo,
+                               IDynamicTextureAtlas**         ppAtlas);
 
 } // namespace Diligent

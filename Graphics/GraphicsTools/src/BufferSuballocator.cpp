@@ -109,11 +109,12 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferSuballocator, TBase)
 
     BufferSuballocatorImpl(IReferenceCounters*           pRefCounters,
+                           IRenderDevice*                pDevice,
                            BufferSuballocatorCreateInfo& CreateInfo) :
         // clang-format off
         TBase                    {pRefCounters},
         m_Mgr                    {CreateInfo.Desc.uiSizeInBytes, DefaultRawMemoryAllocator::GetAllocator()},
-        m_Buffer                 {CreateInfo.pDevice, CreateInfo.Desc},
+        m_Buffer                 {pDevice, CreateInfo.Desc},
         m_ExpansionSize          {CreateInfo.ExpansionSize},
         m_SuballocationsAllocator
         {
@@ -226,11 +227,13 @@ IBufferSuballocator* BufferSuballocationImpl::GetAllocator()
 }
 
 
-void CreateBufferSuballocator(BufferSuballocatorCreateInfo& CreateInfo, IBufferSuballocator** ppBufferSuballocator)
+void CreateBufferSuballocator(IRenderDevice*                pDevice,
+                              BufferSuballocatorCreateInfo& CreateInfo,
+                              IBufferSuballocator**         ppBufferSuballocator)
 {
     try
     {
-        auto* pAllocator = MakeNewRCObj<BufferSuballocatorImpl>()(CreateInfo);
+        auto* pAllocator = MakeNewRCObj<BufferSuballocatorImpl>()(pDevice, CreateInfo);
         pAllocator->QueryInterface(IID_BufferSuballocator, reinterpret_cast<IObject**>(ppBufferSuballocator));
     }
     catch (...)

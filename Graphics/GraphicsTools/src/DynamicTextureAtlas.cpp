@@ -113,6 +113,7 @@ public:
     using TBase = ObjectBase<IDynamicTextureAtlas>;
 
     DynamicTextureAtlasImpl(IReferenceCounters*            pRefCounters,
+                            IRenderDevice*                 pDevice,
                             DynamicTextureAtlasCreateInfo& CreateInfo) :
         // clang-format off
         TBase             {pRefCounters},
@@ -160,11 +161,11 @@ public:
             m_Slices.emplace_back(new SliceManager{m_Desc.Width / m_Granularity, m_Desc.Height / m_Granularity});
         }
 
-        if (CreateInfo.pDevice == nullptr)
+        if (pDevice == nullptr)
             m_Desc.ArraySize = 0;
         if (m_Desc.ArraySize > 0)
         {
-            CreateInfo.pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
+            pDevice->CreateTexture(m_Desc, nullptr, &m_pTexture);
             if (!m_pTexture)
                 LOG_ERROR_AND_THROW("Failed to create texture atlas texture");
         }
@@ -394,11 +395,13 @@ float4 TextureAtlasSuballocationImpl::GetUVScaleBias() const
 }
 
 
-void CreateDynamicTextureAtlas(DynamicTextureAtlasCreateInfo& CreateInfo, IDynamicTextureAtlas** ppAtlas)
+void CreateDynamicTextureAtlas(IRenderDevice*                 pDevice,
+                               DynamicTextureAtlasCreateInfo& CreateInfo,
+                               IDynamicTextureAtlas**         ppAtlas)
 {
     try
     {
-        auto* pAllocator = MakeNewRCObj<DynamicTextureAtlasImpl>()(CreateInfo);
+        auto* pAllocator = MakeNewRCObj<DynamicTextureAtlasImpl>()(pDevice, CreateInfo);
         pAllocator->QueryInterface(IID_DynamicTextureAtlas, reinterpret_cast<IObject**>(ppAtlas));
     }
     catch (...)
