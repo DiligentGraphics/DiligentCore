@@ -106,7 +106,7 @@ struct IDynamicTextureAtlas : public IObject
 
 
     /// Returns the texture atlas description
-    const TextureDesc& GetAtlasDesc() const;
+    virtual const TextureDesc& GetAtlasDesc() const = 0;
 
     /// Returns internal texture array version. The version is incremented every time
     /// the array is expanded.

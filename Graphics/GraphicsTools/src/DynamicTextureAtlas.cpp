@@ -304,7 +304,7 @@ public:
         pSliceMgr->Free(std::move(Subregion));
     }
 
-    virtual const TextureDesc& GetAtlasDesc() const
+    virtual const TextureDesc& GetAtlasDesc() const override final
     {
         return m_Desc;
     }
