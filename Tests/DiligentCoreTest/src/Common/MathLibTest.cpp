@@ -1962,4 +1962,68 @@ TEST(Common_AdvancedMath, TransformBoundBox)
     }
 }
 
+TEST(Common_AdvancedMath, CheckBox2DBox2DOverlap)
+{
+    // clang-format off
+    // Self-intersection
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<true> (uint2(0, 0), uint2(1, 1), uint2(0, 0), uint2(1, 1)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<false>(uint2(0, 0), uint2(1, 1), uint2(0, 0), uint2(1, 1)));
+
+    // One box fully inside another
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<true> (uint2(0, 0), uint2(10, 10), uint2(1, 1), uint2( 2,  2)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<true> (uint2(1, 1), uint2( 2,  2), uint2(0, 0), uint2(10, 10)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<false>(uint2(0, 0), uint2(10, 10), uint2(1, 1), uint2( 2,  2)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<false>(uint2(1, 1), uint2( 2, 2 ), uint2(0, 0), uint2(10, 10)));
+
+    // Touching corners
+    EXPECT_TRUE (CheckBox2DBox2DOverlap<true> (int2(0, 0), int2(10, 10), int2(-1, -1), int2( 0,  0)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(int2(0, 0), int2(10, 10), int2(-1, -1), int2( 0,  0)));
+    EXPECT_TRUE (CheckBox2DBox2DOverlap<true> (int2(0, 0), int2(10, 10), int2(-1, 10), int2( 0, 11)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(int2(0, 0), int2(10, 10), int2(-1, 10), int2( 0, 11)));
+    EXPECT_TRUE (CheckBox2DBox2DOverlap<true> (int2(0, 0), int2(10, 10), int2(10, 10), int2(11, 11)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(int2(0, 0), int2(10, 10), int2(10, 10), int2(11, 11)));
+    EXPECT_TRUE (CheckBox2DBox2DOverlap<true> (int2(0, 0), int2(10, 10), int2(10, -1), int2(11,  0)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(int2(0, 0), int2(10, 10), int2(10, -1), int2(11,  0)));
+
+    // Intersections
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2(-1, -1), float2( 1,  1)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2(-1, -1), float2( 1,  1)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2(-1,  9), float2( 1, 11)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2(-1,  9), float2( 1, 11)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2( 9,  9), float2(11, 11)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2( 9,  9), float2(11, 11)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2( 9, -1), float2(11,  1)));
+    EXPECT_TRUE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2( 9, -1), float2(11,  1)));
+
+    // No intersections
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2(-2, -2), float2(-1, -1)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2(-2, -2), float2(-1, -1)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2(-2,  5), float2(-1,  6)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2(-2,  5), float2(-1,  6)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2(-2, 11), float2(-1, 12)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2(-2, 11), float2(-1, 12)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2( 5, 11), float2( 6, 12)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2( 5, 11), float2( 6, 12)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2(11, 11), float2(12, 12)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2(11, 11), float2(12, 12)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2(11,  5), float2(12,  6)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2(11,  5), float2(12,  6)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2(11, -2), float2(12, -1)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2(11, -2), float2(12, -1)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<true> (float2(0, 0), float2(10, 10), float2( 5, -2), float2( 6, -1)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(float2(0, 0), float2(10, 10), float2( 5, -2), float2( 6, -1)));
+
+    // Touching boundaries
+    EXPECT_TRUE (CheckBox2DBox2DOverlap<true> (double2(0, 0), double2(10, 10), double2(-2,  5), double2( 0,  6)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(double2(0, 0), double2(10, 10), double2(-2,  5), double2( 0,  6)));
+    EXPECT_TRUE (CheckBox2DBox2DOverlap<true> (double2(0, 0), double2(10, 10), double2( 5, 10), double2( 6, 12)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(double2(0, 0), double2(10, 10), double2( 5, 10), double2( 6, 12)));
+    EXPECT_TRUE (CheckBox2DBox2DOverlap<true> (double2(0, 0), double2(10, 10), double2(10,  5), double2(12,  6)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(double2(0, 0), double2(10, 10), double2(10,  5), double2(12,  6)));
+    EXPECT_TRUE (CheckBox2DBox2DOverlap<true> (double2(0, 0), double2(10, 10), double2( 5, -2), double2( 6,  0)));
+    EXPECT_FALSE(CheckBox2DBox2DOverlap<false>(double2(0, 0), double2(10, 10), double2( 5, -2), double2( 6,  0)));
+
+    // clang-format on
+}
+
 } // namespace

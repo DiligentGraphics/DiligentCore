@@ -935,6 +935,38 @@ void RasterizeTriangle(Vector2<T> V0,
     }
 }
 
+
+/// Checks if two 2D-boxes overlap.
+
+/// \tparam [in] AllowTouch - Whether to consider two boxes overlapping if
+///                           they only touch at their boundaries or corners.
+/// \tparam [in] T          - Component type.
+///
+/// \param [in]  Box0Min - Min corner of the first box.
+/// \param [in]  Box0Max - Max corner of the first box.
+/// \param [in]  Box1Min - Min corner of the second box.
+/// \param [in]  Box1Max - Max corner of the second box.
+///
+/// \return     true if the bounding boxes overlap, and false otherwise.
+template <bool AllowTouch, typename T>
+bool CheckBox2DBox2DOverlap(const Vector2<T>& Box0Min,
+                            const Vector2<T>& Box0Max,
+                            const Vector2<T>& Box1Min,
+                            const Vector2<T>& Box1Max)
+{
+    VERIFY_EXPR(Box0Max.x >= Box0Min.x && Box0Max.y >= Box0Min.y &&
+                Box1Max.x >= Box1Min.x && Box1Max.y >= Box1Min.y);
+    if (AllowTouch)
+    {
+        return !(Box0Min.x > Box1Max.x || Box1Min.x > Box0Max.x || Box0Min.y > Box1Max.y || Box1Min.y > Box0Max.y);
+    }
+    else
+    {
+        return !(Box0Min.x >= Box1Max.x || Box1Min.x >= Box0Max.x || Box0Min.y >= Box1Max.y || Box1Min.y >= Box0Max.y);
+    }
+}
+
+
 } // namespace Diligent
 
 namespace std
