@@ -48,7 +48,7 @@ namespace Diligent
 
 void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false);
 void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false);
-void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
+void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecursion, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 void CopyRayTracingShaderGroups(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
                                 const RayTracingPipelineStateCreateInfo&                                CreateInfo,
@@ -128,7 +128,7 @@ public:
                       bool                                     bIsDeviceInternal = false) :
         PipelineStateBase{pRefCounters, pDevice, RayTracingPipelineCI.PSODesc, bIsDeviceInternal}
     {
-        ValidateRayTracingPipelineCreateInfo(pDevice, RayTracingPipelineCI);
+        ValidateRayTracingPipelineCreateInfo(pDevice, pDevice->GetProperties().MaxRayTracingRecursionDepth, RayTracingPipelineCI);
     }
 
 

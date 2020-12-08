@@ -165,6 +165,12 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 {
     static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
 
+    // set device properties
+    {
+        static_assert(sizeof(DeviceProperties) == sizeof(Uint32) * 1, "Please set new properties below");
+        m_DeviceProperties.MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+    }
+
     try
     {
         m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D12;

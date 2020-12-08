@@ -67,6 +67,7 @@ VkBorderColor        BorderColorToVkBorderColor(const Float32 BorderColor[]);
 
 VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, VkPipelineStageFlags ShaderStages);
 VkAccessFlags        ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
+VkAccessFlags        AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
 VkImageLayout        ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsideRenderPass = false);
 
 RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags);

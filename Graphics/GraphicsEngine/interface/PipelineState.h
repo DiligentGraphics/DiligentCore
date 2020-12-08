@@ -310,7 +310,9 @@ struct RayTracingPipelineDesc
     Uint16  ShaderRecordSize   DEFAULT_INITIALIZER(0);
 
     /// Number of recursive calls of TraceRay() in HLSL or traceRay() in GLSL.
-    Uint8   MaxRecursionDepth  DEFAULT_INITIALIZER(0); // must be 0..31 (check current device limits)
+    /// Zero means no tracing of rays at all, only ray-gen shader will be executed.
+    /// See DeviceProperties::MaxRayTracingRecursionDepth.
+    Uint8   MaxRecursionDepth  DEFAULT_INITIALIZER(0);
 };
 typedef struct RayTracingPipelineDesc RayTracingPipelineDesc;
 

@@ -276,6 +276,9 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
     VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;
+    
+    /// Gets the device properties, see Diligent::DeviceProperties for details
+    VIRTUAL const DeviceProperties REF METHOD(GetDeviceProperties)(THIS) CONST PURE;
 
 
     /// Returns the basic texture format information.

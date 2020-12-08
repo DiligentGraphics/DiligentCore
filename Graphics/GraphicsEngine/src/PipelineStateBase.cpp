@@ -248,7 +248,7 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
     VALIDATE_SHADER_TYPE(CreateInfo.pCS, SHADER_TYPE_COMPUTE, "compute");
 }
 
-void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
+void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecursion, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
@@ -258,6 +258,11 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, const RayTraci
     {
         if ((CreateInfo.pShaderRecordName != nullptr) != (CreateInfo.RayTracingPipeline.ShaderRecordSize > 0))
             LOG_PSO_ERROR_AND_THROW("pShaderRecordName must not be null if RayTracingPipeline.ShaderRecordSize is not zero");
+    }
+
+    if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > MaxRecursion)
+    {
+        LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth must not exceed the ", MaxRecursion);
     }
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)

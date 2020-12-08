@@ -1644,6 +1644,19 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const Tra
 
     if (!VerifyTraceRaysAttribs(Attribs))
         return false;
+
+    if (m_pPipelineState.RawPtr() != Attribs.pSBT->GetDesc().pPSO)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline ", m_pPipelineState->GetDesc().Name,
+                          "doesn't match the pipeline ", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, " that was used in ShaderBindingTable");
+        return false;
+    }
+
+    if ((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) > m_pDevice->GetProperties().MaxRayGenThreads)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: the dimension must not exceed the ", m_pDevice->GetProperties().MaxRayGenThreads, " threads");
+        return false;
+    }
 #endif
 
     return true;

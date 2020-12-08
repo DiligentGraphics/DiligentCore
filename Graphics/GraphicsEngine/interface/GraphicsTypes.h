@@ -1855,6 +1855,15 @@ struct DeviceCaps
 typedef struct DeviceCaps DeviceCaps;
 
 
+/// Device properties
+struct DeviceProperties
+{
+    /// Maximum supported value for RayTracingPipelineDesc::MaxRecursionDepth.
+    Uint32  MaxRayTracingRecursionDepth;
+};
+typedef struct DeviceProperties DeviceProperties;
+
+
 /// Engine creation attibutes
 struct EngineCreateInfo
 {

@@ -2514,8 +2514,8 @@ void DeviceContextVkImpl::TransitionBLASState(BottomLevelASVkImpl& BLAS,
     if ((OldState & NewState) != NewState || AfterWrite)
     {
         EnsureVkCmdBuffer();
-        auto OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);
-        auto NewAccessFlags = ResourceStateFlagsToVkAccessFlags(NewState);
+        auto OldAccessFlags = AccelStructStateFlagsToVkAccessFlags(OldState);
+        auto NewAccessFlags = AccelStructStateFlagsToVkAccessFlags(NewState);
         auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, m_CommandBuffer.GetEnabledShaderStages());
         auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, m_CommandBuffer.GetEnabledShaderStages());
         m_CommandBuffer.ASMemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
@@ -2560,8 +2560,8 @@ void DeviceContextVkImpl::TransitionTLASState(TopLevelASVkImpl& TLAS,
     if ((OldState & NewState) != NewState || AfterWrite)
     {
         EnsureVkCmdBuffer();
-        auto OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);
-        auto NewAccessFlags = ResourceStateFlagsToVkAccessFlags(NewState);
+        auto OldAccessFlags = AccelStructStateFlagsToVkAccessFlags(OldState);
+        auto NewAccessFlags = AccelStructStateFlagsToVkAccessFlags(NewState);
         auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, m_CommandBuffer.GetEnabledShaderStages());
         auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, m_CommandBuffer.GetEnabledShaderStages());
         m_CommandBuffer.ASMemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
@@ -2792,7 +2792,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             vkTris.maxVertex                = SrcTris.VertexCount;
             vkTris.vertexData.deviceAddress = pVB->GetVkDeviceAddress() + SrcTris.VertexOffset;
 
-            TransitionOrVerifyBufferState(*pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
+            TransitionOrVerifyBufferState(*pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
 
             if (SrcTris.pIndexBuffer)
             {
@@ -2802,7 +2802,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
                 vkTris.indexType               = TypeToVkIndexType(TriDesc.IndexType);
                 vkTris.indexData.deviceAddress = pIB->GetVkDeviceAddress() + SrcTris.IndexOffset;
 
-                TransitionOrVerifyBufferState(*pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
+                TransitionOrVerifyBufferState(*pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
             }
             else
             {
@@ -2815,7 +2815,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
                 auto* const pTB                    = ValidatedCast<BufferVkImpl>(SrcTris.pTransformBuffer);
                 vkTris.transformData.deviceAddress = pTB->GetVkDeviceAddress() + SrcTris.TransformBufferOffset;
 
-                TransitionOrVerifyBufferState(*pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
+                TransitionOrVerifyBufferState(*pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
             }
             else
             {
@@ -2863,7 +2863,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
 
             VERIFY(vkAABBs.data.deviceAddress % 8 == 0, "AABB start address is not properly aligned");
 
-            TransitionOrVerifyBufferState(*pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
+            TransitionOrVerifyBufferState(*pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
 
             off.firstVertex     = 0;
             off.transformOffset = 0;
@@ -2956,7 +2956,7 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
         UpdateBufferRegion(pInstancesVk, Attribs.InstanceBufferOffset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset, Attribs.InstanceBufferTransitionMode);
     }
-    TransitionOrVerifyBufferState(*pInstancesVk, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
+    TransitionOrVerifyBufferState(*pInstancesVk, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
 
     VkAccelerationStructureBuildGeometryInfoKHR     vkASBuildInfo = {};
     VkAccelerationStructureBuildRangeInfoKHR        vkRange       = {};
@@ -3128,10 +3128,10 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
 
     pSBTVk->GetData(pBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
 
-    auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
+    auto* pSBTBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
 
     const char* OpName = "Trace rays (DeviceContextVkImpl::TraceRays)";
-    TransitionOrVerifyBufferState(*pBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
+    TransitionOrVerifyBufferState(*pSBTBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
 
     // buffer ranges are not intersected, so we don't need to add barriers between them
     if (RayGenShaderRecord.pData)
@@ -3146,13 +3146,13 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
     if (CallableShaderTable.pData)
         UpdateBuffer(pBuffer, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
-    TransitionOrVerifyBufferState(*pBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
+    TransitionOrVerifyBufferState(*pSBTBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
 
     // clang-format off
-    VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {pBufferVk->GetVkDeviceAddress() + RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
-    VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {pBufferVk->GetVkDeviceAddress() + MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
-    VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {pBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
-    VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {pBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
+    VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {pSBTBufferVk->GetVkDeviceAddress() + RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
+    VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {pSBTBufferVk->GetVkDeviceAddress() + MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
+    VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {pSBTBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
+    VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {pSBTBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
     // clang-format on
 
     PrepareForRayTracing();

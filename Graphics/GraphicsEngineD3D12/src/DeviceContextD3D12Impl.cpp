@@ -2617,8 +2617,6 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
     if (!TDeviceContextBase::TraceRays(Attribs, 0))
         return;
 
-    VERIFY_EXPR((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) <= D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS);
-
     auto&    CmdCtx    = GetCmdContext().AsGraphicsContext4();
     auto*    pSBTD3D12 = ValidatedCast<ShaderBindingTableD3D12Impl>(Attribs.pSBT);
     IBuffer* pBuffer   = nullptr;

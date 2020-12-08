@@ -620,6 +620,7 @@ TEST_P(RT1, TriangleClosestHitShader)
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
+    ShaderCI.HLSLVersion    = {6, 3};
     ShaderCI.EntryPoint     = "main";
 
     // Create ray generation shader.
@@ -660,7 +661,7 @@ TEST_P(RT1, TriangleClosestHitShader)
     PSOCreateInfo.pTriangleHitShaders    = TriangleHitShaders;
     PSOCreateInfo.TriangleHitShaderCount = _countof(TriangleHitShaders);
 
-    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 0;
+    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 1;
     PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
     RefCntAutoPtr<IPipelineState> pRayTracingPSO;
@@ -802,6 +803,7 @@ TEST_P(RT2, TriangleAnyHitShader)
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
+    ShaderCI.HLSLVersion    = {6, 3};
     ShaderCI.EntryPoint     = "main";
 
     // Create ray generation shader.
@@ -852,7 +854,7 @@ TEST_P(RT2, TriangleAnyHitShader)
     PSOCreateInfo.pTriangleHitShaders    = TriangleHitShaders;
     PSOCreateInfo.TriangleHitShaderCount = _countof(TriangleHitShaders);
 
-    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 0;
+    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 1;
     PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
     RefCntAutoPtr<IPipelineState> pRayTracingPSO;
@@ -994,6 +996,7 @@ TEST_P(RT3, ProceduralIntersection)
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
+    ShaderCI.HLSLVersion    = {6, 3};
     ShaderCI.EntryPoint     = "main";
 
     // Create ray generation shader.
@@ -1044,7 +1047,7 @@ TEST_P(RT3, ProceduralIntersection)
     PSOCreateInfo.pProceduralHitShaders    = ProceduralHitShaders;
     PSOCreateInfo.ProceduralHitShaderCount = _countof(ProceduralHitShaders);
 
-    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 0;
+    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 1;
     PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
     RefCntAutoPtr<IPipelineState> pRayTracingPSO;
@@ -1184,6 +1187,7 @@ TEST_P(RT4, MultiGeometry)
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
+    ShaderCI.HLSLVersion    = {6, 3};
     ShaderCI.EntryPoint     = "main";
 
     // Create ray generation shader.
@@ -1230,7 +1234,7 @@ TEST_P(RT4, MultiGeometry)
     PSOCreateInfo.pTriangleHitShaders    = TriangleHitShaders;
     PSOCreateInfo.TriangleHitShaderCount = _countof(TriangleHitShaders);
 
-    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth = 0;
+    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth = 1;
 
     PSOCreateInfo.RayTracingPipeline.ShaderRecordSize = TestingConstants::MultiGeometry::ShaderRecordSize;
     PSOCreateInfo.pShaderRecordName                   = "g_LocalRoot";
@@ -1416,6 +1420,7 @@ TEST(RayTracingTest, ResourceBinding)
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler             = SHADER_COMPILER_DXC;
+    ShaderCI.HLSLVersion                = {6, 3};
     ShaderCI.EntryPoint                 = "main";
 
     // Create ray generation shader.
@@ -1462,7 +1467,7 @@ TEST(RayTracingTest, ResourceBinding)
     PSOCreateInfo.pTriangleHitShaders    = TriangleHitShaders;
     PSOCreateInfo.TriangleHitShaderCount = _countof(TriangleHitShaders);
 
-    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth = 2;
+    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth = 1;
 
     SamplerDesc SamLinearWrapDesc{
         FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,

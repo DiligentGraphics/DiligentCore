@@ -165,12 +165,20 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupHandleSize,
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxShaderGroupStride,
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupBaseAlignment,
-        m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount
+        m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount,
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayRecursionDepth + 1, // for compatibility with D3D12
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayDispatchInvocationCount
     }
 // clang-format on
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
     static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+
+    // set device properties
+    {
+        static_assert(sizeof(DeviceProperties) == sizeof(Uint32) * 1, "Please set new properties below");
+        m_DeviceProperties.MaxRayTracingRecursionDepth = m_Properties.MaxRayTracingRecursionDepth;
+    }
 
     m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_VULKAN;
     m_DeviceCaps.MajorVersion = 1;

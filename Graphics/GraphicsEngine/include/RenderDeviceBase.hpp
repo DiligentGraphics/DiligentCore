@@ -273,7 +273,8 @@ public:
         m_FramebufferAllocator  {RawMemAllocator, ObjectSizes.FramebufferObjSize, 16  },
         m_BLASAllocator         {RawMemAllocator, ObjectSizes.BLASObjSize,        16  },
         m_TLASAllocator         {RawMemAllocator, ObjectSizes.TLASObjSize,        16  },
-        m_SBTAllocator          {RawMemAllocator, ObjectSizes.SBTObjSize,         16  }
+        m_SBTAllocator          {RawMemAllocator, ObjectSizes.SBTObjSize,         16  },
+        m_DeviceProperties      {}
     // clang-format on
     {
         // Initialize texture format info
@@ -347,6 +348,12 @@ public:
         return m_DeviceCaps;
     }
 
+    /// Implementation of IRenderDevice::GetDeviceProperties().
+    virtual const DeviceProperties& DILIGENT_CALL_TYPE GetDeviceProperties() const override final
+    {
+        return m_DeviceProperties;
+    }
+
     /// Implementation of IRenderDevice::GetTextureFormatInfo().
     virtual const TextureFormatInfo& DILIGENT_CALL_TYPE GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) override final
     {
@@ -418,7 +425,8 @@ protected:
 
     RefCntAutoPtr<IEngineFactory> m_pEngineFactory;
 
-    DeviceCaps m_DeviceCaps;
+    DeviceCaps       m_DeviceCaps;
+    DeviceProperties m_DeviceProperties;
 
     // All state object registries hold raw pointers.
     // This is safe because every object unregisters itself

@@ -189,10 +189,12 @@ public:
 
     struct Properties
     {
-        const Uint32 ShaderGroupHandleSize    = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        const Uint32 MaxShaderRecordStride    = D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE;
-        const Uint32 ShaderGroupBaseAlignment = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
-        const Uint32 MaxDrawMeshTasksCount    = 64000; // from specs: https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
+        const Uint32 ShaderGroupHandleSize       = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        const Uint32 MaxShaderRecordStride       = D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE;
+        const Uint32 ShaderGroupBaseAlignment    = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+        const Uint32 MaxDrawMeshTasksCount       = 64000; // from specs: https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
+        const Uint32 MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+        const Uint32 MaxRayGenThreads            = D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS;
 
         ShaderVersion MaxShaderVersion;
     };

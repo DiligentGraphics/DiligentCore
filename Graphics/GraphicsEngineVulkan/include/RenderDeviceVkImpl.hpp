@@ -215,6 +215,8 @@ public:
         const Uint32 MaxShaderRecordStride;
         const Uint32 ShaderGroupBaseAlignment;
         const Uint32 MaxDrawMeshTasksCount;
+        const Uint32 MaxRayTracingRecursionDepth;
+        const Uint32 MaxRayGenThreads;
     };
 
     const Properties& GetProperties() const

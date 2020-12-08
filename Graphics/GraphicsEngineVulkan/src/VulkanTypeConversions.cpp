@@ -1239,9 +1239,9 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_ACCESS_TRANSFER_READ_BIT;
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         case RESOURCE_STATE_PRESENT:           return 0;
-        case RESOURCE_STATE_BUILD_AS_READ:     return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-        case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_SHADER_READ_BIT; // for TLAS & SBT
+        case RESOURCE_STATE_BUILD_AS_READ:     return VK_ACCESS_SHADER_READ_BIT; // for vertex, index, transform, AABB, instance buffers
+        case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; // for scratch buffer
+        case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_SHADER_READ_BIT; // for SBT
             // clang-format on
 
         default:
@@ -1290,6 +1290,30 @@ VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
     return AccessFlags;
 }
 
+VkAccessFlags AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
+{
+    VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
+
+    VkAccessFlags AccessFlags = 0;
+    Uint32        Bits        = StateFlags;
+    while (Bits != 0)
+    {
+        auto Bit = static_cast<RESOURCE_STATE>(1 << PlatformMisc::GetLSB(Bits));
+        switch (Bit)
+        {
+            // clang-format off
+            case RESOURCE_STATE_BUILD_AS_READ:  AccessFlags |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR; break;
+            case RESOURCE_STATE_BUILD_AS_WRITE: AccessFlags |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; break;
+            case RESOURCE_STATE_RAY_TRACING:    AccessFlags |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR; break;
+            default:                            UNEXPECTED("Unexpected resource state flag");
+                // clang-format on
+        }
+        Bits &= ~Bit;
+    }
+    return AccessFlags;
+}
+
 static RESOURCE_STATE VkAccessFlagToResourceStates(VkAccessFlagBits AccessFlagBit)
 {
     VERIFY((AccessFlagBit & (AccessFlagBit - 1)) == 0, "Single access flag bit is expected");
@@ -1302,7 +1326,7 @@ static RESOURCE_STATE VkAccessFlagToResourceStates(VkAccessFlagBits AccessFlagBi
         case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:                 return RESOURCE_STATE_VERTEX_BUFFER;
         case VK_ACCESS_UNIFORM_READ_BIT:                          return RESOURCE_STATE_CONSTANT_BUFFER;
         case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_INPUT_ATTACHMENT;
-        case VK_ACCESS_SHADER_READ_BIT:                           return RESOURCE_STATE_SHADER_RESOURCE;
+        case VK_ACCESS_SHADER_READ_BIT:                           return RESOURCE_STATE_SHADER_RESOURCE; // or RESOURCE_STATE_BUILD_AS_READ
         case VK_ACCESS_SHADER_WRITE_BIT:                          return RESOURCE_STATE_UNORDERED_ACCESS;
         case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_RENDER_TARGET;
         case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:                return RESOURCE_STATE_RENDER_TARGET;
@@ -1310,6 +1334,7 @@ static RESOURCE_STATE VkAccessFlagToResourceStates(VkAccessFlagBits AccessFlagBi
         case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:        return RESOURCE_STATE_DEPTH_WRITE;
         case VK_ACCESS_TRANSFER_READ_BIT:                         return RESOURCE_STATE_COPY_SOURCE;
         case VK_ACCESS_TRANSFER_WRITE_BIT:                        return RESOURCE_STATE_COPY_DEST;
+        case VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR:      return RESOURCE_STATE_BUILD_AS_WRITE;
         case VK_ACCESS_HOST_READ_BIT:                             return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_HOST_WRITE_BIT:                            return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_MEMORY_READ_BIT:                           return RESOURCE_STATE_UNKNOWN;

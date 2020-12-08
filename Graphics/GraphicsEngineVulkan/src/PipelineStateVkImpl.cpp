@@ -346,12 +346,7 @@ static void CreateRayTracingPipeline(RenderDeviceVkImpl*                        
                                      const RayTracingPipelineDesc&                            RayTracingPipeline,
                                      VulkanUtilities::PipelineWrapper&                        Pipeline)
 {
-    const auto& LogicalDevice  = pDeviceVk->GetLogicalDevice();
-    const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
-    const auto& RTLimits       = PhysicalDevice.GetExtProperties().RayTracingPipeline;
-
-    DEV_CHECK_ERR(RayTracingPipeline.MaxRecursionDepth <= RTLimits.maxRayRecursionDepth,
-                  "RayTracingPipeline.MaxRecursionDepth must not exceed ", RTLimits.maxRayRecursionDepth);
+    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     VkRayTracingPipelineCreateInfoKHR PipelineCI = {};
 
@@ -365,7 +360,7 @@ static void CreateRayTracingPipeline(RenderDeviceVkImpl*                        
     PipelineCI.pStages                      = Stages.data();
     PipelineCI.groupCount                   = static_cast<Uint32>(ShaderGroups.size());
     PipelineCI.pGroups                      = ShaderGroups.data();
-    PipelineCI.maxPipelineRayRecursionDepth = RayTracingPipeline.MaxRecursionDepth;
+    PipelineCI.maxPipelineRayRecursionDepth = std::max(1u, Uint32{RayTracingPipeline.MaxRecursionDepth}) - 1; // for compatibility with D3D12, zero means only one ray tracing depth.
     PipelineCI.pLibraryInfo                 = nullptr;
     PipelineCI.pLibraryInterface            = nullptr;
     PipelineCI.pDynamicState                = nullptr;
