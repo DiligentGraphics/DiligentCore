@@ -69,6 +69,18 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureAtlasSuballocation, TBase)
 
+    virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
+    {
+        RefCntAutoPtr<DynamicTextureAtlasImpl> pAtlas;
+        return TBase::Release(
+            [&]() //
+            {
+                // We must keep the atlas alive while the object is being destroyed because
+                // the atlas keeps the object allocator.
+                pAtlas = m_pParentAtlas;
+            });
+    }
+
     virtual uint2 GetOrigin() const override final;
 
     virtual Uint32 GetSlice() const override final

@@ -42,6 +42,33 @@ using namespace Diligent::Testing;
 namespace
 {
 
+TEST(BufferSuballocatorTest, Create)
+{
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto* const pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
+
+    BufferSuballocatorCreateInfo CI;
+    CI.pDevice            = pDevice;
+    CI.Desc.Name          = "Buffer Suballocator Test";
+    CI.Desc.BindFlags     = BIND_VERTEX_BUFFER;
+    CI.Desc.uiSizeInBytes = 1024;
+
+    RefCntAutoPtr<IBufferSuballocator> pAllocator;
+    CreateBufferSuballocator(CI, &pAllocator);
+
+    auto* pBuffer = pAllocator->GetBuffer(pDevice, pContext);
+    EXPECT_NE(pBuffer, nullptr);
+
+    RefCntAutoPtr<IBufferSuballocation> pAlloc;
+    pAllocator->Allocate(256, 16, &pAlloc);
+    // Release allocator first
+    pAllocator.Release();
+    pAlloc.Release();
+}
+
 TEST(BufferSuballocatorTest, Allocate)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();

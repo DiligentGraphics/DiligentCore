@@ -39,7 +39,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-TEST(DynamicTextureAtlas, CreateEmpty)
+TEST(DynamicTextureAtlas, Create)
 {
     auto* const pEnv     = TestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
@@ -81,6 +81,23 @@ TEST(DynamicTextureAtlas, CreateEmpty)
 
         auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+    }
+
+    CI.pDevice = pDevice;
+    {
+        RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
+        CreateDynamicTextureAtlas(CI, &pAtlas);
+
+        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        EXPECT_NE(pTexture, nullptr);
+
+        RefCntAutoPtr<ITextureAtlasSuballocation> pSuballoc;
+        pAtlas->Allocate(128, 128, &pSuballoc);
+        EXPECT_TRUE(pSuballoc);
+
+        // Release atlas first
+        pAtlas.Release();
+        pSuballoc.Release();
     }
 }
 

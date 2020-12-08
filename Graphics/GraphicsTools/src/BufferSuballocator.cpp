@@ -68,6 +68,18 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferSuballocation, TBase)
 
+    virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
+    {
+        RefCntAutoPtr<BufferSuballocatorImpl> pParent;
+        return TBase::Release(
+            [&]() //
+            {
+                // We must keep parent alive while the object is being destroyed because
+                // it keeps the object allocator.
+                pParent = m_pParentAllocator;
+            });
+    }
+
     virtual Uint32 GetOffset() const override final
     {
         return m_Offset;
