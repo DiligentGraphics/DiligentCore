@@ -154,8 +154,8 @@ struct DynamicTextureAtlasCreateInfo
 ///                         when GetTexture() is called.
 /// \param[in] CreateInfo - Atlas create info, see Diligent::DynamicTextureAtlasCreateInfo.
 /// \param[in] ppAtlas    - Memory location where pointer to the texture atlas object will be written.
-void CreateDynamicTextureAtlas(IRenderDevice*                 pDevice,
-                               DynamicTextureAtlasCreateInfo& CreateInfo,
-                               IDynamicTextureAtlas**         ppAtlas);
+void CreateDynamicTextureAtlas(IRenderDevice*                       pDevice,
+                               const DynamicTextureAtlasCreateInfo& CreateInfo,
+                               IDynamicTextureAtlas**               ppAtlas);
 
 } // namespace Diligent

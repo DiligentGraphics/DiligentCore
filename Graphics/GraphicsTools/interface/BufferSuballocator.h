@@ -131,8 +131,8 @@ struct BufferSuballocatorCreateInfo
 ///                                    buffer will be created when GetBuffer() is called.
 /// \param[in]  CreateInfo           - Suballocator create info, see Diligent::BufferSuballocatorCreateInfo.
 /// \param[in]  ppBufferSuballocator - Memory location where pointer to the buffer suballocator will be stored.
-void CreateBufferSuballocator(IRenderDevice*                pDevice,
-                              BufferSuballocatorCreateInfo& CreateInfo,
-                              IBufferSuballocator**         ppBufferSuballocator);
+void CreateBufferSuballocator(IRenderDevice*                      pDevice,
+                              const BufferSuballocatorCreateInfo& CreateInfo,
+                              IBufferSuballocator**               ppBufferSuballocator);
 
 } // namespace Diligent

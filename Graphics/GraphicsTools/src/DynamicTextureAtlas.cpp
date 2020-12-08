@@ -112,9 +112,9 @@ class DynamicTextureAtlasImpl final : public ObjectBase<IDynamicTextureAtlas>
 public:
     using TBase = ObjectBase<IDynamicTextureAtlas>;
 
-    DynamicTextureAtlasImpl(IReferenceCounters*            pRefCounters,
-                            IRenderDevice*                 pDevice,
-                            DynamicTextureAtlasCreateInfo& CreateInfo) :
+    DynamicTextureAtlasImpl(IReferenceCounters*                  pRefCounters,
+                            IRenderDevice*                       pDevice,
+                            const DynamicTextureAtlasCreateInfo& CreateInfo) :
         // clang-format off
         TBase             {pRefCounters},
         m_Desc            {CreateInfo.Desc},
@@ -395,9 +395,9 @@ float4 TextureAtlasSuballocationImpl::GetUVScaleBias() const
 }
 
 
-void CreateDynamicTextureAtlas(IRenderDevice*                 pDevice,
-                               DynamicTextureAtlasCreateInfo& CreateInfo,
-                               IDynamicTextureAtlas**         ppAtlas)
+void CreateDynamicTextureAtlas(IRenderDevice*                       pDevice,
+                               const DynamicTextureAtlasCreateInfo& CreateInfo,
+                               IDynamicTextureAtlas**               ppAtlas)
 {
     try
     {

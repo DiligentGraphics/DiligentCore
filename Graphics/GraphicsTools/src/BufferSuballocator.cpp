@@ -108,9 +108,9 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferSuballocator, TBase)
 
-    BufferSuballocatorImpl(IReferenceCounters*           pRefCounters,
-                           IRenderDevice*                pDevice,
-                           BufferSuballocatorCreateInfo& CreateInfo) :
+    BufferSuballocatorImpl(IReferenceCounters*                 pRefCounters,
+                           IRenderDevice*                      pDevice,
+                           const BufferSuballocatorCreateInfo& CreateInfo) :
         // clang-format off
         TBase                    {pRefCounters},
         m_Mgr                    {CreateInfo.Desc.uiSizeInBytes, DefaultRawMemoryAllocator::GetAllocator()},
@@ -227,9 +227,9 @@ IBufferSuballocator* BufferSuballocationImpl::GetAllocator()
 }
 
 
-void CreateBufferSuballocator(IRenderDevice*                pDevice,
-                              BufferSuballocatorCreateInfo& CreateInfo,
-                              IBufferSuballocator**         ppBufferSuballocator)
+void CreateBufferSuballocator(IRenderDevice*                      pDevice,
+                              const BufferSuballocatorCreateInfo& CreateInfo,
+                              IBufferSuballocator**               ppBufferSuballocator)
 {
     try
     {
