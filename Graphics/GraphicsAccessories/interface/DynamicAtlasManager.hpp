@@ -31,8 +31,8 @@
 /// \file
 /// Implementes 2D atlas manager
 
-#include <set>
-#include <unordered_set>
+#include <map>
+#include <unordered_map>
 
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Common/interface/HashUtils.hpp"
@@ -149,60 +149,80 @@ public:
 #undef CMP
 
 private:
-    void InitRegion(const Region R, const Region Val);
-    void AddFreeRegion(Region R);
-    void RemoveFreeRegion(const Region R);
-
-    Region& GetRegion(Uint32 x, Uint32 y)
-    {
-        VERIFY_EXPR(x < m_Width && y < m_Height);
-        return m_RegionMap[x + y * m_Width];
-    }
-    const Region& GetRegion(Uint32 x, Uint32 y) const
-    {
-        VERIFY_EXPR(x < m_Width && y < m_Height);
-        return m_RegionMap[x + y * m_Width];
-    }
-
 #if DILIGENT_DEBUG
     void DbgVerifyRegion(const Region& R) const;
     void DbgVerifyConsistency() const;
+    struct Node;
+    void DbgRecursiveVerifyConsistency(const Node& N, Uint32& Area) const;
 #endif
 
     const Uint32 m_Width;
     const Uint32 m_Height;
 
-    std::set<Region, WidthFirstCompare>  m_FreeRegionsByWidth;
-    std::set<Region, HeightFirstCompare> m_FreeRegionsByHeight;
-
-    std::unique_ptr<Region[]> m_RegionMap;
-
-#if DILIGENT_DEBUG
-    struct RegionInfo
+    struct Node
     {
-        const Region R;
-        const bool   IsAllocated;
+        Region R;
+        bool   IsAllocated = false;
+        Node*  Parent      = nullptr;
 
-        RegionInfo(const Region& _R, bool _IsAllocated) :
-            R{_R},
-            IsAllocated{_IsAllocated}
-        {}
-
-        bool operator==(const RegionInfo& rhs) const
+        void Split(const std::initializer_list<Region>& Regions);
+        bool CanMergeChildren() const;
+        void MergeChildren();
+        bool HasChildren() const
         {
-            return R == rhs.R && IsAllocated == rhs.IsAllocated;
+            VERIFY_EXPR(NumChildren == 0 && !Children || NumChildren != 0 && Children);
+            VERIFY(!IsAllocated || NumChildren == 0, "Allocated nodes can't have children");
+            return NumChildren != 0;
         }
 
-        struct Hasher
+        const Node& Child(Uint32 i) const
         {
-            size_t operator()(const RegionInfo& RI) const
-            {
-                return ComputeHash(Region::Hasher{}(RI.R), RI.IsAllocated);
-            }
-        };
-    };
-    std::unordered_set<RegionInfo, RegionInfo::Hasher> m_dbgRegions;
+            VERIFY_EXPR(i < NumChildren);
+            return Children[i];
+        }
+        Node& Child(Uint32 i)
+        {
+            VERIFY_EXPR(i < NumChildren);
+            return Children[i];
+        }
+
+
+        Uint32 GetNumChildren() const
+        {
+            return NumChildren;
+        }
+
+        template <typename ProcessChildType>
+        void ProcessChildren(ProcessChildType ProcessChild) const
+        {
+            for (Uint32 i = 0; i < NumChildren; ++i)
+                ProcessChild(Child(i));
+        }
+        template <typename ProcessChildType>
+        void ProcessChildren(ProcessChildType ProcessChild)
+        {
+            for (Uint32 i = 0; i < NumChildren; ++i)
+                ProcessChild(Child(i));
+        }
+
+#if DILIGENT_DEBUG
+        void Validate() const;
 #endif
+    private:
+        Uint32                  NumChildren = 0;
+        std::unique_ptr<Node[]> Children;
+    };
+    std::unique_ptr<Node> m_Root{new Node};
+
+    void RegisterNode(Node& N);
+    void UnregisterNode(const Node& N);
+
+    // Free regions ordered by width->height->x->y
+    std::map<Region, Node*, WidthFirstCompare> m_FreeRegionsByWidth;
+    // Free regions ordered by height->width->y->x
+    std::map<Region, Node*, HeightFirstCompare> m_FreeRegionsByHeight;
+    // Allocated regions
+    std::unordered_map<Region, Node*, Region::Hasher> m_AllocatedRegions;
 };
 
 } // namespace Diligent
