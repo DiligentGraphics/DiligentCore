@@ -175,6 +175,11 @@ private:
             return NumChildren != 0;
         }
 
+        Uint32 GetNumChildren() const
+        {
+            return NumChildren;
+        }
+
         const Node& Child(Uint32 i) const
         {
             VERIFY_EXPR(i < NumChildren);
@@ -184,12 +189,6 @@ private:
         {
             VERIFY_EXPR(i < NumChildren);
             return Children[i];
-        }
-
-
-        Uint32 GetNumChildren() const
-        {
-            return NumChildren;
         }
 
         template <typename ProcessChildType>
