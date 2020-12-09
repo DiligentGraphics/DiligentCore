@@ -35,12 +35,11 @@ namespace Diligent
 {
 
 static const DynamicAtlasManager::Region InvalidRegion{UINT_MAX, UINT_MAX, 0, 0};
-static const DynamicAtlasManager::Region AllocatedRegion{UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX};
 
 #if DILIGENT_DEBUG
 void DynamicAtlasManager::Node::Validate() const
 {
-    VERIFY(NumChildren == 0 || NumChildren >= 2, "Zero or at least two children are expected");
+    VERIFY(NumChildren == 0 || NumChildren == 2 || NumChildren == 3, "Only zero, two or three children are expected");
     VERIFY(NumChildren == 0 || !IsAllocated, "Allocated nodes must not have children");
     if (NumChildren > 0)
     {
@@ -51,7 +50,8 @@ void DynamicAtlasManager::Node::Validate() const
 
             VERIFY(!R0.IsEmpty(), "Region must not be empty");
             VERIFY(R0.x >= R.x && R0.x + R0.width <= R.x + R.width && R0.y >= R.y && R0.y + R0.height <= R.y + R.height,
-                   "Region lies outside of parent region");
+                   "Child region [", R0.x, ", ", R0.x + R0.width, ") x [", R0.y, ", ", R0.y + R0.height,
+                   ") is not contained in its parent [", R.x, ", ", R.x + R.width, ") x [", R.y, ", ", R.y + R.height, ")");
 
             Area += R0.width * R0.height;
 
@@ -61,7 +61,7 @@ void DynamicAtlasManager::Node::Validate() const
                 if (CheckBox2DBox2DOverlap<false>(uint2{R0.x, R0.y}, uint2{R0.x + R0.width, R0.y + R0.height},
                                                   uint2{R1.x, R1.y}, uint2{R1.x + R1.width, R1.y + R1.height}))
                 {
-                    UNEXPECTED("Regions [", R0.x, ", ", R0.x + R0.width, ") x [", R0.y, ", ", R0.y + R0.height,
+                    UNEXPECTED("Child regions [", R0.x, ", ", R0.x + R0.width, ") x [", R0.y, ", ", R0.y + R0.height,
                                ") and [", R1.x, ", ", R1.x + R1.width, ") x [", R1.y, ", ", R1.y + R1.height, ") overlap");
                 }
             }
@@ -79,10 +79,10 @@ void DynamicAtlasManager::Node::Split(const std::initializer_list<Region>& Regio
 
     Children.reset(new Node[Regions.size()]);
     NumChildren = 0;
-    for (const auto& _R : Regions)
+    for (const auto& ChildR : Regions)
     {
         Children[NumChildren].Parent = this;
-        Children[NumChildren].R      = _R;
+        Children[NumChildren].R      = ChildR;
         ++NumChildren;
     }
     VERIFY_EXPR(NumChildren == Regions.size());
@@ -127,7 +127,7 @@ DynamicAtlasManager::~DynamicAtlasManager()
         DbgVerifyConsistency();
 #endif
 
-        DEV_CHECK_ERR(!m_Root->IsAllocated && !m_Root->HasChildren(), "Root node is expected to be free");
+        DEV_CHECK_ERR(!m_Root->IsAllocated && !m_Root->HasChildren(), "Root node is expected to be free and has no children");
         VERIFY_EXPR(m_FreeRegionsByWidth.size() == m_FreeRegionsByHeight.size());
         DEV_CHECK_ERR(m_FreeRegionsByWidth.size() == 1, "There expected to be a single free region");
         DEV_CHECK_ERR(m_AllocatedRegions.empty(), "There must be no allocated regions");
@@ -218,7 +218,7 @@ DynamicAtlasManager::Region DynamicAtlasManager::Allocate(Uint32 Width, Uint32 H
 
     UnregisterNode(*pSrcNode);
 
-    const auto& R = pSrcNode->R;
+    auto R = pSrcNode->R;
     if (R.width > Width && R.height > Height)
     {
         if (R.width > R.height)
@@ -296,8 +296,11 @@ DynamicAtlasManager::Region DynamicAtlasManager::Allocate(Uint32 Width, Uint32 H
             });
     }
 
+    R.width  = Width;
+    R.height = Height;
     if (pSrcNode->HasChildren())
     {
+        VERIFY_EXPR(pSrcNode->Child(0).R == R);
         pSrcNode->Child(0).IsAllocated = true;
         pSrcNode->ProcessChildren([this](Node& Child) //
                                   {
@@ -306,6 +309,7 @@ DynamicAtlasManager::Region DynamicAtlasManager::Allocate(Uint32 Width, Uint32 H
     }
     else
     {
+        VERIFY_EXPR(pSrcNode->R == R);
         pSrcNode->IsAllocated = true;
         RegisterNode(*pSrcNode);
     }
@@ -314,7 +318,7 @@ DynamicAtlasManager::Region DynamicAtlasManager::Allocate(Uint32 Width, Uint32 H
     DbgVerifyConsistency();
 #endif
 
-    return pSrcNode->HasChildren() ? pSrcNode->Child(0).R : pSrcNode->R;
+    return R;
 }
 
 
@@ -327,7 +331,7 @@ void DynamicAtlasManager::Free(Region&& R)
     auto node_it = m_AllocatedRegions.find(R);
     if (node_it == m_AllocatedRegions.end())
     {
-        UNEXPECTED("Unable to find region [", R.x, ", ", R.x + R.width, ") x [", R.y, ", ", R.y + R.height, ") among allocated regions.");
+        UNEXPECTED("Unable to find region [", R.x, ", ", R.x + R.width, ") x [", R.y, ", ", R.y + R.height, ") among allocated regions. Have you ever allocated it?");
         return;
     }
 
@@ -511,7 +515,7 @@ void DynamicAtlasManager::AddFreeRegion(Region R)
 
 void DynamicAtlasManager::DbgVerifyRegion(const Region& R) const
 {
-    VERIFY_EXPR(R != InvalidRegion && R != AllocatedRegion);
+    VERIFY_EXPR(R != InvalidRegion);
     VERIFY_EXPR(!R.IsEmpty());
 
     VERIFY(R.x < m_Width, "Region x (", R.x, ") exceeds atlas width (", m_Width, ").");
@@ -546,8 +550,8 @@ void DynamicAtlasManager::DbgRecursiveVerifyConsistency(const Node& N, Uint32& A
         else
         {
             VERIFY(m_AllocatedRegions.find(N.R) == m_AllocatedRegions.end(), "Free region is found in allocated regions hash map");
-            VERIFY(m_FreeRegionsByWidth.find(N.R) != m_FreeRegionsByWidth.end(), "Free region should is not found in free regions map");
-            VERIFY(m_FreeRegionsByHeight.find(N.R) != m_FreeRegionsByHeight.end(), "Free region should is not found in free regions map");
+            VERIFY(m_FreeRegionsByWidth.find(N.R) != m_FreeRegionsByWidth.end(), "Free region is not found in free regions map");
+            VERIFY(m_FreeRegionsByHeight.find(N.R) != m_FreeRegionsByHeight.end(), "Free region is not found in free regions map");
         }
 
         Area += N.R.width * N.R.height;

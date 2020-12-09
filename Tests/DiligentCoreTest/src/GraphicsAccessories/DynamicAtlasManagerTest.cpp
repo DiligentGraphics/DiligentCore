@@ -32,6 +32,8 @@
 
 #include "gtest/gtest.h"
 
+#include "FastRand.hpp"
+
 using namespace Diligent;
 
 namespace Diligent
@@ -228,7 +230,7 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Allocate)
         } while (std::next_permutation(ids.begin(), ids.end()));
     }
 
-
+#if 0
     // Test merging regions while splitting free space
     {
         DynamicAtlasManager Mgr{64, 64};
@@ -425,6 +427,27 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Allocate)
         Mgr.Free(std::move(R3));
         Mgr.Free(std::move(R5));
         EXPECT_EQ(Mgr.GetFreeRegionCount(), 1U);
+    }
+#endif
+}
+
+TEST(GraphicsAccessories_DynamicAtlasManager, AllocateRandom)
+{
+    DynamicAtlasManager Mgr{256, 256};
+    const Uint32        NumIterations = 10;
+    for (Uint32 i = 0; i < NumIterations; ++i)
+    {
+        FastRandInt         rnd{static_cast<unsigned int>(i), 1, 16};
+        std::vector<Region> Regions(i * 8);
+        for (auto& R : Regions)
+        {
+            R = Mgr.Allocate(rnd(), rnd());
+        }
+        for (auto& R : Regions)
+        {
+            if (!R.IsEmpty())
+                Mgr.Free(std::move(R));
+        }
     }
 }
 
