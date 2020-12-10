@@ -95,7 +95,7 @@ struct IBufferSuballocator : public IObject
 
     /// Returns the total remaining free size.
 
-    /// \note   Due to fragmentation total free size may be split between
+    /// \note   Due to fragmentation, total free size may be split between
     ///         mutliple free chunks.
     virtual Uint32 GetFreeSize() = 0;
 
@@ -121,6 +121,10 @@ struct BufferSuballocatorCreateInfo
 
 
     /// Allocation granularity for IBufferSuballocator objects.
+
+    /// Buffer suballocator uses FixedBlockMemoryAllocator to allocate instances
+    /// of IBufferSuballocation implementation class. This memeber defines
+    /// the number of objects in one page.
     Uint32 SuballocationObjAllocationGranularity = 64;
 };
 

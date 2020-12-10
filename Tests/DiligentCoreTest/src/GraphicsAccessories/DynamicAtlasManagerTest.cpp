@@ -151,6 +151,16 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Empty)
     DynamicAtlasManager Mgr{16, 8};
 }
 
+TEST(GraphicsAccessories_DynamicAtlasManager, Move)
+{
+    DynamicAtlasManager Mgr0{16, 8};
+
+    auto R = Mgr0.Allocate(16, 8);
+
+    DynamicAtlasManager Mgr1{std::move(Mgr0)};
+    Mgr1.Free(std::move(R));
+}
+
 TEST(GraphicsAccessories_DynamicAtlasManager, Allocate)
 {
     {

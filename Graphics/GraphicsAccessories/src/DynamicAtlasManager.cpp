@@ -127,7 +127,7 @@ DynamicAtlasManager::~DynamicAtlasManager()
         DbgVerifyConsistency();
 #endif
 
-        DEV_CHECK_ERR(!m_Root->IsAllocated && !m_Root->HasChildren(), "Root node is expected to be free and has no children");
+        DEV_CHECK_ERR(!m_Root->IsAllocated && !m_Root->HasChildren(), "Root node is expected to be free and have no children");
         VERIFY_EXPR(m_FreeRegionsByWidth.size() == m_FreeRegionsByHeight.size());
         DEV_CHECK_ERR(m_FreeRegionsByWidth.size() == 1, "There expected to be a single free region");
         DEV_CHECK_ERR(m_AllocatedRegions.empty(), "There must be no allocated regions");
@@ -145,15 +145,16 @@ void DynamicAtlasManager::RegisterNode(Node& N)
     VERIFY(!N.HasChildren(), "Registering node that has children");
     VERIFY(!N.R.IsEmpty(), "Region must not be empty");
 
+    VERIFY(m_AllocatedRegions.find(N.R) == m_AllocatedRegions.end(), "New region should not be present in allocated regions hash map");
+    VERIFY(m_FreeRegionsByWidth.find(N.R) == m_FreeRegionsByWidth.end(), "New region should not be present in free regions map");
+    VERIFY(m_FreeRegionsByHeight.find(N.R) == m_FreeRegionsByHeight.end(), "New region should not be present in free regions map");
+
     if (N.IsAllocated)
     {
-        VERIFY(m_AllocatedRegions.find(N.R) == m_AllocatedRegions.end(), "New region should not be present in allocated regions hash map");
         m_AllocatedRegions.emplace(N.R, &N);
     }
     else
     {
-        VERIFY(m_FreeRegionsByWidth.find(N.R) == m_FreeRegionsByWidth.end(), "New region should not be present in free regions map");
-        VERIFY(m_FreeRegionsByHeight.find(N.R) == m_FreeRegionsByHeight.end(), "New region should not be present in free regions map");
         m_FreeRegionsByWidth.emplace(N.R, &N);
         m_FreeRegionsByHeight.emplace(N.R, &N);
     }
@@ -362,154 +363,6 @@ void DynamicAtlasManager::Free(Region&& R)
     R = InvalidRegion;
 }
 
-#if 0
-void DynamicAtlasManager::AddFreeRegion(Region R)
-{
-#    ifdef DILIGENT_DEBUG
-    {
-        const auto& R0 = GetRegion(R.x, R.y);
-        VERIFY_EXPR(R0 == AllocatedRegion || R0 == InvalidRegion);
-        for (Uint32 y = R.y; y < R.y + R.height; ++y)
-        {
-            for (Uint32 x = R.x; x < R.x + R.width; ++x)
-            {
-                VERIFY_EXPR(GetRegion(x, y) == R0);
-            }
-        }
-    }
-#    endif
-
-    bool Merged = false;
-    do
-    {
-        auto TryMergeHorz = [&]() //
-        {
-            if (R.x > 0)
-            {
-                const auto& lftR = GetRegion(R.x - 1, R.y);
-                if (lftR != AllocatedRegion && lftR != InvalidRegion)
-                {
-                    VERIFY_EXPR(lftR.x + lftR.width == R.x);
-                    if (lftR.y == R.y && lftR.height == R.height)
-                    {
-                        //   __________ __________
-                        //  |          |          |
-                        //  |   lftR   |    R     |
-                        //  |__________|__________|
-                        R.x = lftR.x;
-                        R.width += lftR.width;
-                        RemoveFreeRegion(lftR);
-                        VERIFY_EXPR(lftR == InvalidRegion);
-                        return true;
-                    }
-                }
-            }
-
-            if (R.x + R.width < m_Width)
-            {
-                const auto& rgtR = GetRegion(R.x + R.width, R.y);
-                if (rgtR != AllocatedRegion && rgtR != InvalidRegion)
-                {
-                    VERIFY_EXPR(R.x + R.width == rgtR.x);
-                    if (rgtR.y == R.y && rgtR.height == R.height)
-                    {
-                        //   _________ ____________
-                        //  |         |            |
-                        //  |    R    |    rgtR    |
-                        //  |_________|____________|
-                        R.width += rgtR.width;
-                        RemoveFreeRegion(rgtR);
-                        VERIFY_EXPR(rgtR == InvalidRegion);
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        };
-
-        auto TryMergeVert = [&]() //
-        {
-            if (R.y > 0)
-            {
-                const auto& btmR = GetRegion(R.x, R.y - 1);
-                if (btmR != AllocatedRegion && btmR != InvalidRegion)
-                {
-                    VERIFY_EXPR(btmR.y + btmR.height == R.y);
-                    if (btmR.x == R.x && btmR.width == R.width)
-                    {
-                        //    ________
-                        //   |        |
-                        //   |   R    |
-                        //   |________|
-                        //   |        |
-                        //   |  btmR  |
-                        //   |________|
-                        R.y = btmR.y;
-                        R.height += btmR.height;
-                        RemoveFreeRegion(btmR);
-                        VERIFY_EXPR(btmR == InvalidRegion);
-                        return true;
-                    }
-                }
-            }
-
-            if (R.y + R.height < m_Height)
-            {
-                const auto& tpR = GetRegion(R.x, R.y + R.height);
-                if (tpR != AllocatedRegion && tpR != InvalidRegion)
-                {
-                    VERIFY_EXPR(R.y + R.height == tpR.y);
-                    if (tpR.x == R.x && tpR.width == R.width)
-                    {
-                        //    _______
-                        //   |       |
-                        //   |  tpR  |
-                        //   |_______|
-                        //   |       |
-                        //   |   R   |
-                        //   |_______|
-                        R.height += tpR.height;
-                        RemoveFreeRegion(tpR);
-                        VERIFY_EXPR(tpR == InvalidRegion);
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        };
-
-        // Try to merge along the longest edge first
-        Merged = (R.width > R.height) ? TryMergeVert() : TryMergeHorz();
-
-        // If not merged, try another edge
-        if (!Merged)
-        {
-            Merged = (R.width > R.height) ? TryMergeHorz() : TryMergeVert();
-        }
-    } while (Merged);
-
-    InitRegion(R, R);
-
-    {
-        auto inserted = m_FreeRegionsByWidth.emplace(R).second;
-        VERIFY_EXPR(inserted);
-    }
-    {
-        auto inserted = m_FreeRegionsByHeight.emplace(R).second;
-        VERIFY_EXPR(inserted);
-    }
-
-#    if DILIGENT_DEBUG
-    {
-        auto inserted = m_dbgRegions.emplace(R, false).second;
-        VERIFY_EXPR(inserted);
-    }
-#    endif
-}
-
-#endif
 
 #if DILIGENT_DEBUG
 
@@ -530,9 +383,9 @@ void DynamicAtlasManager::DbgRecursiveVerifyConsistency(const Node& N, Uint32& A
     if (N.HasChildren())
     {
         VERIFY_EXPR(!N.IsAllocated);
-        VERIFY(m_AllocatedRegions.find(N.R) == m_AllocatedRegions.end(), "Region with children should not be present in allocated regions hash map");
-        VERIFY(m_FreeRegionsByWidth.find(N.R) == m_FreeRegionsByWidth.end(), "Region with children should not be present in free regions map");
-        VERIFY(m_FreeRegionsByHeight.find(N.R) == m_FreeRegionsByHeight.end(), "Region with children should not be present in free regions map");
+        VERIFY(m_AllocatedRegions.find(N.R) == m_AllocatedRegions.end(), "Regions with children must not be present in allocated regions hash map");
+        VERIFY(m_FreeRegionsByWidth.find(N.R) == m_FreeRegionsByWidth.end(), "Regions with children must not be present in free regions map");
+        VERIFY(m_FreeRegionsByHeight.find(N.R) == m_FreeRegionsByHeight.end(), "Regions with children must not be present in free regions map");
 
         N.ProcessChildren([&Area, this](const Node& Child) //
                           {
@@ -567,7 +420,6 @@ void DynamicAtlasManager::DbgVerifyConsistency() const
 
     VERIFY(Area == m_Width * m_Height, "Not entire atlas area has been covered");
 }
-#endif
-
+#endif // DILIGENT_DEBUG
 
 } // namespace Diligent

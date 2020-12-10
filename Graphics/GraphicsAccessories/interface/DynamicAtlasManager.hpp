@@ -29,7 +29,7 @@
 #pragma once
 
 /// \file
-/// Implementes 2D atlas manager
+/// Declaration of DynamicAtlasManager class
 
 #include <map>
 #include <unordered_map>
@@ -173,11 +173,6 @@ private:
             VERIFY_EXPR(NumChildren == 0 && !Children || NumChildren != 0 && Children);
             VERIFY(!IsAllocated || NumChildren == 0, "Allocated nodes can't have children");
             return NumChildren != 0;
-        }
-
-        Uint32 GetNumChildren() const
-        {
-            return NumChildren;
         }
 
         const Node& Child(Uint32 i) const

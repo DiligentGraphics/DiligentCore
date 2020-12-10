@@ -75,8 +75,8 @@ public:
         return TBase::Release(
             [&]() //
             {
-                // We must keep the atlas alive while the object is being destroyed because
-                // the atlas keeps the object allocator.
+                // We must keep parent alive while this object is being destroyed because
+                // the parent keeps the memory allocator for the object.
                 pAtlas = m_pParentAtlas;
             });
     }

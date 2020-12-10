@@ -120,17 +120,14 @@ WindowsFile* WindowsFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 
 bool WindowsFileSystem::FileExists(const Char* strFilePath)
 {
-    FileOpenAttribs OpenAttribs;
-    OpenAttribs.strFilePath = strFilePath;
-    BasicFile   DummyFile(OpenAttribs, WindowsFileSystem::GetSlashSymbol());
-    const auto& Path          = DummyFile.GetPath(); // This is necessary to correct slashes
-    auto        UTF16FilePath = UTF8ToUTF16(Path.c_str());
-    FILE*       pFile         = nullptr;
-    auto        err           = _wfopen_s(&pFile, UTF16FilePath.data(), L"r");
-    bool        Exists        = (err == 0);
-    if (Exists && pFile)
-        fclose(pFile);
-    return Exists;
+    if (!PathExists(strFilePath))
+        return false;
+
+    auto FileAttribs = GetFileAttributesA(strFilePath);
+    if (FileAttribs == INVALID_FILE_ATTRIBUTES)
+        return false;
+
+    return (FileAttribs & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
 static bool CreateDirectoryImpl(const Char* strPath)
