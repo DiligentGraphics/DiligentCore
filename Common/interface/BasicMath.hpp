@@ -1073,6 +1073,19 @@ template <class T> struct Matrix4x4
     }
     // clang-format on
 
+    // clang-format off
+    Matrix4x4(const Vector4<T>& Row0,
+              const Vector4<T>& Row1,
+              const Vector4<T>& Row2,
+              const Vector4<T>& Row3) :
+        _11{Row0.x}, _12{Row0.y}, _13{Row0.z}, _14{Row0.w}, 
+        _21{Row1.x}, _22{Row1.y}, _23{Row1.z}, _24{Row1.w}, 
+        _31{Row2.x}, _32{Row2.y}, _33{Row2.z}, _34{Row2.w}, 
+        _41{Row3.x}, _42{Row3.y}, _43{Row3.z}, _44{Row3.w}
+    {
+    }
+    // clang-format on
+
     template <typename Y>
     static Matrix4x4 MakeMatrix(const Y& vals)
     {

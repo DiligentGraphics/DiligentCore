@@ -789,6 +789,17 @@ TEST(Common_BasicMath, MatrixConstructors)
         EXPECT_TRUE(m1 == m2);
         auto t = m1.Transpose().Transpose();
         EXPECT_TRUE(t == m1);
+
+        // clang-format off
+        float4x4 m3
+        {
+            float4{ 1,  2,  3,  4},
+            float4{ 5,  6,  7,  8},
+            float4{ 9, 10, 11, 12},
+            float4{13, 14, 15, 16}
+        };
+        EXPECT_TRUE(m1 == m3);
+        // clang-format on
     }
 }
 
