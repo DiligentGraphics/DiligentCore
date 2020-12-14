@@ -794,18 +794,18 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
                 }
             }
         }
-    }
 
-    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
-    {
-        // Verify bindings after all resources are set
-        dbgVerifyCommittedSRVs();
-        dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
-        dbgVerifyCommittedSamplers();
-        dbgVerifyCommittedCBs();
-        dbgVerifyCommittedVertexBuffers();
-        dbgVerifyCommittedIndexBuffer();
-        dbgVerifyCommittedShaders();
+        if ((m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0)
+        {
+            // Verify bindings after all resources are set
+            dbgVerifyCommittedSRVs();
+            dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
+            dbgVerifyCommittedSamplers();
+            dbgVerifyCommittedCBs();
+            dbgVerifyCommittedVertexBuffers();
+            dbgVerifyCommittedIndexBuffer();
+            dbgVerifyCommittedShaders();
+        }
     }
 #endif
 }
