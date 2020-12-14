@@ -59,6 +59,15 @@ public:
     template <typename DefintionType>
     void AddShaderMacro(const Char* Name, DefintionType Definition)
     {
+#if DILIGENT_DEBUG
+        for (size_t i = 0; i < m_Macros.size() && m_Macros[i].Definition != nullptr; ++i)
+        {
+            if (strcmp(m_Macros[i].Name, Name) == 0)
+            {
+                UNEXPECTED("Macro '", Name, "' already exists. Use UpdateMacro() to update the macro value.");
+            }
+        }
+#endif
         std::ostringstream ss;
         ss << Definition;
         AddShaderMacro<const Char*>(Name, ss.str().c_str());
@@ -170,5 +179,7 @@ inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, Uint8 Definition
 {
     AddShaderMacro(Name, Uint32{Definition});
 }
+
+#define ADD_SHADER_MACRO_ENUM_VALUE(Helper, EnumValue) Helper.AddShaderMacro(#EnumValue, static_cast<int>(EnumValue));
 
 } // namespace Diligent
