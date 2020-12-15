@@ -2454,7 +2454,7 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
     // copy instance data into instance buffer
     {
         size_t Size     = Attribs.InstanceCount * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-        auto   TmpSpace = m_DynamicHeap.Allocate(Size, 16, m_ContextFrameNumber);
+        auto   TmpSpace = m_DynamicHeap.Allocate(Size, 16, m_FrameNumber);
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
