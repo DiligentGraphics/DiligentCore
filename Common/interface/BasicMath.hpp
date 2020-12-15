@@ -979,15 +979,9 @@ template <class T> struct Matrix3x3
     {
         return Matrix3x3 //
             {
-                x,
-                0,
-                0,
-                0,
-                y,
-                0,
-                0,
-                0,
-                z,
+                x, 0, 0,
+                0, y, 0,
+                0, 0, z //
             };
     }
 
