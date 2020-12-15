@@ -179,8 +179,16 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
             case D3D_SIT_UAV_APPEND_STRUCTURED:         UNSUPPORTED( "Append structured buffers are not supported" );                          break;
             case D3D_SIT_UAV_CONSUME_STRUCTURED:        UNSUPPORTED( "Consume structured buffers are not supported" );                         break;
             case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER: UNSUPPORTED( "RW structured buffers with counter are not supported" );                 break;
-            case D3D_SIT_RTACCELERATIONSTRUCTURE:       ++RC.NumAccelStructs;                                                                  break;
-            // clang-format on
+                // clang-format on
+
+#pragma warning(push)
+#pragma warning(disable : 4063)
+            // D3D_SIT_RTACCELERATIONSTRUCTURE enum value is missing in Win SDK 17763, so we emulate it as #define, which
+            // makes the compiler emit the following warning:
+            //      warning C4063: case '12' is not a valid value for switch of enum '_D3D_SHADER_INPUT_TYPE'
+            case D3D_SIT_RTACCELERATIONSTRUCTURE: ++RC.NumAccelStructs; break;
+#pragma warning(pop)
+
             default: UNEXPECTED("Unexpected resource type");
         }
         ResourceNamesPoolSize += Name.length() + 1;
@@ -291,7 +299,13 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
                 break;
             }
 
+#pragma warning(push)
+#pragma warning(disable : 4063)
+            // D3D_SIT_RTACCELERATIONSTRUCTURE enum value is missing in Win SDK 17763, so we emulate it as #define, which
+            // makes the compiler emit the following warning:
+            //      warning C4063: case '12' is not a valid value for switch of enum '_D3D_SHADER_INPUT_TYPE'
             case D3D_SIT_RTACCELERATIONSTRUCTURE:
+#pragma warning(pop)
             {
                 OnNewAccelStruct(Res);
                 break;

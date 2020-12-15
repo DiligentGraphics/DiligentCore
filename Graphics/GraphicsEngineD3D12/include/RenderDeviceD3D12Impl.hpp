@@ -42,6 +42,13 @@
 #include "QueryManagerD3D12.hpp"
 #include "DXCompiler.hpp"
 
+#ifndef D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS // Defined in Win SDK 19041+
+#    define D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS (1073741824)
+#endif
+#ifndef D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE // Defined in Win SDK 19041+
+#    define D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE (4096)
+#endif
+
 namespace Diligent
 {
 

@@ -33,6 +33,10 @@
 #include "DXGITypeConversions.hpp"
 #include "StringTools.hpp"
 
+#ifndef D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE // Defined in Win SDK 19041+
+#    define D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE (16777216)
+#endif
+
 namespace Diligent
 {
 

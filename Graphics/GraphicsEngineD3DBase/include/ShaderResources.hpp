@@ -61,6 +61,12 @@
 #define NOMINMAX
 #include <d3dcommon.h>
 
+#ifndef NTDDI_WIN10_19H1 // Defined in Win SDK 19041
+#    define D3D_SIT_RTACCELERATIONSTRUCTURE (D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER + 1)
+#endif
+
+#include <ntverp.h>
+
 #include "ShaderD3D.h"
 #include "STDAllocator.hpp"
 #include "HashUtils.hpp"
