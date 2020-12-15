@@ -30,7 +30,7 @@
 /// \file
 /// Declaration of Diligent::ShaderResourcesD3D12 class
 
-//  ShaderResourcesD3D12 are created by ShaderD3D12Impl instances. They are then referenced by ShaderResourceLayoutD3D12 objects, which are in turn
+//  ShaderResourcesD3D12 are created by ShaderD3D12Impl instances. They are then used by ShaderResourceLayoutD3D12 objects, which are
 //  created by instances of PipelineStatesD3D12Impl and ShaderD3D12Impl
 //
 //    _________________
@@ -43,10 +43,10 @@
 //   |                      |  unique_ptr    |        |           |           |           |           |            |
 //   | ShaderResourcesD3D12 |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  |  Samplers  |
 //   |______________________|                |________|___________|___________|___________|___________|____________|
-//            A                                         A                              A                   A
-//            |                                          \                            /                     \
-//            |shared_ptr                                Ref                        Ref                     Ref
-//    ________|__________________                  ________\________________________/_________________________\_________________________________________
+//                                                      A                              A                   A
+//                                                       \                            /                     \
+//                                                       Copy                       Copy                    Copy
+//    ___________________________                  ________\________________________/_________________________\_________________________________________
 //   |                           |   unique_ptr   |                   |                 |               |                  |                 |          |
 //   | ShaderResourceLayoutD3D12 |--------------->|   SRV_CBV_UAV[0]  |  SRV_CBV_UAV[1] |       ...     |    Sampler[0]    |    Sampler[1]   |   ...    |
 //   |___________________________|                |___________________|_________________|_______________|__________________|_________________|__________|
@@ -57,29 +57,6 @@
 //   |                        |
 //   | PipelineStateD3D12Impl |
 //   |________________________|
-//
-//
-//
-//  One ShaderResourcesD3D12 instance can be referenced by multiple objects
-//
-//
-//             ________________________           _<m_pShaderResourceLayouts>_          _____<m_pShaderVarMgrs>_____       ________________________________
-//            |                        |         |                            |        |                            |     |                                |
-//            | PipelineStateD3D12Impl |========>| ShaderResourceLayoutD3D12  |<-------| ShaderVariableManagerD3D12 |<====| ShaderResourceBindingD3D12Impl |
-//            |________________________|         |____________________________|        |____________________________|     |________________________________|
-//                                                            |            A
-//                                                            |shared_ptr   \         
-//             _________________                   ___________V__________    \          _____<m_pShaderVarMgrs>_____       ________________________________
-//            |                 |  shared_ptr     |                      |    \        |                            |     |                                |
-//            | ShaderD3D12Impl |---------------->| ShaderResourcesD3D12 |     '-------| ShaderVariableManagerD3D12 |<====| ShaderResourceBindingD3D12Impl |
-//            |_________________|                 |______________________|             |____________________________|     |________________________________|
-//                    |      |___________________               A
-//                    |                          |              |
-//                    V                          V              |shared_ptr
-//  _______<m_StaticVarsMgr>____         ___<m_StaticResLayout>_|___
-// |                            |       |                           |
-// | ShaderVariableManagerD3D12 |------>| ShaderResourceLayoutD3D12 |
-// |____________________________|       |___________________________|
 //
 
 #include "ShaderResources.hpp"

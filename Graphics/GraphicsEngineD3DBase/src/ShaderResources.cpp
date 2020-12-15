@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 #include "ShaderResources.hpp"
@@ -55,6 +54,9 @@ ShaderResources::~ShaderResources()
 
     for (Uint32 n = 0; n < GetNumSamplers(); ++n)
         GetSampler(n).~D3DShaderResourceAttribs();
+
+    for (Uint32 n = 0; n < GetNumAccelStructs(); ++n)
+        GetAccelStruct(n).~D3DShaderResourceAttribs();
 }
 
 void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
@@ -74,23 +76,25 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
     };
 
     // clang-format off
-    auto CBOffset    = AdvanceOffset(ResCounters.NumCBs);       (void)CBOffset; // To suppress warning
-    m_TexSRVOffset   = AdvanceOffset(ResCounters.NumTexSRVs);
-    m_TexUAVOffset   = AdvanceOffset(ResCounters.NumTexUAVs);
-    m_BufSRVOffset   = AdvanceOffset(ResCounters.NumBufSRVs);
-    m_BufUAVOffset   = AdvanceOffset(ResCounters.NumBufUAVs);
-    m_SamplersOffset = AdvanceOffset(ResCounters.NumSamplers);
-    m_TotalResources = AdvanceOffset(0);
+    auto CBOffset        = AdvanceOffset(ResCounters.NumCBs);       (void)CBOffset; // To suppress warning
+    m_TexSRVOffset       = AdvanceOffset(ResCounters.NumTexSRVs);
+    m_TexUAVOffset       = AdvanceOffset(ResCounters.NumTexUAVs);
+    m_BufSRVOffset       = AdvanceOffset(ResCounters.NumBufSRVs);
+    m_BufUAVOffset       = AdvanceOffset(ResCounters.NumBufUAVs);
+    m_SamplersOffset     = AdvanceOffset(ResCounters.NumSamplers);
+    m_AccelStructsOffset = AdvanceOffset(ResCounters.NumAccelStructs);
+    m_TotalResources     = AdvanceOffset(0);
 
     auto AlignedResourceNamesPoolSize = Align(ResourceNamesPoolSize, sizeof(void*));
     auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + AlignedResourceNamesPoolSize * sizeof(char);
 
-    VERIFY_EXPR(GetNumCBs()     == ResCounters.NumCBs);
-    VERIFY_EXPR(GetNumTexSRV()  == ResCounters.NumTexSRVs);
-    VERIFY_EXPR(GetNumTexUAV()  == ResCounters.NumTexUAVs);
-    VERIFY_EXPR(GetNumBufSRV()  == ResCounters.NumBufSRVs);
-    VERIFY_EXPR(GetNumBufUAV()  == ResCounters.NumBufUAVs);
-    VERIFY_EXPR(GetNumSamplers()== ResCounters.NumSamplers);
+    VERIFY_EXPR(GetNumCBs()         == ResCounters.NumCBs);
+    VERIFY_EXPR(GetNumTexSRV()      == ResCounters.NumTexSRVs);
+    VERIFY_EXPR(GetNumTexUAV()      == ResCounters.NumTexUAVs);
+    VERIFY_EXPR(GetNumBufSRV()      == ResCounters.NumBufSRVs);
+    VERIFY_EXPR(GetNumBufUAV()      == ResCounters.NumBufUAVs);
+    VERIFY_EXPR(GetNumSamplers()    == ResCounters.NumSamplers);
+    VERIFY_EXPR(GetNumAccelStructs()== ResCounters.NumAccelStructs);
     // clang-format on
 
     if (MemorySize)
@@ -208,6 +212,12 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
             auto VarType = FindVariableType(BufUAV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
                 ++Counters.NumBufUAVs;
+        },
+        [&](const D3DShaderResourceAttribs& AccelStruct, Uint32) //
+        {
+            auto VarType = FindVariableType(AccelStruct, ResourceLayout);
+            if (IsAllowedType(VarType, AllowedTypeBits))
+                ++Counters.NumAccelStructs;
         } //
     );
 
@@ -226,15 +236,16 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
         std::string ShadersStr;
         while (ShaderStages != SHADER_TYPE_UNKNOWN)
         {
-            const auto  ShaderType = ShaderStages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(ShaderStages) - 1));
-            const char* ShaderName = nullptr;
+            const auto ShaderType = ShaderStages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(ShaderStages) - 1));
+            String     ShaderName;
             for (Uint32 s = 0; s < NumShaders; ++s)
             {
                 const auto& Resources = *pShaderResources[s];
                 if ((ShaderStages & Resources.GetShaderType()) != 0)
                 {
-                    ShaderName = Resources.GetShaderName();
-                    break;
+                    if (ShaderName.size())
+                        ShaderName += ", ";
+                    ShaderName += Resources.GetShaderName();
                 }
             }
 
@@ -242,10 +253,10 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
                 ShadersStr.append(", ");
             ShadersStr.append(GetShaderTypeLiteralName(ShaderType));
             ShadersStr.append(" (");
-            if (ShaderName)
+            if (ShaderName.size())
             {
                 ShadersStr.push_back('\'');
-                ShadersStr.append(ShaderName ? ShaderName : "<Not enabled in PSO>");
+                ShadersStr.append(ShaderName);
                 ShadersStr.push_back('\'');
             }
             else
@@ -400,6 +411,11 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources& Res) const
         {
             if (!BufUAV.IsCompatibleWith(Res.GetBufUAV(n)))
                 IsCompatible = false;
+        },
+        [&](const D3DShaderResourceAttribs& AccelStruct, Uint32 n) //
+        {
+            if (!AccelStruct.IsCompatibleWith(Res.GetAccelStruct(n)))
+                IsCompatible = false;
         } //
     );
     return IsCompatible;
@@ -452,27 +468,6 @@ HLSLShaderResourceDesc D3DShaderResourceAttribs::GetHLSLResourceDesc() const
     }
 
     return ResourceDesc;
-}
-
-RESOURCE_DIMENSION D3DShaderResourceAttribs::GetResourceDimension() const
-{
-    switch (GetSRVDimension())
-    {
-        // clang-format off
-        case D3D_SRV_DIMENSION_BUFFER:           return RESOURCE_DIM_BUFFER;
-        case D3D_SRV_DIMENSION_TEXTURE1D:        return RESOURCE_DIM_TEX_1D;
-        case D3D_SRV_DIMENSION_TEXTURE1DARRAY:   return RESOURCE_DIM_TEX_1D_ARRAY;
-        case D3D_SRV_DIMENSION_TEXTURE2D:        return RESOURCE_DIM_TEX_2D;
-        case D3D_SRV_DIMENSION_TEXTURE2DARRAY:   return RESOURCE_DIM_TEX_2D_ARRAY;
-        case D3D_SRV_DIMENSION_TEXTURE2DMS:      return RESOURCE_DIM_TEX_2D;
-        case D3D_SRV_DIMENSION_TEXTURE2DMSARRAY: return RESOURCE_DIM_TEX_2D_ARRAY;
-        case D3D_SRV_DIMENSION_TEXTURE3D:        return RESOURCE_DIM_TEX_3D;
-        case D3D_SRV_DIMENSION_TEXTURECUBE:      return RESOURCE_DIM_TEX_CUBE;
-        case D3D_SRV_DIMENSION_TEXTURECUBEARRAY: return RESOURCE_DIM_TEX_CUBE_ARRAY;
-        // clang-format on
-        default:
-            return RESOURCE_DIM_BUFFER;
-    }
 }
 
 bool D3DShaderResourceAttribs::IsMultisample() const

@@ -81,7 +81,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// The following bind flags are allowed:
     /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
-    /// Diligent::BIND_INDIRECT_DRAW_ARGS
+    /// Diligent::BIND_INDIRECT_DRAW_ARGS, Diligent::BIND_RAY_TRACING
     BIND_FLAGS BindFlags            DEFAULT_INITIALIZER(BIND_NONE);
 
     /// Buffer usage, see Diligent::USAGE for details

@@ -40,6 +40,9 @@
 #include "QueryD3D12Impl.hpp"
 #include "RenderPassD3D12Impl.hpp"
 #include "FramebufferD3D12Impl.hpp"
+#include "BottomLevelASD3D12Impl.hpp"
+#include "TopLevelASD3D12Impl.hpp"
+#include "ShaderBindingTableD3D12Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -65,12 +68,8 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Dev
     return nullptr;
 }
 
-ShaderVersion RenderDeviceD3D12Impl::GetMaxShaderModel() const
-{
-    return ShaderVersion{static_cast<Uint8>((m_MaxShaderModel >> 4) & 0xF), static_cast<Uint8>(m_MaxShaderModel & 0xF)};
-}
 
-D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
+static D3D_FEATURE_LEVEL GetD3DFeatureLevel(ID3D12Device* pd3d12Device)
 {
     D3D_FEATURE_LEVEL FeatureLevels[] =
         {
@@ -85,11 +84,10 @@ D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
 
     FeatureLevelsData.pFeatureLevelsRequested = FeatureLevels;
     FeatureLevelsData.NumFeatureLevels        = _countof(FeatureLevels);
-    m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &FeatureLevelsData, sizeof(FeatureLevelsData));
+    pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &FeatureLevelsData, sizeof(FeatureLevelsData));
     return FeatureLevelsData.MaxSupportedFeatureLevel;
 }
 
-#ifdef D3D12_H_HAS_MESH_SHADER
 ID3D12Device2* RenderDeviceD3D12Impl::GetD3D12Device2()
 {
     if (!m_pd3d12Device2)
@@ -98,7 +96,15 @@ ID3D12Device2* RenderDeviceD3D12Impl::GetD3D12Device2()
     }
     return m_pd3d12Device2;
 }
-#endif
+
+ID3D12Device5* RenderDeviceD3D12Impl::GetD3D12Device5()
+{
+    if (!m_pd3d12Device5)
+    {
+        CHECK_D3D_RESULT_THROW(m_pd3d12Device->QueryInterface(IID_PPV_ARGS(&m_pd3d12Device5)), "Failed to get ID3D12Device5");
+    }
+    return m_pd3d12Device5;
+}
 
 RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
@@ -129,7 +135,10 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             sizeof(FenceD3D12Impl),
             sizeof(QueryD3D12Impl),
             sizeof(RenderPassD3D12Impl),
-            sizeof(FramebufferD3D12Impl)
+            sizeof(FramebufferD3D12Impl),
+            sizeof(BottomLevelASD3D12Impl),
+            sizeof(TopLevelASD3D12Impl),
+            sizeof(ShaderBindingTableD3D12Impl)
         }
     },
     m_pd3d12Device  {pd3d12Device},
@@ -154,10 +163,18 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     m_pDxCompiler         {CreateDXCompiler(DXCompilerTarget::Direct3D12, EngineCI.pDxCompilerPath)}
 // clang-format on
 {
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+
+    // set device properties
+    {
+        static_assert(sizeof(DeviceProperties) == sizeof(Uint32) * 1, "Please set new properties below");
+        m_DeviceProperties.MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+    }
+
     try
     {
         m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D12;
-        auto FeatureLevel    = GetD3DFeatureLevel();
+        auto FeatureLevel    = GetD3DFeatureLevel(m_pd3d12Device);
         switch (FeatureLevel)
         {
             case D3D_FEATURE_LEVEL_12_0:
@@ -195,17 +212,18 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         m_DeviceCaps.Features.VertexPipelineUAVWritesAndAtomics = DEVICE_FEATURE_STATE_ENABLED;
 
         // Detect maximum  shader model.
+        D3D_SHADER_MODEL MaxShaderModel = D3D_SHADER_MODEL_5_1;
         {
             // Direct3D12 supports shader model 5.1 on all feature levels.
             // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-            m_MaxShaderModel = D3D_SHADER_MODEL_5_1;
+            MaxShaderModel = D3D_SHADER_MODEL_5_1;
 
             // Header may not have constants for D3D_SHADER_MODEL_6_1 and above.
             const D3D_SHADER_MODEL Models[] = //
                 {
-                    static_cast<D3D_SHADER_MODEL>(0x65), // minimum required for mesh shader
+                    static_cast<D3D_SHADER_MODEL>(0x65), // minimum required for mesh shader and DXR 1.1
                     static_cast<D3D_SHADER_MODEL>(0x64),
-                    static_cast<D3D_SHADER_MODEL>(0x63),
+                    static_cast<D3D_SHADER_MODEL>(0x63), // minimum required for DXR 1.0
                     static_cast<D3D_SHADER_MODEL>(0x62),
                     static_cast<D3D_SHADER_MODEL>(0x61),
                     D3D_SHADER_MODEL_6_0 //
@@ -216,12 +234,15 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                 D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {Model};
                 if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
                 {
-                    m_MaxShaderModel = ShaderModel.HighestShaderModel;
+                    MaxShaderModel = ShaderModel.HighestShaderModel;
                     break;
                 }
             }
-            LOG_INFO_MESSAGE("Max device shader model: ", (m_MaxShaderModel >> 4) & 0xF, '_', m_MaxShaderModel & 0xF);
+            LOG_INFO_MESSAGE("Max device shader model: ", (MaxShaderModel >> 4) & 0xF, '_', MaxShaderModel & 0xF);
         }
+
+        m_Properties.MaxShaderVersion.Major = static_cast<Uint8>((MaxShaderModel >> 4) & 0xF);
+        m_Properties.MaxShaderVersion.Minor = static_cast<Uint8>(MaxShaderModel & 0xF);
 
         // Check if mesh shader is supported.
         bool MeshShadersSupported = false;
@@ -233,7 +254,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                 SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureData, sizeof(FeatureData))) &&
                 FeatureData.MeshShaderTier != D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
 
-            MeshShadersSupported = (m_MaxShaderModel >= D3D_SHADER_MODEL_6_5 && MeshShadersSupported);
+            MeshShadersSupported = (MaxShaderModel >= D3D_SHADER_MODEL_6_5 && MeshShadersSupported);
         }
 #else
         if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED)
@@ -251,6 +272,16 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         m_DeviceCaps.Features.MeshShaders = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
 
+        {
+            D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features = {};
+            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &d3d12Features, sizeof(d3d12Features))))
+            {
+                if (d3d12Features.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
+                {
+                    m_DeviceCaps.Features.RayTracing = DEVICE_FEATURE_STATE_ENABLED;
+                }
+            }
+        }
 
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
@@ -293,11 +324,13 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         CHECK_REQUIRED_FEATURE(ShaderInt8,               "8-bit shader operations are");
         CHECK_REQUIRED_FEATURE(ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
         CHECK_REQUIRED_FEATURE(UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
+
+        CHECK_REQUIRED_FEATURE(RayTracing,               "ray tracing is");
         // clang-format on
 #undef CHECK_REQUIRED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         auto& TexCaps = m_DeviceCaps.TexCaps;
@@ -557,6 +590,11 @@ void RenderDeviceD3D12Impl::CreateComputePipelineState(const ComputePipelineStat
     CreatePipelineState(PSOCreateInfo, ppPipelineState);
 }
 
+void RenderDeviceD3D12Impl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+}
+
 void RenderDeviceD3D12Impl::CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer,
@@ -689,6 +727,70 @@ void RenderDeviceD3D12Impl::CreateFramebuffer(const FramebufferDesc& Desc, IFram
                            FramebufferD3D12Impl* pFramebufferD3D12{NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferD3D12Impl instance", FramebufferD3D12Impl)(this, Desc)};
                            pFramebufferD3D12->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            OnCreateDeviceObject(pFramebufferD3D12);
+                       });
+}
+
+void RenderDeviceD3D12Impl::CreateBLASFromD3DResource(ID3D12Resource*          pd3d12BLAS,
+                                                      const BottomLevelASDesc& Desc,
+                                                      RESOURCE_STATE           InitialState,
+                                                      IBottomLevelAS**         ppBLAS)
+{
+    CreateDeviceObject("buffer", Desc, ppBLAS,
+                       [&]() //
+                       {
+                           BottomLevelASD3D12Impl* pBottomLevelASD3D12{NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASD3D12Impl instance", BottomLevelASD3D12Impl)(this, Desc, InitialState, pd3d12BLAS)};
+                           pBottomLevelASD3D12->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           OnCreateDeviceObject(pBottomLevelASD3D12);
+                       });
+}
+
+void RenderDeviceD3D12Impl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                       IBottomLevelAS**         ppBLAS)
+{
+    CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
+                       [&]() //
+                       {
+                           BottomLevelASD3D12Impl* pBottomLevelASD3D12(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASD3D12Impl instance", BottomLevelASD3D12Impl)(this, Desc));
+                           pBottomLevelASD3D12->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           OnCreateDeviceObject(pBottomLevelASD3D12);
+                       });
+}
+
+void RenderDeviceD3D12Impl::CreateTLASFromD3DResource(ID3D12Resource*       pd3d12TLAS,
+                                                      const TopLevelASDesc& Desc,
+                                                      RESOURCE_STATE        InitialState,
+                                                      ITopLevelAS**         ppTLAS)
+{
+    CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+                       [&]() //
+                       {
+                           TopLevelASD3D12Impl* pTopLevelASD3D12{NEW_RC_OBJ(m_TLASAllocator, "TopLevelASD3D12Impl instance", TopLevelASD3D12Impl)(this, Desc, InitialState, pd3d12TLAS)};
+                           pTopLevelASD3D12->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           OnCreateDeviceObject(pTopLevelASD3D12);
+                       });
+}
+
+void RenderDeviceD3D12Impl::CreateTLAS(const TopLevelASDesc& Desc,
+                                       ITopLevelAS**         ppTLAS)
+{
+    CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+                       [&]() //
+                       {
+                           TopLevelASD3D12Impl* pTopLevelASD3D12(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASD3D12Impl instance", TopLevelASD3D12Impl)(this, Desc));
+                           pTopLevelASD3D12->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           OnCreateDeviceObject(pTopLevelASD3D12);
+                       });
+}
+
+void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                      IShaderBindingTable**         ppSBT)
+{
+    CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
+                       [&]() //
+                       {
+                           ShaderBindingTableD3D12Impl* pSBTD3D12(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableD3D12Impl instance", ShaderBindingTableD3D12Impl)(this, Desc));
+                           pSBTD3D12->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
+                           OnCreateDeviceObject(pSBTD3D12);
                        });
 }
 

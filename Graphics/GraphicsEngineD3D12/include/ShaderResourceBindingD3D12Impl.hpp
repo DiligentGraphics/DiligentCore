@@ -85,7 +85,8 @@ private:
 
     // Resource layout index in m_ShaderResourceCache array for every shader stage,
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
+    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
     bool        m_bStaticResourcesInitialized = false;
     const Uint8 m_NumShaders                  = 0;

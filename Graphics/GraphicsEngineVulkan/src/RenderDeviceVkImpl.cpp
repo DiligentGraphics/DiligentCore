@@ -39,6 +39,9 @@
 #include "QueryVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
 #include "FramebufferVkImpl.hpp"
+#include "BottomLevelASVkImpl.hpp"
+#include "TopLevelASVkImpl.hpp"
+#include "ShaderBindingTableVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -75,7 +78,10 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(FenceVkImpl),
             sizeof(QueryVkImpl),
             sizeof(RenderPassVkImpl),
-            sizeof(FramebufferVkImpl)
+            sizeof(FramebufferVkImpl),
+            sizeof(BottomLevelASVkImpl),
+            sizeof(TopLevelASVkImpl),
+            sizeof(ShaderBindingTableVkImpl),
         }
     },
     m_VulkanInstance         {Instance                 },
@@ -90,17 +96,18 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         "Main descriptor pool",
         std::vector<VkDescriptorPoolSize>
         {
-            {VK_DESCRIPTOR_TYPE_SAMPLER,                EngineCI.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineCI.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          EngineCI.MainDescriptorPoolSize.NumSampledImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          EngineCI.MainDescriptorPoolSize.NumStorageImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   EngineCI.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   EngineCI.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLER,                    EngineCI.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     EngineCI.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,              EngineCI.MainDescriptorPoolSize.NumSampledImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              EngineCI.MainDescriptorPoolSize.NumStorageImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,       EngineCI.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,       EngineCI.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,           EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,           EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,           EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
+            {VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, EngineCI.MainDescriptorPoolSize.NumAccelStructDescriptors}
         },
         EngineCI.MainDescriptorPoolSize.MaxDescriptorSets,
         true
@@ -111,17 +118,18 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         "Dynamic descriptor pool",
         std::vector<VkDescriptorPoolSize>
         {
-            {VK_DESCRIPTOR_TYPE_SAMPLER,                EngineCI.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineCI.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          EngineCI.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          EngineCI.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   EngineCI.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   EngineCI.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLER,                    EngineCI.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     EngineCI.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,              EngineCI.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              EngineCI.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,       EngineCI.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,       EngineCI.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,           EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,           EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,           EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
+            {VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, EngineCI.MainDescriptorPoolSize.NumAccelStructDescriptors}
         },
         EngineCI.DynamicDescriptorPoolSize.MaxDescriptorSets,
         false // Pools can only be reset
@@ -151,9 +159,27 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI.DynamicHeapSize,
         ~Uint64{0}
     },
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath)}
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath)},
+    m_Properties
+    {
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupHandleSize,
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxShaderGroupStride,
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupBaseAlignment,
+        m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount,
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayRecursionDepth + 1, // for compatibility with D3D12
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayDispatchInvocationCount
+    }
 // clang-format on
 {
+    static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+
+    // set device properties
+    {
+        static_assert(sizeof(DeviceProperties) == sizeof(Uint32) * 1, "Please set new properties below");
+        m_DeviceProperties.MaxRayTracingRecursionDepth = m_Properties.MaxRayTracingRecursionDepth;
+    }
+
     m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_VULKAN;
     m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
@@ -223,7 +249,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     const auto& vkDeviceLimits    = m_PhysicalDevice->GetProperties().limits;
@@ -567,6 +593,10 @@ void RenderDeviceVkImpl::CreateComputePipelineState(const ComputePipelineStateCr
     CreatePipelineState(PSOCreateInfo, ppPipelineState);
 }
 
+void RenderDeviceVkImpl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+}
 
 void RenderDeviceVkImpl::CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
@@ -729,6 +759,74 @@ void RenderDeviceVkImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebu
                            FramebufferVkImpl* pFramebufferVk(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferVkImpl instance", FramebufferVkImpl)(this, Desc));
                            pFramebufferVk->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            OnCreateDeviceObject(pFramebufferVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateBLASFromVulkanResource(VkAccelerationStructureKHR vkBLAS,
+                                                      const BottomLevelASDesc&   Desc,
+                                                      RESOURCE_STATE             InitialState,
+                                                      IBottomLevelAS**           ppBLAS)
+{
+    CreateDeviceObject(
+        "BottomLevelAS", Desc, ppBLAS,
+        [&]() //
+        {
+            BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc, InitialState, vkBLAS));
+            pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+            OnCreateDeviceObject(pBottomLevelASVk);
+        } //
+    );
+}
+
+void RenderDeviceVkImpl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                    IBottomLevelAS**         ppBLAS)
+{
+    CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
+                       [&]() //
+                       {
+                           BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc));
+                           pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           OnCreateDeviceObject(pBottomLevelASVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateTLASFromVulkanResource(VkAccelerationStructureKHR vkTLAS,
+                                                      const TopLevelASDesc&      Desc,
+                                                      RESOURCE_STATE             InitialState,
+                                                      ITopLevelAS**              ppTLAS)
+{
+    CreateDeviceObject(
+        "TopLevelAS", Desc, ppTLAS,
+        [&]() //
+        {
+            TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc, InitialState, vkTLAS));
+            pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+            OnCreateDeviceObject(pTopLevelASVk);
+        } //
+    );
+}
+
+void RenderDeviceVkImpl::CreateTLAS(const TopLevelASDesc& Desc,
+                                    ITopLevelAS**         ppTLAS)
+{
+    CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+                       [&]() //
+                       {
+                           TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc));
+                           pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           OnCreateDeviceObject(pTopLevelASVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                   IShaderBindingTable**         ppSBT)
+{
+    CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
+                       [&]() //
+                       {
+                           ShaderBindingTableVkImpl* pSBTVk(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableVkImpl instance", ShaderBindingTableVkImpl)(this, Desc));
+                           pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
+                           OnCreateDeviceObject(pSBTVk);
                        });
 }
 

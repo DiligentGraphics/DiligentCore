@@ -36,8 +36,8 @@ namespace VulkanUtilities
 class VulkanCommandBuffer
 {
 public:
-    VulkanCommandBuffer(VkPipelineStageFlags EnabledGraphicsShaderStages) noexcept :
-        m_EnabledGraphicsShaderStages{EnabledGraphicsShaderStages}
+    VulkanCommandBuffer(VkPipelineStageFlags EnabledShaderStages) noexcept :
+        m_EnabledShaderStages{EnabledShaderStages}
     {}
 
     // clang-format off
@@ -140,27 +140,27 @@ public:
 
     __forceinline void DrawMesh(uint32_t TaskCount, uint32_t FirstTask)
     {
-#ifdef VK_NV_mesh_shader
+#if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksNV() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMeshTasksNV(m_VkCmdBuffer, TaskCount, FirstTask);
 #else
-        UNSUPPORTED("DrawMesh is not supported in current Vulkan headers");
+        UNSUPPORTED("DrawMesh is not supported when vulkan library is linked statically");
 #endif
     }
 
     __forceinline void DrawMeshIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
     {
-#ifdef VK_NV_mesh_shader
+#if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksNV() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMeshTasksIndirectNV(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
 #else
-        UNSUPPORTED("DrawMeshIndirect is not supported in current Vulkan headers");
+        UNSUPPORTED("DrawMeshIndirect is not supported when vulkan library is linked statically");
 #endif
     }
 
@@ -280,6 +280,17 @@ public:
         }
     }
 
+    __forceinline void BindRayTracingPipeline(VkPipeline RayTracingPipeline)
+    {
+        // 9.8
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RayTracingPipeline != RayTracingPipeline)
+        {
+            vkCmdBindPipeline(m_VkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, RayTracingPipeline);
+            m_State.RayTracingPipeline = RayTracingPipeline;
+        }
+    }
+
     __forceinline void SetViewports(uint32_t FirstViewport, uint32_t ViewportCount, const VkViewport* pViewports)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
@@ -331,7 +342,7 @@ public:
                                       VkImageLayout                  OldLayout,
                                       VkImageLayout                  NewLayout,
                                       const VkImageSubresourceRange& SubresRange,
-                                      VkPipelineStageFlags           EnabledGraphicsShaderStages,
+                                      VkPipelineStageFlags           EnabledShaderStages,
                                       VkPipelineStageFlags           SrcStages  = 0,
                                       VkPipelineStageFlags           DestStages = 0);
 
@@ -349,7 +360,7 @@ public:
             // dependencies between attachments
             EndRenderPass();
         }
-        TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, m_EnabledGraphicsShaderStages, SrcStages, DestStages);
+        TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, m_EnabledShaderStages, SrcStages, DestStages);
     }
 
 
@@ -357,7 +368,7 @@ public:
                                     VkBuffer             Buffer,
                                     VkAccessFlags        srcAccessMask,
                                     VkAccessFlags        dstAccessMask,
-                                    VkPipelineStageFlags EnabledGraphicsShaderStages,
+                                    VkPipelineStageFlags EnabledShaderStages,
                                     VkPipelineStageFlags SrcStages  = 0,
                                     VkPipelineStageFlags DestStages = 0);
 
@@ -374,7 +385,31 @@ public:
             // dependencies between attachments
             EndRenderPass();
         }
-        BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_EnabledGraphicsShaderStages, SrcStages, DestStages);
+        BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_EnabledShaderStages, SrcStages, DestStages);
+    }
+
+
+    // for Acceleration structures
+    static void ASMemoryBarrier(VkCommandBuffer      CmdBuffer,
+                                VkAccessFlags        srcAccessMask,
+                                VkAccessFlags        dstAccessMask,
+                                VkPipelineStageFlags EnabledShaderStages,
+                                VkPipelineStageFlags SrcStages  = 0,
+                                VkPipelineStageFlags DestStages = 0);
+
+    __forceinline void ASMemoryBarrier(VkAccessFlags        srcAccessMask,
+                                       VkAccessFlags        dstAccessMask,
+                                       VkPipelineStageFlags SrcStages  = 0,
+                                       VkPipelineStageFlags DestStages = 0)
+    {
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Image layout transitions within a render pass execute
+            // dependencies between attachments
+            EndRenderPass();
+        }
+        ASMemoryBarrier(m_VkCmdBuffer, srcAccessMask, dstAccessMask, m_EnabledShaderStages, SrcStages, DestStages);
     }
 
     __forceinline void BindDescriptorSets(VkPipelineBindPoint    pipelineBindPoint,
@@ -570,6 +605,71 @@ public:
                                   dstBuffer, dstOffset, stride, flags);
     }
 
+    __forceinline void BuildAccelerationStructure(uint32_t                                               infoCount,
+                                                  const VkAccelerationStructureBuildGeometryInfoKHR*     pInfos,
+                                                  const VkAccelerationStructureBuildRangeInfoKHR* const* ppBuildRangeInfos)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Build AS operations must be performed outside of render pass.
+            EndRenderPass();
+        }
+        vkCmdBuildAccelerationStructuresKHR(m_VkCmdBuffer, infoCount, pInfos, ppBuildRangeInfos);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
+#endif
+    }
+
+    __forceinline void CopyAccelerationStructure(const VkCopyAccelerationStructureInfoKHR& Info)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Copy AS operations must be performed outside of render pass.
+            EndRenderPass();
+        }
+        vkCmdCopyAccelerationStructureKHR(m_VkCmdBuffer, &Info);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
+#endif
+    }
+
+    __forceinline void WriteAccelerationStructuresProperties(VkAccelerationStructureKHR accelerationStructure, VkQueryType queryType, VkQueryPool queryPool, uint32_t firstQuery)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Write AS properties operations must be performed outside of render pass.
+            EndRenderPass();
+        }
+        vkCmdWriteAccelerationStructuresPropertiesKHR(m_VkCmdBuffer, 1, &accelerationStructure, queryType, queryPool, firstQuery);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
+#endif
+    }
+
+    __forceinline void TraceRays(const VkStridedDeviceAddressRegionKHR& RaygenShaderBindingTable,
+                                 const VkStridedDeviceAddressRegionKHR& MissShaderBindingTable,
+                                 const VkStridedDeviceAddressRegionKHR& HitShaderBindingTable,
+                                 const VkStridedDeviceAddressRegionKHR& CallableShaderBindingTable,
+                                 uint32_t                               width,
+                                 uint32_t                               height,
+                                 uint32_t                               depth)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RayTracingPipeline != VK_NULL_HANDLE, "No ray tracing pipeline bound");
+
+        vkCmdTraceRaysKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, width, height, depth);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
+#endif
+    }
+
     void FlushBarriers();
 
     __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)
@@ -578,12 +678,15 @@ public:
     }
     VkCommandBuffer GetVkCmdBuffer() const { return m_VkCmdBuffer; }
 
+    VkPipelineStageFlags GetEnabledShaderStages() const { return m_EnabledShaderStages; }
+
     struct StateCache
     {
         VkRenderPass  RenderPass         = VK_NULL_HANDLE;
         VkFramebuffer Framebuffer        = VK_NULL_HANDLE;
         VkPipeline    GraphicsPipeline   = VK_NULL_HANDLE;
         VkPipeline    ComputePipeline    = VK_NULL_HANDLE;
+        VkPipeline    RayTracingPipeline = VK_NULL_HANDLE;
         VkBuffer      IndexBuffer        = VK_NULL_HANDLE;
         VkDeviceSize  IndexBufferOffset  = 0;
         VkIndexType   IndexType          = VK_INDEX_TYPE_MAX_ENUM;
@@ -598,7 +701,7 @@ public:
 private:
     StateCache                 m_State;
     VkCommandBuffer            m_VkCmdBuffer = VK_NULL_HANDLE;
-    const VkPipelineStageFlags m_EnabledGraphicsShaderStages;
+    const VkPipelineStageFlags m_EnabledShaderStages;
 };
 
 } // namespace VulkanUtilities

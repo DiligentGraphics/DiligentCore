@@ -29,7 +29,8 @@
 
 #include "DefaultRawMemoryAllocator.hpp"
 #include "FixedBlockMemoryAllocator.hpp"
-#include "LinearAllocator.hpp"
+#include "FixedLinearAllocator.hpp"
+#include "DynamicLinearAllocator.hpp"
 
 #include "gtest/gtest.h"
 
@@ -123,9 +124,9 @@ TEST(Common_FixedBlockMemoryAllocator, UnalignedSize)
     }
 }
 
-TEST(Common_LinearAllocator, EmptyAllocator)
+TEST(Common_FixedLinearAllocator, EmptyAllocator)
 {
-    LinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
+    FixedLinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
     Allocator.AddSpace(0, 16);
     Allocator.Reserve();
     EXPECT_EQ(Allocator.GetReservedSize(), size_t{0});
@@ -133,18 +134,18 @@ TEST(Common_LinearAllocator, EmptyAllocator)
     EXPECT_EQ(pNull, nullptr);
 }
 
-TEST(Common_LinearAllocator, LargeAlignment)
+TEST(Common_FixedLinearAllocator, LargeAlignment)
 {
-    LinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
+    FixedLinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
     Allocator.AddSpace(32, 8192);
     Allocator.Reserve();
     auto* Ptr = Allocator.Allocate(32, 8192);
     EXPECT_EQ(Ptr, Align(Ptr, 8192));
 }
 
-TEST(Common_LinearAllocator, ObjectConstruction)
+TEST(Common_FixedLinearAllocator, ObjectConstruction)
 {
-    LinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
+    FixedLinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
 
     struct alignas(1024) TObj1k
     {
@@ -218,6 +219,14 @@ TEST(Common_LinearAllocator, ObjectConstruction)
         auto* pObj = Allocator.Allocate<TObj1k>(4);
         EXPECT_EQ(pObj, Align(pObj, alignof(TObj1k)));
     }
+}
+
+TEST(Common_DynamicLinearAllocator, ObjectConstruction)
+{
+    DynamicLinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
+
+    EXPECT_TRUE(reinterpret_cast<size_t>(Allocator.Allocate(10, 16)) % 16 == 0);
+    EXPECT_TRUE(reinterpret_cast<size_t>(Allocator.Allocate(200, 64)) % 64 == 0);
 }
 
 } // namespace

@@ -1721,4 +1721,39 @@ void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                   
     CommitRenderTargets();
 }
 
+void DeviceContextGLImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
+{
+    UNSUPPORTED("BuildBLAS is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
+{
+    UNSUPPORTED("BuildTLAS is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
+{
+    UNSUPPORTED("CopyBLAS is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
+{
+    UNSUPPORTED("CopyTLAS is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs)
+{
+    UNSUPPORTED("WriteBLASCompactedSize is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs)
+{
+    UNSUPPORTED("WriteTLASCompactedSize is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::TraceRays(const TraceRaysAttribs& Attribs)
+{
+    UNSUPPORTED("TraceRays is not supported in OpenGL");
+}
+
 } // namespace Diligent

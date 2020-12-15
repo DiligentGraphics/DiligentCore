@@ -329,7 +329,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
 
 static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STATE StateFlag)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -351,6 +351,9 @@ static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STAT
         case RESOURCE_STATE_RESOLVE_SOURCE:    return D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         case RESOURCE_STATE_PRESENT:           return D3D12_RESOURCE_STATE_PRESENT;
+        case RESOURCE_STATE_BUILD_AS_READ:     return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        case RESOURCE_STATE_BUILD_AS_WRITE:    return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        case RESOURCE_STATE_RAY_TRACING:       return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
         // clang-format on
         default:
             UNEXPECTED("Unexpected resource state flag");
@@ -364,7 +367,7 @@ public:
     StateFlagBitPosToD3D12ResourceState()
     {
         static_assert((1 << MaxFlagBitPos) == RESOURCE_STATE_MAX_BIT, "This function must be updated to handle new resource state flag");
-        for (Uint32 bit = 0; bit <= MaxFlagBitPos; ++bit)
+        for (Uint32 bit = 0; bit < FlagBitPosToResStateMap.size(); ++bit)
         {
             FlagBitPosToResStateMap[bit] = ResourceStateFlagToD3D12ResourceState(static_cast<RESOURCE_STATE>(1 << bit));
         }
@@ -377,7 +380,7 @@ public:
     }
 
 private:
-    static constexpr Uint32                              MaxFlagBitPos = 16;
+    static constexpr Uint32                              MaxFlagBitPos = 19;
     std::array<D3D12_RESOURCE_STATES, MaxFlagBitPos + 1> FlagBitPosToResStateMap;
 };
 
@@ -399,7 +402,7 @@ D3D12_RESOURCE_STATES ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE Sta
 
 static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STATES state)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     VERIFY((state & (state - 1)) == 0, "Only single state must be set");
     switch (state)
     {
@@ -433,7 +436,7 @@ class D3D12StateFlagBitPosToResourceState
 public:
     D3D12StateFlagBitPosToResourceState()
     {
-        for (Uint32 bit = 0; bit <= MaxFlagBitPos; ++bit)
+        for (Uint32 bit = 0; bit < FlagBitPosToResStateMap.size(); ++bit)
         {
             FlagBitPosToResStateMap[bit] = D3D12ResourceStateToResourceStateFlags(static_cast<D3D12_RESOURCE_STATES>(1 << bit));
         }
@@ -535,6 +538,215 @@ D3D12_RENDER_PASS_ENDING_ACCESS_TYPE AttachmentStoreOpToD3D12EndingAccessType(AT
             return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
     }
     // clang-format on
+}
+
+D3D12_SHADER_VISIBILITY ShaderTypeToD3D12ShaderVisibility(SHADER_TYPE ShaderType)
+{
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    switch (ShaderType)
+    {
+        // clang-format off
+        case SHADER_TYPE_VERTEX:            return D3D12_SHADER_VISIBILITY_VERTEX;
+        case SHADER_TYPE_PIXEL:             return D3D12_SHADER_VISIBILITY_PIXEL;
+        case SHADER_TYPE_GEOMETRY:          return D3D12_SHADER_VISIBILITY_GEOMETRY;
+        case SHADER_TYPE_HULL:              return D3D12_SHADER_VISIBILITY_HULL;
+        case SHADER_TYPE_DOMAIN:            return D3D12_SHADER_VISIBILITY_DOMAIN;
+        case SHADER_TYPE_COMPUTE:           return D3D12_SHADER_VISIBILITY_ALL;
+#   ifdef D3D12_H_HAS_MESH_SHADER
+        case SHADER_TYPE_AMPLIFICATION:     return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
+        case SHADER_TYPE_MESH:              return D3D12_SHADER_VISIBILITY_MESH;
+#   endif
+        case SHADER_TYPE_RAY_GEN:
+        case SHADER_TYPE_RAY_MISS:
+        case SHADER_TYPE_RAY_CLOSEST_HIT:
+        case SHADER_TYPE_RAY_ANY_HIT:
+        case SHADER_TYPE_RAY_INTERSECTION:
+        case SHADER_TYPE_CALLABLE:          return D3D12_SHADER_VISIBILITY_ALL;
+        // clang-format on
+        default:
+            LOG_ERROR("Unknown shader type (", ShaderType, ")");
+            return D3D12_SHADER_VISIBILITY_ALL;
+    }
+}
+
+SHADER_TYPE D3D12ShaderVisibilityToShaderType(D3D12_SHADER_VISIBILITY ShaderVisibility)
+{
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    switch (ShaderVisibility)
+    {
+        // clang-format off
+        case D3D12_SHADER_VISIBILITY_ALL:           return SHADER_TYPE_UNKNOWN;
+        case D3D12_SHADER_VISIBILITY_VERTEX:        return SHADER_TYPE_VERTEX;
+        case D3D12_SHADER_VISIBILITY_PIXEL:         return SHADER_TYPE_PIXEL;
+        case D3D12_SHADER_VISIBILITY_GEOMETRY:      return SHADER_TYPE_GEOMETRY;
+        case D3D12_SHADER_VISIBILITY_HULL:          return SHADER_TYPE_HULL;
+        case D3D12_SHADER_VISIBILITY_DOMAIN:        return SHADER_TYPE_DOMAIN;
+#   ifdef D3D12_H_HAS_MESH_SHADER
+        case D3D12_SHADER_VISIBILITY_AMPLIFICATION: return SHADER_TYPE_AMPLIFICATION;
+        case D3D12_SHADER_VISIBILITY_MESH:          return SHADER_TYPE_MESH;
+#   endif
+        // clang-format on
+        default:
+            LOG_ERROR("Unknown shader visibility (", ShaderVisibility, ")");
+            return SHADER_TYPE_UNKNOWN;
+    }
+}
+
+DXGI_FORMAT ValueTypeToIndexType(VALUE_TYPE IndexType)
+{
+    switch (IndexType)
+    {
+        // clang-format off
+        case VT_UNDEFINED: return DXGI_FORMAT_UNKNOWN; // only for ray tracing
+        case VT_UINT16:    return DXGI_FORMAT_R16_UINT;
+        case VT_UINT32:    return DXGI_FORMAT_R32_UINT;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected index type");
+            return DXGI_FORMAT_R32_UINT;
+    }
+}
+
+D3D12_RAYTRACING_GEOMETRY_FLAGS GeometryFlagsToD3D12RTGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags)
+{
+    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION,
+                  "Please update the switch below to handle the new ray tracing geometry flag");
+
+    D3D12_RAYTRACING_GEOMETRY_FLAGS Result = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+    while (Flags != RAYTRACING_GEOMETRY_FLAG_NONE)
+    {
+        auto FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
+        {
+            // clang-format off
+            case RAYTRACING_GEOMETRY_FLAG_OPAQUE:                          Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;                         break;
+            case RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION; break;
+            // clang-format on
+            default: UNEXPECTED("unknown geometry flag");
+        }
+        Flags &= ~FlagBit;
+    }
+    return Result;
+}
+
+D3D12_RAYTRACING_INSTANCE_FLAGS InstanceFlagsToD3D12RTInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags)
+{
+    static_assert(RAYTRACING_INSTANCE_FLAGS_LAST == RAYTRACING_INSTANCE_FORCE_NO_OPAQUE,
+                  "Please update the switch below to handle the new ray tracing instance flag");
+
+    D3D12_RAYTRACING_INSTANCE_FLAGS Result = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+    while (Flags != RAYTRACING_INSTANCE_NONE)
+    {
+        auto FlagBit = static_cast<RAYTRACING_INSTANCE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
+        {
+            // clang-format off
+            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;           break;
+            case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: Result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE; break;
+            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    Result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;                    break;
+            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 Result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE;                break;
+            // clang-format on
+            default: UNEXPECTED("unknown instance flag");
+        }
+        Flags &= ~FlagBit;
+    }
+    return Result;
+}
+
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS BuildASFlagsToD3D12ASBuildFlags(RAYTRACING_BUILD_AS_FLAGS Flags)
+{
+    static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == RAYTRACING_BUILD_AS_LOW_MEMORY,
+                  "Please update the switch below to handle the new acceleration structure build flag");
+
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Result = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+    while (Flags != RAYTRACING_BUILD_AS_NONE)
+    {
+        auto FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
+        {
+            // clang-format off
+            case RAYTRACING_BUILD_AS_ALLOW_UPDATE:      Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;      break;
+            case RAYTRACING_BUILD_AS_ALLOW_COMPACTION:  Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;  break;
+            case RAYTRACING_BUILD_AS_PREFER_FAST_TRACE: Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE; break;
+            case RAYTRACING_BUILD_AS_PREFER_FAST_BUILD: Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD; break;
+            case RAYTRACING_BUILD_AS_LOW_MEMORY:        Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;   break;
+            // clang-format on
+            default: UNEXPECTED("unknown build AS flag");
+        }
+        Flags &= ~FlagBit;
+    }
+    return Result;
+}
+
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE CopyASModeToD3D12ASCopyMode(COPY_AS_MODE Mode)
+{
+    static_assert(COPY_AS_MODE_LAST == COPY_AS_MODE_COMPACT,
+                  "Please update the switch below to handle the new copy AS mode");
+
+    switch (Mode)
+    {
+        // clang-format off
+        case COPY_AS_MODE_CLONE:   return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_CLONE;
+        case COPY_AS_MODE_COMPACT: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT;
+        // clang-format on
+        default:
+            UNEXPECTED("unknown AS copy mode");
+            return static_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE>(~0u);
+    }
+}
+
+DXGI_FORMAT TypeToRayTracingVertexFormat(VALUE_TYPE ValueType, Uint32 ComponentCount)
+{
+    // Vertex format must be one of the following (https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_raytracing_geometry_triangles_desc):
+    //  * DXGI_FORMAT_R32G32_FLOAT       - third component is assumed 0
+    //  * DXGI_FORMAT_R32G32B32_FLOAT
+    //  * DXGI_FORMAT_R16G16_FLOAT       - third component is assumed 0
+    //  * DXGI_FORMAT_R16G16B16A16_FLOAT - A16 component is ignored, other data can be packed there, such as setting vertex stride to 6 bytes.
+    //  * DXGI_FORMAT_R16G16_SNORM       - third component is assumed 0
+    //  * DXGI_FORMAT_R16G16B16A16_SNORM - A16 component is ignored, other data can be packed there, such as setting vertex stride to 6 bytes.
+    // Note that DXGI_FORMAT_R16G16B16A16_FLOAT and DXGI_FORMAT_R16G16B16A16_SNORM are merely workarounds for missing 16-bit 3-component DXGI formats
+    switch (ValueType)
+    {
+        case VT_FLOAT16:
+            switch (ComponentCount)
+            {
+                case 2: return DXGI_FORMAT_R16G16_FLOAT;
+                case 3: return DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+                default:
+                    UNEXPECTED("Only 2 and 3 component vertex formats are expected");
+                    return DXGI_FORMAT_UNKNOWN;
+            }
+            break;
+
+        case VT_FLOAT32:
+            switch (ComponentCount)
+            {
+                case 2: return DXGI_FORMAT_R32G32_FLOAT;
+                case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
+
+                default:
+                    UNEXPECTED("Only 2 and 3 component vertex formats are expected");
+                    return DXGI_FORMAT_UNKNOWN;
+            }
+            break;
+
+        case VT_INT16:
+            switch (ComponentCount)
+            {
+                case 2: return DXGI_FORMAT_R16G16_SNORM;
+                case 3: return DXGI_FORMAT_R16G16B16A16_SNORM;
+
+                default:
+                    UNEXPECTED("Only 2 and 3 component vertex formats are expected");
+                    return DXGI_FORMAT_UNKNOWN;
+            }
+            break;
+
+        default:
+            UNEXPECTED(GetValueTypeString(ValueType), " is not a valid vertex component type");
+            return DXGI_FORMAT_UNKNOWN;
+    }
 }
 
 } // namespace Diligent

@@ -47,6 +47,9 @@
 #include "Query.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
+#include "BottomLevelAS.h"
+#include "TopLevelAS.h"
+#include "ShaderBindingTable.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -174,6 +177,17 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateComputePipelineState)(THIS_
                                                     const ComputePipelineStateCreateInfo REF PSOCreateInfo,
                                                     IPipelineState**                         ppPipelineState) PURE;
+    
+    /// Creates a new ray tracing pipeline state object
+
+    /// \param [in]  PSOCreateInfo   - Ray tracing pipeline state create info, see Diligent::RayTracingPipelineStateCreateInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
+    ///                                pipeline state interface will be stored.
+    ///                                The function calls AddRef(), so that the new object will contain
+    ///                                one reference.
+    VIRTUAL void METHOD(CreateRayTracingPipelineState)(THIS_
+                                                       const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
+                                                       IPipelineState**                            ppPipelineState) PURE;
 
     /// Creates a new fence object
 
@@ -224,8 +238,47 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                            IFramebuffer**            ppFramebuffer) PURE;
 
 
+    /// Creates a bottom-level acceleration structure object (BLAS).
+
+    /// \param [in]  Desc    - BLAS description, see Diligent::BottomLevelASDesc for details.
+    /// \param [out] ppBLAS  - Address of the memory location where the pointer to the
+    ///                        BLAS interface will be stored.
+    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        one reference.
+    VIRTUAL void METHOD(CreateBLAS)(THIS_
+                                    const BottomLevelASDesc REF Desc,
+                                    IBottomLevelAS**            ppBLAS) PURE;
+    
+
+    /// Creates a top-level acceleration structure object (TLAS).
+
+    /// \param [in]  Desc    - TLAS description, see Diligent::TopLevelASDesc for details.
+    /// \param [out] ppTLAS  - Address of the memory location where the pointer to the
+    ///                        TLAS interface will be stored.
+    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        one reference.
+    VIRTUAL void METHOD(CreateTLAS)(THIS_
+                                    const TopLevelASDesc REF Desc,
+                                    ITopLevelAS**            ppTLAS) PURE;
+    
+    
+    /// Creates a shader resource binding table object (SBT).
+
+    /// \param [in]  Desc    - SBT description, see Diligent::ShaderBindingTableDesc for details.
+    /// \param [out] ppSBT   - Address of the memory location where the pointer to the
+    ///                        SBT interface will be stored.
+    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        one reference.
+    VIRTUAL void METHOD(CreateSBT)(THIS_
+                                   const ShaderBindingTableDesc REF Desc,
+                                   IShaderBindingTable**            ppSBT) PURE;
+
+
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
     VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;
+    
+    /// Gets the device properties, see Diligent::DeviceProperties for details
+    VIRTUAL const DeviceProperties REF METHOD(GetDeviceProperties)(THIS) CONST PURE;
 
 
     /// Returns the basic texture format information.
@@ -282,25 +335,24 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 // clang-format off
-
-#    define IRenderDevice_CreateBuffer(This, ...)                CALL_IFACE_METHOD(RenderDevice, CreateBuffer,                This, __VA_ARGS__)
-#    define IRenderDevice_CreateShader(This, ...)                CALL_IFACE_METHOD(RenderDevice, CreateShader,                This, __VA_ARGS__)
-#    define IRenderDevice_CreateTexture(This, ...)               CALL_IFACE_METHOD(RenderDevice, CreateTexture,               This, __VA_ARGS__)
-#    define IRenderDevice_CreateSampler(This, ...)               CALL_IFACE_METHOD(RenderDevice, CreateSampler,               This, __VA_ARGS__)
-#    define IRenderDevice_CreateResourceMapping(This, ...)       CALL_IFACE_METHOD(RenderDevice, CreateResourceMapping,       This, __VA_ARGS__)
-#    define IRenderDevice_CreateGraphicsPipelineState(This, ...) CALL_IFACE_METHOD(RenderDevice, CreateGraphicsPipelineState, This, __VA_ARGS__)
-#    define IRenderDevice_CreateComputePipelineState(This, ...)  CALL_IFACE_METHOD(RenderDevice, CreateComputePipelineState,  This, __VA_ARGS__)
-#    define IRenderDevice_CreateFence(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateFence,                 This, __VA_ARGS__)
-#    define IRenderDevice_CreateQuery(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateQuery,                 This, __VA_ARGS__)
-#    define IRenderDevice_CreateRenderPass(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateRenderPass,            This, __VA_ARGS__)
-#    define IRenderDevice_CreateFramebuffer(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateFramebuffer,           This, __VA_ARGS__)
-#    define IRenderDevice_GetDeviceCaps(This)                    CALL_IFACE_METHOD(RenderDevice, GetDeviceCaps,               This)
-#    define IRenderDevice_GetTextureFormatInfo(This, ...)        CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,        This, __VA_ARGS__)
-#    define IRenderDevice_GetTextureFormatInfoExt(This, ...)     CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,     This, __VA_ARGS__)
-#    define IRenderDevice_ReleaseStaleResources(This, ...)       CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,       This, __VA_ARGS__)
-#    define IRenderDevice_IdleGPU(This)                          CALL_IFACE_METHOD(RenderDevice, IdleGPU,                     This)
-#    define IRenderDevice_GetEngineFactory(This)                 CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,            This)
-
+#    define IRenderDevice_CreateBuffer(This, ...)                  CALL_IFACE_METHOD(RenderDevice, CreateBuffer,                This, __VA_ARGS__)
+#    define IRenderDevice_CreateShader(This, ...)                  CALL_IFACE_METHOD(RenderDevice, CreateShader,                This, __VA_ARGS__)
+#    define IRenderDevice_CreateTexture(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateTexture,               This, __VA_ARGS__)
+#    define IRenderDevice_CreateSampler(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateSampler,               This, __VA_ARGS__)
+#    define IRenderDevice_CreateResourceMapping(This, ...)         CALL_IFACE_METHOD(RenderDevice, CreateResourceMapping,       This, __VA_ARGS__)
+#    define IRenderDevice_CreateGraphicsPipelineState(This, ...)   CALL_IFACE_METHOD(RenderDevice, CreateGraphicsPipelineState, This, __VA_ARGS__)
+#    define IRenderDevice_CreateComputePipelineState(This, ...)    CALL_IFACE_METHOD(RenderDevice, CreateComputePipelineState,  This, __VA_ARGS__)
+#    define IRenderDevice_CreateRayTracingPipelineState(This, ...) CALL_IFACE_METHOD(RenderDevice, CreateRayTracingPipelineState, This, __VA_ARGS__)
+#    define IRenderDevice_CreateFence(This, ...)                   CALL_IFACE_METHOD(RenderDevice, CreateFence,                 This, __VA_ARGS__)
+#    define IRenderDevice_CreateQuery(This, ...)                   CALL_IFACE_METHOD(RenderDevice, CreateQuery,                 This, __VA_ARGS__)
+#    define IRenderDevice_CreateRenderPass(This, ...)              CALL_IFACE_METHOD(RenderDevice, CreateRenderPass,            This, __VA_ARGS__)
+#    define IRenderDevice_CreateFramebuffer(This, ...)             CALL_IFACE_METHOD(RenderDevice, CreateFramebuffer,           This, __VA_ARGS__)
+#    define IRenderDevice_GetDeviceCaps(This)                      CALL_IFACE_METHOD(RenderDevice, GetDeviceCaps,               This)
+#    define IRenderDevice_GetTextureFormatInfo(This, ...)          CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,        This, __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatInfoExt(This, ...)       CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,     This, __VA_ARGS__)
+#    define IRenderDevice_ReleaseStaleResources(This, ...)         CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,       This, __VA_ARGS__)
+#    define IRenderDevice_IdleGPU(This)                            CALL_IFACE_METHOD(RenderDevice, IdleGPU,                     This)
+#    define IRenderDevice_GetEngineFactory(This)                   CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,            This)
 // clang-format on
 
 #endif

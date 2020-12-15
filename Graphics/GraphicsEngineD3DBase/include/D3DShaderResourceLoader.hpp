@@ -42,12 +42,13 @@ namespace Diligent
 
 struct D3DShaderResourceCounters
 {
-    Uint32 NumCBs      = 0;
-    Uint32 NumTexSRVs  = 0;
-    Uint32 NumTexUAVs  = 0;
-    Uint32 NumBufSRVs  = 0;
-    Uint32 NumBufUAVs  = 0;
-    Uint32 NumSamplers = 0;
+    Uint32 NumCBs          = 0;
+    Uint32 NumTexSRVs      = 0;
+    Uint32 NumTexUAVs      = 0;
+    Uint32 NumBufSRVs      = 0;
+    Uint32 NumBufUAVs      = 0;
+    Uint32 NumSamplers     = 0;
+    Uint32 NumAccelStructs = 0;
 };
 
 template <typename D3D_SHADER_DESC,
@@ -61,7 +62,8 @@ template <typename D3D_SHADER_DESC,
           typename TOnNewBuffUAV,
           typename TOnNewBuffSRV,
           typename TOnNewSampler,
-          typename TOnNewTexSRV>
+          typename TOnNewTexSRV,
+          typename TOnNewAccelStruct>
 void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
                             THandleShaderDesc   HandleShaderDesc,
                             TOnResourcesCounted OnResourcesCounted,
@@ -70,7 +72,8 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
                             TOnNewBuffUAV       OnNewBuffUAV,
                             TOnNewBuffSRV       OnNewBuffSRV,
                             TOnNewSampler       OnNewSampler,
-                            TOnNewTexSRV        OnNewTexSRV)
+                            TOnNewTexSRV        OnNewTexSRV,
+                            TOnNewAccelStruct   OnNewAccelStruct)
 {
     D3D_SHADER_DESC shaderDesc = {};
     pShaderReflection->GetDesc(&shaderDesc);
@@ -90,6 +93,9 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
     {
         D3D_SHADER_INPUT_BIND_DESC BindingDesc = {};
         pShaderReflection->GetResourceBindingDesc(Res, &BindingDesc);
+
+        if (BindingDesc.BindPoint == UINT32_MAX)
+            BindingDesc.BindPoint = D3DShaderResourceAttribs::InvalidBindPoint;
 
         std::string Name(BindingDesc.Name);
 
@@ -173,6 +179,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
             case D3D_SIT_UAV_APPEND_STRUCTURED:         UNSUPPORTED( "Append structured buffers are not supported" );                          break;
             case D3D_SIT_UAV_CONSUME_STRUCTURED:        UNSUPPORTED( "Consume structured buffers are not supported" );                         break;
             case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER: UNSUPPORTED( "RW structured buffers with counter are not supported" );                 break;
+            case D3D_SIT_RTACCELERATIONSTRUCTURE:       ++RC.NumAccelStructs;                                                                  break;
             // clang-format on
             default: UNEXPECTED("Unexpected resource type");
         }
@@ -281,6 +288,12 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
             case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
             {
                 UNSUPPORTED("RW structured buffers with counter are not supported");
+                break;
+            }
+
+            case D3D_SIT_RTACCELERATIONSTRUCTURE:
+            {
+                OnNewAccelStruct(Res);
                 break;
             }
 

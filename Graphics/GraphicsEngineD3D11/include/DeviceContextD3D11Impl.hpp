@@ -41,6 +41,8 @@
 #include "FramebufferD3D11Impl.hpp"
 #include "RenderPassD3D11Impl.hpp"
 #include "DisjointQueryPool.hpp"
+#include "BottomLevelASBase.hpp"
+#include "TopLevelASBase.hpp"
 
 #ifdef DILIGENT_DEBUG
 #    define VERIFY_CONTEXT_BINDINGS
@@ -58,6 +60,8 @@ struct DeviceContextD3D11ImplTraits
     using QueryType         = QueryD3D11Impl;
     using FramebufferType   = FramebufferD3D11Impl;
     using RenderPassType    = RenderPassD3D11Impl;
+    using BottomLevelASType = BottomLevelASBase<IBottomLevelAS, RenderDeviceD3D11Impl>;
+    using TopLevelASType    = TopLevelASBase<ITopLevelAS, BottomLevelASType, RenderDeviceD3D11Impl>;
 };
 
 /// Device context implementation in Direct3D11 backend.
@@ -245,6 +249,27 @@ public:
 
     /// Implementation of IDeviceContext::Flush() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE Flush() override final;
+
+    /// Implementation of IDeviceContext::BuildBLAS().
+    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BuildBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::BuildTLAS().
+    virtual void DILIGENT_CALL_TYPE BuildTLAS(const BuildTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyBLAS().
+    virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyTLAS().
+    virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::WriteBLASCompactedSize().
+    virtual void DILIGENT_CALL_TYPE WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::WriteTLASCompactedSize().
+    virtual void DILIGENT_CALL_TYPE WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::TraceRays().
+    virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }

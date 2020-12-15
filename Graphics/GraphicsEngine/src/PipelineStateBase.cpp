@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "PipelineStateBase.hpp"
 
 namespace Diligent
@@ -248,6 +247,102 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 
     VALIDATE_SHADER_TYPE(CreateInfo.pCS, SHADER_TYPE_COMPUTE, "compute");
 }
+
+void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecursion, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
+{
+    const auto& PSODesc = CreateInfo.PSODesc;
+    if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
+        LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING");
+
+    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+    {
+        if ((CreateInfo.pShaderRecordName != nullptr) != (CreateInfo.RayTracingPipeline.ShaderRecordSize > 0))
+            LOG_PSO_ERROR_AND_THROW("pShaderRecordName must not be null if RayTracingPipeline.ShaderRecordSize is not zero");
+    }
+
+    if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > MaxRecursion)
+    {
+        LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth must not exceed the ", MaxRecursion);
+    }
+
+    for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
+    {
+        const auto& Group = CreateInfo.pGeneralShaders[i];
+        if (Group.pShader == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].pShader must not be null");
+        if (Group.Name == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must not be null");
+
+        switch (Group.pShader->GetDesc().ShaderType)
+        {
+            case SHADER_TYPE_RAY_GEN:
+            case SHADER_TYPE_RAY_MISS:
+            case SHADER_TYPE_RAY_CLOSEST_HIT: break;
+            default:
+                LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(Group.pShader->GetDesc().ShaderType), " is not a valid type for ray tracing general shader");
+        }
+    }
+
+    for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
+    {
+        const auto& Group = CreateInfo.pTriangleHitShaders[i];
+        if (Group.pClosestHitShader == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].pClosestHitShader must not be null");
+        if (Group.Name == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must not be null");
+
+        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closest hit");
+
+        if (Group.pAnyHitShader != nullptr)
+            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing triangle any hit");
+    }
+
+    for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
+    {
+        const auto& Group = CreateInfo.pProceduralHitShaders[i];
+        if (Group.pIntersectionShader == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].pIntersectionShader must not be null");
+        if (Group.Name == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must not be null");
+
+        VALIDATE_SHADER_TYPE(Group.pIntersectionShader, SHADER_TYPE_RAY_INTERSECTION, "ray tracing procedural intersection");
+
+        if (Group.pClosestHitShader != nullptr)
+            VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing procedural closest hit");
+        if (Group.pAnyHitShader != nullptr)
+            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing procedural any hit");
+    }
+}
+
+void CopyRayTracingShaderGroups(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
+                                const RayTracingPipelineStateCreateInfo&                                CreateInfo,
+                                FixedLinearAllocator&                                                   MemPool) noexcept(false)
+{
+    const auto& PSODesc    = CreateInfo.PSODesc;
+    Uint32      GroupIndex = 0;
+
+    for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
+    {
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pGeneralShaders[i].Name)}, GroupIndex++).second;
+        if (!IsUniqueName)
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must be unique");
+    }
+    for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
+    {
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pTriangleHitShaders[i].Name)}, GroupIndex++).second;
+        if (!IsUniqueName)
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must be unique");
+    }
+    for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
+    {
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pProceduralHitShaders[i].Name)}, GroupIndex++).second;
+        if (!IsUniqueName)
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must be unique");
+    }
+
+    VERIFY_EXPR(Uint32{CreateInfo.GeneralShaderCount} + Uint32{CreateInfo.TriangleHitShaderCount} + Uint32{CreateInfo.ProceduralHitShaderCount} == GroupIndex);
+}
+
 #undef VALIDATE_SHADER_TYPE
 #undef LOG_PSO_ERROR_AND_THROW
 

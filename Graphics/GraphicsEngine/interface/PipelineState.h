@@ -152,7 +152,7 @@ typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 
 /// Graphics pipeline state description
 
-/// This structure describes the graphics pipeline state and is part of the PipelineStateDesc structure.
+/// This structure describes the graphics pipeline state and is part of the GraphicsPipelineStateCreateInfo structure.
 struct GraphicsPipelineDesc
 {
     /// Blend state description.
@@ -215,6 +215,107 @@ struct GraphicsPipelineDesc
 typedef struct GraphicsPipelineDesc GraphicsPipelineDesc;
 
 
+/// Ray tracing general shader group description
+struct RayTracingGeneralShaderGroup
+{
+    /// Unique group name.
+    const char* Name    DEFAULT_INITIALIZER(nullptr);
+
+    /// Shader type must be SHADER_TYPE_RAY_GEN, SHADER_TYPE_RAY_MISS or SHADER_TYPE_CALLABLE.
+    IShader*    pShader DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    RayTracingGeneralShaderGroup() noexcept
+    {}
+
+    RayTracingGeneralShaderGroup(const char* _Name,
+                                 IShader*    _pShader) noexcept:
+        Name   {_Name   },
+        pShader{_pShader}
+    {}
+#endif
+};
+typedef struct RayTracingGeneralShaderGroup RayTracingGeneralShaderGroup;
+
+/// Ray tracing triangle hit shader group description.
+struct RayTracingTriangleHitShaderGroup
+{
+    /// Unique group name.
+    const char* Name              DEFAULT_INITIALIZER(nullptr);
+
+    /// Closest hit shader.
+    /// The shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
+    IShader*    pClosestHitShader DEFAULT_INITIALIZER(nullptr);
+
+    /// Any-hit shader. Can be null.
+    /// The shader type must be SHADER_TYPE_RAY_ANY_HIT.
+    IShader*    pAnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
+
+#if DILIGENT_CPP_INTERFACE
+    RayTracingTriangleHitShaderGroup() noexcept
+    {}
+
+    RayTracingTriangleHitShaderGroup(const char* _Name,
+                                     IShader*    _pClosestHitShader,
+                                     IShader*    _pAnyHitShader    = nullptr) noexcept:
+        Name             {_Name             },
+        pClosestHitShader{_pClosestHitShader},
+        pAnyHitShader    {_pAnyHitShader    }
+    {}
+#endif
+};
+typedef struct RayTracingTriangleHitShaderGroup RayTracingTriangleHitShaderGroup;
+
+/// Ray tracing procedural hit shader group description.
+struct RayTracingProceduralHitShaderGroup
+{
+    /// Unique group name.
+    const char* Name                DEFAULT_INITIALIZER(nullptr);
+
+    /// Intersection shader.
+    /// The shader type must be SHADER_TYPE_RAY_INTERSECTION.
+    IShader*    pIntersectionShader DEFAULT_INITIALIZER(nullptr);
+    
+    /// Closest hit shader. Can be null.
+    /// The shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
+    IShader*    pClosestHitShader   DEFAULT_INITIALIZER(nullptr);
+    
+    /// Any-hit shader. Can be null.
+    /// The shader type must be SHADER_TYPE_RAY_ANY_HIT.
+    IShader*    pAnyHitShader       DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    RayTracingProceduralHitShaderGroup() noexcept
+    {}
+
+    RayTracingProceduralHitShaderGroup(const char* _Name,
+                                       IShader*    _pIntersectionShader,
+                                       IShader*    _pClosestHitShader  = nullptr,
+                                       IShader*    _pAnyHitShader      = nullptr) noexcept:
+        Name               {_Name               },
+        pIntersectionShader{_pIntersectionShader},
+        pClosestHitShader  {_pClosestHitShader  },
+        pAnyHitShader      {_pAnyHitShader      }
+    {}
+#endif
+};
+typedef struct RayTracingProceduralHitShaderGroup RayTracingProceduralHitShaderGroup;
+
+/// This structure describes the ray tracing pipeline state and is part of the RayTracingPipelineStateCreateInfo structure.
+struct RayTracingPipelineDesc
+{
+    /// Size of the additional data passed to the shader.
+    /// Shader record size plus shader group size (32 bytes) must be aligned to 32 bytes.
+    /// Shader record size plus shader group size (32 bytes) must not exceed 4096 bytes.
+    Uint16  ShaderRecordSize   DEFAULT_INITIALIZER(0);
+
+    /// Number of recursive calls of TraceRay() in HLSL or traceRay() in GLSL.
+    /// Zero means no tracing of rays at all, only ray-gen shader will be executed.
+    /// See DeviceProperties::MaxRayTracingRecursionDepth.
+    Uint8   MaxRecursionDepth  DEFAULT_INITIALIZER(0);
+};
+typedef struct RayTracingPipelineDesc RayTracingPipelineDesc;
+
 /// Pipeline type
 DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
 {
@@ -227,6 +328,11 @@ DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
 
     /// Mesh pipeline, which is used by IDeviceContext::DrawMesh(), IDeviceContext::DrawMeshIndirect().
     PIPELINE_TYPE_MESH,
+
+    /// Ray tracing pipeline, which is used by IDeviceContext::TraceRays().
+    PIPELINE_TYPE_RAY_TRACING,
+
+    PIPELINE_TYPE_LAST = PIPELINE_TYPE_RAY_TRACING
 };
 
 
@@ -251,6 +357,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 #if DILIGENT_CPP_INTERFACE
     bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }
     bool IsComputePipeline()     const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
+    bool IsRayTracingPipeline()  const { return PipelineType == PIPELINE_TYPE_RAY_TRACING; }
 #endif
 };
 typedef struct PipelineStateDesc PipelineStateDesc;
@@ -339,6 +446,48 @@ struct ComputePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
 typedef struct ComputePipelineStateCreateInfo ComputePipelineStateCreateInfo;
 
 
+/// Ray tracing pipeline state description.
+struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
+    
+    /// Ray tracing pipeline description.
+    RayTracingPipelineDesc                    RayTracingPipeline;
+
+    /// A pointer to an array of GeneralShaderCount RayTracingGeneralShaderGroup structures that contain shader group description.
+    const RayTracingGeneralShaderGroup*       pGeneralShaders          DEFAULT_INITIALIZER(nullptr);
+    
+    /// The number of general shader groups.
+    Uint32                                    GeneralShaderCount       DEFAULT_INITIALIZER(0);
+    
+    /// A pointer to an array of TriangleHitShaderCount RayTracingTriangleHitShaderGroup structures that contain shader group description.
+    /// Can be null.
+    const RayTracingTriangleHitShaderGroup*   pTriangleHitShaders      DEFAULT_INITIALIZER(nullptr);
+    
+    /// The number of triangle hit shader groups.
+    Uint32                                    TriangleHitShaderCount   DEFAULT_INITIALIZER(0);
+    
+    /// A pointer to an array of ProceduralHitShaderCount RayTracingProceduralHitShaderGroup structures that contain shader group description.
+    /// Can be null.
+    const RayTracingProceduralHitShaderGroup* pProceduralHitShaders    DEFAULT_INITIALIZER(nullptr);
+    
+    /// The number of procedural shader groups.
+    Uint32                                    ProceduralHitShaderCount DEFAULT_INITIALIZER(0);
+    
+    /// Direct3D12 only: the name of the constant buffer that will be used by the local root signature.
+    /// Ignored if RayTracingPipelineDesc::ShaderRecordSize is zero.
+    /// In Vulkan backend in HLSL add [[vk::shader_record_nv]] attribute to the constant buffer, in GLSL add shaderRecord layout to buffer.
+    const char*                               pShaderRecordName        DEFAULT_INITIALIZER(nullptr);
+    
+    /// Direct3D12 only: the maximum hit shader attribute size in bytes.
+    /// If zero then maximum allowed size will be used.
+    Uint32                                    MaxAttributeSize         DEFAULT_INITIALIZER(0);
+    
+    /// Direct3D12 only: the maximum payload size in bytes.
+    /// If zero then maximum allowed size will be used.
+    Uint32                                    MaxPayloadSize           DEFAULT_INITIALIZER(0);
+};
+typedef struct RayTracingPipelineStateCreateInfo RayTracingPipelineStateCreateInfo;
+
+
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static const struct INTERFACE_ID IID_PipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
@@ -363,6 +512,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// Returns the graphics pipeline description used to create the object.
     /// This method must only be called for a graphics or mesh pipeline.
     VIRTUAL const GraphicsPipelineDesc REF METHOD(GetGraphicsPipelineDesc)(THIS) CONST PURE;
+    
+    /// Returns the ray tracing pipeline description used to create the object.
+    /// This method must only be called for a ray tracing pipeline.
+    VIRTUAL const RayTracingPipelineDesc REF METHOD(GetRayTracingPipelineDesc)(THIS) CONST PURE;
 
     /// Binds resources for all shaders in the pipeline state
 
@@ -453,6 +606,7 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
 
 #    define IPipelineState_GetGraphicsPipelineDesc(This)          CALL_IFACE_METHOD(PipelineState, GetGraphicsPipelineDesc,     This)
+#    define IPipelineState_GetRayTracingPipelineDesc(This)        CALL_IFACE_METHOD(PipelineState, GetRayTracingPipelineDesc,   This)
 #    define IPipelineState_BindStaticResources(This, ...)         CALL_IFACE_METHOD(PipelineState, BindStaticResources,         This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableCount(This, ...)      CALL_IFACE_METHOD(PipelineState, GetStaticVariableCount,      This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableByName(This, ...)     CALL_IFACE_METHOD(PipelineState, GetStaticVariableByName,     This, __VA_ARGS__)

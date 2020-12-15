@@ -70,18 +70,24 @@ void FinalizeGlslang()
 
 static EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:        return EShLangVertex;
-        case SHADER_TYPE_HULL:          return EShLangTessControl;
-        case SHADER_TYPE_DOMAIN:        return EShLangTessEvaluation;
-        case SHADER_TYPE_GEOMETRY:      return EShLangGeometry;
-        case SHADER_TYPE_PIXEL:         return EShLangFragment;
-        case SHADER_TYPE_COMPUTE:       return EShLangCompute;
-        case SHADER_TYPE_AMPLIFICATION: return EShLangTaskNV;
-        case SHADER_TYPE_MESH:          return EShLangMeshNV;
+        case SHADER_TYPE_VERTEX:           return EShLangVertex;
+        case SHADER_TYPE_HULL:             return EShLangTessControl;
+        case SHADER_TYPE_DOMAIN:           return EShLangTessEvaluation;
+        case SHADER_TYPE_GEOMETRY:         return EShLangGeometry;
+        case SHADER_TYPE_PIXEL:            return EShLangFragment;
+        case SHADER_TYPE_COMPUTE:          return EShLangCompute;
+        case SHADER_TYPE_AMPLIFICATION:    return EShLangTaskNV;
+        case SHADER_TYPE_MESH:             return EShLangMeshNV;
+        case SHADER_TYPE_RAY_GEN:          return EShLangRayGen;
+        case SHADER_TYPE_RAY_MISS:         return EShLangMiss;
+        case SHADER_TYPE_RAY_CLOSEST_HIT:  return EShLangClosestHit;
+        case SHADER_TYPE_RAY_ANY_HIT:      return EShLangAnyHit;
+        case SHADER_TYPE_RAY_INTERSECTION: return EShLangIntersect;
+        case SHADER_TYPE_CALLABLE:         return EShLangCallable;
         // clang-format on
         default:
             UNEXPECTED("Unexpected shader type");
@@ -449,6 +455,11 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
 
+    VERIFY(ShLang != EShLangRayGen && ShLang != EShLangIntersect && ShLang != EShLangAnyHit && ShLang != EShLangClosestHit && ShLang != EShLangMiss && ShLang != EShLangCallable,
+           "Ray tracing shaders are not supported, use DXCompiler to build SPIRV from HLSL");
+    VERIFY(ShLang != EShLangTaskNV && ShLang != EShLangMeshNV,
+           "Mesh shaders are not supported, use DXCompiler to build SPIRV from HLSL");
+
     Shader.setEnvInput(::glslang::EShSourceHlsl, ShLang, ::glslang::EShClientVulkan, 100);
     Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_0);
     Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
@@ -507,12 +518,41 @@ std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderTyp
                                       int                              SourceCodeLen,
                                       const ShaderMacro*               Macros,
                                       IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                                      SpirvVersion                     Version,
                                       IDataBlob**                      ppCompilerOutput)
 {
     VERIFY_EXPR(ShaderSource != nullptr && SourceCodeLen > 0);
 
     EShLanguage        ShLang = ShaderTypeToShLanguage(ShaderType);
     ::glslang::TShader Shader(ShLang);
+    spv_target_env     spvTarget = SPV_ENV_VULKAN_1_0;
+
+    switch (Version)
+    {
+        case SpirvVersion::Vk100:
+            // keep default
+            break;
+        case SpirvVersion::Vk110:
+            Shader.setEnvInput(::glslang::EShSourceGlsl, ShLang, ::glslang::EShClientVulkan, 110);
+            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_1);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_3);
+            spvTarget = SPV_ENV_VULKAN_1_1;
+            break;
+        case SpirvVersion::Vk110_Spirv14:
+            Shader.setEnvInput(::glslang::EShSourceGlsl, ShLang, ::glslang::EShClientVulkan, 110);
+            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_1);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_4);
+            spvTarget = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
+            break;
+        case SpirvVersion::Vk120:
+            Shader.setEnvInput(::glslang::EShSourceGlsl, ShLang, ::glslang::EShClientVulkan, 120);
+            Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_2);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_4);
+            spvTarget = SPV_ENV_VULKAN_1_2;
+            break;
+        default:
+            UNEXPECTED("Unknown SPIRV version");
+    }
 
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
@@ -533,7 +573,7 @@ std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderTyp
     if (SPIRV.empty())
         return SPIRV;
 
-    spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
+    spvtools::Optimizer SpirvOptimizer(spvTarget);
     SpirvOptimizer.RegisterPerformancePasses();
     std::vector<uint32_t> OptimizedSPIRV;
     if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &OptimizedSPIRV))

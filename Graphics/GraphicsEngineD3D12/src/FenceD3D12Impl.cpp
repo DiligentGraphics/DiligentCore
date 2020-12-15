@@ -51,7 +51,9 @@ FenceD3D12Impl::~FenceD3D12Impl()
 
 Uint64 FenceD3D12Impl::GetCompletedValue()
 {
-    return m_pd3d12Fence->GetCompletedValue();
+    Uint64 Result = m_pd3d12Fence->GetCompletedValue();
+    VERIFY(Result != UINT64_MAX, "If the device has been removed, the return value will be UINT64_MAX");
+    return Result;
 }
 
 void FenceD3D12Impl::Reset(Uint64 Value)
@@ -61,7 +63,7 @@ void FenceD3D12Impl::Reset(Uint64 Value)
 
 void FenceD3D12Impl::WaitForCompletion(Uint64 Value)
 {
-    while (m_pd3d12Fence->GetCompletedValue() < Value)
+    while (GetCompletedValue() < Value)
         std::this_thread::yield();
 }
 

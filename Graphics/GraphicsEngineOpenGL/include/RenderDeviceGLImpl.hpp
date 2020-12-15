@@ -94,6 +94,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
                                                                IPipelineState**                      ppPipelineState) override final;
 
+    /// Implementation of IRenderDevice::CreateRayTracingPipelineState() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
+                                                                  IPipelineState**                         ppPipelineState) override final;
+
     void CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
                                      IPipelineState**                       ppPipelineState,
                                      bool                                   bIsDeviceInternal);
@@ -114,6 +118,18 @@ public:
     /// Implementation of IRenderDevice::CreateFramebuffer() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
                                                       IFramebuffer**         ppFramebuffer) override final;
+
+    /// Implementation of IRenderDevice::CreateBLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreateBLAS(const BottomLevelASDesc& Desc,
+                                               IBottomLevelAS**         ppBLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateTLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreateTLAS(const TopLevelASDesc& Desc,
+                                               ITopLevelAS**         ppTLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateSBT() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
+                                              IShaderBindingTable**         ppSBT) override final;
 
     /// Implementation of IRenderDeviceGL::CreateTextureFromGLHandle().
     virtual void DILIGENT_CALL_TYPE CreateTextureFromGLHandle(Uint32             GLHandle,

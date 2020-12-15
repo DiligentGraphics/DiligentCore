@@ -41,7 +41,7 @@ namespace
 static const char g_TrivialVSSource[] = R"(
 void VSMain(out float4 pos : SV_POSITION)
 {
-	pos = float4(0.0, 0.0, 0.0, 0.0);
+    pos = float4(0.0, 0.0, 0.0, 0.0);
 }
 )";
 

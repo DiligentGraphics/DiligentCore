@@ -34,6 +34,8 @@
 #include "TextureViewD3D12.h"
 #include "TextureD3D12.h"
 #include "BufferD3D12.h"
+#include "BottomLevelASD3D12.h"
+#include "TopLevelASD3D12.h"
 #include "DescriptorHeap.hpp"
 
 namespace Diligent
@@ -114,6 +116,8 @@ public:
 
     void TransitionResource(ITextureD3D12* pTexture, RESOURCE_STATE NewState);
     void TransitionResource(IBufferD3D12* pBuffer, RESOURCE_STATE NewState);
+    void TransitionResource(IBottomLevelASD3D12* pBLAS, RESOURCE_STATE NewState);
+    void TransitionResource(ITopLevelASD3D12* pTLAS, RESOURCE_STATE NewState);
     void TransitionResource(const StateTransitionDesc& Barrier);
     //void BeginResourceTransition(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
 
@@ -183,7 +187,8 @@ public:
     {
         if (pPSO != m_pCurPipelineState)
         {
-            m_pCommandList->SetPipelineState(m_pCurPipelineState = pPSO);
+            m_pCommandList->SetPipelineState(pPSO);
+            m_pCurPipelineState = pPSO;
         }
     }
 
@@ -218,7 +223,7 @@ protected:
     CComPtr<ID3D12GraphicsCommandList> m_pCommandList;
     CComPtr<ID3D12CommandAllocator>    m_pCurrentAllocator;
 
-    ID3D12PipelineState* m_pCurPipelineState         = nullptr;
+    void*                m_pCurPipelineState         = nullptr;
     ID3D12RootSignature* m_pCurGraphicsRootSignature = nullptr;
     ID3D12RootSignature* m_pCurComputeRootSignature  = nullptr;
 
@@ -237,8 +242,25 @@ protected:
     Uint32 m_MaxInterfaceVer = 0;
 };
 
+class ComputeContext : public CommandContext
+{
+public:
+    void SetComputeRootSignature(ID3D12RootSignature* pRootSig)
+    {
+        if (pRootSig != m_pCurComputeRootSignature)
+        {
+            m_pCommandList->SetComputeRootSignature(m_pCurComputeRootSignature = pRootSig);
+        }
+    }
 
-class GraphicsContext : public CommandContext
+    void Dispatch(size_t GroupCountX = 1, size_t GroupCountY = 1, size_t GroupCountZ = 1)
+    {
+        FlushResourceBarriers();
+        m_pCommandList->Dispatch((UINT)GroupCountX, (UINT)GroupCountY, (UINT)GroupCountZ);
+    }
+};
+
+class GraphicsContext : public ComputeContext
 {
 public:
     void ClearRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE RTV, const float* Color)
@@ -253,7 +275,7 @@ public:
         m_pCommandList->ClearDepthStencilView(DSV, ClearFlags, Depth, Stencil, 0, nullptr);
     }
 
-    void SetRootSignature(ID3D12RootSignature* pRootSig)
+    void SetGraphicsRootSignature(ID3D12RootSignature* pRootSig)
     {
         if (pRootSig != m_pCurGraphicsRootSignature)
         {
@@ -288,47 +310,6 @@ public:
             m_PrimitiveTopology = Topology;
             m_pCommandList->IASetPrimitiveTopology(Topology);
         }
-    }
-
-    void SetConstants(UINT RootIndex, UINT NumConstants, const void* pConstants)
-    {
-        m_pCommandList->SetGraphicsRoot32BitConstants(RootIndex, NumConstants, pConstants, 0);
-    }
-
-    void SetConstants(UINT RootIndex, DWParam X)
-    {
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, X.Uint, 0);
-    }
-
-    void SetConstants(UINT RootIndex, DWParam X, DWParam Y)
-    {
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, X.Uint, 0);
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, Y.Uint, 1);
-    }
-
-    void SetConstants(UINT RootIndex, DWParam X, DWParam Y, DWParam Z)
-    {
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, X.Uint, 0);
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, Y.Uint, 1);
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, Z.Uint, 2);
-    }
-
-    void SetConstants(UINT RootIndex, DWParam X, DWParam Y, DWParam Z, DWParam W)
-    {
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, X.Uint, 0);
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, Y.Uint, 1);
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, Z.Uint, 2);
-        m_pCommandList->SetGraphicsRoot32BitConstant(RootIndex, W.Uint, 3);
-    }
-
-    void SetConstantBuffer(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS CBV)
-    {
-        m_pCommandList->SetGraphicsRootConstantBufferView(RootIndex, CBV);
-    }
-
-    void SetDescriptorTable(UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle)
-    {
-        m_pCommandList->SetGraphicsRootDescriptorTable(RootIndex, FirstHandle);
     }
 
     void SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& IBView)
@@ -383,6 +364,44 @@ public:
     {
         static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->EndRenderPass();
     }
+
+    void SetRayTracingPipelineState(ID3D12StateObject* pPSO)
+    {
+        if (pPSO != m_pCurPipelineState)
+        {
+            static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->SetPipelineState1(pPSO);
+            m_pCurPipelineState = pPSO;
+        }
+    }
+
+    void BuildRaytracingAccelerationStructure(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC&          Desc,
+                                              UINT                                                               NumPostbuildInfoDescs,
+                                              const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC* pPostbuildInfoDescs)
+    {
+        FlushResourceBarriers();
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->BuildRaytracingAccelerationStructure(&Desc, NumPostbuildInfoDescs, pPostbuildInfoDescs);
+    }
+
+    void EmitRaytracingAccelerationStructurePostbuildInfo(const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC& Desc,
+                                                          D3D12_GPU_VIRTUAL_ADDRESS                                          SourceAccelerationStructureAddress)
+    {
+        FlushResourceBarriers();
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->EmitRaytracingAccelerationStructurePostbuildInfo(&Desc, 1, &SourceAccelerationStructureAddress);
+    }
+
+    void CopyRaytracingAccelerationStructure(D3D12_GPU_VIRTUAL_ADDRESS                         DestAccelerationStructureData,
+                                             D3D12_GPU_VIRTUAL_ADDRESS                         SourceAccelerationStructureData,
+                                             D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE Mode)
+    {
+        FlushResourceBarriers();
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->CopyRaytracingAccelerationStructure(DestAccelerationStructureData, SourceAccelerationStructureData, Mode);
+    }
+
+    void DispatchRays(const D3D12_DISPATCH_RAYS_DESC& Desc)
+    {
+        FlushResourceBarriers();
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->DispatchRays(&Desc);
+    }
 };
 
 class GraphicsContext5 : public GraphicsContext4
@@ -400,66 +419,6 @@ public:
 #else
         UNSUPPORTED("DrawMesh is not supported in current D3D12 header");
 #endif
-    }
-};
-
-class ComputeContext : public CommandContext
-{
-public:
-    void SetRootSignature(ID3D12RootSignature* pRootSig)
-    {
-        if (pRootSig != m_pCurComputeRootSignature)
-        {
-            m_pCommandList->SetComputeRootSignature(m_pCurComputeRootSignature = pRootSig);
-        }
-    }
-
-    void SetConstants(UINT RootIndex, UINT NumConstants, const void* pConstants)
-    {
-        m_pCommandList->SetComputeRoot32BitConstants(RootIndex, NumConstants, pConstants, 0);
-    }
-
-    void SetConstants(UINT RootIndex, DWParam X)
-    {
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, X.Uint, 0);
-    }
-
-    void SetConstants(UINT RootIndex, DWParam X, DWParam Y)
-    {
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, X.Uint, 0);
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, Y.Uint, 1);
-    }
-
-    void SetConstants(UINT RootIndex, DWParam X, DWParam Y, DWParam Z)
-    {
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, X.Uint, 0);
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, Y.Uint, 1);
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, Z.Uint, 2);
-    }
-
-    void SetConstants(UINT RootIndex, DWParam X, DWParam Y, DWParam Z, DWParam W)
-    {
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, X.Uint, 0);
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, Y.Uint, 1);
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, Z.Uint, 2);
-        m_pCommandList->SetComputeRoot32BitConstant(RootIndex, W.Uint, 3);
-    }
-
-
-    void SetConstantBuffer(UINT RootIndex, D3D12_GPU_VIRTUAL_ADDRESS CBV)
-    {
-        m_pCommandList->SetComputeRootConstantBufferView(RootIndex, CBV);
-    }
-
-    void SetDescriptorTable(UINT RootIndex, D3D12_GPU_DESCRIPTOR_HANDLE FirstHandle)
-    {
-        m_pCommandList->SetComputeRootDescriptorTable(RootIndex, FirstHandle);
-    }
-
-    void Dispatch(size_t GroupCountX = 1, size_t GroupCountY = 1, size_t GroupCountZ = 1)
-    {
-        FlushResourceBarriers();
-        m_pCommandList->Dispatch((UINT)GroupCountX, (UINT)GroupCountY, (UINT)GroupCountZ);
     }
 };
 

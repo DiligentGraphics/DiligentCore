@@ -112,12 +112,13 @@ public:
 /*1-7*/ // Unused
 /* 8 */ RefCntAutoPtr<IDeviceObject>                    pObject;
 
-        VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo ()                const;
-        VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo ()                const;
-        VkDescriptorImageInfo  GetImageDescriptorWriteInfo  (bool IsImmutableSampler)const;
-        VkBufferView           GetBufferViewWriteInfo       ()                       const;
-        VkDescriptorImageInfo  GetSamplerDescriptorWriteInfo()                       const;
-        VkDescriptorImageInfo  GetInputAttachmentDescriptorWriteInfo()               const;
+        VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo ()                    const;
+        VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo ()                    const;
+        VkDescriptorImageInfo  GetImageDescriptorWriteInfo  (bool IsImmutableSampler)    const;
+        VkBufferView           GetBufferViewWriteInfo       ()                           const;
+        VkDescriptorImageInfo  GetSamplerDescriptorWriteInfo()                           const;
+        VkDescriptorImageInfo  GetInputAttachmentDescriptorWriteInfo()                   const;
+        VkWriteDescriptorSetAccelerationStructureKHR GetAccelerationStructureWriteInfo() const;
         // clang-format on
     };
 

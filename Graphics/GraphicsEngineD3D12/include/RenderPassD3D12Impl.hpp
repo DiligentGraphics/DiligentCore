@@ -39,7 +39,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Render pass implementation in Direct3D11 backend.
+/// Render pass implementation in Direct3D12 backend.
 class RenderPassD3D12Impl final : public RenderPassBase<IRenderPass, RenderDeviceD3D12Impl>
 {
 public:

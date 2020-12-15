@@ -40,7 +40,7 @@ namespace Diligent
 template <typename PSOCreateInfoType>
 void PipelineStateGLImpl::Initialize(const PSOCreateInfoType& CreateInfo, const std::vector<GLPipelineShaderStageInfo>& ShaderStages)
 {
-    LinearAllocator MemPool{GetRawAllocator()};
+    FixedLinearAllocator MemPool{GetRawAllocator()};
     VERIFY_EXPR(m_NumShaderStages > 0 && m_NumShaderStages == ShaderStages.size());
     if (!GetDevice()->GetDeviceCaps().Features.SeparablePrograms)
         m_NumShaderStages = 1;
@@ -154,6 +154,8 @@ PipelineStateGLImpl::~PipelineStateGLImpl()
 
 void PipelineStateGLImpl::Destruct()
 {
+    TPipelineStateBase::Destruct();
+
     auto& RawAllocator = GetRawAllocator();
     m_StaticResourceCache.Destroy(RawAllocator);
     GetDevice()->OnDestroyPSO(this);
@@ -188,7 +190,7 @@ IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_PipelineStateGL, TPipelineSta
 
 
 void PipelineStateGLImpl::InitResourceLayouts(const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
-                                              LinearAllocator&                              MemPool)
+                                              FixedLinearAllocator&                         MemPool)
 {
     auto* const pDeviceGL  = GetDevice();
     const auto& deviceCaps = pDeviceGL->GetDeviceCaps();

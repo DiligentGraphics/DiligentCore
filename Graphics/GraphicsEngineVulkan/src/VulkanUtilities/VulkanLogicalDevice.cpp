@@ -34,11 +34,12 @@
 namespace VulkanUtilities
 {
 
-std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(VkPhysicalDevice             vkPhysicalDevice,
+std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(const VulkanPhysicalDevice&  PhysicalDevice,
                                                                  const VkDeviceCreateInfo&    DeviceCI,
+                                                                 const ExtensionFeatures&     EnabledExtFeatures,
                                                                  const VkAllocationCallbacks* vkAllocator)
 {
-    auto* LogicalDevice = new VulkanLogicalDevice{vkPhysicalDevice, DeviceCI, vkAllocator};
+    auto* LogicalDevice = new VulkanLogicalDevice{PhysicalDevice, DeviceCI, EnabledExtFeatures, vkAllocator};
     return std::shared_ptr<VulkanLogicalDevice>{LogicalDevice};
 }
 
@@ -47,13 +48,15 @@ VulkanLogicalDevice::~VulkanLogicalDevice()
     vkDestroyDevice(m_VkDevice, m_VkAllocator);
 }
 
-VulkanLogicalDevice::VulkanLogicalDevice(VkPhysicalDevice             vkPhysicalDevice,
+VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDevice,
                                          const VkDeviceCreateInfo&    DeviceCI,
+                                         const ExtensionFeatures&     EnabledExtFeatures,
                                          const VkAllocationCallbacks* vkAllocator) :
     m_VkAllocator{vkAllocator},
-    m_EnabledFeatures{*DeviceCI.pEnabledFeatures}
+    m_EnabledFeatures{*DeviceCI.pEnabledFeatures},
+    m_EnabledExtFeatures{EnabledExtFeatures}
 {
-    auto res = vkCreateDevice(vkPhysicalDevice, &DeviceCI, vkAllocator, &m_VkDevice);
+    auto res = vkCreateDevice(PhysicalDevice.GetVkDeviceHandle(), &DeviceCI, vkAllocator, &m_VkDevice);
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
 
 #if DILIGENT_USE_VOLK
@@ -62,11 +65,15 @@ VulkanLogicalDevice::VulkanLogicalDevice(VkPhysicalDevice             vkPhysical
     volkLoadDevice(m_VkDevice);
 #endif
 
-    m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    m_EnabledShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     if (DeviceCI.pEnabledFeatures->geometryShader)
-        m_EnabledGraphicsShaderStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+        m_EnabledShaderStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
     if (DeviceCI.pEnabledFeatures->tessellationShader)
-        m_EnabledGraphicsShaderStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+        m_EnabledShaderStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+    if (m_EnabledExtFeatures.MeshShader.meshShader != VK_FALSE && m_EnabledExtFeatures.MeshShader.taskShader != VK_FALSE)
+        m_EnabledShaderStages |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV | VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
+    if (m_EnabledExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE)
+        m_EnabledShaderStages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 }
 
 VkQueue VulkanLogicalDevice::GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex)
@@ -222,6 +229,29 @@ PipelineWrapper VulkanLogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipe
     return PipelineWrapper{GetSharedPtr(), std::move(vkPipeline)};
 }
 
+PipelineWrapper VulkanLogicalDevice::CreateRayTracingPipeline(const VkRayTracingPipelineCreateInfoKHR& PipelineCI, VkPipelineCache cache, const char* DebugName) const
+{
+#if DILIGENT_USE_VOLK
+    VERIFY_EXPR(PipelineCI.sType == VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR);
+
+    if (DebugName == nullptr)
+        DebugName = "";
+
+    VkPipeline vkPipeline = VK_NULL_HANDLE;
+
+    auto err = vkCreateRayTracingPipelinesKHR(m_VkDevice, VK_NULL_HANDLE, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
+    CHECK_VK_ERROR_AND_THROW(err, "Failed to create ray tracing pipeline '", DebugName, '\'');
+
+    if (*DebugName != 0)
+        SetPipelineName(m_VkDevice, vkPipeline, DebugName);
+
+    return PipelineWrapper{GetSharedPtr(), std::move(vkPipeline)};
+#else
+    UNSUPPORTED("vkCreateRayTracingPipelinesKHR is only available through Volk");
+    return PipelineWrapper{};
+#endif
+}
+
 ShaderModuleWrapper VulkanLogicalDevice::CreateShaderModule(const VkShaderModuleCreateInfo& ShaderModuleCI, const char* DebugName) const
 {
     VERIFY_EXPR(ShaderModuleCI.sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO);
@@ -262,6 +292,17 @@ QueryPoolWrapper VulkanLogicalDevice::CreateQueryPool(const VkQueryPoolCreateInf
 {
     VERIFY_EXPR(QueryPoolCI.sType == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
     return CreateVulkanObject<VkQueryPool, VulkanHandleTypeId::QueryPool>(vkCreateQueryPool, QueryPoolCI, DebugName, "query pool");
+}
+
+AccelStructWrapper VulkanLogicalDevice::CreateAccelStruct(const VkAccelerationStructureCreateInfoKHR& CI, const char* DebugName) const
+{
+#if DILIGENT_USE_VOLK
+    VERIFY_EXPR(CI.sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR);
+    return CreateVulkanObject<VkAccelerationStructureKHR, VulkanHandleTypeId::AccelerationStructureKHR>(vkCreateAccelerationStructureKHR, CI, DebugName, "acceleration structure");
+#else
+    UNSUPPORTED("vkCreateAccelerationStructureKHR is only available through Volk");
+    return AccelStructWrapper{};
+#endif
 }
 
 VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName) const
@@ -405,6 +446,16 @@ void VulkanLogicalDevice::ReleaseVulkanObject(QueryPoolWrapper&& QueryPool) cons
     QueryPool.m_VkObject = VK_NULL_HANDLE;
 }
 
+void VulkanLogicalDevice::ReleaseVulkanObject(AccelStructWrapper&& AccelStruct) const
+{
+#if DILIGENT_USE_VOLK
+    vkDestroyAccelerationStructureKHR(m_VkDevice, AccelStruct.m_VkObject, m_VkAllocator);
+    AccelStruct.m_VkObject = VK_NULL_HANDLE;
+#else
+    UNSUPPORTED("vkDestroyAccelerationStructureKHR is only available through Volk");
+#endif
+}
+
 void VulkanLogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const
 {
     VERIFY_EXPR(Pool != VK_NULL_HANDLE && Set != VK_NULL_HANDLE);
@@ -436,6 +487,31 @@ VkResult VulkanLogicalDevice::BindBufferMemory(VkBuffer buffer, VkDeviceMemory m
 VkResult VulkanLogicalDevice::BindImageMemory(VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
 {
     return vkBindImageMemory(m_VkDevice, image, memory, memoryOffset);
+}
+
+VkDeviceAddress VulkanLogicalDevice::GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const
+{
+#if DILIGENT_USE_VOLK
+    VkAccelerationStructureDeviceAddressInfoKHR Info = {};
+
+    Info.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+    Info.accelerationStructure = AS;
+
+    return vkGetAccelerationStructureDeviceAddressKHR(m_VkDevice, &Info);
+#else
+    UNSUPPORTED("vkGetAccelerationStructureDeviceAddressKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
+}
+
+void VulkanLogicalDevice::GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildGeometryInfoKHR& BuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR& SizeInfo) const
+{
+#if DILIGENT_USE_VOLK
+    vkGetAccelerationStructureBuildSizesKHR(m_VkDevice, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &BuildInfo, pMaxPrimitiveCounts, &SizeInfo);
+#else
+    UNSUPPORTED("vkGetAccelerationStructureDeviceAddressKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
 }
 
 VkResult VulkanLogicalDevice::MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const
@@ -500,6 +576,16 @@ VkResult VulkanLogicalDevice::ResetDescriptorPool(VkDescriptorPool           vkD
     auto err = vkResetDescriptorPool(m_VkDevice, vkDescriptorPool, flags);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset descriptor pool");
     return err;
+}
+
+VkResult VulkanLogicalDevice::GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const
+{
+#if DILIGENT_USE_VOLK
+    return vkGetRayTracingShaderGroupHandlesKHR(m_VkDevice, pipeline, firstGroup, groupCount, dataSize, pData);
+#else
+    UNSUPPORTED("vkGetRayTracingShaderGroupHandlesKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
 }
 
 } // namespace VulkanUtilities

@@ -78,6 +78,9 @@ public:
     /// Implementation of IRenderDevice::CreateComputePipelineState() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
 
+    /// Implementation of IRenderDevice::CreateRayTracingPipelineState() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
+
     /// Implementation of IRenderDevice::CreateBuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
                                                  const BufferData* pBuffData,
@@ -115,6 +118,18 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
                                                       IFramebuffer**         ppFramebuffer) override final;
 
+    /// Implementation of IRenderDevice::CreateBLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateBLAS(const BottomLevelASDesc& Desc,
+                                               IBottomLevelAS**         ppBLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateTLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateTLAS(const TopLevelASDesc& Desc,
+                                               ITopLevelAS**         ppTLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateSBT() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
+                                              IShaderBindingTable**         ppSBT) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 
@@ -135,6 +150,18 @@ public:
                                                                    const BufferDesc& BuffDesc,
                                                                    RESOURCE_STATE    InitialState,
                                                                    IBuffer**         ppBuffer) override final;
+
+    /// Implementation of IRenderDeviceVk::CreateBLASFromVulkanResource().
+    virtual void DILIGENT_CALL_TYPE CreateBLASFromVulkanResource(VkAccelerationStructureKHR vkBLAS,
+                                                                 const BottomLevelASDesc&   Desc,
+                                                                 RESOURCE_STATE             InitialState,
+                                                                 IBottomLevelAS**           ppBLAS) override final;
+
+    /// Implementation of IRenderDeviceVk::CreateTLASFromVulkanResource().
+    virtual void DILIGENT_CALL_TYPE CreateTLASFromVulkanResource(VkAccelerationStructureKHR vkTLAS,
+                                                                 const TopLevelASDesc&      Desc,
+                                                                 RESOURCE_STATE             InitialState,
+                                                                 ITopLevelAS**              ppTLAS) override final;
 
     /// Implementation of IRenderDevice::IdleGPU() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
@@ -163,16 +190,16 @@ public:
     FramebufferCache& GetFramebufferCache() { return m_FramebufferCache; }
     RenderPassCache&  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache; }
 
-    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
+    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties, VkMemoryAllocateFlags AllocateFlags = 0)
     {
-        return m_MemoryMgr.Allocate(MemReqs, MemoryProperties);
+        return m_MemoryMgr.Allocate(MemReqs, MemoryProperties, AllocateFlags);
     }
-    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex)
+    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, VkMemoryAllocateFlags AllocateFlags = 0)
     {
         const auto& MemoryProps = m_PhysicalDevice->GetMemoryProperties();
         VERIFY_EXPR(MemoryTypeIndex < MemoryProps.memoryTypeCount);
         const auto MemoryFlags = MemoryProps.memoryTypes[MemoryTypeIndex].propertyFlags;
-        return m_MemoryMgr.Allocate(Size, Alignment, MemoryTypeIndex, (MemoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0);
+        return m_MemoryMgr.Allocate(Size, Alignment, MemoryTypeIndex, (MemoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0, AllocateFlags);
     }
     VulkanUtilities::VulkanMemoryManager& GetGlobalMemoryManager() { return m_MemoryMgr; }
 
@@ -181,6 +208,21 @@ public:
     void FlushStaleResources(Uint32 CmdQueueIndex);
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
+
+    struct Properties
+    {
+        const Uint32 ShaderGroupHandleSize;
+        const Uint32 MaxShaderRecordStride;
+        const Uint32 ShaderGroupBaseAlignment;
+        const Uint32 MaxDrawMeshTasksCount;
+        const Uint32 MaxRayTracingRecursionDepth;
+        const Uint32 MaxRayGenThreads;
+    };
+
+    const Properties& GetProperties() const
+    {
+        return m_Properties;
+    }
 
 private:
     template <typename PSOCreateInfoType>
@@ -216,6 +258,8 @@ private:
     VulkanDynamicMemoryManager m_DynamicMemoryManager;
 
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
+
+    Properties m_Properties;
 };
 
 } // namespace Diligent

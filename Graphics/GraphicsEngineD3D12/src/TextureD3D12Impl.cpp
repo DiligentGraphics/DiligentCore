@@ -424,7 +424,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
         auto UpdatedViewDesc = ViewDesc;
-        CorrectTextureViewDesc(UpdatedViewDesc);
+        ValidatedAndCorrectTextureViewDesc(m_Desc, UpdatedViewDesc);
 
         DescriptorHeapAllocation ViewDescriptor;
         switch (ViewDesc.ViewType)

@@ -30,7 +30,7 @@
 #include "PipelineStateVkImpl.hpp"
 #include "ShaderVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
-#include "LinearAllocator.hpp"
+#include "FixedLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -54,7 +54,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pR
 
         m_NumShaders = static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaderStages());
 
-        LinearAllocator MemPool{GetRawAllocator()};
+        FixedLinearAllocator MemPool{GetRawAllocator()};
         MemPool.AddSpace<ShaderVariableManagerVk>(m_NumShaders);
         MemPool.Reserve();
         m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerVk>(m_NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));

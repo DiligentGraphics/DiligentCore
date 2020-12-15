@@ -86,54 +86,89 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     VkBuffCI.usage =
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | // The buffer can be used as the source of a transfer command
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;  // The buffer can be used as the destination of a transfer command
-    if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
-    {
-        // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        // HLSL formatted buffers are mapped to GLSL storage buffers:
-        //
-        //     RWBuffer<uint4> RWBuff
-        //
-        //                 |
-        //                 V
-        //
-        //     layout(std140, binding = 3) buffer RWBuff
-        //     {
-        //         uvec4 data[];
-        //     }g_RWBuff;
-        //
-        // So we have to set both VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT bits
-        VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-        // Each element of pDynamicOffsets of vkCmdBindDescriptorSets function which corresponds to a descriptor
-        // binding with type VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC must be a multiple of
-        // VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment (13.2.5)
-        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
-        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
-    }
-    if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
-    {
-        // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        // HLSL buffer SRVs are mapped to storge buffers in GLSL, so we need to set both
-        // VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT flags
-        VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    static_assert(BIND_FLAGS_LAST == 0x400, "Please update this function to handle the new bind flags");
 
-        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
-        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
-    }
-    if (m_Desc.BindFlags & BIND_VERTEX_BUFFER)
-        VkBuffCI.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    if (m_Desc.BindFlags & BIND_INDEX_BUFFER)
-        VkBuffCI.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    if (m_Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
-        VkBuffCI.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-    if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
+    for (Uint32 BindFlag = 1; BindFlag <= m_Desc.BindFlags; BindFlag <<= 1)
     {
-        VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        if ((m_Desc.BindFlags & BindFlag) != BindFlag)
+            continue;
 
-        // Each element of pDynamicOffsets parameter of vkCmdBindDescriptorSets function which corresponds to a descriptor
-        // binding with type VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC must be a multiple of
-        // VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment (13.2.5)
-        m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minUniformBufferOffsetAlignment));
+        switch (BindFlag)
+        {
+            case BIND_UNORDERED_ACCESS:
+            {
+                // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                // HLSL formatted buffers are mapped to GLSL storage buffers:
+                //
+                //     RWBuffer<uint4> RWBuff
+                //
+                //                 |
+                //                 V
+                //
+                //     layout(std140, binding = 3) buffer RWBuff
+                //     {
+                //         uvec4 data[];
+                //     }g_RWBuff;
+                //
+                // So we have to set both VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT bits
+                VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+                // Each element of pDynamicOffsets of vkCmdBindDescriptorSets function which corresponds to a descriptor
+                // binding with type VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC must be a multiple of
+                // VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment (13.2.5)
+                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
+                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
+                break;
+            }
+            case BIND_SHADER_RESOURCE:
+            {
+                // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                // HLSL buffer SRVs are mapped to storge buffers in GLSL, so we need to set both
+                // VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT flags
+                VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
+                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
+                break;
+            }
+            case BIND_VERTEX_BUFFER:
+            {
+                VkBuffCI.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                break;
+            }
+            case BIND_INDEX_BUFFER:
+            {
+                VkBuffCI.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                break;
+            }
+            case BIND_INDIRECT_DRAW_ARGS:
+            {
+                VkBuffCI.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+                break;
+            }
+            case BIND_UNIFORM_BUFFER:
+            {
+                VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+                // Each element of pDynamicOffsets parameter of vkCmdBindDescriptorSets function which corresponds to a descriptor
+                // binding with type VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC must be a multiple of
+                // VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment (13.2.5)
+                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minUniformBufferOffsetAlignment));
+                break;
+            }
+            case BIND_RAY_TRACING:
+            {
+                VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // for scratch buffer
+                VkBuffCI.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+                VkBuffCI.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR; // acceleration structure build inputs such as vertex, index, transform, aabb, and instance data
+                VkBuffCI.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+                break;
+            }
+            default:
+                UNEXPECTED("unsupported buffer binding type");
+                break;
+        }
     }
 
     if (m_Desc.Usage == USAGE_DYNAMIC)
@@ -213,11 +248,15 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, vkMemoryFlags);
         }
 
+        VkMemoryAllocateFlags AllocateFlags = 0;
+        if (VkBuffCI.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+            AllocateFlags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+
         if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
             LOG_ERROR_AND_THROW("Failed to find suitable memory type for buffer '", m_Desc.Name, '\'');
 
         VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
-        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex);
+        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, AllocateFlags);
 
         m_BufferMemoryAlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
         VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_BufferMemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
@@ -285,12 +324,12 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 VkCommandBuffer                     vkCmdBuff;
                 pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
 
-                auto EnabledGraphicsShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
-                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledGraphicsShaderStages);
+                auto EnabledShaderStages = LogicalDevice.GetEnabledShaderStages();
+                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledShaderStages);
                 InitialState              = RESOURCE_STATE_COPY_DEST;
                 VkAccessFlags AccessFlags = ResourceStateFlagsToVkAccessFlags(InitialState);
                 VERIFY_EXPR(AccessFlags == VK_ACCESS_TRANSFER_WRITE_BIT);
-                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags, EnabledGraphicsShaderStages);
+                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags, EnabledShaderStages);
 
                 // Copy commands MUST be recorded outside of a render pass instance. This is OK here
                 // as copy will be the only command in the cmd buffer
@@ -408,7 +447,7 @@ void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
 VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDesc& ViewDesc)
 {
     VulkanUtilities::BufferViewWrapper BuffView;
-    CorrectBufferViewDesc(ViewDesc);
+    ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc);
     if ((ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) &&
         (m_Desc.Mode == BUFFER_MODE_FORMATTED || m_Desc.Mode == BUFFER_MODE_RAW))
     {
@@ -455,6 +494,32 @@ void BufferVkImpl::SetAccessFlags(VkAccessFlags AccessFlags)
 VkAccessFlags BufferVkImpl::GetAccessFlags() const
 {
     return ResourceStateFlagsToVkAccessFlags(GetState());
+}
+
+VkDeviceAddress BufferVkImpl::GetVkDeviceAddress() const
+{
+    constexpr auto DeviceAddressFlags = BIND_RAY_TRACING;
+
+    if (m_VulkanBuffer != VK_NULL_HANDLE && (m_Desc.BindFlags & DeviceAddressFlags) != 0)
+    {
+#if DILIGENT_USE_VOLK
+        VkBufferDeviceAddressInfoKHR BufferInfo = {};
+
+        BufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR;
+        BufferInfo.buffer      = m_VulkanBuffer;
+        VkDeviceAddress Result = vkGetBufferDeviceAddressKHR(m_pDevice->GetLogicalDevice().GetVkDevice(), &BufferInfo);
+        VERIFY_EXPR(Result > 0);
+        return Result;
+#else
+        UNSUPPORTED("vkGetBufferDeviceAddressKHR is only available through Volk");
+        return VkDeviceAddress{};
+#endif
+    }
+    else
+    {
+        UNEXPECTED("Can't get device address for buffer");
+        return 0;
+    }
 }
 
 #ifdef DILIGENT_DEVELOPMENT

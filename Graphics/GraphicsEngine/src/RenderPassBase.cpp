@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "RenderPassBase.hpp"
 #include "GraphicsAccessories.hpp"
 #include "Align.hpp"
@@ -33,7 +32,7 @@
 namespace Diligent
 {
 
-void ValidateRenderPassDesc(const RenderPassDesc& Desc)
+void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false)
 {
 #define LOG_RENDER_PASS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of render pass '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 

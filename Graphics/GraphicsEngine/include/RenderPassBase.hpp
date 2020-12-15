@@ -40,7 +40,7 @@
 namespace Diligent
 {
 
-void ValidateRenderPassDesc(const RenderPassDesc& Desc);
+void ValidateRenderPassDesc(const RenderPassDesc& Desc) noexcept(false);
 
 template <typename RenderDeviceImplType>
 void _CorrectAttachmentState(RESOURCE_STATE& State) {}
@@ -81,7 +81,7 @@ public:
                    bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        ValidateRenderPassDesc(Desc);
+        ValidateRenderPassDesc(this->m_Desc);
 
         if (Desc.AttachmentCount != 0)
         {

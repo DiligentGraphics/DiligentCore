@@ -62,6 +62,9 @@ DILIGENT_BEGIN_INTERFACE(IBufferVk, IBuffer)
     /// If the buffer state is known to the engine (i.e. not Diligent::RESOURCE_STATE_UNKNOWN),
     /// returns Vulkan access flags corresponding to the state. If the state is unknown, returns 0.
     VIRTUAL VkAccessFlags METHOD(GetAccessFlags)(THIS) CONST PURE;
+
+    /// Returns a Vulkan device address.
+    VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -72,6 +75,7 @@ DILIGENT_END_INTERFACE
 #    define IBufferVk_GetVkBuffer(This)         CALL_IFACE_METHOD(BufferVk, GetVkBuffer, This)
 #    define IBufferVk_SetAccessFlags(This, ...) CALL_IFACE_METHOD(BufferVk, SetAccessFlags, This, __VA_ARGS__)
 #    define IBufferVk_GetAccessFlags(This)      CALL_IFACE_METHOD(BufferVk, GetAccessFlags, This)
+#    define IBufferVk_GetVkDeviceAddress(This)  CALL_IFACE_METHOD(BufferVk, GetVkDeviceAddress, This)
 
 #endif
 

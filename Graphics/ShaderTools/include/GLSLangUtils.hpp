@@ -37,6 +37,14 @@ namespace Diligent
 namespace GLSLangUtils
 {
 
+enum class SpirvVersion
+{
+    Vk100,         // SPIRV 1.0
+    Vk110,         // SPIRV 1.3
+    Vk110_Spirv14, // SPIRV 1.4 (extension)
+    Vk120,         // SPIRV 1.4
+};
+
 void InitializeGlslang();
 void FinalizeGlslang();
 
@@ -45,6 +53,7 @@ std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderTyp
                                       int                              SourceCodeLen,
                                       const ShaderMacro*               Macros,
                                       IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                                      SpirvVersion                     Version,
                                       IDataBlob**                      ppCompilerOutput);
 
 std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,

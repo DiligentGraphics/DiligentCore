@@ -34,7 +34,7 @@
 namespace Diligent
 {
 
-enum TargetGLSLCompiler
+enum class TargetGLSLCompiler
 {
     glslang,
     driver

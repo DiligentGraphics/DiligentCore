@@ -70,7 +70,7 @@ void TextureBaseD3D11::CreateViewInternal(const struct TextureViewDesc& ViewDesc
     try
     {
         auto UpdatedViewDesc = ViewDesc;
-        CorrectTextureViewDesc(UpdatedViewDesc);
+        ValidatedAndCorrectTextureViewDesc(m_Desc, UpdatedViewDesc);
 
         RefCntAutoPtr<ID3D11View> pD3D11View;
         switch (ViewDesc.ViewType)

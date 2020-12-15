@@ -423,6 +423,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     swapchain_ci.imageColorSpace    = ColorSpace;
 
     DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
+    static_assert(SWAP_CHAIN_USAGE_LAST == SWAP_CHAIN_USAGE_COPY_SOURCE, "Please update this function to handle the new swapchain usage");
     if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET)
         swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_SHADER_INPUT)
@@ -639,9 +640,10 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     m_ImageAcquiredFenceSubmitted[m_SemaphoreIndex] = (res == VK_SUCCESS);
     if (res == VK_SUCCESS)
     {
-        // Next command in the device context must wait for the next image to be acquired
-        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
-        pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        // Next command in the device context must wait for the next image to be acquired.
+        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2).
+        // Swapchain image may be used as render target or as destination for copy command.
+        pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
         if (!m_SwapChainImagesInitialized[m_BackBufferIndex])
         {
             // Vulkan validation layers do not like uninitialized memory.

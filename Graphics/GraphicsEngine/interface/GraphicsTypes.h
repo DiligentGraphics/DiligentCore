@@ -41,9 +41,6 @@
 /// Graphics engine namespace
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-struct ITexture;
-struct IBuffer;
-
 /// Value type
 
 /// This enumeration describes value type. It is used by
@@ -73,19 +70,22 @@ DILIGENT_TYPED_ENUM(VALUE_TYPE, Uint8)
 /// - TextureDesc to describe bind flags for a texture
 DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
 {
-    BIND_NONE               = 0x0L, ///< Undefined binding
-    BIND_VERTEX_BUFFER	    = 0x1L, ///< A buffer can be bound as a vertex buffer
-    BIND_INDEX_BUFFER	    = 0x2L, ///< A buffer can be bound as an index buffer
-    BIND_UNIFORM_BUFFER	    = 0x4L, ///< A buffer can be bound as a uniform buffer
-                                    ///  \warning This flag may not be combined with any other bind flag
-    BIND_SHADER_RESOURCE	= 0x8L, ///< A buffer or a texture can be bound as a shader resource
-                                    ///  \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag 
-    BIND_STREAM_OUTPUT	    = 0x10L,///< A buffer can be bound as a target for stream output stage
-    BIND_RENDER_TARGET	    = 0x20L,///< A texture can be bound as a render target
-    BIND_DEPTH_STENCIL	    = 0x40L,///< A texture can be bound as a depth-stencil target
-    BIND_UNORDERED_ACCESS	= 0x80L,///< A buffer or a texture can be bound as an unordered access view
-    BIND_INDIRECT_DRAW_ARGS	= 0x100L,///< A buffer can be bound as the source buffer for indirect draw commands
-    BIND_INPUT_ATTACHMENT   = 0x200L ///< A texture can be used as render pass input attachment
+    BIND_NONE                = 0x0L,   ///< Undefined binding
+    BIND_VERTEX_BUFFER	     = 0x1L,   ///< A buffer can be bound as a vertex buffer
+    BIND_INDEX_BUFFER	     = 0x2L,   ///< A buffer can be bound as an index buffer
+    BIND_UNIFORM_BUFFER	     = 0x4L,   ///< A buffer can be bound as a uniform buffer
+                                       ///  \warning This flag may not be combined with any other bind flag
+    BIND_SHADER_RESOURCE	 = 0x8L,   ///< A buffer or a texture can be bound as a shader resource
+                                       ///  \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag 
+    BIND_STREAM_OUTPUT	     = 0x10L,  ///< A buffer can be bound as a target for stream output stage
+    BIND_RENDER_TARGET	     = 0x20L,  ///< A texture can be bound as a render target
+    BIND_DEPTH_STENCIL	     = 0x40L,  ///< A texture can be bound as a depth-stencil target
+    BIND_UNORDERED_ACCESS	 = 0x80L,  ///< A buffer or a texture can be bound as an unordered access view
+    BIND_INDIRECT_DRAW_ARGS	 = 0x100L, ///< A buffer can be bound as the source buffer for indirect draw commands
+    BIND_INPUT_ATTACHMENT    = 0x200L, ///< A texture can be used as render pass input attachment
+    BIND_RAY_TRACING         = 0x400L, ///< A buffer can be used as a scratch buffer or as the source of primitive data 
+                                       ///  for acceleration structure building
+    BIND_FLAGS_LAST          = 0x400L
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
 
@@ -1251,16 +1251,18 @@ typedef struct DisplayModeAttribs DisplayModeAttribs;
 DILIGENT_TYPED_ENUM(SWAP_CHAIN_USAGE_FLAGS, Uint32)
 {
     /// No allowed usage
-    SWAP_CHAIN_USAGE_NONE           = 0x00L,
+    SWAP_CHAIN_USAGE_NONE             = 0x00L,
         
     /// Swap chain can be used as render target ouput
-    SWAP_CHAIN_USAGE_RENDER_TARGET  = 0x01L,
+    SWAP_CHAIN_USAGE_RENDER_TARGET    = 0x01L,
 
     /// Swap chain images can be used as shader inputs
-    SWAP_CHAIN_USAGE_SHADER_INPUT   = 0x02L,
+    SWAP_CHAIN_USAGE_SHADER_INPUT     = 0x02L,
 
     /// Swap chain images can be used as source of copy operation
-    SWAP_CHAIN_USAGE_COPY_SOURCE    = 0x04L
+    SWAP_CHAIN_USAGE_COPY_SOURCE      = 0x04L,
+
+    SWAP_CHAIN_USAGE_LAST             = SWAP_CHAIN_USAGE_COPY_SOURCE,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SWAP_CHAIN_USAGE_FLAGS)
 
@@ -1553,6 +1555,9 @@ struct DeviceFeatures
         
     /// Indicates if device supports mesh and amplification shaders
     DEVICE_FEATURE_STATE MeshShaders                   DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+    
+    /// Indicates if device supports ray tracing shaders
+    DEVICE_FEATURE_STATE RayTracing                    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports bindless resources
     DEVICE_FEATURE_STATE BindlessResources             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
@@ -1642,6 +1647,7 @@ struct DeviceFeatures
         GeometryShaders                   {State},
         Tessellation                      {State},
         MeshShaders                       {State},
+        RayTracing                        {State},
         BindlessResources                 {State},
         OcclusionQueries                  {State},
         BinaryOcclusionQueries            {State},
@@ -1666,7 +1672,7 @@ struct DeviceFeatures
         UniformBuffer8BitAccess           {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 31, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 32, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -1849,6 +1855,15 @@ struct DeviceCaps
 typedef struct DeviceCaps DeviceCaps;
 
 
+/// Device properties
+struct DeviceProperties
+{
+    /// Maximum supported value for RayTracingPipelineDesc::MaxRecursionDepth.
+    Uint32  MaxRayTracingRecursionDepth;
+};
+typedef struct DeviceProperties DeviceProperties;
+
+
 /// Engine creation attibutes
 struct EngineCreateInfo
 {
@@ -1885,8 +1900,8 @@ typedef struct EngineCreateInfo EngineCreateInfo;
 /// Attributes of the OpenGL-based engine implementation
 struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
-	/// Native window wrapper
-	NativeWindow Window;
+    /// Native window wrapper
+    NativeWindow Window;
 
     /// Create debug OpenGL context and enable debug output.
 
@@ -2118,6 +2133,7 @@ struct VulkanDescriptorPoolSize
     Uint32 NumUniformTexelBufferDescriptors DEFAULT_INITIALIZER(0);
     Uint32 NumStorageTexelBufferDescriptors DEFAULT_INITIALIZER(0);
     Uint32 NumInputAttachmentDescriptors    DEFAULT_INITIALIZER(0);
+    Uint32 NumAccelStructDescriptors        DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     VulkanDescriptorPoolSize()noexcept {}
@@ -2131,7 +2147,8 @@ struct VulkanDescriptorPoolSize
                              Uint32 _NumStorageBufferDescriptors,
                              Uint32 _NumUniformTexelBufferDescriptors,
                              Uint32 _NumStorageTexelBufferDescriptors,
-                             Uint32 _NumInputAttachmentDescriptors)noexcept :
+                             Uint32 _NumInputAttachmentDescriptors,
+                             Uint32 _NumAccelStructDescriptors)noexcept :
         MaxDescriptorSets               {_MaxDescriptorSets               },
         NumSeparateSamplerDescriptors   {_NumSeparateSamplerDescriptors   },
         NumCombinedSamplerDescriptors   {_NumCombinedSamplerDescriptors   },
@@ -2141,7 +2158,8 @@ struct VulkanDescriptorPoolSize
         NumStorageBufferDescriptors     {_NumStorageBufferDescriptors     },
         NumUniformTexelBufferDescriptors{_NumUniformTexelBufferDescriptors},
         NumStorageTexelBufferDescriptors{_NumStorageTexelBufferDescriptors},
-        NumInputAttachmentDescriptors   {_NumInputAttachmentDescriptors   }
+        NumInputAttachmentDescriptors   {_NumInputAttachmentDescriptors   },
+        NumAccelStructDescriptors       {_NumAccelStructDescriptors       }
     {
         // On clang aggregate initialization fails to compile if 
         // structure members have default initializers
@@ -2179,8 +2197,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// the engine creates another one.
     VulkanDescriptorPoolSize MainDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
-        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt
-        {8192,  1024,  8192,  8192,  1024,  4096,  4096,  1024,  1024,   256}
+        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt  AccelSt
+        {8192,  1024,  8192,  8192,  1024,  4096,  4096,  1024,  1024,   256,     256}
 #endif
     ;
 
@@ -2191,8 +2209,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     
     VulkanDescriptorPoolSize DynamicDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
-        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt
-        {2048,   256,  2048,  2048,   256,  1024,  1024,   256,   256,    64}
+        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt  AccelSt
+        {2048,   256,  2048,  2048,   256,  1024,  1024,   256,   256,    64,      64}
 #endif
     ;
 
@@ -2697,16 +2715,16 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource state is known to the engine, but is undefined. A resource is typically in an undefined state right after initialization.
     RESOURCE_STATE_UNDEFINED            = 0x00001,
 
-    /// The resource is accessed as vertex buffer
+    /// The resource is accessed as a vertex buffer
     RESOURCE_STATE_VERTEX_BUFFER        = 0x00002,
 
-    /// The resource is accessed as constant (uniform) buffer
+    /// The resource is accessed as a constant (uniform) buffer
     RESOURCE_STATE_CONSTANT_BUFFER      = 0x00004,
 
-    /// The resource is accessed as index buffer
+    /// The resource is accessed as an index buffer
     RESOURCE_STATE_INDEX_BUFFER         = 0x00008,
 
-    /// The resource is accessed as render target
+    /// The resource is accessed as a render target
     RESOURCE_STATE_RENDER_TARGET        = 0x00010,
         
     /// The resource is used for unordered access
@@ -2724,7 +2742,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is used as the destination for stream output
     RESOURCE_STATE_STREAM_OUT           = 0x00200,
 
-    /// The resource is used as indirect draw/dispatch arguments buffer
+    /// The resource is used as an indirect draw/dispatch arguments buffer
     RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x00400,
 
     /// The resource is used as the destination in a copy operation
@@ -2739,13 +2757,23 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is used as the source in a resolve operation 
     RESOURCE_STATE_RESOLVE_SOURCE       = 0x04000,
 
-    /// The resource is used as input attachment in a render pass subpass
+    /// The resource is used as an input attachment in a render pass subpass
     RESOURCE_STATE_INPUT_ATTACHMENT     = 0x08000,
 
     /// The resource is used for present
     RESOURCE_STATE_PRESENT              = 0x10000,
 
-    RESOURCE_STATE_MAX_BIT              = 0x10000,
+    /// The resource is used as vertex/index/instance buffer in an AS building operation
+    /// or as an acceleration structure source in an AS copy operation.
+    RESOURCE_STATE_BUILD_AS_READ        = 0x20000,
+
+    /// The resource is used as the target for AS building or AS copy operations.
+    RESOURCE_STATE_BUILD_AS_WRITE       = 0x40000,
+
+    /// The resource is used as a top-level AS shader resource in a trace rays operation.
+    RESOURCE_STATE_RAY_TRACING          = 0x80000,
+
+    RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_RAY_TRACING,
 
     RESOURCE_STATE_GENERIC_READ         = RESOURCE_STATE_VERTEX_BUFFER     |
                                           RESOURCE_STATE_CONSTANT_BUFFER   |
@@ -2774,106 +2802,5 @@ DILIGENT_TYPED_ENUM(STATE_TRANSITION_TYPE, Uint8)
     /// In other backends, this mode is similar to STATE_TRANSITION_TYPE_IMMEDIATE.
     STATE_TRANSITION_TYPE_END
 };
-
-static const Uint32 REMAINING_MIP_LEVELS   = 0xFFFFFFFFU;
-static const Uint32 REMAINING_ARRAY_SLICES = 0xFFFFFFFFU;
-
-/// Resource state transition barrier description
-struct StateTransitionDesc
-{
-    /// Texture to transition.
-    /// \note Exactly one of pTexture or pBuffer must be non-null.
-    struct ITexture* pTexture DEFAULT_INITIALIZER(nullptr);
-        
-    /// Buffer to transition.
-    /// \note Exactly one of pTexture or pBuffer must be non-null.
-    struct IBuffer* pBuffer   DEFAULT_INITIALIZER(nullptr);
-        
-    /// When transitioning a texture, first mip level of the subresource range to transition.
-    Uint32 FirstMipLevel     DEFAULT_INITIALIZER(0);
-
-    /// When transitioning a texture, number of mip levels of the subresource range to transition.
-    Uint32 MipLevelsCount    DEFAULT_INITIALIZER(REMAINING_MIP_LEVELS);
-
-    /// When transitioning a texture, first array slice of the subresource range to transition.
-    Uint32 FirstArraySlice   DEFAULT_INITIALIZER(0);
-
-    /// When transitioning a texture, number of array slices of the subresource range to transition.
-    Uint32 ArraySliceCount   DEFAULT_INITIALIZER(REMAINING_ARRAY_SLICES);
-
-    /// Resource state before transition. If this value is RESOURCE_STATE_UNKNOWN,
-    /// internal resource state will be used, which must be defined in this case.
-    RESOURCE_STATE OldState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
-
-    /// Resource state after transition.
-    RESOURCE_STATE NewState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
-
-    /// State transition type, see Diligent::STATE_TRANSITION_TYPE.
-
-    /// \note When issuing UAV barrier (i.e. OldState and NewState equal RESOURCE_STATE_UNORDERED_ACCESS),
-    ///       TransitionType must be STATE_TRANSITION_TYPE_IMMEDIATE.
-    STATE_TRANSITION_TYPE TransitionType DEFAULT_INITIALIZER(STATE_TRANSITION_TYPE_IMMEDIATE);
-
-    /// If set to true, the internal resource state will be set to NewState and the engine
-    /// will be able to take over the resource state management. In this case it is the 
-    /// responsibility of the application to make sure that all subresources are indeed in
-    /// designated state.
-    /// If set to false, internal resource state will be unchanged.
-    /// \note When TransitionType is STATE_TRANSITION_TYPE_BEGIN, this member must be false.
-    bool UpdateResourceState  DEFAULT_INITIALIZER(false);
-
-#if DILIGENT_CPP_INTERFACE
-    StateTransitionDesc()noexcept{}
-
-    StateTransitionDesc(ITexture*             _pTexture, 
-                        RESOURCE_STATE        _OldState,
-                        RESOURCE_STATE        _NewState, 
-                        Uint32                _FirstMipLevel   = 0,
-                        Uint32                _MipLevelsCount  = REMAINING_MIP_LEVELS,
-                        Uint32                _FirstArraySlice = 0,
-                        Uint32                _ArraySliceCount = REMAINING_ARRAY_SLICES,
-                        STATE_TRANSITION_TYPE _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
-                        bool                  _UpdateState     = false)noexcept : 
-        pTexture            {_pTexture       },
-        FirstMipLevel       {_FirstMipLevel  },
-        MipLevelsCount      {_MipLevelsCount },
-        FirstArraySlice     {_FirstArraySlice},
-        ArraySliceCount     {_ArraySliceCount},
-        OldState            {_OldState       },
-        NewState            {_NewState       },
-        TransitionType      {_TransitionType },
-        UpdateResourceState {_UpdateState    }
-    {}
-
-    StateTransitionDesc(ITexture*      _pTexture, 
-                        RESOURCE_STATE _OldState,
-                        RESOURCE_STATE _NewState, 
-                        bool           _UpdateState)noexcept :
-        StateTransitionDesc
-        {
-            _pTexture,
-            _OldState,
-            _NewState,
-            0,
-            REMAINING_MIP_LEVELS,
-            0,
-            REMAINING_ARRAY_SLICES,
-            STATE_TRANSITION_TYPE_IMMEDIATE,
-            _UpdateState
-        }
-    {}
-
-    StateTransitionDesc(IBuffer*       _pBuffer, 
-                        RESOURCE_STATE _OldState,
-                        RESOURCE_STATE _NewState,
-                        bool           _UpdateState)noexcept : 
-        pBuffer             {_pBuffer    },
-        OldState            {_OldState   },
-        NewState            {_NewState   },
-        UpdateResourceState {_UpdateState}
-    {}
-#endif
-};
-typedef struct StateTransitionDesc StateTransitionDesc;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

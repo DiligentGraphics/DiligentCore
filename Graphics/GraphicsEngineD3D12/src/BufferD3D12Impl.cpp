@@ -118,9 +118,9 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         // understood by applications and row-major texture data is commonly marshaled through buffers.
         D3D12BuffDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         D3D12BuffDesc.Flags  = D3D12_RESOURCE_FLAG_NONE;
-        if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
+        if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.BindFlags & BIND_RAY_TRACING))
             D3D12BuffDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        if (!(m_Desc.BindFlags & BIND_SHADER_RESOURCE))
+        if (!(m_Desc.BindFlags & BIND_SHADER_RESOURCE) && !(m_Desc.BindFlags & BIND_RAY_TRACING))
             D3D12BuffDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
         auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
@@ -348,7 +348,7 @@ void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
 
 void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor)
 {
-    CorrectBufferViewDesc(UAVDesc);
+    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc);
 
     D3D12_UNORDERED_ACCESS_VIEW_DESC D3D12_UAVDesc;
     BufferViewDesc_to_D3D12_UAV_DESC(m_Desc, UAVDesc, D3D12_UAVDesc);
@@ -359,7 +359,7 @@ void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HA
 
 void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor)
 {
-    CorrectBufferViewDesc(SRVDesc);
+    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
     BufferViewDesc_to_D3D12_SRV_DESC(m_Desc, SRVDesc, D3D12_SRVDesc);

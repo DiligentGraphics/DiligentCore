@@ -58,7 +58,8 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     volkInitialize();
 
     RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice, IID_RenderDeviceVk};
-    m_vkDevice = pRenderDeviceVk->GetVkDevice();
+    m_vkDevice         = pRenderDeviceVk->GetVkDevice();
+    m_vkPhysicalDevice = pRenderDeviceVk->GetVkPhysicalDevice();
 
     volkLoadInstance(pRenderDeviceVk->GetVkInstance());
 
@@ -71,11 +72,21 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     auto vkPhysicalDevice = pRenderDeviceVk->GetVkPhysicalDevice();
     vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, &m_MemoryProperties);
 
-    VkCommandPoolCreateInfo CmdPoolCI = {};
-    CmdPoolCI.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    CmdPoolCI.queueFamilyIndex        = QueueFamilyIndex;
-    vkCreateCommandPool(m_vkDevice, &CmdPoolCI, nullptr, &m_vkCmdPool);
-    VERIFY_EXPR(m_vkCmdPool != VK_NULL_HANDLE);
+    {
+        VkCommandPoolCreateInfo CmdPoolCI = {};
+        CmdPoolCI.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        CmdPoolCI.queueFamilyIndex        = QueueFamilyIndex;
+        vkCreateCommandPool(m_vkDevice, &CmdPoolCI, nullptr, &m_vkCmdPool);
+        VERIFY_EXPR(m_vkCmdPool != VK_NULL_HANDLE);
+    }
+
+    {
+        VkFenceCreateInfo FenceCI = {};
+        FenceCI.sType             = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        FenceCI.flags             = 0;
+        vkCreateFence(m_vkDevice, &FenceCI, nullptr, &m_vkFence);
+        VERIFY_EXPR(m_vkFence != VK_NULL_HANDLE);
+    }
 
     if (m_pSwapChain == nullptr)
     {
@@ -88,6 +99,10 @@ TestingEnvironmentVk::~TestingEnvironmentVk()
     if (m_vkCmdPool != VK_NULL_HANDLE)
     {
         vkDestroyCommandPool(m_vkDevice, m_vkCmdPool, nullptr);
+    }
+    if (m_vkFence != VK_NULL_HANDLE)
+    {
+        vkDestroyFence(m_vkDevice, m_vkFence, nullptr);
     }
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::FinalizeGlslang();
@@ -317,7 +332,11 @@ VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE Shader
     LOG_ERROR("GLSLang was not built. Shader compilaton is not possible.");
     return VK_NULL_HANDLE;
 #else
-    auto Bytecode = GLSLangUtils::GLSLtoSPIRV(ShaderType, ShaderSource.c_str(), static_cast<int>(ShaderSource.length()), nullptr, nullptr, nullptr);
+    GLSLangUtils::SpirvVersion spvVersion = GLSLangUtils::SpirvVersion::Vk100;
+    if (ShaderType >= SHADER_TYPE_RAY_GEN)
+        spvVersion = GLSLangUtils::SpirvVersion::Vk120;
+
+    auto Bytecode = GLSLangUtils::GLSLtoSPIRV(ShaderType, ShaderSource.c_str(), static_cast<int>(ShaderSource.length()), nullptr, nullptr, spvVersion, nullptr);
     VERIFY_EXPR(!Bytecode.empty());
     if (Bytecode.empty())
         return VK_NULL_HANDLE;
@@ -373,9 +392,16 @@ void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool
     SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
     SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
+    vkQueueSubmit(vkQueue, 1, &SubmitInfo, WaitForIdle ? m_vkFence : VK_NULL_HANDLE);
     if (WaitForIdle)
+    {
         vkQueueWaitIdle(vkQueue);
+
+        // Use fence because vkQueueWaitIdle does not seem to always work causing validation layers to generate errors
+        vkWaitForFences(m_vkDevice, 1, &m_vkFence, VK_TRUE, ~0ull);
+
+        vkResetFences(m_vkDevice, 1, &m_vkFence);
+    }
 
     pContextVk->UnlockCommandQueue();
 }

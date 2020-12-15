@@ -92,6 +92,10 @@ public:
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) override final;
 
+    virtual bool RemapResourceBinding(const TResourceBindingMap& ResourceMap,
+                                      IDxcBlob*                  pSrcBytecode,
+                                      IDxcBlob**                 ppDstByteCode) override final;
+
 private:
     DxcCreateInstanceProc Load()
     {
@@ -132,6 +136,9 @@ private:
 
         return m_pCreateInstance;
     }
+
+    bool ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const;
+    bool PatchDXIL(const TResourceBindingMap& ResourceMap, String& DXIL) const;
 
 private:
     DxcCreateInstanceProc  m_pCreateInstance = nullptr;
@@ -327,54 +334,252 @@ bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
     // validate and sign
     if (m_Target == DXCompilerTarget::Direct3D12)
     {
-        CComPtr<IDxcValidator> validator;
-        hr = CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
-        if (FAILED(hr))
-        {
-            LOG_ERROR("Failed to create  DXC Validator");
-            return false;
-        }
-
-        CComPtr<IDxcOperationResult> validationResult;
-        hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
-
-        if (validationResult == nullptr || FAILED(hr))
-        {
-            LOG_ERROR("Failed to validate shader bytecode");
-            return false;
-        }
-
-        HRESULT status = E_FAIL;
-        validationResult->GetStatus(&status);
-
-        if (SUCCEEDED(status))
-        {
-            CComPtr<IDxcBlob> validated;
-            hr = validationResult->GetResult(&validated);
-            if (FAILED(hr))
-                return false;
-
-            *Attribs.ppBlobOut = validated ? validated.Detach() : compiled.Detach();
-            return true;
-        }
-        else
-        {
-            CComPtr<IDxcBlobEncoding> validationOutput;
-            CComPtr<IDxcBlobEncoding> validationOutputUtf8;
-            validationResult->GetErrorBuffer(&validationOutput);
-            library->GetBlobAsUtf8(validationOutput, &validationOutputUtf8);
-
-            size_t      ValidationMsgLen = validationOutputUtf8 ? validationOutputUtf8->GetBufferSize() : 0;
-            const char* ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(validationOutputUtf8->GetBufferPointer()) : "";
-
-            LOG_ERROR("Shader validation failed: ", ValidationMsg);
-            return false;
-        }
+        return ValidateAndSign(CreateInstance, library, compiled, Attribs.ppBlobOut);
     }
 
     *Attribs.ppBlobOut = compiled.Detach();
     return true;
 }
+
+bool DXCompilerImpl::ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* library, CComPtr<IDxcBlob>& compiled, IDxcBlob** ppBlobOut) const
+{
+    HRESULT                hr;
+    CComPtr<IDxcValidator> validator;
+    hr = CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create  DXC Validator");
+        return false;
+    }
+
+    CComPtr<IDxcOperationResult> validationResult;
+    hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
+
+    if (validationResult == nullptr || FAILED(hr))
+    {
+        LOG_ERROR("Failed to validate shader bytecode");
+        return false;
+    }
+
+    HRESULT status = E_FAIL;
+    validationResult->GetStatus(&status);
+
+    if (SUCCEEDED(status))
+    {
+        CComPtr<IDxcBlob> validated;
+        hr = validationResult->GetResult(&validated);
+        if (FAILED(hr))
+            return false;
+
+        *ppBlobOut = validated ? validated.Detach() : compiled.Detach();
+        return true;
+    }
+    else
+    {
+        CComPtr<IDxcBlobEncoding> validationOutput;
+        CComPtr<IDxcBlobEncoding> validationOutputUtf8;
+        validationResult->GetErrorBuffer(&validationOutput);
+        library->GetBlobAsUtf8(validationOutput, &validationOutputUtf8);
+
+        size_t      ValidationMsgLen = validationOutputUtf8 ? validationOutputUtf8->GetBufferSize() : 0;
+        const char* ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(validationOutputUtf8->GetBufferPointer()) : "";
+
+        LOG_ERROR("Shader validation failed: ", ValidationMsg);
+        return false;
+    }
+}
+
+#if D3D12_SUPPORTED
+class ShaderReflectionViaLibraryReflection final : public ID3D12ShaderReflection
+{
+public:
+    ShaderReflectionViaLibraryReflection(CComPtr<ID3D12LibraryReflection> pLib, ID3D12FunctionReflection* pFunc) :
+        m_pLib{std::move(pLib)},
+        m_pFunc{pFunc},
+        m_RefCount{0}
+    {}
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID* ppv) override
+    {
+        return E_FAIL;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef() override
+    {
+        return Atomics::AtomicIncrement(m_RefCount);
+    }
+
+    ULONG STDMETHODCALLTYPE Release() override
+    {
+        auto RefCount = Atomics::AtomicDecrement(m_RefCount);
+        VERIFY(RefCount >= 0, "Inconsistent call to ReleaseStrongRef()");
+        if (RefCount == 0)
+        {
+            delete this;
+        }
+        return RefCount;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetDesc(D3D12_SHADER_DESC* pDesc) override
+    {
+        D3D12_FUNCTION_DESC FnDesc = {};
+        HRESULT             hr     = m_pFunc->GetDesc(&FnDesc);
+        if (FAILED(hr))
+            return hr;
+
+        pDesc->Version                     = FnDesc.Version;
+        pDesc->Creator                     = FnDesc.Creator;
+        pDesc->Flags                       = FnDesc.Flags;
+        pDesc->ConstantBuffers             = FnDesc.ConstantBuffers;
+        pDesc->BoundResources              = FnDesc.BoundResources;
+        pDesc->InputParameters             = 0;
+        pDesc->OutputParameters            = 0;
+        pDesc->InstructionCount            = FnDesc.InstructionCount;
+        pDesc->TempRegisterCount           = FnDesc.TempRegisterCount;
+        pDesc->TempArrayCount              = FnDesc.TempArrayCount;
+        pDesc->DefCount                    = FnDesc.DefCount;
+        pDesc->DclCount                    = FnDesc.DclCount;
+        pDesc->TextureNormalInstructions   = FnDesc.TextureNormalInstructions;
+        pDesc->TextureLoadInstructions     = FnDesc.TextureLoadInstructions;
+        pDesc->TextureCompInstructions     = FnDesc.TextureCompInstructions;
+        pDesc->TextureBiasInstructions     = FnDesc.TextureBiasInstructions;
+        pDesc->TextureGradientInstructions = FnDesc.TextureGradientInstructions;
+        pDesc->FloatInstructionCount       = FnDesc.FloatInstructionCount;
+        pDesc->IntInstructionCount         = FnDesc.IntInstructionCount;
+        pDesc->UintInstructionCount        = FnDesc.UintInstructionCount;
+        pDesc->StaticFlowControlCount      = FnDesc.StaticFlowControlCount;
+        pDesc->DynamicFlowControlCount     = FnDesc.DynamicFlowControlCount;
+        pDesc->MacroInstructionCount       = FnDesc.MacroInstructionCount;
+        pDesc->ArrayInstructionCount       = FnDesc.ArrayInstructionCount;
+        pDesc->CutInstructionCount         = 0;
+        pDesc->EmitInstructionCount        = 0;
+        pDesc->GSOutputTopology            = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+        pDesc->GSMaxOutputVertexCount      = 0;
+        pDesc->InputPrimitive              = D3D_PRIMITIVE_UNDEFINED;
+        pDesc->PatchConstantParameters     = 0;
+        pDesc->cGSInstanceCount            = 0;
+        pDesc->cControlPoints              = 0;
+        pDesc->HSOutputPrimitive           = D3D_TESSELLATOR_OUTPUT_UNDEFINED;
+        pDesc->HSPartitioning              = D3D_TESSELLATOR_PARTITIONING_UNDEFINED;
+        pDesc->TessellatorDomain           = D3D_TESSELLATOR_DOMAIN_UNDEFINED;
+        pDesc->cBarrierInstructions        = 0;
+        pDesc->cInterlockedInstructions    = 0;
+        pDesc->cTextureStoreInstructions   = 0;
+
+        return S_OK;
+    }
+
+    ID3D12ShaderReflectionConstantBuffer* STDMETHODCALLTYPE GetConstantBufferByIndex(UINT Index) override
+    {
+        return m_pFunc->GetConstantBufferByIndex(Index);
+    }
+
+    ID3D12ShaderReflectionConstantBuffer* STDMETHODCALLTYPE GetConstantBufferByName(LPCSTR Name) override
+    {
+        return m_pFunc->GetConstantBufferByName(Name);
+    }
+
+    HRESULT STDMETHODCALLTYPE GetResourceBindingDesc(UINT ResourceIndex, D3D12_SHADER_INPUT_BIND_DESC* pDesc) override
+    {
+        return m_pFunc->GetResourceBindingDesc(ResourceIndex, pDesc);
+    }
+
+    HRESULT STDMETHODCALLTYPE GetInputParameterDesc(UINT ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC* pDesc) override
+    {
+        UNEXPECTED("not supported");
+        return E_FAIL;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetOutputParameterDesc(UINT ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC* pDesc) override
+    {
+        UNEXPECTED("not supported");
+        return E_FAIL;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetPatchConstantParameterDesc(UINT ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC* pDesc) override
+    {
+        UNEXPECTED("not supported");
+        return E_FAIL;
+    }
+
+    ID3D12ShaderReflectionVariable* STDMETHODCALLTYPE GetVariableByName(LPCSTR Name) override
+    {
+        return m_pFunc->GetVariableByName(Name);
+    }
+
+    HRESULT STDMETHODCALLTYPE GetResourceBindingDescByName(LPCSTR Name, D3D12_SHADER_INPUT_BIND_DESC* pDesc) override
+    {
+        return m_pFunc->GetResourceBindingDescByName(Name, pDesc);
+    }
+
+    UINT STDMETHODCALLTYPE GetMovInstructionCount() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    UINT STDMETHODCALLTYPE GetMovcInstructionCount() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    UINT STDMETHODCALLTYPE GetConversionInstructionCount() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    UINT STDMETHODCALLTYPE GetBitwiseInstructionCount() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    D3D_PRIMITIVE STDMETHODCALLTYPE GetGSInputPrimitive() override
+    {
+        UNEXPECTED("not supported");
+        return D3D_PRIMITIVE_UNDEFINED;
+    }
+
+    BOOL STDMETHODCALLTYPE IsSampleFrequencyShader() override
+    {
+        UNEXPECTED("not supported");
+        return FALSE;
+    }
+
+    UINT STDMETHODCALLTYPE GetNumInterfaceSlots() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetMinFeatureLevel(D3D_FEATURE_LEVEL* pLevel) override
+    {
+        UNEXPECTED("not supported");
+        return E_FAIL;
+    }
+
+    UINT STDMETHODCALLTYPE GetThreadGroupSize(UINT* pSizeX, UINT* pSizeY, UINT* pSizeZ) override
+    {
+        UNEXPECTED("not supported");
+        *pSizeX = *pSizeY = *pSizeZ = 0;
+        return 0;
+    }
+
+    UINT64 STDMETHODCALLTYPE GetRequiresFlags() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+private:
+    CComPtr<ID3D12LibraryReflection> m_pLib;
+    ID3D12FunctionReflection*        m_pFunc = nullptr;
+    Atomics::AtomicLong              m_RefCount;
+};
+#endif // D3D12_SUPPORTED
+
 
 void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                               ID3D12ShaderReflection** ppShaderReflection)
@@ -386,9 +591,6 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
         if (CreateInstance == nullptr)
             return;
 
-#    define FOURCC(a, b, c, d) (uint32_t{((d) << 24) | ((c) << 16) | ((b) << 8) | (a)})
-        const uint32_t DFCC_DXIL = FOURCC('D', 'X', 'I', 'L');
-
         CComPtr<IDxcContainerReflection> pReflection;
 
         auto hr = CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
@@ -399,20 +601,41 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to load shader reflection from bytecode");
 
-        UINT32 shaderIdx;
+        UINT32 shaderIdx = 0;
 
-        hr = pReflection->FindFirstPartKind(DFCC_DXIL, &shaderIdx);
+        hr = pReflection->FindFirstPartKind(DXC_PART_DXIL, &shaderIdx);
         if (SUCCEEDED(hr))
         {
-            hr = pReflection->GetPartReflection(shaderIdx, __uuidof(*ppShaderReflection), reinterpret_cast<void**>(ppShaderReflection));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to get the shader reflection");
+            hr = pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(ppShaderReflection));
+            if (SUCCEEDED(hr))
+                return;
+
+            // Try to get the reflection via library reflection
+            CComPtr<ID3D12LibraryReflection> pLib;
+
+            hr = pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&pLib));
+            if (SUCCEEDED(hr))
+            {
+                D3D12_LIBRARY_DESC Desc = {};
+                pLib->GetDesc(&Desc);
+                VERIFY_EXPR(Desc.FunctionCount == 1);
+
+                ID3D12FunctionReflection* pFunc = pLib->GetFunctionByIndex(0);
+                if (pFunc != nullptr)
+                {
+                    *ppShaderReflection = new ShaderReflectionViaLibraryReflection{std::move(pLib), pFunc};
+                    (*ppShaderReflection)->AddRef();
+                    return;
+                }
+            }
         }
+
+        LOG_ERROR_AND_THROW("Failed to get the shader reflection");
     }
     catch (...)
     {
     }
-#endif
+#endif // D3D12_SUPPORTED
 }
 
 
@@ -470,19 +693,35 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             DxilArgs.push_back(L"-Qembed_debug");
         }
 #else
-        DxilArgs.push_back(L"-Od"); // TODO: something goes wrong if optimization is enabled
+        if (m_MajorVer > 1 || m_MajorVer == 1 && m_MinorVer >= 5)
+            DxilArgs.push_back(L"-O3"); // Optimization level 3
+        else
+            DxilArgs.push_back(L"-Od"); // TODO: something goes wrong if optimization is enabled
 #endif
     }
     else if (m_Target == DXCompilerTarget::Vulkan)
     {
+        const Uint32 RayTracingStages =
+            SHADER_TYPE_RAY_GEN | SHADER_TYPE_RAY_MISS | SHADER_TYPE_RAY_CLOSEST_HIT |
+            SHADER_TYPE_RAY_ANY_HIT | SHADER_TYPE_RAY_INTERSECTION | SHADER_TYPE_CALLABLE;
+
         DxilArgs.assign(
             {
                 L"-spirv",
                 L"-fspv-reflect",
-                L"-fspv-target-env=vulkan1.0",
                 //L"-WX", // Warnings as errors
                 L"-O3", // Optimization level 3
             });
+
+        if (ShaderCI.Desc.ShaderType & RayTracingStages)
+        {
+            DxilArgs.push_back(L"-fspv-extension=SPV_NV_ray_tracing");
+            DxilArgs.push_back(L"-fspv-extension=SPV_GOOGLE_hlsl_functionality1");
+            DxilArgs.push_back(L"-fspv-extension=SPV_GOOGLE_user_type");
+
+            // TODO: SPV_NV_ray_tracing is not compatible with new ray tracing extensions, but the latest DXC does not support shaderRecord, so uncomment this line when will it be fixed
+            //DxilArgs.push_back(L"-fspv-target-env=vulkan1.2");
+        }
     }
     else
     {
@@ -521,6 +760,173 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
         if (ppByteCodeBlob != nullptr)
             *ppByteCodeBlob = pDXIL.Detach();
     }
+}
+
+bool DXCompilerImpl::RemapResourceBinding(const TResourceBindingMap& ResourceMap,
+                                          IDxcBlob*                  pSrcBytecode,
+                                          IDxcBlob**                 ppDstByteCode)
+{
+#if D3D12_SUPPORTED
+    auto CreateInstance = GetCreateInstaceProc();
+
+    if (CreateInstance == nullptr)
+    {
+        LOG_ERROR("Failed to load DXCompiler");
+        return false;
+    }
+
+    HRESULT              hr;
+    CComPtr<IDxcLibrary> library;
+    hr = CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC Library");
+        return false;
+    }
+
+    CComPtr<IDxcAssembler> assembler;
+    hr = CreateInstance(CLSID_DxcAssembler, IID_PPV_ARGS(&assembler));
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC assembler");
+        return false;
+    }
+
+    CComPtr<IDxcCompiler> compiler;
+    hr = CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC Compiler");
+        return false;
+    }
+
+    CComPtr<IDxcBlobEncoding> disasm;
+    hr = compiler->Disassemble(pSrcBytecode, &disasm);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to disassemble bytecode");
+        return false;
+    }
+
+    String dxilAsm;
+    dxilAsm.assign(static_cast<const char*>(disasm->GetBufferPointer()), disasm->GetBufferSize());
+
+    if (!PatchDXIL(ResourceMap, dxilAsm))
+    {
+        LOG_ERROR("Failed to patch resource bindings");
+        return false;
+    }
+
+    CComPtr<IDxcBlobEncoding> patchedDisasm;
+    hr = library->CreateBlobWithEncodingFromPinned(dxilAsm.data(), static_cast<UINT32>(dxilAsm.size()), 0, &patchedDisasm);
+    if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create disassemble blob");
+        return false;
+    }
+
+    CComPtr<IDxcOperationResult> dxilResult;
+    hr = assembler->AssembleToContainer(patchedDisasm, &dxilResult);
+    if (FAILED(hr) || dxilResult == nullptr)
+    {
+        LOG_ERROR("Failed to create DXIL container");
+        return false;
+    }
+
+    HRESULT status = E_FAIL;
+    dxilResult->GetStatus(&status);
+
+    if (FAILED(status))
+    {
+        CComPtr<IDxcBlobEncoding> errorsBlob;
+        CComPtr<IDxcBlobEncoding> errorsBlobUtf8;
+        if (SUCCEEDED(dxilResult->GetErrorBuffer(&errorsBlob)) && SUCCEEDED(library->GetBlobAsUtf8(errorsBlob, &errorsBlobUtf8)))
+        {
+            String errorLog;
+            errorLog.assign(static_cast<const char*>(errorsBlobUtf8->GetBufferPointer()), errorsBlobUtf8->GetBufferSize());
+            LOG_ERROR_MESSAGE("Compilation message: ", errorLog);
+        }
+        else
+            LOG_ERROR("Failed to compile patched asm");
+
+        return false;
+    }
+
+    CComPtr<IDxcBlob> compiled;
+    hr = dxilResult->GetResult(static_cast<IDxcBlob**>(&compiled));
+    if (FAILED(hr))
+        return false;
+
+    return ValidateAndSign(CreateInstance, library, compiled, ppDstByteCode);
+#else
+
+    return false;
+#endif // D3D12_SUPPORTED
+}
+
+bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& DXIL) const
+{
+    String     ResName;
+    char       BindPointStr[32];
+    const char Zero[]   = "0";
+    const auto IntToStr = [&BindPointStr](int val) //
+    {
+        char* str = &BindPointStr[_countof(BindPointStr) - 1];
+        *(str--)  = 0;
+        do
+        {
+            *(str--) = "0123456789"[val % 10];
+            val /= 10;
+        } while (val);
+        return ++str;
+    };
+
+    for (auto& ResPair : ResourceMap)
+    {
+        // [res name], i32 [space], i32 [bind point]
+
+        const auto& Name      = ResPair.first;
+        const auto& BindPoint = ResPair.second;
+
+        ResName = String{"!\""} + Name.GetStr() + "\", ";
+
+        size_t pos = DXIL.find(ResName);
+        if (pos == String::npos)
+            continue;
+
+        Uint32 Part      = 0;
+        size_t PartStart = pos + ResName.length();
+
+        for (size_t i = PartStart; i < DXIL.size(); ++i)
+        {
+            const char c = DXIL[i];
+            if (c == ' ')
+            {
+                if (Part == 0 || Part == 2)
+                {
+                    const char* str = &DXIL[PartStart];
+                    VERIFY_EXPR(std::memcmp(str, "i32", i - PartStart) == 0);
+                }
+                else if (Part == 1) // space
+                {
+                    DXIL.replace(PartStart, i - PartStart - 1, Zero);
+                    i = PartStart + strlen(Zero) + 1;
+                }
+                else if (Part == 3) // bind point
+                {
+                    const char* str = IntToStr(BindPoint);
+                    DXIL.replace(PartStart, i - PartStart - 1, str);
+                    i = PartStart + strlen(str) + 1;
+                }
+                else
+                    break;
+
+                PartStart = i + 1;
+                ++Part;
+            }
+        }
+    }
+    return true;
 }
 
 } // namespace Diligent

@@ -26,3 +26,25 @@
  */
 
 #include "DiligentCore/Graphics/GraphicsEngine/interface/PipelineState.h"
+
+void TestPipelineState_CInterface(IPipelineState* pPSO)
+{
+    const GraphicsPipelineDesc*   pGDesc  = IPipelineState_GetGraphicsPipelineDesc(pPSO);
+    const RayTracingPipelineDesc* pRTDesc = IPipelineState_GetRayTracingPipelineDesc(pPSO);
+    (void)pGDesc;
+    (void)pRTDesc;
+
+    IPipelineState_BindStaticResources(pPSO, (Uint32)0, (IResourceMapping*)NULL, (Uint32)1);
+
+    Uint32                   VarCount = IPipelineState_GetStaticVariableCount(pPSO, SHADER_TYPE_UNKNOWN);
+    IShaderResourceVariable* pSRV1    = IPipelineState_GetStaticVariableByName(pPSO, SHADER_TYPE_UNKNOWN, "Resource name");
+    IShaderResourceVariable* pSRV2    = IPipelineState_GetStaticVariableByIndex(pPSO, SHADER_TYPE_UNKNOWN, (Uint32)1);
+    (void)VarCount;
+    (void)pSRV1;
+    (void)pSRV2;
+
+    IPipelineState_CreateShaderResourceBinding(pPSO, (IShaderResourceBinding**)NULL, true);
+
+    bool Compatible = IPipelineState_IsCompatibleWith(pPSO, (IPipelineState*)NULL);
+    (void)Compatible;
+}

@@ -27,10 +27,14 @@
 
 #pragma once
 
+#include <array>
 #include <vector>
+#include <unordered_map>
 
+#include "Constants.h"
 #include "Shader.h"
 #include "DataBlob.h"
+#include "HashUtils.hpp"
 
 // defined in dxcapi.h
 struct DxcDefine;
@@ -79,6 +83,12 @@ public:
                          IDxcBlob**              ppByteCodeBlob,
                          std::vector<uint32_t>*  pByteCode,
                          IDataBlob**             ppCompilerOutput) noexcept(false) = 0;
+
+    using TResourceBindingMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
+
+    virtual bool RemapResourceBinding(const TResourceBindingMap& ResourceMap,
+                                      IDxcBlob*                  pSrcBytecode,
+                                      IDxcBlob**                 ppDstByteCode) = 0;
 
     // Attempts to extract shader reflection from the bytecode using DXC.
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,

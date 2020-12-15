@@ -112,7 +112,7 @@ private:
     void Initialize(const PSOCreateInfoType& CreateInfo, const std::vector<GLPipelineShaderStageInfo>& ShaderStages);
 
     void InitResourceLayouts(const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
-                             LinearAllocator&                              MemPool);
+                             FixedLinearAllocator&                         MemPool);
 
     void Destruct();
 

@@ -39,10 +39,24 @@ class VulkanPhysicalDevice
 public:
     struct ExtensionFeatures
     {
-        VkPhysicalDeviceMeshShaderFeaturesNV         MeshShader        = {};
-        VkPhysicalDevice16BitStorageFeaturesKHR      Storage16Bit      = {};
-        VkPhysicalDevice8BitStorageFeaturesKHR       Storage8Bit       = {};
-        VkPhysicalDeviceShaderFloat16Int8FeaturesKHR ShaderFloat16Int8 = {};
+        VkPhysicalDeviceMeshShaderFeaturesNV             MeshShader          = {};
+        VkPhysicalDevice16BitStorageFeaturesKHR          Storage16Bit        = {};
+        VkPhysicalDevice8BitStorageFeaturesKHR           Storage8Bit         = {};
+        VkPhysicalDeviceShaderFloat16Int8FeaturesKHR     ShaderFloat16Int8   = {};
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR AccelStruct         = {};
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR    RayTracingPipeline  = {};
+        bool                                             Spirv14             = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
+        bool                                             Spirv15             = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
+        VkPhysicalDeviceBufferDeviceAddressFeaturesKHR   BufferDeviceAddress = {};
+        VkPhysicalDeviceDescriptorIndexingFeaturesEXT    DescriptorIndexing  = {};
+    };
+
+    struct ExtensionProperties
+    {
+        VkPhysicalDeviceMeshShaderPropertiesNV             MeshShader         = {};
+        VkPhysicalDeviceAccelerationStructurePropertiesKHR AccelStruct        = {};
+        VkPhysicalDeviceRayTracingPipelinePropertiesKHR    RayTracingPipeline = {};
+        VkPhysicalDeviceDescriptorIndexingPropertiesEXT    DescriptorIndexing = {};
     };
 
 public:
@@ -70,6 +84,7 @@ public:
     const VkPhysicalDeviceProperties&       GetProperties() const { return m_Properties; }
     const VkPhysicalDeviceFeatures&         GetFeatures() const { return m_Features; }
     const ExtensionFeatures&                GetExtFeatures() const { return m_ExtFeatures; }
+    const ExtensionProperties&              GetExtProperties() const { return m_ExtProperties; }
     const VkPhysicalDeviceMemoryProperties& GetMemoryProperties() const { return m_MemoryProperties; }
     VkFormatProperties                      GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const;
 
@@ -82,6 +97,7 @@ private:
     VkPhysicalDeviceFeatures             m_Features         = {};
     VkPhysicalDeviceMemoryProperties     m_MemoryProperties = {};
     ExtensionFeatures                    m_ExtFeatures      = {};
+    ExtensionProperties                  m_ExtProperties    = {};
     std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
     std::vector<VkExtensionProperties>   m_SupportedExtensions;
 };

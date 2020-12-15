@@ -2159,7 +2159,6 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
 #ifdef DILIGENT_DEVELOPMENT
         DvpVerifyStateTransitionDesc(Barrier);
 #endif
-        DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer must not be null");
         DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
 
         if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)
@@ -2170,28 +2169,27 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
         }
         VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
 
-        if (Barrier.pTexture)
+        if (RefCntAutoPtr<TextureBaseD3D11> pTexture{Barrier.pResource, IID_TextureD3D11})
         {
-            auto* pTextureD3D11Impl = ValidatedCast<TextureBaseD3D11>(Barrier.pTexture);
-            auto  OldState          = Barrier.OldState;
+            auto OldState = Barrier.OldState;
             if (OldState == RESOURCE_STATE_UNKNOWN)
             {
-                if (pTextureD3D11Impl->IsInKnownState())
+                if (pTexture->IsInKnownState())
                 {
-                    OldState = pTextureD3D11Impl->GetState();
+                    OldState = pTexture->GetState();
                 }
                 else
                 {
-                    LOG_ERROR_MESSAGE("Failed to transition the state of texture '", pTextureD3D11Impl->GetDesc().Name, "' because the buffer state is unknown and is not explicitly specified");
+                    LOG_ERROR_MESSAGE("Failed to transition the state of texture '", pTexture->GetDesc().Name, "' because the buffer state is unknown and is not explicitly specified");
                     continue;
                 }
             }
             else
             {
-                if (pTextureD3D11Impl->IsInKnownState() && pTextureD3D11Impl->GetState() != OldState)
+                if (pTexture->IsInKnownState() && pTexture->GetState() != OldState)
                 {
-                    LOG_ERROR_MESSAGE("The state ", GetResourceStateString(pTextureD3D11Impl->GetState()), " of texture '",
-                                      pTextureD3D11Impl->GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
+                    LOG_ERROR_MESSAGE("The state ", GetResourceStateString(pTexture->GetState()), " of texture '",
+                                      pTexture->GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
                                       " specified by the barrier");
                 }
             }
@@ -2199,52 +2197,50 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
             if ((Barrier.NewState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
             {
                 DEV_CHECK_ERR((Barrier.NewState & (RESOURCE_STATE_GENERIC_READ | RESOURCE_STATE_INPUT_ATTACHMENT)) == 0, "Unordered access state is not compatible with any input state");
-                UnbindTextureFromInput(pTextureD3D11Impl, pTextureD3D11Impl->GetD3D11Texture());
+                UnbindTextureFromInput(pTexture, pTexture->GetD3D11Texture());
             }
 
             if ((Barrier.NewState & (RESOURCE_STATE_GENERIC_READ | RESOURCE_STATE_INPUT_ATTACHMENT)) != 0)
             {
                 if ((OldState & RESOURCE_STATE_RENDER_TARGET) != 0)
-                    UnbindTextureFromRenderTarget(pTextureD3D11Impl);
+                    UnbindTextureFromRenderTarget(pTexture);
 
                 if ((OldState & RESOURCE_STATE_DEPTH_WRITE) != 0)
-                    UnbindTextureFromDepthStencil(pTextureD3D11Impl);
+                    UnbindTextureFromDepthStencil(pTexture);
 
                 if ((OldState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
                 {
-                    UnbindResourceFromUAV(pTextureD3D11Impl, pTextureD3D11Impl->GetD3D11Texture());
-                    pTextureD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
+                    UnbindResourceFromUAV(pTexture, pTexture->GetD3D11Texture());
+                    pTexture->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
                 }
             }
 
             if (Barrier.UpdateResourceState)
             {
-                pTextureD3D11Impl->SetState(Barrier.NewState);
+                pTexture->SetState(Barrier.NewState);
             }
         }
-        else
+        else if (RefCntAutoPtr<BufferD3D11Impl> pBuffer{Barrier.pResource, IID_BufferD3D11})
         {
-            VERIFY_EXPR(Barrier.pBuffer);
-            auto* pBufferD3D11Impl = ValidatedCast<BufferD3D11Impl>(Barrier.pBuffer);
-            auto  OldState         = Barrier.OldState;
+            auto OldState = Barrier.OldState;
             if (OldState == RESOURCE_STATE_UNKNOWN)
             {
-                if (pBufferD3D11Impl->IsInKnownState())
+                if (pBuffer->IsInKnownState())
                 {
-                    OldState = pBufferD3D11Impl->GetState();
+                    OldState = pBuffer->GetState();
                 }
                 else
                 {
-                    LOG_ERROR_MESSAGE("Failed to transition the state of buffer '", pBufferD3D11Impl->GetDesc().Name, "' because the buffer state is unknown and is not explicitly specified");
+                    LOG_ERROR_MESSAGE("Failed to transition the state of buffer '", pBuffer->GetDesc().Name, "' because the buffer state is unknown and is not explicitly specified");
                     continue;
                 }
             }
             else
             {
-                if (pBufferD3D11Impl->IsInKnownState() && pBufferD3D11Impl->GetState() != OldState)
+                if (pBuffer->IsInKnownState() && pBuffer->GetState() != OldState)
                 {
-                    LOG_ERROR_MESSAGE("The state ", GetResourceStateString(pBufferD3D11Impl->GetState()), " of buffer '",
-                                      pBufferD3D11Impl->GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
+                    LOG_ERROR_MESSAGE("The state ", GetResourceStateString(pBuffer->GetState()), " of buffer '",
+                                      pBuffer->GetDesc().Name, "' does not match the old state ", GetResourceStateString(OldState),
                                       " specified by the barrier");
                 }
             }
@@ -2252,18 +2248,22 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
             if ((Barrier.NewState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
             {
                 DEV_CHECK_ERR((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) == 0, "Unordered access state is not compatible with any input state");
-                UnbindBufferFromInput(pBufferD3D11Impl, pBufferD3D11Impl->m_pd3d11Buffer);
+                UnbindBufferFromInput(pBuffer, pBuffer->m_pd3d11Buffer);
             }
 
             if ((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) != 0)
             {
-                UnbindResourceFromUAV(pBufferD3D11Impl, pBufferD3D11Impl->m_pd3d11Buffer);
+                UnbindResourceFromUAV(pBuffer, pBuffer->m_pd3d11Buffer);
             }
 
             if (Barrier.UpdateResourceState)
             {
-                pBufferD3D11Impl->SetState(Barrier.NewState);
+                pBuffer->SetState(Barrier.NewState);
             }
+        }
+        else
+        {
+            UNEXPECTED("The type of resource '", Barrier.pResource->GetDesc().Name, "' is not support in D3D11");
         }
     }
 }
@@ -2299,6 +2299,41 @@ void DeviceContextD3D11Impl::ResolveTextureSubresource(ITexture*                
     auto SrcSubresIndex = D3D11CalcSubresource(ResolveAttribs.SrcMipLevel, ResolveAttribs.SrcSlice, SrcTexDesc.MipLevels);
     auto DstSubresIndex = D3D11CalcSubresource(ResolveAttribs.DstMipLevel, ResolveAttribs.DstSlice, DstTexDesc.MipLevels);
     m_pd3d11DeviceContext->ResolveSubresource(pDstTexD3D11->GetD3D11Texture(), DstSubresIndex, pSrcTexD3D11->GetD3D11Texture(), SrcSubresIndex, DXGIFmt);
+}
+
+void DeviceContextD3D11Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
+{
+    UNSUPPORTED("BuildBLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
+{
+    UNSUPPORTED("BuildTLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
+{
+    UNSUPPORTED("CopyBLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
+{
+    UNSUPPORTED("CopyTLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs)
+{
+    UNSUPPORTED("CopyTLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs)
+{
+    UNSUPPORTED("CopyTLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::TraceRays(const TraceRaysAttribs& Attribs)
+{
+    UNSUPPORTED("TraceRays is not supported in DirectX 11");
 }
 
 // clang-format off

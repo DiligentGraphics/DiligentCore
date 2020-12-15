@@ -32,12 +32,11 @@
 #include <array>
 #include "ShaderResourceLayoutD3D12.hpp"
 #include "BufferD3D12Impl.hpp"
+#include "D3D12TypeConversions.hpp"
 
 namespace Diligent
 {
 
-SHADER_TYPE                ShaderTypeFromShaderVisibility(D3D12_SHADER_VISIBILITY ShaderVisibility);
-D3D12_SHADER_VISIBILITY    GetShaderVisibility(SHADER_TYPE ShaderType);
 D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapTypeFromRangeType(D3D12_DESCRIPTOR_RANGE_TYPE RangeType);
 
 class RootParameter
@@ -299,31 +298,14 @@ private:
 /// Implementation of the Diligent::RootSignature class
 class RootSignature
 {
+    friend class RootSignatureBuilder;
+
 public:
     RootSignature();
 
-    void AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
-
-    void Finalize(ID3D12Device* pd3d12Device);
-
     ID3D12RootSignature* GetD3D12RootSignature() const { return m_pd3d12RootSignature; }
 
-    size_t GetResourceCacheRequiredMemSize() const;
-
     void InitResourceCache(class RenderDeviceD3D12Impl* pDeviceD3D12Impl, class ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator& CacheMemAllocator) const;
-
-    void InitImmutableSampler(SHADER_TYPE                     ShaderType,
-                              const char*                     SamplerName,
-                              const char*                     SamplerSuffix,
-                              const D3DShaderResourceAttribs& ShaderResAttribs);
-
-    void AllocateResourceSlot(SHADER_TYPE                     ShaderType,
-                              PIPELINE_TYPE                   PipelineType,
-                              const D3DShaderResourceAttribs& ShaderResAttribs,
-                              SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
-                              D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
-                              Uint32&                         RootIndex,
-                              Uint32&                         OffsetFromTableStart);
 
     // This method should be thread-safe as it does not modify any object state
     void (RootSignature::*CommitDescriptorHandles)(class RenderDeviceD3D12Impl* pRenderDeviceD3D12,
@@ -375,10 +357,6 @@ public:
     }
 
 private:
-#ifdef DILIGENT_DEBUG
-    void dbgVerifyRootParameters() const;
-#endif
-
 #ifdef DILIGENT_DEVELOPMENT
     static void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
                                        D3D12_DESCRIPTOR_RANGE_TYPE               RangeType);
@@ -481,23 +459,6 @@ private:
 
     RootParamsManager m_RootParams;
 
-    struct ImmutableSamplerAttribs
-    {
-        ImmutableSamplerDesc    SamplerDesc;
-        UINT                    ShaderRegister   = static_cast<UINT>(-1);
-        UINT                    ArraySize        = 0;
-        UINT                    RegisterSpace    = 0;
-        D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
-
-        ImmutableSamplerAttribs() noexcept {}
-        ImmutableSamplerAttribs(const ImmutableSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility) noexcept :
-            SamplerDesc(SamDesc),
-            ShaderVisibility(Visibility)
-        {}
-    };
-    // Note: sizeof(m_ImmutableSamplers) == 56 (MS compiler, release x64)
-    std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> m_ImmutableSamplers;
-
     IMemoryAllocator& m_MemAllocator;
 
     // Commits descriptor handles for static and mutable variables
@@ -515,6 +476,71 @@ private:
                                              bool                         IsCompute,
                                              bool                         ValidateStates) const;
 };
+
+
+class RootSignatureBuilder
+{
+public:
+    explicit RootSignatureBuilder(RootSignature& RootSig);
+
+    void AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
+
+    void InitImmutableSampler(SHADER_TYPE                     ShaderType,
+                              const char*                     SamplerName,
+                              const char*                     SamplerSuffix,
+                              const D3DShaderResourceAttribs& ShaderResAttribs);
+
+    void AllocateResourceSlot(SHADER_TYPE                     ShaderType,
+                              PIPELINE_TYPE                   PipelineType,
+                              const D3DShaderResourceAttribs& ShaderResAttribs,
+                              SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
+                              D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
+                              Uint32&                         BindPoint,
+                              Uint32&                         RootIndex,
+                              Uint32&                         OffsetFromTableStart);
+
+    void Finalize(ID3D12Device* pd3d12Device);
+
+    size_t GetResourceCacheRequiredMemSize() const;
+
+    size_t GetHash() const
+    {
+        return m_RootSig.GetHash();
+    }
+
+    // Note: sizeof(m_ImmutableSamplers) == 56 (MS compiler, release x64)
+    struct ImmutableSamplerAttribs
+    {
+        ImmutableSamplerDesc    SamplerDesc;
+        UINT                    ShaderRegister   = static_cast<UINT>(-1);
+        UINT                    ArraySize        = 0;
+        UINT                    RegisterSpace    = 0;
+        D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
+        String                  Name;
+        SHADER_TYPE             ShaderType = SHADER_TYPE_UNKNOWN;
+
+        ImmutableSamplerAttribs() noexcept {}
+        ImmutableSamplerAttribs(const ImmutableSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility, SHADER_TYPE Stage) noexcept :
+            SamplerDesc(SamDesc),
+            ShaderVisibility(Visibility),
+            ShaderType{Stage}
+        {}
+    };
+    const ImmutableSamplerAttribs* GetImmutableSamplers() const { return m_ImmutableSamplers.data(); }
+    size_t                         GetImmutableSamplerCount() const { return m_ImmutableSamplers.size(); }
+
+private:
+#ifdef DILIGENT_DEBUG
+    void dbgVerifyRootParameters() const;
+#endif
+
+    RootSignature& m_RootSig;
+
+    std::array<Uint16, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> m_NumResources = {};
+
+    std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> m_ImmutableSamplers;
+};
+
 
 void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
                                     CommandContext&           CmdCtx,
@@ -537,7 +563,7 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
         {
             auto& Param = static_cast<const D3D12_ROOT_PARAMETER&>(RootView);
             VERIFY_EXPR(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
-            dbgShaderType = ShaderTypeFromShaderVisibility(Param.ShaderVisibility);
+            dbgShaderType = D3D12ShaderVisibilityToShaderType(Param.ShaderVisibility);
         }
 #endif
 
@@ -587,5 +613,24 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
         }
     }
 }
+
+
+class LocalRootSignature
+{
+public:
+    LocalRootSignature(const char* pCBName, Uint32 ShaderRecordSize);
+
+    bool SetOrMerge(const D3DShaderResourceAttribs& CB);
+
+    ID3D12RootSignature* Create(ID3D12Device* pDevice);
+
+private:
+    static constexpr Uint32 InvalidBindPoint = ~0u;
+
+    const char*                  m_pName            = nullptr;
+    Uint32                       m_BindPoint        = InvalidBindPoint;
+    const Uint32                 m_ShaderRecordSize = 0;
+    CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
+};
 
 } // namespace Diligent

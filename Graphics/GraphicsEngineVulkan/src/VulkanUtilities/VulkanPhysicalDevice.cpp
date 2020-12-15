@@ -68,12 +68,13 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         VERIFY_EXPR(ExtensionCount == m_SupportedExtensions.size());
     }
 
-#ifdef VK_KHR_get_physical_device_properties2
+#if DILIGENT_USE_VOLK
     if (Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
         VkPhysicalDeviceFeatures2   Feats2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
         VkPhysicalDeviceProperties2 Props2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
         void**                      NextFeat = &Feats2.pNext;
+        void**                      NextProp = &Props2.pNext;
 
         if (IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
         {
@@ -103,23 +104,92 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             }
         }
 
-        // Enable mesh shader extension.
+        // Get mesh shader features and properties.
         if (IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
         {
             *NextFeat = &m_ExtFeatures.MeshShader;
             NextFeat  = &m_ExtFeatures.MeshShader.pNext;
 
             m_ExtFeatures.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+
+            *NextProp = &m_ExtProperties.MeshShader;
+            NextProp  = &m_ExtProperties.MeshShader.pNext;
+
+            m_ExtProperties.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
         }
 
+        // Get acceleration structure features and properties.
+        if (IsExtensionSupported(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.AccelStruct;
+            NextFeat  = &m_ExtFeatures.AccelStruct.pNext;
+
+            m_ExtFeatures.AccelStruct.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+
+            *NextProp = &m_ExtProperties.AccelStruct;
+            NextProp  = &m_ExtProperties.AccelStruct.pNext;
+
+            m_ExtProperties.AccelStruct.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+        }
+
+        // Get ray tracing pipeline features and properties.
+        if (IsExtensionSupported(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.RayTracingPipeline;
+            NextFeat  = &m_ExtFeatures.RayTracingPipeline.pNext;
+
+            m_ExtFeatures.RayTracingPipeline.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+
+            *NextProp = &m_ExtProperties.RayTracingPipeline;
+            NextProp  = &m_ExtProperties.RayTracingPipeline.pNext;
+
+            m_ExtProperties.RayTracingPipeline.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+        }
+
+        // Additional extension that is required for ray tracing.
+        if (IsExtensionSupported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.BufferDeviceAddress;
+            NextFeat  = &m_ExtFeatures.BufferDeviceAddress.pNext;
+
+            m_ExtFeatures.BufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+        }
+
+        // Additional extension that is required for ray tracing.
+        if (IsExtensionSupported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.DescriptorIndexing;
+            NextFeat  = &m_ExtFeatures.DescriptorIndexing.pNext;
+
+            m_ExtFeatures.DescriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+
+            *NextProp = &m_ExtProperties.DescriptorIndexing;
+            NextProp  = &m_ExtProperties.DescriptorIndexing.pNext;
+
+            m_ExtProperties.DescriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
+        }
+
+        // Additional extension that is required for ray tracing shader.
+        if (IsExtensionSupported(VK_KHR_SPIRV_1_4_EXTENSION_NAME))
+            m_ExtFeatures.Spirv14 = true;
+
+        // Some features requires SPIRV 1.4 or 1.5 that added to Vulkan 1.2 core.
+        if (Instance.GetVkVersion() >= VK_API_VERSION_1_2)
+        {
+            m_ExtFeatures.Spirv14 = true;
+            m_ExtFeatures.Spirv15 = true;
+        }
+
+        // make sure that last pNext is null
         *NextFeat = nullptr;
+        *NextProp = nullptr;
 
         // Initialize device extension features by current physical device features.
         // Some flags may not be supported by hardware.
         vkGetPhysicalDeviceFeatures2KHR(m_VkDevice, &Feats2);
         vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
     }
-#endif
+#endif // DILIGENT_USE_VOLK
 }
 
 uint32_t VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const

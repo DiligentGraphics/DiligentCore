@@ -25,14 +25,13 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "FramebufferBase.hpp"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
 
-void ValidateFramebufferDesc(const FramebufferDesc& Desc)
+void ValidateFramebufferDesc(const FramebufferDesc& Desc) noexcept(false)
 {
 #define LOG_FRAMEBUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of framebuffer '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 

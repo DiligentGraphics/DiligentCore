@@ -225,7 +225,7 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 {
                     auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
 
-                    const auto EnabledShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
+                    const auto EnabledShaderStages = LogicalDevice.GetEnabledShaderStages();
 
                     auto Idx = 0;
 

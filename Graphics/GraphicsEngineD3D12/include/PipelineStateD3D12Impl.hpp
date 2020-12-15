@@ -53,6 +53,7 @@ public:
 
     PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const GraphicsPipelineStateCreateInfo& CreateInfo);
     PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const ComputePipelineStateCreateInfo& CreateInfo);
+    PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const RayTracingPipelineStateCreateInfo& CreateInfo);
     ~PipelineStateD3D12Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
@@ -76,7 +77,10 @@ public:
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
     /// Implementation of IPipelineStateD3D12::GetD3D12PipelineState().
-    virtual ID3D12PipelineState* DILIGENT_CALL_TYPE GetD3D12PipelineState() const override final { return m_pd3d12PSO; }
+    virtual ID3D12PipelineState* DILIGENT_CALL_TYPE GetD3D12PipelineState() const override final { return static_cast<ID3D12PipelineState*>(m_pd3d12PSO.p); }
+
+    /// Implementation of IPipelineStateD3D12::GetD3D12StateObject().
+    virtual ID3D12StateObject* DILIGENT_CALL_TYPE GetD3D12StateObject() const override final { return static_cast<ID3D12StateObject*>(m_pd3d12PSO.p); }
 
     /// Implementation of IPipelineStateD3D12::GetD3D12RootSignature().
     virtual ID3D12RootSignature* DILIGENT_CALL_TYPE GetD3D12RootSignature() const override final { return m_RootSig.GetD3D12RootSignature(); }
@@ -121,27 +125,27 @@ public:
     }
 
 private:
-    struct D3D12PipelineShaderStageInfo
+    struct ShaderStageInfo
     {
-        const SHADER_TYPE      Type;
-        ShaderD3D12Impl* const pShader;
-        D3D12PipelineShaderStageInfo(SHADER_TYPE      _Type,
-                                     ShaderD3D12Impl* _pShader) :
-            Type{_Type},
-            pShader{_pShader}
-        {}
+        ShaderStageInfo() {}
+        ShaderStageInfo(SHADER_TYPE _Type, ShaderD3D12Impl* _pShader);
+
+        void   Append(ShaderD3D12Impl* pShader);
+        size_t Count() const;
+
+        SHADER_TYPE                   Type = SHADER_TYPE_UNKNOWN;
+        std::vector<ShaderD3D12Impl*> Shaders;
     };
+    using TShaderStages = std::vector<ShaderStageInfo>;
 
-    template <typename PSOCreateInfoType>
-    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
-
-    void InitResourceLayouts(const PipelineStateCreateInfo&             CreateInfo,
-                             std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
+    template <typename PSOCreateInfoType, typename InitPSODescType>
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, RootSignatureBuilder& RootSigBuilder, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot, InitPSODescType InitPSODesc);
+    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo, RootSignatureBuilder& RootSigBuilder, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot);
 
     void Destruct();
 
-    CComPtr<ID3D12PipelineState> m_pd3d12PSO;
-    RootSignature                m_RootSig;
+    CComPtr<ID3D12DeviceChild> m_pd3d12PSO;
+    RootSignature              m_RootSig;
 
     // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;
@@ -152,7 +156,8 @@ private:
 
     // Resource layout index in m_pShaderResourceLayouts array for every shader stage,
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
+    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 };
 
 } // namespace Diligent

@@ -122,9 +122,17 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                         SourceLength     = GLSLSourceString.length();
                     }
 
+                    GLSLangUtils::SpirvVersion spvVersion = GLSLangUtils::SpirvVersion::Vk100;
+                    const auto&                ExtFeats   = GetDevice()->GetLogicalDevice().GetEnabledExtFeatures();
+                    if (ExtFeats.Spirv15)
+                        spvVersion = GLSLangUtils::SpirvVersion::Vk120;
+                    else if (ExtFeats.Spirv14)
+                        spvVersion = GLSLangUtils::SpirvVersion::Vk110_Spirv14;
+
                     m_SPIRV = GLSLangUtils::GLSLtoSPIRV(m_Desc.ShaderType, ShaderSource,
                                                         static_cast<int>(SourceLength), Macros,
                                                         ShaderCI.pShaderSourceStreamFactory,
+                                                        spvVersion,
                                                         ShaderCI.ppCompilerOutput);
                 }
 #endif

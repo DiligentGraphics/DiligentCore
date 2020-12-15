@@ -73,6 +73,8 @@ public:
 
     void IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue);
 
+    void ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle);
+
     HRESULT CompileDXILShader(const std::string& Source,
                               LPCWSTR            strFunctionName,
                               const DxcDefine*   Defines,

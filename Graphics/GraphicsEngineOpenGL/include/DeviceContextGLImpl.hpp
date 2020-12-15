@@ -40,6 +40,8 @@
 #include "FramebufferGLImpl.hpp"
 #include "RenderPassGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
+#include "BottomLevelASBase.hpp"
+#include "TopLevelASBase.hpp"
 
 namespace Diligent
 {
@@ -53,6 +55,8 @@ struct DeviceContextGLImplTraits
     using QueryType         = QueryGLImpl;
     using FramebufferType   = FramebufferGLImpl;
     using RenderPassType    = RenderPassGLImpl;
+    using BottomLevelASType = BottomLevelASBase<IBottomLevelAS, RenderDeviceGLImpl>;
+    using TopLevelASType    = TopLevelASBase<ITopLevelAS, BottomLevelASType, RenderDeviceGLImpl>;
 };
 
 /// Device context implementation in OpenGL backend.
@@ -242,6 +246,27 @@ public:
 
     /// Implementation of IDeviceContext::Flush() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE Flush() override final;
+
+    /// Implementation of IDeviceContext::BuildBLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BuildBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::BuildTLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE BuildTLAS(const BuildTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyBLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyTLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::WriteBLASCompactedSize() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::WriteTLASCompactedSize() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::TraceRays() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;

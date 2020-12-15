@@ -359,7 +359,7 @@ void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDes
     try
     {
         auto ViewDesc = OrigViewDesc;
-        CorrectTextureViewDesc(ViewDesc);
+        ValidatedAndCorrectTextureViewDesc(m_Desc, ViewDesc);
 
         auto* pDeviceGLImpl    = GetDevice();
         auto& TexViewAllocator = pDeviceGLImpl->GetTexViewObjAllocator();
@@ -598,7 +598,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
         TextureViewDesc SRVDesc;
         SRVDesc.TextureDim = SrcTexDesc.Type;
         SRVDesc.ViewType   = TEXTURE_VIEW_SHADER_RESOURCE;
-        CorrectTextureViewDesc(SRVDesc);
+        ValidatedAndCorrectTextureViewDesc(m_Desc, SRVDesc);
         // Note: texture view allocates memory for the copy of the name
         // If the name is empty, memory should not be allocated
         // We have to provide allocator even though it will never be used
@@ -617,7 +617,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             RTVDesc.FirstArraySlice = DepthSlice + DstSlice;
             RTVDesc.MostDetailedMip = DstMipLevel;
             RTVDesc.NumArraySlices  = 1;
-            CorrectTextureViewDesc(RTVDesc);
+            ValidatedAndCorrectTextureViewDesc(m_Desc, RTVDesc);
             // Note: texture view allocates memory for the copy of the name
             // If the name is empty, memory should not be allocated
             // We have to provide allocator even though it will never be used

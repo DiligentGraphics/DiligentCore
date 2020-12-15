@@ -40,7 +40,8 @@ namespace Diligent
 VkFormat       TexFormatToVkFormat(TEXTURE_FORMAT TexFmt);
 TEXTURE_FORMAT VkFormatToTexFormat(VkFormat VkFmt);
 
-VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
+VkFormat    TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
+VkIndexType TypeToVkIndexType(VALUE_TYPE IndexType);
 
 VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const struct RasterizerStateDesc& RasterizerDesc);
 VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const struct DepthStencilStateDesc& DepthStencilDesc);
@@ -64,8 +65,10 @@ VkSamplerMipmapMode  FilterTypeToVkMipmapMode(FILTER_TYPE FilterType);
 VkSamplerAddressMode AddressModeToVkAddressMode(TEXTURE_ADDRESS_MODE AddressMode);
 VkBorderColor        BorderColorToVkBorderColor(const Float32 BorderColor[]);
 
-VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
-VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsideRenderPass = false);
+VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, VkPipelineStageFlags ShaderStages);
+VkAccessFlags        ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
+VkAccessFlags        AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
+VkImageLayout        ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsideRenderPass = false);
 
 RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags);
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout);
@@ -84,5 +87,10 @@ VkAccessFlags        AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags);
 
 
 VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType);
+
+VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags);
+VkGeometryFlagsKHR                   GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags);
+VkGeometryInstanceFlagsKHR           InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags);
+VkCopyAccelerationStructureModeKHR   CopyASModeToVkCopyAccelerationStructureMode(COPY_AS_MODE Mode);
 
 } // namespace Diligent

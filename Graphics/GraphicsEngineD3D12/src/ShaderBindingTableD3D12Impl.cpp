@@ -25,21 +25,31 @@
  *  of the possibility of such damages.
  */
 
-/// \file
-/// Precomputed header
+#include "pch.h"
+#include "ShaderBindingTableD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
+#include "D3D12TypeConversions.hpp"
+#include "GraphicsAccessories.hpp"
+#include "DXGITypeConversions.hpp"
+#include "EngineMemory.h"
+#include "StringTools.hpp"
 
-#pragma once
+namespace Diligent
+{
 
-#include <vector>
-#include <list>
-#include <set>
-#include <map>
-#include <unordered_map>
-#include <memory>
-#include <algorithm>
-#include "GraphicsTypes.h"
-#include "RefCntAutoPtr.hpp"
-#include "Errors.hpp"
-#include "DebugUtilities.hpp"
-#include "RenderDeviceBase.hpp"
-#include "DeviceContextBase.hpp"
+ShaderBindingTableD3D12Impl::ShaderBindingTableD3D12Impl(IReferenceCounters*           pRefCounters,
+                                                         class RenderDeviceD3D12Impl*  pDeviceD3D12,
+                                                         const ShaderBindingTableDesc& Desc,
+                                                         bool                          bIsDeviceInternal) :
+    TShaderBindingTableBase{pRefCounters, pDeviceD3D12, Desc, bIsDeviceInternal}
+{
+}
+
+ShaderBindingTableD3D12Impl::~ShaderBindingTableD3D12Impl()
+{
+}
+
+IMPLEMENT_QUERY_INTERFACE(ShaderBindingTableD3D12Impl, IID_ShaderBindingTableD3D12, TShaderBindingTableBase)
+
+} // namespace Diligent

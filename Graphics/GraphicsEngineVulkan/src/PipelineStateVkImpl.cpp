@@ -44,98 +44,24 @@
 
 namespace Diligent
 {
-
-RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
-    Uint32                                                        NumRenderTargets,
-    const TEXTURE_FORMAT                                          RTVFormats[],
-    TEXTURE_FORMAT                                                DSVFormat,
-    Uint8                                                         SampleCount,
-    std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 1>& Attachments,
-    std::array<AttachmentReference, MAX_RENDER_TARGETS + 1>&      AttachmentReferences,
-    SubpassDesc&                                                  SubpassDesc)
+namespace
 {
-    VERIFY_EXPR(NumRenderTargets <= MAX_RENDER_TARGETS);
 
-    RenderPassDesc RPDesc;
-
-    RPDesc.AttachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets;
-
-    uint32_t             AttachmentInd             = 0;
-    AttachmentReference* pDepthAttachmentReference = nullptr;
-    if (DSVFormat != TEX_FORMAT_UNKNOWN)
-    {
-        auto& DepthAttachment = Attachments[AttachmentInd];
-
-        DepthAttachment.Format      = DSVFormat;
-        DepthAttachment.SampleCount = SampleCount;
-        DepthAttachment.LoadOp      = ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area
-                                                               // will be preserved. For attachments with a depth/stencil format,
-                                                               // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT.
-        DepthAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
-                                                               // area are written to memory. For attachments with a depth/stencil format,
-                                                               // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT.
-        DepthAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_LOAD;
-        DepthAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_STORE;
-        DepthAttachment.InitialState   = RESOURCE_STATE_DEPTH_WRITE;
-        DepthAttachment.FinalState     = RESOURCE_STATE_DEPTH_WRITE;
-
-        pDepthAttachmentReference                  = &AttachmentReferences[AttachmentInd];
-        pDepthAttachmentReference->AttachmentIndex = AttachmentInd;
-        pDepthAttachmentReference->State           = RESOURCE_STATE_DEPTH_WRITE;
-
-        ++AttachmentInd;
-    }
-
-    AttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
-    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt, ++AttachmentInd)
-    {
-        auto& ColorAttachment = Attachments[AttachmentInd];
-
-        ColorAttachment.Format      = RTVFormats[rt];
-        ColorAttachment.SampleCount = SampleCount;
-        ColorAttachment.LoadOp      = ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area
-                                                               // will be preserved. For attachments with a depth/stencil format,
-                                                               // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_READ_BIT.
-        ColorAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
-                                                               // area are written to memory. For attachments with a color format,
-                                                               // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT.
-        ColorAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_DISCARD;
-        ColorAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
-        ColorAttachment.InitialState   = RESOURCE_STATE_RENDER_TARGET;
-        ColorAttachment.FinalState     = RESOURCE_STATE_RENDER_TARGET;
-
-        auto& ColorAttachmentRef           = AttachmentReferences[AttachmentInd];
-        ColorAttachmentRef.AttachmentIndex = AttachmentInd;
-        ColorAttachmentRef.State           = RESOURCE_STATE_RENDER_TARGET;
-    }
-
-    RPDesc.pAttachments    = Attachments.data();
-    RPDesc.SubpassCount    = 1;
-    RPDesc.pSubpasses      = &SubpassDesc;
-    RPDesc.DependencyCount = 0;       // the number of dependencies between pairs of subpasses, or zero indicating no dependencies.
-    RPDesc.pDependencies   = nullptr; // an array of dependencyCount number of VkSubpassDependency structures describing
-                                      // dependencies between pairs of subpasses, or NULL if dependencyCount is zero.
-
-
-    SubpassDesc.InputAttachmentCount        = 0;
-    SubpassDesc.pInputAttachments           = nullptr;
-    SubpassDesc.RenderTargetAttachmentCount = NumRenderTargets;
-    SubpassDesc.pRenderTargetAttachments    = pColorAttachmentsReference;
-    SubpassDesc.pResolveAttachments         = nullptr;
-    SubpassDesc.pDepthStencilAttachment     = pDepthAttachmentReference;
-    SubpassDesc.PreserveAttachmentCount     = 0;
-    SubpassDesc.pPreserveAttachments        = nullptr;
-
-    return RPDesc;
-}
-
-static bool StripReflection(std::vector<uint32_t>& SPIRV)
+bool StripReflection(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, std::vector<uint32_t>& SPIRV)
 {
 #if DILIGENT_NO_HLSL
-    return false;
+    return true;
 #else
     std::vector<uint32_t> StrippedSPIRV;
-    spvtools::Optimizer   SpirvOptimizer(SPV_ENV_VULKAN_1_0);
+    spv_target_env        Target   = SPV_ENV_VULKAN_1_0;
+    const auto&           ExtFeats = LogicalDevice.GetEnabledExtFeatures();
+
+    if (ExtFeats.Spirv15)
+        Target = SPV_ENV_VULKAN_1_2;
+    else if (ExtFeats.Spirv14)
+        Target = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
+
+    spvtools::Optimizer SpirvOptimizer(Target);
     // Decorations defined in SPV_GOOGLE_hlsl_functionality1 are the only instructions
     // removed by strip-reflect-info pass. SPIRV offsets become INVALID after this operation.
     SpirvOptimizer.RegisterPass(spvtools::CreateStripReflectInfoPass());
@@ -149,21 +75,25 @@ static bool StripReflection(std::vector<uint32_t>& SPIRV)
 #endif
 }
 
-static void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&        LogicalDevice,
-                                     ShaderResourceLayoutVk::TShaderStages&             ShaderStages,
-                                     std::vector<VulkanUtilities::ShaderModuleWrapper>& vkShaderModules,
-                                     std::vector<VkPipelineShaderStageCreateInfo>&      vkPipelineShaderStages)
+void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&        LogicalDevice,
+                              ShaderResourceLayoutVk::TShaderStages&             ShaderStages,
+                              std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
+                              std::vector<VkPipelineShaderStageCreateInfo>&      Stages)
 {
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        auto& StageInfo = ShaderStages[s];
+        const auto& Shaders    = ShaderStages[s].Shaders;
+        auto&       SPIRVs     = ShaderStages[s].SPIRVs;
+        const auto  ShaderType = ShaderStages[s].Type;
+
+        VERIFY_EXPR(Shaders.size() == SPIRVs.size());
 
         VkPipelineShaderStageCreateInfo StageCI = {};
 
         StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         StageCI.pNext = nullptr;
         StageCI.flags = 0; //  reserved for future use
-        StageCI.stage = ShaderTypeToVkShaderStageFlagBit(StageInfo.Type);
+        StageCI.stage = ShaderTypeToVkShaderStageFlagBit(ShaderType);
 
         VkShaderModuleCreateInfo ShaderModuleCI = {};
 
@@ -171,25 +101,31 @@ static void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&
         ShaderModuleCI.pNext = nullptr;
         ShaderModuleCI.flags = 0;
 
-        // We have to strip reflection instructions to fix the follownig validation error:
-        //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
-        // Optimizer also performs validation and may catch problems with the byte code.
-        if (!StripReflection(StageInfo.SPIRV))
-            LOG_ERROR("Failed to strip reflection information from shader '", StageInfo.pShader->GetDesc().Name, "'. This may indicate a problem with the byte code.");
+        for (size_t i = 0; i < Shaders.size(); ++i)
+        {
+            auto* pShader = Shaders[i];
+            auto& SPIRV   = SPIRVs[i];
 
-        ShaderModuleCI.codeSize = StageInfo.SPIRV.size() * sizeof(uint32_t);
-        ShaderModuleCI.pCode    = StageInfo.SPIRV.data();
+            // We have to strip reflection instructions to fix the follownig validation error:
+            //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
+            // Optimizer also performs validation and may catch problems with the byte code.
+            if (!StripReflection(LogicalDevice, SPIRV))
+                LOG_ERROR("Failed to strip reflection information from shader '", pShader->GetDesc().Name, "'. This may indicate a problem with the byte code.");
 
-        vkShaderModules.push_back(LogicalDevice.CreateShaderModule(ShaderModuleCI, StageInfo.pShader->GetDesc().Name));
+            ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
+            ShaderModuleCI.pCode    = SPIRV.data();
 
-        StageCI.module              = vkShaderModules.back();
-        StageCI.pName               = StageInfo.pShader->GetEntryPoint();
-        StageCI.pSpecializationInfo = nullptr;
+            ShaderModules.push_back(LogicalDevice.CreateShaderModule(ShaderModuleCI, pShader->GetDesc().Name));
 
-        vkPipelineShaderStages.push_back(StageCI);
+            StageCI.module              = ShaderModules.back();
+            StageCI.pName               = pShader->GetEntryPoint();
+            StageCI.pSpecializationInfo = nullptr;
+
+            Stages.push_back(StageCI);
+        }
     }
 
-    VERIFY_EXPR(vkShaderModules.size() == vkPipelineShaderStages.size());
+    VERIFY_EXPR(ShaderModules.size() == Stages.size());
 }
 
 
@@ -401,6 +337,253 @@ static void CreateGraphicsPipeline(RenderDeviceVkImpl*                          
     Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
 }
 
+
+static void CreateRayTracingPipeline(RenderDeviceVkImpl*                                      pDeviceVk,
+                                     std::vector<VkPipelineShaderStageCreateInfo>&            Stages,
+                                     const std::vector<VkRayTracingShaderGroupCreateInfoKHR>& ShaderGroups,
+                                     const PipelineLayout&                                    Layout,
+                                     const PipelineStateDesc&                                 PSODesc,
+                                     const RayTracingPipelineDesc&                            RayTracingPipeline,
+                                     VulkanUtilities::PipelineWrapper&                        Pipeline)
+{
+    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+
+    VkRayTracingPipelineCreateInfoKHR PipelineCI = {};
+
+    PipelineCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+    PipelineCI.pNext = nullptr;
+#ifdef DILIGENT_DEBUG
+    PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+#endif
+
+    PipelineCI.stageCount                   = static_cast<Uint32>(Stages.size());
+    PipelineCI.pStages                      = Stages.data();
+    PipelineCI.groupCount                   = static_cast<Uint32>(ShaderGroups.size());
+    PipelineCI.pGroups                      = ShaderGroups.data();
+    PipelineCI.maxPipelineRayRecursionDepth = std::max(1u, Uint32{RayTracingPipeline.MaxRecursionDepth}) - 1; // for compatibility with D3D12, zero means only one ray tracing depth.
+    PipelineCI.pLibraryInfo                 = nullptr;
+    PipelineCI.pLibraryInterface            = nullptr;
+    PipelineCI.pDynamicState                = nullptr;
+    PipelineCI.layout                       = Layout.GetVkPipelineLayout();
+    PipelineCI.basePipelineHandle           = VK_NULL_HANDLE; // a pipeline to derive from
+    PipelineCI.basePipelineIndex            = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
+
+    Pipeline = LogicalDevice.CreateRayTracingPipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+}
+
+
+template <typename TNameToGroupIndexMap>
+void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&           CreateInfo,
+                                const TNameToGroupIndexMap&                        NameToGroupIndex,
+                                std::vector<VkRayTracingShaderGroupCreateInfoKHR>& ShaderGroups,
+                                const ShaderResourceLayoutVk::TShaderStages&       ShaderStages)
+{
+#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", CreateInfo.PSODesc.Name, "' is invalid: ", ##__VA_ARGS__)
+    ShaderGroups.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
+
+    std::array<Uint32, MAX_SHADERS_IN_PIPELINE> ShaderIndices = {};
+    std::unordered_map<const IShader*, Uint32>  UniqueShaders;
+
+    const auto ShaderToIndex = [&ShaderIndices, &UniqueShaders](const IShader* pShader) -> Uint32 {
+        if (pShader != nullptr)
+        {
+            Uint32& Index  = ShaderIndices[GetShaderTypePipelineIndex(pShader->GetDesc().ShaderType, PIPELINE_TYPE_RAY_TRACING)];
+            auto    Result = UniqueShaders.emplace(pShader, Index);
+            if (Result.second)
+            {
+                ++Index;
+            }
+            return Result.first->second;
+        }
+        return VK_SHADER_UNUSED_KHR;
+    };
+
+    Uint32 ShaderCount = 0;
+    for (auto& Stage : ShaderStages)
+    {
+        ShaderIndices[GetShaderTypePipelineIndex(Stage.Type, PIPELINE_TYPE_RAY_TRACING)] = ShaderCount;
+        ShaderCount += static_cast<Uint32>(Stage.Count());
+    }
+
+    for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
+    {
+        const auto& GeneralShader = CreateInfo.pGeneralShaders[i];
+
+        VkRayTracingShaderGroupCreateInfoKHR Group = {};
+
+        Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        Group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+        Group.generalShader      = ShaderToIndex(GeneralShader.pShader);
+        Group.closestHitShader   = VK_SHADER_UNUSED_KHR;
+        Group.anyHitShader       = VK_SHADER_UNUSED_KHR;
+        Group.intersectionShader = VK_SHADER_UNUSED_KHR;
+
+#ifdef DILIGENT_DEVELOPMENT
+        auto Iter = NameToGroupIndex.find(GeneralShader.Name);
+        if (Iter == NameToGroupIndex.end())
+            LOG_PSO_ERROR_AND_THROW("Can't find general shader '", GeneralShader.Name, "'");
+        if (Iter->second != ShaderGroups.size())
+            LOG_PSO_ERROR_AND_THROW("General shader group '", GeneralShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
+#endif
+
+        ShaderGroups.push_back(Group);
+    }
+
+    for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
+    {
+        const auto& TriHitShader = CreateInfo.pTriangleHitShaders[i];
+
+        VkRayTracingShaderGroupCreateInfoKHR Group = {};
+
+        Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        Group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+        Group.generalShader      = VK_SHADER_UNUSED_KHR;
+        Group.closestHitShader   = ShaderToIndex(TriHitShader.pClosestHitShader);
+        Group.anyHitShader       = ShaderToIndex(TriHitShader.pAnyHitShader);
+        Group.intersectionShader = VK_SHADER_UNUSED_KHR;
+
+#ifdef DILIGENT_DEVELOPMENT
+        auto Iter = NameToGroupIndex.find(TriHitShader.Name);
+        if (Iter == NameToGroupIndex.end())
+            LOG_PSO_ERROR_AND_THROW("Can't find triangle hit group '", TriHitShader.Name, "'");
+        if (Iter->second != ShaderGroups.size())
+            LOG_PSO_ERROR_AND_THROW("Triangle hit group '", TriHitShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
+#endif
+
+        ShaderGroups.push_back(Group);
+    }
+
+    for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
+    {
+        const auto& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
+
+        VkRayTracingShaderGroupCreateInfoKHR Group = {};
+
+        Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        Group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
+        Group.generalShader      = VK_SHADER_UNUSED_KHR;
+        Group.intersectionShader = ShaderToIndex(ProcHitShader.pIntersectionShader);
+        Group.closestHitShader   = ShaderToIndex(ProcHitShader.pClosestHitShader);
+        Group.anyHitShader       = ShaderToIndex(ProcHitShader.pAnyHitShader);
+
+#ifdef DILIGENT_DEVELOPMENT
+        auto Iter = NameToGroupIndex.find(ProcHitShader.Name);
+        if (Iter == NameToGroupIndex.end())
+            LOG_PSO_ERROR_AND_THROW("Can't find procedural hit group '", ProcHitShader.Name, "'");
+        if (Iter->second != ShaderGroups.size())
+            LOG_PSO_ERROR_AND_THROW("Procedural hit group '", ProcHitShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
+#endif
+
+        ShaderGroups.push_back(Group);
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    Uint32 ShaderIndex2 = 0;
+    for (auto& Stage : ShaderStages)
+    {
+        for (auto* pShader : Stage.Shaders)
+        {
+            auto iter = UniqueShaders.find(static_cast<const IShader*>(pShader));
+            if (iter != UniqueShaders.end())
+                VERIFY_EXPR(iter->second == ShaderIndex2);
+            else
+                UNEXPECTED("Shader '", pShader->GetDesc().Name, "' is not used in ray tracing shader groups");
+
+            ++ShaderIndex2;
+        }
+    }
+    VERIFY_EXPR(UniqueShaders.size() == ShaderIndex2);
+#endif
+#undef LOG_PSO_ERROR_AND_THROW
+}
+
+} // namespace
+
+
+RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
+    Uint32                                                        NumRenderTargets,
+    const TEXTURE_FORMAT                                          RTVFormats[],
+    TEXTURE_FORMAT                                                DSVFormat,
+    Uint8                                                         SampleCount,
+    std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 1>& Attachments,
+    std::array<AttachmentReference, MAX_RENDER_TARGETS + 1>&      AttachmentReferences,
+    SubpassDesc&                                                  SubpassDesc)
+{
+    VERIFY_EXPR(NumRenderTargets <= MAX_RENDER_TARGETS);
+
+    RenderPassDesc RPDesc;
+
+    RPDesc.AttachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets;
+
+    uint32_t             AttachmentInd             = 0;
+    AttachmentReference* pDepthAttachmentReference = nullptr;
+    if (DSVFormat != TEX_FORMAT_UNKNOWN)
+    {
+        auto& DepthAttachment = Attachments[AttachmentInd];
+
+        DepthAttachment.Format      = DSVFormat;
+        DepthAttachment.SampleCount = SampleCount;
+        DepthAttachment.LoadOp      = ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area
+                                                               // will be preserved. For attachments with a depth/stencil format,
+                                                               // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT.
+        DepthAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
+                                                               // area are written to memory. For attachments with a depth/stencil format,
+                                                               // this uses the access type VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT.
+        DepthAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_LOAD;
+        DepthAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_STORE;
+        DepthAttachment.InitialState   = RESOURCE_STATE_DEPTH_WRITE;
+        DepthAttachment.FinalState     = RESOURCE_STATE_DEPTH_WRITE;
+
+        pDepthAttachmentReference                  = &AttachmentReferences[AttachmentInd];
+        pDepthAttachmentReference->AttachmentIndex = AttachmentInd;
+        pDepthAttachmentReference->State           = RESOURCE_STATE_DEPTH_WRITE;
+
+        ++AttachmentInd;
+    }
+
+    AttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt, ++AttachmentInd)
+    {
+        auto& ColorAttachment = Attachments[AttachmentInd];
+
+        ColorAttachment.Format      = RTVFormats[rt];
+        ColorAttachment.SampleCount = SampleCount;
+        ColorAttachment.LoadOp      = ATTACHMENT_LOAD_OP_LOAD; // previous contents of the image within the render area
+                                                               // will be preserved. For attachments with a depth/stencil format,
+                                                               // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_READ_BIT.
+        ColorAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
+                                                               // area are written to memory. For attachments with a color format,
+                                                               // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT.
+        ColorAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_DISCARD;
+        ColorAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
+        ColorAttachment.InitialState   = RESOURCE_STATE_RENDER_TARGET;
+        ColorAttachment.FinalState     = RESOURCE_STATE_RENDER_TARGET;
+
+        auto& ColorAttachmentRef           = AttachmentReferences[AttachmentInd];
+        ColorAttachmentRef.AttachmentIndex = AttachmentInd;
+        ColorAttachmentRef.State           = RESOURCE_STATE_RENDER_TARGET;
+    }
+
+    RPDesc.pAttachments    = Attachments.data();
+    RPDesc.SubpassCount    = 1;
+    RPDesc.pSubpasses      = &SubpassDesc;
+    RPDesc.DependencyCount = 0;       // the number of dependencies between pairs of subpasses, or zero indicating no dependencies.
+    RPDesc.pDependencies   = nullptr; // an array of dependencyCount number of VkSubpassDependency structures describing
+                                      // dependencies between pairs of subpasses, or NULL if dependencyCount is zero.
+
+
+    SubpassDesc.InputAttachmentCount        = 0;
+    SubpassDesc.pInputAttachments           = nullptr;
+    SubpassDesc.RenderTargetAttachmentCount = NumRenderTargets;
+    SubpassDesc.pRenderTargetAttachments    = pColorAttachmentsReference;
+    SubpassDesc.pResolveAttachments         = nullptr;
+    SubpassDesc.pDepthStencilAttachment     = pDepthAttachmentReference;
+    SubpassDesc.PreserveAttachmentCount     = 0;
+    SubpassDesc.pPreserveAttachments        = nullptr;
+
+    return RPDesc;
+}
+
 void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
                                               TShaderStages&                 ShaderStages)
 {
@@ -416,7 +599,7 @@ void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
         m_ResourceLayoutIndex[ShaderTypeInd] = static_cast<Int8>(s);
 
         auto& StaticResLayout = m_ShaderResourceLayouts[GetNumShaderStages() + s];
-        StaticResLayout.InitializeStaticResourceLayout(StageInfo.pShader, GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
+        StaticResLayout.InitializeStaticResourceLayout(StageInfo.Shaders, GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
 
         m_StaticVarsMgrs[s].Initialize(StaticResLayout, GetRawAllocator(), nullptr, 0);
     }
@@ -460,17 +643,18 @@ void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
     m_ShaderResourceLayoutHash = m_PipelineLayout.GetHash();
 }
 
-template <typename PSOCreateInfoType>
+template <typename PSOCreateInfoType, typename InitPSODescType>
 void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
                                               std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                                              std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules)
+                                              std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
+                                              InitPSODescType                                    InitPSODesc)
 {
     m_ResourceLayoutIndex.fill(-1);
 
     TShaderStages ShaderStages;
     ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
 
-    LinearAllocator MemPool{GetRawAllocator()};
+    FixedLinearAllocator MemPool{GetRawAllocator()};
 
     const auto NumShaderStages = GetNumShaderStages();
     VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
@@ -498,7 +682,7 @@ void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&          
     for (Uint32 s = 0; s < NumShaderStages; ++s)
         new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, m_StaticResCaches[s]};
 
-    InitializePipelineDesc(CreateInfo, MemPool);
+    InitPSODesc(CreateInfo, MemPool, ShaderStages);
 
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
@@ -508,6 +692,7 @@ void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&          
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(GetDevice()->GetLogicalDevice(), ShaderStages, ShaderModules, vkShaderStages);
 }
+
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    pRefCounters,
                                          RenderDeviceVkImpl*                    pDeviceVk,
@@ -520,7 +705,12 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
-        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
+                            [this](const GraphicsPipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool, TShaderStages /*ShaderStages*/) //
+                            {
+                                InitializePipelineDesc(CreateInfo, MemPool);
+                            } //
+        );
 
         CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
     }
@@ -543,7 +733,12 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   p
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
-        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
+                            [this](const ComputePipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool, TShaderStages /*ShaderStages*/) //
+                            {
+                                InitializePipelineDesc(CreateInfo, MemPool);
+                            } //
+        );
 
         CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
     }
@@ -554,6 +749,41 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   p
     }
 }
 
+PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                      pRefCounters,
+                                         RenderDeviceVkImpl*                      pDeviceVk,
+                                         const RayTracingPipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo},
+    m_SRBMemAllocator{GetRawAllocator()}
+{
+    try
+    {
+        const auto& LogicalDevice         = pDeviceVk->GetLogicalDevice();
+        const auto  ShaderGroupHandleSize = pDeviceVk->GetProperties().ShaderGroupHandleSize;
+
+        std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
+        std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
+        std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
+
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
+                            [&](const RayTracingPipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool, TShaderStages& ShaderStages) //
+                            {
+                                InitializePipelineDesc(CreateInfo, MemPool);
+                                BuildRTPipelineDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderGroups, ShaderStages);
+                            } //
+        );
+
+        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, ShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
+
+        auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), ShaderGroupHandleSize, &m_pRayTracingPipelineData->Shaders[0]);
+        VERIFY(err == VK_SUCCESS, "Failed to get shader group handles");
+        (void)err;
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
 
 PipelineStateVkImpl::~PipelineStateVkImpl()
 {
@@ -562,6 +792,8 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
 
 void PipelineStateVkImpl::Destruct()
 {
+    TPipelineStateBase::Destruct();
+
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
     m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
 
@@ -617,7 +849,6 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
         return false;
 
     auto IsSamePipelineLayout = m_PipelineLayout.IsSameAs(pPSOVk->m_PipelineLayout);
-
 #ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
@@ -634,8 +865,8 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
                     break;
                 }
 
-                const auto& Res0 = GetShaderResLayout(s).GetResources();
-                const auto& Res1 = pPSOVk->GetShaderResLayout(s).GetResources();
+                const auto& Res0 = GetShaderResLayout(s);
+                const auto& Res1 = pPSOVk->GetShaderResLayout(s);
                 if (!Res0.IsCompatibleWith(Res1))
                 {
                     IsCompatibleShaders = false;
@@ -736,9 +967,23 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
                     Layout.CommitDynamicResources(ResourceCache, DynamicDescrSet);
             }
         }
-        // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
+
+
+        VkPipelineBindPoint BindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+        switch (m_Desc.PipelineType)
+        {
+            // clang-format off
+            case PIPELINE_TYPE_GRAPHICS:
+            case PIPELINE_TYPE_MESH:        BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;        break;
+            case PIPELINE_TYPE_COMPUTE:     BindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;         break;
+            case PIPELINE_TYPE_RAY_TRACING: BindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR; break;
+            // clang-format on
+            default: UNEXPECTED("Unknown pipeline type");
+        }
+
         VERIFY_EXPR(pDescrSetBindInfo != nullptr);
-        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline(), ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
+        // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
+        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, BindPoint, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
         // Dynamic descriptor sets are not released individually. Instead, all dynamic descriptor pools
         // are released at the end of the frame by DeviceContextVkImpl::FinishFrame().
     }

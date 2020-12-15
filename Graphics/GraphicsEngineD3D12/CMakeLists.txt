@@ -37,6 +37,9 @@ set(INCLUDE
     include/SwapChainD3D12Impl.hpp
     include/TextureD3D12Impl.hpp
     include/TextureViewD3D12Impl.hpp
+    include/BottomLevelASD3D12Impl.hpp
+    include/TopLevelASD3D12Impl.hpp
+    include/ShaderBindingTableD3D12Impl.hpp
 )
 
 set(INTERFACE 
@@ -55,6 +58,9 @@ set(INTERFACE
     interface/SwapChainD3D12.h
     interface/TextureD3D12.h
     interface/TextureViewD3D12.h
+    interface/BottomLevelASD3D12.h
+    interface/TopLevelASD3D12.h
+    interface/ShaderBindingTableD3D12.h
 )
 
 
@@ -89,6 +95,9 @@ set(SRC
     src/SwapChainD3D12Impl.cpp
     src/TextureD3D12Impl.cpp
     src/TextureViewD3D12Impl.cpp
+    src/BottomLevelASD3D12Impl.cpp
+    src/TopLevelASD3D12Impl.cpp
+    src/ShaderBindingTableD3D12Impl.cpp
 )
 
 if(PLATFORM_WIN32)

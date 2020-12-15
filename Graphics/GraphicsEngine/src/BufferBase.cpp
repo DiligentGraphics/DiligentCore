@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "Buffer.h"
 #include "GraphicsAccessories.hpp"
 
@@ -43,8 +42,10 @@ namespace Diligent
     } while (false)
 
 
-void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
+void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps) noexcept(false)
 {
+    static_assert(BIND_FLAGS_LAST == 0x400L, "Please update this function to handle the new bind flags");
+
     constexpr Uint32 AllowedBindFlags =
         BIND_VERTEX_BUFFER |
         BIND_INDEX_BUFFER |
@@ -52,7 +53,8 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
         BIND_SHADER_RESOURCE |
         BIND_STREAM_OUTPUT |
         BIND_UNORDERED_ACCESS |
-        BIND_INDIRECT_DRAW_ARGS;
+        BIND_INDIRECT_DRAW_ARGS |
+        BIND_RAY_TRACING;
 
     VERIFY_BUFFER((Desc.BindFlags & ~AllowedBindFlags) == 0, "the following bind flags are not allowed for a buffer: ", GetBindFlagsString(Desc.BindFlags & ~AllowedBindFlags, ", "), '.');
 
@@ -112,7 +114,7 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
     }
 }
 
-void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
+void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false)
 {
     if (Desc.Usage == USAGE_IMMUTABLE && (pBuffData == nullptr || pBuffData->pData == nullptr))
         LOG_BUFFER_ERROR_AND_THROW("initial data must not be null as immutable buffers must be initialized at creation time.");
@@ -139,5 +141,52 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
 
 #undef VERIFY_BUFFER
 #undef LOG_BUFFER_ERROR_AND_THROW
+
+void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc, BufferViewDesc& ViewDesc) noexcept(false)
+{
+    if (ViewDesc.ByteWidth == 0)
+    {
+        DEV_CHECK_ERR(BuffDesc.uiSizeInBytes > ViewDesc.ByteOffset, "Byte offset (", ViewDesc.ByteOffset, ") exceeds buffer size (", BuffDesc.uiSizeInBytes, ")");
+        ViewDesc.ByteWidth = BuffDesc.uiSizeInBytes - ViewDesc.ByteOffset;
+    }
+
+    if (ViewDesc.ByteOffset + ViewDesc.ByteWidth > BuffDesc.uiSizeInBytes)
+        LOG_ERROR_AND_THROW("Buffer view range [", ViewDesc.ByteOffset, ", ", ViewDesc.ByteOffset + ViewDesc.ByteWidth, ") is out of the buffer boundaries [0, ", BuffDesc.uiSizeInBytes, ").");
+
+    if ((BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) ||
+        (BuffDesc.BindFlags & BIND_SHADER_RESOURCE))
+    {
+        if (BuffDesc.Mode == BUFFER_MODE_STRUCTURED || BuffDesc.Mode == BUFFER_MODE_FORMATTED)
+        {
+            VERIFY(BuffDesc.ElementByteStride != 0, "Element byte stride is zero");
+            if ((ViewDesc.ByteOffset % BuffDesc.ElementByteStride) != 0)
+                LOG_ERROR_AND_THROW("Buffer view byte offset (", ViewDesc.ByteOffset, ") is not a multiple of element byte stride (", BuffDesc.ElementByteStride, ").");
+            if ((ViewDesc.ByteWidth % BuffDesc.ElementByteStride) != 0)
+                LOG_ERROR_AND_THROW("Buffer view byte width (", ViewDesc.ByteWidth, ") is not a multiple of element byte stride (", BuffDesc.ElementByteStride, ").");
+        }
+
+        if (BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType == VT_UNDEFINED)
+            LOG_ERROR_AND_THROW("Format must be specified when creating a view of a formatted buffer");
+
+        if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || (BuffDesc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType != VT_UNDEFINED))
+        {
+            if (ViewDesc.Format.NumComponents <= 0 || ViewDesc.Format.NumComponents > 4)
+                LOG_ERROR_AND_THROW("Incorrect number of components (", Uint32{ViewDesc.Format.NumComponents}, "). 1, 2, 3, or 4 are allowed values");
+            if (ViewDesc.Format.ValueType == VT_FLOAT32 || ViewDesc.Format.ValueType == VT_FLOAT16)
+                ViewDesc.Format.IsNormalized = false;
+            auto ViewElementStride = GetValueSize(ViewDesc.Format.ValueType) * Uint32{ViewDesc.Format.NumComponents};
+            if (BuffDesc.Mode == BUFFER_MODE_RAW && BuffDesc.ElementByteStride == 0)
+                LOG_ERROR_AND_THROW("To enable formatted views of a raw buffer, element byte must be specified during buffer initialization");
+            if (ViewElementStride != BuffDesc.ElementByteStride)
+                LOG_ERROR_AND_THROW("Buffer element byte stride (", BuffDesc.ElementByteStride, ") is not consistent with the size (", ViewElementStride, ") defined by the format of the view (", GetBufferFormatString(ViewDesc.Format), ')');
+        }
+
+        if (BuffDesc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType == VT_UNDEFINED)
+        {
+            if ((ViewDesc.ByteOffset % 16) != 0)
+                LOG_ERROR_AND_THROW("When creating a RAW view, the offset of the first element from the start of the buffer (", ViewDesc.ByteOffset, ") must be a multiple of 16 bytes");
+        }
+    }
+}
 
 } // namespace Diligent

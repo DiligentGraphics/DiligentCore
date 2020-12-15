@@ -149,13 +149,18 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
             sizeof(FenceGLImpl),
             sizeof(QueryGLImpl),
             sizeof(RenderPassGLImpl),
-            sizeof(FramebufferGLImpl)
+            sizeof(FramebufferGLImpl),
+            0,
+            0,
+            0
         }
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext{InitAttribs, m_DeviceCaps, pSCDesc}
 // clang-format on
 {
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+
     GLint NumExtensions = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &NumExtensions);
     CHECK_GL_ERROR("Failed to get the number of extensions");
@@ -310,6 +315,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
     SET_FEATURE_STATE(VertexPipelineUAVWritesAndAtomics, false, "Vertex pipeline UAV writes and atomics are");
     SET_FEATURE_STATE(MeshShaders, false, "Mesh shaders are");
+    SET_FEATURE_STATE(RayTracing, false, "Ray tracing is");
 
     {
         bool WireframeFillSupported = (glPolygonMode != nullptr);
@@ -461,7 +467,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #undef SET_FEATURE_STATE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 }
 
@@ -735,6 +741,12 @@ void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCr
     return CreateComputePipelineState(PSOCreateInfo, ppPipelineState, false);
 }
 
+void RenderDeviceGLImpl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    UNSUPPORTED("Ray tracing is not supported in OpenGL");
+    *ppPipelineState = nullptr;
+}
+
 void RenderDeviceGLImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
 {
     CreateDeviceObject(
@@ -787,6 +799,27 @@ void RenderDeviceGLImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebu
                            pFramebufferGL->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            OnCreateDeviceObject(pFramebufferGL);
                        });
+}
+
+void RenderDeviceGLImpl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                    IBottomLevelAS**         ppBLAS)
+{
+    UNSUPPORTED("CreateBLAS is not supported in OpenGL");
+    *ppBLAS = nullptr;
+}
+
+void RenderDeviceGLImpl::CreateTLAS(const TopLevelASDesc& Desc,
+                                    ITopLevelAS**         ppTLAS)
+{
+    UNSUPPORTED("CreateTLAS is not supported in OpenGL");
+    *ppTLAS = nullptr;
+}
+
+void RenderDeviceGLImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                   IShaderBindingTable**         ppSBT)
+{
+    UNSUPPORTED("CreateSBT is not supported in OpenGL");
+    *ppSBT = nullptr;
 }
 
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString)

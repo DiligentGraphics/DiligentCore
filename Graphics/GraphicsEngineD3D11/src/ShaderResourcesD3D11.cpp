@@ -94,6 +94,11 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
             Resources.m_MaxSRVBindPoint = std::max(Resources.m_MaxSRVBindPoint, static_cast<MaxBindPointType>(TexAttribs.BindPoint + TexAttribs.BindCount - 1));
         }
 
+        void OnNewAccelStruct(const D3DShaderResourceAttribs& ASAttribs)
+        {
+            UNEXPECTED("Acceleration structure is not supported in DirectX 11");
+        }
+
         ~NewResourceHandler()
         {
         }
@@ -439,6 +444,11 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
                     return;
                 }
             }
+        },
+
+        [&](const D3DShaderResourceAttribs&, Uint32) //
+        {
+            UNEXPECTED("Acceleration structure is not supported in DirectX 11");
         } // clang-format off
     ); // clang-format on
 }

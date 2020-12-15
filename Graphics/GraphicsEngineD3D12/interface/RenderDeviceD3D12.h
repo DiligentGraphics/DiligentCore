@@ -99,6 +99,38 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
                                                      const BufferDesc REF BuffDesc,
                                                      RESOURCE_STATE       InitialState,
                                                      IBuffer**            ppBuffer) PURE;
+    
+    /// Creates a bottom-level AS object from native d3d12 resoruce
+
+    /// \param [in]  pd3d12BLAS   - Pointer to the native d3d12 acceleration structure resource
+    /// \param [in]  Desc         - Bottom-level AS description.
+    /// \param [in]  InitialState - Initial BLAS state. Can be RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_BUILD_AS_READ, RESOURCE_STATE_BUILD_AS_WRITE.
+    ///                             See Diligent::RESOURCE_STATE.
+    /// \param [out] ppBLAS       - Address of the memory location where the pointer to the
+    ///                             bottom-level AS interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
+    ///                             one reference.
+    VIRTUAL void METHOD(CreateBLASFromD3DResource)(THIS_
+                                                   ID3D12Resource*             pd3d12BLAS,
+                                                   const BottomLevelASDesc REF Desc,
+                                                   RESOURCE_STATE              InitialState,
+                                                   IBottomLevelAS**            ppBLAS) PURE;
+
+    /// Creates a top-level AS object from native d3d12 resoruce
+
+    /// \param [in]  pd3d12TLAS   - Pointer to the native d3d12 acceleration structure resource
+    /// \param [in]  Desc         - Top-level AS description.
+    /// \param [in]  InitialState - Initial TLAS state. Can be RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_BUILD_AS_READ, RESOURCE_STATE_BUILD_AS_WRITE, RESOURCE_STATE_RAY_TRACING.
+    ///                             See Diligent::RESOURCE_STATE.
+    /// \param [out] ppTLAS       - Address of the memory location where the pointer to the
+    ///                             top-level AS interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
+    ///                             one reference.
+    VIRTUAL void METHOD(CreateTLASFromD3DResource)(THIS_
+                                                   ID3D12Resource*          pd3d12TLAS,
+                                                   const TopLevelASDesc REF Desc,
+                                                   RESOURCE_STATE           InitialState,
+                                                   ITopLevelAS**            ppTLAS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -114,6 +146,8 @@ DILIGENT_END_INTERFACE
 #    define IRenderDeviceD3D12_IsFenceSignaled(This, ...)              CALL_IFACE_METHOD(RenderDeviceD3D12, IsFenceSignaled,              This, __VA_ARGS__)
 #    define IRenderDeviceD3D12_CreateTextureFromD3DResource(This, ...) CALL_IFACE_METHOD(RenderDeviceD3D12, CreateTextureFromD3DResource, This, __VA_ARGS__)
 #    define IRenderDeviceD3D12_CreateBufferFromD3DResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceD3D12, CreateBufferFromD3DResource,  This, __VA_ARGS__)
+#    define IRenderDeviceD3D12_CreateBLASFromD3DResource(This, ...)    CALL_IFACE_METHOD(RenderDeviceD3D12, CreateBLASFromD3DResource,    This, __VA_ARGS__)
+#    define IRenderDeviceD3D12_CreateTLASFromD3DResource(This, ...)    CALL_IFACE_METHOD(RenderDeviceD3D12, CreateTLASFromD3DResource,    This, __VA_ARGS__)
 
 // clang-format on
 

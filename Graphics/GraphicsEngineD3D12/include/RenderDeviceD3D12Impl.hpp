@@ -68,6 +68,9 @@ public:
     /// Implementation of IRenderDevice::CreateComputePipelineState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
 
+    /// Implementation of IRenderDevice::CreateRayTracingPipelineState() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
+
     /// Implementation of IRenderDevice::CreateBuffer() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
                                                  const BufferData* pBuffData,
@@ -104,6 +107,18 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
                                                       IFramebuffer**         ppFramebuffer) override final;
 
+    /// Implementation of IRenderDevice::CreateBLAS() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateBLAS(const BottomLevelASDesc& Desc,
+                                               IBottomLevelAS**         ppBLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateTLAS() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateTLAS(const TopLevelASDesc& Desc,
+                                               ITopLevelAS**         ppTLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateSBT() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
+                                              IShaderBindingTable**         ppSBT) override final;
+
     /// Implementation of IRenderDeviceD3D12::GetD3D12Device().
     virtual ID3D12Device* DILIGENT_CALL_TYPE GetD3D12Device() override final { return m_pd3d12Device; }
 
@@ -117,6 +132,18 @@ public:
                                                                 const BufferDesc& BuffDesc,
                                                                 RESOURCE_STATE    InitialState,
                                                                 IBuffer**         ppBuffer) override final;
+
+    /// Implementation of IRenderDeviceD3D12::CreateBLASFromD3DResource().
+    virtual void DILIGENT_CALL_TYPE CreateBLASFromD3DResource(ID3D12Resource*          pd3d12BLAS,
+                                                              const BottomLevelASDesc& Desc,
+                                                              RESOURCE_STATE           InitialState,
+                                                              IBottomLevelAS**         ppBLAS) override final;
+
+    /// Implementation of IRenderDeviceD3D12::CreateTLASFromD3DResource().
+    virtual void DILIGENT_CALL_TYPE CreateTLASFromD3DResource(ID3D12Resource*       pd3d12TLAS,
+                                                              const TopLevelASDesc& Desc,
+                                                              RESOURCE_STATE        InitialState,
+                                                              ITopLevelAS**         ppTLAS) override final;
 
     DescriptorHeapAllocation AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
     DescriptorHeapAllocation AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
@@ -157,12 +184,25 @@ public:
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
-#ifdef D3D12_H_HAS_MESH_SHADER
     ID3D12Device2* GetD3D12Device2();
-#endif
+    ID3D12Device5* GetD3D12Device5();
 
-    ShaderVersion     GetMaxShaderModel() const;
-    D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
+    struct Properties
+    {
+        const Uint32 ShaderGroupHandleSize       = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+        const Uint32 MaxShaderRecordStride       = D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE;
+        const Uint32 ShaderGroupBaseAlignment    = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+        const Uint32 MaxDrawMeshTasksCount       = 64000; // from specs: https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
+        const Uint32 MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+        const Uint32 MaxRayGenThreads            = D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS;
+
+        ShaderVersion MaxShaderVersion;
+    };
+
+    const Properties& GetProperties() const
+    {
+        return m_Properties;
+    }
 
 private:
     template <typename PSOCreateInfoType>
@@ -173,9 +213,8 @@ private:
 
     CComPtr<ID3D12Device> m_pd3d12Device;
 
-#ifdef D3D12_H_HAS_MESH_SHADER
     CComPtr<ID3D12Device2> m_pd3d12Device2;
-#endif
+    CComPtr<ID3D12Device5> m_pd3d12Device5;
 
     EngineD3D12CreateInfo m_EngineAttribs;
 
@@ -198,7 +237,7 @@ private:
 
     QueryManagerD3D12 m_QueryMgr;
 
-    D3D_SHADER_MODEL m_MaxShaderModel = D3D_SHADER_MODEL_5_1;
+    Properties m_Properties;
 
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
 };

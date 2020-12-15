@@ -50,8 +50,6 @@ FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemory
     m_NumBlocksInPage   {NumBlocksInPage           }
 // clang-format on
 {
-    VERIFY_EXPR(BlockSize > 0);
-
     // Allocate one page
     CreateNewPage();
 }

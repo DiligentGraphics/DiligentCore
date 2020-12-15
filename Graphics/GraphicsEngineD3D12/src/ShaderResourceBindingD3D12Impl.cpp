@@ -30,7 +30,7 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "LinearAllocator.hpp"
+#include "FixedLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -53,7 +53,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
     {
         m_ResourceLayoutIndex.fill(-1);
 
-        LinearAllocator MemPool{GetRawAllocator()};
+        FixedLinearAllocator MemPool{GetRawAllocator()};
         MemPool.AddSpace<ShaderVariableManagerD3D12>(m_NumShaders);
         MemPool.Reserve();
         m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(m_NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));

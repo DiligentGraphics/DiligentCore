@@ -292,6 +292,11 @@ void ShaderResourceLayoutD3D11::Initialize(std::shared_ptr<const ShaderResources
                 new (&GetResource<BuffUAVBindInfo>(bufUav++)) BuffUAVBindInfo(BuffUAV, *this, VarType);
                 NumUAVSlots = std::max(NumUAVSlots, Uint32{BuffUAV.BindPoint} + Uint32{BuffUAV.BindCount});
             }
+        },
+
+        [&](const D3DShaderResourceAttribs&, Uint32) //
+        {
+            UNEXPECTED("acceleration structure is not supported in DirectX 11");
         });
 
     // clang-format off

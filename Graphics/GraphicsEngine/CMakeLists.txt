@@ -14,7 +14,6 @@ set(INCLUDE
     include/EngineMemory.h
     include/FenceBase.hpp
     include/FramebufferBase.hpp
-    include/pch.h
     include/PipelineStateBase.hpp
     include/QueryBase.hpp
     include/RenderDeviceBase.hpp
@@ -28,6 +27,9 @@ set(INCLUDE
     include/SwapChainBase.hpp
     include/TextureBase.hpp
     include/TextureViewBase.hpp
+    include/BottomLevelASBase.hpp
+    include/TopLevelASBase.hpp
+    include/ShaderBindingTableBase.hpp
 )
 
 set(INTERFACE 
@@ -58,18 +60,25 @@ set(INTERFACE
     interface/SwapChain.h
     interface/Texture.h
     interface/TextureView.h
+    interface/BottomLevelAS.h
+    interface/TopLevelAS.h
+    interface/ShaderBindingTable.h
 )
 
 set(SOURCE
     src/APIInfo.cpp
+    src/BottomLevelASBase.cpp
     src/BufferBase.cpp
     src/DefaultShaderSourceStreamFactory.cpp
+    src/DeviceContextBase.cpp
     src/EngineMemory.cpp
     src/FramebufferBase.cpp
     src/PipelineStateBase.cpp
     src/ResourceMappingBase.cpp
+    src/ShaderBindingTableBase.cpp
     src/RenderPassBase.cpp
     src/TextureBase.cpp
+    src/TopLevelASBase.cpp
 )
 
 add_library(Diligent-GraphicsEngine STATIC ${SOURCE} ${INTERFACE} ${INCLUDE})

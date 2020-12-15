@@ -45,16 +45,22 @@ static const INTERFACE_ID IID_Shader =
 /// Describes the shader type
 DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
 {
-    SHADER_TYPE_UNKNOWN       = 0x000, ///< Unknown shader type
-    SHADER_TYPE_VERTEX        = 0x001, ///< Vertex shader
-    SHADER_TYPE_PIXEL         = 0x002, ///< Pixel (fragment) shader
-    SHADER_TYPE_GEOMETRY      = 0x004, ///< Geometry shader
-    SHADER_TYPE_HULL          = 0x008, ///< Hull (tessellation control) shader
-    SHADER_TYPE_DOMAIN        = 0x010, ///< Domain (tessellation evaluation) shader
-    SHADER_TYPE_COMPUTE       = 0x020, ///< Compute shader
-    SHADER_TYPE_AMPLIFICATION = 0x040, ///< Amplification (task) shader
-    SHADER_TYPE_MESH          = 0x080, ///< Mesh shader
-    SHADER_TYPE_LAST          = SHADER_TYPE_MESH
+    SHADER_TYPE_UNKNOWN          = 0x0000, ///< Unknown shader type
+    SHADER_TYPE_VERTEX           = 0x0001, ///< Vertex shader
+    SHADER_TYPE_PIXEL            = 0x0002, ///< Pixel (fragment) shader
+    SHADER_TYPE_GEOMETRY         = 0x0004, ///< Geometry shader
+    SHADER_TYPE_HULL             = 0x0008, ///< Hull (tessellation control) shader
+    SHADER_TYPE_DOMAIN           = 0x0010, ///< Domain (tessellation evaluation) shader
+    SHADER_TYPE_COMPUTE          = 0x0020, ///< Compute shader
+    SHADER_TYPE_AMPLIFICATION    = 0x0040, ///< Amplification (task) shader
+    SHADER_TYPE_MESH             = 0x0080, ///< Mesh shader
+    SHADER_TYPE_RAY_GEN          = 0x0100, ///< Ray generation shader
+    SHADER_TYPE_RAY_MISS         = 0x0200, ///< Ray miss shader
+    SHADER_TYPE_RAY_CLOSEST_HIT  = 0x0400, ///< Ray closest hit shader
+    SHADER_TYPE_RAY_ANY_HIT      = 0x0800, ///< Ray any hit shader
+    SHADER_TYPE_RAY_INTERSECTION = 0x1000, ///< Ray intersection shader
+    SHADER_TYPE_CALLABLE         = 0x2000, ///< Callable shader
+    SHADER_TYPE_LAST             = SHADER_TYPE_CALLABLE
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 
@@ -106,6 +112,8 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
         
     /// Legacy HLSL compiler (FXC) for Direct3D11 and Direct3D12 supporting shader models up to 5.1.
     SHADER_COMPILER_FXC,
+
+    SHADER_COMPILER_LAST = SHADER_COMPILER_FXC
 };
 
 
@@ -351,7 +359,10 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8)
     /// Input attachment in a render pass
     SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT,
 
-    SHADER_RESOURCE_TYPE_LAST = SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT
+    /// Acceleration structure
+    SHADER_RESOURCE_TYPE_ACCEL_STRUCT,
+    
+    SHADER_RESOURCE_TYPE_LAST = SHADER_RESOURCE_TYPE_ACCEL_STRUCT
 };
 // clang-format on
 

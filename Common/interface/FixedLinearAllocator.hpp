@@ -28,33 +28,34 @@
 #pragma once
 
 /// \file
-/// Defines Diligent::LinearAllocator class
+/// Defines Diligent::FixedLinearAllocator class
 
 #include <vector>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "CompilerDefinitions.h"
 #include "Align.hpp"
 
 namespace Diligent
 {
 
 /// Implementation of a linear allocator on a fixed-size memory page
-class LinearAllocator
+class FixedLinearAllocator
 {
 public:
     // clang-format off
-    LinearAllocator           (const LinearAllocator&) = delete;
-    LinearAllocator& operator=(const LinearAllocator&) = delete;
-    LinearAllocator& operator=(LinearAllocator&&)      = delete;
+    FixedLinearAllocator           (const FixedLinearAllocator&) = delete;
+    FixedLinearAllocator& operator=(const FixedLinearAllocator&) = delete;
+    FixedLinearAllocator& operator=(FixedLinearAllocator&&)      = delete;
     // clang-format on
 
-    explicit LinearAllocator(IMemoryAllocator& Allocator) noexcept :
+    explicit FixedLinearAllocator(IMemoryAllocator& Allocator) noexcept :
         m_pAllocator{&Allocator}
     {}
 
-    LinearAllocator(LinearAllocator&& Other) noexcept :
+    FixedLinearAllocator(FixedLinearAllocator&& Other) noexcept :
         // clang-format off
         m_pDataStart   {Other.m_pDataStart   },
         m_pCurrPtr     {Other.m_pCurrPtr     },
@@ -66,7 +67,7 @@ public:
         Other.Reset();
     }
 
-    ~LinearAllocator()
+    ~FixedLinearAllocator()
     {
         Free();
     }
@@ -80,20 +81,20 @@ public:
         Reset();
     }
 
-    void* Release()
+    NODISCARD void* Release()
     {
         void* Ptr = m_pDataStart;
         Reset();
         return Ptr;
     }
 
-    void* ReleaseOwnership() noexcept
+    NODISCARD void* ReleaseOwnership() noexcept
     {
         m_pAllocator = nullptr;
         return GetDataPtr();
     }
 
-    void* GetDataPtr() const noexcept
+    NODISCARD void* GetDataPtr() const noexcept
     {
         return m_pDataStart;
     }
@@ -168,7 +169,7 @@ public:
         m_CurrAlignment = sizeof(void*);
     }
 
-    void* Allocate(size_t size, size_t alignment)
+    NODISCARD void* Allocate(size_t size, size_t alignment)
     {
         VERIFY(size == 0 || m_pDataStart != nullptr, "Memory has not been allocated");
         VERIFY(IsPowerOfTwo(alignment), "Alignment is not a power of two!");
@@ -201,13 +202,13 @@ public:
     }
 
     template <typename T>
-    T* Allocate(size_t count = 1)
+    NODISCARD T* Allocate(size_t count = 1)
     {
         return reinterpret_cast<T*>(Allocate(sizeof(T) * count, alignof(T)));
     }
 
     template <typename T, typename... Args>
-    T* Construct(Args&&... args)
+    NODISCARD T* Construct(Args&&... args)
     {
         T* Ptr = Allocate<T>();
         new (Ptr) T{std::forward<Args>(args)...};
@@ -215,7 +216,7 @@ public:
     }
 
     template <typename T, typename... Args>
-    T* ConstructArray(size_t count, const Args&... args)
+    NODISCARD T* ConstructArray(size_t count, const Args&... args)
     {
         T* Ptr = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
@@ -226,13 +227,13 @@ public:
     }
 
     template <typename T>
-    T* Copy(const T& Src)
+    NODISCARD T* Copy(const T& Src)
     {
         return Construct<T>(Src);
     }
 
     template <typename T>
-    T* CopyArray(const T* Src, size_t count)
+    NODISCARD T* CopyArray(const T* Src, size_t count)
     {
         T* Dst = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
@@ -242,7 +243,7 @@ public:
         return Dst;
     }
 
-    Char* CopyString(const char* Str)
+    NODISCARD Char* CopyString(const char* Str)
     {
         if (Str == nullptr)
             return nullptr;
@@ -264,17 +265,18 @@ public:
         return Ptr;
     }
 
-    Char* CopyString(const std::string& Str)
+    NODISCARD Char* CopyString(const std::string& Str)
     {
         return CopyString(Str.c_str());
     }
 
-    size_t GetCurrentSize() const
+    NODISCARD size_t GetCurrentSize() const
     {
+        VERIFY(m_pDataStart != nullptr, "Memory has not been allocated");
         return static_cast<size_t>(m_pCurrPtr - m_pDataStart);
     }
 
-    size_t GetReservedSize() const
+    NODISCARD size_t GetReservedSize() const
     {
         return m_ReservedSize;
     }
@@ -287,6 +289,11 @@ private:
         m_ReservedSize  = 0;
         m_CurrAlignment = 0;
         m_pAllocator    = nullptr;
+
+#if DILIGENT_DEBUG
+        m_DbgCurrAllocation = 0;
+        m_DbgAllocations.clear();
+#endif
     }
 
     uint8_t*          m_pDataStart    = nullptr;

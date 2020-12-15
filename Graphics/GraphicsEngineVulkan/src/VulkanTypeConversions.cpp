@@ -632,6 +632,21 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
     }
 }
 
+VkIndexType TypeToVkIndexType(VALUE_TYPE IndexType)
+{
+    switch (IndexType)
+    {
+        // clang-format off
+        case VT_UNDEFINED: return VK_INDEX_TYPE_NONE_KHR; // only for ray tracing
+        case VT_UINT16:    return VK_INDEX_TYPE_UINT16;
+        case VT_UINT32:    return VK_INDEX_TYPE_UINT32;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected index type");
+            return VK_INDEX_TYPE_UINT32;
+    }
+}
+
 VkPolygonMode FillModeToVkPolygonMode(FILL_MODE FillMode)
 {
     switch (FillMode)
@@ -1137,6 +1152,56 @@ VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[])
 }
 
 
+static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE StateFlag, VkPipelineStageFlags ShaderStages)
+{
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
+    VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
+    switch (StateFlag)
+    {
+        // clang-format off
+        case RESOURCE_STATE_UNDEFINED:         return 0;
+        case RESOURCE_STATE_VERTEX_BUFFER:     return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        case RESOURCE_STATE_CONSTANT_BUFFER:   return ShaderStages;
+        case RESOURCE_STATE_INDEX_BUFFER:      return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+        case RESOURCE_STATE_RENDER_TARGET:     return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        case RESOURCE_STATE_UNORDERED_ACCESS:  return ShaderStages;
+        case RESOURCE_STATE_DEPTH_WRITE:       return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        case RESOURCE_STATE_DEPTH_READ:        return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        case RESOURCE_STATE_SHADER_RESOURCE:   return ShaderStages;
+        case RESOURCE_STATE_STREAM_OUT:        return 0;
+        case RESOURCE_STATE_INDIRECT_ARGUMENT: return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+        case RESOURCE_STATE_COPY_DEST:         return VK_PIPELINE_STAGE_TRANSFER_BIT;
+        case RESOURCE_STATE_COPY_SOURCE:       return VK_PIPELINE_STAGE_TRANSFER_BIT;
+        case RESOURCE_STATE_RESOLVE_DEST:      return VK_PIPELINE_STAGE_TRANSFER_BIT;
+        case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_PIPELINE_STAGE_TRANSFER_BIT;
+        case RESOURCE_STATE_INPUT_ATTACHMENT:  return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        case RESOURCE_STATE_PRESENT:           return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        case RESOURCE_STATE_BUILD_AS_READ:     return VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+        case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+        case RESOURCE_STATE_RAY_TRACING:       return VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+            // clang-format on
+
+        default:
+            UNEXPECTED("Unexpected resource state flag");
+            return 0;
+    }
+}
+
+VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, VkPipelineStageFlags vkShaderStages)
+{
+    VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
+
+    VkPipelineStageFlags vkPipelineStages = 0;
+    while (StateFlags != RESOURCE_STATE_UNKNOWN)
+    {
+        auto StateBit = static_cast<RESOURCE_STATE>(1 << PlatformMisc::GetLSB(Uint32{StateFlags}));
+        vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit, vkShaderStages);
+        StateFlags &= ~StateBit;
+    }
+    return vkPipelineStages;
+}
+
+
 static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
 {
     // Currently not used:
@@ -1151,10 +1216,8 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
     //VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX
     //VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT
     //VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV
-    //VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NVX
-    //VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NVX
 
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1176,6 +1239,9 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_ACCESS_TRANSFER_READ_BIT;
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         case RESOURCE_STATE_PRESENT:           return 0;
+        case RESOURCE_STATE_BUILD_AS_READ:     return VK_ACCESS_SHADER_READ_BIT; // for vertex, index, transform, AABB, instance buffers
+        case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; // for scratch buffer
+        case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_SHADER_READ_BIT; // for SBT
             // clang-format on
 
         default:
@@ -1190,7 +1256,7 @@ public:
     StateFlagBitPosToVkAccessFlags()
     {
         static_assert((1 << MaxFlagBitPos) == RESOURCE_STATE_MAX_BIT, "This function must be updated to handle new resource state flag");
-        for (Uint32 bit = 0; bit < MaxFlagBitPos; ++bit)
+        for (Uint32 bit = 0; bit < FlagBitPosToVkAccessFlagsMap.size(); ++bit)
         {
             FlagBitPosToVkAccessFlagsMap[bit] = ResourceStateFlagToVkAccessFlags(static_cast<RESOURCE_STATE>(1 << bit));
         }
@@ -1203,7 +1269,7 @@ public:
     }
 
 private:
-    static constexpr const Uint32                MaxFlagBitPos = 16;
+    static constexpr const Uint32                MaxFlagBitPos = 19;
     std::array<VkAccessFlags, MaxFlagBitPos + 1> FlagBitPosToVkAccessFlagsMap;
 };
 
@@ -1224,7 +1290,31 @@ VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
     return AccessFlags;
 }
 
-RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlagBits AccessFlagBit)
+VkAccessFlags AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
+{
+    VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
+
+    VkAccessFlags AccessFlags = 0;
+    Uint32        Bits        = StateFlags;
+    while (Bits != 0)
+    {
+        auto Bit = static_cast<RESOURCE_STATE>(1 << PlatformMisc::GetLSB(Bits));
+        switch (Bit)
+        {
+            // clang-format off
+            case RESOURCE_STATE_BUILD_AS_READ:  AccessFlags |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR; break;
+            case RESOURCE_STATE_BUILD_AS_WRITE: AccessFlags |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR; break;
+            case RESOURCE_STATE_RAY_TRACING:    AccessFlags |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR; break;
+            default:                            UNEXPECTED("Unexpected resource state flag");
+                // clang-format on
+        }
+        Bits &= ~Bit;
+    }
+    return AccessFlags;
+}
+
+static RESOURCE_STATE VkAccessFlagToResourceStates(VkAccessFlagBits AccessFlagBit)
 {
     VERIFY((AccessFlagBit & (AccessFlagBit - 1)) == 0, "Single access flag bit is expected");
 
@@ -1236,7 +1326,7 @@ RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlagBits AccessFlagBit)
         case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:                 return RESOURCE_STATE_VERTEX_BUFFER;
         case VK_ACCESS_UNIFORM_READ_BIT:                          return RESOURCE_STATE_CONSTANT_BUFFER;
         case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_INPUT_ATTACHMENT;
-        case VK_ACCESS_SHADER_READ_BIT:                           return RESOURCE_STATE_SHADER_RESOURCE;
+        case VK_ACCESS_SHADER_READ_BIT:                           return RESOURCE_STATE_SHADER_RESOURCE; // or RESOURCE_STATE_BUILD_AS_READ
         case VK_ACCESS_SHADER_WRITE_BIT:                          return RESOURCE_STATE_UNORDERED_ACCESS;
         case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_RENDER_TARGET;
         case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:                return RESOURCE_STATE_RENDER_TARGET;
@@ -1244,6 +1334,7 @@ RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlagBits AccessFlagBit)
         case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:        return RESOURCE_STATE_DEPTH_WRITE;
         case VK_ACCESS_TRANSFER_READ_BIT:                         return RESOURCE_STATE_COPY_SOURCE;
         case VK_ACCESS_TRANSFER_WRITE_BIT:                        return RESOURCE_STATE_COPY_DEST;
+        case VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR:      return RESOURCE_STATE_BUILD_AS_WRITE;
         case VK_ACCESS_HOST_READ_BIT:                             return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_HOST_WRITE_BIT:                            return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_MEMORY_READ_BIT:                           return RESOURCE_STATE_UNKNOWN;
@@ -1256,8 +1347,6 @@ RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlagBits AccessFlagBit)
         case VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_NV:           return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT: return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV:            return RESOURCE_STATE_UNKNOWN;
-        case VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV:        return RESOURCE_STATE_UNKNOWN;
-        case VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV:       return RESOURCE_STATE_UNKNOWN;
             // clang-format on
         default:
             UNEXPECTED("Unknown access flag");
@@ -1271,9 +1360,9 @@ class VkAccessFlagBitPosToResourceState
 public:
     VkAccessFlagBitPosToResourceState()
     {
-        for (Uint32 bit = 0; bit < MaxFlagBitPos; ++bit)
+        for (Uint32 bit = 0; bit < FlagBitPosToResourceState.size(); ++bit)
         {
-            FlagBitPosToResourceState[bit] = VkAccessFlagsToResourceStates(static_cast<VkAccessFlagBits>(1 << bit));
+            FlagBitPosToResourceState[bit] = VkAccessFlagToResourceStates(static_cast<VkAccessFlagBits>(1 << bit));
         }
     }
 
@@ -1317,7 +1406,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
     //VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
     //VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
 
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1339,6 +1428,9 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
         case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         case RESOURCE_STATE_PRESENT:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        case RESOURCE_STATE_BUILD_AS_READ:     UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_BUILD_AS_WRITE:    UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_RAY_TRACING:       UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
             // clang-format on
 
         default:
@@ -1349,7 +1441,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
 
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     switch (Layout)
     {
         // clang-format off
@@ -1514,7 +1606,7 @@ VkAccessFlags AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags)
 
 VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_MESH, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
     VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "More than one shader type is specified");
     switch (ShaderType)
     {
@@ -1527,10 +1619,104 @@ VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
         case SHADER_TYPE_COMPUTE:          return VK_SHADER_STAGE_COMPUTE_BIT;
         case SHADER_TYPE_AMPLIFICATION:    return VK_SHADER_STAGE_TASK_BIT_NV;
         case SHADER_TYPE_MESH:             return VK_SHADER_STAGE_MESH_BIT_NV;
+        case SHADER_TYPE_RAY_GEN:          return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+        case SHADER_TYPE_RAY_MISS:         return VK_SHADER_STAGE_MISS_BIT_KHR;
+        case SHADER_TYPE_RAY_CLOSEST_HIT:  return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+        case SHADER_TYPE_RAY_ANY_HIT:      return VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+        case SHADER_TYPE_RAY_INTERSECTION: return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+        case SHADER_TYPE_CALLABLE:         return VK_SHADER_STAGE_CALLABLE_BIT_KHR;
         // clang-format on
         default:
             UNEXPECTED("Unknown shader type");
             return VK_SHADER_STAGE_VERTEX_BIT;
+    }
+}
+
+VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags)
+{
+    static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == RAYTRACING_BUILD_AS_LOW_MEMORY,
+                  "Please update the switch below to handle the new ray tracing build flag");
+
+    VkBuildAccelerationStructureFlagsKHR Result = 0;
+    while (Flags != RAYTRACING_BUILD_AS_NONE)
+    {
+        auto FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
+        {
+            // clang-format off
+            case RAYTRACING_BUILD_AS_ALLOW_UPDATE:      Result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;      break;
+            case RAYTRACING_BUILD_AS_ALLOW_COMPACTION:  Result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;  break;
+            case RAYTRACING_BUILD_AS_PREFER_FAST_TRACE: Result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR; break;
+            case RAYTRACING_BUILD_AS_PREFER_FAST_BUILD: Result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR; break;
+            case RAYTRACING_BUILD_AS_LOW_MEMORY:        Result |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;        break;
+            // clang-format on
+            default: UNEXPECTED("unknown build AS flag");
+        }
+        Flags = Flags & ~FlagBit;
+    }
+    return Result;
+}
+
+VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags)
+{
+    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION,
+                  "Please update the switch below to handle the new ray tracing geometry flag");
+
+    VkGeometryFlagsKHR Result = 0;
+    while (Flags != RAYTRACING_GEOMETRY_FLAG_NONE)
+    {
+        auto FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
+        {
+            // clang-format off
+            case RAYTRACING_GEOMETRY_FLAG_OPAQUE:                          Result |= VK_GEOMETRY_OPAQUE_BIT_KHR; break;
+            case RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR; break;
+            // clang-format on
+            default: UNEXPECTED("unknown geometry flag");
+        }
+        Flags = Flags & ~FlagBit;
+    }
+    return Result;
+}
+
+VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags)
+{
+    static_assert(RAYTRACING_INSTANCE_FLAGS_LAST == RAYTRACING_INSTANCE_FORCE_NO_OPAQUE,
+                  "Please update the switch below to handle the new ray tracing instance flag");
+
+    VkGeometryInstanceFlagsKHR Result = 0;
+    while (Flags != RAYTRACING_INSTANCE_NONE)
+    {
+        auto FlagBit = static_cast<RAYTRACING_INSTANCE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
+        {
+            // clang-format off
+            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR; break;
+            case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: Result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR; break;
+            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    Result |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR; break;
+            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 Result |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR; break;
+            // clang-format on
+            default: UNEXPECTED("unknown instance flag");
+        }
+        Flags = Flags & ~FlagBit;
+    }
+    return Result;
+}
+
+VkCopyAccelerationStructureModeKHR CopyASModeToVkCopyAccelerationStructureMode(COPY_AS_MODE Mode)
+{
+    static_assert(COPY_AS_MODE_LAST == COPY_AS_MODE_COMPACT,
+                  "Please update the switch below to handle the new copy AS mode");
+
+    switch (Mode)
+    {
+        // clang-format off
+        case COPY_AS_MODE_CLONE:   return VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_KHR;
+        case COPY_AS_MODE_COMPACT: return VK_COPY_ACCELERATION_STRUCTURE_MODE_COMPACT_KHR;
+        // clang-format on
+        default:
+            UNEXPECTED("unknown AS copy mode");
+            return VK_COPY_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
     }
 }
 

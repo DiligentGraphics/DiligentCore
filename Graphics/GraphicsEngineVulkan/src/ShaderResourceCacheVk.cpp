@@ -33,6 +33,7 @@
 #include "TextureViewVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "SamplerVkImpl.hpp"
+#include "TopLevelASVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 
 namespace Diligent
@@ -155,7 +156,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
     for (Uint32 res = 0; res < m_TotalResources; ++res)
     {
         auto& Res = pResources[res];
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 11, "Please handle the new resource type below");
+        static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type below");
         switch (Res.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
@@ -318,6 +319,40 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                 // Nothing to do with input attachments - they are transitioned by the render pass.
                 // There is nothing we can validate here - a texture may be in different state at
                 // the beginning of the render pass before being transitioned to INPUT_ATTACHMENT state.
+            }
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure:
+            {
+                auto* pTLASVk = Res.pObject.RawPtr<TopLevelASVkImpl>();
+                if (pTLASVk != nullptr && pTLASVk->IsInKnownState())
+                {
+                    constexpr RESOURCE_STATE RequiredState     = RESOURCE_STATE_RAY_TRACING;
+                    const bool               IsInRequiredState = pTLASVk->CheckState(RequiredState);
+                    if (VerifyOnly)
+                    {
+                        if (!IsInRequiredState)
+                        {
+                            LOG_ERROR_MESSAGE("State of TLAS '", pTLASVk->GetDesc().Name, "' is incorrect. Required state: ",
+                                              GetResourceStateString(RequiredState), ". Actual state: ",
+                                              GetResourceStateString(pTLASVk->GetState()),
+                                              ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                              "when calling IDeviceContext::CommitShaderResources() or explicitly transition the TLAS state "
+                                              "with IDeviceContext::TransitionResourceStates().");
+                        }
+                    }
+                    else
+                    {
+                        if (!IsInRequiredState)
+                        {
+                            pCtxVkImpl->TransitionTLASState(*pTLASVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        }
+                    }
+
+#ifdef DILIGENT_DEVELOPMENT
+                    pTLASVk->ValidateContent();
+#endif
+                }
             }
             break;
 
@@ -495,6 +530,22 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetInputAttachmentDescrip
     DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     return DescrImgInfo;
+}
+
+VkWriteDescriptorSetAccelerationStructureKHR ShaderResourceCacheVk::Resource::GetAccelerationStructureWriteInfo() const
+{
+    VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure, "Acceleration structure resource is expected");
+    DEV_CHECK_ERR(pObject != nullptr, "Unable to get acceleration structure write info: cached object is null");
+
+    auto* pTLASVk = pObject.RawPtr<const TopLevelASVkImpl>();
+
+    VkWriteDescriptorSetAccelerationStructureKHR DescrAS;
+    DescrAS.sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+    DescrAS.pNext                      = nullptr;
+    DescrAS.accelerationStructureCount = 1;
+    DescrAS.pAccelerationStructures    = pTLASVk->GetVkTLASPtr();
+
+    return DescrAS;
 }
 
 } // namespace Diligent

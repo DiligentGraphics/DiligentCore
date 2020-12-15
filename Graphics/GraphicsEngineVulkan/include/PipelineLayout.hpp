@@ -48,7 +48,7 @@ class ShaderResourceCacheVk;
 class PipelineLayout
 {
 public:
-    static VkDescriptorType GetVkDescriptorType(const SPIRVShaderResourceAttribs& Res);
+    static VkDescriptorType GetVkDescriptorType(SPIRVShaderResourceAttribs::ResourceType Type);
 
     PipelineLayout();
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
@@ -69,8 +69,7 @@ public:
                               SHADER_TYPE                       ShaderType,
                               Uint32&                           DescriptorSet,
                               Uint32&                           Binding,
-                              Uint32&                           OffsetInCache,
-                              std::vector<uint32_t>&            SPIRV);
+                              Uint32&                           OffsetInCache);
 
     Uint32 GetTotalDescriptors(SHADER_RESOURCE_VARIABLE_TYPE VarType) const
     {
@@ -137,7 +136,7 @@ public:
     // set by the same Vulkan command. If there are no dynamic descriptors, this
     // function also binds descriptor sets rightaway.
     void PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkImpl,
-                               bool                         IsCompute,
+                               VkPipelineBindPoint          BindPoint,
                                const ShaderResourceCacheVk& ResourceCache,
                                DescriptorSetBindInfo&       BindInfo,
                                VkDescriptorSet              VkDynamicDescrSet) const;

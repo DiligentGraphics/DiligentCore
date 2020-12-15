@@ -208,7 +208,7 @@ public:
         }
     };
 
-private:
+protected:
     static constexpr size_t StrOwnershipBit  = sizeof(size_t) * 8 - 1;
     static constexpr size_t StrOwnershipMask = size_t{1} << StrOwnershipBit;
     static constexpr size_t HashMask         = ~StrOwnershipMask;
