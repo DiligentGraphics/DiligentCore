@@ -394,7 +394,7 @@ void CreateTLAS(RTContext& Ctx, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_IN
     Ctx.pDevice->CreateShaderResourceView(nullptr, &SRVDesc, DescHandle);
 }
 
-void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 InstanceCount, Uint32 NumMissShaders, Uint32 NumHitShaders, Uint32 ShaderRecordSize = 0, size_t UploadSize = 0)
+void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 InstanceCount, Uint32 NumMissShaders, Uint32 NumHitShaders, Uint32 ShaderRecordSize = 0, UINT64 UploadSize = 0)
 {
     D3D12_RESOURCE_DESC BuffDesc = {};
     BuffDesc.Dimension           = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -491,15 +491,15 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     }
 }
 
-void UpdateBuffer(RTContext& Ctx, ID3D12Resource* pBuffer, size_t Offset, const void* pData, size_t DataSize)
+void UpdateBuffer(RTContext& Ctx, ID3D12Resource* pBuffer, UINT64 Offset, const void* pData, UINT64 DataSize)
 {
     VERIFY_EXPR(pBuffer != nullptr);
     VERIFY_EXPR(pData != nullptr);
 
     Ctx.pCmdList->CopyBufferRegion(pBuffer, Offset, Ctx.pUploadBuffer, Ctx.MappedOffset, DataSize);
 
-    std::memcpy(reinterpret_cast<char*>(Ctx.MappedPtr) + Ctx.MappedOffset, pData, DataSize);
-    Ctx.MappedOffset += DataSize;
+    std::memcpy(reinterpret_cast<char*>(Ctx.MappedPtr) + Ctx.MappedOffset, pData, static_cast<size_t>(DataSize));
+    Ctx.MappedOffset += static_cast<size_t>(DataSize);
 }
 
 void ASPrebuildBarriers(const RTContext& Ctx)
@@ -665,9 +665,9 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 
         const UINT64 handleSize     = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
         const UINT64 align          = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
-        const size_t RayGenOffset   = 0;
-        const size_t RayMissOffset  = Align(RayGenOffset + handleSize, align);
-        const size_t HitGroupOffset = Align(RayMissOffset + handleSize, align);
+        const UINT64 RayGenOffset   = 0;
+        const UINT64 RayMissOffset  = Align(RayGenOffset + handleSize, align);
+        const UINT64 HitGroupOffset = Align(RayMissOffset + handleSize, align);
 
         Desc.RayGenerationShaderRecord.StartAddress = Ctx.pSBTBuffer->GetGPUVirtualAddress() + RayGenOffset;
         Desc.RayGenerationShaderRecord.SizeInBytes  = handleSize;
@@ -801,9 +801,9 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 
         const UINT64 handleSize     = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
         const UINT64 align          = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
-        const size_t RayGenOffset   = 0;
-        const size_t RayMissOffset  = Align(RayGenOffset + handleSize, align);
-        const size_t HitGroupOffset = Align(RayMissOffset + handleSize, align);
+        const UINT64 RayGenOffset   = 0;
+        const UINT64 RayMissOffset  = Align(RayGenOffset + handleSize, align);
+        const UINT64 HitGroupOffset = Align(RayMissOffset + handleSize, align);
 
         Desc.RayGenerationShaderRecord.StartAddress = Ctx.pSBTBuffer->GetGPUVirtualAddress() + RayGenOffset;
         Desc.RayGenerationShaderRecord.SizeInBytes  = handleSize;
@@ -933,9 +933,9 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
 
         const UINT64 handleSize     = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
         const UINT64 align          = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
-        const size_t RayGenOffset   = 0;
-        const size_t RayMissOffset  = Align(RayGenOffset + handleSize, align);
-        const size_t HitGroupOffset = Align(RayMissOffset + handleSize, align);
+        const UINT64 RayGenOffset   = 0;
+        const UINT64 RayMissOffset  = Align(RayGenOffset + handleSize, align);
+        const UINT64 HitGroupOffset = Align(RayMissOffset + handleSize, align);
 
         Desc.RayGenerationShaderRecord.StartAddress = Ctx.pSBTBuffer->GetGPUVirtualAddress() + RayGenOffset;
         Desc.RayGenerationShaderRecord.SizeInBytes  = handleSize;
@@ -1236,9 +1236,9 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
         const UINT64 handleSize       = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
         const UINT64 align            = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
         const UINT64 ShaderRecordSize = handleSize + TestingConstants::MultiGeometry::ShaderRecordSize;
-        const size_t RayGenOffset     = 0;
-        const size_t RayMissOffset    = Align(RayGenOffset + handleSize, align);
-        const size_t HitGroupOffset   = Align(RayMissOffset + handleSize, align);
+        const UINT64 RayGenOffset     = 0;
+        const UINT64 RayMissOffset    = Align(RayGenOffset + handleSize, align);
+        const UINT64 HitGroupOffset   = Align(RayMissOffset + handleSize, align);
         const auto&  Weights          = TestingConstants::MultiGeometry::Weights;
 
         Desc.RayGenerationShaderRecord.StartAddress = Ctx.pSBTBuffer->GetGPUVirtualAddress() + RayGenOffset;

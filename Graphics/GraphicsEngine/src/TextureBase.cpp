@@ -26,6 +26,9 @@
  */
 
 #include "Texture.h"
+
+#include <algorithm>
+
 #include "DeviceContext.h"
 #include "GraphicsAccessories.hpp"
 

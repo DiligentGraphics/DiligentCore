@@ -25,9 +25,11 @@
  *  of the possibility of such damages.
  */
 
+#include "VulkanUtilities/VulkanInstance.hpp"
+
 #include <vector>
 #include <cstring>
-#include "VulkanUtilities/VulkanInstance.hpp"
+#include <algorithm>
 
 #if DILIGENT_USE_VOLK
 #    define VOLK_IMPLEMENTATION
