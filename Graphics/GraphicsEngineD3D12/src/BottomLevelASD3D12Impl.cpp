@@ -33,19 +33,12 @@
 #include "DXGITypeConversions.hpp"
 #include "StringTools.hpp"
 
-#ifndef D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE // Defined in Win SDK 19041+
-#    define D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE (536870912)
-#endif
-#ifndef D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE // Defined in Win SDK 19041+
-#    define D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE (16777216)
-#endif
-
 namespace Diligent
 {
 
-BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
-                                               class RenderDeviceD3D12Impl* pDeviceD3D12,
-                                               const BottomLevelASDesc&     Desc) :
+BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCounters,
+                                               RenderDeviceD3D12Impl*   pDeviceD3D12,
+                                               const BottomLevelASDesc& Desc) :
     TBottomLevelASBase{pRefCounters, pDeviceD3D12, Desc}
 {
     auto*  pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
@@ -84,7 +77,7 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
 
                 MaxPrimitiveCount += src.MaxPrimitiveCount;
             }
-            VERIFY_EXPR(MaxPrimitiveCount <= D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
+            VERIFY_EXPR(MaxPrimitiveCount <= pDeviceD3D12->GetProperties().MaxPrimitivesPerBLAS);
         }
         else if (m_Desc.pBoxes != nullptr)
         {
@@ -103,14 +96,14 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
 
                 MaxBoxCount += src.MaxBoxCount;
             }
-            VERIFY_EXPR(MaxBoxCount <= D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
+            VERIFY_EXPR(MaxBoxCount <= pDeviceD3D12->GetProperties().MaxPrimitivesPerBLAS);
         }
         else
         {
             UNEXPECTED("Either pTriangles or pBoxes must not be null");
         }
 
-        VERIFY_EXPR(d3d12Geometries.size() <= D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
+        VERIFY_EXPR(d3d12Geometries.size() <= pDeviceD3D12->GetProperties().MaxGeometriesPerBLAS);
 
         d3d12BottomLevelInputs.Type           = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
         d3d12BottomLevelInputs.Flags          = BuildASFlagsToD3D12ASBuildFlags(m_Desc.Flags);
