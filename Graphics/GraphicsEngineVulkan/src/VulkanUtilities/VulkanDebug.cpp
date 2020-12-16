@@ -52,6 +52,22 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
         }
     }
 
+    // temporary fixes
+#if 1
+    if (std::string{"VUID-vkCmdPipelineBarrier-srcAccessMask-02815"} == callbackData->pMessageIdName)
+    {
+        std::string msg{callbackData->pMessage};
+        if (msg.find("srcAccessMask (0x20) is not supported by srcStageMask (0x2000000)") != std::string::npos)
+            return VK_FALSE;
+    }
+    if (std::string{"VUID-vkCmdPipelineBarrier-dstAccessMask-02816"} == callbackData->pMessageIdName)
+    {
+        std::string msg{callbackData->pMessage};
+        if (msg.find("dstAccessMask (0x20) is not supported by dstStageMask (0x2000000)") != std::string::npos)
+            return VK_FALSE;
+    }
+#endif
+
     Diligent::DEBUG_MESSAGE_SEVERITY MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
     {

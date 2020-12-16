@@ -235,11 +235,10 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
             }
             if (LayerVer < VK_HEADER_VERSION_COMPLETE)
             {
-                ValidationLayersPresent = false;
                 LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_VERSION_MAJOR(LayerVer), ".", VK_VERSION_MINOR(LayerVer), ".", VK_VERSION_PATCH(LayerVer),
                                     ") is less than header version (",
                                     VK_VERSION_MAJOR(VK_HEADER_VERSION_COMPLETE), ".", VK_VERSION_MINOR(VK_HEADER_VERSION_COMPLETE), ".", VK_VERSION_PATCH(VK_HEADER_VERSION_COMPLETE),
-                                    "). Validation will be disabled");
+                                    ").");
             }
         }
         if (ValidationLayersPresent)

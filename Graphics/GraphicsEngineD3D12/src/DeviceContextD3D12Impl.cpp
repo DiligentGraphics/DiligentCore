@@ -2631,21 +2631,24 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
     auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
 
     const char* OpName = "Trace rays (DeviceContextD3D12Impl::TraceRays)";
-    TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, Attribs.SBTTransitionMode, RESOURCE_STATE_COPY_DEST, OpName);
 
-    // buffer ranges are not intersected, so we don't need to add barriers between them
-    if (RayGenShaderRecord.pData)
-        UpdateBuffer(pBufferD3D12, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    if (RayGenShaderRecord.pData || MissShaderTable.pData || HitGroupTable.pData || CallableShaderTable.pData)
+    {
+        TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, Attribs.SBTTransitionMode, RESOURCE_STATE_COPY_DEST, OpName);
 
-    if (MissShaderTable.pData)
-        UpdateBuffer(pBufferD3D12, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+        // buffer ranges are not intersected, so we don't need to add barriers between them
+        if (RayGenShaderRecord.pData)
+            UpdateBuffer(pBufferD3D12, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
-    if (HitGroupTable.pData)
-        UpdateBuffer(pBufferD3D12, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+        if (MissShaderTable.pData)
+            UpdateBuffer(pBufferD3D12, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
-    if (CallableShaderTable.pData)
-        UpdateBuffer(pBufferD3D12, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+        if (HitGroupTable.pData)
+            UpdateBuffer(pBufferD3D12, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
+        if (CallableShaderTable.pData)
+            UpdateBuffer(pBufferD3D12, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    }
     TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, Attribs.SBTTransitionMode, RESOURCE_STATE_RAY_TRACING, OpName);
 
     D3D12_DISPATCH_RAYS_DESC d3d12DispatchDesc = {};

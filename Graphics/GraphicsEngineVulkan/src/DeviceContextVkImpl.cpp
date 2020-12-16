@@ -3131,21 +3131,24 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
     auto* pSBTBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
 
     const char* OpName = "Trace rays (DeviceContextVkImpl::TraceRays)";
-    TransitionOrVerifyBufferState(*pSBTBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
 
-    // buffer ranges are not intersected, so we don't need to add barriers between them
-    if (RayGenShaderRecord.pData)
-        UpdateBuffer(pBuffer, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    if (RayGenShaderRecord.pData || MissShaderTable.pData || HitGroupTable.pData || CallableShaderTable.pData)
+    {
+        TransitionOrVerifyBufferState(*pSBTBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
 
-    if (MissShaderTable.pData)
-        UpdateBuffer(pBuffer, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+        // buffer ranges are not intersected, so we don't need to add barriers between them
+        if (RayGenShaderRecord.pData)
+            UpdateBuffer(pBuffer, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
-    if (HitGroupTable.pData)
-        UpdateBuffer(pBuffer, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+        if (MissShaderTable.pData)
+            UpdateBuffer(pBuffer, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
-    if (CallableShaderTable.pData)
-        UpdateBuffer(pBuffer, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+        if (HitGroupTable.pData)
+            UpdateBuffer(pBuffer, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
+        if (CallableShaderTable.pData)
+            UpdateBuffer(pBuffer, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    }
     TransitionOrVerifyBufferState(*pSBTBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
 
     // clang-format off
