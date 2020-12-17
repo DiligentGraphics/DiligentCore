@@ -44,19 +44,22 @@ namespace Diligent
 
 struct BLASGeomIndex
 {
-    Uint32 IndexInDesc = INVALID_INDEX; // geometry index in description
-    Uint32 ActualIndex = INVALID_INDEX; // geometry index in build operation
+    Uint32 IndexInDesc = INVALID_INDEX; // Geometry index in BottomLevelASDesc
+    Uint32 ActualIndex = INVALID_INDEX; // Geometry index in build operation
 
     BLASGeomIndex() {}
-    BLASGeomIndex(Uint32 _IndexInDesc, Uint32 _ActualIndex) :
-        IndexInDesc{_IndexInDesc}, ActualIndex{_ActualIndex} {}
+    BLASGeomIndex(Uint32 _IndexInDesc,
+                  Uint32 _ActualIndex) :
+        IndexInDesc{_IndexInDesc},
+        ActualIndex{_ActualIndex}
+    {}
 };
 using BLASNameToIndex = std::unordered_map<HashMapStringKey, BLASGeomIndex, HashMapStringKey::Hasher>;
 
-/// Validates bottom-level AS description and throws and exception in case of an error.
+/// Validates bottom-level AS description and throws an exception in case of an error.
 void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false);
 
-/// Copies bottom-level AS geometry description using MemPool to allocate required dynamic space.
+/// Copies bottom-level AS geometry description using MemPool to allocate required space.
 void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
                           BottomLevelASDesc&       DstDesc,
                           FixedLinearAllocator&    MemPool,
@@ -64,11 +67,11 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
                           BLASNameToIndex&         DstNameToIndex) noexcept(false);
 
 
-/// Template class implementing base functionality for a bottom-level acceleration structure object.
+/// Template class implementing base functionality of the bottom-level acceleration structure object.
 
-/// \tparam BaseInterface        - base interface that this class will inheret
+/// \tparam BaseInterface        - Base interface that this class will inheret
 ///                                (Diligent::IBottomLevelASD3D12 or Diligent::IBottomLevelASVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>
 class BottomLevelASBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, BottomLevelASDesc>
@@ -76,10 +79,10 @@ class BottomLevelASBase : public DeviceObjectBase<BaseInterface, RenderDeviceImp
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BottomLevelASDesc>;
 
-    /// \param pRefCounters      - reference counters object that controls the lifetime of this BLAS.
-    /// \param pDevice           - pointer to the device.
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this BLAS.
+    /// \param pDevice           - Pointer to the device.
     /// \param Desc              - BLAS description.
-    /// \param bIsDeviceInternal - flag indicating if the BLAS is an internal device object and
+    /// \param bIsDeviceInternal - Flag indicating if the BLAS is an internal device object and
     ///							   must not keep a strong reference to the device.
     BottomLevelASBase(IReferenceCounters*      pRefCounters,
                       RenderDeviceImplType*    pDevice,
@@ -105,11 +108,11 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
 
-    // Maps geometry that was used in build operation to geometry description.
+    // Maps geometry that was used in a build operation to the geometry description.
     // Returns the geometry index in geometry description.
     Uint32 UpdateGeometryIndex(const char* Name, Uint32& ActualIndex, bool OnUpdate)
     {
-        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+        DEV_CHECK_ERR(Name != nullptr && Name[0] != '\0', "Geometry name must not be empty");
 
         auto iter = m_NameToIndex.find(Name);
         if (iter != m_NameToIndex.end())
@@ -124,9 +127,10 @@ public:
         return INVALID_INDEX;
     }
 
+    /// Implementation of IBottomLevelAS::GetGeometryDescIndex()
     virtual Uint32 DILIGENT_CALL_TYPE GetGeometryDescIndex(const char* Name) const override final
     {
-        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+        DEV_CHECK_ERR(Name != nullptr && Name[0] != '\0', "Geometry name must not be empty");
 
         auto iter = m_NameToIndex.find(Name);
         if (iter != m_NameToIndex.end())
@@ -136,27 +140,30 @@ public:
         return INVALID_INDEX;
     }
 
+    /// Implementation of IBottomLevelAS::GetGeometryIndex()
     virtual Uint32 DILIGENT_CALL_TYPE GetGeometryIndex(const char* Name) const override final
     {
-        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+        DEV_CHECK_ERR(Name != nullptr && Name[0] != '\0', "Geometry name must not be emtpy");
 
         auto iter = m_NameToIndex.find(Name);
         if (iter != m_NameToIndex.end())
         {
-            VERIFY(iter->second.ActualIndex != INVALID_INDEX, "Geometry with name '", Name, "', exists but was not enabled during last build");
+            VERIFY(iter->second.ActualIndex != INVALID_INDEX, "Geometry with name '", Name, "', exists, but was not enabled in the last build");
             return iter->second.ActualIndex;
         }
         LOG_ERROR_MESSAGE("Can't find geometry with name '", Name, '\'');
         return INVALID_INDEX;
     }
 
+    /// Implementation of IBottomLevelAS::SetState()
     virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
     {
-        VERIFY(State == RESOURCE_STATE_UNKNOWN || State == RESOURCE_STATE_BUILD_AS_READ || State == RESOURCE_STATE_BUILD_AS_WRITE,
-               "Unsupported state for a bottom-level acceleration structure");
+        DEV_CHECK_ERR(State == RESOURCE_STATE_UNKNOWN || State == RESOURCE_STATE_BUILD_AS_READ || State == RESOURCE_STATE_BUILD_AS_WRITE,
+                      "Unsupported state for a bottom-level acceleration structure");
         this->m_State = State;
     }
 
+    /// Implementation of IBottomLevelAS::GetState()
     virtual RESOURCE_STATE DILIGENT_CALL_TYPE GetState() const override final
     {
         return this->m_State;
@@ -175,20 +182,20 @@ public:
 
     bool CheckState(RESOURCE_STATE State) const
     {
-        VERIFY((State & (State - 1)) == 0, "Single state is expected");
-        VERIFY(IsInKnownState(), "BLAS state is unknown");
+        DEV_CHECK_ERR((State & (State - 1)) == 0, "Single state is expected");
+        DEV_CHECK_ERR(IsInKnownState(), "BLAS state is unknown");
         return (this->m_State & State) == State;
     }
 
 #ifdef DILIGENT_DEVELOPMENT
     void UpdateVersion()
     {
-        this->m_DbgVersion.fetch_add(1);
+        this->m_DvpVersion.fetch_add(1);
     }
 
     Uint32 GetVersion() const
     {
-        return this->m_DbgVersion.load();
+        return this->m_DvpVersion.load();
     }
 #endif // DILIGENT_DEVELOPMENT
 
@@ -238,7 +245,7 @@ private:
         this->m_Desc.pBoxes        = nullptr;
         this->m_Desc.BoxCount      = 0;
 
-        m_NameToIndex.clear();
+        m_NameToIndex = decltype(m_NameToIndex){};
     }
 
 protected:
@@ -249,7 +256,7 @@ protected:
     ScratchBufferSizes m_ScratchSize;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic<Uint32> m_DbgVersion{0};
+    std::atomic<Uint32> m_DvpVersion{0};
 #endif
 };
 

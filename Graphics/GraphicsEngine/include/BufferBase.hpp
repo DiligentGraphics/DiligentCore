@@ -52,15 +52,15 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
 void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc, BufferViewDesc& ViewDesc) noexcept(false);
 
 
-/// Template class implementing base functionality for a buffer object
+/// Template class implementing base functionality of the buffer object
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::IBufferD3D11, Diligent::IBufferD3D12,
 ///                          Diligent::IBufferGL or Diligent::IBufferVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-/// \tparam BufferViewImplType - type of the buffer view implementation
+/// \tparam BufferViewImplType - Type of the buffer view implementation
 ///                              (Diligent::BufferViewD3D11Impl, Diligent::BufferViewD3D12Impl,
 ///                               Diligent::BufferViewGLImpl or Diligent::BufferViewVkImpl)
 /// \tparam TBuffViewObjAllocator - type of the allocator that is used to allocate memory for the buffer view object instances
@@ -70,12 +70,12 @@ class BufferBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, 
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferDesc>;
 
-    /// \param pRefCounters         - reference counters object that controls the lifetime of this buffer.
-    /// \param BuffViewObjAllocator - allocator that is used to allocate memory for the buffer view instances.
+    /// \param pRefCounters         - Reference counters object that controls the lifetime of this buffer.
+    /// \param BuffViewObjAllocator - Allocator that is used to allocate memory for the buffer view instances.
     ///                               This parameter is only used for debug purposes.
-    /// \param pDevice              - pointer to the device.
-    /// \param BuffDesc             - buffer description.
-    /// \param bIsDeviceInternal    - flag indicating if the buffer is an internal device object and
+    /// \param pDevice              - Pointer to the device.
+    /// \param BuffDesc             - Buffer description.
+    /// \param bIsDeviceInternal    - Flag indicating if the buffer is an internal device object and
     ///							      must not keep a strong reference to the device.
     BufferBase(IReferenceCounters*    pRefCounters,
                TBuffViewObjAllocator& BuffViewObjAllocator,
@@ -198,8 +198,8 @@ public:
 
     bool CheckState(RESOURCE_STATE State) const
     {
-        VERIFY((State & (State - 1)) == 0, "Single state is expected");
-        VERIFY(IsInKnownState(), "Buffer state is unknown");
+        DEV_CHECK_ERR((State & (State - 1)) == 0, "Single state is expected");
+        DEV_CHECK_ERR(IsInKnownState(), "Buffer state is unknown");
         return (this->m_State & State) == State;
     }
 

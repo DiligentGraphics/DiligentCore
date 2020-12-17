@@ -38,12 +38,12 @@
 namespace Diligent
 {
 
-/// Template class implementing base functionality for a buffer view object
+/// Template class implementing base functionality of the buffer view object
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::IBufferViewD3D11, Diligent::IBufferViewD3D12,
 ///                          Diligent::IBufferViewGL or Diligent::IBufferViewVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>
@@ -52,11 +52,11 @@ class BufferViewBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplTy
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferViewDesc>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this buffer view.
-    /// \param pDevice - pointer to the render device.
-    /// \param ViewDesc - buffer view description.
-    /// \param pBuffer - pointer to the buffer that the view is to be created for.
-    /// \param bIsDefaultView - flag indicating if the view is default view, and is thus
+    /// \param pRefCounters   - Reference counters object that controls the lifetime of this buffer view.
+    /// \param pDevice        - Pointer to the render device.
+    /// \param ViewDesc       - Buffer view description.
+    /// \param pBuffer        - Pointer to the buffer that the view is to be created for.
+    /// \param bIsDefaultView - Flag indicating if the view is a default view, and is thus
     ///						    part of the buffer object. In this case the view will attach
     ///							to the buffer's reference counters.
     BufferViewBase(IReferenceCounters*   pRefCounters,

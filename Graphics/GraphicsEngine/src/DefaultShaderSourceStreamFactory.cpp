@@ -26,6 +26,7 @@
  */
 
 #include "DefaultShaderSourceStreamFactory.h"
+
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"

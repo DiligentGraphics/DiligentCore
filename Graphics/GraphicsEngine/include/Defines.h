@@ -28,5 +28,5 @@
 #pragma once
 
 #if !D3D11_SUPPORTED && !D3D12_SUPPORTED && !GL_SUPPORTED && !GLES_SUPPORTED && !VULKAN_SUPPORTED && !METAL_SUPPORTED
-#    error No API is supported on this platform. At least one of D3D11_SUPPORTED, D3D12_SUPPORTED, GL_SUPPORTED, GLES_SUPPORTED, VULKAN_SUPPORTED, or METAL_SUPPORTED macros must be defined as 1.
+#    error No API is supported on this platform: one of D3D11_SUPPORTED, D3D12_SUPPORTED, GL_SUPPORTED, GLES_SUPPORTED, VULKAN_SUPPORTED, or METAL_SUPPORTED macros must be defined as 1.
 #endif

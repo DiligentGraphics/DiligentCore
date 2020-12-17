@@ -32,9 +32,9 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
-/// Creates default shader source stream factory
+/// Creates a default shader source stream factory
 /// \param [in]  SearchDirectories           - Semicolon-seprated list of search directories.
-/// \param [out] ppShaderSourceStreamFactory - Memory address where pointer to the shader source stream factory will be written.
+/// \param [out] ppShaderSourceStreamFactory - Memory address where the pointer to the shader source stream factory will be written.
 void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,
                                             IShaderSourceInputStreamFactory** ppShaderSourceStreamFactory);
 

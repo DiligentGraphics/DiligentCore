@@ -90,8 +90,8 @@ struct VertexStreamInfo
 
 /// Base implementation of the device context.
 
-/// \tparam BaseInterface         - base interface that this class will inheret.
-/// \tparam ImplementationTraits  - implementation traits that define specific implementation details
+/// \tparam BaseInterface         - Base interface that this class will inheret.
+/// \tparam ImplementationTraits  - Implementation traits that define specific implementation details
 ///                                 (texture implemenation type, buffer implementation type, etc.)
 /// \remarks Device context keeps strong references to all objects currently bound to
 ///          the pipeline: buffers, tetxures, states, SRBs, etc.
@@ -113,9 +113,9 @@ public:
     using BottomLevelASType     = typename ImplementationTraits::BottomLevelASType;
     using TopLevelASType        = typename ImplementationTraits::TopLevelASType;
 
-    /// \param pRefCounters  - reference counters object that controls the lifetime of this device context.
-    /// \param pRenderDevice - render device.
-    /// \param bIsDeferred   - flag indicating if this instance is a deferred context
+    /// \param pRefCounters  - Reference counters object that controls the lifetime of this device context.
+    /// \param pRenderDevice - Render device.
+    /// \param bIsDeferred   - Flag indicating if this instance is a deferred context
     DeviceContextBase(IReferenceCounters* pRefCounters, DeviceImplType* pRenderDevice, bool bIsDeferred) :
         // clang-format off
         TObjectBase  {pRefCounters },
@@ -491,9 +491,9 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::CommitShader
     int)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    VERIFY(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
-           "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
-           "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
+    DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
+                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     if (!m_pPipelineState)
     {
@@ -532,9 +532,9 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetIndexBuff
     m_pIndexBuffer         = ValidatedCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
 #ifdef DILIGENT_DEVELOPMENT
-    VERIFY(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
-           "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
-           "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
+    DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
+                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     if (m_pIndexBuffer)
     {
@@ -551,8 +551,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetIndexBuff
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef)
 {
-    VERIFY(ppPSO != nullptr, "Null pointer provided null");
-    VERIFY(*ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state");
+    DEV_CHECK_ERR(ppPSO != nullptr, "Null pointer provided null");
+    DEV_CHECK_ERR(*ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state");
     if (m_pPipelineState)
     {
         m_pPipelineState->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPSO));
@@ -604,7 +604,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetViewports
         RTHeight = m_FramebufferHeight;
     }
 
-    VERIFY(NumViewports < MAX_VIEWPORTS, "Number of viewports (", NumViewports, ") exceeds the limit (", MAX_VIEWPORTS, ")");
+    DEV_CHECK_ERR(NumViewports < MAX_VIEWPORTS, "Number of viewports (", NumViewports, ") exceeds the limit (", MAX_VIEWPORTS, ")");
     m_NumViewports = std::min(MAX_VIEWPORTS, NumViewports);
 
     Viewport DefaultVP(0, 0, static_cast<float>(RTWidth), static_cast<float>(RTHeight));
@@ -617,9 +617,9 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetViewports
     for (Uint32 vp = 0; vp < m_NumViewports; ++vp)
     {
         m_Viewports[vp] = pViewports[vp];
-        VERIFY(m_Viewports[vp].Width >= 0, "Incorrect viewport width (", m_Viewports[vp].Width, ")");
-        VERIFY(m_Viewports[vp].Height >= 0, "Incorrect viewport height (", m_Viewports[vp].Height, ")");
-        VERIFY(m_Viewports[vp].MaxDepth >= m_Viewports[vp].MinDepth, "Incorrect viewport depth range [", m_Viewports[vp].MinDepth, ", ", m_Viewports[vp].MaxDepth, "]");
+        DEV_CHECK_ERR(m_Viewports[vp].Width >= 0, "Incorrect viewport width (", m_Viewports[vp].Width, ")");
+        DEV_CHECK_ERR(m_Viewports[vp].Height >= 0, "Incorrect viewport height (", m_Viewports[vp].Height, ")");
+        DEV_CHECK_ERR(m_Viewports[vp].MaxDepth >= m_Viewports[vp].MinDepth, "Incorrect viewport depth range [", m_Viewports[vp].MinDepth, ", ", m_Viewports[vp].MaxDepth, "]");
     }
 }
 
@@ -647,14 +647,14 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetScissorRe
         RTHeight = m_FramebufferHeight;
     }
 
-    VERIFY(NumRects < MAX_VIEWPORTS, "Number of scissor rects (", NumRects, ") exceeds the limit (", MAX_VIEWPORTS, ")");
+    DEV_CHECK_ERR(NumRects < MAX_VIEWPORTS, "Number of scissor rects (", NumRects, ") exceeds the limit (", MAX_VIEWPORTS, ")");
     m_NumScissorRects = std::min(MAX_VIEWPORTS, NumRects);
 
     for (Uint32 sr = 0; sr < m_NumScissorRects; ++sr)
     {
         m_ScissorRects[sr] = pRects[sr];
-        VERIFY(m_ScissorRects[sr].left <= m_ScissorRects[sr].right, "Incorrect horizontal bounds for a scissor rect [", m_ScissorRects[sr].left, ", ", m_ScissorRects[sr].right, ")");
-        VERIFY(m_ScissorRects[sr].top <= m_ScissorRects[sr].bottom, "Incorrect vertical bounds for a scissor rect [", m_ScissorRects[sr].top, ", ", m_ScissorRects[sr].bottom, ")");
+        DEV_CHECK_ERR(m_ScissorRects[sr].left <= m_ScissorRects[sr].right, "Incorrect horizontal bounds for a scissor rect [", m_ScissorRects[sr].left, ", ", m_ScissorRects[sr].right, ")");
+        DEV_CHECK_ERR(m_ScissorRects[sr].top <= m_ScissorRects[sr].bottom, "Incorrect vertical bounds for a scissor rect [", m_ScissorRects[sr].top, ", ", m_ScissorRects[sr].bottom, ")");
     }
 }
 
@@ -1288,8 +1288,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateBuffer
     const void*                    pData,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    VERIFY(pBuffer != nullptr, "Buffer must not be null");
-    VERIFY(m_pActiveRenderPass == nullptr, "UpdateBuffer command must be used outside of render pass.");
+    DEV_CHECK_ERR(pBuffer != nullptr, "Buffer must not be null");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& BuffDesc = ValidatedCast<BufferImplType>(pBuffer)->GetDesc();
@@ -1310,9 +1310,9 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBuffer(
     Uint32                         Size,
     RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
 {
-    VERIFY(pSrcBuffer != nullptr, "Source buffer must not be null");
-    VERIFY(pDstBuffer != nullptr, "Destination buffer must not be null");
-    VERIFY(m_pActiveRenderPass == nullptr, "CopyBuffer command must be used outside of render pass.");
+    DEV_CHECK_ERR(pSrcBuffer != nullptr, "Source buffer must not be null");
+    DEV_CHECK_ERR(pDstBuffer != nullptr, "Destination buffer must not be null");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "CopyBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& SrcBufferDesc = ValidatedCast<BufferImplType>(pSrcBuffer)->GetDesc();
@@ -1330,7 +1330,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::MapBuffer(
     MAP_FLAGS MapFlags,
     PVoid&    pMappedData)
 {
-    VERIFY(pBuffer, "pBuffer must not be null");
+    DEV_CHECK_ERR(pBuffer, "pBuffer must not be null");
 
     const auto& BuffDesc = pBuffer->GetDesc();
 
@@ -1406,8 +1406,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateTextur
     RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
     RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
 {
-    VERIFY(pTexture != nullptr, "pTexture must not be null");
-    VERIFY(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
+    DEV_CHECK_ERR(pTexture != nullptr, "pTexture must not be null");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
 
     ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData);
 }
@@ -1415,9 +1415,9 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateTextur
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
-    VERIFY(CopyAttribs.pSrcTexture, "Src texture must not be null");
-    VERIFY(CopyAttribs.pDstTexture, "Dst texture must not be null");
-    VERIFY(m_pActiveRenderPass == nullptr, "CopyTexture command must be used outside of render pass.");
+    DEV_CHECK_ERR(CopyAttribs.pSrcTexture, "Src texture must not be null");
+    DEV_CHECK_ERR(CopyAttribs.pDstTexture, "Dst texture must not be null");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "CopyTexture command must be used outside of render pass.");
 
     ValidateCopyTextureParams(CopyAttribs);
 }
@@ -1432,7 +1432,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::MapTextureSu
     const Box*                pMapRegion,
     MappedTextureSubresource& MappedData)
 {
-    VERIFY(pTexture, "pTexture must not be null");
+    DEV_CHECK_ERR(pTexture, "pTexture must not be null");
     ValidateMapTextureParams(pTexture->GetDesc(), MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
 }
 
@@ -1442,7 +1442,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UnmapTexture
     Uint32    MipLevel,
     Uint32    ArraySlice)
 {
-    VERIFY(pTexture, "pTexture must not be null");
+    DEV_CHECK_ERR(pTexture, "pTexture must not be null");
     DEV_CHECK_ERR(MipLevel < pTexture->GetDesc().MipLevels, "Mip level is out of range");
     DEV_CHECK_ERR(ArraySlice < pTexture->GetDesc().ArraySize, "Array slice is out of range");
 }
@@ -1450,8 +1450,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UnmapTexture
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GenerateMips(ITextureView* pTexView)
 {
-    VERIFY(pTexView != nullptr, "pTexView must not be null");
-    VERIFY(m_pActiveRenderPass == nullptr, "GenerateMips command must be used outside of render pass.");
+    DEV_CHECK_ERR(pTexView != nullptr, "pTexView must not be null");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "GenerateMips command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& ViewDesc = pTexView->GetDesc();
@@ -1471,9 +1471,9 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResolveTextureSubre
     const ResolveTextureSubresourceAttribs& ResolveAttribs)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    VERIFY(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource command must be used outside of render pass.");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource command must be used outside of render pass.");
 
-    VERIFY_EXPR(pSrcTexture != nullptr && pDstTexture != nullptr);
+    DEV_CHECK_ERR(pSrcTexture != nullptr && pDstTexture != nullptr, "Src and Dst textures must not be null");
     const auto& SrcTexDesc = pSrcTexture->GetDesc();
     const auto& DstTexDesc = pDstTexture->GetDesc();
 
@@ -1657,10 +1657,10 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const Tra
     if (!VerifyTraceRaysAttribs(Attribs))
         return false;
 
-    if (m_pPipelineState.RawPtr() != Attribs.pSBT->GetDesc().pPSO)
+    if (!PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)))
     {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline ", m_pPipelineState->GetDesc().Name,
-                          "doesn't match the pipeline ", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, " that was used in ShaderBindingTable");
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
+                          "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
         return false;
     }
 
