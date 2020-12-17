@@ -31,9 +31,9 @@
 /// Implementation of the Diligent::PipelineStateBase template class
 
 #include <array>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <cstring>
 
 #include "PipelineState.h"
 #include "DeviceObjectBase.hpp"
@@ -56,12 +56,12 @@ void CopyRayTracingShaderGroups(std::unordered_map<HashMapStringKey, Uint32, Has
 
 void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept;
 
-/// Template class implementing base functionality for a pipeline state object.
+/// Template class implementing base functionality of the pipeline state object.
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::IPipelineStateD3D11, Diligent::IPipelineStateD3D12,
 ///                          Diligent::IPipelineStateGL or Diligent::IPipelineStateVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>
@@ -84,11 +84,13 @@ private:
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0,
                       "No bits in the command queue mask (0x", std::hex, this->m_Desc.CommandQueueMask,
-                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
+                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues.");
         this->m_Desc.CommandQueueMask &= DeviceQueuesMask;
     }
 
 public:
+    /// Initializes the object as graphics pipeline
+
     /// \param pRefCounters       - Reference counters object that controls the lifetime of this PSO
     /// \param pDevice            - Pointer to the device.
     /// \param GraphicsPipelineCI - Graphics pipeline create information.
@@ -103,6 +105,8 @@ public:
         ValidateGraphicsPipelineCreateInfo(GraphicsPipelineCI);
     }
 
+    /// Initializes the object as compute pipeline
+
     /// \param pRefCounters       - Reference counters object that controls the lifetime of this PSO
     /// \param pDevice            - Pointer to the device.
     /// \param ComputePipelineCI  - Compute pipeline create information.
@@ -116,6 +120,8 @@ public:
     {
         ValidateComputePipelineCreateInfo(ComputePipelineCI);
     }
+
+    /// Initializes the object as ray tracing pipeline
 
     /// \param pRefCounters         - Reference counters object that controls the lifetime of this PSO
     /// \param pDevice              - Pointer to the device.
@@ -231,7 +237,7 @@ public:
             std::memcpy(pData, &m_pRayTracingPipelineData->Shaders[ShaderHandleSize * iter->second], ShaderHandleSize);
             return;
         }
-        UNEXPECTED("Can't find shader group with specified name");
+        UNEXPECTED("Can't find shader group with the specified name");
     }
 
 protected:
@@ -242,7 +248,7 @@ protected:
         if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'.");
             return -1;
         }
 
@@ -251,7 +257,7 @@ protected:
         if (LayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'");
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
         return LayoutInd;
@@ -262,7 +268,7 @@ protected:
         if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'.");
             return -1;
         }
 
@@ -271,7 +277,7 @@ protected:
         if (LayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'");
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
         return LayoutInd;
@@ -282,7 +288,7 @@ protected:
         if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'.");
             return -1;
         }
 
@@ -291,7 +297,7 @@ protected:
         if (LayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'");
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
         return LayoutInd;
@@ -343,10 +349,10 @@ protected:
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
-        // reserve size for shader handles
+        // Reserve space for shader handles
         const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
-        // Extra bytes are reserved to avoid compiler errors on zero-sized arrays
+        // Extra bytes were reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::Shaders);
         MemPool.AddSpace(RTDataSize, alignof(RayTracingPipelineData));
     }
@@ -459,12 +465,12 @@ protected:
         }
 
         if (ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_GEN, PIPELINE_TYPE_RAY_TRACING)].Count() == 0)
-            LOG_ERROR_AND_THROW("At least one shader with type SHADER_TYPE_RAY_GEN must be provided");
+            LOG_ERROR_AND_THROW("At least one shader with type SHADER_TYPE_RAY_GEN must be provided.");
 
         if (ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_MISS, PIPELINE_TYPE_RAY_TRACING)].Count() == 0)
-            LOG_ERROR_AND_THROW("At least one shader with type SHADER_TYPE_RAY_MISS must be provided");
+            LOG_ERROR_AND_THROW("At least one shader with type SHADER_TYPE_RAY_MISS must be provided.");
 
-        // remove empty stages
+        // Remove empty stages
         for (auto iter = ShaderStages.begin(); iter != ShaderStages.end();)
         {
             if (iter->Count() == 0)
@@ -626,11 +632,11 @@ protected:
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
-        // reserve size for shader handles
+        // Reserve space for shader handles
         const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const auto ShaderDataSize   = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         RTDataSize += ShaderDataSize;
-        // Extra bytes are reserved to avoid compiler errors on zero-sized arrays
+        // Extra bytes were reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::Shaders);
 
         this->m_pRayTracingPipelineData = static_cast<RayTracingPipelineData*>(MemPool.Allocate(RTDataSize, alignof(RayTracingPipelineData)));

@@ -237,11 +237,11 @@ public:
         const size_t SBTObjSize;
     };
 
-    /// \param pRefCounters        - reference counters object that controls the lifetime of this render device
-    /// \param RawMemAllocator     - allocator that will be used to allocate memory for all device objects (including render device itself)
-    /// \param pEngineFactory      - engine factory that was used to create this device
-    /// \param NumDeferredContexts - number of deferred device contexts
-    /// \param ObjectSizes         - device object sizes
+    /// \param pRefCounters        - Reference counters object that controls the lifetime of this render device
+    /// \param RawMemAllocator     - Allocator that will be used to allocate memory for all device objects (including render device itself)
+    /// \param pEngineFactory      - Engine factory that was used to create this device
+    /// \param NumDeferredContexts - The number of deferred device contexts
+    /// \param ObjectSizes         - Device object sizes
     ///
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
     ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
@@ -482,13 +482,13 @@ void RenderDeviceBase<BaseInterface>::CreateResourceMapping(const ResourceMappin
 }
 
 
-/// \tparam TObjectType - type of the object being created (IBuffer, ITexture, etc.)
-/// \tparam TObjectDescType - type of the object description structure (BufferDesc, TextureDesc, etc.)
-/// \tparam TObjectConstructor - type of the function that constructs the object
-/// \param ObjectTypeName - string name of the object type ("buffer", "texture", etc.)
-/// \param Desc - object description
-/// \param ppObject - memory address where the pointer to the created object will be stored
-/// \param ConstructObject - function that constructs the object
+/// \tparam TObjectType        - The type of the object being created (IBuffer, ITexture, etc.).
+/// \tparam TObjectDescType    - The type of the object description structure (BufferDesc, TextureDesc, etc.).
+/// \tparam TObjectConstructor - The type of the function that constructs the object.
+/// \param ObjectTypeName      - String name of the object type ("buffer", "texture", etc.).
+/// \param Desc                - Object description.
+/// \param ppObject            - Memory address where the pointer to the created object will be stored.
+/// \param ConstructObject     - Function that constructs the object.
 template <typename BaseInterface>
 template <typename TObjectType, typename TObjectDescType, typename TObjectConstructor>
 void RenderDeviceBase<BaseInterface>::CreateDeviceObject(const Char* ObjectTypeName, const TObjectDescType& Desc, TObjectType** ppObject, TObjectConstructor ConstructObject)

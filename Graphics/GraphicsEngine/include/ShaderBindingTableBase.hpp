@@ -31,6 +31,7 @@
 /// Implementation of the Diligent::ShaderBindingTableBase template class
 
 #include <unordered_map>
+#include <cstring>
 
 #include "ShaderBindingTable.h"
 #include "TopLevelASBase.hpp"
@@ -45,11 +46,11 @@ namespace Diligent
 /// Validates SBT description and throws an exception in case of an error.
 void ValidateShaderBindingTableDesc(const ShaderBindingTableDesc& Desc, Uint32 ShaderGroupHandleSize, Uint32 MaxShaderRecordStride) noexcept(false);
 
-/// Template class implementing base functionality for a shader binding table object.
+/// Template class implementing base functionality of the shader binding table object.
 
-/// \tparam BaseInterface        - base interface that this class will inheret
+/// \tparam BaseInterface        - Base interface that this class will inheret
 ///                                (Diligent::IShaderBindingTableD3D12 or Diligent::IShaderBindingTableVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class PipelineStateImplType, class TopLevelASImplType, class RenderDeviceImplType>
 class ShaderBindingTableBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderBindingTableDesc>
@@ -57,10 +58,10 @@ class ShaderBindingTableBase : public DeviceObjectBase<BaseInterface, RenderDevi
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderBindingTableDesc>;
 
-    /// \param pRefCounters      - reference counters object that controls the lifetime of this SBT.
-    /// \param pDevice           - pointer to the device.
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this SBT.
+    /// \param pDevice           - Pointer to the device.
     /// \param Desc              - SBT description.
-    /// \param bIsDeviceInternal - flag indicating if the BLAS is an internal device object and
+    /// \param bIsDeviceInternal - Flag indicating if the BLAS is an internal device object and
     ///							   must not keep a strong reference to the device.
     ShaderBindingTableBase(IReferenceCounters*           pRefCounters,
                            RenderDeviceImplType*         pDevice,
@@ -351,7 +352,7 @@ public:
 
                     if (Count == ShSize)
                     {
-                        LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: shader in '", GroupName, "'(", i / Stride, ") is not bound");
+                        LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: shader in '", GroupName, "'(", i / Stride, ") is not bound.");
                         return false;
                     }
                 }
@@ -362,10 +363,10 @@ public:
                     for (size_t j = ShSize; j < Stride; ++j)
                         Count += (Data[i + j] == EmptyElem);
 
-                    // shader record data may not used in shader
+                    // shader record data may not be used in the shader
                     if (Count == Stride - ShSize)
                     {
-                        LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: shader record data in '", GroupName, "'(", i / Stride, ") is not initialized");
+                        LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: shader record data in '", GroupName, "' (", i / Stride, ") is not initialized.");
                         return false;
                     }
                 }
@@ -375,7 +376,7 @@ public:
 
         if (m_RayGenShaderRecord.empty())
         {
-            LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: ray generation shader is not bound");
+            LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: ray generation shader is not bound.");
             return false;
         }
 
@@ -387,18 +388,18 @@ public:
                 auto  pTLAS   = Binding.pTLAS.Lock();
                 if (!Binding.IsBound)
                 {
-                    LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: hit group at index (", i, ") is not bound");
+                    LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: hit group at index (", i, ") is not bound.");
                     return false;
                 }
                 if (!pTLAS)
                 {
-                    LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: TLAS that was used to bind hit group at index (", i, ") was deleted");
+                    LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: TLAS that was used to bind hit group at index (", i, ") was deleted.");
                     return false;
                 }
                 if (pTLAS->GetVersion() != Binding.Version)
                 {
                     LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: TLAS that was used to bind hit group at index '(", i,
-                                     ") with name '", pTLAS->GetDesc().Name, " was changed and no longer compatible with SBT");
+                                     ") with name '", pTLAS->GetDesc().Name, " was changed and no longer compatible with SBT.");
                     return false;
                 }
             }
@@ -463,7 +464,7 @@ public:
 
         pSBTBuffer = this->m_pBuffer;
 
-        if (m_RayGenShaderRecord.size())
+        if (!m_RayGenShaderRecord.empty())
         {
             RaygenShaderBindingTable.pData  = this->m_Changed ? m_RayGenShaderRecord.data() : nullptr;
             RaygenShaderBindingTable.Offset = RayGenOffset;
@@ -471,7 +472,7 @@ public:
             RaygenShaderBindingTable.Stride = this->m_ShaderRecordStride;
         }
 
-        if (m_MissShadersRecord.size())
+        if (!m_MissShadersRecord.empty())
         {
             MissShaderBindingTable.pData  = this->m_Changed ? m_MissShadersRecord.data() : nullptr;
             MissShaderBindingTable.Offset = MissShaderOffset;
@@ -479,7 +480,7 @@ public:
             MissShaderBindingTable.Stride = this->m_ShaderRecordStride;
         }
 
-        if (m_HitGroupsRecord.size())
+        if (!m_HitGroupsRecord.empty())
         {
             HitShaderBindingTable.pData  = this->m_Changed ? m_HitGroupsRecord.data() : nullptr;
             HitShaderBindingTable.Offset = HitGroupOffset;
@@ -487,7 +488,7 @@ public:
             HitShaderBindingTable.Stride = this->m_ShaderRecordStride;
         }
 
-        if (m_CallableShadersRecord.size())
+        if (!m_CallableShadersRecord.empty())
         {
             CallableShaderBindingTable.pData  = this->m_Changed ? m_CallableShadersRecord.data() : nullptr;
             CallableShaderBindingTable.Offset = CallableShadersOffset;

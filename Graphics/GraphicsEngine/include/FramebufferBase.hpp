@@ -41,11 +41,11 @@ namespace Diligent
 
 void ValidateFramebufferDesc(const FramebufferDesc& Desc) noexcept(false);
 
-/// Template class implementing base functionality for the framebuffer object.
+/// Template class implementing base functionality of the framebuffer object.
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (e.g. Diligent::IFramebufferVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>
@@ -54,10 +54,10 @@ class FramebufferBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplT
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, FramebufferDesc>;
 
-    /// \param pRefCounters      - reference counters object that controls the lifetime of this framebuffer pass.
-    /// \param pDevice           - pointer to the device.
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this framebuffer pass.
+    /// \param pDevice           - Pointer to the device.
     /// \param Desc              - Framebuffer description.
-    /// \param bIsDeviceInternal - flag indicating if the Framebuffer is an internal device object and
+    /// \param bIsDeviceInternal - Flag indicating if the Framebuffer is an internal device object and
     ///							   must not keep a strong reference to the device.
     FramebufferBase(IReferenceCounters*    pRefCounters,
                     RenderDeviceImplType*  pDevice,
@@ -68,32 +68,24 @@ public:
     {
         ValidateFramebufferDesc(this->m_Desc);
 
-        if (this->m_Desc.AttachmentCount > 0)
+        if (this->m_Desc.Width == 0 || this->m_Desc.Height == 0 || this->m_Desc.NumArraySlices == 0)
         {
-            m_ppAttachments =
-                ALLOCATE(GetRawAllocator(), "Memory for framebuffer attachment array", ITextureView*, this->m_Desc.AttachmentCount);
-            this->m_Desc.ppAttachments = m_ppAttachments;
             for (Uint32 i = 0; i < this->m_Desc.AttachmentCount; ++i)
             {
-                if (Desc.ppAttachments[i] == nullptr)
+                auto* const pAttachment = Desc.ppAttachments[i];
+                if (pAttachment == nullptr)
                     continue;
 
-                m_ppAttachments[i] = Desc.ppAttachments[i];
-                m_ppAttachments[i]->AddRef();
+                const auto& ViewDesc = pAttachment->GetDesc();
+                const auto& TexDesc  = pAttachment->GetTexture()->GetDesc();
 
-                if (this->m_Desc.Width == 0 || this->m_Desc.Height == 0 || this->m_Desc.NumArraySlices == 0)
-                {
-                    const auto& ViewDesc = m_ppAttachments[i]->GetDesc();
-                    const auto& TexDesc  = m_ppAttachments[i]->GetTexture()->GetDesc();
-
-                    auto MipLevelProps = GetMipLevelProperties(TexDesc, ViewDesc.MostDetailedMip);
-                    if (this->m_Desc.Width == 0)
-                        this->m_Desc.Width = MipLevelProps.LogicalWidth;
-                    if (this->m_Desc.Height == 0)
-                        this->m_Desc.Height = MipLevelProps.LogicalHeight;
-                    if (this->m_Desc.NumArraySlices == 0)
-                        this->m_Desc.NumArraySlices = ViewDesc.NumArraySlices;
-                }
+                auto MipLevelProps = GetMipLevelProperties(TexDesc, ViewDesc.MostDetailedMip);
+                if (this->m_Desc.Width == 0)
+                    this->m_Desc.Width = MipLevelProps.LogicalWidth;
+                if (this->m_Desc.Height == 0)
+                    this->m_Desc.Height = MipLevelProps.LogicalHeight;
+                if (this->m_Desc.NumArraySlices == 0)
+                    this->m_Desc.NumArraySlices = ViewDesc.NumArraySlices;
             }
         }
 
@@ -107,6 +99,21 @@ public:
             LOG_ERROR_AND_THROW("The framebuffer height is zero and can't be automatically determined as there are no non-null attachments");
         if (this->m_Desc.NumArraySlices == 0)
             LOG_ERROR_AND_THROW("The framebuffer array slice count is zero and can't be automatically determined as there are no non-null attachments");
+
+        if (this->m_Desc.AttachmentCount > 0)
+        {
+            m_ppAttachments =
+                ALLOCATE(GetRawAllocator(), "Memory for framebuffer attachment array", ITextureView*, this->m_Desc.AttachmentCount);
+            this->m_Desc.ppAttachments = m_ppAttachments;
+            for (Uint32 i = 0; i < this->m_Desc.AttachmentCount; ++i)
+            {
+                if (Desc.ppAttachments[i] == nullptr)
+                    continue;
+
+                m_ppAttachments[i] = Desc.ppAttachments[i];
+                m_ppAttachments[i]->AddRef();
+            }
+        }
 
         Desc.pRenderPass->AddRef();
     }

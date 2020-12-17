@@ -57,11 +57,11 @@ inline void _CorrectAttachmentState<class RenderDeviceVkImpl>(RESOURCE_STATE& St
     }
 }
 
-/// Template class implementing base functionality for the render pass object.
+/// Template class implementing base functionality of the render pass object.
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (e.g. Diligent::IRenderPassVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>
@@ -70,10 +70,10 @@ class RenderPassBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplTy
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, RenderPassDesc>;
 
-    /// \param pRefCounters      - reference counters object that controls the lifetime of this render pass.
-    /// \param pDevice           - pointer to the device.
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this render pass.
+    /// \param pDevice           - Pointer to the device.
     /// \param Desc              - Render pass description.
-    /// \param bIsDeviceInternal - flag indicating if the RenderPass is an internal device object and
+    /// \param bIsDeviceInternal - Flag indicating if the RenderPass is an internal device object and
     ///							   must not keep a strong reference to the device.
     RenderPassBase(IReferenceCounters*   pRefCounters,
                    RenderDeviceImplType* pDevice,

@@ -36,12 +36,12 @@ void ValidateShaderBindingTableDesc(const ShaderBindingTableDesc& Desc, Uint32 S
 
     if (Desc.pPSO == nullptr)
     {
-        LOG_SBT_ERROR_AND_THROW("pPSO must not be null");
+        LOG_SBT_ERROR_AND_THROW("pPSO must not be null.");
     }
 
     if (Desc.pPSO->GetDesc().PipelineType != PIPELINE_TYPE_RAY_TRACING)
     {
-        LOG_SBT_ERROR_AND_THROW("pPSO must be ray tracing pipeline");
+        LOG_SBT_ERROR_AND_THROW("pPSO must be ray tracing pipeline.");
     }
 
 

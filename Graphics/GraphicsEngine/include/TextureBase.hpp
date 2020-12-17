@@ -82,13 +82,13 @@ class TextureBase : public DeviceObjectBase<BaseInterface, TRenderDeviceImpl, Te
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, TRenderDeviceImpl, TextureDesc>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this texture.
-    /// \param TexViewObjAllocator - allocator that is used to allocate memory for the instances of the texture view object.
+    /// \param pRefCounters        - Reference counters object that controls the lifetime of this texture.
+    /// \param TexViewObjAllocator - Allocator that is used to allocate memory for the instances of the texture view object.
     ///                              This parameter is only used for debug purposes.
-    /// \param pDevice - pointer to the device
-    /// \param Desc - texture description
-    /// \param bIsDeviceInternal - flag indicating if the texture is an internal device object and
-    ///							   must not keep a strong reference to the device
+    /// \param pDevice             - Pointer to the device
+    /// \param Desc                - Texture description
+    /// \param bIsDeviceInternal   - Flag indicating if the texture is an internal device object and
+    ///							     must not keep a strong reference to the device
     TextureBase(IReferenceCounters*   pRefCounters,
                 TTexViewObjAllocator& TexViewObjAllocator,
                 TRenderDeviceImpl*    pDevice,
@@ -149,15 +149,15 @@ public:
     {
         DEV_CHECK_ERR(ViewDesc.ViewType != TEXTURE_VIEW_UNDEFINED, "Texture view type is not specified");
         if (ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
-            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_SHADER_RESOURCE, "Attempting to create SRV for texture '", this->m_Desc.Name, "' that was not created with BIND_SHADER_RESOURCE flag");
+            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_SHADER_RESOURCE, "Attempting to create SRV for texture '", this->m_Desc.Name, "' that was not created with BIND_SHADER_RESOURCE flag.");
         else if (ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS)
-            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "Attempting to create UAV for texture '", this->m_Desc.Name, "' that was not created with BIND_UNORDERED_ACCESS flag");
+            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "Attempting to create UAV for texture '", this->m_Desc.Name, "' that was not created with BIND_UNORDERED_ACCESS flag.");
         else if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET)
-            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_RENDER_TARGET, "Attempting to create RTV for texture '", this->m_Desc.Name, "' that was not created with BIND_RENDER_TARGET flag");
+            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_RENDER_TARGET, "Attempting to create RTV for texture '", this->m_Desc.Name, "' that was not created with BIND_RENDER_TARGET flag.");
         else if (ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
-            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_DEPTH_STENCIL, "Attempting to create DSV for texture '", this->m_Desc.Name, "' that was not created with BIND_DEPTH_STENCIL flag");
+            DEV_CHECK_ERR(this->m_Desc.BindFlags & BIND_DEPTH_STENCIL, "Attempting to create DSV for texture '", this->m_Desc.Name, "' that was not created with BIND_DEPTH_STENCIL flag.");
         else
-            UNEXPECTED("Unexpected texture view type");
+            UNEXPECTED("Unexpected texture view type.");
 
         CreateViewInternal(ViewDesc, ppView, false);
     }
@@ -217,8 +217,8 @@ public:
 
             ITextureView* pView = nullptr;
             CreateViewInternal(ViewDesc, &pView, true);
-            VERIFY(pView != nullptr, "Failed to create default view for texture '", this->m_Desc.Name, "'");
-            VERIFY(pView->GetDesc().ViewType == ViewType, "Unexpected view type");
+            VERIFY(pView != nullptr, "Failed to create default view for texture '", this->m_Desc.Name, "'.");
+            VERIFY(pView->GetDesc().ViewType == ViewType, "Unexpected view type.");
 
             return static_cast<TTextureViewImpl*>(pView);
         };

@@ -88,14 +88,14 @@ private:
     {
         using TBase = HashMapStringKey;
 
-        ResMappingHashKey(const Char* Str, bool bMakeCopy, Uint32 ArrInd) :
+        ResMappingHashKey(const Char* Str, bool bMakeCopy, Uint32 ArrInd) noexcept :
             HashMapStringKey{Str, bMakeCopy},
             ArrayIndex{ArrInd}
         {
             Ownership_Hash = (ComputeHash(GetHash(), ArrInd) & HashMask) | (Ownership_Hash & StrOwnershipMask);
         }
 
-        ResMappingHashKey(ResMappingHashKey&& rhs) :
+        ResMappingHashKey(ResMappingHashKey&& rhs) noexcept :
             HashMapStringKey{std::move(rhs)},
             ArrayIndex{rhs.ArrayIndex}
         {}

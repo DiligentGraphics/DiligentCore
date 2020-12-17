@@ -42,7 +42,7 @@ namespace Diligent
 
 /// Base implementation of the swap chain.
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::ISwapChainGL, Diligent::ISwapChainD3D11,
 ///                          Diligent::ISwapChainD3D12 or Diligent::ISwapChainVk).
 /// \remarks Swap chain holds the strong reference to the device and a weak reference to the
@@ -53,10 +53,10 @@ class SwapChainBase : public ObjectBase<BaseInterface>
 public:
     using TObjectBase = ObjectBase<BaseInterface>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this swap chain.
-    /// \param pDevice - pointer to the device.
-    /// \param pDeviceContext - pointer to the device context.
-    /// \param SCDesc - swap chain description
+    /// \param pRefCounters   - Reference counters object that controls the lifetime of this swap chain.
+    /// \param pDevice        - Pointer to the device.
+    /// \param pDeviceContext - Pointer to the device context.
+    /// \param SCDesc         - Swap chain description
     SwapChainBase(IReferenceCounters*  pRefCounters,
                   IRenderDevice*       pDevice,
                   IDeviceContext*      pDeviceContext,

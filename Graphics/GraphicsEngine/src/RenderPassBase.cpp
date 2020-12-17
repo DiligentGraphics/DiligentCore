@@ -26,6 +26,7 @@
  */
 
 #include "RenderPassBase.hpp"
+
 #include "GraphicsAccessories.hpp"
 #include "Align.hpp"
 

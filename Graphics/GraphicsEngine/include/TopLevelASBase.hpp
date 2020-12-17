@@ -46,11 +46,11 @@ namespace Diligent
 /// Validates top-level AS description and throws an exception in case of an error.
 void ValidateTopLevelASDesc(const TopLevelASDesc& Desc) noexcept(false);
 
-/// Template class implementing base functionality for a top-level acceleration structure object.
+/// Template class implementing base functionality of the top-level acceleration structure object.
 
-/// \tparam BaseInterface        - base interface that this class will inheret
+/// \tparam BaseInterface        - Base interface that this class will inheret
 ///                                (Diligent::ITopLevelASD3D12 or Diligent::ITopLevelASVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class BottomLevelASType, class RenderDeviceImplType>
 class TopLevelASBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, TopLevelASDesc>
@@ -69,10 +69,10 @@ private:
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, TopLevelASDesc>;
 
-    /// \param pRefCounters      - reference counters object that controls the lifetime of this BLAS.
-    /// \param pDevice           - pointer to the device.
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this BLAS.
+    /// \param pDevice           - Pointer to the device.
     /// \param Desc              - TLAS description.
-    /// \param bIsDeviceInternal - flag indicating if the BLAS is an internal device object and
+    /// \param bIsDeviceInternal - Flag indicating if the BLAS is an internal device object and
     ///							   must not keep a strong reference to the device.
     TopLevelASBase(IReferenceCounters*   pRefCounters,
                    RenderDeviceImplType* pDevice,
@@ -140,14 +140,14 @@ public:
             this->m_BuildInfo.InstanceCount                    = InstanceCount;
 
 #ifdef DILIGENT_DEVELOPMENT
-            this->m_DbgVersion.fetch_add(1);
+            this->m_DvpVersion.fetch_add(1);
 #endif
             return true;
         }
         catch (...)
         {
 #ifdef DILIGENT_DEVELOPMENT
-            this->m_DbgVersion.fetch_add(1);
+            this->m_DvpVersion.fetch_add(1);
 #endif
             ClearInstanceData();
             return false;
@@ -201,7 +201,7 @@ public:
         Changed = Changed || (this->m_BuildInfo.LastContributionToHitGroupIndex != InstanceOffset);
         Changed = Changed || (this->m_BuildInfo.BindingMode != BindingMode);
         if (Changed)
-            this->m_DbgVersion.fetch_add(1);
+            this->m_DvpVersion.fetch_add(1);
 #endif
         this->m_BuildInfo.HitGroupStride                   = HitGroupStride;
         this->m_BuildInfo.FirstContributionToHitGroupIndex = BaseContributionToHitGroupIndex;
@@ -227,10 +227,11 @@ public:
         VERIFY_EXPR(this->m_StringPool.GetRemainingSize() == 0);
 
 #ifdef DILIGENT_DEVELOPMENT
-        this->m_DbgVersion.fetch_add(1);
+        this->m_DvpVersion.fetch_add(1);
 #endif
     }
 
+    /// Implementation of ITopLevelAS::GetInstanceDesc().
     virtual TLASInstanceDesc DILIGENT_CALL_TYPE GetInstanceDesc(const char* Name) const override final
     {
         VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
@@ -255,11 +256,13 @@ public:
         return Result;
     }
 
+    /// Implementation of ITopLevelAS::GetBuildInfo().
     virtual TLASBuildInfo DILIGENT_CALL_TYPE GetBuildInfo() const override final
     {
         return m_BuildInfo;
     }
 
+    /// Implementation of ITopLevelAS::SetState().
     virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
     {
         VERIFY(State == RESOURCE_STATE_UNKNOWN || State == RESOURCE_STATE_BUILD_AS_READ || State == RESOURCE_STATE_BUILD_AS_WRITE || State == RESOURCE_STATE_RAY_TRACING,
@@ -267,6 +270,7 @@ public:
         this->m_State = State;
     }
 
+    /// Implementation of ITopLevelAS::GetState().
     virtual RESOURCE_STATE DILIGENT_CALL_TYPE GetState() const override final
     {
         return this->m_State;
@@ -308,15 +312,15 @@ public:
 
             if (Inst.Version != Inst.pBLAS->GetVersion())
             {
-                LOG_ERROR_MESSAGE("Instance with name ('", NameAndInst.first.GetStr(), "') has BLAS with name ('", Inst.pBLAS->GetDesc().Name,
-                                  "') that was changed after TLAS build, you must rebuild TLAS");
+                LOG_ERROR_MESSAGE("Instance with name '", NameAndInst.first.GetStr(), "' contains BLAS with name '", Inst.pBLAS->GetDesc().Name,
+                                  "' that was changed after TLAS build, you must rebuild TLAS");
                 result = false;
             }
 
             if (Inst.pBLAS->IsInKnownState() && Inst.pBLAS->GetState() != RESOURCE_STATE_BUILD_AS_READ)
             {
-                LOG_ERROR_MESSAGE("Instance with name ('", NameAndInst.first.GetStr(), "') has BLAS with name ('", Inst.pBLAS->GetDesc().Name,
-                                  "') that must be in BUILD_AS_READ state, but current state is ",
+                LOG_ERROR_MESSAGE("Instance with name '", NameAndInst.first.GetStr(), "' contains BLAS with name '", Inst.pBLAS->GetDesc().Name,
+                                  "' that must be in BUILD_AS_READ state, but current state is ",
                                   GetResourceStateFlagString(Inst.pBLAS->GetState()));
                 result = false;
             }
@@ -326,7 +330,7 @@ public:
 
     Uint32 GetVersion() const
     {
-        return this->m_DbgVersion.load();
+        return this->m_DvpVersion.load();
     }
 #endif // DILIGENT_DEVELOPMENT
 
@@ -375,10 +379,11 @@ protected:
     ScratchBufferSizes m_ScratchSize;
 
     std::unordered_map<HashMapStringKey, InstanceDesc, HashMapStringKey::Hasher> m_Instances;
-    StringPool                                                                   m_StringPool;
+
+    StringPool m_StringPool;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic<Uint32> m_DbgVersion{0};
+    std::atomic<Uint32> m_DvpVersion{0};
 #endif
 };
 

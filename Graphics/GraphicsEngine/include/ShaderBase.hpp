@@ -42,12 +42,12 @@
 namespace Diligent
 {
 
-/// Template class implementing base functionality for a shader object
+/// Template class implementing base functionality of the shader object
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::IShaderD3D11, Diligent::IShaderD3D12,
 ///                          Diligent::IShaderGL or Diligent::IShaderVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>
@@ -56,10 +56,10 @@ class ShaderBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, 
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderDesc>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this shader.
-    /// \param pDevice - pointer to the device.
-    /// \param ShdrDesc - shader description.
-    /// \param bIsDeviceInternal - flag indicating if the shader is an internal device object and
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this shader.
+    /// \param pDevice           - Pointer to the device.
+    /// \param ShdrDesc          - Shader description.
+    /// \param bIsDeviceInternal - Flag indicating if the shader is an internal device object and
     ///							   must not keep a strong reference to the device.
     ShaderBase(IReferenceCounters*   pRefCounters,
                RenderDeviceImplType* pDevice,
@@ -69,19 +69,19 @@ public:
     {
         const auto& deviceFeatures = pDevice->GetDeviceCaps().Features;
         if (ShdrDesc.ShaderType == SHADER_TYPE_GEOMETRY && !deviceFeatures.GeometryShaders)
-            LOG_ERROR_AND_THROW("Geometry shaders are not supported by this device");
+            LOG_ERROR_AND_THROW("Geometry shaders are not supported by this device.");
 
         if ((ShdrDesc.ShaderType == SHADER_TYPE_DOMAIN || ShdrDesc.ShaderType == SHADER_TYPE_HULL) && !deviceFeatures.Tessellation)
-            LOG_ERROR_AND_THROW("Tessellation shaders are not supported by this device");
+            LOG_ERROR_AND_THROW("Tessellation shaders are not supported by this device.");
 
         if (ShdrDesc.ShaderType == SHADER_TYPE_COMPUTE && !deviceFeatures.ComputeShaders)
-            LOG_ERROR_AND_THROW("Compute shaders are not supported by this device");
+            LOG_ERROR_AND_THROW("Compute shaders are not supported by this device.");
 
         if ((ShdrDesc.ShaderType == SHADER_TYPE_AMPLIFICATION || ShdrDesc.ShaderType == SHADER_TYPE_MESH) && !deviceFeatures.MeshShaders)
-            LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device");
+            LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device.");
 
         if ((ShdrDesc.ShaderType >= SHADER_TYPE_RAY_GEN && ShdrDesc.ShaderType <= SHADER_TYPE_CALLABLE) && !deviceFeatures.RayTracing)
-            LOG_ERROR_AND_THROW("Ray tracing shaders are not supported by this device");
+            LOG_ERROR_AND_THROW("Ray tracing shaders are not supported by this device.");
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)

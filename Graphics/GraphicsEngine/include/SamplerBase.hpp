@@ -37,12 +37,12 @@
 namespace Diligent
 {
 
-/// Template class implementing base functionality for a sampler object.
+/// Template class implementing base functionality of the sampler object.
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                          (Diligent::ISamplerD3D11, Diligent::ISamplerD3D12,
 ///                           Diligent::ISamplerGL or Diligent::ISamplerVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>
@@ -51,10 +51,10 @@ class SamplerBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType,
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, SamplerDesc>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this sampler.
-    /// \param pDevice - pointer to the device.
-    /// \param SamDesc - sampler description.
-    /// \param bIsDeviceInternal - flag indicating if the sampler is an internal device object and
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this sampler.
+    /// \param pDevice           - Pointer to the device.
+    /// \param SamDesc           - Sampler description.
+    /// \param bIsDeviceInternal - Flag indicating if the sampler is an internal device object and
     ///							   must not keep a strong reference to the device.
     SamplerBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, SamDesc, bIsDeviceInternal}

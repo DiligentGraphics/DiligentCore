@@ -38,24 +38,24 @@ void ValidateTopLevelASDesc(const TopLevelASDesc& Desc) noexcept(false)
     {
         if (Desc.MaxInstanceCount != 0)
         {
-            LOG_TLAS_ERROR_AND_THROW("If non-zero CompactedSize is specified, MaxInstanceCount must be zero");
+            LOG_TLAS_ERROR_AND_THROW("If non-zero CompactedSize is specified, MaxInstanceCount must be zero.");
         }
 
         if (Desc.Flags != RAYTRACING_BUILD_AS_NONE)
         {
-            LOG_TLAS_ERROR_AND_THROW("If non-zero CompactedSize is specified, Flags must be RAYTRACING_BUILD_AS_NONE");
+            LOG_TLAS_ERROR_AND_THROW("If non-zero CompactedSize is specified, Flags must be RAYTRACING_BUILD_AS_NONE.");
         }
     }
     else
     {
         if (Desc.MaxInstanceCount == 0)
         {
-            LOG_TLAS_ERROR_AND_THROW("MaxInstanceCount must not be zero");
+            LOG_TLAS_ERROR_AND_THROW("MaxInstanceCount must not be zero.");
         }
 
         if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) != 0 && (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD) != 0)
         {
-            LOG_TLAS_ERROR_AND_THROW("RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD flags are mutually exclusive");
+            LOG_TLAS_ERROR_AND_THROW("RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD flags are mutually exclusive.");
         }
     }
 

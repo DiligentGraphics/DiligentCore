@@ -38,9 +38,9 @@
 namespace Diligent
 {
 
-/// Template class implementing base functionality for a Query object
+/// Template class implementing base functionality of the query object
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::IQueryD3D11, Diligent::IQueryD3D12,
 ///                          Diligent::IQueryGL or Diligent::IQueryVk).
 /// \tparam RenderDeviceImplType - type of the render device implementation
@@ -57,10 +57,10 @@ public:
 
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, QueryDesc>;
 
-    /// \param pRefCounters      - reference counters object that controls the lifetime of this command list.
-    /// \param pDevice           - pointer to the device.
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this command list.
+    /// \param pDevice           - Pointer to the device.
     /// \param Desc              - Query description
-    /// \param bIsDeviceInternal - flag indicating if the Query is an internal device object and
+    /// \param bIsDeviceInternal - Flag indicating if the Query is an internal device object and
     ///							   must not keep a strong reference to the device.
     QueryBase(IReferenceCounters*   pRefCounters,
               RenderDeviceImplType* pDevice,
@@ -145,7 +145,7 @@ public:
         {
             if (m_State != QueryState::Querying)
             {
-                LOG_ERROR_MESSAGE("Attempting to end query '", this->m_Desc.Name, "' that has not been begun");
+                LOG_ERROR_MESSAGE("Attempting to end query '", this->m_Desc.Name, "' that has not been begun.");
                 return false;
             }
         }
@@ -154,7 +154,7 @@ public:
         {
             if (this->m_Desc.Type != QUERY_TYPE_TIMESTAMP)
             {
-                LOG_ERROR_MESSAGE("Ending query '", this->m_Desc.Name, "' that has not been begun");
+                LOG_ERROR_MESSAGE("Ending query '", this->m_Desc.Name, "' that has not been begun.");
                 return false;
             }
 
@@ -162,7 +162,7 @@ public:
         }
         else if (m_pContext != pContext)
         {
-            LOG_ERROR_MESSAGE("Query '", this->m_Desc.Name, "' has been begun by another context");
+            LOG_ERROR_MESSAGE("Query '", this->m_Desc.Name, "' has been begun by another context.");
             return false;
         }
 
@@ -179,7 +179,7 @@ public:
     {
         if (m_State != QueryState::Ended)
         {
-            LOG_ERROR_MESSAGE("Attempting to get data of query '", this->m_Desc.Name, "' that has not been ended");
+            LOG_ERROR_MESSAGE("Attempting to get data of query '", this->m_Desc.Name, "' that has not been ended.");
             return false;
         }
 
@@ -191,17 +191,17 @@ public:
                 return false;
             }
 
-            static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
+            static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below.");
             switch (this->m_Desc.Type)
             {
                 case QUERY_TYPE_UNDEFINED:
-                    UNEXPECTED("Undefined query type is unexpected");
+                    UNEXPECTED("Undefined query type is unexpected.");
                     return false;
 
                 case QUERY_TYPE_OCCLUSION:
                     if (DataSize != sizeof(QueryDataOcclusion))
                     {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataOcclusion), " (aka sizeof(QueryDataOcclusion)) is expected");
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataOcclusion), " (aka sizeof(QueryDataOcclusion)) is expected.");
                         return false;
                     }
                     break;
@@ -209,7 +209,7 @@ public:
                 case QUERY_TYPE_BINARY_OCCLUSION:
                     if (DataSize != sizeof(QueryDataBinaryOcclusion))
                     {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataBinaryOcclusion), " (aka sizeof(QueryDataBinaryOcclusion)) is expected");
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataBinaryOcclusion), " (aka sizeof(QueryDataBinaryOcclusion)) is expected.");
                         return false;
                     }
                     break;
@@ -217,7 +217,7 @@ public:
                 case QUERY_TYPE_TIMESTAMP:
                     if (DataSize != sizeof(QueryDataTimestamp))
                     {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataTimestamp), " (aka sizeof(QueryDataTimestamp)) is expected");
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataTimestamp), " (aka sizeof(QueryDataTimestamp)) is expected.");
                         return false;
                     }
                     break;
@@ -225,7 +225,7 @@ public:
                 case QUERY_TYPE_PIPELINE_STATISTICS:
                     if (DataSize != sizeof(QueryDataPipelineStatistics))
                     {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataPipelineStatistics), " (aka sizeof(QueryDataPipelineStatistics)) is expected");
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataPipelineStatistics), " (aka sizeof(QueryDataPipelineStatistics)) is expected.");
                         return false;
                     }
                     break;
@@ -233,13 +233,13 @@ public:
                 case QUERY_TYPE_DURATION:
                     if (DataSize != sizeof(QueryDataDuration))
                     {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataDuration), " (aka sizeof(QueryDataDuration)) is expected");
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataDuration), " (aka sizeof(QueryDataDuration)) is expected.");
                         return false;
                     }
                     break;
 
                 default:
-                    UNEXPECTED("Unexpected query type");
+                    UNEXPECTED("Unexpected query type.");
                     return false;
             }
         }

@@ -42,9 +42,9 @@
 namespace Diligent
 {
 
-/// Template class implementing base functionality for a shader resource binding
+/// Template class implementing base functionality of the shader resource binding
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::IShaderResourceBindingGL, Diligent::IShaderResourceBindingD3D11,
 ///                          Diligent::IShaderResourceBindingD3D12 or Diligent::IShaderResourceBindingVk).
 /// \tparam PipelineStateImplType - Type of the pipeline state implementation
@@ -55,10 +55,10 @@ class ShaderResourceBindingBase : public ObjectBase<BaseInterface>
 public:
     typedef ObjectBase<BaseInterface> TObjectBase;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this SRB.
-    /// \param pPSO - pipeline state that this SRB belongs to.
-    /// \param IsInternal - flag indicating if the shader resource binding is an internal PSO object and
-    ///						must not keep a strong reference to the PSO.
+    /// \param pRefCounters - Reference counters object that controls the lifetime of this SRB.
+    /// \param pPSO         - Pipeline state that this SRB belongs to.
+    /// \param IsInternal   - Flag indicating if the shader resource binding is an internal PSO object and
+    ///                       must not keep a strong reference to the PSO.
     ShaderResourceBindingBase(IReferenceCounters* pRefCounters, PipelineStateImplType* pPSO, bool IsInternal = false) :
         TObjectBase{pRefCounters},
         m_spPSO{IsInternal ? nullptr : pPSO},
@@ -92,7 +92,7 @@ protected:
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'.");
             return -1;
         }
 
@@ -101,7 +101,7 @@ protected:
         if (ResLayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'");
+                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'.");
         }
 
         return ResLayoutInd;
@@ -113,7 +113,7 @@ protected:
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'.");
             return -1;
         }
 
@@ -122,7 +122,7 @@ protected:
         if (ResLayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'");
+                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'.");
         }
 
         return ResLayoutInd;
@@ -134,7 +134,7 @@ protected:
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'.");
             return -1;
         }
 
@@ -143,7 +143,7 @@ protected:
         if (ResLayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'");
+                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'.");
         }
 
         return ResLayoutInd;

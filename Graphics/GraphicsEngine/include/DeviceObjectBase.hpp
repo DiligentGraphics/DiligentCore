@@ -40,17 +40,17 @@
 namespace Diligent
 {
 
-/// Template class implementing base functionality for a device object
+/// Template class implementing base functionality of the device object
 template <class BaseInterface, typename RenderDeviceImplType, typename ObjectDescType>
 class DeviceObjectBase : public ObjectBase<BaseInterface>
 {
 public:
     typedef ObjectBase<BaseInterface> TBase;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this device object
-    /// \param pDevice - pointer to the render device.
-    /// \param ObjDesc - object description.
-    /// \param bIsDeviceInternal - flag indicating if the object is an internal device object
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this device object
+    /// \param pDevice           - Pointer to the render device.
+    /// \param ObjDesc           - Object description.
+    /// \param bIsDeviceInternal - Flag indicating if the object is an internal device object
     ///							   and must not keep a strong reference to the device.
     DeviceObjectBase(IReferenceCounters*   pRefCounters,
                      RenderDeviceImplType* pDevice,
@@ -149,7 +149,7 @@ public:
         /// This unique ID is used to unambiguously identify device object for
         /// tracking purposes.
         /// Niether GL handle nor pointer could be safely used for this purpose
-        /// as both GL reuses released handles and the OS reuses released pointers
+        /// as both GL reuses released handles and the OS reuses released pointers.
         return m_UniqueID.GetID();
     }
 

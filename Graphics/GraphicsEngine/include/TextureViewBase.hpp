@@ -38,12 +38,12 @@
 namespace Diligent
 {
 
-/// Template class implementing base functionality for a texture view interface
+/// Template class implementing base functionality of the texture view interface
 
-/// \tparam BaseInterface - base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::ITextureViewD3D11, Diligent::ITextureViewD3D12,
 ///                          Diligent::ITextureViewGL or Diligent::ITextureViewVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
+/// \tparam RenderDeviceImplType - Type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
 template <class BaseInterface, class RenderDeviceImplType>
@@ -53,11 +53,11 @@ public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, TextureViewDesc>;
 
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this texture view.
-    /// \param pDevice - pointer to the render device.
-    /// \param ViewDesc - texture view description.
-    /// \param pTexture - pointer to the texture that the view is to be created for.
-    /// \param bIsDefaultView - flag indicating if the view is default view, and is thus
+    /// \param pRefCounters   - Reference counters object that controls the lifetime of this texture view.
+    /// \param pDevice        - Pointer to the render device.
+    /// \param ViewDesc       - Texture view description.
+    /// \param pTexture       - Pointer to the texture that the view is to be created for.
+    /// \param bIsDefaultView - Flag indicating if the view is default view, and is thus
     ///						    part of the texture object. In this case the view will attach
     ///							to the texture's reference counters.
     TextureViewBase(IReferenceCounters*    pRefCounters,

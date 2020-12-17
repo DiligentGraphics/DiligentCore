@@ -39,29 +39,29 @@ void ValidateRasterizerStateDesc(const PipelineStateDesc& PSODesc, const Graphic
 {
     const auto& RSDesc = GraphicsPipeline.RasterizerDesc;
     if (RSDesc.FillMode == FILL_MODE_UNDEFINED)
-        LOG_PSO_ERROR_AND_THROW("RasterizerDesc.FillMode must not be FILL_MODE_UNDEFINED");
+        LOG_PSO_ERROR_AND_THROW("RasterizerDesc.FillMode must not be FILL_MODE_UNDEFINED.");
     if (RSDesc.CullMode == CULL_MODE_UNDEFINED)
-        LOG_PSO_ERROR_AND_THROW("RasterizerDesc.CullMode must not be CULL_MODE_UNDEFINED");
+        LOG_PSO_ERROR_AND_THROW("RasterizerDesc.CullMode must not be CULL_MODE_UNDEFINED.");
 }
 
 void ValidateDepthStencilDesc(const PipelineStateDesc& PSODesc, const GraphicsPipelineDesc& GraphicsPipeline) noexcept(false)
 {
     const auto& DSSDesc = GraphicsPipeline.DepthStencilDesc;
     if (DSSDesc.DepthEnable && DSSDesc.DepthFunc == COMPARISON_FUNC_UNKNOWN)
-        LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.DepthFunc must not be COMPARISON_FUNC_UNKNOWN when depth is enabled");
+        LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.DepthFunc must not be COMPARISON_FUNC_UNKNOWN when depth is enabled.");
 
     auto CheckStencilOpDesc = [&](const StencilOpDesc& OpDesc, const char* FaceName) //
     {
         if (DSSDesc.StencilEnable)
         {
             if (OpDesc.StencilFailOp == STENCIL_OP_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilFailOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
+                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilFailOp must not be STENCIL_OP_UNDEFINED when stencil is enabled.");
             if (OpDesc.StencilDepthFailOp == STENCIL_OP_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilDepthFailOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
+                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilDepthFailOp must not be STENCIL_OP_UNDEFINED when stencil is enabled.");
             if (OpDesc.StencilPassOp == STENCIL_OP_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilPassOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
+                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilPassOp must not be STENCIL_OP_UNDEFINED when stencil is enabled.");
             if (OpDesc.StencilFunc == COMPARISON_FUNC_UNKNOWN)
-                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilFunc must not be COMPARISON_FUNC_UNKNOWN when stencil is enabled");
+                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilFunc must not be COMPARISON_FUNC_UNKNOWN when stencil is enabled.");
         }
     };
     CheckStencilOpDesc(DSSDesc.FrontFace, "FrontFace");
@@ -103,18 +103,18 @@ void ValidateBlendStateDesc(const PipelineStateDesc& PSODesc, const GraphicsPipe
         if (BlendEnable)
         {
             if (RTDesc.SrcBlend == BLEND_FACTOR_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].SrcBlend must not be BLEND_FACTOR_UNDEFINED");
+                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].SrcBlend must not be BLEND_FACTOR_UNDEFINED.");
             if (RTDesc.DestBlend == BLEND_FACTOR_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].DestBlend must not be BLEND_FACTOR_UNDEFINED");
+                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].DestBlend must not be BLEND_FACTOR_UNDEFINED.");
             if (RTDesc.BlendOp == BLEND_OPERATION_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].BlendOp must not be BLEND_OPERATION_UNDEFINED");
+                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].BlendOp must not be BLEND_OPERATION_UNDEFINED.");
 
             if (RTDesc.SrcBlendAlpha == BLEND_FACTOR_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].SrcBlendAlpha must not be BLEND_FACTOR_UNDEFINED");
+                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].SrcBlendAlpha must not be BLEND_FACTOR_UNDEFINED.");
             if (RTDesc.DestBlendAlpha == BLEND_FACTOR_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].DestBlendAlpha must not be BLEND_FACTOR_UNDEFINED");
+                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].DestBlendAlpha must not be BLEND_FACTOR_UNDEFINED.");
             if (RTDesc.BlendOpAlpha == BLEND_OPERATION_UNDEFINED)
-                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].BlendOpAlpha must not be BLEND_OPERATION_UNDEFINED");
+                LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].BlendOpAlpha must not be BLEND_OPERATION_UNDEFINED.");
         }
     }
 }
@@ -163,7 +163,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
 {
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_GRAPHICS && PSODesc.PipelineType != PIPELINE_TYPE_MESH)
-        LOG_PSO_ERROR_AND_THROW("Pipeline type must be GRAPHICS or MESH");
+        LOG_PSO_ERROR_AND_THROW("Pipeline type must be GRAPHICS or MESH.");
 
     const auto& GraphicsPipeline = CreateInfo.GraphicsPipeline;
 
@@ -175,21 +175,21 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
         if (CreateInfo.pVS == nullptr)
-            LOG_ERROR_AND_THROW("Vertex shader must not be null");
+            LOG_ERROR_AND_THROW("Vertex shader must not be null.");
 
-        DEV_CHECK_ERR(CreateInfo.pAS == nullptr && CreateInfo.pMS == nullptr, "Mesh shaders are not supported in graphics pipeline");
+        DEV_CHECK_ERR(CreateInfo.pAS == nullptr && CreateInfo.pMS == nullptr, "Mesh shaders are not supported in graphics pipeline.");
     }
     else if (PSODesc.PipelineType == PIPELINE_TYPE_MESH)
     {
         if (CreateInfo.pMS == nullptr)
-            LOG_ERROR_AND_THROW("Mesh shader must not be null");
+            LOG_ERROR_AND_THROW("Mesh shader must not be null.");
 
         DEV_CHECK_ERR(CreateInfo.pVS == nullptr && CreateInfo.pGS == nullptr && CreateInfo.pDS == nullptr && CreateInfo.pHS == nullptr,
-                      "Vertex, geometry and tessellation shaders are not supported in a mesh pipeline");
-        DEV_CHECK_ERR(GraphicsPipeline.InputLayout.NumElements == 0, "Input layout is ignored in a mesh pipeline");
+                      "Vertex, geometry and tessellation shaders are not supported in a mesh pipeline.");
+        DEV_CHECK_ERR(GraphicsPipeline.InputLayout.NumElements == 0, "Input layout is ignored in a mesh pipeline.");
         DEV_CHECK_ERR(GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
                           GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_UNDEFINED,
-                      "Primitive topology is ignored in a mesh pipeline, set it to undefined or keep default value (triangle list)");
+                      "Primitive topology is ignored in a mesh pipeline, set it to undefined or keep default value (triangle list).");
     }
 
 
@@ -205,19 +205,19 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     if (GraphicsPipeline.pRenderPass != nullptr)
     {
         if (GraphicsPipeline.NumRenderTargets != 0)
-            LOG_PSO_ERROR_AND_THROW("NumRenderTargets must be 0 when explicit render pass is used");
+            LOG_PSO_ERROR_AND_THROW("NumRenderTargets must be 0 when explicit render pass is used.");
         if (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN)
-            LOG_PSO_ERROR_AND_THROW("DSVFormat must be TEX_FORMAT_UNKNOWN when explicit render pass is used");
+            LOG_PSO_ERROR_AND_THROW("DSVFormat must be TEX_FORMAT_UNKNOWN when explicit render pass is used.");
 
         for (Uint32 rt = 0; rt < MAX_RENDER_TARGETS; ++rt)
         {
             if (GraphicsPipeline.RTVFormats[rt] != TEX_FORMAT_UNKNOWN)
-                LOG_PSO_ERROR_AND_THROW("RTVFormats[", rt, "] must be TEX_FORMAT_UNKNOWN when explicit render pass is used");
+                LOG_PSO_ERROR_AND_THROW("RTVFormats[", rt, "] must be TEX_FORMAT_UNKNOWN when explicit render pass is used.");
         }
 
         const auto& RPDesc = GraphicsPipeline.pRenderPass->GetDesc();
         if (GraphicsPipeline.SubpassIndex >= RPDesc.SubpassCount)
-            LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") exceeds the number of subpasses (", Uint32{RPDesc.SubpassCount}, ") in render pass '", RPDesc.Name, "'");
+            LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") exceeds the number of subpasses (", Uint32{RPDesc.SubpassCount}, ") in render pass '", RPDesc.Name, "'.");
     }
     else
     {
@@ -227,12 +227,12 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
             if (RTVFmt != TEX_FORMAT_UNKNOWN)
             {
                 LOG_ERROR_MESSAGE("Render target format (", GetTextureFormatAttribs(RTVFmt).Name, ") of unused slot ", rt,
-                                  " must be set to TEX_FORMAT_UNKNOWN");
+                                  " must be set to TEX_FORMAT_UNKNOWN.");
             }
         }
 
         if (GraphicsPipeline.SubpassIndex != 0)
-            LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") must be 0 when explicit render pass is not used");
+            LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") must be 0 when explicit render pass is not used.");
     }
 }
 
@@ -240,10 +240,10 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 {
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_COMPUTE)
-        LOG_PSO_ERROR_AND_THROW("Pipeline type must be COMPUTE");
+        LOG_PSO_ERROR_AND_THROW("Pipeline type must be COMPUTE.");
 
     if (CreateInfo.pCS == nullptr)
-        LOG_ERROR_AND_THROW("Compute shader must not be null");
+        LOG_ERROR_AND_THROW("Compute shader must not be null.");
 
     VALIDATE_SHADER_TYPE(CreateInfo.pCS, SHADER_TYPE_COMPUTE, "compute");
 }
@@ -252,12 +252,12 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
 {
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
-        LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING");
+        LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING.");
 
     if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
     {
         if ((CreateInfo.pShaderRecordName != nullptr) != (CreateInfo.RayTracingPipeline.ShaderRecordSize > 0))
-            LOG_PSO_ERROR_AND_THROW("pShaderRecordName must not be null if RayTracingPipeline.ShaderRecordSize is not zero");
+            LOG_PSO_ERROR_AND_THROW("pShaderRecordName must not be null if RayTracingPipeline.ShaderRecordSize is not zero.");
     }
 
     if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > MaxRecursion)
@@ -269,9 +269,9 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
     {
         const auto& Group = CreateInfo.pGeneralShaders[i];
         if (Group.pShader == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].pShader must not be null");
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].pShader must not be null.");
         if (Group.Name == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must not be null");
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must not be null.");
 
         switch (Group.pShader->GetDesc().ShaderType)
         {
@@ -279,7 +279,7 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
             case SHADER_TYPE_RAY_MISS:
             case SHADER_TYPE_RAY_CLOSEST_HIT: break;
             default:
-                LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(Group.pShader->GetDesc().ShaderType), " is not a valid type for ray tracing general shader");
+                LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(Group.pShader->GetDesc().ShaderType), " is not a valid type for ray tracing general shader.");
         }
     }
 
@@ -287,30 +287,30 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
     {
         const auto& Group = CreateInfo.pTriangleHitShaders[i];
         if (Group.pClosestHitShader == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].pClosestHitShader must not be null");
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].pClosestHitShader must not be null.");
         if (Group.Name == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must not be null");
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must not be null.");
 
-        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closest hit");
+        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closest hit.");
 
         if (Group.pAnyHitShader != nullptr)
-            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing triangle any hit");
+            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing triangle any hit.");
     }
 
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
         const auto& Group = CreateInfo.pProceduralHitShaders[i];
         if (Group.pIntersectionShader == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].pIntersectionShader must not be null");
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].pIntersectionShader must not be null.");
         if (Group.Name == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must not be null");
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must not be null.");
 
-        VALIDATE_SHADER_TYPE(Group.pIntersectionShader, SHADER_TYPE_RAY_INTERSECTION, "ray tracing procedural intersection");
+        VALIDATE_SHADER_TYPE(Group.pIntersectionShader, SHADER_TYPE_RAY_INTERSECTION, "ray tracing procedural intersection.");
 
         if (Group.pClosestHitShader != nullptr)
-            VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing procedural closest hit");
+            VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing procedural closest hit.");
         if (Group.pAnyHitShader != nullptr)
-            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing procedural any hit");
+            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing procedural any hit.");
     }
 }
 
@@ -323,21 +323,24 @@ void CopyRayTracingShaderGroups(std::unordered_map<HashMapStringKey, Uint32, Has
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pGeneralShaders[i].Name)}, GroupIndex++).second;
+        const auto* Name         = CreateInfo.pGeneralShaders[i].Name;
+        const bool  IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
         if (!IsUniqueName)
-            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must be unique");
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name ('", Name, "') must be unique.");
     }
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pTriangleHitShaders[i].Name)}, GroupIndex++).second;
+        const auto* Name         = CreateInfo.pTriangleHitShaders[i].Name;
+        const bool  IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
         if (!IsUniqueName)
-            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must be unique");
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name ('", Name, "') must be unique.");
     }
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pProceduralHitShaders[i].Name)}, GroupIndex++).second;
+        const auto* Name         = CreateInfo.pProceduralHitShaders[i].Name;
+        const bool  IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
         if (!IsUniqueName)
-            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must be unique");
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name ('", Name, "') must be unique.");
     }
 
     VERIFY_EXPR(Uint32{CreateInfo.GeneralShaderCount} + Uint32{CreateInfo.TriangleHitShaderCount} + Uint32{CreateInfo.ProceduralHitShaderCount} == GroupIndex);
