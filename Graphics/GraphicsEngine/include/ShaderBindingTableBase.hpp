@@ -272,7 +272,7 @@ public:
 
 #ifdef DILIGENT_DEVELOPMENT
             VERIFY_EXPR(Index >= Info.FirstContributionToHitGroupIndex && Index <= Info.LastContributionToHitGroupIndex);
-            OnBindHitGroup(pTLASImpl, BeginIndex + i);
+            OnBindHitGroup(pTLASImpl, Index);
 #endif
         }
     }

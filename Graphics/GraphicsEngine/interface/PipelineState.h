@@ -484,6 +484,13 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
     /// Direct3D12 only: the maximum payload size in bytes.
     /// If zero then maximum allowed size will be used.
     Uint32                                    MaxPayloadSize           DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    RayTracingPipelineStateCreateInfo() noexcept
+    {
+        PSODesc.PipelineType = PIPELINE_TYPE_RAY_TRACING;
+    }
+#endif
 };
 typedef struct RayTracingPipelineStateCreateInfo RayTracingPipelineStateCreateInfo;
 

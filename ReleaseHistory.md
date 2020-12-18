@@ -1,5 +1,6 @@
 ## Current progress
 
+* Enabled ray tracing (API Version 240080)
 * Added `IDeviceContext::GetFrameNumber` method (API Version 240079)
 * Added `ShaderResourceQueries` device feature and `EngineGLCreateInfo::ForceNonSeparablePrograms` parameter (API Version 240078)
 
