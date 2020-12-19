@@ -508,7 +508,6 @@ public:
         return m_RootSig.GetHash();
     }
 
-    // Note: sizeof(m_ImmutableSamplers) == 56 (MS compiler, release x64)
     struct ImmutableSamplerAttribs
     {
         ImmutableSamplerDesc    SamplerDesc;
@@ -536,7 +535,7 @@ private:
 
     RootSignature& m_RootSig;
 
-    std::array<Uint16, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> m_NumResources = {};
+    std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> m_NumResources = {};
 
     std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> m_ImmutableSamplers;
 };

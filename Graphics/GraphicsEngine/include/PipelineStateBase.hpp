@@ -479,6 +479,7 @@ protected:
                 continue;
             }
 
+            VERIFY(m_ShaderStageTypes[m_NumShaderStages] == SHADER_TYPE_UNKNOWN, "This shader stage is already initialized.");
             m_ShaderStageTypes[m_NumShaderStages++] = iter->Type;
             ++iter;
         }
@@ -541,8 +542,7 @@ protected:
         // Correct description and compute offsets and tight strides
         std::array<Uint32, MAX_BUFFER_SLOTS> Strides, TightStrides = {};
         // Set all strides to an invalid value because an application may want to use 0 stride
-        for (auto& Stride : Strides)
-            Stride = LAYOUT_ELEMENT_AUTO_STRIDE;
+        Strides.fill(LAYOUT_ELEMENT_AUTO_STRIDE);
 
         for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
         {
@@ -632,7 +632,7 @@ protected:
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
-        // Reserve space for shader handles
+        // Allocate space for shader handles
         const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
         const auto ShaderDataSize   = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         RTDataSize += ShaderDataSize;
@@ -678,8 +678,8 @@ private:
     {
         if (SrcLayout.Variables != nullptr)
         {
-            auto* Variables     = MemPool.ConstructArray<ShaderResourceVariableDesc>(SrcLayout.NumVariables);
-            DstLayout.Variables = Variables;
+            auto* const Variables = MemPool.ConstructArray<ShaderResourceVariableDesc>(SrcLayout.NumVariables);
+            DstLayout.Variables   = Variables;
             for (Uint32 i = 0; i < SrcLayout.NumVariables; ++i)
             {
                 const auto& SrcVar = SrcLayout.Variables[i];
@@ -690,8 +690,8 @@ private:
 
         if (SrcLayout.ImmutableSamplers != nullptr)
         {
-            auto* ImmutableSamplers     = MemPool.ConstructArray<ImmutableSamplerDesc>(SrcLayout.NumImmutableSamplers);
-            DstLayout.ImmutableSamplers = ImmutableSamplers;
+            auto* const ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerDesc>(SrcLayout.NumImmutableSamplers);
+            DstLayout.ImmutableSamplers   = ImmutableSamplers;
             for (Uint32 i = 0; i < SrcLayout.NumImmutableSamplers; ++i)
             {
                 const auto& SrcSmplr = SrcLayout.ImmutableSamplers[i];

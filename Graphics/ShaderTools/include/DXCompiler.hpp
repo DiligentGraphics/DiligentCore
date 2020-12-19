@@ -52,6 +52,7 @@ enum class DXCompilerTarget
     Vulkan,     // compiles to SPIRV
 };
 
+/// DXC compiler interface.
 class IDXCompiler
 {
 public:
@@ -84,13 +85,26 @@ public:
                          std::vector<uint32_t>*  pByteCode,
                          IDataBlob**             ppCompilerOutput) noexcept(false) = 0;
 
+    /// A mapping from the resource name to the binding (shader register).
     using TResourceBindingMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
 
-    virtual bool RemapResourceBinding(const TResourceBindingMap& ResourceMap,
-                                      IDxcBlob*                  pSrcBytecode,
-                                      IDxcBlob**                 ppDstByteCode) = 0;
 
-    // Attempts to extract shader reflection from the bytecode using DXC.
+    /// Remaps resource bindings (shader registers) in the source byte code using the
+    /// resource binding map.
+
+    /// \param [in]  ResourceMap   - Resource binding map. For every resource in the
+    ///                              source byte code it must define the binding
+    ///                              (shader register).
+    /// \param [in]  pSrcBytecode  - Source byte code.
+    /// \param [out] ppDstByteCode - Memory location where pointer to the byte code
+    ///                              with remapped bindigs will be written.
+    ///
+    /// \return     true if the remapping was successfull, and false otherwise.
+    virtual bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
+                                       IDxcBlob*                  pSrcBytecode,
+                                       IDxcBlob**                 ppDstByteCode) = 0;
+
+    /// Attempts to extract shader reflection from the bytecode using DXC.
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) = 0;
 };

@@ -55,7 +55,7 @@ public:
                            ID3D12Resource*              pd3d12BLAS);
     ~BottomLevelASD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASD3D12, TBottomLevelASBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASD3D12, TBottomLevelASBase)
 
     /// Implementation of IBottomLevelASD3D12::GetD3D12BLAS().
     virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12BLAS() override final { return GetD3D12Resource(); }

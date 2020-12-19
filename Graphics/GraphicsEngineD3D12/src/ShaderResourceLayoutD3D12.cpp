@@ -145,7 +145,7 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
     m_pd3d12Device = pd3d12Device;
 
     VERIFY_EXPR((pResourceCache != nullptr) ^ (pRootSig != nullptr));
-    VERIFY_EXPR(Shaders.size() > 0);
+    VERIFY_EXPR(!Shaders.empty());
 
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 

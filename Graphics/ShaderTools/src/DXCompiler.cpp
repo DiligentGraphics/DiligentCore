@@ -92,9 +92,9 @@ public:
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) override final;
 
-    virtual bool RemapResourceBinding(const TResourceBindingMap& ResourceMap,
-                                      IDxcBlob*                  pSrcBytecode,
-                                      IDxcBlob**                 ppDstByteCode) override final;
+    virtual bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
+                                       IDxcBlob*                  pSrcBytecode,
+                                       IDxcBlob**                 ppDstByteCode) override final;
 
 private:
     DxcCreateInstanceProc Load()
@@ -762,9 +762,9 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     }
 }
 
-bool DXCompilerImpl::RemapResourceBinding(const TResourceBindingMap& ResourceMap,
-                                          IDxcBlob*                  pSrcBytecode,
-                                          IDxcBlob**                 ppDstByteCode)
+bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMap,
+                                           IDxcBlob*                  pSrcBytecode,
+                                           IDxcBlob**                 ppDstByteCode)
 {
 #if D3D12_SUPPORTED
     auto CreateInstance = GetCreateInstaceProc();
@@ -866,67 +866,85 @@ bool DXCompilerImpl::RemapResourceBinding(const TResourceBindingMap& ResourceMap
 
 bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& DXIL) const
 {
-    String     ResName;
-    char       BindPointStr[32];
-    const char Zero[]   = "0";
-    const auto IntToStr = [&BindPointStr](int val) //
-    {
-        char* str = &BindPointStr[_countof(BindPointStr) - 1];
-        *(str--)  = 0;
-        do
-        {
-            *(str--) = "0123456789"[val % 10];
-            val /= 10;
-        } while (val);
-        return ++str;
-    };
-
+    bool RemappingOK = true;
     for (auto& ResPair : ResourceMap)
     {
-        // [res name], i32 [space], i32 [bind point]
+        // Patch metadata resource record
 
-        const auto& Name      = ResPair.first;
+        // https://github.com/microsoft/DirectXShaderCompiler/blob/master/docs/DXIL.rst#metadata-resource-records
+        // Idx | Type            | Description
+        // ----|-----------------|------------------------------------------------------------------------------------------
+        //  0  | i32             | Unique resource record ID, used to identify the resource record in createHandle operation.
+        //  1  | Pointer         | Pointer to a global constant symbol with the original shape of resource and element type
+        //  2  | Metadata string | Name of resource variable.
+        //  3  | i32             | Bind space ID of the root signature range that corresponds to this resource.
+        //  4  | i32             | Bind lower bound of the root signature range that corresponds to this resource.
+        //  5  | i32             | Range size of the root signature range that corresponds to this resource.
+
+        // Example:
+        //
+        // !158 = !{i32 0, %"class.RWTexture2D<vector<float, 4> >"* @"\01?g_ColorBuffer@@3V?$RWTexture2D@V?$vector@M$03@@@@A", !"g_ColorBuffer", i32 0, i32 0, i32 1, i32 2, i1 false, i1 false, i1 false, !159}
+
+        const auto* Name      = ResPair.first.GetStr();
         const auto& BindPoint = ResPair.second;
+        const auto  DxilName  = String{"!\""} + Name + "\", ";
 
-        ResName = String{"!\""} + Name.GetStr() + "\", ";
-
-        size_t pos = DXIL.find(ResName);
+        size_t pos = DXIL.find(DxilName);
         if (pos == String::npos)
             continue;
 
-        Uint32 Part      = 0;
-        size_t PartStart = pos + ResName.length();
+        // !"g_ColorBuffer", i32 0, i32 0,
+        // ^
 
-        for (size_t i = PartStart; i < DXIL.size(); ++i)
-        {
-            const char c = DXIL[i];
-            if (c == ' ')
-            {
-                if (Part == 0 || Part == 2)
-                {
-                    const char* str = &DXIL[PartStart];
-                    VERIFY_EXPR(std::memcmp(str, "i32", i - PartStart) == 0);
-                }
-                else if (Part == 1) // space
-                {
-                    DXIL.replace(PartStart, i - PartStart - 1, Zero);
-                    i = PartStart + strlen(Zero) + 1;
-                }
-                else if (Part == 3) // bind point
-                {
-                    const char* str = IntToStr(BindPoint);
-                    DXIL.replace(PartStart, i - PartStart - 1, str);
-                    i = PartStart + strlen(str) + 1;
-                }
-                else
-                    break;
+        pos += DxilName.length();
+        // !"g_ColorBuffer", i32 0, i32 0,
+        //                   ^
 
-                PartStart = i + 1;
-                ++Part;
-            }
-        }
+#define CHECK_PATCHING_ERROR(Cond, ...)                                                          \
+    if (!(Cond))                                                                                 \
+    {                                                                                            \
+        LOG_ERROR_MESSAGE("Unable to patch binding for resource '", Name, "': ", ##__VA_ARGS__); \
+        RemappingOK = false;                                                                     \
+        continue;                                                                                \
     }
-    return true;
+
+        pos = DXIL.find_first_of(',', pos);
+        CHECK_PATCHING_ERROR(pos != String::npos, "binding record is not found")
+
+        ++pos;
+        // !"g_ColorBuffer", i32 0, i32 0,
+        //                         ^
+
+        while (pos < DXIL.length() && DXIL[pos] == ' ')
+            ++pos;
+        CHECK_PATCHING_ERROR(pos < DXIL.length(), "binding record type is missing")
+        // !"g_ColorBuffer", i32 0, i32 0,
+        //                          ^
+
+        static const String i32 = "i32";
+        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "unexpected binding record type")
+        pos += i32.length();
+        // !"g_ColorBuffer", i32 0, i32 0,
+        //                             ^
+
+        static constexpr char* Digits = "0123456789";
+
+        pos = DXIL.find_first_of(Digits, pos);
+        CHECK_PATCHING_ERROR(pos != String::npos, "binding record data is missing")
+        // !"g_ColorBuffer", i32 0, i32 0,
+        //                              ^
+
+        auto RecordEndPos = DXIL.find_first_not_of(Digits, pos);
+        CHECK_PATCHING_ERROR(pos != String::npos, "unable to find the end of the binding record data")
+        // !"g_ColorBuffer", i32 0, i32 0,
+        //                               ^
+
+        auto NewBinding = std::to_string(BindPoint);
+        DXIL.replace(pos, RecordEndPos - pos, NewBinding);
+
+#undef CHECK_PATCHING_ERROR
+    }
+    return RemappingOK;
 }
 
 } // namespace Diligent

@@ -56,7 +56,7 @@ public:
     PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const RayTracingPipelineStateCreateInfo& CreateInfo);
     ~PipelineStateD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateD3D12, TPipelineStateBase)
 
     /// Implementation of IPipelineState::BindStaticResources() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final;
@@ -138,9 +138,16 @@ private:
     };
     using TShaderStages = std::vector<ShaderStageInfo>;
 
-    template <typename PSOCreateInfoType, typename InitPSODescType>
-    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, RootSignatureBuilder& RootSigBuilder, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot, InitPSODescType InitPSODesc);
-    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo, RootSignatureBuilder& RootSigBuilder, TShaderStages& ShaderStages, LocalRootSignature* pLocalRoot);
+    template <typename PSOCreateInfoType>
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo,
+                             RootSignatureBuilder&    RootSigBuilder,
+                             TShaderStages&           ShaderStages,
+                             LocalRootSignature*      pLocalRoot = nullptr);
+
+    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
+                             RootSignatureBuilder&          RootSigBuilder,
+                             TShaderStages&                 ShaderStages,
+                             LocalRootSignature*            pLocalRoot);
 
     void Destruct();
 

@@ -56,7 +56,7 @@ struct alignas(void*) PSS_SubObject
     const D3D12_PIPELINE_STATE_SUBOBJECT_TYPE Type{SubObjType};
     InnerStructType                           Obj{};
 
-    PSS_SubObject() {}
+    PSS_SubObject() noexcept {}
 
     PSS_SubObject& operator=(const InnerStructType& obj)
     {
@@ -117,11 +117,10 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     const auto ShaderIndexToStr = [&TempPool](Uint32 Index) -> LPCWSTR {
         const Uint32 Len = sizeof(Index) * 2;
-        auto*        Dst = TempPool.Allocate<WCHAR>(Len + 1);
+        auto* const  Dst = TempPool.Allocate<WCHAR>(Len + 1);
         for (Uint32 i = 0; i < Len; ++i)
         {
-            Uint32 c = Index & 0xF;
-            Dst[i]   = static_cast<WCHAR>(c < 10 ? '0' + c : 'A' + c - 10);
+            Dst[Len - 1 - i] = L"0123456789ABCDEF"[Index & 0x0F];
             Index >>= 4;
         }
         Dst[Len] = 0;
@@ -129,44 +128,43 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
     };
 
     const auto AddDxilLib = [&](IShader* pShader, const char* Name) -> LPCWSTR {
-        if (pShader != nullptr)
+        if (pShader == nullptr)
+            return nullptr;
+
+        auto Result = UniqueShaders.emplace(pShader, nullptr);
+        if (Result.second)
         {
-            auto Result = UniqueShaders.emplace(pShader, nullptr);
-            if (Result.second)
-            {
-                auto&  LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
-                auto&  ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
-                auto*  pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(pShader);
-                Uint32 ShaderIdx    = GetShaderTypePipelineIndex(pShaderD3D12->GetDesc().ShaderType, PIPELINE_TYPE_RAY_TRACING);
-                auto&  BindingMap   = BindingMapPerStage[ShaderIdx];
+            auto&  LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
+            auto&  ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
+            auto*  pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(pShader);
+            Uint32 ShaderIdx    = GetShaderTypePipelineIndex(pShaderD3D12->GetDesc().ShaderType, PIPELINE_TYPE_RAY_TRACING);
+            auto&  BindingMap   = BindingMapPerStage[ShaderIdx];
 
-                CComPtr<IDxcBlob> pBlob;
-                if (!compiler->RemapResourceBinding(BindingMap, reinterpret_cast<IDxcBlob*>(pShaderD3D12->GetShaderByteCode()), &pBlob))
-                    LOG_ERROR_AND_THROW("Failed to remap resource bindings");
+            CComPtr<IDxcBlob> pBlob;
+            if (!compiler->RemapResourceBindings(BindingMap, reinterpret_cast<IDxcBlob*>(pShaderD3D12->GetShaderByteCode()), &pBlob))
+                LOG_ERROR_AND_THROW("Failed to remap resource bindings");
 
-                LibDesc.DXILLibrary.BytecodeLength  = pBlob->GetBufferSize();
-                LibDesc.DXILLibrary.pShaderBytecode = pBlob->GetBufferPointer();
-                LibDesc.NumExports                  = 1;
-                LibDesc.pExports                    = &ExportDesc;
+            LibDesc.DXILLibrary.BytecodeLength  = pBlob->GetBufferSize();
+            LibDesc.DXILLibrary.pShaderBytecode = pBlob->GetBufferPointer();
+            LibDesc.NumExports                  = 1;
+            LibDesc.pExports                    = &ExportDesc;
 
-                ExportDesc.Flags          = D3D12_EXPORT_FLAG_NONE;
-                ExportDesc.ExportToRename = TempPool.CopyWString(pShaderD3D12->GetEntryPoint());
+            ExportDesc.Flags          = D3D12_EXPORT_FLAG_NONE;
+            ExportDesc.ExportToRename = TempPool.CopyWString(pShaderD3D12->GetEntryPoint());
 
-                if (Name != nullptr)
-                    ExportDesc.Name = TempPool.CopyWString(Name);
-                else
-                    ExportDesc.Name = ShaderIndexToStr(++ShaderIndex);
-
-                Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &LibDesc});
-                ShaderBlobs.push_back(pBlob);
-
-                Result.first->second = ExportDesc.Name;
-                return ExportDesc.Name;
-            }
+            if (Name != nullptr)
+                ExportDesc.Name = TempPool.CopyWString(Name);
             else
-                return Result.first->second;
+                ExportDesc.Name = ShaderIndexToStr(++ShaderIndex);
+
+            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &LibDesc});
+            ShaderBlobs.push_back(pBlob);
+
+            Result.first->second = ExportDesc.Name;
+            return ExportDesc.Name;
         }
-        return nullptr;
+        else
+            return Result.first->second;
     };
 
     ShaderBlobs.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
@@ -277,17 +275,18 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
     }
 }
 
-void ExtractResourceBindingMap(const RootSignatureBuilder&                      RootSig,
-                               const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex,
-                               const ShaderResourceLayoutD3D12*                 pResourceLayouts,
-                               const ShaderResourceLayoutD3D12*                 pStaticLayouts,
-                               TBindingMapPerStage&                             BindingMapPerStage) noexcept(false)
+TBindingMapPerStage ExtractResourceBindingMap(const RootSignatureBuilder&                      RootSig,
+                                              const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex,
+                                              const ShaderResourceLayoutD3D12*                 pResourceLayouts,
+                                              const ShaderResourceLayoutD3D12*                 pStaticLayouts) noexcept(false)
 {
+    TBindingMapPerStage BindingMapPerStage;
+
     const auto ExtractResources = [&](const ShaderResourceLayoutD3D12* pLayouts) //
     {
         for (Uint32 ShaderIdx = 0; ShaderIdx < ResourceLayoutIndex.size(); ++ShaderIdx)
         {
-            const Int8 LayoutIdx = ResourceLayoutIndex[ShaderIdx];
+            const auto LayoutIdx = ResourceLayoutIndex[ShaderIdx];
             if (LayoutIdx < 0)
                 continue;
 
@@ -325,7 +324,7 @@ void ExtractResourceBindingMap(const RootSignatureBuilder&                      
     {
         const auto&  ImtblSmplr = RootSig.GetImmutableSamplers()[i];
         const Uint32 ShaderIdx  = GetShaderTypePipelineIndex(ImtblSmplr.ShaderType, PIPELINE_TYPE_RAY_TRACING);
-        const Int8   LayoutIdx  = ResourceLayoutIndex[ShaderIdx];
+        const auto   LayoutIdx  = ResourceLayoutIndex[ShaderIdx];
         if (LayoutIdx < 0)
             continue;
 
@@ -336,6 +335,8 @@ void ExtractResourceBindingMap(const RootSignatureBuilder&                      
         auto& BindingMap = BindingMapPerStage[ShaderIdx];
         BindingMap.emplace(HashMapStringKey{ImtblSmplr.Name.c_str()}, ImtblSmplr.ShaderRegister);
     }
+
+    return BindingMapPerStage;
 }
 
 } // namespace
@@ -358,12 +359,11 @@ size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 }
 
 
-template <typename PSOCreateInfoType, typename InitPSODescType>
+template <typename PSOCreateInfoType>
 void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo,
                                                  RootSignatureBuilder&    RootSigBuilder,
                                                  TShaderStages&           ShaderStages,
-                                                 LocalRootSignature*      pLocalRoot,
-                                                 InitPSODescType          InitPSODesc)
+                                                 LocalRootSignature*      pLocalRoot)
 {
     m_ResourceLayoutIndex.fill(-1);
 
@@ -395,7 +395,7 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
     for (Uint32 s = 0; s < NumShaderStages; ++s)
         new (m_pStaticVarManagers + s) ShaderVariableManagerD3D12{*this, GetStaticShaderResCache(s)};
 
-    InitPSODesc(CreateInfo, MemPool);
+    InitializePipelineDesc(CreateInfo, MemPool);
 
     RootSigBuilder.AllocateImmutableSamplers(CreateInfo.PSODesc.ResourceLayout);
 
@@ -416,12 +416,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
     {
         RootSignatureBuilder RootSigBuilder{m_RootSig};
         TShaderStages        ShaderStages;
-        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, nullptr,
-                            [this](const GraphicsPipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool) //
-                            {
-                                InitializePipelineDesc(CreateInfo, MemPool);
-                            } //
-        );
+        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages);
 
         auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
         if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
@@ -510,7 +505,6 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create pipeline state");
         }
-
 #ifdef D3D12_H_HAS_MESH_SHADER
         else if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
         {
@@ -628,12 +622,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
     {
         RootSignatureBuilder RootSigBuilder{m_RootSig};
         TShaderStages        ShaderStages;
-        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, nullptr,
-                            [this](const ComputePipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool) //
-                            {
-                                InitializePipelineDesc(CreateInfo, MemPool);
-                            } //
-        );
+        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages);
 
         auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
 
@@ -686,25 +675,24 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 {
     try
     {
-        LocalRootSignature     LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
-        TShaderStages          ShaderStages;
-        DynamicLinearAllocator TempPool{GetRawAllocator(), 4 << 10};
-        RootSignatureBuilder   RootSigBuilder{m_RootSig};
+        LocalRootSignature   LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
+        TShaderStages        ShaderStages;
+        RootSignatureBuilder RootSigBuilder{m_RootSig};
+        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, &LocalRootSig);
 
-        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, &LocalRootSig,
-                            [&](const RayTracingPipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool) //
-                            {
-                                InitializePipelineDesc(CreateInfo, MemPool);
-                            } //
-        );
+        auto* pd3d12Device = pDeviceD3D12->GetD3D12Device5();
 
-        auto pd3d12Device = pDeviceD3D12->GetD3D12Device5();
+        const auto* const pStaticResLayouts = m_pShaderResourceLayouts + GetNumShaderStages();
+        // Extract bindings (shader registers) assigned during the layout initialization,
+        // for every shader stage.
+        const auto BindingMapPerStage =
+            ExtractResourceBindingMap(RootSigBuilder, m_ResourceLayoutIndex, m_pShaderResourceLayouts, pStaticResLayouts);
 
-        TBindingMapPerStage BindingMapPerStage;
-        ExtractResourceBindingMap(RootSigBuilder, m_ResourceLayoutIndex, &m_pShaderResourceLayouts[0], &m_pShaderResourceLayouts[GetNumShaderStages()], BindingMapPerStage);
-
+        DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
         std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
         std::vector<CComPtr<IDxcBlob>>     ShaderBlobs;
+        // Create ray-tracing pipeline and remap shader registers using the bind points assigned during the
+        // resource layout initialization.
         BuildRTPipelineDescription(CreateInfo, Subobjects, ShaderBlobs, TempPool, pDeviceD3D12->GetDxCompiler(), BindingMapPerStage);
 
         D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot = {m_RootSig.GetD3D12RootSignature()};
@@ -783,8 +771,6 @@ void PipelineStateD3D12Impl::Destruct()
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase)
-
 void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
                                                  RootSignatureBuilder&          RootSigBuilder,
                                                  TShaderStages&                 ShaderStages,
@@ -800,7 +786,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         {
             for (auto* pShader : ShaderStages[s].Shaders)
             {
-                Resources.push_back(&(*pShader->GetShaderResources()));
+                Resources.push_back(pShader->GetShaderResources().get());
             }
         }
         ShaderResources::DvpVerifyResourceLayout(ResourceLayout, Resources.data(), static_cast<Uint32>(Resources.size()),
@@ -878,7 +864,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
 {
     auto& SRBAllocator     = m_pDevice->GetSRBAllocator();
-    auto  pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this, false);
+    auto* pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this, false);
     if (InitStaticResources)
         pResBindingD3D12->InitializeStaticResources(nullptr);
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
@@ -1028,7 +1014,7 @@ void PipelineStateD3D12Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMa
 {
     for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
-        auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
+        const auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
         if ((ShaderFlags & ShaderType) != 0)
             m_pStaticVarManagers[s].BindResources(pResourceMapping, Flags);
     }

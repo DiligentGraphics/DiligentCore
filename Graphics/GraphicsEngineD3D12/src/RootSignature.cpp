@@ -39,7 +39,14 @@
 
 namespace Diligent
 {
-static constexpr auto RayTracingMask = SHADER_TYPE_RAY_GEN | SHADER_TYPE_RAY_MISS | SHADER_TYPE_RAY_CLOSEST_HIT | SHADER_TYPE_RAY_ANY_HIT | SHADER_TYPE_RAY_INTERSECTION | SHADER_TYPE_CALLABLE;
+
+static constexpr auto RAY_TRACING_SHADER_TYPES =
+    SHADER_TYPE_RAY_GEN |
+    SHADER_TYPE_RAY_MISS |
+    SHADER_TYPE_RAY_CLOSEST_HIT |
+    SHADER_TYPE_RAY_ANY_HIT |
+    SHADER_TYPE_RAY_INTERSECTION |
+    SHADER_TYPE_CALLABLE;
 
 RootSignature::RootParamsManager::RootParamsManager(IMemoryAllocator& MemAllocator) :
     m_MemAllocator{MemAllocator},
@@ -190,7 +197,7 @@ void RootSignatureBuilder::InitImmutableSampler(SHADER_TYPE                     
             ImtblSmplr.RegisterSpace  = 0;
             ImtblSmplr.Name           = SamplerName;
 
-            if (ShaderType & RayTracingMask)
+            if (ShaderType & RAY_TRACING_SHADER_TYPES)
             {
                 ImtblSmplr.ShaderRegister = m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER];
                 m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER] += SamplerAttribs.BindCount;
@@ -222,14 +229,17 @@ void RootSignatureBuilder::AllocateResourceSlot(SHADER_TYPE                     
     const auto ShaderVisibility = ShaderTypeToD3D12ShaderVisibility(ShaderType);
     auto&      RootParams       = m_RootSig.m_RootParams;
 
-    // update resource binding for ray tracing
-    if (ShaderType & RayTracingMask)
+    if (ShaderType & RAY_TRACING_SHADER_TYPES)
     {
+        // For ray tracing shaders, original bind points are ignored as
+        // they will be remapped anyway.
         BindPoint = m_NumResources[RangeType];
         m_NumResources[RangeType] += ShaderResAttribs.BindCount;
     }
     else
+    {
         BindPoint = ShaderResAttribs.BindPoint;
+    }
 
     if (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV && ShaderResAttribs.BindCount == 1)
     {
@@ -415,7 +425,8 @@ void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
 
     CComPtr<ID3DBlob> signature;
     CComPtr<ID3DBlob> error;
-    HRESULT           hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
+
+    HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
     if (error)
     {
         LOG_ERROR_MESSAGE("Error: ", (const char*)error->GetBufferPointer());
