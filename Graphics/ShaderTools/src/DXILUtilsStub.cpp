@@ -30,9 +30,9 @@
 namespace Diligent
 {
 
-IDXCompiler* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
+std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
 {
-    return nullptr;
+    return {};
 }
 
 } // namespace Diligent
