@@ -360,7 +360,7 @@ static void CreateRayTracingPipeline(RenderDeviceVkImpl*                        
     PipelineCI.pStages                      = Stages.data();
     PipelineCI.groupCount                   = static_cast<Uint32>(ShaderGroups.size());
     PipelineCI.pGroups                      = ShaderGroups.data();
-    PipelineCI.maxPipelineRayRecursionDepth = std::max(1u, Uint32{RayTracingPipeline.MaxRecursionDepth}) - 1; // for compatibility with D3D12, zero means only one ray tracing depth.
+    PipelineCI.maxPipelineRayRecursionDepth = RayTracingPipeline.MaxRecursionDepth;
     PipelineCI.pLibraryInfo                 = nullptr;
     PipelineCI.pLibraryInterface            = nullptr;
     PipelineCI.pDynamicState                = nullptr;

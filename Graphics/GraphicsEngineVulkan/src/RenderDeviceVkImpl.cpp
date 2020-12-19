@@ -166,7 +166,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxShaderGroupStride,
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupBaseAlignment,
         m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount,
-        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayRecursionDepth + 1, // for compatibility with D3D12
+        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayRecursionDepth,
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayDispatchInvocationCount
     }
 // clang-format on
