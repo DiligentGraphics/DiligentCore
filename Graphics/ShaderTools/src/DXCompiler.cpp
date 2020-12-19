@@ -883,66 +883,94 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
 
         // Example:
         //
-        // !158 = !{i32 0, %"class.RWTexture2D<vector<float, 4> >"* @"\01?g_ColorBuffer@@3V?$RWTexture2D@V?$vector@M$03@@@@A", !"g_ColorBuffer", i32 0, i32 0, i32 1, i32 2, i1 false, i1 false, i1 false, !159}
+        // !158 = !{i32 0, %"class.RWTexture2D<vector<float, 4> >"* @"\01?g_ColorBuffer@@3V?$RWTexture2D@V?$vector@M$03@@@@A", !"g_ColorBuffer", i32 -1, i32 -1, i32 1, i32 2, i1 false, i1 false, i1 false, !159}
 
         const auto* Name      = ResPair.first.GetStr();
         const auto& BindPoint = ResPair.second;
-        const auto  DxilName  = String{"!\""} + Name + "\", ";
+        const auto  DxilName  = String{"!\""} + Name + "\"";
 
         size_t pos = DXIL.find(DxilName);
         if (pos == String::npos)
             continue;
 
-        // !"g_ColorBuffer", i32 0, i32 0,
+        // !"g_ColorBuffer", i32 -1, i32 -1,
         // ^
 
         pos += DxilName.length();
-        // !"g_ColorBuffer", i32 0, i32 0,
-        //                   ^
+        // !"g_ColorBuffer", i32 -1, i32 -1,
+        //                 ^
 
-#define CHECK_PATCHING_ERROR(Cond, ...)                                                          \
-    if (!(Cond))                                                                                 \
-    {                                                                                            \
-        LOG_ERROR_MESSAGE("Unable to patch binding for resource '", Name, "': ", ##__VA_ARGS__); \
-        RemappingOK = false;                                                                     \
-        continue;                                                                                \
+        auto ReplaceRecord = [&](const std::string& NewValue, const char* RecordName) //
+        {
+#define CHECK_PATCHING_ERROR(Cond, ...)                                                       \
+    if (!(Cond))                                                                              \
+    {                                                                                         \
+        LOG_ERROR_MESSAGE("Unable to patch DXIL for resource '", Name, "': ", ##__VA_ARGS__); \
+        return false;                                                                         \
     }
+            // , i32 -1
+            // ^
+            pos = DXIL.find_first_of(',', pos);
+            CHECK_PATCHING_ERROR(pos != String::npos, RecordName, " record is not found")
 
-        pos = DXIL.find_first_of(',', pos);
-        CHECK_PATCHING_ERROR(pos != String::npos, "binding record is not found")
-
-        ++pos;
-        // !"g_ColorBuffer", i32 0, i32 0,
-        //                         ^
-
-        while (pos < DXIL.length() && DXIL[pos] == ' ')
             ++pos;
-        CHECK_PATCHING_ERROR(pos < DXIL.length(), "binding record type is missing")
-        // !"g_ColorBuffer", i32 0, i32 0,
-        //                          ^
+            // , i32 -1
+            //  ^
 
-        static const String i32 = "i32";
-        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "unexpected binding record type")
-        pos += i32.length();
-        // !"g_ColorBuffer", i32 0, i32 0,
-        //                             ^
+            while (pos < DXIL.length() && DXIL[pos] == ' ')
+                ++pos;
+            CHECK_PATCHING_ERROR(pos < DXIL.length(), RecordName, " record type is missing")
+            // , i32 -1
+            //   ^
 
-        static constexpr char* Digits = "0123456789";
+            static const String i32 = "i32";
+            CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "unexpected ", RecordName, " record type")
+            pos += i32.length();
+            // , i32 -1
+            //      ^
 
-        pos = DXIL.find_first_of(Digits, pos);
-        CHECK_PATCHING_ERROR(pos != String::npos, "binding record data is missing")
-        // !"g_ColorBuffer", i32 0, i32 0,
-        //                              ^
+            pos = DXIL.find_first_of("+-0123456789", pos);
+            CHECK_PATCHING_ERROR(pos != String::npos, RecordName, " record data is missing")
+            // , i32 -1
+            //       ^
 
-        auto RecordEndPos = DXIL.find_first_not_of(Digits, pos);
-        CHECK_PATCHING_ERROR(pos != String::npos, "unable to find the end of the binding record data")
-        // !"g_ColorBuffer", i32 0, i32 0,
-        //                               ^
+            auto RecordEndPos = DXIL.find_first_not_of("0123456789", pos + 1);
+            CHECK_PATCHING_ERROR(pos != String::npos, "unable to find the end of the ", RecordName, " record data")
+            // , i32 -1
+            //         ^
+            //    RecordEndPos
 
-        auto NewBinding = std::to_string(BindPoint);
-        DXIL.replace(pos, RecordEndPos - pos, NewBinding);
+            DXIL.replace(pos, RecordEndPos - pos, NewValue);
+            // , i32 1
+            //         ^
+            //    RecordEndPos
+
+            pos += NewValue.length();
+            // , i32 1
+            //        ^
 
 #undef CHECK_PATCHING_ERROR
+
+            return true;
+        };
+
+        // !"g_ColorBuffer", i32 -1, i32 -1,
+        //                 ^
+        if (!ReplaceRecord("0", "space"))
+        {
+            RemappingOK = false;
+            continue;
+        }
+        // !"g_ColorBuffer", i32 0, i32 -1,
+        //                        ^
+
+        if (!ReplaceRecord(std::to_string(BindPoint), "binding"))
+        {
+            RemappingOK = false;
+            continue;
+        }
+        // !"g_ColorBuffer", i32 0, i32 1,
+        //                               ^
     }
     return RemappingOK;
 }
