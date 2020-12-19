@@ -30,6 +30,7 @@
 #include <array>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 
 #include "Constants.h"
 #include "Shader.h"
@@ -112,7 +113,7 @@ public:
 // Use this function to load the DX Compiler library.
 // pLibraryName is an optional path to the library. If not provided, default
 // path is used.
-IDXCompiler* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName);
+std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName);
 
 
 } // namespace Diligent

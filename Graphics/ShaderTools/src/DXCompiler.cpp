@@ -238,9 +238,9 @@ private:
 } // namespace
 
 
-IDXCompiler* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
+std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
 {
-    return new DXCompilerImpl{Target, pLibraryName};
+    return std::unique_ptr<IDXCompiler>{new DXCompilerImpl{Target, pLibraryName}};
 }
 
 bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)

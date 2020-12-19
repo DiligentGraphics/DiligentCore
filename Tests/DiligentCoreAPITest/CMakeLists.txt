@@ -17,24 +17,8 @@ if(NOT TARGET Diligent-HLSL2GLSLConverterLib)
     list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/HLSL2GLSLConverterTest.cpp)
 endif()
 
-if(NOT GL_SUPPORTED AND NOT GLES_SUPPORTED)
-    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/CreateObjFromNativeResGL.cpp)
-    list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/CreateObjFromNativeResGL.hpp)
-endif()
-
-if(NOT D3D11_SUPPORTED)
-    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/CreateObjFromNativeResD3D11.cpp)
-    list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/CreateObjFromNativeResD3D11.hpp)
-endif()
-
 if(NOT D3D12_SUPPORTED)
-    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/CreateObjFromNativeResD3D12.cpp)
-    list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/CreateObjFromNativeResD3D12.hpp)
-endif()
-
-if(NOT VULKAN_SUPPORTED)
-    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/CreateObjFromNativeResVK.cpp)
-    list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/CreateObjFromNativeResVK.hpp)
+    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/DXCTest.cpp)
 endif()
 
 if(PLATFORM_WIN32)
