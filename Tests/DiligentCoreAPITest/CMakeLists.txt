@@ -18,7 +18,7 @@ if(NOT TARGET Diligent-HLSL2GLSLConverterLib)
 endif()
 
 if(NOT D3D12_SUPPORTED)
-    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/DXCTest.cpp)
+    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/DXCompilerTest.cpp)
 endif()
 
 if(PLATFORM_WIN32)
