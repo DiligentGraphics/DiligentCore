@@ -154,7 +154,6 @@ private:
     CComPtr<ID3D12DeviceChild> m_pd3d12PSO;
     RootSignature              m_RootSig;
 
-    // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;
 
     ShaderResourceLayoutD3D12*  m_pShaderResourceLayouts = nullptr; // [m_NumShaderStages * 2]

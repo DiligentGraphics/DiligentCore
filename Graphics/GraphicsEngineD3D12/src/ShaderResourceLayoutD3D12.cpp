@@ -311,12 +311,26 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
         }
         else
         {
-            // merge with existing
+            // Merge with existing
             auto& ExistingRes = GetResource(ResIter->second);
-            VERIFY_EXPR(ExistingRes.VariableType == VarType);
-            VERIFY_EXPR(ExistingRes.Attribs.GetInputType() == Attribs.GetInputType());
-            VERIFY_EXPR(ExistingRes.Attribs.GetSRVDimension() == Attribs.GetSRVDimension());
-            VERIFY_EXPR(ExistingRes.Attribs.BindCount == Attribs.BindCount);
+            VERIFY(ExistingRes.VariableType == VarType,
+                   "The type of variable '", Attribs.Name, "' does not match the type determined for previous shaders. This appears to be a bug.");
+
+            DEV_CHECK_ERR(ExistingRes.Attribs.GetInputType() == Attribs.GetInputType(),
+                          "Shader variable '", Attribs.Name,
+                          "' exists in multiple shaders from the same shader stage, but its input type is not consistent between "
+                          "shaders. All variables with the same name from the same shader stage must have the same input type.");
+
+            DEV_CHECK_ERR(ExistingRes.Attribs.GetSRVDimension() == Attribs.GetSRVDimension(),
+                          "Shader variable '", Attribs.Name,
+                          "' exists in multiple shaders from the same shader stage, but its SRV dimension is not consistent between "
+                          "shaders. All variables with the same name from the same shader stage must have the same SRV dimension.");
+
+            DEV_CHECK_ERR(ExistingRes.Attribs.BindCount == Attribs.BindCount,
+                          "Shader variable '", Attribs.Name,
+                          "' exists in multiple shaders from the same shader stage, but its array size is not consistent between "
+                          "shaders. All variables with the same name from the same shader stage must have the same array size.");
+
             VERIFY_EXPR(ExistingRes.Attribs.BindPoint == Attribs.BindPoint ||
                         Attribs.BindPoint == D3DShaderResourceAttribs::InvalidBindPoint);
         }

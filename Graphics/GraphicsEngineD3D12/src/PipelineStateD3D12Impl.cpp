@@ -111,7 +111,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 {
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", CreateInfo.PSODesc.Name, "' is invalid: ", ##__VA_ARGS__)
 
-    Uint32 ShaderIndex = 0;
+    Uint32 UnnamedShaderIndex = 0;
 
     std::unordered_map<IShader*, LPCWSTR> UniqueShaders;
 
@@ -131,8 +131,8 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
         if (pShader == nullptr)
             return nullptr;
 
-        auto Result = UniqueShaders.emplace(pShader, nullptr);
-        if (Result.second)
+        auto it_inserted = UniqueShaders.emplace(pShader, nullptr);
+        if (it_inserted.second)
         {
             auto&  LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
             auto&  ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
@@ -155,16 +155,16 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
             if (Name != nullptr)
                 ExportDesc.Name = TempPool.CopyWString(Name);
             else
-                ExportDesc.Name = ShaderIndexToStr(++ShaderIndex);
+                ExportDesc.Name = ShaderIndexToStr(++UnnamedShaderIndex);
 
             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &LibDesc});
             ShaderBlobs.push_back(pBlob);
 
-            Result.first->second = ExportDesc.Name;
+            it_inserted.first->second = ExportDesc.Name;
             return ExportDesc.Name;
         }
         else
-            return Result.first->second;
+            return it_inserted.first->second;
     };
 
     ShaderBlobs.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
@@ -776,7 +776,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
                                                  TShaderStages&                 ShaderStages,
                                                  LocalRootSignature*            pLocalRoot)
 {
-    auto        pd3d12Device   = GetDevice()->GetD3D12Device();
+    auto* const pd3d12Device   = GetDevice()->GetD3D12Device();
     const auto& ResourceLayout = m_Desc.ResourceLayout;
 
 #ifdef DILIGENT_DEVELOPMENT

@@ -231,8 +231,8 @@ void RootSignatureBuilder::AllocateResourceSlot(SHADER_TYPE                     
 
     if (ShaderType & RAY_TRACING_SHADER_TYPES)
     {
-        // For ray tracing shaders, original bind points are ignored as
-        // they will be remapped anyway.
+        // For ray tracing shaders, original bind points are ignored and
+        // will be remapped later by the PSO constructor.
         BindPoint = m_NumResources[RangeType];
         m_NumResources[RangeType] += ShaderResAttribs.BindCount;
     }
