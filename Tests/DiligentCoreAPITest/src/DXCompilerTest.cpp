@@ -101,10 +101,11 @@ const wchar_t* DXCArgs[] = {
     L"-Zpc", // Matrices in column-major order
 #ifdef DILIGENT_DEBUG
     L"-Zi", // Debug info
-    L"-Od", // Disable optimization
-    // Silence the following warning:
-    // no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
-    L"-Qembed_debug",
+    L"-Od"  // Disable optimization
+
+// Silence the following warning:
+// no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
+// L"-Qembed_debug", // Requires DXC1.5+
 #else
     L"-O3" // Optimization level 3
 #endif
@@ -131,7 +132,7 @@ TEST(DXCompilerTest, Reflection)
     CA.ppBlobOut        = &pDXIL.p;
     CA.ppCompilerOutput = &pOutput.p;
     pDXC->Compile(CA);
-    ASSERT_TRUE(pDXIL) << (pOutput ? reinterpret_cast<const char*>(pOutput->GetBufferPointer()) : "");
+    ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
     CComPtr<ID3D12ShaderReflection> pReflection;
     pDXC->GetD3D12ShaderReflection(pDXIL, &pReflection);
@@ -195,7 +196,7 @@ TEST(DXCompilerTest, RemapBindings)
     CA.ppBlobOut        = &pDXIL.p;
     CA.ppCompilerOutput = &pOutput.p;
     pDXC->Compile(CA);
-    ASSERT_TRUE(pDXIL) << (pOutput ? reinterpret_cast<const char*>(pOutput->GetBufferPointer()) : "");
+    ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
     IDXCompiler::TResourceBindingMap BindigMap;
     BindigMap["g_TLAS"]        = 15;
