@@ -131,7 +131,7 @@ TEST(DXCompilerTest, Reflection)
     CA.ppBlobOut        = &pDXIL.p;
     CA.ppCompilerOutput = &pOutput.p;
     pDXC->Compile(CA);
-    ASSERT_TRUE(pDXIL);
+    ASSERT_TRUE(pDXIL) << (pOutput ? reinterpret_cast<const char*>(pOutput->GetBufferPointer()) : "");
 
     CComPtr<ID3D12ShaderReflection> pReflection;
     pDXC->GetD3D12ShaderReflection(pDXIL, &pReflection);
@@ -195,7 +195,7 @@ TEST(DXCompilerTest, RemapBindings)
     CA.ppBlobOut        = &pDXIL.p;
     CA.ppCompilerOutput = &pOutput.p;
     pDXC->Compile(CA);
-    ASSERT_TRUE(pDXIL);
+    ASSERT_TRUE(pDXIL) << (pOutput ? reinterpret_cast<const char*>(pOutput->GetBufferPointer()) : "");
 
     IDXCompiler::TResourceBindingMap BindigMap;
     BindigMap["g_TLAS"]        = 15;
