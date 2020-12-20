@@ -192,15 +192,26 @@ void RootSignatureBuilder::InitImmutableSampler(SHADER_TYPE                     
         if (ImtblSmplr.ShaderVisibility == ShaderVisibility &&
             StreqSuff(SamplerName, ImtblSmplr.SamplerDesc.SamplerOrTextureName, SamplerSuffix))
         {
-            ImtblSmplr.ShaderRegister = SamplerAttribs.BindPoint;
-            ImtblSmplr.ArraySize      = SamplerAttribs.BindCount;
-            ImtblSmplr.RegisterSpace  = 0;
-            ImtblSmplr.Name           = SamplerName;
-
-            if (ShaderType & RAY_TRACING_SHADER_TYPES)
+            if (ImtblSmplr.ShaderRegister == ~UINT{0})
             {
-                ImtblSmplr.ShaderRegister = m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER];
-                m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER] += SamplerAttribs.BindCount;
+                ImtblSmplr.ShaderRegister = SamplerAttribs.BindPoint;
+                ImtblSmplr.ArraySize      = SamplerAttribs.BindCount;
+                ImtblSmplr.RegisterSpace  = 0;
+                ImtblSmplr.Name           = SamplerName;
+
+                if (ShaderType & RAY_TRACING_SHADER_TYPES)
+                {
+                    ImtblSmplr.ShaderRegister = m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER];
+                    m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER] += SamplerAttribs.BindCount;
+                }
+            }
+            else
+            {
+                // Do not allocate another register if the sampler has already been processed
+                VERIFY(ShaderType & RAY_TRACING_SHADER_TYPES, "Multiple samplers with the same name can only be encountered in ray tracing shaders");
+                DEV_CHECK_ERR(ImtblSmplr.ArraySize == SamplerAttribs.BindCount, "Immutable sampler '", SamplerName,
+                              "' has already been found, but its previous array size (", ImtblSmplr.ArraySize,
+                              ") does not match the new array size (", SamplerAttribs.BindCount, ")");
             }
 
             SamplerFound = true;

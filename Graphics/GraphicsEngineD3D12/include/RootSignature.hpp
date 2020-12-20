@@ -513,7 +513,7 @@ public:
     struct ImmutableSamplerAttribs
     {
         ImmutableSamplerDesc    SamplerDesc;
-        UINT                    ShaderRegister   = static_cast<UINT>(-1);
+        UINT                    ShaderRegister   = ~UINT{0};
         UINT                    ArraySize        = 0;
         UINT                    RegisterSpace    = 0;
         D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
