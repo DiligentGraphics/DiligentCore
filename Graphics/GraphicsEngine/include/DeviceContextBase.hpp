@@ -1648,9 +1648,9 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const Tra
         return false;
     }
 
-    if (m_pActiveRenderPass != nullptr && Attribs.SBTTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+    if (m_pActiveRenderPass != nullptr)
     {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command uses resource state transition and must be performed outside of render pass");
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays must be performed outside of render pass");
         return false;
     }
 

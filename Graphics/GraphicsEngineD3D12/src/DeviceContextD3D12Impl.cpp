@@ -2632,7 +2632,7 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
 
     if (RayGenShaderRecord.pData || MissShaderTable.pData || HitGroupTable.pData || CallableShaderTable.pData)
     {
-        TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, Attribs.SBTTransitionMode, RESOURCE_STATE_COPY_DEST, OpName);
+        TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_COPY_DEST, OpName);
 
         // buffer ranges are not intersected, so we don't need to add barriers between them
         if (RayGenShaderRecord.pData)
@@ -2647,7 +2647,7 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
         if (CallableShaderTable.pData)
             UpdateBuffer(pBufferD3D12, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
     }
-    TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, Attribs.SBTTransitionMode, RESOURCE_STATE_RAY_TRACING, OpName);
+    TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_RAY_TRACING, OpName);
 
     D3D12_DISPATCH_RAYS_DESC d3d12DispatchDesc = {};
 

@@ -1229,10 +1229,7 @@ struct TraceRaysAttribs
     Uint32               DimensionX  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in X direction.
     Uint32               DimensionY  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in Y direction.
     Uint32               DimensionZ  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in Z direction.
-    
-    /// Shader binding table buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    RESOURCE_STATE_TRANSITION_MODE SBTTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+        
 #if DILIGENT_CPP_INTERFACE
     TraceRaysAttribs() noexcept {}
 #endif
@@ -2198,6 +2195,9 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Executes a trace rays command.
     
     /// \param [in] Attribs - Trace rays command attributes, see Diligent::TraceRaysAttribs for details.
+    ///
+    /// \remarks  The method is not thread-safe. An application must externally synchronize the access
+    ///           to the shader binding table passed as an argument to the function.
     VIRTUAL void METHOD(TraceRays)(THIS_
                                    const TraceRaysAttribs REF Attribs) PURE;
 };

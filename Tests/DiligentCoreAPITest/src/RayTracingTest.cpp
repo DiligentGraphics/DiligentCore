@@ -738,10 +738,9 @@ TEST_P(RT1, TriangleClosestHitShader)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     TraceRaysAttribs Attribs;
-    Attribs.DimensionX        = SCDesc.Width;
-    Attribs.DimensionY        = SCDesc.Height;
-    Attribs.pSBT              = pSBT;
-    Attribs.SBTTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.DimensionX = SCDesc.Width;
+    Attribs.DimensionY = SCDesc.Height;
+    Attribs.pSBT       = pSBT;
 
     pContext->TraceRays(Attribs);
 
@@ -931,10 +930,9 @@ TEST_P(RT2, TriangleAnyHitShader)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     TraceRaysAttribs Attribs;
-    Attribs.DimensionX        = SCDesc.Width;
-    Attribs.DimensionY        = SCDesc.Height;
-    Attribs.pSBT              = pSBT;
-    Attribs.SBTTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.DimensionX = SCDesc.Width;
+    Attribs.DimensionY = SCDesc.Height;
+    Attribs.pSBT       = pSBT;
 
     pContext->TraceRays(Attribs);
 
@@ -1122,10 +1120,9 @@ TEST_P(RT3, ProceduralIntersection)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     TraceRaysAttribs Attribs;
-    Attribs.DimensionX        = SCDesc.Width;
-    Attribs.DimensionY        = SCDesc.Height;
-    Attribs.pSBT              = pSBT;
-    Attribs.SBTTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.DimensionX = SCDesc.Width;
+    Attribs.DimensionY = SCDesc.Height;
+    Attribs.pSBT       = pSBT;
 
     pContext->TraceRays(Attribs);
 
@@ -1388,10 +1385,9 @@ TEST_P(RT4, MultiGeometry)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     TraceRaysAttribs Attribs;
-    Attribs.DimensionX        = SCDesc.Width;
-    Attribs.DimensionY        = SCDesc.Height;
-    Attribs.pSBT              = pSBT;
-    Attribs.SBTTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.DimensionX = SCDesc.Width;
+    Attribs.DimensionY = SCDesc.Height;
+    Attribs.pSBT       = pSBT;
 
     pContext->TraceRays(Attribs);
 
