@@ -72,6 +72,4 @@ TextureViewD3D12Impl::~TextureViewD3D12Impl()
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(TextureViewD3D12Impl, IID_TextureViewD3D12, TTextureViewBase)
-
 } // namespace Diligent

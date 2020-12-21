@@ -51,8 +51,6 @@ CommandQueueD3D12Impl::~CommandQueueD3D12Impl()
     CloseHandle(m_WaitForGPUEventHandle);
 }
 
-IMPLEMENT_QUERY_INTERFACE(CommandQueueD3D12Impl, IID_CommandQueueD3D12, TBase)
-
 Uint64 CommandQueueD3D12Impl::Submit(ID3D12GraphicsCommandList* commandList)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMtx};

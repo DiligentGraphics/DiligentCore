@@ -407,7 +407,6 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     m_pd3d12Resource = pTexture;
     SetState(InitialState);
 }
-IMPLEMENT_QUERY_INTERFACE(TextureD3D12Impl, IID_TextureD3D12, TTextureBase)
 
 void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
@@ -512,8 +511,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
 TextureD3D12Impl::~TextureD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    auto* pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
-    pDeviceD3D12Impl->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
+    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
     if (m_StagingFootprints != nullptr)
     {
         FREE(GetRawAllocator(), m_StagingFootprints);

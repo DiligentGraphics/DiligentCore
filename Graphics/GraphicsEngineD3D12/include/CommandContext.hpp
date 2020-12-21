@@ -45,13 +45,13 @@ namespace Diligent
 struct DWParam
 {
     // clang-format off
-    DWParam( FLOAT f ) : Float{f} {}
-    DWParam( UINT u )  : Uint {u} {}
-    DWParam( INT i )   : Int  {i} {}
+    DWParam(FLOAT f) : Float{f} {}
+    DWParam(UINT u)  : Uint {u} {}
+    DWParam(INT i)   : Int  {i} {}
 
-    void operator= ( FLOAT f ) { Float = f; }
-    void operator= ( UINT u )  { Uint = u; }
-    void operator= ( INT i )   { Int = i; }
+    void operator= (FLOAT f) { Float = f; }
+    void operator= (UINT u)  { Uint = u; }
+    void operator= (INT i)   { Int = i; }
     // clang-format on
 
     union
@@ -143,9 +143,12 @@ public:
 
     struct ShaderDescriptorHeaps
     {
-        ID3D12DescriptorHeap* pSrvCbvUavHeap;
-        ID3D12DescriptorHeap* pSamplerHeap;
-        ShaderDescriptorHeaps(ID3D12DescriptorHeap* _pSrvCbvUavHeap = nullptr, ID3D12DescriptorHeap* _pSamplerHeap = nullptr) :
+        ID3D12DescriptorHeap* pSrvCbvUavHeap = nullptr;
+        ID3D12DescriptorHeap* pSamplerHeap   = nullptr;
+
+        ShaderDescriptorHeaps() noexcept {}
+
+        ShaderDescriptorHeaps(ID3D12DescriptorHeap* _pSrvCbvUavHeap, ID3D12DescriptorHeap* _pSamplerHeap) noexcept :
             pSrvCbvUavHeap{_pSrvCbvUavHeap},
             pSamplerHeap{_pSamplerHeap}
         {}

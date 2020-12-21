@@ -46,7 +46,7 @@ public:
     CommandQueueD3D12Impl(IReferenceCounters* pRefCounters, ID3D12CommandQueue* pd3d12NativeCmdQueue, ID3D12Fence* pd3d12Fence);
     ~CommandQueueD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueD3D12, TBase)
 
     // Implementation of ICommandQueueD3D12::GetNextFenceValue().
     virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue; }

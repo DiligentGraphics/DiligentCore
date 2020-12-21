@@ -74,7 +74,7 @@ void CommandContext::Reset(CommandListManager& CmdListManager)
     m_pCurGraphicsRootSignature = nullptr;
     m_pCurComputeRootSignature  = nullptr;
     m_PendingResourceBarriers.clear();
-    m_BoundDescriptorHeaps = ShaderDescriptorHeaps();
+    m_BoundDescriptorHeaps = ShaderDescriptorHeaps{};
 
     m_DynamicGPUDescriptorAllocators = nullptr;
 

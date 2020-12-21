@@ -56,7 +56,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     m_DynamicData
     (
         BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
-        D3D12DynamicAllocation{},
+        CtxDynamicData{},
         STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
     )
 // clang-format on
@@ -284,7 +284,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     m_DynamicData
     (
         BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
-        D3D12DynamicAllocation{},
+        CtxDynamicData{},
         STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
     )
 // clang-format on
@@ -301,12 +301,8 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 BufferD3D12Impl::~BufferD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    auto* pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
-    pDeviceD3D12Impl->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
+    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
 }
-
-IMPLEMENT_QUERY_INTERFACE(BufferD3D12Impl, IID_BufferD3D12, TBufferBase)
-
 
 void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView)
 {

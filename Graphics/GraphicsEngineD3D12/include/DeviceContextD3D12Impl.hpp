@@ -76,7 +76,7 @@ public:
                            Uint32                       CommandQueueId);
     ~DeviceContextD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextD3D12, TDeviceContextBase)
 
     /// Implementation of IDeviceContext::SetPipelineState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;

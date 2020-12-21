@@ -53,7 +53,7 @@ public:
                                 bool                          bIsDeviceInternal = false);
     ~ShaderBindingTableD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableD3D12, TShaderBindingTableBase)
 };
 
 } // namespace Diligent

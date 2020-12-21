@@ -51,6 +51,4 @@ BufferViewD3D12Impl::BufferViewD3D12Impl(IReferenceCounters*        pRefCounters
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(BufferViewD3D12Impl, IID_BufferViewD3D12, TBufferViewBase)
-
 } // namespace Diligent

@@ -118,8 +118,6 @@ void ShaderResourceBindingD3D12Impl::Destruct()
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingD3D12Impl, IID_ShaderResourceBindingD3D12, TBase)
-
 void ShaderResourceBindingD3D12Impl::BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)
 {
     const auto PipelineType = m_pPSO->GetDesc().PipelineType;

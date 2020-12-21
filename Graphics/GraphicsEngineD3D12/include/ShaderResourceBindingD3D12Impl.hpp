@@ -54,7 +54,7 @@ public:
                                    bool                    IsPSOInternal);
     ~ShaderResourceBindingD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingD3D12, TBase)
 
     virtual void DILIGENT_CALL_TYPE BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override;
 

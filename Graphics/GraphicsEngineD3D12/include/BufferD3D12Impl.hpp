@@ -63,7 +63,7 @@ public:
                     ID3D12Resource*              pd3d12Buffer);
     ~BufferD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferD3D12, TBufferBase)
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx) const;
@@ -120,10 +120,21 @@ private:
 
     DescriptorHeapAllocation m_CBVDescriptorAllocation;
 
+    // Align the struct size to the cache line size to avoid false sharing
+    struct alignas(64) CtxDynamicData : D3D12DynamicAllocation
+    {
+        CtxDynamicData& operator=(const D3D12DynamicAllocation& Allocation)
+        {
+            *static_cast<D3D12DynamicAllocation*>(this) = Allocation;
+            return *this;
+        }
+        Uint8 Padding[64 - sizeof(D3D12DynamicAllocation)];
+    };
+    static_assert(sizeof(CtxDynamicData) == 64, "Unexpected sizeof(CtxDynamicData)");
+
     friend class DeviceContextD3D12Impl;
-    // Array of dynamic allocations for every device context
-    // sizeof(D3D12DynamicAllocation) == 40 (x64)
-    std::vector<D3D12DynamicAllocation, STDAllocatorRawMem<D3D12DynamicAllocation>> m_DynamicData;
+    // Array of dynamic allocations for every device context.
+    std::vector<CtxDynamicData, STDAllocatorRawMem<D3D12DynamicAllocation>> m_DynamicData;
 };
 
 } // namespace Diligent

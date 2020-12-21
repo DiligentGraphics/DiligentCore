@@ -51,7 +51,7 @@ public:
                        const NativeWindow&           Window);
     ~SwapChainD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SwapChainD3D12, TSwapChainBase)
 
     /// Implementation of ISwapChain::Present() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;

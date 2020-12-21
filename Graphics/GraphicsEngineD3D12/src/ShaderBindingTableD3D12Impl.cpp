@@ -50,6 +50,4 @@ ShaderBindingTableD3D12Impl::~ShaderBindingTableD3D12Impl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(ShaderBindingTableD3D12Impl, IID_ShaderBindingTableD3D12, TShaderBindingTableBase)
-
 } // namespace Diligent

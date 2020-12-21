@@ -56,7 +56,7 @@ public:
                         ID3D12Resource*              pd3d12TLAS);
     ~TopLevelASD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelASD3D12, TTopLevelASBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelASD3D12, TTopLevelASBase)
 
     /// Implementation of ITopLevelASD3D12D3D12::GetD3D12TLAS().
     virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12TLAS() override final { return GetD3D12Resource(); }

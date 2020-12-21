@@ -185,7 +185,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
         D3D12_DESCRIPTOR_HEAP_TYPE HeapType        = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         auto                       DescriptorAlloc = Ctx.AllocateDynamicGPUVisibleDescriptor(HeapType, 5);
 
-        CommandContext::ShaderDescriptorHeaps Heaps{DescriptorAlloc.GetDescriptorHeap()};
+        CommandContext::ShaderDescriptorHeaps Heaps{DescriptorAlloc.GetDescriptorHeap(), nullptr};
         ComputeCtx.SetDescriptorHeaps(Heaps);
         Ctx.GetCommandList()->SetComputeRootDescriptorTable(1, DescriptorAlloc.GetGpuHandle(0));
         Ctx.GetCommandList()->SetComputeRootDescriptorTable(2, DescriptorAlloc.GetGpuHandle(1));

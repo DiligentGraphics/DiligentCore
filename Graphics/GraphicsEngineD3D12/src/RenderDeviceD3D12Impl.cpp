@@ -564,9 +564,6 @@ void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 }
 
-
-IMPLEMENT_QUERY_INTERFACE(RenderDeviceD3D12Impl, IID_RenderDeviceD3D12, TRenderDeviceBase)
-
 template <typename PSOCreateInfoType>
 void RenderDeviceD3D12Impl::CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState)
 {

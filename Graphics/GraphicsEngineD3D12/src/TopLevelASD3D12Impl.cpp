@@ -58,7 +58,8 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
         d3d12TopLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
         d3d12TopLevelInputs.NumDescs    = m_Desc.MaxInstanceCount;
 
-        VERIFY_EXPR(m_Desc.MaxInstanceCount <= pDeviceD3D12->GetProperties().MaxInstancesPerTLAS);
+        DEV_CHECK_ERR(m_Desc.MaxInstanceCount <= pDeviceD3D12->GetProperties().MaxInstancesPerTLAS,
+                      "Max instance count (", m_Desc.MaxInstanceCount, ") exceeds device limit.");
 
         pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12TopLevelInputs, &d3d12TopLevelPrebuildInfo);
         if (d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)
@@ -109,7 +110,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
     d3d12SRVDesc.RaytracingAccelerationStructure.Location = GetGPUAddress();
     pd3d12Device->CreateShaderResourceView(nullptr, &d3d12SRVDesc, m_DescriptorHandle.GetCpuHandle());
 
-    DEV_CHECK_ERR(GetGPUAddress() % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0, "GPU virtual address is expect to be at least 256-byte aligned");
+    DEV_CHECK_ERR(GetGPUAddress() % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0, "GPU virtual address is expected to be at least 256-byte aligned");
 
     SetState(RESOURCE_STATE_BUILD_AS_READ);
 }
@@ -128,8 +129,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounte
 TopLevelASD3D12Impl::~TopLevelASD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    auto* pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
-    pDeviceD3D12Impl->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
+    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
 }
 
 } // namespace Diligent

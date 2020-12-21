@@ -119,9 +119,6 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(SwapChainD3D12Impl, IID_SwapChainD3D12, TSwapChainBase)
-
-
 void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
 {
 #if PLATFORM_UNIVERSAL_WINDOWS
