@@ -111,7 +111,7 @@ public:
         SRBResources
     };
 
-    ShaderResourceCacheD3D12(DbgCacheContentType dbgContentType) noexcept
+    explicit ShaderResourceCacheD3D12(DbgCacheContentType dbgContentType) noexcept
     // clang-format off
 #ifdef DILIGENT_DEBUG
         : m_DbgContentType

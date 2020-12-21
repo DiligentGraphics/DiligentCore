@@ -292,34 +292,24 @@ TBindingMapPerStage ExtractResourceBindingMap(const RootSignatureBuilder&       
 
             auto&       BindingMap = BindingMapPerStage[ShaderIdx];
             const auto& ResLayout  = pLayouts[LayoutIdx];
-            for (Uint32 v = 0; v < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++v)
+
+            const auto TotalResCount = ResLayout.GetTotalResourceCount();
+            for (Uint32 i = 0; i < TotalResCount; ++i)
             {
-                auto   VarType   = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(v);
-                Uint32 ResCount  = ResLayout.GetCbvSrvUavCount(VarType);
-                Uint32 SampCount = ResLayout.GetSamplerCount(VarType);
+                const auto& Attribs = ResLayout.GetResource(i).Attribs;
+                VERIFY_EXPR(Attribs.Name != nullptr && strlen(Attribs.Name) > 0);
 
-                for (Uint32 i = 0; i < ResCount; ++i)
-                {
-                    const auto& Attribs = ResLayout.GetSrvCbvUav(VarType, i).Attribs;
-                    VERIFY_EXPR(Attribs.Name != nullptr && strlen(Attribs.Name) > 0);
-
-                    auto Iter = BindingMap.emplace(HashMapStringKey{Attribs.Name}, Attribs.BindPoint).first;
-                    VERIFY_EXPR(Iter->second == Attribs.BindPoint);
-                }
-                for (Uint32 i = 0; i < SampCount; ++i)
-                {
-                    const auto& Attribs = ResLayout.GetSampler(VarType, i).Attribs;
-                    VERIFY_EXPR(Attribs.Name != nullptr && strlen(Attribs.Name) > 0);
-
-                    auto Iter = BindingMap.emplace(HashMapStringKey{Attribs.Name}, Attribs.BindPoint).first;
-                    VERIFY_EXPR(Iter->second == Attribs.BindPoint);
-                }
+                auto Iter = BindingMap.emplace(HashMapStringKey{Attribs.Name}, Attribs.BindPoint).first;
+                VERIFY(Iter->second == Attribs.BindPoint,
+                       "Resource '", Attribs.Name, "' was assigned incosistent bind points in different resource layouts. This is a bug.");
             }
         }
     };
+    // Gather resource bind points
     ExtractResources(pResourceLayouts);
     ExtractResources(pStaticLayouts);
 
+    // Gather static sampler bind points
     for (size_t i = 0; i < RootSig.GetImmutableSamplerCount(); ++i)
     {
         const auto&  ImtblSmplr = RootSig.GetImmutableSamplers()[i];
@@ -335,7 +325,9 @@ TBindingMapPerStage ExtractResourceBindingMap(const RootSignatureBuilder&       
         }
 
         auto& BindingMap = BindingMapPerStage[ShaderIdx];
-        BindingMap.emplace(HashMapStringKey{ImtblSmplr.Name.c_str()}, ImtblSmplr.ShaderRegister);
+        auto  Iter       = BindingMap.emplace(HashMapStringKey{ImtblSmplr.Name.c_str()}, ImtblSmplr.ShaderRegister).first;
+        VERIFY(Iter->second == ImtblSmplr.ShaderRegister,
+               "Static sampler '", ImtblSmplr.Name, "' was assigned incosistent bind points in different resource layouts. This is a bug.");
     }
 
     return BindingMapPerStage;
@@ -694,7 +686,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
         std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
         std::vector<CComPtr<IDxcBlob>>     ShaderBlobs;
-        // Create ray-tracing pipeline and remap shader registers using the bind points assigned during the
+        // Create ray-tracing pipeline and remap shader registers (including static samplers) using the bind points assigned during the
         // resource layout initialization.
         BuildRTPipelineDescription(CreateInfo, Subobjects, ShaderBlobs, TempPool, pDeviceD3D12->GetDxCompiler(), BindingMapPerStage);
 

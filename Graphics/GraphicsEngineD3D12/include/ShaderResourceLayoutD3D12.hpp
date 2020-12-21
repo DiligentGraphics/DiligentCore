@@ -119,7 +119,7 @@ namespace Diligent
 class ShaderResourceLayoutD3D12 final
 {
 public:
-    explicit ShaderResourceLayoutD3D12(IObject& Owner, ID3D12Device* pd3d12Device) noexcept :
+    ShaderResourceLayoutD3D12(IObject& Owner, ID3D12Device* pd3d12Device) noexcept :
         m_Owner{Owner},
         m_pd3d12Device{pd3d12Device}
     {
@@ -129,7 +129,7 @@ public:
     }
 
     // Initializes reference layouts that address all types of resources (static, mutable, dynamic).
-    // Root indices and descriptor table offsets are assigned during the initialization;
+    // Root indices and descriptor table offsets are assigned during the initialization.
     void Initialize(PIPELINE_TYPE                        PipelineType,
                     const PipelineResourceLayoutDesc&    ResourceLayout,
                     const std::vector<ShaderD3D12Impl*>& Shaders,
@@ -138,7 +138,8 @@ public:
                     class LocalRootSignature*            pLocalRootSig);
 
     // Copies the specified variable types from the source layout and initializes the
-    // resource cache.
+    // resource cache. Uses bind points from the source layout.
+    // \note This method is used to initialize static resource cache.
     void Initialize(const ShaderResourceLayoutD3D12&           SrcLayout,
                     IMemoryAllocator&                          LayoutDataAllocator,
                     const SHADER_RESOURCE_VARIABLE_TYPE* const AllowedVarTypes,
@@ -177,7 +178,7 @@ public:
         static_assert(static_cast<int>(CachedResourceType::NumTypes) < (1 << ResourceTypeBits), "Not enough bits to represent CachedResourceType");
 
         /* 0  */ const ShaderResourceLayoutD3D12& ParentResLayout;
-        /* 8  */ const D3DShaderResourceAttribs   Attribs;
+        /* 8  */ const D3DShaderResourceAttribs   Attribs; // Copy of the attributes, potentially with some changes to bindings
         /*24  */ const Uint32                     OffsetFromTableStart;
         /*28.0*/ const Uint32                     ResourceType : ResourceTypeBits; // | 0 1 2 |
         /*28.3*/ const Uint32                     VariableType : VariableTypeBits; //         | 3 4 |
@@ -283,6 +284,10 @@ public:
     {
         return m_SamplersOffsets[VarType + 1] - m_SamplersOffsets[VarType];
     }
+    Uint32 GetTotalResourceCount() const
+    {
+        return m_SamplersOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
+    }
 
     const D3D12Resource& GetSrvCbvUav(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r) const
     {
@@ -293,6 +298,13 @@ public:
     {
         VERIFY_EXPR(s < GetSamplerCount(VarType));
         return GetResource(GetSamplerOffset(VarType, s));
+    }
+
+    const D3D12Resource& GetResource(Uint32 r) const
+    {
+        VERIFY_EXPR(r < GetTotalResourceCount());
+        const auto* Resources = reinterpret_cast<const D3D12Resource*>(m_ResourceBuffer.get());
+        return Resources[r];
     }
 
     const bool IsUsingSeparateSamplers() const { return m_IsUsingSeparateSamplers; }
@@ -322,21 +334,11 @@ private:
     {
         return m_SamplersOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] - m_SamplersOffsets[0];
     }
-    Uint32 GetTotalResourceCount() const
-    {
-        return m_SamplersOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
-    }
 
     D3D12Resource& GetResource(Uint32 r)
     {
         VERIFY_EXPR(r < GetTotalResourceCount());
         auto* Resources = reinterpret_cast<D3D12Resource*>(m_ResourceBuffer.get());
-        return Resources[r];
-    }
-    const D3D12Resource& GetResource(Uint32 r) const
-    {
-        VERIFY_EXPR(r < GetTotalResourceCount());
-        const auto* Resources = reinterpret_cast<const D3D12Resource*>(m_ResourceBuffer.get());
         return Resources[r];
     }
 

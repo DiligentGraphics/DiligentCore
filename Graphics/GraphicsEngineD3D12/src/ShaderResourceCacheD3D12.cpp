@@ -71,11 +71,11 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator, Uint32
         auto* pTables     = reinterpret_cast<RootTable*>(m_pMemory);
         auto* pCurrResPtr = reinterpret_cast<Resource*>(pTables + m_NumTables);
         for (Uint32 res = 0; res < TotalResources; ++res)
-            new (pCurrResPtr + res) Resource();
+            new (pCurrResPtr + res) Resource{};
 
         for (Uint32 t = 0; t < NumTables; ++t)
         {
-            new (&GetRootTable(t)) RootTable(TableSizes[t], TableSizes[t] > 0 ? pCurrResPtr : nullptr);
+            new (&GetRootTable(t)) RootTable{TableSizes[t], TableSizes[t] > 0 ? pCurrResPtr : nullptr};
             pCurrResPtr += TableSizes[t];
         }
         VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory + MemorySize);
