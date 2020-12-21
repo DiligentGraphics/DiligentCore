@@ -89,6 +89,4 @@ SamplerVkImpl::~SamplerVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_VkSampler), m_CommandQueueMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE(SamplerVkImpl, IID_SamplerVk, TSamplerBase)
-
 } // namespace Diligent

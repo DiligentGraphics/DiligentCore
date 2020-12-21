@@ -482,8 +482,6 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     SetState(InitialState);
 }
 
-IMPLEMENT_QUERY_INTERFACE(TextureVkImpl, IID_TextureVk, TTextureBase)
-
 void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
     VERIFY(ppView != nullptr, "View pointer address is null");

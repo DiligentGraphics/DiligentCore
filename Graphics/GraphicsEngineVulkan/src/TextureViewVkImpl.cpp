@@ -70,6 +70,4 @@ TextureViewVkImpl::~TextureViewVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_ImageView), m_pTexture->GetDesc().CommandQueueMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE(TextureViewVkImpl, IID_TextureViewVk, TTextureViewBase)
-
 } // namespace Diligent

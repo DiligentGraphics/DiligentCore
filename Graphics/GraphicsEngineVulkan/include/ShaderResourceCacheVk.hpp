@@ -75,7 +75,7 @@ public:
     };
 
     // clang-format off
-    ShaderResourceCacheVk(DbgCacheContentType dbgContentType) noexcept
+    explicit ShaderResourceCacheVk(DbgCacheContentType dbgContentType) noexcept
 #ifdef DILIGENT_DEBUG
         : m_DbgContentType{dbgContentType}
 #endif
@@ -99,7 +99,7 @@ public:
     struct Resource
     {
         // clang-format off
-        Resource(SPIRVShaderResourceAttribs::ResourceType _Type) :
+        explicit Resource(SPIRVShaderResourceAttribs::ResourceType _Type) noexcept :
             Type{_Type}
         {}
 

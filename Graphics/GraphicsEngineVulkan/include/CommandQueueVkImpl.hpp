@@ -52,7 +52,7 @@ public:
                        uint32_t                                              QueueFamilyIndex);
     ~CommandQueueVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueVk, TBase)
 
     /// Implementation of ICommandQueueVk::GetNextFenceValue().
     virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue; }

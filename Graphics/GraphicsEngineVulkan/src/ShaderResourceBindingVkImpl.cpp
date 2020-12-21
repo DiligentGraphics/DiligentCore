@@ -123,8 +123,6 @@ void ShaderResourceBindingVkImpl::Destruct()
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingVkImpl, IID_ShaderResourceBindingVk, TBase)
-
 void ShaderResourceBindingVkImpl::BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)
 {
     const auto PipelineType = m_pPSO->GetDesc().PipelineType;

@@ -76,7 +76,8 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
 
                 MaxPrimitiveCount += src.MaxPrimitiveCount;
             }
-            VERIFY_EXPR(MaxPrimitiveCount <= Limits.maxPrimitiveCount);
+            DEV_CHECK_ERR(MaxPrimitiveCount <= Limits.maxPrimitiveCount,
+                          "Max primitives count (", MaxPrimitiveCount, ") exceeds device limit (", Limits.maxPrimitiveCount, ")");
         }
         else if (m_Desc.pBoxes != nullptr)
         {
@@ -97,7 +98,8 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
 
                 MaxBoxCount += src.MaxBoxCount;
             }
-            VERIFY_EXPR(MaxBoxCount <= Limits.maxPrimitiveCount);
+            DEV_CHECK_ERR(MaxBoxCount <= Limits.maxPrimitiveCount,
+                          "Max box count (", MaxBoxCount, ") exceeds device limit (", Limits.maxPrimitiveCount, ")");
         }
         else
         {

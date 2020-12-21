@@ -52,7 +52,7 @@ public:
                              bool                          bIsDeviceInternal = false);
     ~ShaderBindingTableVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableVk, TShaderBindingTableBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableVk, TShaderBindingTableBase)
 };
 
 } // namespace Diligent

@@ -121,16 +121,17 @@ private:
     DescriptorHeapAllocation m_CBVDescriptorAllocation;
 
     // Align the struct size to the cache line size to avoid false sharing
-    struct alignas(64) CtxDynamicData : D3D12DynamicAllocation
+    static constexpr size_t CacheLineSize = 64;
+    struct alignas(CacheLineSize) CtxDynamicData : D3D12DynamicAllocation
     {
         CtxDynamicData& operator=(const D3D12DynamicAllocation& Allocation)
         {
             *static_cast<D3D12DynamicAllocation*>(this) = Allocation;
             return *this;
         }
-        Uint8 Padding[64 - sizeof(D3D12DynamicAllocation)];
+        Uint8 Padding[CacheLineSize - sizeof(D3D12DynamicAllocation)];
     };
-    static_assert(sizeof(CtxDynamicData) == 64, "Unexpected sizeof(CtxDynamicData)");
+    static_assert(sizeof(CtxDynamicData) == CacheLineSize, "Unexpected sizeof(CtxDynamicData)");
 
     friend class DeviceContextD3D12Impl;
     // Array of dynamic allocations for every device context.

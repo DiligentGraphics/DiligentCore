@@ -825,9 +825,6 @@ void PipelineStateVkImpl::Destruct()
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase)
-
-
 void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
 {
     auto& SRBAllocator  = m_pDevice->GetSRBAllocator();

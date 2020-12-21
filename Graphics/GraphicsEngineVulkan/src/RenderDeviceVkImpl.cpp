@@ -565,9 +565,6 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 }
 
-
-IMPLEMENT_QUERY_INTERFACE(RenderDeviceVkImpl, IID_RenderDeviceVk, TRenderDeviceBase)
-
 template <typename PSOCreateInfoType>
 void RenderDeviceVkImpl::CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState)
 {

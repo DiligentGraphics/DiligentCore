@@ -67,7 +67,7 @@ public:
     /// Implementation of IBottomLevelASVk::GetVkDeviceAddress().
     virtual VkDeviceAddress DILIGENT_CALL_TYPE GetVkDeviceAddress() const override { return m_DeviceAddress; }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASVk, TBottomLevelASBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASVk, TBottomLevelASBase)
 
 private:
     VkDeviceAddress                         m_DeviceAddress = 0;

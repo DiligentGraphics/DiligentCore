@@ -70,7 +70,7 @@ public:
                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice) noexcept(false);
     ~RenderDeviceVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDeviceVk, TRenderDeviceBase)
 
     /// Implementation of IRenderDevice::CreateGraphicsPipelineState() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;

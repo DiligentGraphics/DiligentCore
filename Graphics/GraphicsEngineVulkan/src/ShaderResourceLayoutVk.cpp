@@ -336,7 +336,7 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(const std::vector<co
                 else
                 {
                     // merge with existing
-                    auto& ExistingRes = GetResource(VarType, ResIter->second);
+                    const auto& ExistingRes = GetResource(VarType, ResIter->second);
                     VERIFY_EXPR(ExistingRes.VariableType == VarType);
                     VERIFY_EXPR(ExistingRes.Type == Attribs.Type);
                     VERIFY_EXPR(ExistingRes.ResourceDim == Attribs.ResourceDim);

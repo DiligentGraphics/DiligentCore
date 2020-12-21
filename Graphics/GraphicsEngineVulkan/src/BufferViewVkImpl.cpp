@@ -58,8 +58,6 @@ BufferViewVkImpl::~BufferViewVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_BuffView), m_pBuffer->GetDesc().CommandQueueMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE(BufferViewVkImpl, IID_BufferViewVk, TBufferViewBase)
-
 const BufferVkImpl* BufferViewVkImpl::GetBufferVk() const
 {
     return ValidatedCast<const BufferVkImpl>(m_pBuffer);

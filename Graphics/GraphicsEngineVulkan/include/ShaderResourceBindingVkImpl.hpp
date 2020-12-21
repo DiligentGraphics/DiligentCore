@@ -54,7 +54,7 @@ public:
                                 bool                 IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingVk, TBase)
 
     /// Implementation of IShaderResourceBinding::BindResources() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override final;

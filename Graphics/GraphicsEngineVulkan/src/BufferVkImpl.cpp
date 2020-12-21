@@ -54,7 +54,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         BuffDesc,
         false
     },
-    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
+    m_DynamicData(STD_ALLOCATOR_RAW_MEM(CtxDynamicData, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
 // clang-format on
 {
     ValidateBufferInitData(BuffDesc, pBuffData);
@@ -174,9 +174,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_DYNAMIC)
     {
         auto CtxCount = 1 + pRenderDeviceVk->GetNumDeferredContexts();
-        m_DynamicAllocations.reserve(CtxCount);
+        m_DynamicData.reserve(CtxCount);
         for (Uint32 ctx = 0; ctx < CtxCount; ++ctx)
-            m_DynamicAllocations.emplace_back();
+            m_DynamicData.emplace_back();
     }
 
     if (m_Desc.Usage == USAGE_DYNAMIC && (VkBuffCI.usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)) == 0)
@@ -394,7 +394,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         BuffDesc,
         false
     },
-    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>")),
+    m_DynamicData(STD_ALLOCATOR_RAW_MEM(CtxDynamicData, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>")),
     m_VulkanBuffer{vkBuffer}
 // clang-format on
 {
@@ -409,9 +409,6 @@ BufferVkImpl::~BufferVkImpl()
     if (m_MemoryAllocation.Page != nullptr)
         m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
 }
-
-IMPLEMENT_QUERY_INTERFACE(BufferVkImpl, IID_BufferVk, TBufferBase)
-
 
 void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView)
 {
@@ -526,7 +523,7 @@ VkDeviceAddress BufferVkImpl::GetVkDeviceAddress() const
 void BufferVkImpl::DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx) const
 {
     const auto  ContextId    = pCtx->GetContextId();
-    const auto& DynAlloc     = m_DynamicAllocations[ContextId];
+    const auto& DynAlloc     = m_DynamicData[ContextId];
     const auto  CurrentFrame = pCtx->GetFrameNumber();
     DEV_CHECK_ERR(DynAlloc.pDynamicMemMgr != nullptr, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
     DEV_CHECK_ERR(DynAlloc.dvpFrameNumber == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");

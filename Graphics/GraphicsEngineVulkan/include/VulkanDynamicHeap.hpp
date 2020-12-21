@@ -52,7 +52,7 @@ struct VulkanDynamicAllocation
     VulkanDynamicAllocation() noexcept {}
 
     // clang-format off
-    VulkanDynamicAllocation(VulkanDynamicMemoryManager& _DynamicMemMgr, size_t _AlignedOffset, size_t _Size)noexcept :
+    VulkanDynamicAllocation(VulkanDynamicMemoryManager& _DynamicMemMgr, size_t _AlignedOffset, size_t _Size) noexcept :
         pDynamicMemMgr{&_DynamicMemMgr},
         AlignedOffset {_AlignedOffset }, 
         Size          {_Size          }

@@ -50,7 +50,7 @@ public:
     SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
     ~SamplerVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SamplerVk, TSamplerBase)
 
     /// Implementation of ISamplerVk::GetVkSampler().
     virtual VkSampler DILIGENT_CALL_TYPE GetVkSampler() const override final { return m_VkSampler; }

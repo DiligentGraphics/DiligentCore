@@ -62,7 +62,7 @@ public:
     PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const RayTracingPipelineStateCreateInfo& CreateInfo);
     ~PipelineStateVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateVk, TPipelineStateBase)
 
     /// Implementation of IPipelineState::CreateShaderResourceBinding() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final;
@@ -162,7 +162,6 @@ private:
     ShaderResourceCacheVk*   m_StaticResCaches       = nullptr; // [m_NumShaderStages]
     ShaderVariableManagerVk* m_StaticVarsMgrs        = nullptr; // [m_NumShaderStages]
 
-    // SRB memory allocator must be declared before m_pDefaultShaderResBinding
     SRBMemoryAllocator m_SRBMemAllocator;
 
     VulkanUtilities::PipelineWrapper m_Pipeline;

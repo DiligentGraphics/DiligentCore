@@ -52,9 +52,6 @@ CommandQueueVkImpl::~CommandQueueVkImpl()
     // is called on that device.
 }
 
-IMPLEMENT_QUERY_INTERFACE(CommandQueueVkImpl, IID_CommandQueueVk, TBase)
-
-
 Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMutex};

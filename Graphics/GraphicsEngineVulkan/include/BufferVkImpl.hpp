@@ -66,7 +66,7 @@ public:
                  VkBuffer                   vkBuffer);
     ~BufferVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferVk, TBufferBase)
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx) const;
@@ -81,11 +81,11 @@ public:
         else
         {
             VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
-            VERIFY_EXPR(!m_DynamicAllocations.empty());
+            VERIFY_EXPR(!m_DynamicData.empty());
 #ifdef DILIGENT_DEVELOPMENT
             DvpVerifyDynamicAllocation(pCtx);
 #endif
-            auto& DynAlloc = m_DynamicAllocations[CtxId];
+            auto& DynAlloc = m_DynamicData[CtxId];
             return static_cast<Uint32>(DynAlloc.AlignedOffset);
         }
     }
@@ -130,9 +130,23 @@ private:
     Uint32       m_DynamicOffsetAlignment    = 0;
     VkDeviceSize m_BufferMemoryAlignedOffset = 0;
 
-    // TODO (assiduous): improve cache performance, move dynamic allocations to
-    // device context.
-    std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation>> m_DynamicAllocations;
+    // TODO (assiduous): move dynamic allocations to device context.
+    static constexpr size_t CacheLineSize = 64;
+    struct alignas(CacheLineSize) CtxDynamicData : VulkanDynamicAllocation
+    {
+        CtxDynamicData() noexcept {}
+        CtxDynamicData(CtxDynamicData&&) = default;
+
+        CtxDynamicData& operator=(VulkanDynamicAllocation&& Allocation)
+        {
+            *static_cast<VulkanDynamicAllocation*>(this) = std::move(Allocation);
+            return *this;
+        }
+
+        Uint8 Padding[CacheLineSize - sizeof(VulkanDynamicAllocation)];
+    };
+    static_assert(sizeof(CtxDynamicData) == CacheLineSize, "Unexpected sizeof(CtxDynamicData)");
+    std::vector<CtxDynamicData, STDAllocatorRawMem<CtxDynamicData>> m_DynamicData;
 
     VulkanUtilities::BufferWrapper          m_VulkanBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;

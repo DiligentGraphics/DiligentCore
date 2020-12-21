@@ -56,7 +56,7 @@ public:
                      bool                                 bIsDefaultView);
     ~BufferViewVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferViewVk, TBufferViewBase)
 
     /// Implementation of IBufferViewVk::GetVkBufferView().
     virtual VkBufferView DILIGENT_CALL_TYPE GetVkBufferView() const override final { return m_BuffView; }

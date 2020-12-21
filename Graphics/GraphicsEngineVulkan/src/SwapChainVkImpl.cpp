@@ -661,9 +661,6 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     return res;
 }
 
-IMPLEMENT_QUERY_INTERFACE(SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase)
-
-
 void SwapChainVkImpl::Present(Uint32 SyncInterval)
 {
     if (SyncInterval != 0 && SyncInterval != 1)
