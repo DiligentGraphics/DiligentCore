@@ -812,11 +812,9 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         // general layout is initialized, because we will use the bind points that
         // may have been assigned (for ray tracing shaders).
         const SHADER_RESOURCE_VARIABLE_TYPE StaticVarType[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-        m_pShaderResourceLayouts[GetNumShaderStages() + s].Initialize(
+        m_pShaderResourceLayouts[GetNumShaderStages() + s].InitializeStaticReourceLayout(
             m_pShaderResourceLayouts[s],
             GetRawAllocator(),
-            StaticVarType,
-            _countof(StaticVarType),
             m_pStaticResourceCaches[s] //
         );
 

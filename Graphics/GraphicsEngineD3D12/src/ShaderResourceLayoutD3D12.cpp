@@ -146,7 +146,8 @@ void ShaderResourceLayoutD3D12::Initialize(PIPELINE_TYPE                        
     std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> CbvSrvUavCount = {};
     std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> SamplerCount   = {};
 
-    // Mapping from the resource name to its index in m_ResourceBuffer
+    // Mapping from the resource name to its index in m_ResourceBuffer that is used
+    // to de-duplicate resources.
     std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher> ResourceNameToIndex;
 
     // Construct shader or shader group name
@@ -389,16 +390,14 @@ void ShaderResourceLayoutD3D12::Initialize(PIPELINE_TYPE                        
 #endif
 }
 
-void ShaderResourceLayoutD3D12::Initialize(const ShaderResourceLayoutD3D12&           SrcLayout,
-                                           IMemoryAllocator&                          LayoutDataAllocator,
-                                           const SHADER_RESOURCE_VARIABLE_TYPE* const AllowedVarTypes,
-                                           Uint32                                     NumAllowedTypes,
-                                           ShaderResourceCacheD3D12&                  ResourceCache)
+void ShaderResourceLayoutD3D12::InitializeStaticReourceLayout(const ShaderResourceLayoutD3D12& SrcLayout,
+                                                              IMemoryAllocator&                LayoutDataAllocator,
+                                                              ShaderResourceCacheD3D12&        ResourceCache)
 {
     m_IsUsingSeparateSamplers = SrcLayout.m_IsUsingSeparateSamplers;
     m_ShaderType              = SrcLayout.m_ShaderType;
 
-    const auto        AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+    const auto        AllowedTypeBits = GetAllowedTypeBit(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     const auto* const ShaderName      = SrcLayout.GetShaderName();
 
     std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> CbvSrvUavCount = {};

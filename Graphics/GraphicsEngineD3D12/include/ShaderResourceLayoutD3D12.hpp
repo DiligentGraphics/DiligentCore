@@ -137,14 +137,11 @@ public:
                     class RootSignatureBuilder&          RootSgnBldr,
                     class LocalRootSignature*            pLocalRootSig);
 
-    // Copies the specified variable types from the source layout and initializes the
+    // Copies static resources from the source layout and initializes the
     // resource cache. Uses bind points from the source layout.
-    // \note This method is used to initialize static resource cache.
-    void Initialize(const ShaderResourceLayoutD3D12&           SrcLayout,
-                    IMemoryAllocator&                          LayoutDataAllocator,
-                    const SHADER_RESOURCE_VARIABLE_TYPE* const AllowedVarTypes,
-                    Uint32                                     NumAllowedTypes,
-                    ShaderResourceCacheD3D12&                  ResourceCache);
+    void InitializeStaticReourceLayout(const ShaderResourceLayoutD3D12& SrcLayout,
+                                       IMemoryAllocator&                LayoutDataAllocator,
+                                       ShaderResourceCacheD3D12&        ResourceCache);
 
     // clang-format off
     ShaderResourceLayoutD3D12            (const ShaderResourceLayoutD3D12&) = delete;

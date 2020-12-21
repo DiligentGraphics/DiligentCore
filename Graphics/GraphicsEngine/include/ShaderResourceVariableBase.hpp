@@ -104,6 +104,11 @@ inline bool IsAllowedType(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 AllowedT
     return ((1 << VarType) & AllowedTypeBits) != 0;
 }
 
+inline Uint32 GetAllowedTypeBit(SHADER_RESOURCE_VARIABLE_TYPE VarType)
+{
+    return 1 << static_cast<Uint32>(VarType);
+}
+
 inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes, Uint32 NumAllowedTypes) noexcept
 {
     if (AllowedVarTypes == nullptr)
@@ -111,7 +116,7 @@ inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVar
 
     Uint32 AllowedTypeBits = 0;
     for (Uint32 i = 0; i < NumAllowedTypes; ++i)
-        AllowedTypeBits |= 1 << AllowedVarTypes[i];
+        AllowedTypeBits |= GetAllowedTypeBit(AllowedVarTypes[i]);
     return AllowedTypeBits;
 }
 

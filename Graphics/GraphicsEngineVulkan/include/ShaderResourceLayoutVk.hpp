@@ -237,7 +237,7 @@ public:
             ParentResLayout          {_ParentLayout    }
         // clang-format on
         {
-#if defined(_MSC_VER) && defined(_WIN64) && !defined(DILIGENT_DEBUG)
+#if defined(_MSC_VER) && defined(_WIN64) && !defined(DILIGENT_DEVELOPMENT)
             static_assert(sizeof(*this) == 32, "Unexpected sizeof(VkResource)");
 #endif
             // clang-format off
@@ -465,8 +465,8 @@ private:
     }
 
     // clang-format off
-/* 0 */ const VulkanUtilities::VulkanLogicalDevice&     m_LogicalDevice;
-/* 8 */ std::unique_ptr<void, STDDeleterRawMem<void> >  m_ResourceBuffer;
+/* 0 */ const VulkanUtilities::VulkanLogicalDevice&    m_LogicalDevice;
+/* 8 */ std::unique_ptr<void, STDDeleterRawMem<void>>  m_ResourceBuffer;
 
 /*24 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES+1>  m_NumResources = {};
 

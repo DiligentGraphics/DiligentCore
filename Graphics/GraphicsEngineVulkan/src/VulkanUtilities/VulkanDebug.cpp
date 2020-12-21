@@ -52,7 +52,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
         }
     }
 
-    // temporary fixes
+    // Temporarily disable false warnings from validation layers.
+    // TODO: check in next Vulkan SDK
 #if 1
     if (std::string{"VUID-vkCmdPipelineBarrier-srcAccessMask-02815"} == callbackData->pMessageIdName)
     {
