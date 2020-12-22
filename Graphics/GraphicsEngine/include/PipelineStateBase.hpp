@@ -446,7 +446,7 @@ protected:
         };
 
         ShaderStages.clear();
-        ShaderStages.resize(6);
+        ShaderStages.resize(MAX_SHADERS_IN_PIPELINE);
 
         for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
         {

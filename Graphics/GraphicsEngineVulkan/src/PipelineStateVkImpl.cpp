@@ -379,10 +379,19 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
                                 const ShaderResourceLayoutVk::TShaderStages&       ShaderStages)
 {
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", CreateInfo.PSODesc.Name, "' is invalid: ", ##__VA_ARGS__)
-    ShaderGroups.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
 
     std::array<Uint32, MAX_SHADERS_IN_PIPELINE> ShaderIndices = {};
-    std::unordered_map<const IShader*, Uint32>  UniqueShaders;
+    {
+        // Compute the first shader index for each stage
+        Uint32 ShaderCount = 0;
+        for (auto& Stage : ShaderStages)
+        {
+            ShaderIndices[GetShaderTypePipelineIndex(Stage.Type, PIPELINE_TYPE_RAY_TRACING)] = ShaderCount;
+            ShaderCount += static_cast<Uint32>(Stage.Count());
+        }
+    }
+
+    std::unordered_map<const IShader*, Uint32> UniqueShaders;
 
     const auto ShaderToIndex = [&ShaderIndices, &UniqueShaders](const IShader* pShader) -> Uint32 {
         if (pShader != nullptr)
@@ -398,12 +407,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
         return VK_SHADER_UNUSED_KHR;
     };
 
-    Uint32 ShaderCount = 0;
-    for (auto& Stage : ShaderStages)
-    {
-        ShaderIndices[GetShaderTypePipelineIndex(Stage.Type, PIPELINE_TYPE_RAY_TRACING)] = ShaderCount;
-        ShaderCount += static_cast<Uint32>(Stage.Count());
-    }
+    ShaderGroups.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
@@ -418,12 +422,18 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
         Group.anyHitShader       = VK_SHADER_UNUSED_KHR;
         Group.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-#ifdef DILIGENT_DEVELOPMENT
-        auto Iter = NameToGroupIndex.find(GeneralShader.Name);
-        if (Iter == NameToGroupIndex.end())
-            LOG_PSO_ERROR_AND_THROW("Can't find general shader '", GeneralShader.Name, "'");
-        if (Iter->second != ShaderGroups.size())
-            LOG_PSO_ERROR_AND_THROW("General shader group '", GeneralShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
+#ifdef DILIGENT_DEBUG
+        {
+            auto Iter = NameToGroupIndex.find(GeneralShader.Name);
+            VERIFY(Iter != NameToGroupIndex.end(),
+                   "Can't find general shader '", GeneralShader.Name,
+                   "'. This looks to be a bug as NameToGroupIndex is initialized by "
+                   "CopyRayTracingShaderGroups that processes the same general shaders.");
+            VERIFY(Iter->second == ShaderGroups.size(),
+                   "General shader group '", GeneralShader.Name, "' index mismatch: (", Iter->second, " != ", ShaderGroups.size(),
+                   "). This looks to be a bug as NameToGroupIndex is initialized by "
+                   "CopyRayTracingShaderGroups that processes the same shaders in the same order.");
+        }
 #endif
 
         ShaderGroups.push_back(Group);
@@ -442,12 +452,18 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
         Group.anyHitShader       = ShaderToIndex(TriHitShader.pAnyHitShader);
         Group.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-#ifdef DILIGENT_DEVELOPMENT
-        auto Iter = NameToGroupIndex.find(TriHitShader.Name);
-        if (Iter == NameToGroupIndex.end())
-            LOG_PSO_ERROR_AND_THROW("Can't find triangle hit group '", TriHitShader.Name, "'");
-        if (Iter->second != ShaderGroups.size())
-            LOG_PSO_ERROR_AND_THROW("Triangle hit group '", TriHitShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
+#ifdef DILIGENT_DEBUG
+        {
+            auto Iter = NameToGroupIndex.find(TriHitShader.Name);
+            VERIFY(Iter != NameToGroupIndex.end(),
+                   "Can't find triangle hit group '", TriHitShader.Name,
+                   "'. This looks to be a bug as NameToGroupIndex is initialized by "
+                   "CopyRayTracingShaderGroups that processes the same hit groups.");
+            VERIFY(Iter->second == ShaderGroups.size(),
+                   "Triangle hit group '", TriHitShader.Name, "' index mismatch: (", Iter->second, " != ", ShaderGroups.size(),
+                   "). This looks to be a bug as NameToGroupIndex is initialized by "
+                   "CopyRayTracingShaderGroups that processes the same hit groups in the same order.");
+        }
 #endif
 
         ShaderGroups.push_back(Group);
@@ -466,33 +482,41 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
         Group.closestHitShader   = ShaderToIndex(ProcHitShader.pClosestHitShader);
         Group.anyHitShader       = ShaderToIndex(ProcHitShader.pAnyHitShader);
 
-#ifdef DILIGENT_DEVELOPMENT
-        auto Iter = NameToGroupIndex.find(ProcHitShader.Name);
-        if (Iter == NameToGroupIndex.end())
-            LOG_PSO_ERROR_AND_THROW("Can't find procedural hit group '", ProcHitShader.Name, "'");
-        if (Iter->second != ShaderGroups.size())
-            LOG_PSO_ERROR_AND_THROW("Procedural hit group '", ProcHitShader.Name, "' index mismatch: (", Iter->second, ") != (", ShaderGroups.size(), ")");
+#ifdef DILIGENT_DEBUG
+        {
+            auto Iter = NameToGroupIndex.find(ProcHitShader.Name);
+            VERIFY(Iter != NameToGroupIndex.end(),
+                   "Can't find procedural hit group '", ProcHitShader.Name,
+                   "'. This looks to be a bug as NameToGroupIndex is initialized by "
+                   "CopyRayTracingShaderGroups that processes the same hit groups.");
+            VERIFY(Iter->second == ShaderGroups.size(),
+                   "Procedural hit group '", ProcHitShader.Name, "' index mismatch: (", Iter->second, " != ", ShaderGroups.size(),
+                   "). This looks to be a bug as NameToGroupIndex is initialized by "
+                   "CopyRayTracingShaderGroups that processes the same hit groups in the same order.");
+        }
 #endif
 
         ShaderGroups.push_back(Group);
     }
 
-#ifdef DILIGENT_DEVELOPMENT
-    Uint32 ShaderIndex2 = 0;
-    for (auto& Stage : ShaderStages)
+#ifdef DILIGENT_DEBUG
     {
-        for (auto* pShader : Stage.Shaders)
+        Uint32 ShaderIndex2 = 0;
+        for (auto& Stage : ShaderStages)
         {
-            auto iter = UniqueShaders.find(static_cast<const IShader*>(pShader));
-            if (iter != UniqueShaders.end())
-                VERIFY_EXPR(iter->second == ShaderIndex2);
-            else
-                UNEXPECTED("Shader '", pShader->GetDesc().Name, "' is not used in ray tracing shader groups");
+            for (auto* pShader : Stage.Shaders)
+            {
+                auto iter = UniqueShaders.find(static_cast<const IShader*>(pShader));
+                if (iter != UniqueShaders.end())
+                    VERIFY_EXPR(iter->second == ShaderIndex2);
+                else
+                    UNEXPECTED("Shader '", pShader->GetDesc().Name, "' is not used in any ray tracing shader group");
 
-            ++ShaderIndex2;
+                ++ShaderIndex2;
+            }
         }
+        VERIFY_EXPR(UniqueShaders.size() == ShaderIndex2);
     }
-    VERIFY_EXPR(UniqueShaders.size() == ShaderIndex2);
 #endif
 #undef LOG_PSO_ERROR_AND_THROW
 }

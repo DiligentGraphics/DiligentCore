@@ -1299,6 +1299,7 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
         // Get resource attributes
         const auto& DstRes = GetResource(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
         const auto& SrcRes = SrcLayout.GetResource(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
+        VERIFY(strcmp(SrcRes.Name, DstRes.Name) == 0, "Src resource name ('", SrcRes.Name, "') does match the dst resource name '(", DstRes.Name, "'). This is a bug.");
         VERIFY(SrcRes.Binding == Uint32{SrcRes.Type}, "Unexpected binding");
         VERIFY(SrcRes.ArraySize == DstRes.ArraySize, "Inconsistent array size");
 
