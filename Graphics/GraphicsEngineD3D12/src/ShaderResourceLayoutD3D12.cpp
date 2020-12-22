@@ -446,7 +446,7 @@ void ShaderResourceLayoutD3D12::InitializeStaticReourceLayout(const ShaderResour
         // CBVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_CBV (2)
         // Samplers at root index D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER (3)
         const Uint32 RootIndex = GetDescriptorRangeType(ResType);
-        const Uint32 Offset    = SrcRes.Attribs.BindPoint; // Offset is the same as the bind point
+        const Uint32 Offset    = StaticResCacheTblSizes[RootIndex];
 
         auto& NewResource = GetResource(ResOffset);
         ::new (&NewResource) D3D12Resource //
@@ -462,8 +462,7 @@ void ShaderResourceLayoutD3D12::InitializeStaticReourceLayout(const ShaderResour
                 Offset //
             };
 
-        // Resources in the static resource cache are indexed by the bind point
-        StaticResCacheTblSizes[RootIndex] = std::max(StaticResCacheTblSizes[RootIndex], Offset + NewResource.Attribs.BindCount);
+        StaticResCacheTblSizes[RootIndex] += NewResource.Attribs.BindCount;
     };
 
     // Process samplers first
@@ -928,14 +927,15 @@ bool ShaderResourceLayoutD3D12::D3D12Resource::IsBound(Uint32 ArrayIndex, const 
     return false;
 }
 
-void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderResourceCacheD3D12& SrcCache, const ShaderResourceLayoutD3D12& DstLayout, ShaderResourceCacheD3D12& DstCache) const
+void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderResourceCacheD3D12&  SrcCache,
+                                                                   const ShaderResourceLayoutD3D12& DstLayout,
+                                                                   ShaderResourceCacheD3D12&        DstCache) const
 {
     // Static shader resources are stored as follows:
     // CBVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
     // SRVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
     // UAVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_UAV, and
     // Samplers at root index D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER
-    // Every resource is stored at the offset that equals its bind point
 
     {
         const auto CbvSrvUavCount = DstLayout.GetCbvSrvUavCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
@@ -946,40 +946,25 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
         for (Uint32 r = 0; r < CbvSrvUavCount; ++r)
         {
             // Get resource attributes
-            const auto& res = DstLayout.GetSrvCbvUav(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
-#ifdef DILIGENT_DEBUG
-            {
-                bool SrcResourceFound = false;
-                for (Uint32 i = 0; i < CbvSrvUavCount; ++i)
-                {
-                    const auto& src_res = GetSrvCbvUav(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, i);
-                    if (strcmp(src_res.Attribs.Name, res.Attribs.Name) == 0)
-                    {
-                        VERIFY(src_res.Attribs.BindPoint == res.Attribs.BindPoint, "Src resource bind point does match the dst resource bind point");
-                        VERIFY(src_res.OffsetFromTableStart == res.Attribs.BindPoint, "Src resource bind point must match its offset in the descriptor table");
-                        VERIFY(src_res.Attribs.BindCount == res.Attribs.BindCount, "Inconsistent array size");
-                        SrcResourceFound = true;
-                        break;
-                    }
-                }
-                VERIFY(SrcResourceFound, "Unable to find resource '", res.Attribs.Name, "' in the cache. This is a bug.");
-            }
-#endif
-            auto RangeType = GetDescriptorRangeType(res.GetResType());
-            // Source resource in the static resource cache is in the root table at index RangeType, at offset BindPoint
+            const auto& DstResInfo = DstLayout.GetSrvCbvUav(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
+            const auto& SrcResInfo = GetSrvCbvUav(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
+            VERIFY(strcmp(SrcResInfo.Attribs.Name, DstResInfo.Attribs.Name) == 0, "Src resource name ('", SrcResInfo.Attribs.Name, "') does match the dst resource name '(", DstResInfo.Attribs.Name, "'). This is a bug.");
+            VERIFY(SrcResInfo.Attribs.IsCompatibleWith(DstResInfo.Attribs), "Src resource is incompatible with the dst resource. This is a bug.");
+
+            // Source resource in the static resource cache is in the root table at index RangeType
             // D3D12_DESCRIPTOR_RANGE_TYPE_SRV = 0,
             // D3D12_DESCRIPTOR_RANGE_TYPE_UAV = 1
             // D3D12_DESCRIPTOR_RANGE_TYPE_CBV = 2
-            const auto& SrcRootTable = SrcCache.GetRootTable(RangeType);
-            auto&       DstRootTable = DstCache.GetRootTable(res.RootIndex);
-            for (Uint32 ArrInd = 0; ArrInd < res.Attribs.BindCount; ++ArrInd)
+            VERIFY(SrcResInfo.RootIndex == static_cast<Uint32>(GetDescriptorRangeType(DstResInfo.GetResType())), "Unexpected root index for the source resource. This is a bug.");
+            const auto& SrcRootTable = SrcCache.GetRootTable(SrcResInfo.RootIndex);
+            auto&       DstRootTable = DstCache.GetRootTable(DstResInfo.RootIndex);
+            for (Uint32 ArrInd = 0; ArrInd < DstResInfo.Attribs.BindCount; ++ArrInd)
             {
-                // Offset in the source table equals the bind point
-                const auto& SrcRes = SrcRootTable.GetResource(res.Attribs.BindPoint + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, GetShaderType());
+                const auto& SrcRes = SrcRootTable.GetResource(SrcResInfo.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, GetShaderType());
                 if (!SrcRes.pObject)
-                    LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", res.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'.");
+                    LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", DstResInfo.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'.");
                 // Destination resource is at the root index and offset defined by the resource layout
-                auto& DstRes = DstRootTable.GetResource(res.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, GetShaderType());
+                auto& DstRes = DstRootTable.GetResource(DstResInfo.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, GetShaderType());
 
                 if (DstRes.pObject != SrcRes.pObject)
                 {
@@ -1002,7 +987,10 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
                     DstRes.Type                = SrcRes.Type;
                     DstRes.CPUDescriptorHandle = SrcRes.CPUDescriptorHandle;
 
-                    auto ShdrVisibleHeapCPUDescriptorHandle = DstCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(res.RootIndex, res.OffsetFromTableStart + ArrInd);
+                    auto ShdrVisibleHeapCPUDescriptorHandle =
+                        DstCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(
+                            DstResInfo.RootIndex,
+                            DstResInfo.OffsetFromTableStart + ArrInd);
                     VERIFY_EXPR(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0 || DstRes.Type == CachedResourceType::CBV);
                     // Root views are not assigned space in the GPU-visible descriptor heap allocation
                     if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
@@ -1018,28 +1006,20 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
                 }
             }
 
-            if (res.Attribs.IsCombinedWithSampler())
+            VERIFY(DstResInfo.Attribs.IsCombinedWithSampler() == SrcResInfo.Attribs.IsCombinedWithSampler(),
+                   "When source resource is combined with the sampler, destination resource must also be combined with the sampler and vice versa");
+            if (DstResInfo.Attribs.IsCombinedWithSampler())
             {
 #ifdef DILIGENT_DEBUG
-                const auto& DstSamInfo = DstLayout.GetAssignedSampler(res);
+                const auto& DstSamInfo = DstLayout.GetAssignedSampler(DstResInfo);
+                const auto& SrcSamInfo = GetAssignedSampler(SrcResInfo);
+                VERIFY(strcmp(SrcSamInfo.Attribs.Name, DstSamInfo.Attribs.Name) == 0, "Src sampler name ('", SrcSamInfo.Attribs.Name, "') does match the dst sampler name '(", DstSamInfo.Attribs.Name, "'). This is a bug.");
+                VERIFY(DstSamInfo.Attribs.IsCompatibleWith(SrcSamInfo.Attribs), "Source sampler is incompatible with destination sampler");
 
                 //VERIFY(!SamInfo.IsImmutableSampler(), "Immutable samplers should never be assigned space in the cache");
 
                 VERIFY(DstSamInfo.Attribs.IsValidBindPoint(), "Sampler bind point must be valid");
-                VERIFY_EXPR(DstSamInfo.Attribs.BindCount == res.Attribs.BindCount || DstSamInfo.Attribs.BindCount == 1);
-                bool SrcSamplerFound = false;
-                for (Uint32 i = 0; i < GetSamplerCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC); ++i)
-                {
-                    const auto& SrcSamInfo = GetSampler(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, i);
-                    if (strcmp(SrcSamInfo.Attribs.Name, DstSamInfo.Attribs.Name) == 0)
-                    {
-                        VERIFY_EXPR(SrcSamInfo.Attribs.BindCount == DstSamInfo.Attribs.BindCount);
-                        SrcSamplerFound = true;
-                        break;
-                    }
-                }
-                VERIFY(SrcSamplerFound, "Sampler '", DstSamInfo.Attribs.Name, "' assigned to static texture SRV '", res.Attribs.Name,
-                       "' is not found in the static resource cache. This is a bug.");
+                VERIFY_EXPR(DstSamInfo.Attribs.BindCount == DstResInfo.Attribs.BindCount || DstSamInfo.Attribs.BindCount == 1);
 #endif
             }
         }
@@ -1053,32 +1033,18 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
         for (Uint32 s = 0; s < SamplerCount; ++s)
         {
             const auto& DstSamInfo = DstLayout.GetSampler(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, s);
-#ifdef DILIGENT_DEBUG
-            {
-                bool SrcSamplerFound = false;
-                for (Uint32 i = 0; i < SamplerCount; ++i)
-                {
-                    const auto& SrcSamInfo = GetSampler(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, i);
-                    if (strcmp(SrcSamInfo.Attribs.Name, DstSamInfo.Attribs.Name) == 0)
-                    {
-                        VERIFY(SrcSamInfo.Attribs.BindPoint == DstSamInfo.Attribs.BindPoint, "Src sampler bind point does match the dst sampler bind point");
-                        VERIFY(SrcSamInfo.OffsetFromTableStart == DstSamInfo.Attribs.BindPoint, "Src sampler bind point must match its offset in the descriptor table");
-                        VERIFY(SrcSamInfo.Attribs.BindCount == DstSamInfo.Attribs.BindCount, "Inconsistent array size");
-                        SrcSamplerFound = true;
-                        break;
-                    }
-                }
-                VERIFY(SrcSamplerFound, "Unable to find sampler '", DstSamInfo.Attribs.Name, "' in the cache. This is a bug.");
-            }
-#endif
+            const auto& SrcSamInfo = GetSampler(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, s);
+            VERIFY(strcmp(SrcSamInfo.Attribs.Name, DstSamInfo.Attribs.Name) == 0, "Src sampler name ('", SrcSamInfo.Attribs.Name, "') does match the dst sampler name '(", DstSamInfo.Attribs.Name, "'). This is a bug.");
+            VERIFY(SrcSamInfo.Attribs.IsCompatibleWith(DstSamInfo.Attribs), "Src sampler is incompatible with the dst sampler. This is a bug.");
+
             // Source sampler in the static resource cache is in the root table at index 3
-            // (D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER = 3), at offset BindPoint
-            const auto& SrcRootTable = SrcCache.GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
+            // (D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER = 3)
+            VERIFY(SrcSamInfo.RootIndex == static_cast<Uint32>(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER), "Unexpected root index for the source sampler. This is a bug.");
+            const auto& SrcRootTable = SrcCache.GetRootTable(SrcSamInfo.RootIndex);
             auto&       DstRootTable = DstCache.GetRootTable(DstSamInfo.RootIndex);
             for (Uint32 ArrInd = 0; ArrInd < DstSamInfo.Attribs.BindCount; ++ArrInd)
             {
-                // Offset in the source table equals the bind point
-                const auto& SrcSampler = SrcRootTable.GetResource(DstSamInfo.Attribs.BindPoint + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, GetShaderType());
+                const auto& SrcSampler = SrcRootTable.GetResource(SrcSamInfo.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, GetShaderType());
                 if (!SrcSampler.pObject)
                     LOG_ERROR_MESSAGE("No sampler assigned to static shader variable '", DstSamInfo.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'.");
                 auto& DstSampler = DstRootTable.GetResource(DstSamInfo.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, GetShaderType());
@@ -1091,7 +1057,10 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
                     DstSampler.Type                = SrcSampler.Type;
                     DstSampler.CPUDescriptorHandle = SrcSampler.CPUDescriptorHandle;
 
-                    auto ShdrVisibleSamplerHeapCPUDescriptorHandle = DstCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(DstSamInfo.RootIndex, DstSamInfo.OffsetFromTableStart + ArrInd);
+                    auto ShdrVisibleSamplerHeapCPUDescriptorHandle =
+                        DstCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(
+                            DstSamInfo.RootIndex,
+                            DstSamInfo.OffsetFromTableStart + ArrInd);
                     VERIFY_EXPR(ShdrVisibleSamplerHeapCPUDescriptorHandle.ptr != 0);
                     if (ShdrVisibleSamplerHeapCPUDescriptorHandle.ptr != 0)
                     {
