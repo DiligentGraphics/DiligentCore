@@ -336,14 +336,31 @@ TBindingMapPerStage ExtractResourceBindingMap(const RootSignatureBuilder&       
 } // namespace
 
 
-PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(SHADER_TYPE _Type, ShaderD3D12Impl* _pShader) :
-    Type{_Type},
+PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(ShaderD3D12Impl* _pShader) :
+    Type{_pShader->GetDesc().ShaderType},
     Shaders{_pShader}
 {
 }
 
 void PipelineStateD3D12Impl::ShaderStageInfo::Append(ShaderD3D12Impl* pShader)
 {
+    VERIFY_EXPR(pShader != nullptr);
+    VERIFY(std::find(Shaders.begin(), Shaders.end(), pShader) == Shaders.end(),
+           "Shader '", pShader->GetDesc().Name, "' already exists in the stage. Shaders must be deduplicated.");
+
+    const auto NewShaderType = pShader->GetDesc().ShaderType;
+    if (Type == SHADER_TYPE_UNKNOWN)
+    {
+        VERIFY_EXPR(Shaders.empty());
+        Type = NewShaderType;
+    }
+    else
+    {
+        VERIFY(Type == NewShaderType, "The type (", GetShaderTypeLiteralName(NewShaderType),
+               ") of shader '", pShader->GetDesc().Name, "' being added to the stage is incosistent with the stage type (",
+               GetShaderTypeLiteralName(Type), ").");
+    }
+
     Shaders.push_back(pShader);
 }
 
@@ -706,7 +723,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create ray tracing state object");
 
-        GetShaderIdentifiers(m_pd3d12PSO, CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, m_pRayTracingPipelineData->Shaders);
+        GetShaderIdentifiers(m_pd3d12PSO, CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, m_pRayTracingPipelineData->ShaderHandles);
 
         if (*m_Desc.Name != 0)
         {

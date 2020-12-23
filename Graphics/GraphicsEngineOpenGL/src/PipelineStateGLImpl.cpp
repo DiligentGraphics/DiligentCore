@@ -38,10 +38,10 @@ namespace Diligent
 
 
 template <typename PSOCreateInfoType>
-void PipelineStateGLImpl::Initialize(const PSOCreateInfoType& CreateInfo, const std::vector<GLPipelineShaderStageInfo>& ShaderStages)
+void PipelineStateGLImpl::Initialize(const PSOCreateInfoType& CreateInfo, std::vector<ShaderGLImpl*>& Shaders)
 {
     FixedLinearAllocator MemPool{GetRawAllocator()};
-    VERIFY_EXPR(m_NumShaderStages > 0 && m_NumShaderStages == ShaderStages.size());
+    VERIFY_EXPR(m_NumShaderStages > 0 && m_NumShaderStages == Shaders.size());
     if (!GetDevice()->GetDeviceCaps().Features.SeparablePrograms)
         m_NumShaderStages = 1;
 
@@ -69,7 +69,7 @@ void PipelineStateGLImpl::Initialize(const PSOCreateInfoType& CreateInfo, const 
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitResourceLayouts(ShaderStages, MemPool);
+    InitResourceLayouts(Shaders, MemPool);
     InitializePipelineDesc(CreateInfo, MemPool);
 }
 
@@ -91,8 +91,8 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
 {
     try
     {
-        std::vector<GLPipelineShaderStageInfo> ShaderStages;
-        ExtractShaders<ShaderGLImpl>(CreateInfo, ShaderStages);
+        std::vector<ShaderGLImpl*> Shaders;
+        ExtractShaders<ShaderGLImpl>(CreateInfo, Shaders);
 
         RefCntAutoPtr<ShaderGLImpl> pTempPS;
         if (CreateInfo.pPS == nullptr)
@@ -106,11 +106,11 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
             ShaderCI.Desc.Name       = "Dummy fragment shader";
             pDeviceGL->CreateShader(ShaderCI, reinterpret_cast<IShader**>(static_cast<ShaderGLImpl**>(&pTempPS)));
 
-            ShaderStages.emplace_back(SHADER_TYPE_PIXEL, pTempPS);
+            Shaders.emplace_back(pTempPS);
             m_ShaderStageTypes[m_NumShaderStages++] = SHADER_TYPE_PIXEL;
         }
 
-        Initialize(CreateInfo, ShaderStages);
+        Initialize(CreateInfo, Shaders);
     }
     catch (...)
     {
@@ -136,10 +136,10 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                   p
 {
     try
     {
-        std::vector<GLPipelineShaderStageInfo> ShaderStages;
-        ExtractShaders<ShaderGLImpl>(CreateInfo, ShaderStages);
+        std::vector<ShaderGLImpl*> Shaders;
+        ExtractShaders<ShaderGLImpl>(CreateInfo, Shaders);
 
-        Initialize(CreateInfo, ShaderStages);
+        Initialize(CreateInfo, Shaders);
     }
     catch (...)
     {
@@ -189,8 +189,8 @@ void PipelineStateGLImpl::Destruct()
 IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_PipelineStateGL, TPipelineStateBase)
 
 
-void PipelineStateGLImpl::InitResourceLayouts(const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
-                                              FixedLinearAllocator&                         MemPool)
+void PipelineStateGLImpl::InitResourceLayouts(std::vector<ShaderGLImpl*>& Shaders,
+                                              FixedLinearAllocator&       MemPool)
 {
     auto* const pDeviceGL  = GetDevice();
     const auto& deviceCaps = pDeviceGL->GetDeviceCaps();
@@ -210,9 +210,9 @@ void PipelineStateGLImpl::InitResourceLayouts(const std::vector<GLPipelineShader
             // Program pipelines are not shared between GL contexts, so we cannot create
             // it now
             m_ShaderResourceLayoutHash = 0;
-            for (size_t i = 0; i < ShaderStages.size(); ++i)
+            for (size_t i = 0; i < Shaders.size(); ++i)
             {
-                auto*       pShaderGL  = ShaderStages[i].pShader;
+                auto*       pShaderGL  = Shaders[i];
                 const auto& ShaderDesc = pShaderGL->GetDesc();
                 m_GLPrograms[i]        = GLProgramObj{ShaderGLImpl::LinkProgram(&pShaderGL, 1, true)};
                 // Load uniforms and assign bindings
@@ -227,14 +227,12 @@ void PipelineStateGLImpl::InitResourceLayouts(const std::vector<GLPipelineShader
         }
         else
         {
-            std::vector<ShaderGLImpl*> Shaders;
-
             SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
-            for (const auto& Stage : ShaderStages)
+            for (const auto* pShader : Shaders)
             {
-                Shaders.push_back(Stage.pShader);
-                VERIFY((ActiveStages & Stage.Type) == 0, "Shader stage ", GetShaderTypeLiteralName(Stage.Type), " is already active");
-                ActiveStages |= Stage.Type;
+                const auto ShaderType = pShader->GetDesc().ShaderType;
+                VERIFY((ActiveStages & ShaderType) == 0, "Shader stage ", GetShaderTypeLiteralName(ShaderType), " is already active");
+                ActiveStages |= ShaderType;
             }
 
             m_GLPrograms[0] = ShaderGLImpl::LinkProgram(Shaders.data(), static_cast<Uint32>(Shaders.size()), false);

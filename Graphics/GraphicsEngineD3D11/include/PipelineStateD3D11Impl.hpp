@@ -140,8 +140,8 @@ private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo);
 
-    void InitResourceLayouts(const PipelineStateCreateInfo&                               CreateInfo,
-                             const std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>>& ShaderStages);
+    void InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
+                             const std::vector<ShaderD3D11Impl*>& Shaders);
 
     void Destruct();
 

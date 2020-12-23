@@ -95,8 +95,8 @@ static SHADER_RESOURCE_VARIABLE_TYPE FindShaderVariableType(SHADER_TYPE         
 }
 
 
-ShaderResourceLayoutVk::ShaderStageInfo::ShaderStageInfo(SHADER_TYPE Stage, const ShaderVkImpl* pShader) :
-    Type{Stage},
+ShaderResourceLayoutVk::ShaderStageInfo::ShaderStageInfo(const ShaderVkImpl* pShader) :
+    Type{pShader->GetDesc().ShaderType},
     Shaders{pShader},
     SPIRVs{pShader->GetSPIRV()}
 {
@@ -104,6 +104,22 @@ ShaderResourceLayoutVk::ShaderStageInfo::ShaderStageInfo(SHADER_TYPE Stage, cons
 
 void ShaderResourceLayoutVk::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
 {
+    VERIFY_EXPR(pShader != nullptr);
+    VERIFY(std::find(Shaders.begin(), Shaders.end(), pShader) == Shaders.end(),
+           "Shader '", pShader->GetDesc().Name, "' already exists in the stage. Shaders must be deduplicated.");
+
+    const auto NewShaderType = pShader->GetDesc().ShaderType;
+    if (Type == SHADER_TYPE_UNKNOWN)
+    {
+        VERIFY_EXPR(Shaders.empty() && SPIRVs.empty());
+        Type = NewShaderType;
+    }
+    else
+    {
+        VERIFY(Type == NewShaderType, "The type (", GetShaderTypeLiteralName(NewShaderType),
+               ") of shader '", pShader->GetDesc().Name, "' being added to the stage is incosistent with the stage type (",
+               GetShaderTypeLiteralName(Type), ").");
+    }
     Shaders.push_back(pShader);
     SPIRVs.push_back(pShader->GetSPIRV());
 }

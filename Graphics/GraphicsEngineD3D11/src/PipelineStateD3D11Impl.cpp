@@ -40,11 +40,11 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
 {
     m_ResourceLayoutIndex.fill(-1);
 
-    std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>> ShaderStages;
-    ExtractShaders<ShaderD3D11Impl>(CreateInfo, ShaderStages);
+    std::vector<ShaderD3D11Impl*> Shaders;
+    ExtractShaders<ShaderD3D11Impl>(CreateInfo, Shaders);
 
     const auto NumShaderStages = GetNumShaderStages();
-    VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
+    VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == Shaders.size());
 
     FixedLinearAllocator MemPool{GetRawAllocator()};
 
@@ -71,7 +71,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitResourceLayouts(CreateInfo, ShaderStages);
+    InitResourceLayouts(CreateInfo, Shaders);
 }
 
 
@@ -230,18 +230,17 @@ void PipelineStateD3D11Impl::Destruct()
 IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D11Impl, IID_PipelineStateD3D11, TPipelineStateBase)
 
 
-void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo&                               CreateInfo,
-                                                 const std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>>& ShaderStages)
+void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
+                                                 const std::vector<ShaderD3D11Impl*>& Shaders)
 {
     const auto& ResourceLayout = m_Desc.ResourceLayout;
 
 #ifdef DILIGENT_DEVELOPMENT
     {
         const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
-        for (Uint32 s = 0; s < ShaderStages.size(); ++s)
+        for (Uint32 s = 0; s < Shaders.size(); ++s)
         {
-            auto* pShader = ShaderStages[s].second;
-            pResources[s] = &(*pShader->GetD3D11Resources());
+            pResources[s] = Shaders[s]->GetD3D11Resources().get();
         }
         ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderStages(),
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
@@ -253,9 +252,9 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResLayoutDataSizes = {};
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResCacheDataSizes  = {};
-    for (Uint32 s = 0; s < ShaderStages.size(); ++s)
+    for (Uint32 s = 0; s < Shaders.size(); ++s)
     {
-        const auto* pShader    = ShaderStages[s].second;
+        const auto* pShader    = Shaders[s];
         const auto& ShaderDesc = pShader->GetDesc();
         const auto& Resources  = *pShader->GetD3D11Resources();
         VERIFY_EXPR(ShaderDesc.ShaderType == Resources.GetShaderType());

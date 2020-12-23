@@ -110,7 +110,7 @@ public:
     struct ShaderStageInfo
     {
         ShaderStageInfo() {}
-        ShaderStageInfo(SHADER_TYPE Stage, const ShaderVkImpl* pShader);
+        ShaderStageInfo(const ShaderVkImpl* pShader);
 
         void   Append(const ShaderVkImpl* pShader);
         size_t Count() const;

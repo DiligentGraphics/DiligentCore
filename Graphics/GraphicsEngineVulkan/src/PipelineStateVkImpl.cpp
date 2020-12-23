@@ -798,7 +798,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 
         CreateRayTracingPipeline(pDeviceVk, vkShaderStages, ShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
 
-        auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, &m_pRayTracingPipelineData->Shaders[0]);
+        auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, &m_pRayTracingPipelineData->ShaderHandles[0]);
         VERIFY(err == VK_SUCCESS, "Failed to get shader group handles");
         (void)err;
     }

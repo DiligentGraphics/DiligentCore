@@ -97,22 +97,11 @@ private:
 
     void InitImmutableSamplersInResourceCache(const GLPipelineResourceLayout& ResourceLayout, GLProgramResourceCache& Cache) const;
 
-    struct GLPipelineShaderStageInfo
-    {
-        const SHADER_TYPE   Type;
-        ShaderGLImpl* const pShader;
-        GLPipelineShaderStageInfo(SHADER_TYPE   _Type,
-                                  ShaderGLImpl* _pShader) :
-            Type{_Type},
-            pShader{_pShader}
-        {}
-    };
-
     template <typename PSOCreateInfoType>
-    void Initialize(const PSOCreateInfoType& CreateInfo, const std::vector<GLPipelineShaderStageInfo>& ShaderStages);
+    void Initialize(const PSOCreateInfoType& CreateInfo, std::vector<ShaderGLImpl*>& Shaders);
 
-    void InitResourceLayouts(const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
-                             FixedLinearAllocator&                         MemPool);
+    void InitResourceLayouts(std::vector<ShaderGLImpl*>& Shaders,
+                             FixedLinearAllocator&       MemPool);
 
     void Destruct();
 
