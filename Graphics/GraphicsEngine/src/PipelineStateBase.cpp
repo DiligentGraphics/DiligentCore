@@ -34,7 +34,7 @@
 namespace Diligent
 {
 
-#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", GetPipelineTypeString(PSODesc.PipelineType), " PSO '", PSODesc.Name, "' is invalid: ", ##__VA_ARGS__)
+#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", GetPipelineTypeString(PSODesc.PipelineType), " PSO '", (PSODesc.Name != nullptr ? PSODesc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
 namespace
 {
@@ -179,14 +179,14 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
         if (CreateInfo.pVS == nullptr)
-            LOG_ERROR_AND_THROW("Vertex shader must not be null.");
+            LOG_PSO_ERROR_AND_THROW("Vertex shader must not be null.");
 
         DEV_CHECK_ERR(CreateInfo.pAS == nullptr && CreateInfo.pMS == nullptr, "Mesh shaders are not supported in graphics pipeline.");
     }
     else if (PSODesc.PipelineType == PIPELINE_TYPE_MESH)
     {
         if (CreateInfo.pMS == nullptr)
-            LOG_ERROR_AND_THROW("Mesh shader must not be null.");
+            LOG_PSO_ERROR_AND_THROW("Mesh shader must not be null.");
 
         DEV_CHECK_ERR(CreateInfo.pVS == nullptr && CreateInfo.pGS == nullptr && CreateInfo.pDS == nullptr && CreateInfo.pHS == nullptr,
                       "Vertex, geometry and tessellation shaders are not supported in a mesh pipeline.");
