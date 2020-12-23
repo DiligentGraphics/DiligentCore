@@ -632,16 +632,10 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
                 {
                     // NB: for immutable separate samplers we still allocate VkResource instances, but they are never exposed to the app
                     auto& ImmutableSampler = ResLayout.GetImmutableSampler(CurrImmutableSamplerInd[ShaderInd]++);
-                    if (!ImmutableSampler) // There may be multiple immutable samplers with the same name in ray tracing shaders
-                    {
-                        const auto& ImmutableSamplerDesc = ResourceLayoutDesc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
-                        pRenderDevice->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
-                    }
-                    else
-                    {
-                        VERIFY((ShaderType & RAY_TRACING_SHADER_TYPES) != 0,
-                               "Multiple immutable samplers with the same name in one stage are only possible in ray tracing pipeliens.");
-                    }
+                    VERIFY(!ImmutableSampler, "Immutable sampler has already been initialized. This is unexpected "
+                                              "as all resources are deduplicated and should only be initialized once.");
+                    const auto& ImmutableSamplerDesc = ResourceLayoutDesc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
+                    pRenderDevice->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
                     vkImmutableSampler = ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler();
                 }
             }
