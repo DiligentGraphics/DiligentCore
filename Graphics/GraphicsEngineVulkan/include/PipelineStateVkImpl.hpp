@@ -129,11 +129,10 @@ public:
 private:
     using TShaderStages = ShaderResourceLayoutVk::TShaderStages;
 
-    template <typename PSOCreateInfoType, typename InitPSODescType>
-    void InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
-                             std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                             std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
-                             InitPSODescType                                    InitPSODesc);
+    template <typename PSOCreateInfoType>
+    TShaderStages InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
+                                      std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
+                                      std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules);
 
     void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
                              TShaderStages&                 ShaderStages);

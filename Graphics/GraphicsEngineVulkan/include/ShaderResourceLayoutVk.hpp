@@ -115,7 +115,9 @@ public:
         void   Append(const ShaderVkImpl* pShader);
         size_t Count() const;
 
-        SHADER_TYPE                        Type = SHADER_TYPE_UNKNOWN;
+        // Shader stage type. All shaders in the stage must have the same type.
+        SHADER_TYPE Type = SHADER_TYPE_UNKNOWN;
+
         std::vector<const ShaderVkImpl*>   Shaders;
         std::vector<std::vector<uint32_t>> SPIRVs;
     };
