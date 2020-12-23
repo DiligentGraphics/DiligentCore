@@ -44,6 +44,14 @@
 namespace Diligent
 {
 
+static constexpr auto RAY_TRACING_SHADER_TYPES =
+    SHADER_TYPE_RAY_GEN |
+    SHADER_TYPE_RAY_MISS |
+    SHADER_TYPE_RAY_CLOSEST_HIT |
+    SHADER_TYPE_RAY_ANY_HIT |
+    SHADER_TYPE_RAY_INTERSECTION |
+    SHADER_TYPE_CALLABLE;
+
 static Int32 FindImmutableSampler(SHADER_TYPE                       ShaderType,
                                   const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                   const SPIRVShaderResourceAttribs& Attribs,
@@ -159,7 +167,7 @@ StringPool ShaderResourceLayoutVk::AllocateMemory(const std::vector<const Shader
     // Construct shader or shader group name
     const auto ShaderName = GetShaderGroupName(Shaders);
 
-    size_t StringPoolSize = ShaderName.length() + 1;
+    size_t StringPoolSize = StringPool::GetRequiredReserveSize(ShaderName);
 
     // Count the number of resources to allocate all needed memory
     for (size_t s = 0; s < Shaders.size(); ++s)
@@ -344,7 +352,7 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(const std::vector<co
                     {
                         // Only search for the immutable sampler for combined image samplers and separate samplers
                         SrcImmutableSamplerInd = FindImmutableSampler(m_ShaderType, ResourceLayoutDesc, Attribs, CombinedSamplerSuffix);
-                        // For immutable separate samplers we allocate VkResource instances, but they are never exposed to the app
+                        // NB: for immutable separate samplers we still allocate VkResource instances, but they are never exposed to the app
                     }
 
                     Uint32 Binding       = Uint32{Attribs.Type};
@@ -558,7 +566,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
     dvpVerifyResourceLayoutDesc(ShaderStages, ResourceLayoutDesc, VerifyVariables, VerifyImmutableSamplers);
 #endif
 
-    // Mapping from resource name to its index, for all shader stages
+    // Mappings from resource name to its index, for every shader stage
     std::array<ResourceNameToIndex_t, MAX_SHADERS_IN_PIPELINE> ResourceNameToIndexArray;
 
     const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes = nullptr;
@@ -577,7 +585,6 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
                                       AllocateImmutableSamplers));
     }
 
-    //VERIFY_EXPR(NumShaders <= MAX_SHADERS_IN_PIPELINE);
     std::array<std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>, MAX_SHADERS_IN_PIPELINE> CurrResInd              = {};
     std::array<Uint32, MAX_SHADERS_IN_PIPELINE>                                                      CurrImmutableSamplerInd = {};
 #ifdef DILIGENT_DEBUG
@@ -623,11 +630,17 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
                 Int32 SrcImmutableSamplerInd = FindImmutableSampler(ShaderType, ResourceLayoutDesc, Attribs, Resources.GetCombinedSamplerSuffix());
                 if (SrcImmutableSamplerInd >= 0)
                 {
+                    // NB: for immutable separate samplers we still allocate VkResource instances, but they are never exposed to the app
                     auto& ImmutableSampler = ResLayout.GetImmutableSampler(CurrImmutableSamplerInd[ShaderInd]++);
                     if (!ImmutableSampler) // There may be multiple immutable samplers with the same name in ray tracing shaders
                     {
                         const auto& ImmutableSamplerDesc = ResourceLayoutDesc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
                         pRenderDevice->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
+                    }
+                    else
+                    {
+                        VERIFY((ShaderType & RAY_TRACING_SHADER_TYPES) != 0,
+                               "Multiple immutable samplers with the same name in one stage are only possible in ray tracing pipeliens.");
                     }
                     vkImmutableSampler = ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler();
                 }
@@ -680,7 +693,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
         SPIRV[Attribs.DescriptorSetDecorationOffset] = pResource->DescriptorSet;
     };
 
-    // First process uniform buffers for all shader stages to make sure all UBs go first in every descriptor set
+    // First process uniform buffers for ALL shader stages to make sure all UBs go first in every descriptor set
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
         auto& Shaders   = ShaderStages[s].Shaders;
@@ -702,7 +715,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
         }
     }
 
-    // Second, process all storage buffers
+    // Second, process all storage buffers in all shader stages
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
         auto& Shaders   = ShaderStages[s].Shaders;
