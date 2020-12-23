@@ -266,23 +266,34 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
 
     if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > MaxRecursion)
     {
-        LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth must not exceed the ", MaxRecursion);
+        LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth (", Uint32{CreateInfo.RayTracingPipeline.MaxRecursionDepth},
+                                ") exceeds device limit (", MaxRecursion, ").");
     }
 
     std::unordered_set<HashMapStringKey, HashMapStringKey::Hasher> GroupNames;
 
+    auto VerifyShaderGroupName = [&](const char* MemberName, // "pGeneralShaders", "pTriangleHitShaders", or "pProceduralHitShaders"
+                                     Uint32      GroupInd,
+                                     const char* GroupName) {
+        if (GroupName == nullptr)
+            LOG_PSO_ERROR_AND_THROW(MemberName, "[", GroupInd, "].Name must not be null.");
+
+        if (*GroupName == 0)
+            LOG_PSO_ERROR_AND_THROW(MemberName, "[", GroupInd, "].Name must not be empty.");
+
+        const bool IsNewName = GroupNames.emplace(HashMapStringKey{GroupName}).second;
+        if (!IsNewName)
+            LOG_PSO_ERROR_AND_THROW(MemberName, "[", GroupInd, "].Name ('", GroupName, "') has already been assigned to another group. All group names must be unique.");
+    };
+
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
         const auto& Group = CreateInfo.pGeneralShaders[i];
+
+        VerifyShaderGroupName("pGeneralShaders", i, Group.Name);
+
         if (Group.pShader == nullptr)
             LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].pShader must not be null.");
-        if (Group.Name == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must not be null.");
-
-        const bool IsNewName = GroupNames.emplace(HashMapStringKey{Group.Name}).second;
-        if (!IsNewName)
-            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name ('", Group.Name, "') has already been assigned to another group. All group names must be unique.");
-
         switch (Group.pShader->GetDesc().ShaderType)
         {
             case SHADER_TYPE_RAY_GEN:
@@ -296,15 +307,11 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
         const auto& Group = CreateInfo.pTriangleHitShaders[i];
+
+        VerifyShaderGroupName("pTriangleHitShaders", i, Group.Name);
+
         if (Group.pClosestHitShader == nullptr)
             LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].pClosestHitShader must not be null.");
-        if (Group.Name == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must not be null.");
-
-        const bool IsNewName = GroupNames.emplace(HashMapStringKey{Group.Name}).second;
-        if (!IsNewName)
-            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name ('", Group.Name, "') has already been assigned to another group. All group names must be unique.");
-
         VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closest hit.");
 
         if (Group.pAnyHitShader != nullptr)
@@ -314,15 +321,11 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
         const auto& Group = CreateInfo.pProceduralHitShaders[i];
+
+        VerifyShaderGroupName("pProceduralHitShaders", i, Group.Name);
+
         if (Group.pIntersectionShader == nullptr)
             LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].pIntersectionShader must not be null.");
-        if (Group.Name == nullptr)
-            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must not be null.");
-
-        const bool IsNewName = GroupNames.emplace(HashMapStringKey{Group.Name}).second;
-        if (!IsNewName)
-            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name ('", Group.Name, "') has already been assigned to another group. All group names must be unique.");
-
         VALIDATE_SHADER_TYPE(Group.pIntersectionShader, SHADER_TYPE_RAY_INTERSECTION, "ray tracing procedural intersection.");
 
         if (Group.pClosestHitShader != nullptr)

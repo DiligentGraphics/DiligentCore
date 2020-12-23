@@ -608,6 +608,8 @@ void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
 
         m_StaticVarsMgrs[s].Initialize(StaticResLayout, GetRawAllocator(), nullptr, 0);
     }
+
+    // Initialize shader resource layouts and assign bindings and descriptor sets in shader SPIRVs
     ShaderResourceLayoutVk::Initialize(pDeviceVk, ShaderStages, m_ShaderResourceLayouts, GetRawAllocator(),
                                        m_Desc.ResourceLayout, m_PipelineLayout,
                                        (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
@@ -766,8 +768,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 
         CreateRayTracingPipeline(pDeviceVk, vkShaderStages, ShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
 
-        auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, &m_pRayTracingPipelineData->ShaderHandles[0]);
-        VERIFY(err == VK_SUCCESS, "Failed to get shader group handles");
+        auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, m_pRayTracingPipelineData->ShaderHandles);
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to get shader group handles");
         (void)err;
     }
     catch (...)

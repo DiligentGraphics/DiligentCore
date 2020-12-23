@@ -103,7 +103,15 @@ public:
                       bool                                   bIsDeviceInternal = false) :
         PipelineStateBase{pRefCounters, pDevice, GraphicsPipelineCI.PSODesc, bIsDeviceInternal}
     {
-        ValidateGraphicsPipelineCreateInfo(GraphicsPipelineCI);
+        try
+        {
+            ValidateGraphicsPipelineCreateInfo(GraphicsPipelineCI);
+        }
+        catch (...)
+        {
+            Destruct();
+            throw;
+        }
     }
 
     /// Initializes the object as compute pipeline
@@ -119,7 +127,15 @@ public:
                       bool                                  bIsDeviceInternal = false) :
         PipelineStateBase{pRefCounters, pDevice, ComputePipelineCI.PSODesc, bIsDeviceInternal}
     {
-        ValidateComputePipelineCreateInfo(ComputePipelineCI);
+        try
+        {
+            ValidateComputePipelineCreateInfo(ComputePipelineCI);
+        }
+        catch (...)
+        {
+            Destruct();
+            throw;
+        }
     }
 
     /// Initializes the object as ray tracing pipeline
@@ -135,7 +151,15 @@ public:
                       bool                                     bIsDeviceInternal = false) :
         PipelineStateBase{pRefCounters, pDevice, RayTracingPipelineCI.PSODesc, bIsDeviceInternal}
     {
-        ValidateRayTracingPipelineCreateInfo(pDevice, pDevice->GetProperties().MaxRayTracingRecursionDepth, RayTracingPipelineCI);
+        try
+        {
+            ValidateRayTracingPipelineCreateInfo(pDevice, pDevice->GetProperties().MaxRayTracingRecursionDepth, RayTracingPipelineCI);
+        }
+        catch (...)
+        {
+            Destruct();
+            throw;
+        }
     }
 
 
