@@ -51,9 +51,9 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecursion, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 /// Copies ray tracing shader group names and also initializes the mapping from the group name to its index.
-void CopyRayTracingShaderGroups(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
-                                const RayTracingPipelineStateCreateInfo&                                CreateInfo,
-                                FixedLinearAllocator&                                                   MemPool) noexcept;
+void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
+                            const RayTracingPipelineStateCreateInfo&                                CreateInfo,
+                            FixedLinearAllocator&                                                   MemPool) noexcept;
 
 void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept;
 
@@ -246,7 +246,7 @@ public:
         VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
 
         const auto ShaderHandleSize = m_pRayTracingPipelineData->ShaderHandleSize;
-        VERIFY_EXPR(ShaderHandleSize <= DataSize);
+        VERIFY(ShaderHandleSize <= DataSize, "DataSize (", DataSize, ") must be at least as large as the shader handle size (", ShaderHandleSize, ").");
 
         if (Name == nullptr || Name[0] == '\0')
         {
@@ -262,7 +262,7 @@ public:
             std::memcpy(pData, &m_pRayTracingPipelineData->ShaderHandles[ShaderHandleSize * iter->second], ShaderHandleSize);
             return;
         }
-        UNEXPECTED("Can't find shader group with the specified name");
+        UNEXPECTED("Can't find shader group '", Name, "'.");
     }
 
 protected:
@@ -657,7 +657,7 @@ protected:
                                 FixedLinearAllocator&                    MemPool) noexcept
     {
         TNameToGroupIndexMap NameToGroupIndex;
-        CopyRayTracingShaderGroups(NameToGroupIndex, CreateInfo, MemPool);
+        CopyRTShaderGroupNames(NameToGroupIndex, CreateInfo, MemPool);
 
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
 
@@ -761,12 +761,20 @@ protected:
     struct RayTracingPipelineData
     {
         RayTracingPipelineDesc Desc;
-        TNameToGroupIndexMap   NameToGroupIndex;
+
+        // Mapping from the shader group name to its index in the pipeline.
+        // It is used to find the shader handle in ShaderHandles array.
+        TNameToGroupIndexMap NameToGroupIndex;
 
         Uint32 ShaderHandleSize = 0;
         Uint32 ShaderDataSize   = 0;
 
-        Uint8 ShaderHandles[sizeof(void*)] = {}; // The actual array size will be ShaderDataSize
+        // Array of shader handles for every group in the pipeline.
+        // The handles will be copied to the SBT using NameToGroupIndex to find
+        // handles by group name.
+        // The actual array size will be determined at run time and will be stored
+        // in ShaderDataSize.
+        Uint8 ShaderHandles[sizeof(void*)] = {};
     };
     static_assert(offsetof(RayTracingPipelineData, ShaderHandles) % sizeof(void*) == 0, "ShaderHandles member is expected to be sizeof(void*)-aligned");
 

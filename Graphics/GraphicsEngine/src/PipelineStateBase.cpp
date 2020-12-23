@@ -278,7 +278,7 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
         if (GroupName == nullptr)
             LOG_PSO_ERROR_AND_THROW(MemberName, "[", GroupInd, "].Name must not be null.");
 
-        if (*GroupName == 0)
+        if (GroupName[0] == '\0')
             LOG_PSO_ERROR_AND_THROW(MemberName, "[", GroupInd, "].Name must not be empty.");
 
         const bool IsNewName = GroupNames.emplace(HashMapStringKey{GroupName}).second;
@@ -335,9 +335,9 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
     }
 }
 
-void CopyRayTracingShaderGroups(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
-                                const RayTracingPipelineStateCreateInfo&                                CreateInfo,
-                                FixedLinearAllocator&                                                   MemPool) noexcept
+void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
+                            const RayTracingPipelineStateCreateInfo&                                CreateInfo,
+                            FixedLinearAllocator&                                                   MemPool) noexcept
 {
     Uint32 GroupIndex = 0;
 

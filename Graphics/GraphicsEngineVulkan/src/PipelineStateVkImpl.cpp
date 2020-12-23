@@ -395,7 +395,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
                         return idx;
                 }
                 UNEXPECTED("Unable to find shader '", pShader->GetDesc().Name, "' in the shader stage. This should never happen and is a bug.");
-                return ~0U;
+                return VK_SHADER_UNUSED_KHR;
             }
             else
             {
@@ -403,7 +403,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
             }
         }
         UNEXPECTED("Unable to find corresponding shader stage for shader '", pShader->GetDesc().Name, "'. This should never happen and is a bug.");
-        return ~0U;
+        return VK_SHADER_UNUSED_KHR;
     };
 
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
@@ -428,11 +428,11 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
             VERIFY(Iter != NameToGroupIndex.end(),
                    "Can't find general shader '", GeneralShader.Name,
                    "'. This looks to be a bug as NameToGroupIndex is initialized by "
-                   "CopyRayTracingShaderGroups that processes the same general shaders.");
+                   "CopyRTShaderGroupNames() that processes the same general shaders.");
             VERIFY(Iter->second == ShaderGroups.size(),
                    "General shader group '", GeneralShader.Name, "' index mismatch: (", Iter->second, " != ", ShaderGroups.size(),
                    "). This looks to be a bug as NameToGroupIndex is initialized by "
-                   "CopyRayTracingShaderGroups that processes the same shaders in the same order.");
+                   "CopyRTShaderGroupNames() that processes the same shaders in the same order.");
         }
 #endif
 
@@ -458,11 +458,11 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
             VERIFY(Iter != NameToGroupIndex.end(),
                    "Can't find triangle hit group '", TriHitShader.Name,
                    "'. This looks to be a bug as NameToGroupIndex is initialized by "
-                   "CopyRayTracingShaderGroups that processes the same hit groups.");
+                   "CopyRTShaderGroupNames() that processes the same hit groups.");
             VERIFY(Iter->second == ShaderGroups.size(),
                    "Triangle hit group '", TriHitShader.Name, "' index mismatch: (", Iter->second, " != ", ShaderGroups.size(),
                    "). This looks to be a bug as NameToGroupIndex is initialized by "
-                   "CopyRayTracingShaderGroups that processes the same hit groups in the same order.");
+                   "CopyRTShaderGroupNames() that processes the same hit groups in the same order.");
         }
 #endif
 
@@ -488,11 +488,11 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
             VERIFY(Iter != NameToGroupIndex.end(),
                    "Can't find procedural hit group '", ProcHitShader.Name,
                    "'. This looks to be a bug as NameToGroupIndex is initialized by "
-                   "CopyRayTracingShaderGroups that processes the same hit groups.");
+                   "CopyRTShaderGroupNames() that processes the same hit groups.");
             VERIFY(Iter->second == ShaderGroups.size(),
                    "Procedural hit group '", ProcHitShader.Name, "' index mismatch: (", Iter->second, " != ", ShaderGroups.size(),
                    "). This looks to be a bug as NameToGroupIndex is initialized by "
-                   "CopyRayTracingShaderGroups that processes the same hit groups in the same order.");
+                   "CopyRTShaderGroupNames() that processes the same hit groups in the same order.");
         }
 #endif
 
@@ -697,7 +697,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
     InitResourceLayouts(CreateInfo, ShaderStages);
 
     // Create shader modules and initialize shader stages
-    InitPipelineShaderStages(GetDevice()->GetLogicalDevice(), ShaderStages, ShaderModules, vkShaderStages);
+    InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);
 
     return ShaderStages;
 }
@@ -768,6 +768,9 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 
         CreateRayTracingPipeline(pDeviceVk, vkShaderStages, ShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
 
+        VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == ShaderGroups.size(),
+               "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");
+        // Get shader group handles from the PSO.
         auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, m_pRayTracingPipelineData->ShaderHandles);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to get shader group handles");
         (void)err;
