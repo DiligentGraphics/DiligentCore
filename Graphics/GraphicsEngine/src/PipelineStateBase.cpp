@@ -247,9 +247,9 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be COMPUTE.");
 
     if (CreateInfo.pCS == nullptr)
-        LOG_ERROR_AND_THROW("Compute shader must not be null.");
+        LOG_PSO_ERROR_AND_THROW("Compute shader must not be null.");
 
-    VALIDATE_SHADER_TYPE(CreateInfo.pCS, SHADER_TYPE_COMPUTE, "compute");
+    VALIDATE_SHADER_TYPE(CreateInfo.pCS, SHADER_TYPE_COMPUTE, "compute")
 }
 
 void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecursion, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
@@ -294,13 +294,14 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
 
         if (Group.pShader == nullptr)
             LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].pShader must not be null.");
+
         switch (Group.pShader->GetDesc().ShaderType)
         {
             case SHADER_TYPE_RAY_GEN:
             case SHADER_TYPE_RAY_MISS:
             case SHADER_TYPE_RAY_CLOSEST_HIT: break;
             default:
-                LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(Group.pShader->GetDesc().ShaderType), " is not a valid type for ray tracing general shader.");
+                LOG_PSO_ERROR_AND_THROW(GetShaderTypeLiteralName(Group.pShader->GetDesc().ShaderType), " is not a valid type for ray tracing general shader.");
         }
     }
 
@@ -312,10 +313,9 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
 
         if (Group.pClosestHitShader == nullptr)
             LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].pClosestHitShader must not be null.");
-        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closest hit.");
 
-        if (Group.pAnyHitShader != nullptr)
-            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing triangle any hit.");
+        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closest hit")
+        VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing triangle any hit")
     }
 
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
@@ -326,12 +326,10 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
 
         if (Group.pIntersectionShader == nullptr)
             LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].pIntersectionShader must not be null.");
-        VALIDATE_SHADER_TYPE(Group.pIntersectionShader, SHADER_TYPE_RAY_INTERSECTION, "ray tracing procedural intersection.");
 
-        if (Group.pClosestHitShader != nullptr)
-            VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing procedural closest hit.");
-        if (Group.pAnyHitShader != nullptr)
-            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing procedural any hit.");
+        VALIDATE_SHADER_TYPE(Group.pIntersectionShader, SHADER_TYPE_RAY_INTERSECTION, "ray tracing procedural intersection")
+        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing procedural closest hit")
+        VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing procedural any hit")
     }
 }
 

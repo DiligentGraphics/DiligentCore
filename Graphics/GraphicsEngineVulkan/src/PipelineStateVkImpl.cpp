@@ -339,8 +339,8 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
 
 
 void CreateRayTracingPipeline(RenderDeviceVkImpl*                                      pDeviceVk,
-                              std::vector<VkPipelineShaderStageCreateInfo>&            Stages,
-                              const std::vector<VkRayTracingShaderGroupCreateInfoKHR>& ShaderGroups,
+                              const std::vector<VkPipelineShaderStageCreateInfo>&      vkStages,
+                              const std::vector<VkRayTracingShaderGroupCreateInfoKHR>& vkShaderGroups,
                               const PipelineLayout&                                    Layout,
                               const PipelineStateDesc&                                 PSODesc,
                               const RayTracingPipelineDesc&                            RayTracingPipeline,
@@ -356,10 +356,10 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
     PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif
 
-    PipelineCI.stageCount                   = static_cast<Uint32>(Stages.size());
-    PipelineCI.pStages                      = Stages.data();
-    PipelineCI.groupCount                   = static_cast<Uint32>(ShaderGroups.size());
-    PipelineCI.pGroups                      = ShaderGroups.data();
+    PipelineCI.stageCount                   = static_cast<Uint32>(vkStages.size());
+    PipelineCI.pStages                      = vkStages.data();
+    PipelineCI.groupCount                   = static_cast<Uint32>(vkShaderGroups.size());
+    PipelineCI.pGroups                      = vkShaderGroups.data();
     PipelineCI.maxPipelineRayRecursionDepth = RayTracingPipeline.MaxRecursionDepth;
     PipelineCI.pLibraryInfo                 = nullptr;
     PipelineCI.pLibraryInterface            = nullptr;
@@ -764,14 +764,14 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 
         const auto ShaderStages = InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        const auto ShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
+        const auto vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
 
-        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, ShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
+        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
 
-        VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == ShaderGroups.size(),
+        VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == vkShaderGroups.size(),
                "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");
         // Get shader group handles from the PSO.
-        auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, m_pRayTracingPipelineData->ShaderHandles);
+        auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(vkShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, m_pRayTracingPipelineData->ShaderHandles);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to get shader group handles");
         (void)err;
     }
