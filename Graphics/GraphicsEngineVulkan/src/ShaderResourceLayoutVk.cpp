@@ -209,6 +209,8 @@ StringPool ShaderResourceLayoutVk::AllocateMemory(const std::vector<const Shader
     m_NumImmutableSamplers = 0;
     if (AllocateImmutableSamplers)
     {
+        // Reserve space for all immutable samplers that may potentially be used in this
+        // shader stage. Note that not all samplers may actually be used/initialized.
         for (Uint32 s = 0; s < ResourceLayoutDesc.NumImmutableSamplers; ++s)
         {
             const auto& ImtblSamDesc = ResourceLayoutDesc.ImmutableSamplers[s];
@@ -352,7 +354,8 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(const std::vector<co
                     {
                         // Only search for the immutable sampler for combined image samplers and separate samplers
                         SrcImmutableSamplerInd = FindImmutableSampler(m_ShaderType, ResourceLayoutDesc, Attribs, CombinedSamplerSuffix);
-                        // NB: for immutable separate samplers we still allocate VkResource instances, but they are never exposed to the app
+                        // NB: for immutable separate samplers we still allocate VkResource instances to be compliant with the main
+                        //     layout, but they are never initialized or exposed to the app.
                     }
 
                     Uint32 Binding       = Uint32{Attribs.Type};
@@ -585,8 +588,11 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
                                       AllocateImmutableSamplers));
     }
 
-    std::array<std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>, MAX_SHADERS_IN_PIPELINE> CurrResInd              = {};
-    std::array<Uint32, MAX_SHADERS_IN_PIPELINE>                                                      CurrImmutableSamplerInd = {};
+    // Current resource index, for every variable type in every shader stage
+    std::array<std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>, MAX_SHADERS_IN_PIPELINE> CurrResInd = {};
+    // Current immutable sampler index, for every shader stage
+    std::array<Uint32, MAX_SHADERS_IN_PIPELINE> CurrImmutableSamplerInd = {};
+
 #ifdef DILIGENT_DEBUG
     std::unordered_map<Uint32, std::pair<Uint32, Uint32>> dbgBindings_CacheOffsets;
 #endif
@@ -631,6 +637,9 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
                 if (SrcImmutableSamplerInd >= 0)
                 {
                     // NB: for immutable separate samplers we still allocate VkResource instances, but they are never exposed to the app
+
+                    // We reserve enough space for the maximum number of immutable samplers that may be used in the stage,
+                    // but not all of them will necessarily be initialized.
                     auto& ImmutableSampler = ResLayout.GetImmutableSampler(CurrImmutableSamplerInd[ShaderInd]++);
                     VERIFY(!ImmutableSampler, "Immutable sampler has already been initialized. This is unexpected "
                                               "as all resources are deduplicated and should only be initialized once.");
@@ -1319,12 +1328,15 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
     // Static shader resources are stored in one large continuous descriptor set
     for (Uint32 r = 0; r < NumStaticResources; ++r)
     {
-        // Get resource attributes
+        // Get resource attributes. Resources have the same index in both layouts.
         const auto& DstRes = GetResource(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
         const auto& SrcRes = SrcLayout.GetResource(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, r);
         VERIFY(strcmp(SrcRes.Name, DstRes.Name) == 0, "Src resource name ('", SrcRes.Name, "') does match the dst resource name '(", DstRes.Name, "'). This is a bug.");
+        VERIFY(SrcRes.Type == DstRes.Type, "Src and dst resource types are incompatible. This is a bug.");
+        VERIFY(SrcRes.ResourceDim == DstRes.ResourceDim, "Src and dst resource dimensions are incompatible. This is a bug.");
         VERIFY(SrcRes.Binding == Uint32{SrcRes.Type}, "Unexpected binding");
-        VERIFY(SrcRes.ArraySize == DstRes.ArraySize, "Inconsistent array size");
+        VERIFY(SrcRes.ArraySize == DstRes.ArraySize, "Src and dst resource array sizes are not identical. This is a bug.");
+        VERIFY(SrcRes.IsImmutableSamplerAssigned() == DstRes.IsImmutableSamplerAssigned(), "Src and dst resource immutable sampler flags are not identical. This is a bug.");
 
         if (DstRes.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler &&
             DstRes.IsImmutableSamplerAssigned())
