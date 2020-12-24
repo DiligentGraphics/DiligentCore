@@ -241,7 +241,10 @@ void ShaderResourceLayoutD3D12::Initialize(PIPELINE_TYPE                        
             const auto VarType = ShaderRes.FindVariableType(Attribs, ResourceLayout);
 
             auto ResIter = ResourceNameToIndex.find(HashMapStringKey{Attribs.Name});
-            VERIFY_EXPR(ResIter != ResourceNameToIndex.end());
+            VERIFY(ResIter != ResourceNameToIndex.end(),
+                   "Resource '", Attribs.Name,
+                   "' is not found in ResourceNameToIndex map. This should never happen as "
+                   "all resources are added to the map when they are being counted.");
 
             if (ResIter->second == InvalidResourceIndex)
             {
@@ -317,8 +320,8 @@ void ShaderResourceLayoutD3D12::Initialize(PIPELINE_TYPE                        
                 if (ImtblSamplerInd >= 0)
                 {
                     // Note that there may be multiple immutable samplers with the same name in different shaders that
-                    // are assigned to different registers. This is not a problem, because InitImmutableSampler allocates new
-                    // register only first time the sampler is encountered.
+                    // are assigned to different registers. InitImmutableSampler() handles this by allocating new
+                    // register only first time the sampler is encountered. All bindings will be remapped afterwards.
                     RootSgnBldr.InitImmutableSampler(ShaderRes.GetShaderType(), Sam.Name, ShaderRes.GetCombinedSamplerSuffix(), Sam);
                 }
                 else

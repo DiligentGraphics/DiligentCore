@@ -194,15 +194,21 @@ void RootSignatureBuilder::InitImmutableSampler(SHADER_TYPE                     
         {
             if (ImtblSmplr.ShaderRegister == ~UINT{0})
             {
-                ImtblSmplr.ShaderRegister = SamplerAttribs.BindPoint;
-                ImtblSmplr.ArraySize      = SamplerAttribs.BindCount;
-                ImtblSmplr.RegisterSpace  = 0;
-                ImtblSmplr.Name           = SamplerName;
+                ImtblSmplr.ArraySize     = SamplerAttribs.BindCount;
+                ImtblSmplr.RegisterSpace = 0;
+                ImtblSmplr.Name          = SamplerName;
 
                 if (ShaderType & RAY_TRACING_SHADER_TYPES)
                 {
+                    // For ray tracing shaders, use the next available sampler register.
+                    // The bindings will be remapped in the DXIL byte code.
                     ImtblSmplr.ShaderRegister = m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER];
                     m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER] += SamplerAttribs.BindCount;
+                }
+                else
+                {
+                    // Use original bind point.
+                    ImtblSmplr.ShaderRegister = SamplerAttribs.BindPoint;
                 }
             }
             else
@@ -249,6 +255,7 @@ void RootSignatureBuilder::AllocateResourceSlot(SHADER_TYPE                     
     }
     else
     {
+        // Use original bind point
         BindPoint = ShaderResAttribs.BindPoint;
     }
 
@@ -391,7 +398,10 @@ void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
 
     UINT TotalD3D12StaticSamplers = 0;
     for (const auto& ImtblSam : m_ImmutableSamplers)
-        TotalD3D12StaticSamplers += ImtblSam.ArraySize;
+    {
+        if (ImtblSam.ShaderRegister != ~UINT{0})
+            TotalD3D12StaticSamplers += ImtblSam.ArraySize;
+    }
     rootSignatureDesc.NumStaticSamplers = TotalD3D12StaticSamplers;
     rootSignatureDesc.pStaticSamplers   = nullptr;
     std::vector<D3D12_STATIC_SAMPLER_DESC, STDAllocatorRawMem<D3D12_STATIC_SAMPLER_DESC>> D3D12StaticSamplers(STD_ALLOCATOR_RAW_MEM(D3D12_STATIC_SAMPLER_DESC, GetRawAllocator(), "Allocator for vector<D3D12_STATIC_SAMPLER_DESC>"));
@@ -401,7 +411,10 @@ void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
         for (size_t s = 0; s < m_ImmutableSamplers.size(); ++s)
         {
             const auto& ImtblSmplrDesc = m_ImmutableSamplers[s];
-            const auto& SamDesc        = ImtblSmplrDesc.SamplerDesc.Desc;
+            if (ImtblSmplrDesc.ShaderRegister == ~UINT{0})
+                continue; // The sampler has not been initialized
+
+            const auto& SamDesc = ImtblSmplrDesc.SamplerDesc.Desc;
             for (UINT ArrInd = 0; ArrInd < ImtblSmplrDesc.ArraySize; ++ArrInd)
             {
                 D3D12StaticSamplers.emplace_back(

@@ -132,7 +132,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
             CComPtr<IDxcBlob> pBlob;
             if (!compiler->RemapResourceBindings(BindingMap, reinterpret_cast<IDxcBlob*>(pShaderD3D12->GetShaderByteCode()), &pBlob))
-                LOG_ERROR_AND_THROW("Failed to remap resource bindings");
+                LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShaderD3D12->GetDesc().Name, "'.");
 
             LibDesc.DXILLibrary.BytecodeLength  = pBlob->GetBufferSize();
             LibDesc.DXILLibrary.pShaderBytecode = pBlob->GetBufferPointer();
@@ -200,7 +200,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
     constexpr Uint32 DefaultPayloadSize = sizeof(float) * 8;
 
     auto& PipelineConfig = *TempPool.Construct<D3D12_RAYTRACING_PIPELINE_CONFIG>();
-    // For compatibility with Vulkan set minimal recursion depth to one, zero means no tracing of rays at all.
+
     PipelineConfig.MaxTraceRecursionDepth = CreateInfo.RayTracingPipeline.MaxRecursionDepth;
     Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &PipelineConfig});
 
@@ -298,7 +298,7 @@ TBindingMapPerStage ExtractResourceBindingMap(const RootSignatureBuilder&       
             for (Uint32 i = 0; i < TotalResCount; ++i)
             {
                 const auto& Attribs = ResLayout.GetResource(i).Attribs;
-                VERIFY_EXPR(Attribs.Name != nullptr && strlen(Attribs.Name) > 0);
+                VERIFY_EXPR(Attribs.Name != nullptr && Attribs.Name[0] != '\0');
 
                 auto Iter = BindingMap.emplace(HashMapStringKey{Attribs.Name}, Attribs.BindPoint).first;
                 VERIFY(Iter->second == Attribs.BindPoint,
@@ -318,6 +318,9 @@ TBindingMapPerStage ExtractResourceBindingMap(const RootSignatureBuilder&       
         const auto   LayoutIdx  = ResourceLayoutIndex[ShaderIdx];
         if (LayoutIdx < 0)
             continue;
+
+        if (ImtblSmplr.ShaderRegister == ~UINT{0})
+            continue; // Sampler has not been initialized
 
         if (ImtblSmplr.Name.empty())
         {
@@ -817,7 +820,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
 
-        // Initialize general layout
+        // Initialize all-resources layout
         m_pShaderResourceLayouts[s].Initialize(
             m_Desc.PipelineType,
             ResourceLayout,
