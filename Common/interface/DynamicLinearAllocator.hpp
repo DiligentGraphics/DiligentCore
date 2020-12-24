@@ -163,13 +163,17 @@ public:
         return Dst;
     }
 
-    NODISCARD wchar_t* CopyWString(const char* Str)
+    NODISCARD wchar_t* CopyWString(const char* Str, size_t len = 0)
     {
         if (Str == nullptr)
             return nullptr;
 
-        size_t len = strlen(Str);
-        auto*  Dst = Allocate<wchar_t>(len + 1);
+        if (len == 0)
+            len = strlen(Str);
+        else
+            VERIFY_EXPR(len <= strlen(Str));
+
+        auto* Dst = Allocate<wchar_t>(len + 1);
         for (size_t i = 0; i < len; ++i)
         {
             Dst[i] = static_cast<wchar_t>(Str[i]);
@@ -181,6 +185,11 @@ public:
     NODISCARD Char* CopyString(const String& Str)
     {
         return CopyString(Str.c_str(), Str.length());
+    }
+
+    NODISCARD wchar_t* CopyWString(const String& Str)
+    {
+        return CopyWString(Str.c_str(), Str.length());
     }
 
 private:

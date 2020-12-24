@@ -27,6 +27,8 @@
 
 #include "pch.h"
 #include <array>
+#include <sstream>
+
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
 #include "D3D12TypeConversions.hpp"
@@ -111,21 +113,9 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 {
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", CreateInfo.PSODesc.Name, "' is invalid: ", ##__VA_ARGS__)
 
-    Uint32 UnnamedShaderIndex = 0;
+    Uint32 UnnamedExportIndex = 0;
 
     std::unordered_map<IShader*, LPCWSTR> UniqueShaders;
-
-    const auto ShaderIndexToStr = [&TempPool](Uint32 Index) -> LPCWSTR {
-        const Uint32 Len = sizeof(Index) * 2;
-        auto* const  Dst = TempPool.Allocate<WCHAR>(Len + 1);
-        for (Uint32 i = 0; i < Len; ++i)
-        {
-            Dst[Len - 1 - i] = L"0123456789ABCDEF"[Index & 0x0F];
-            Index >>= 4;
-        }
-        Dst[Len] = 0;
-        return Dst;
-    };
 
     const auto AddDxilLib = [&](IShader* pShader, const char* Name) -> LPCWSTR {
         if (pShader == nullptr)
@@ -155,7 +145,11 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
             if (Name != nullptr)
                 ExportDesc.Name = TempPool.CopyWString(Name);
             else
-                ExportDesc.Name = ShaderIndexToStr(++UnnamedShaderIndex);
+            {
+                std::stringstream ss;
+                ss << "__Shader_" << std::setfill('0') << std::setw(4) << UnnamedExportIndex++;
+                ExportDesc.Name = TempPool.CopyWString(ss.str());
+            }
 
             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &LibDesc});
             ShaderBlobs.push_back(pBlob);
@@ -207,7 +201,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     auto& PipelineConfig = *TempPool.Construct<D3D12_RAYTRACING_PIPELINE_CONFIG>();
     // For compatibility with Vulkan set minimal recursion depth to one, zero means no tracing of rays at all.
-    PipelineConfig.MaxTraceRecursionDepth = CreateInfo.RayTracingPipeline.MaxRecursionDepth + 1;
+    PipelineConfig.MaxTraceRecursionDepth = CreateInfo.RayTracingPipeline.MaxRecursionDepth;
     Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &PipelineConfig});
 
     auto& ShaderConfig                   = *TempPool.Construct<D3D12_RAYTRACING_SHADER_CONFIG>();
@@ -221,10 +215,9 @@ template <typename TNameToGroupIndexMap>
 void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
                           const RayTracingPipelineStateCreateInfo& CreateInfo,
                           const TNameToGroupIndexMap&              NameToGroupIndex,
-                          Uint8*                                   ShaderData)
+                          Uint8*                                   ShaderData,
+                          Uint32                                   ShaderIdentifierSize)
 {
-    const Uint32 ShaderIdentifierSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-
     CComPtr<ID3D12StateObjectProperties> pStateObjectProperties;
 
     auto hr = pSO->QueryInterface(IID_PPV_ARGS(&pStateObjectProperties));
@@ -236,8 +229,10 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
         const auto& GeneralShader = CreateInfo.pGeneralShaders[i];
 
         auto iter = NameToGroupIndex.find(GeneralShader.Name);
-        if (iter == NameToGroupIndex.end())
-            LOG_ERROR_AND_THROW("Failed to get shader group index for general shader group '", GeneralShader.Name, "'");
+        VERIFY(iter != NameToGroupIndex.end(),
+               "Can't find general shader '", GeneralShader.Name,
+               "'. This looks to be a bug as NameToGroupIndex is initialized by "
+               "CopyRTShaderGroupNames() that processes the same general shaders.");
 
         const auto* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(GeneralShader.Name).c_str());
         if (ShaderID == nullptr)
@@ -245,13 +240,16 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 
         std::memcpy(&ShaderData[ShaderIdentifierSize * iter->second], ShaderID, ShaderIdentifierSize);
     }
+
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
         const auto& TriHitShader = CreateInfo.pTriangleHitShaders[i];
 
         auto iter = NameToGroupIndex.find(TriHitShader.Name);
-        if (iter == NameToGroupIndex.end())
-            LOG_ERROR_AND_THROW("Failed to get shader group index for triangle hit group '", TriHitShader.Name, "'");
+        VERIFY(iter != NameToGroupIndex.end(),
+               "Can't find triangle hit group '", TriHitShader.Name,
+               "'. This looks to be a bug as NameToGroupIndex is initialized by "
+               "CopyRTShaderGroupNames() that processes the same hit groups.");
 
         const auto* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(TriHitShader.Name).c_str());
         if (ShaderID == nullptr)
@@ -259,13 +257,16 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 
         std::memcpy(&ShaderData[ShaderIdentifierSize * iter->second], ShaderID, ShaderIdentifierSize);
     }
+
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
         const auto& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
 
         auto iter = NameToGroupIndex.find(ProcHitShader.Name);
-        if (iter == NameToGroupIndex.end())
-            LOG_ERROR_AND_THROW("Failed to get shader group index for procedural hit shader group '", ProcHitShader.Name, "'");
+        VERIFY(iter != NameToGroupIndex.end(),
+               "Can't find procedural hit group '", ProcHitShader.Name,
+               "'. This looks to be a bug as NameToGroupIndex is initialized by "
+               "CopyRTShaderGroupNames() that processes the same hit groups.");
 
         const auto* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(ProcHitShader.Name).c_str());
         if (ShaderID == nullptr)
@@ -723,7 +724,8 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create ray tracing state object");
 
-        GetShaderIdentifiers(m_pd3d12PSO, CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, m_pRayTracingPipelineData->ShaderHandles);
+        GetShaderIdentifiers(m_pd3d12PSO, CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex,
+                             m_pRayTracingPipelineData->ShaderHandles, m_pRayTracingPipelineData->ShaderHandleSize);
 
         if (*m_Desc.Name != 0)
         {
