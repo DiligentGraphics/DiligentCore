@@ -377,18 +377,13 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(const std::vector<co
                         {
                             *this,
                             stringPool.CopyString(Attribs.Name),
-                            Attribs.ArraySize,
-                            Attribs.Type,
-                            Attribs.GetResourceDimension(),
-                            Attribs.IsMultisample(),
+                            Attribs,
                             VarType,
                             Binding,
                             DescriptorSet,
                             CacheOffset,
                             SamplerInd,
-                            SrcImmutableSamplerInd >= 0,
-                            Attribs.BufferStaticSize,
-                            Attribs.BufferStride //
+                            SrcImmutableSamplerInd >= 0 //
                         };
                 }
                 else
@@ -667,18 +662,13 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
                 {
                     ResLayout,
                     stringPools[ShaderStageInd].CopyString(Attribs.Name),
-                    Attribs.ArraySize,
-                    Attribs.Type,
-                    Attribs.GetResourceDimension(),
-                    Attribs.IsMultisample(),
+                    Attribs,
                     VarType,
                     Binding,
                     DescriptorSet,
                     CacheOffset,
                     SamplerInd,
-                    vkImmutableSampler != VK_NULL_HANDLE,
-                    Attribs.BufferStaticSize,
-                    Attribs.BufferStride //
+                    vkImmutableSampler != VK_NULL_HANDLE //
                 };
         }
         else
@@ -1322,7 +1312,7 @@ void ShaderResourceLayoutVk::InitializeStaticResources(const ShaderResourceLayou
 
         if (DstRes.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler &&
             DstRes.IsImmutableSamplerAssigned())
-            continue; // Skip immutable samplers
+            continue; // Skip immutable separate samplers
 
         for (Uint32 ArrInd = 0; ArrInd < DstRes.ArraySize; ++ArrInd)
         {

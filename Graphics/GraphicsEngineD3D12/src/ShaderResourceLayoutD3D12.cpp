@@ -319,8 +319,8 @@ void ShaderResourceLayoutD3D12::Initialize(PIPELINE_TYPE                        
                 const auto ImtblSamplerInd = ShaderRes.FindImmutableSampler(Sam, ResourceLayout, LogImtblSamplerArrayError);
                 if (ImtblSamplerInd >= 0)
                 {
-                    // Note that there may be multiple immutable samplers with the same name in different shaders that
-                    // are assigned to different registers. InitImmutableSampler() handles this by allocating new
+                    // Note that there may be multiple immutable samplers with the same name in different ray tracing shaders
+                    // that are assigned to different registers. InitImmutableSampler() handles this by allocating new
                     // register only first time the sampler is encountered. All bindings will be remapped afterwards.
                     RootSgnBldr.InitImmutableSampler(ShaderRes.GetShaderType(), Sam.Name, ShaderRes.GetCombinedSamplerSuffix(), Sam);
                 }
@@ -350,6 +350,7 @@ void ShaderResourceLayoutD3D12::Initialize(PIPELINE_TYPE                        
                     const auto     ImtblSamplerInd           = ShaderRes.FindImmutableSampler(SamplerAttribs, ResourceLayout, LogImtblSamplerArrayError);
                     if (ImtblSamplerInd >= 0)
                     {
+                        SamplerId = D3DShaderResourceAttribs::InvalidSamplerId;
                         // Immutable samplers are never copied, and should not be found in resources
                         DEV_CHECK_ERR(FindSamplerByName(SamplerAttribs.Name) == D3DShaderResourceAttribs::InvalidSamplerId,
                                       "Immutable sampler '", SamplerAttribs.Name, "' was found among shader resources. This seems to be a bug");
@@ -966,12 +967,12 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
                 const auto& SrcRes = SrcRootTable.GetResource(SrcResInfo.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, GetShaderType());
                 if (!SrcRes.pObject)
                     LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", DstResInfo.Attribs.GetPrintName(ArrInd), "' in shader '", GetShaderName(), "'.");
-                // Destination resource is at the root index and offset defined by the resource layout
+
                 auto& DstRes = DstRootTable.GetResource(DstResInfo.OffsetFromTableStart + ArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, GetShaderType());
 
                 if (DstRes.pObject != SrcRes.pObject)
                 {
-                    VERIFY(DstRes.pObject == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
+                    DEV_CHECK_ERR(DstRes.pObject == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
 
                     if (SrcRes.Type == CachedResourceType::CBV)
                     {
@@ -1054,7 +1055,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
 
                 if (DstSampler.pObject != SrcSampler.pObject)
                 {
-                    VERIFY(DstSampler.pObject == nullptr, "Static-type sampler has already been initialized, and the sampler to be assigned from the shader does not match previously assigned resource");
+                    DEV_CHECK_ERR(DstSampler.pObject == nullptr, "Static-type sampler has already been initialized, and the sampler to be assigned from the shader does not match previously assigned resource");
 
                     DstSampler.pObject             = SrcSampler.pObject;
                     DstSampler.Type                = SrcSampler.Type;

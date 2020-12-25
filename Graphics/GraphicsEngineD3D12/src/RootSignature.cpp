@@ -430,10 +430,6 @@ void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
         }
         rootSignatureDesc.pStaticSamplers = D3D12StaticSamplers.data();
 
-        // Release immutable samplers array, we no longer need it
-        //std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> EmptySamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerAttribs, GetRawAllocator(), "Allocator for vector<ImmutableSamplerAttribs>"));
-        //m_ImmutableSamplers.swap(EmptySamplers);
-
         VERIFY_EXPR(D3D12StaticSamplers.size() == TotalD3D12StaticSamplers);
     }
 

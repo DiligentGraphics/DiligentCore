@@ -206,37 +206,32 @@ public:
 #endif
         // clang-format on
 
-        VkResource(const ShaderResourceLayoutVk& _ParentLayout,
-                   const char*                   _Name,
-                   Uint16                        _ArraySize,
-                   ResourceType                  _Type,
-                   RESOURCE_DIMENSION            _ResourceDim,
-                   bool                          _IsMS,
-                   SHADER_RESOURCE_VARIABLE_TYPE _VariableType,
-                   uint32_t                      _Binding,
-                   uint32_t                      _DescriptorSet,
-                   Uint32                        _CacheOffset,
-                   Uint32                        _SamplerInd,
-                   bool                          _ImmutableSamplerAssigned,
-                   Uint32                        _BufferStaticSize,
-                   Uint32                        _BufferStride) noexcept :
+        VkResource(const ShaderResourceLayoutVk&     _ParentLayout,
+                   const char*                       _Name,
+                   const SPIRVShaderResourceAttribs& _Attribs,
+                   SHADER_RESOURCE_VARIABLE_TYPE     _VariableType,
+                   uint32_t                          _Binding,
+                   uint32_t                          _DescriptorSet,
+                   Uint32                            _CacheOffset,
+                   Uint32                            _SamplerInd,
+                   bool                              _ImmutableSamplerAssigned) noexcept :
             // clang-format off
             Binding                  {static_cast<decltype(Binding)>(_Binding)            },
             DescriptorSet            {static_cast<decltype(DescriptorSet)>(_DescriptorSet)},
-            CacheOffset              {_CacheOffset  },
-            SamplerInd               {_SamplerInd   },
-            VariableType             {_VariableType },
+            CacheOffset              {_CacheOffset },
+            SamplerInd               {_SamplerInd  },
+            VariableType             {_VariableType},
             ImmutableSamplerAssigned {_ImmutableSamplerAssigned ? 1U : 0U},
-            ArraySize                {_ArraySize     },
-            Type                     {_Type          },
-            ResourceDim              {_ResourceDim   },
-            IsMS                     {_IsMS ? Uint8{1} : Uint8{0}},
+            ArraySize                {_Attribs.ArraySize  },
+            Type                     {_Attribs.Type       },
+            ResourceDim              {_Attribs.ResourceDim},
+            IsMS                     {_Attribs.IsMS       },
 #ifdef DILIGENT_DEVELOPMENT
-            BufferStaticSize         {_BufferStaticSize},
-            BufferStride             {_BufferStride    },
+            BufferStaticSize         {_Attribs.BufferStaticSize},
+            BufferStride             {_Attribs.BufferStride    },
 #endif
-            Name                     {_Name            },
-            ParentResLayout          {_ParentLayout    }
+            Name                     {_Name        },
+            ParentResLayout          {_ParentLayout}
         // clang-format on
         {
 #if defined(_MSC_VER) && defined(_WIN64) && !defined(DILIGENT_DEVELOPMENT)
@@ -248,7 +243,7 @@ public:
             VERIFY(_Binding       <= std::numeric_limits<decltype(Binding)>::max(),       "Binding (", _Binding, ") exceeds max representable value ", std::numeric_limits<decltype(Binding)>::max() );
             VERIFY(_DescriptorSet <= std::numeric_limits<decltype(DescriptorSet)>::max(), "Descriptor set (", _DescriptorSet, ") exceeds max representable value ", std::numeric_limits<decltype(DescriptorSet)>::max());
             VERIFY(_VariableType  < (1 << VariableTypeBits),                              "Variable type (", Uint32{_VariableType}, ") exceeds max representable value ", (1 << VariableTypeBits) );
-            VERIFY(_ResourceDim   < (1 << ResourceDimBits),                               "Resource dimension (", Uint32{_ResourceDim}, ") exceeds max representable value ", (1 << ResourceDimBits) );
+            VERIFY(_Attribs.ResourceDim < (1 << ResourceDimBits),                         "Resource dimension (", Uint32{_Attribs.ResourceDim}, ") exceeds max representable value ", (1 << ResourceDimBits) );
             // clang-format on
         }
 

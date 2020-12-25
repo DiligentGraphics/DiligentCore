@@ -722,6 +722,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create ray tracing state object");
 
+        // Extract shader identifiers from ray tracing pipeline and store them in ShaderHandles
         GetShaderIdentifiers(m_pd3d12PSO, CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex,
                              m_pRayTracingPipelineData->ShaderHandles, m_pRayTracingPipelineData->ShaderHandleSize);
 
