@@ -80,8 +80,7 @@ test_script:
 
 after_test:
   - 'cd %APPVEYOR_BUILD_FOLDER%\install'
-  - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip
-    .\*
+  - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip .\* -xr!lib
 
 artifacts:
   - path: install\*.zip
