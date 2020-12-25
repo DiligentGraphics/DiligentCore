@@ -173,8 +173,10 @@ size_t RootSignature::RootParamsManager::GetHash() const
 }
 
 
-RootSignatureBuilder::RootSignatureBuilder(RootSignature& RootSig) :
+RootSignatureBuilder::RootSignatureBuilder(RootSignature&                    RootSig,
+                                           const PipelineResourceLayoutDesc& PipelineResLayout) :
     m_RootSig{RootSig},
+    m_PipelineResLayout{PipelineResLayout},
     m_ImmutableSamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerAttribs, GetRawAllocator(), "Allocator for vector<ImmutableSamplerAttribs>"))
 {
 }
@@ -185,50 +187,64 @@ void RootSignatureBuilder::InitImmutableSampler(SHADER_TYPE                     
                                                 const char*                     SamplerSuffix,
                                                 const D3DShaderResourceAttribs& SamplerAttribs)
 {
-    auto ShaderVisibility = ShaderTypeToD3D12ShaderVisibility(ShaderType);
-    auto SamplerFound     = false;
-    for (auto& ImtblSmplr : m_ImmutableSamplers)
-    {
-        if (ImtblSmplr.ShaderVisibility == ShaderVisibility &&
-            StreqSuff(SamplerName, ImtblSmplr.SamplerDesc.SamplerOrTextureName, SamplerSuffix))
+    auto FindExistingSampler = [&]() -> const ImmutableSamplerAttribs* {
+        for (const auto& ImtblSmplr : m_ImmutableSamplers)
         {
-            if (ImtblSmplr.ShaderRegister == ~UINT{0})
+            if (ImtblSmplr.ShaderType == ShaderType && ImtblSmplr.SamplerName == SamplerName)
             {
-                ImtblSmplr.ArraySize     = SamplerAttribs.BindCount;
-                ImtblSmplr.RegisterSpace = 0;
-                ImtblSmplr.Name          = SamplerName;
+                return &ImtblSmplr;
+            }
+        }
+        return nullptr;
+    };
 
-                if (ShaderType & RAY_TRACING_SHADER_TYPES)
-                {
-                    // For ray tracing shaders, use the next available sampler register.
-                    // The bindings will be remapped in the DXIL byte code.
-                    ImtblSmplr.ShaderRegister = m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER];
-                    m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER] += SamplerAttribs.BindCount;
-                }
-                else
-                {
-                    // Use original bind point.
-                    ImtblSmplr.ShaderRegister = SamplerAttribs.BindPoint;
-                }
-            }
-            else
+    if (ShaderType & RAY_TRACING_SHADER_TYPES)
+    {
+        if (const auto* pImtblSmplr = FindExistingSampler())
+        {
+            // The sampler has already been initialized when processing another
+            // shader from the same shader stage.
+            DEV_CHECK_ERR(pImtblSmplr->ArraySize == SamplerAttribs.BindCount, "Immutable sampler '", SamplerName,
+                          "' has already been found, but its previous array size (", pImtblSmplr->ArraySize,
+                          ") does not match the new array size (", SamplerAttribs.BindCount, ")");
+            return;
+        }
+    }
+    else
+    {
+        VERIFY(FindExistingSampler() == nullptr, "Multiple samplers with the same name in one stage are only expected in ray tracing shaders");
+    }
+
+    bool SamplerFound = false;
+    for (Uint32 SrcImtblSmplrId = 0; SrcImtblSmplrId < m_PipelineResLayout.NumImmutableSamplers; ++SrcImtblSmplrId)
+    {
+        const auto& ImtblSamDesc = m_PipelineResLayout.ImmutableSamplers[SrcImtblSmplrId];
+        if ((ImtblSamDesc.ShaderStages & ShaderType) != 0 &&
+            StreqSuff(SamplerName, ImtblSamDesc.SamplerOrTextureName, SamplerSuffix))
+        {
+            UINT ShaderRegister = SamplerAttribs.BindPoint;
+            if (ShaderType & RAY_TRACING_SHADER_TYPES)
             {
-                // Do not allocate another register if the sampler has already been processed
-                VERIFY(ShaderType & RAY_TRACING_SHADER_TYPES, "Multiple samplers with the same name can only be encountered in ray tracing shaders");
-                DEV_CHECK_ERR(ImtblSmplr.ArraySize == SamplerAttribs.BindCount, "Immutable sampler '", SamplerName,
-                              "' has already been found, but its previous array size (", ImtblSmplr.ArraySize,
-                              ") does not match the new array size (", SamplerAttribs.BindCount, ")");
+                // For ray tracing shaders, use the next available sampler register.
+                // The bindings will be remapped in the DXIL byte code.
+                ShaderRegister = m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER];
+                m_NumResources[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER] += SamplerAttribs.BindCount;
             }
+
+            m_ImmutableSamplers.emplace_back(
+                ImtblSamDesc.Desc,
+                SamplerName,
+                ShaderRegister,
+                SamplerAttribs.BindCount,
+                0, // Register space
+                ShaderType);
 
             SamplerFound = true;
             break;
         }
     }
 
-    if (!SamplerFound)
-    {
-        LOG_ERROR("Unable to find immutable sampler \'", SamplerName, '\'');
-    }
+    DEV_CHECK_ERR(SamplerFound, "Unable to find immutable sampler \'", SamplerName, '\'');
 }
 
 
@@ -319,27 +335,6 @@ void RootSignatureBuilder::AllocateResourceSlot(SHADER_TYPE                     
     }
 }
 
-
-void RootSignatureBuilder::AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout)
-{
-    if (ResourceLayout.NumImmutableSamplers > 0)
-    {
-        m_ImmutableSamplers.reserve(ResourceLayout.NumImmutableSamplers);
-        for (Uint32 sam = 0; sam < ResourceLayout.NumImmutableSamplers; ++sam)
-        {
-            const auto& ImtblSamDesc = ResourceLayout.ImmutableSamplers[sam];
-            SHADER_TYPE ShaderStages = ImtblSamDesc.ShaderStages;
-            while (ShaderStages != 0)
-            {
-                auto Stage = ShaderStages & ~static_cast<SHADER_TYPE>(ShaderStages - 1);
-                m_ImmutableSamplers.emplace_back(ImtblSamDesc, ShaderTypeToD3D12ShaderVisibility(Stage), Stage);
-                ShaderStages &= ~Stage;
-            }
-        }
-    }
-}
-
-
 void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
 {
     auto& RootParams          = m_RootSig.m_RootParams;
@@ -399,8 +394,7 @@ void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
     UINT TotalD3D12StaticSamplers = 0;
     for (const auto& ImtblSam : m_ImmutableSamplers)
     {
-        if (ImtblSam.ShaderRegister != ~UINT{0})
-            TotalD3D12StaticSamplers += ImtblSam.ArraySize;
+        TotalD3D12StaticSamplers += ImtblSam.ArraySize;
     }
     rootSignatureDesc.NumStaticSamplers = TotalD3D12StaticSamplers;
     rootSignatureDesc.pStaticSamplers   = nullptr;
@@ -410,12 +404,9 @@ void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
     {
         for (size_t s = 0; s < m_ImmutableSamplers.size(); ++s)
         {
-            const auto& ImtblSmplrDesc = m_ImmutableSamplers[s];
-            if (ImtblSmplrDesc.ShaderRegister == ~UINT{0})
-                continue; // The sampler has not been initialized
-
-            const auto& SamDesc = ImtblSmplrDesc.SamplerDesc.Desc;
-            for (UINT ArrInd = 0; ArrInd < ImtblSmplrDesc.ArraySize; ++ArrInd)
+            const auto& ImtblSmplr = m_ImmutableSamplers[s];
+            const auto& SamDesc    = ImtblSmplr.Desc;
+            for (UINT ArrInd = 0; ArrInd < ImtblSmplr.ArraySize; ++ArrInd)
             {
                 D3D12StaticSamplers.emplace_back(
                     D3D12_STATIC_SAMPLER_DESC //
@@ -430,10 +421,10 @@ void RootSignatureBuilder::Finalize(ID3D12Device* pd3d12Device)
                         BorderColorToD3D12StaticBorderColor(SamDesc.BorderColor),
                         SamDesc.MinLOD,
                         SamDesc.MaxLOD,
-                        ImtblSmplrDesc.ShaderRegister + ArrInd,
-                        ImtblSmplrDesc.RegisterSpace,
-                        ImtblSmplrDesc.ShaderVisibility //
-                    }                                   //
+                        ImtblSmplr.ShaderRegister + ArrInd,
+                        ImtblSmplr.RegisterSpace,
+                        ShaderTypeToD3D12ShaderVisibility(ImtblSmplr.ShaderType) //
+                    }                                                            //
                 );
             }
         }

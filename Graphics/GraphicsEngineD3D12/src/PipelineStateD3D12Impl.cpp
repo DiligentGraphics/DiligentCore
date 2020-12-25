@@ -319,19 +319,16 @@ TBindingMapPerStage ExtractResourceBindingMap(const RootSignatureBuilder&       
         if (LayoutIdx < 0)
             continue;
 
-        if (ImtblSmplr.ShaderRegister == ~UINT{0})
-            continue; // Sampler has not been initialized
-
-        if (ImtblSmplr.Name.empty())
+        if (ImtblSmplr.SamplerName.empty())
         {
             UNEXPECTED("Immutable sampler name is empty");
             continue;
         }
 
         auto& BindingMap = BindingMapPerStage[ShaderIdx];
-        auto  Iter       = BindingMap.emplace(HashMapStringKey{ImtblSmplr.Name.c_str()}, ImtblSmplr.ShaderRegister).first;
+        auto  Iter       = BindingMap.emplace(HashMapStringKey{ImtblSmplr.SamplerName.c_str()}, ImtblSmplr.ShaderRegister).first;
         VERIFY(Iter->second == ImtblSmplr.ShaderRegister,
-               "Static sampler '", ImtblSmplr.Name, "' was assigned incosistent bind points in different resource layouts. This is a bug.");
+               "Static sampler '", ImtblSmplr.SamplerName, "' was assigned incosistent bind points in different resource layouts. This is a bug.");
     }
 
     return BindingMapPerStage;
@@ -413,8 +410,6 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
-    RootSigBuilder.AllocateImmutableSamplers(CreateInfo.PSODesc.ResourceLayout);
-
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
@@ -430,7 +425,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 {
     try
     {
-        RootSignatureBuilder RootSigBuilder{m_RootSig};
+        RootSignatureBuilder RootSigBuilder{m_RootSig, CreateInfo.PSODesc.ResourceLayout};
         TShaderStages        ShaderStages;
         InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages);
 
@@ -636,7 +631,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 {
     try
     {
-        RootSignatureBuilder RootSigBuilder{m_RootSig};
+        RootSignatureBuilder RootSigBuilder{m_RootSig, CreateInfo.PSODesc.ResourceLayout};
         TShaderStages        ShaderStages;
         InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages);
 
@@ -693,7 +688,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
     {
         LocalRootSignature   LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
         TShaderStages        ShaderStages;
-        RootSignatureBuilder RootSigBuilder{m_RootSig};
+        RootSignatureBuilder RootSigBuilder{m_RootSig, CreateInfo.PSODesc.ResourceLayout};
         InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, &LocalRootSig);
 
         auto* pd3d12Device = pDeviceD3D12->GetD3D12Device5();

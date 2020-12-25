@@ -479,9 +479,7 @@ private:
 class RootSignatureBuilder
 {
 public:
-    explicit RootSignatureBuilder(RootSignature& RootSig);
-
-    void AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
+    RootSignatureBuilder(RootSignature& RootSig, const PipelineResourceLayoutDesc& PipelineResLayout);
 
     void InitImmutableSampler(SHADER_TYPE                     ShaderType,
                               const char*                     SamplerName,
@@ -512,19 +510,28 @@ public:
 
     struct ImmutableSamplerAttribs
     {
-        ImmutableSamplerDesc    SamplerDesc;
-        UINT                    ShaderRegister   = ~UINT{0};
-        UINT                    ArraySize        = 0;
-        UINT                    RegisterSpace    = 0;
-        D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
-        String                  Name;
-        SHADER_TYPE             ShaderType = SHADER_TYPE_UNKNOWN;
+        const SamplerDesc& Desc;
+        const String       SamplerName;
+        const UINT         ShaderRegister;
+        const UINT         ArraySize;
+        const UINT         RegisterSpace;
+        const SHADER_TYPE  ShaderType;
 
-        ImmutableSamplerAttribs() noexcept {}
-        ImmutableSamplerAttribs(const ImmutableSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility, SHADER_TYPE Stage) noexcept :
-            SamplerDesc(SamDesc),
-            ShaderVisibility(Visibility),
-            ShaderType{Stage}
+        ImmutableSamplerAttribs(
+            const SamplerDesc& _Desc,
+            const char*        _SamplerName,
+            const UINT         _ShaderRegister,
+            const UINT         _ArraySize,
+            const UINT         _RegisterSpace,
+            const SHADER_TYPE  _ShaderType) noexcept :
+            // clang-format off
+            Desc          {_Desc},
+            SamplerName   {_SamplerName},
+            ShaderRegister{_ShaderRegister},
+            ArraySize     {_ArraySize},
+            RegisterSpace {_RegisterSpace},
+            ShaderType    {_ShaderType}
+        // clang-format on
         {}
     };
     const ImmutableSamplerAttribs* GetImmutableSamplers() const { return m_ImmutableSamplers.data(); }
@@ -536,6 +543,8 @@ private:
 #endif
 
     RootSignature& m_RootSig;
+
+    const PipelineResourceLayoutDesc& m_PipelineResLayout;
 
     // Resource counters for every descriptor range type used to assign bind points
     // for ray-tracing shaders.
