@@ -406,7 +406,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                 SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer;
             const auto& Type   = Compiler.get_type(SB.type_id);
             const auto  Size   = Compiler.get_declared_struct_size(Type);
-            const auto  Stride = Compiler.get_declared_struct_size_runtime_array(Type, 1);
+            const auto  Stride = Compiler.get_declared_struct_size_runtime_array(Type, 1) - Size;
             new (&GetSB(CurrSB++))
                 SPIRVShaderResourceAttribs(Compiler,
                                            SB,

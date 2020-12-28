@@ -61,7 +61,8 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
         vkBuildInfo.pGeometries   = &vkGeometry;
         vkBuildInfo.geometryCount = 1;
 
-        VERIFY_EXPR(MaxPrimitiveCount <= Limits.maxInstanceCount);
+        DEV_CHECK_ERR(m_Desc.MaxInstanceCount <= Limits.maxInstanceCount,
+                      "Max instance count (", m_Desc.MaxInstanceCount, ") exceeds device limit (", Limits.maxInstanceCount, ").");
 
         LogicalDevice.GetAccelerationStructureBuildSizes(vkBuildInfo, &MaxPrimitiveCount, vkSizeInfo);
 

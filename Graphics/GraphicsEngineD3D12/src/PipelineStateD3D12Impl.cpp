@@ -111,7 +111,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
                                 IDXCompiler*                             compiler,
                                 const TBindingMapPerStage&               BindingMapPerStage) noexcept(false)
 {
-#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", CreateInfo.PSODesc.Name, "' is invalid: ", ##__VA_ARGS__)
+#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
     Uint32 UnnamedExportIndex = 0;
 
