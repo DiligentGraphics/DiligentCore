@@ -41,8 +41,9 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCoun
                                                const BottomLevelASDesc& Desc) :
     TBottomLevelASBase{pRefCounters, pDeviceD3D12, Desc}
 {
-    auto*  pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
-    UINT64 ResultDataMaxSizeInBytes = 0;
+    auto*       pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
+    const auto& Limits                   = pDeviceD3D12->GetProperties();
+    UINT64      ResultDataMaxSizeInBytes = 0;
 
     if (m_Desc.CompactedSize)
     {
@@ -77,8 +78,8 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCoun
 
                 MaxPrimitiveCount += src.MaxPrimitiveCount;
             }
-            DEV_CHECK_ERR(MaxPrimitiveCount <= pDeviceD3D12->GetProperties().MaxPrimitivesPerBLAS,
-                          "Max primitive count (", MaxPrimitiveCount, ") exceeds device limit");
+            DEV_CHECK_ERR(MaxPrimitiveCount <= Limits.MaxPrimitivesPerBLAS,
+                          "Max primitive count (", MaxPrimitiveCount, ") exceeds device limit (", Limits.MaxPrimitivesPerBLAS, ")");
         }
         else if (m_Desc.pBoxes != nullptr)
         {
@@ -97,16 +98,16 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCoun
 
                 MaxBoxCount += src.MaxBoxCount;
             }
-            DEV_CHECK_ERR(MaxBoxCount <= pDeviceD3D12->GetProperties().MaxPrimitivesPerBLAS,
-                          "Max box count (", MaxBoxCount, ") exceeds device limit");
+            DEV_CHECK_ERR(MaxBoxCount <= Limits.MaxPrimitivesPerBLAS,
+                          "Max box count (", MaxBoxCount, ") exceeds device limit (", Limits.MaxPrimitivesPerBLAS, ")");
         }
         else
         {
             UNEXPECTED("Either pTriangles or pBoxes must not be null");
         }
 
-        DEV_CHECK_ERR(d3d12Geometries.size() <= pDeviceD3D12->GetProperties().MaxGeometriesPerBLAS,
-                      "The number of geometries (", d3d12Geometries.size(), ") exceeds device limit");
+        DEV_CHECK_ERR(d3d12Geometries.size() <= Limits.MaxGeometriesPerBLAS,
+                      "The number of geometries (", d3d12Geometries.size(), ") exceeds device limit (", Limits.MaxGeometriesPerBLAS, ")");
 
         d3d12BottomLevelInputs.Type           = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
         d3d12BottomLevelInputs.Flags          = BuildASFlagsToD3D12ASBuildFlags(m_Desc.Flags);

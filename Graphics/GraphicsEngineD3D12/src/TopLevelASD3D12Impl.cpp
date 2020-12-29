@@ -41,8 +41,9 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
                                          const TopLevelASDesc&  Desc) :
     TTopLevelASBase{pRefCounters, pDeviceD3D12, Desc}
 {
-    auto*  pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
-    UINT64 ResultDataMaxSizeInBytes = 0;
+    auto*       pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
+    const auto& Limits                   = pDeviceD3D12->GetProperties();
+    UINT64      ResultDataMaxSizeInBytes = 0;
 
     if (m_Desc.CompactedSize > 0)
     {
@@ -58,8 +59,8 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
         d3d12TopLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
         d3d12TopLevelInputs.NumDescs    = m_Desc.MaxInstanceCount;
 
-        DEV_CHECK_ERR(m_Desc.MaxInstanceCount <= pDeviceD3D12->GetProperties().MaxInstancesPerTLAS,
-                      "Max instance count (", m_Desc.MaxInstanceCount, ") exceeds device limit.");
+        DEV_CHECK_ERR(m_Desc.MaxInstanceCount <= Limits.MaxInstancesPerTLAS,
+                      "Max instance count (", m_Desc.MaxInstanceCount, ") exceeds device limit (", Limits.MaxInstancesPerTLAS, ").");
 
         pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12TopLevelInputs, &d3d12TopLevelPrebuildInfo);
         if (d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)

@@ -67,6 +67,18 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
         if (msg.find("dstAccessMask (0x20) is not supported by dstStageMask (0x2000000)") != std::string::npos)
             return VK_FALSE;
     }
+    if (std::string{"VUID-VkShaderModuleCreateInfo-pCode-01091"} == callbackData->pMessageIdName)
+    {
+        std::string msg{callbackData->pMessage};
+        if (msg.find("The SPIR-V Capability (RayTracingNV) was declared, but none of the requirements were met to use it.") != std::string::npos)
+            return VK_FALSE;
+    }
+    if (std::string{"VUID-VkShaderModuleCreateInfo-pCode-04147"} == callbackData->pMessageIdName)
+    {
+        std::string msg{callbackData->pMessage};
+        if (msg.find("The SPIR-V Extension (SPV_NV_ray_tracing) was declared, but none of the requirements were met to use it.") != std::string::npos)
+            return VK_FALSE;
+    }
 #endif
 
     Diligent::DEBUG_MESSAGE_SEVERITY MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
