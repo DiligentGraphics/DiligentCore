@@ -898,6 +898,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 #endif
 
     auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
+    auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
 
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -909,18 +910,17 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         }
     }
 
-    if (m_HasStaticResources && !pResBindingVkImpl->StaticResourcesInitialized())
+    if (CommitResources)
     {
-        LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", m_Desc.Name, "'. Please call IShaderResourceBinding::InitializeStaticResources().");
-    }
-#endif
+        if (m_HasStaticResources && !pResBindingVkImpl->StaticResourcesInitialized())
+        {
+            LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", m_Desc.Name, "'. Please call IShaderResourceBinding::InitializeStaticResources().");
+        }
 
-    auto& ResourceCache = pResBindingVkImpl->GetResourceCache();
-
-#ifdef DILIGENT_DEVELOPMENT
-    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-    {
-        m_ShaderResourceLayouts[s].dvpVerifyBindings(ResourceCache);
+        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
+        {
+            m_ShaderResourceLayouts[s].dvpVerifyBindings(ResourceCache);
+        }
     }
 #endif
 #ifdef DILIGENT_DEBUG

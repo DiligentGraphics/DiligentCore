@@ -955,15 +955,17 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
         return nullptr;
     }
 
-
-    if ((m_RootSig.GetTotalSrvCbvUavSlots(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0 ||
-         m_RootSig.GetTotalRootViews(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0) &&
-        !pResBindingD3D12Impl->StaticResourcesInitialized())
+    if (Attrib.CommitResources)
     {
-        LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", m_Desc.Name, "'. Please call IShaderResourceBinding::InitializeStaticResources().");
-    }
+        if ((m_RootSig.GetTotalSrvCbvUavSlots(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0 ||
+             m_RootSig.GetTotalRootViews(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0) &&
+            !pResBindingD3D12Impl->StaticResourcesInitialized())
+        {
+            LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", m_Desc.Name, "'. Please call IShaderResourceBinding::InitializeStaticResources().");
+        }
 
-    pResBindingD3D12Impl->dvpVerifyResourceBindings(this);
+        pResBindingD3D12Impl->dvpVerifyResourceBindings(this);
+    }
 #endif
 
     auto& ResourceCache = pResBindingD3D12Impl->GetResourceCache();
