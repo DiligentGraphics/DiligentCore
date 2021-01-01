@@ -370,7 +370,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                     );
                 }
             }
-            D3D12_RANGE FlushRange{0, stagingBufferSize};
+            D3D12_RANGE FlushRange{0, static_cast<SIZE_T>(stagingBufferSize)};
             m_pd3d12Resource->Unmap(0, &FlushRange);
         }
     }
