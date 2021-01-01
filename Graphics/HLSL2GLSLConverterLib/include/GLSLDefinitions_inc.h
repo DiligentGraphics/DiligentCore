@@ -1,5 +1,5 @@
 "/*\n"
-" *  Copyright 2019-2020 Diligent Graphics LLC\n"
+" *  Copyright 2019-2021 Diligent Graphics LLC\n"
 " *  Copyright 2015-2019 Egor Yusov\n"
 " *  \n"
 " *  Licensed under the Apache License, Version 2.0 (the \"License\");\n"
