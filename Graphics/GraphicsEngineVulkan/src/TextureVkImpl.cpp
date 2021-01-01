@@ -60,6 +60,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     const auto& FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
+    const bool bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
         VkImageCreateInfo ImageCI = {};
@@ -177,8 +178,6 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         // If it is VK_IMAGE_LAYOUT_UNDEFINED, then the contents of the data are considered to be undefined,
         // and the transition away from this layout is not guaranteed to preserve that data.
         ImageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-        bool bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
 
         m_VulkanImage = LogicalDevice.CreateImage(ImageCI, m_Desc.Name);
 
@@ -418,6 +417,8 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         VkMemoryPropertyFlags MemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         if (m_Desc.CPUAccessFlags & CPU_ACCESS_READ)
         {
+            DEV_CHECK_ERR(!bInitializeTexture, "Readback textures should not be initialized with data");
+
             VkStagingBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
             MemProperties |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
             SetState(RESOURCE_STATE_COPY_DEST);
@@ -461,6 +462,33 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
 
         m_StagingDataAlignedOffset = AlignedStagingMemOffset;
+
+        if (bInitializeTexture)
+        {
+            uint8_t* const pStagingData = GetStagingDataCPUAddress();
+
+            Uint32 subres = 0;
+            for (Uint32 layer = 0; layer < m_Desc.ArraySize; ++layer)
+            {
+                for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
+                {
+                    const auto& SubResData = pInitData->pSubResources[subres++];
+                    const auto  MipProps   = GetMipLevelProperties(m_Desc, mip);
+
+                    const auto DstSubresOffset =
+                        GetStagingTextureSubresourceOffset(m_Desc, layer, mip, StagingBufferOffsetAlignment);
+
+                    CopyTextureSubresource(SubResData,
+                                           MipProps.StorageHeight / FmtAttribs.BlockHeight, // NumRows
+                                           MipProps.Depth,
+                                           MipProps.RowSize,
+                                           pStagingData + DstSubresOffset,
+                                           MipProps.RowSize,       // DstRowStride
+                                           MipProps.DepthSliceSize // DstDepthStride
+                    );
+                }
+            }
+        }
     }
     else
     {

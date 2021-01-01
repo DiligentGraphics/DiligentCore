@@ -573,4 +573,22 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
                                                    const Box&         Region,
                                                    Uint32             RowStrideAlignment);
 
+
+/// Copies texture subresource data on the CPU.
+
+/// \param [in] SrcSubres      - Source subresource data.
+/// \param [in] NumRows        - The number of rows in the subresource.
+/// \param [in] NumDepthSlices - The number of depth slices in the subresource.
+/// \param [in] RowSize        - Subresource data row size, in bytes.
+/// \param [in] pDstData       - Pointer to the destination subresource data.
+/// \param [in] DstRowStride   - Destination subresource row stride, in bytes.
+/// \param [in] DstDepthStride - Destination subresource depth stride, in bytes.
+void CopyTextureSubresource(const TextureSubResData& SrcSubres,
+                            Uint32                   NumRows,
+                            Uint32                   NumDepthSlices,
+                            Uint32                   RowSize,
+                            void*                    pDstData,
+                            Uint32                   DstRowStride,
+                            Uint32                   DstDepthStride);
+
 } // namespace Diligent

@@ -1449,6 +1449,7 @@ Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
                                        Uint32             LocationY,
                                        Uint32             LocationZ)
 {
+    VERIFY_EXPR(TexDesc.MipLevels > 0 && TexDesc.ArraySize > 0 && TexDesc.Width > 0 && TexDesc.Height > 0 && TexDesc.Format != TEX_FORMAT_UNKNOWN);
     VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
 
     Uint32 Offset = 0;
@@ -1550,6 +1551,33 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
     CopyInfo.MemorySize  = UpdateRegionDepth * CopyInfo.DepthStride;
     CopyInfo.Region      = Region;
     return CopyInfo;
+}
+
+
+void CopyTextureSubresource(const TextureSubResData& SrcSubres,
+                            Uint32                   NumRows,
+                            Uint32                   NumDepthSlices,
+                            Uint32                   RowSize,
+                            void*                    pDstData,
+                            Uint32                   DstRowStride,
+                            Uint32                   DstDepthStride)
+{
+    VERIFY_EXPR(SrcSubres.pSrcBuffer == nullptr && SrcSubres.pData != nullptr);
+    VERIFY_EXPR(pDstData != nullptr);
+    VERIFY(SrcSubres.Stride >= RowSize, "Source data row stride (", SrcSubres.Stride, ") is smaller than the row size (", RowSize, ")");
+    VERIFY(DstRowStride >= RowSize, "Dst data row stride (", DstRowStride, ") is smaller than the row size (", RowSize, ")");
+    for (Uint32 z = 0; z < NumDepthSlices; ++z)
+    {
+        const auto* pSrcSlice = reinterpret_cast<const Uint8*>(SrcSubres.pData) + SrcSubres.DepthStride * z;
+        auto*       pDstSlice = reinterpret_cast<Uint8*>(pDstData) + DstDepthStride * z;
+
+        for (Uint32 y = 0; y < NumRows; ++y)
+        {
+            memcpy(pDstSlice + DstRowStride * y,
+                   pSrcSlice + SrcSubres.Stride * y,
+                   RowSize);
+        }
+    }
 }
 
 } // namespace Diligent

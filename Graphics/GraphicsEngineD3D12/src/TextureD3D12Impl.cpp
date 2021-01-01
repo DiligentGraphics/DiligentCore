@@ -148,7 +148,8 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
     D3D12_RESOURCE_DESC Desc = GetD3D12TextureDesc();
 
-    auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
+    auto* pd3d12Device       = pRenderDeviceD3D12->GetD3D12Device();
+    bool  bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
         D3D12_CLEAR_VALUE  ClearValue  = {};
@@ -184,8 +185,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         HeapProps.CreationNodeMask     = 1;
         HeapProps.VisibleNodeMask      = 1;
 
-        bool bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
-        auto InitialState       = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
+        auto InitialState = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
         SetState(InitialState);
         auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(InitialState);
         auto hr =
@@ -289,6 +289,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         RESOURCE_STATE InitialState = RESOURCE_STATE_UNKNOWN;
         if (m_Desc.CPUAccessFlags & CPU_ACCESS_READ)
         {
+            DEV_CHECK_ERR(!bInitializeTexture, "Readback textures should not be initialized with data");
             StaginHeapProps.Type = D3D12_HEAP_TYPE_READBACK;
             InitialState         = RESOURCE_STATE_COPY_DEST;
         }
@@ -337,6 +338,41 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                                                         nullptr, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create staging buffer");
+
+        if (bInitializeTexture)
+        {
+            const auto FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
+            void* pStagingData = nullptr;
+            m_pd3d12Resource->Map(0, nullptr, &pStagingData);
+            DEV_CHECK_ERR(pStagingData != nullptr, "Failed to map staging buffer");
+            if (pStagingData != nullptr)
+            {
+                for (Uint32 Subres = 0; Subres < NumSubresources; ++Subres)
+                {
+                    const auto Mip      = Subres % m_Desc.MipLevels;
+                    const auto MipProps = GetMipLevelProperties(m_Desc, Mip);
+
+                    const auto& SrcSubresData = pInitData->pSubResources[Subres];
+                    const auto& DstFootprint  = GetStagingFootprint(Subres);
+
+                    VERIFY_EXPR(MipProps.StorageWidth == DstFootprint.Footprint.Width);
+                    VERIFY_EXPR(MipProps.StorageHeight == DstFootprint.Footprint.Height);
+                    VERIFY_EXPR(MipProps.Depth == DstFootprint.Footprint.Depth);
+
+                    CopyTextureSubresource(SrcSubresData,
+                                           MipProps.StorageHeight / FmtAttribs.BlockHeight, // NumRows
+                                           MipProps.Depth,
+                                           MipProps.RowSize,
+                                           reinterpret_cast<Uint8*>(pStagingData) + DstFootprint.Offset,
+                                           DstFootprint.Footprint.RowPitch,
+                                           DstFootprint.Footprint.RowPitch * DstFootprint.Footprint.Height / FmtAttribs.BlockHeight // DstDepthStride
+                    );
+                }
+            }
+            D3D12_RANGE FlushRange{0, stagingBufferSize};
+            m_pd3d12Resource->Unmap(0, &FlushRange);
+        }
     }
     else
     {
@@ -355,8 +391,8 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
     else
     {
         auto RefFormat = DXGI_FormatToTexFormat(ResourceDesc.Format);
-        DEV_CHECK_ERR(RefFormat == TexDesc.Format, "The format specified by texture description (", GetTextureFormatAttribs(TexDesc.Format).Name, ")"
-                                                                                                                                                  " does not match the D3D12 resource format (",
+        DEV_CHECK_ERR(RefFormat == TexDesc.Format, "The format specified by texture description (", GetTextureFormatAttribs(TexDesc.Format).Name,
+                      ") does not match the D3D12 resource format (",
                       GetTextureFormatAttribs(RefFormat).Name, ")");
         (void)RefFormat;
     }
@@ -384,7 +420,7 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
         TexDesc.BindFlags |= BIND_UNORDERED_ACCESS;
     if ((ResourceDesc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
     {
-        auto FormatAttribs = GetTextureFormatAttribs(TexDesc.Format);
+        const auto& FormatAttribs = GetTextureFormatAttribs(TexDesc.Format);
         if (FormatAttribs.IsTypeless ||
             (FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH &&
              FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL))
