@@ -1,4 +1,5 @@
-## Current progress
+
+## v2.4.g
 
 * Enabled ray tracing (API Version 240080)
 * Added `IDeviceContext::GetFrameNumber` method (API Version 240079)
