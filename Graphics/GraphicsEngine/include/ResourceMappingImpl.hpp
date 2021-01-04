@@ -108,7 +108,16 @@ private:
 
         bool operator==(const ResMappingHashKey& RHS) const
         {
-            return static_cast<const TBase&>(*this) == static_cast<const TBase&>(RHS) && ArrayIndex == RHS.ArrayIndex;
+            if (ArrayIndex != RHS.ArrayIndex)
+            {
+                // We must check array index first because TBase::operator==()
+                // expects that if the hashes are different, the strings must be
+                // different too. This will not be the case for different array
+                // elements of the same variable.
+                return false;
+            }
+
+            return static_cast<const TBase&>(*this) == static_cast<const TBase&>(RHS);
         }
 
         const Uint32 ArrayIndex;
