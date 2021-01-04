@@ -87,7 +87,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
             auto* pFactoryD3D11 = GetEngineFactoryD3D11();
             pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice, &m_pImmediateContext);
             pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext,
-			                        SCDesc, NativeWindowHandle, &m_pSwapChain);
+                                    SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 
@@ -102,7 +102,7 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
             auto* pFactoryD3D12 = GetEngineFactoryD3D12();
             pFactoryD3D12->CreateDeviceAndContextsD3D12(EngineCI, &m_pDevice, &m_pImmediateContext);
             pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext,
-			                        SCDesc, NativeWindowHandle, &m_pSwapChain);
+                                    SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 
