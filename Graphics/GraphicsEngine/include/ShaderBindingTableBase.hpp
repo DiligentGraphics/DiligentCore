@@ -178,13 +178,13 @@ public:
     }
 
 
-    void DILIGENT_CALL_TYPE BindHitGroup(ITopLevelAS* pTLAS,
-                                         const char*  pInstanceName,
-                                         const char*  pGeometryName,
-                                         Uint32       RayOffsetInHitGroupIndex,
-                                         const char*  pShaderGroupName,
-                                         const void*  pData,
-                                         Uint32       DataSize) override final
+    void DILIGENT_CALL_TYPE BindHitGroupForGeometry(ITopLevelAS* pTLAS,
+                                                    const char*  pInstanceName,
+                                                    const char*  pGeometryName,
+                                                    Uint32       RayOffsetInHitGroupIndex,
+                                                    const char*  pShaderGroupName,
+                                                    const void*  pData,
+                                                    Uint32       DataSize) override final
     {
         VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
@@ -221,12 +221,12 @@ public:
     }
 
 
-    void DILIGENT_CALL_TYPE BindHitGroups(ITopLevelAS* pTLAS,
-                                          const char*  pInstanceName,
-                                          Uint32       RayOffsetInHitGroupIndex,
-                                          const char*  pShaderGroupName,
-                                          const void*  pData,
-                                          Uint32       DataSize) override final
+    void DILIGENT_CALL_TYPE BindHitGroupForInstance(ITopLevelAS* pTLAS,
+                                                    const char*  pInstanceName,
+                                                    Uint32       RayOffsetInHitGroupIndex,
+                                                    const char*  pShaderGroupName,
+                                                    const void*  pData,
+                                                    Uint32       DataSize) override final
     {
         VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
@@ -278,11 +278,11 @@ public:
     }
 
 
-    void DILIGENT_CALL_TYPE BindHitGroupForAll(ITopLevelAS* pTLAS,
-                                               Uint32       RayOffsetInHitGroupIndex,
-                                               const char*  pShaderGroupName,
-                                               const void*  pData,
-                                               Uint32       DataSize) override final
+    void DILIGENT_CALL_TYPE BindHitGroupForTLAS(ITopLevelAS* pTLAS,
+                                                Uint32       RayOffsetInHitGroupIndex,
+                                                const char*  pShaderGroupName,
+                                                const void*  pData,
+                                                Uint32       DataSize) override final
     {
         VERIFY_EXPR((pData == nullptr) == (DataSize == 0));
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));

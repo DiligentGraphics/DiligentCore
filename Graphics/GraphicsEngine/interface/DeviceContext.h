@@ -1077,8 +1077,8 @@ struct BuildTLASAttribs
     /// 'MultiplierForGeometryContributionToHitGroupIndex' argument in TraceRay() in HLSL, 'sbtRecordStride' argument in traceRay() in GLSL.
     Uint32                          HitGroupStride         DEFAULT_INITIALIZER(1);
     
-    /// Base offset for hit group location.
-    /// Can be used to bind hit shaders for multiple acceleration structures, see IShaderBindingTable::BindHitGroup().
+    /// Base offset for the hit group location.
+    /// Can be used to bind hit shaders for multiple acceleration structures, see IShaderBindingTable::BindHitGroupForGeometry().
     ///   - Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
     ///   - Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
     Uint32                          BaseContributionToHitGroupIndex DEFAULT_INITIALIZER(0);

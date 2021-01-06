@@ -34,9 +34,9 @@ void TestShaderBindingTable_CInterface(IShaderBindingTable* pSBT)
     IShaderBindingTable_ResetHitGroups(pSBT);
     IShaderBindingTable_BindRayGenShader(pSBT, "Group name", (const void*)NULL, 0);
     IShaderBindingTable_BindMissShader(pSBT, "Group name", 0, (const void*)NULL, 0);
-    IShaderBindingTable_BindHitGroup(pSBT, (ITopLevelAS*)NULL, "Instance name", "Geometry name", 0, "Shader group name", (const void*)NULL, 0);
-    IShaderBindingTable_BindHitGroupForAll(pSBT, (ITopLevelAS*)NULL, 0, "Shader group name", (const void*)NULL, 0);
-    IShaderBindingTable_BindHitGroups(pSBT, (ITopLevelAS*)NULL, "Instance name", 0, "Shader group name", (const void*)NULL, 0);
+    IShaderBindingTable_BindHitGroupForGeometry(pSBT, (ITopLevelAS*)NULL, "Instance name", "Geometry name", 0, "Shader group name", (const void*)NULL, 0);
+    IShaderBindingTable_BindHitGroupForTLAS(pSBT, (ITopLevelAS*)NULL, 0, "Shader group name", (const void*)NULL, 0);
+    IShaderBindingTable_BindHitGroupForInstance(pSBT, (ITopLevelAS*)NULL, "Instance name", 0, "Shader group name", (const void*)NULL, 0);
     IShaderBindingTable_BindCallableShader(pSBT, "Shader group name", 0, (const void*)NULL, 0);
     IShaderBindingTable_BindHitGroupByIndex(pSBT, 0, "Shader group name", (const void*)NULL, 0);
 }

@@ -68,7 +68,7 @@ DILIGENT_TYPED_ENUM(SHADER_BINDING_VALIDATION_FLAGS, Uint8)
     /// Checks that shader record data are initialized.
     SHADER_BINDING_VALIDATION_SHADER_RECORD = 0x2,
         
-    /// Checks that all TLASes that were used in IShaderBindingTable::BindHitGroup() are alive and
+    /// Checks that all TLASes that were used in the SBT are alive and
     /// shader binding indices have not changed.
     SHADER_BINDING_VALIDATION_TLAS          = 0x4,
 
@@ -116,7 +116,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     
 
     /// After TLAS or BLAS was rebuilt or updated, hit group shader bindings may have become invalid,
-    /// you can only reset hit groups and keep ray-gen, miss and callable shader bindings intact.
+    /// you can reset hit groups only and keep ray-gen, miss and callable shader bindings intact.
     
     /// \note Access to the SBT must be externally synchronized.
     VIRTUAL void METHOD(ResetHitGroups)(THIS) PURE;
@@ -140,9 +140,9 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     
     /// \param [in] pShaderGroupName - Ray-miss shader name that was specified in RayTracingGeneralShaderGroup::Name
     ///                                when the pipeline state was created. Can be null to make the shader inactive.
-    /// \param [in] MissIndex        - Miss shader offset in the shader binding table. This offset will correspond to
-    ///                                'MissShaderIndex' argument of TraceRay() function in HLSL, and 'missIndex' 
-    ///                                argument of traceRay() function in GLSL.
+    /// \param [in] MissIndex        - Miss shader offset in the shader binding table (aka ray type). This offset will
+    ///                                correspond to 'MissShaderIndex' argument of TraceRay() function in HLSL, 
+    ///                                and 'missIndex' argument of traceRay() function in GLSL.
     /// \param [in] pData            - Shader record data, can be null.
     /// \param [in] DataSize         - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
@@ -156,14 +156,14 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
 
     /// Binds a hit group for the the specified geometry in the instance.
     
-    /// \param [in] pTLAS                    - Top-level AS that will be used to calculate the offset for the given instance.
+    /// \param [in] pTLAS                    - Top-level AS that contains the given instance.
     /// \param [in] pInstanceName            - Instance name that contains the geometry. This is the name that was used
     ///                                        when the TLAS was created, see TLASBuildInstanceData::InstanceName.
     /// \param [in] pGeometryName            - Geometry name in the instance, for which to bind the hit group.
     ///                                        This is the name that was given to geometry when BLAS was created,
     ///                                        see BLASBuildTriangleData::GeometryName and BLASBuildBoundingBoxData::GeometryName.
-    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table. This offset will correspond to
-    ///                                        'RayContributionToHitGroupIndex' argument of TraceRay() function in HLSL, and 
+    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table (aka ray type). This offset will correspond
+    ///                                        to 'RayContributionToHitGroupIndex' argument of TraceRay() function in HLSL, and 
     ///                                        'sbtRecordOffset' argument of traceRay() function in GLSL.
     ///                                        Must be less than HitShadersPerInstance.
     /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name or
@@ -175,19 +175,19 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \note Access to the SBT must be externally synchronized.
     ///       Access to the TLAS must be externally synchronized.
     ///       Access to the BLAS that was used in the TLAS instance with name pInstanceName must be externally synchronized.
-    VIRTUAL void METHOD(BindHitGroup)(THIS_
-                                      ITopLevelAS* pTLAS,
-                                      const char*  pInstanceName,
-                                      const char*  pGeometryName,
-                                      Uint32       RayOffsetInHitGroupIndex,
-                                      const char*  pShaderGroupName,
-                                      const void*  pData            DEFAULT_INITIALIZER(nullptr),
-                                      Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
+    VIRTUAL void METHOD(BindHitGroupForGeometry)(THIS_
+                                                 ITopLevelAS* pTLAS,
+                                                 const char*  pInstanceName,
+                                                 const char*  pGeometryName,
+                                                 Uint32       RayOffsetInHitGroupIndex,
+                                                 const char*  pShaderGroupName,
+                                                 const void*  pData            DEFAULT_INITIALIZER(nullptr),
+                                                 Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
     
 
-    /// Binds a hit group to the specified location.
+    /// Binds a hit group to the specified location in the table.
     
-    /// \param [in] BindingIndex     - Location of the hit group. 
+    /// \param [in] BindingIndex     - Location of the hit group in the table. 
     /// \param [in] pShaderGroupName - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name or
     ///                                RayTracingProceduralHitShaderGroup::Name when the pipeline state was created.
     ///                                Can be null to make the shader group inactive.
@@ -197,7 +197,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \note Access to the SBT must be externally synchronized.
     /// 
     /// \remarks    Use IBottomLevelAS::GetGeometryIndex(), ITopLevelAS::GetBuildInfo(), 
-    ///             ITopLevelAS::GetInstanceDesc().ContributionToHitGroupIndex to calculate binding index.
+    ///             ITopLevelAS::GetInstanceDesc().ContributionToHitGroupIndex to calculate the binding index.
     VIRTUAL void METHOD(BindHitGroupByIndex)(THIS_
                                              Uint32      BindingIndex,
                                              const char* pShaderGroupName,
@@ -207,12 +207,12 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
 
     /// Binds a hit group for all geometries in the specified instance.
     
-    /// \param [in] pTLAS                    - Top-level AS that will be used to calculate the offset for the instance.
+    /// \param [in] pTLAS                    - Top-level AS that contains the given instance.
     /// \param [in] pInstanceName            - Instance name, for which to bind the hit group. This is the name that was used
     ///                                        when the TLAS was created, see TLASBuildInstanceData::InstanceName.
-    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table. This offset will correspond to
-    ///                                        'RayContributionToHitGroupIndex' argument of TraceRay() function in HLSL, 
-    ///                                        and 'sbtRecordOffset' argument of traceRay() function in GLSL.
+    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table (aka ray type). This offset will
+    ///                                        correspond to 'RayContributionToHitGroupIndex' argument of TraceRay() function
+    ///                                        in HLSL, and 'sbtRecordOffset' argument of traceRay() function in GLSL.
     ///                                        Must be less than HitShadersPerInstance.
     /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name or
     ///                                        RayTracingProceduralHitShaderGroup::Name when the pipeline state was created.
@@ -222,21 +222,21 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// 
     /// \note Access to the SBT must be externally synchronized.
     ///       Access to the TLAS must be externally synchronized.
-    VIRTUAL void METHOD(BindHitGroups)(THIS_
-                                       ITopLevelAS* pTLAS,
-                                       const char*  pInstanceName,
-                                       Uint32       RayOffsetInHitGroupIndex,
-                                       const char*  pShaderGroupName,
-                                       const void*  pData            DEFAULT_INITIALIZER(nullptr),
-                                       Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
+    VIRTUAL void METHOD(BindHitGroupForInstance)(THIS_
+                                                 ITopLevelAS* pTLAS,
+                                                 const char*  pInstanceName,
+                                                 Uint32       RayOffsetInHitGroupIndex,
+                                                 const char*  pShaderGroupName,
+                                                 const void*  pData            DEFAULT_INITIALIZER(nullptr),
+                                                 Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
     
     
-    /// Bind hit group for all instances in the top-level AS.
+    /// Binds a hit group for all instances in the given top-level AS.
     
-    /// \param [in] pTLAS                    - Top-level AS that will be used to calculate the offset for the instance.
-    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table. This offset will correspond to
-    ///                                        'RayContributionToHitGroupIndex' argument of TraceRay() function in HLSL, 
-    ///                                        and 'sbtRecordOffset' argument of traceRay() function in GLSL.
+    /// \param [in] pTLAS                    - Top-level AS, for which to bind the hit group.
+    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table (aka ray type). This offset will
+    ///                                        correspond to 'RayContributionToHitGroupIndex' argument of TraceRay()
+    ///                                        function in HLSL, and 'sbtRecordOffset' argument of traceRay() function in GLSL.
     ///                                        Must be less than HitShadersPerInstance.
     /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name or
     ///                                        RayTracingProceduralHitShaderGroup::Name when the pipeline state was created.
@@ -246,12 +246,12 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// 
     /// \note Access to the SBT must be externally synchronized.
     ///       Access to the TLAS must be externally synchronized.
-    VIRTUAL void METHOD(BindHitGroupForAll)(THIS_
-                                            ITopLevelAS* pTLAS,
-                                            Uint32       RayOffsetInHitGroupIndex,
-                                            const char*  pShaderGroupName,
-                                            const void*  pData            DEFAULT_INITIALIZER(nullptr),
-                                            Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
+    VIRTUAL void METHOD(BindHitGroupForTLAS)(THIS_
+                                             ITopLevelAS* pTLAS,
+                                             Uint32       RayOffsetInHitGroupIndex,
+                                             const char*  pShaderGroupName,
+                                             const void*  pData            DEFAULT_INITIALIZER(nullptr),
+                                             Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
 
 
     /// Binds a callable shader.
@@ -279,16 +279,16 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IShaderBindingTable_Verify(This, ...)              CALL_IFACE_METHOD(ShaderBindingTable, Verify,              This, __VA_ARGS__)
-#    define IShaderBindingTable_Reset(This, ...)               CALL_IFACE_METHOD(ShaderBindingTable, Reset,               This, __VA_ARGS__)
-#    define IShaderBindingTable_ResetHitGroups(This)           CALL_IFACE_METHOD(ShaderBindingTable, ResetHitGroups,      This)
-#    define IShaderBindingTable_BindRayGenShader(This, ...)    CALL_IFACE_METHOD(ShaderBindingTable, BindRayGenShader,    This, __VA_ARGS__)
-#    define IShaderBindingTable_BindMissShader(This, ...)      CALL_IFACE_METHOD(ShaderBindingTable, BindMissShader,      This, __VA_ARGS__)
-#    define IShaderBindingTable_BindHitGroupByIndex(This, ...) CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupByIndex, This, __VA_ARGS__)
-#    define IShaderBindingTable_BindHitGroup(This, ...)        CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroup,        This, __VA_ARGS__)
-#    define IShaderBindingTable_BindHitGroups(This, ...)       CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroups,       This, __VA_ARGS__)
-#    define IShaderBindingTable_BindHitGroupForAll(This, ...)  CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupForAll,  This, __VA_ARGS__)
-#    define IShaderBindingTable_BindCallableShader(This, ...)  CALL_IFACE_METHOD(ShaderBindingTable, BindCallableShader,  This, __VA_ARGS__)
+#    define IShaderBindingTable_Verify(This, ...)                  CALL_IFACE_METHOD(ShaderBindingTable, Verify,                  This, __VA_ARGS__)
+#    define IShaderBindingTable_Reset(This, ...)                   CALL_IFACE_METHOD(ShaderBindingTable, Reset,                   This, __VA_ARGS__)
+#    define IShaderBindingTable_ResetHitGroups(This)               CALL_IFACE_METHOD(ShaderBindingTable, ResetHitGroups,          This)
+#    define IShaderBindingTable_BindRayGenShader(This, ...)        CALL_IFACE_METHOD(ShaderBindingTable, BindRayGenShader,        This, __VA_ARGS__)
+#    define IShaderBindingTable_BindMissShader(This, ...)          CALL_IFACE_METHOD(ShaderBindingTable, BindMissShader,          This, __VA_ARGS__)
+#    define IShaderBindingTable_BindHitGroupByIndex(This, ...)     CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupByIndex,     This, __VA_ARGS__)
+#    define IShaderBindingTable_BindHitGroupForGeometry(This, ...) CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupForGeometry, This, __VA_ARGS__)
+#    define IShaderBindingTable_BindHitGroupForInstance(This, ...) CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupForInstance, This, __VA_ARGS__)
+#    define IShaderBindingTable_BindHitGroupForTLAS(This, ...)     CALL_IFACE_METHOD(ShaderBindingTable, BindHitGroupForTLAS,     This, __VA_ARGS__)
+#    define IShaderBindingTable_BindCallableShader(This, ...)      CALL_IFACE_METHOD(ShaderBindingTable, BindCallableShader,      This, __VA_ARGS__)
 
 // clang-format on
 

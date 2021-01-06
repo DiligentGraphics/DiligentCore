@@ -727,7 +727,7 @@ TEST_P(RT1, TriangleClosestHitShader)
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
-    pSBT->BindHitGroup(pTLAS, "Instance", "Triangle", 0, "HitGroup");
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance", "Triangle", 0, "HitGroup");
 
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_TLAS")->Set(pTLAS);
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_ColorBuffer")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
@@ -919,7 +919,7 @@ TEST_P(RT2, TriangleAnyHitShader)
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
-    pSBT->BindHitGroup(pTLAS, "Instance", "Triangle", 0, "HitGroup");
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance", "Triangle", 0, "HitGroup");
 
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_TLAS")->Set(pTLAS);
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_ColorBuffer")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
@@ -1109,7 +1109,7 @@ TEST_P(RT3, ProceduralIntersection)
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
-    pSBT->BindHitGroup(pTLAS, "Instance", "Sphere", 0, "HitGroup");
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance", "Sphere", 0, "HitGroup");
 
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_TLAS")->Set(pTLAS);
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_ColorBuffer")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
@@ -1362,12 +1362,12 @@ TEST_P(RT4, MultiGeometry)
 
     pSBT->BindRayGenShader("Main");
     pSBT->BindMissShader("Miss", 0);
-    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 1", 0, "HitGroup1", &Weights[0], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 2", 0, "HitGroup1", &Weights[1], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 1", "Geom 3", 0, "HitGroup1", &Weights[2], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 1", 0, "HitGroup2", &Weights[3], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 2", 0, "HitGroup2", &Weights[4], sizeof(Weights[0]));
-    pSBT->BindHitGroup(pTLAS, "Instance 2", "Geom 3", 0, "HitGroup2", &Weights[5], sizeof(Weights[0]));
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance 1", "Geom 1", 0, "HitGroup1", &Weights[0], sizeof(Weights[0]));
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance 1", "Geom 2", 0, "HitGroup1", &Weights[1], sizeof(Weights[0]));
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance 1", "Geom 3", 0, "HitGroup1", &Weights[2], sizeof(Weights[0]));
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance 2", "Geom 1", 0, "HitGroup2", &Weights[3], sizeof(Weights[0]));
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance 2", "Geom 2", 0, "HitGroup2", &Weights[4], sizeof(Weights[0]));
+    pSBT->BindHitGroupForGeometry(pTLAS, "Instance 2", "Geom 3", 0, "HitGroup2", &Weights[5], sizeof(Weights[0]));
 
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_TLAS")->Set(pTLAS);
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_ColorBuffer")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
