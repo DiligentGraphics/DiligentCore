@@ -761,7 +761,7 @@ bool VerifyTraceRaysAttribs(const TraceRaysAttribs& Attribs)
     CHECK_TRACE_RAYS_ATTRIBS(Attribs.pSBT != nullptr, "pSBT must not be null.");
 
 #ifdef DILIGENT_DEVELOPMENT
-    CHECK_TRACE_RAYS_ATTRIBS(Attribs.pSBT->Verify(SHADER_BINDING_VALIDATION_SHADER_ONLY | SHADER_BINDING_VALIDATION_TLAS),
+    CHECK_TRACE_RAYS_ATTRIBS(Attribs.pSBT->Verify(VERIFY_SBT_FLAG_SHADER_ONLY | VERIFY_SBT_FLAG_TLAS),
                              "not all shaders in SBT are bound or instance to shader mapping is incorrect.");
 #endif // DILIGENT_DEVELOPMENT
 

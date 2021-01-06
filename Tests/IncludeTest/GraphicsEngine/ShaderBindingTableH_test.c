@@ -29,7 +29,7 @@
 
 void TestShaderBindingTable_CInterface(IShaderBindingTable* pSBT)
 {
-    IShaderBindingTable_Verify(pSBT, SHADER_BINDING_VALIDATION_ALL);
+    IShaderBindingTable_Verify(pSBT, VERIFY_SBT_FLAG_ALL);
     IShaderBindingTable_Reset(pSBT, (IPipelineState*)NULL);
     IShaderBindingTable_ResetHitGroups(pSBT);
     IShaderBindingTable_BindRayGenShader(pSBT, "Group name", (const void*)NULL, 0);

@@ -60,24 +60,24 @@ typedef struct ShaderBindingTableDesc ShaderBindingTableDesc;
 
 
 /// Defines shader binding table validation flags, see IShaderBindingTable::Verify().
-DILIGENT_TYPED_ENUM(SHADER_BINDING_VALIDATION_FLAGS, Uint8)
+DILIGENT_TYPED_ENUM(VERIFY_SBT_FLAGS, Uint32)
 {
-    /// Checks that all shaders are bound or inactive.
-    SHADER_BINDING_VALIDATION_SHADER_ONLY   = 0x1,
+    /// Check that all shaders are bound or inactive.
+    VERIFY_SBT_FLAG_SHADER_ONLY   = 0x1,
 
-    /// Checks that shader record data are initialized.
-    SHADER_BINDING_VALIDATION_SHADER_RECORD = 0x2,
+    /// Check that shader record data are initialized.
+    VERIFY_SBT_FLAG_SHADER_RECORD = 0x2,
         
-    /// Checks that all TLASes that were used in the SBT are alive and
+    /// Check that all TLASes that were used in the SBT are alive and
     /// shader binding indices have not changed.
-    SHADER_BINDING_VALIDATION_TLAS          = 0x4,
+    VERIFY_SBT_FLAG_TLAS          = 0x4,
 
-    // Enable all validations.
-    SHADER_BINDING_VALIDATION_ALL           = SHADER_BINDING_VALIDATION_SHADER_ONLY   |
-                                              SHADER_BINDING_VALIDATION_SHADER_RECORD |
-                                              SHADER_BINDING_VALIDATION_TLAS
+    /// Enable all validations.
+    VERIFY_SBT_FLAG_ALL           = VERIFY_SBT_FLAG_SHADER_ONLY   |
+                                    VERIFY_SBT_FLAG_SHADER_RECORD |
+                                    VERIFY_SBT_FLAG_TLAS
 };
-DEFINE_FLAG_ENUM_OPERATORS(SHADER_BINDING_VALIDATION_FLAGS)
+DEFINE_FLAG_ENUM_OPERATORS(VERIFY_SBT_FLAGS)
 
 
 #define DILIGENT_INTERFACE_NAME IShaderBindingTable
@@ -99,13 +99,13 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     
     /// Checks that all shaders are bound, instances and geometries have not changed, shader record data are initialized.
     
-    /// \param [in] Flags - Flags used for validation.
-    /// \return     True if SBT content is valid.
+    /// \param [in] Flags - Flags that specify which type of validation to perform.
+    /// \return     True if SBT content is valid, and false otherwise.
     /// 
     /// \note Access to the SBT must be externally synchronized.
     ///       This method implemented only for development build and has no effect in release build.
     VIRTUAL Bool METHOD(Verify)(THIS_
-                                SHADER_BINDING_VALIDATION_FLAGS Flags) CONST PURE;
+                                VERIFY_SBT_FLAGS Flags) CONST PURE;
     
 
     /// Resets the SBT with the new pipeline state. This is more effecient than creating a new SBT.

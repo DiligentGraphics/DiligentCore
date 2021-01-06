@@ -333,7 +333,7 @@ public:
     }
 
 
-    Bool DILIGENT_CALL_TYPE Verify(SHADER_BINDING_VALIDATION_FLAGS Flags) const override final
+    Bool DILIGENT_CALL_TYPE Verify(VERIFY_SBT_FLAGS Flags) const override final
     {
 #ifdef DILIGENT_DEVELOPMENT
         static_assert(EmptyElem != 0, "must not be zero");
@@ -344,7 +344,7 @@ public:
         {
             for (size_t i = 0; i < Data.size(); i += Stride)
             {
-                if (Flags & SHADER_BINDING_VALIDATION_SHADER_ONLY)
+                if (Flags & VERIFY_SBT_FLAG_SHADER_ONLY)
                 {
                     Uint32 Count = 0;
                     for (size_t j = 0; j < ShSize; ++j)
@@ -357,7 +357,7 @@ public:
                     }
                 }
 
-                if ((Flags & SHADER_BINDING_VALIDATION_SHADER_RECORD) && this->m_ShaderRecordSize > 0)
+                if ((Flags & VERIFY_SBT_FLAG_SHADER_RECORD) && this->m_ShaderRecordSize > 0)
                 {
                     Uint32 Count = 0;
                     for (size_t j = ShSize; j < Stride; ++j)
@@ -380,7 +380,7 @@ public:
             return false;
         }
 
-        if (Flags & SHADER_BINDING_VALIDATION_TLAS)
+        if (Flags & VERIFY_SBT_FLAG_TLAS)
         {
             for (size_t i = 0; i < m_DbgHitGroupBindings.size(); ++i)
             {
