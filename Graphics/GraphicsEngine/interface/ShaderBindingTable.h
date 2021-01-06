@@ -28,7 +28,7 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IShaderBindingTable interface and related data structures
+/// Definition of Diligent::IShaderBindingTable interface and related data structures
 
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Primitives/interface/FlagEnum.h"
@@ -68,7 +68,7 @@ DILIGENT_TYPED_ENUM(SHADER_BINDING_VALIDATION_FLAGS, Uint8)
     /// Checks that shader record data are initialized.
     SHADER_BINDING_VALIDATION_SHADER_RECORD = 0x2,
         
-    /// Checks that all TLAS that used in IShaderBindingTable::BindHitGroup() are alive and
+    /// Checks that all TLASes that were used in IShaderBindingTable::BindHitGroup() are alive and
     /// shader binding indices have not changed.
     SHADER_BINDING_VALIDATION_TLAS          = 0x4,
 
@@ -89,15 +89,15 @@ DEFINE_FLAG_ENUM_OPERATORS(SHADER_BINDING_VALIDATION_FLAGS)
 
 /// Shader binding table interface
 
-/// Defines the methods to manipulate a SBT object
+/// Defines the methods to manipulate an SBT object
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
-    /// Returns the shader binding table description used to create the object
+    /// Returns the shader binding table description that was used to create the object
     virtual const ShaderBindingTableDesc& DILIGENT_CALL_TYPE GetDesc() const override = 0;
 #endif
     
-    /// Check that all shaders are bound, instances and geometries are not changed, shader record data are initialized.
+    /// Checks that all shaders are bound, instances and geometries have not changed, shader record data are initialized.
     
     /// \param [in] Flags - Flags used for validation.
     /// \return     True if SBT content is valid.
@@ -108,23 +108,24 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                 SHADER_BINDING_VALIDATION_FLAGS Flags) CONST PURE;
     
 
-    /// Reset SBT with the new pipeline state. This is more effecient than creating a new SBT.
+    /// Resets the SBT with the new pipeline state. This is more effecient than creating a new SBT.
     
     /// \note Access to the SBT must be externally synchronized.
     VIRTUAL void METHOD(Reset)(THIS_
                                IPipelineState* pPSO) PURE;
     
 
-    /// When TLAS or BLAS was rebuilt or updated, hit group shader bindings may have become invalid,
-    /// you can reset only hit groups and keep ray-gen, miss and callable shader bindings intact.
+    /// After TLAS or BLAS was rebuilt or updated, hit group shader bindings may have become invalid,
+    /// you can only reset hit groups and keep ray-gen, miss and callable shader bindings intact.
     
     /// \note Access to the SBT must be externally synchronized.
     VIRTUAL void METHOD(ResetHitGroups)(THIS) PURE;
     
 
-    /// Bind ray-generation shader.
+    /// Binds a ray-generation shader.
     
-    /// \param [in] pShaderGroupName - Ray-generation shader name that was specified in RayTracingGeneralShaderGroup::Name.
+    /// \param [in] pShaderGroupName - Ray-generation shader name that was specified in RayTracingGeneralShaderGroup::Name
+    ///                                when the pipeline state was created.
     /// \param [in] pData            - Shader record data, can be null.
     /// \param [in] DataSize         - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
@@ -135,12 +136,13 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                           Uint32      DataSize         DEFAULT_INITIALIZER(0)) PURE;
     
 
-    /// Bind ray-miss shader.
+    /// Binds a ray-miss shader.
     
-    /// \param [in] pShaderGroupName - Ray-miss shader name that was specified in RayTracingGeneralShaderGroup::Name,
-    ///                                can be null to make shader inactive.
-    /// \param [in] MissIndex        - Miss shader offset in shader binding table, use the same value as in the shader:
-    ///                                'MissShaderIndex' argument in TraceRay() in HLSL, 'missIndex' in traceRay() in GLSL.
+    /// \param [in] pShaderGroupName - Ray-miss shader name that was specified in RayTracingGeneralShaderGroup::Name
+    ///                                when the pipeline state was created. Can be null to make the shader inactive.
+    /// \param [in] MissIndex        - Miss shader offset in the shader binding table. This offset will correspond to
+    ///                                'MissShaderIndex' argument of TraceRay() function in HLSL, and 'missIndex' 
+    ///                                argument of traceRay() function in GLSL.
     /// \param [in] pData            - Shader record data, can be null.
     /// \param [in] DataSize         - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
@@ -152,22 +154,27 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                         Uint32      DataSize         DEFAULT_INITIALIZER(0)) PURE;
     
 
-    /// Bind hit group for the specified geometry in instance.
+    /// Binds a hit group for the the specified geometry in the instance.
     
-    /// \param [in] pTLAS                    - Top-level AS, used to calculate offset for instance.
-    /// \param [in] pInstanceName            - Instance name, see TLASBuildInstanceData::InstanceName.
-    /// \param [in] pGeometryName            - Geometry name, see BLASBuildTriangleData::GeometryName and BLASBuildBoundingBoxData::GeometryName.
-    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in shader binding table, use the same value as in the shader:
-    ///                                        'RayContributionToHitGroupIndex' argument in TraceRay() in HLSL, 'sbtRecordOffset' argument in traceRay() in GLSL.
+    /// \param [in] pTLAS                    - Top-level AS that will be used to calculate the offset for the given instance.
+    /// \param [in] pInstanceName            - Instance name that contains the geometry. This is the name that was used
+    ///                                        when the TLAS was created, see TLASBuildInstanceData::InstanceName.
+    /// \param [in] pGeometryName            - Geometry name in the instance, for which to bind the hit group.
+    ///                                        This is the name that was given to geometry when BLAS was created,
+    ///                                        see BLASBuildTriangleData::GeometryName and BLASBuildBoundingBoxData::GeometryName.
+    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table. This offset will correspond to
+    ///                                        'RayContributionToHitGroupIndex' argument of TraceRay() function in HLSL, and 
+    ///                                        'sbtRecordOffset' argument of traceRay() function in GLSL.
     ///                                        Must be less than HitShadersPerInstance.
-    /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name and RayTracingProceduralHitShaderGroup::Name,
-    ///                                        can be null to make the shader inactive.
+    /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name or
+    ///                                        RayTracingProceduralHitShaderGroup::Name when the pipeline state was created.
+    ///                                        Can be null to make the shader group inactive.
     /// \param [in] pData                    - Shader record data, can be null.
     /// \param [in] DataSize                 - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
     ///       Access to the TLAS must be externally synchronized.
-    ///       Access to the BLAS that was used in TLAS instance with name pInstanceName must be externally synchronized.
+    ///       Access to the BLAS that was used in the TLAS instance with name pInstanceName must be externally synchronized.
     VIRTUAL void METHOD(BindHitGroup)(THIS_
                                       ITopLevelAS* pTLAS,
                                       const char*  pInstanceName,
@@ -178,17 +185,19 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                       Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
     
 
-    /// Bind hit group to specified location.
+    /// Binds a hit group to the specified location.
     
-    /// \param [in] BindingIndex     - location of the hit group. 
-    /// \param [in] pShaderGroupName - hit group name that specified in RayTracingTriangleHitShaderGroup::Name and RayTracingProceduralHitShaderGroup::Name,
-    ///                                can be null to make shader inactive.
-    /// \param [in] pData            - shader record data, can be null.
-    /// \param [in] DataSize         - shader record data size, should equal to RayTracingPipelineDesc::ShaderRecordSize.
+    /// \param [in] BindingIndex     - Location of the hit group. 
+    /// \param [in] pShaderGroupName - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name or
+    ///                                RayTracingProceduralHitShaderGroup::Name when the pipeline state was created.
+    ///                                Can be null to make the shader group inactive.
+    /// \param [in] pData            - Shader record data, can be null.
+    /// \param [in] DataSize         - Shader record data size, should equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
     /// 
-    /// \remarks Use IBottomLevelAS::GetGeometryIndex(), ITopLevelAS::GetBuildInfo(), ITopLevelAS::GetInstanceDesc().ContributionToHitGroupIndex to calculate binding index.
+    /// \remarks    Use IBottomLevelAS::GetGeometryIndex(), ITopLevelAS::GetBuildInfo(), 
+    ///             ITopLevelAS::GetInstanceDesc().ContributionToHitGroupIndex to calculate binding index.
     VIRTUAL void METHOD(BindHitGroupByIndex)(THIS_
                                              Uint32      BindingIndex,
                                              const char* pShaderGroupName,
@@ -196,17 +205,20 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                              Uint32      DataSize         DEFAULT_INITIALIZER(0)) PURE;
 
 
-    /// Bind hit group for each geometries in specified instance.
+    /// Binds a hit group for all geometries in the specified instance.
     
-    /// \param [in] pTLAS                    - Top-level AS, used to calculate offset for instance.
-    /// \param [in] pInstanceName            - Instance name, see TLASBuildInstanceData::InstanceName.
-    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in shader binding table, use the same value as in the shader:
-    ///                                        'RayContributionToHitGroupIndex' argument in TraceRay() in HLSL, 'sbtRecordOffset' argument in traceRay() in GLSL.
+    /// \param [in] pTLAS                    - Top-level AS that will be used to calculate the offset for the instance.
+    /// \param [in] pInstanceName            - Instance name, for which to bind the hit group. This is the name that was used
+    ///                                        when the TLAS was created, see TLASBuildInstanceData::InstanceName.
+    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table. This offset will correspond to
+    ///                                        'RayContributionToHitGroupIndex' argument of TraceRay() function in HLSL, 
+    ///                                        and 'sbtRecordOffset' argument of traceRay() function in GLSL.
     ///                                        Must be less than HitShadersPerInstance.
-    /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name and RayTracingProceduralHitShaderGroup::Name,
-    ///                                        can be null to make shader inactive.
+    /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name or
+    ///                                        RayTracingProceduralHitShaderGroup::Name when the pipeline state was created.
+    ///                                        Can be null to make the shader group inactive.
     /// \param [in] pData                    - Shader record data, can be null.
-    /// \param [in] DataSize                 - Shader record data size, should equal to RayTracingPipelineDesc::ShaderRecordSize.
+    /// \param [in] DataSize                 - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
     ///       Access to the TLAS must be externally synchronized.
@@ -219,16 +231,18 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                        Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
     
     
-    /// Bind hit group for each instances in top-level AS.
+    /// Bind hit group for all instances in the top-level AS.
     
-    /// \param [in] pTLAS                    - Top-level AS, used to calculate offset for instance.
-    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in shader binding table, use the same value as in the shader:
-    ///                                        'RayContributionToHitGroupIndex' argument in TraceRay() in HLSL, 'sbtRecordOffset' argument in traceRay() in GLSL.
+    /// \param [in] pTLAS                    - Top-level AS that will be used to calculate the offset for the instance.
+    /// \param [in] RayOffsetInHitGroupIndex - Ray offset in the shader binding table. This offset will correspond to
+    ///                                        'RayContributionToHitGroupIndex' argument of TraceRay() function in HLSL, 
+    ///                                        and 'sbtRecordOffset' argument of traceRay() function in GLSL.
     ///                                        Must be less than HitShadersPerInstance.
-    /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name and RayTracingProceduralHitShaderGroup::Name,
-    ///                                        can be null to make shader inactive.
+    /// \param [in] pShaderGroupName         - Hit group name that was specified in RayTracingTriangleHitShaderGroup::Name or
+    ///                                        RayTracingProceduralHitShaderGroup::Name when the pipeline state was created.
+    ///                                        Can be null to make the shader group inactive.
     /// \param [in] pData                    - Shader record data, can be null.
-    /// \param [in] DataSize                 - Shader record data size, should equal to RayTracingPipelineDesc::ShaderRecordSize.
+    /// \param [in] DataSize                 - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
     ///       Access to the TLAS must be externally synchronized.
@@ -240,14 +254,15 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                             Uint32       DataSize         DEFAULT_INITIALIZER(0)) PURE;
 
 
-    /// Bind callable shader.
+    /// Binds a callable shader.
     
-    /// \param [in] pShaderGroupName - Callable shader name that specified in RayTracingGeneralShaderGroup::Name,
-    ///                                can be null to make shader inactive.
-    /// \param [in] CallableIndex    - Callable shader offset in shader binding table, use the same value as in the shader:
-    ///                                'ShaderIndex' argument in CallShader() in HLSL, 'callable' argument in executeCallable() in GLSL.
+    /// \param [in] pShaderGroupName - Callable shader name that was specified in RayTracingGeneralShaderGroup::Name
+    ///                                when the pipeline state was created. Can be null to make the shader inactive.
+    /// \param [in] CallableIndex    - Callable shader offset in the shader binding table. This offset will correspond to
+    ///                                'ShaderIndex' argument of CallShader() function in HLSL, 
+    ///                                and 'callable' argument of executeCallable() function in GLSL.
     /// \param [in] pData            - Shader record data, can be null.
-    /// \param [in] DataSize         - Shader record data size, should equal to RayTracingPipelineDesc::ShaderRecordSize.
+    /// \param [in] DataSize         - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
     VIRTUAL void METHOD(BindCallableShader)(THIS_
