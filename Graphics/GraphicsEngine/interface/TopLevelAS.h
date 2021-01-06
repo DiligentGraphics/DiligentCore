@@ -68,7 +68,7 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 typedef struct TopLevelASDesc TopLevelASDesc;
 
 
-/// Defines shader binding mode.
+/// Defines hit group binding mode used by the top-level AS.
 DILIGENT_TYPED_ENUM(HIT_GROUP_BINDING_MODE, Uint8)
 {
     /// Each geometry in every instance may use a unique hit shader group.
@@ -84,10 +84,10 @@ DILIGENT_TYPED_ENUM(HIT_GROUP_BINDING_MODE, Uint8)
     HIT_GROUP_BINDING_MODE_PER_INSTANCE,
  
     /// All instances in each TLAS will use the same hit group.
-    /// In this mode, the SBT reserves a single slot for one hit group for each TLAS,
+    /// In this mode, the SBT reserves a single slot for one hit group for each TLAS
     /// and uses least memory.
     /// See IShaderBindingTable::BindHitGroupForTLAS().
-    HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT,
+    HIT_GROUP_BINDING_MODE_PER_TLAS,
 
     /// The user must specify TLASBuildInstanceData::ContributionToHitGroupIndex 
     /// and only use IShaderBindingTable::BindHitGroupByIndex().
@@ -104,9 +104,9 @@ struct TLASBuildInfo
     Uint32                 InstanceCount                    DEFAULT_INITIALIZER(0);
     
     /// The number of hit shader groups, same as BuildTLASAttribs::HitGroupStride.
-    Uint32                 HitGroupStride            DEFAULT_INITIALIZER(0);
+    Uint32                 HitGroupStride                   DEFAULT_INITIALIZER(0);
     
-    /// Hit shader binding mode, same as BuildTLASAttribs::BindingMode.
+    /// Hit group binding mode, same as BuildTLASAttribs::BindingMode.
     HIT_GROUP_BINDING_MODE BindingMode                      DEFAULT_INITIALIZER(HIT_GROUP_BINDING_MODE_PER_GEOMETRY);
 
     /// First hit group location, same as BuildTLASAttribs::BaseContributionToHitGroupIndex.

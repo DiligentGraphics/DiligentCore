@@ -292,7 +292,7 @@ public:
         const auto Info      = pTLASImpl->GetBuildInfo();
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE ||
-                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT);
+                    Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_TLAS);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
 
         const Uint32 GroupSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;

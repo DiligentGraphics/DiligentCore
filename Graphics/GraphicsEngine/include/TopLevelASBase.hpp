@@ -131,7 +131,7 @@ public:
 
             VERIFY_EXPR(this->m_StringPool.GetRemainingSize() == 0);
 
-            InstanceOffset = InstanceOffset + (BindingMode == HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT ? HitGroupStride : 0) - 1;
+            InstanceOffset = InstanceOffset + (BindingMode == HIT_GROUP_BINDING_MODE_PER_TLAS ? HitGroupStride : 0) - 1;
 
             this->m_BuildInfo.HitGroupStride                   = HitGroupStride;
             this->m_BuildInfo.FirstContributionToHitGroupIndex = BaseContributionToHitGroupIndex;
@@ -193,7 +193,7 @@ public:
 #endif
         }
 
-        InstanceOffset = InstanceOffset + (BindingMode == HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT ? HitGroupStride : 0) - 1;
+        InstanceOffset = InstanceOffset + (BindingMode == HIT_GROUP_BINDING_MODE_PER_TLAS ? HitGroupStride : 0) - 1;
 
 #ifdef DILIGENT_DEVELOPMENT
         Changed = Changed || (this->m_BuildInfo.HitGroupStride != HitGroupStride);
@@ -358,7 +358,7 @@ private:
                 // clang-format off
                 case HIT_GROUP_BINDING_MODE_PER_GEOMETRY:     InstanceOffset += Desc.pBLAS->GetActualGeometryCount() * HitGroupStride;                            break;
                 case HIT_GROUP_BINDING_MODE_PER_INSTANCE:     InstanceOffset += HitGroupStride;                                                                   break;
-                case HIT_GROUP_BINDING_MODE_PER_ACCEL_STRUCT: /* InstanceOffset is a constant */                                                                  break;
+                case HIT_GROUP_BINDING_MODE_PER_TLAS:         /* InstanceOffset is constant */                                                                  break;
                 case HIT_GROUP_BINDING_MODE_USER_DEFINED:     UNEXPECTED("TLAS_INSTANCE_OFFSET_AUTO is not compatible with HIT_GROUP_BINDING_MODE_USER_DEFINED"); break;
                 default:                                      UNEXPECTED("Unknown ray tracing shader binding mode");
                     // clang-format on
