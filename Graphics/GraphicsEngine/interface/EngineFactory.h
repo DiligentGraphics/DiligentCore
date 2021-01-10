@@ -86,6 +86,8 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
 };
 DILIGENT_END_INTERFACE
 
+// clang-format on
+
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE

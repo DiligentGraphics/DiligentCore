@@ -97,6 +97,16 @@ public:
 
     virtual IDynamicTextureAtlas* GetAtlas() override final;
 
+    virtual void SetUserData(IObject* pUserData) override final
+    {
+        m_pUserData = pUserData;
+    }
+
+    virtual IObject* GetUserData() const override final
+    {
+        return m_pUserData.RawPtr<IObject>();
+    }
+
 private:
     RefCntAutoPtr<DynamicTextureAtlasImpl> m_pParentAtlas;
 
@@ -104,6 +114,8 @@ private:
 
     const Uint32 m_Slice;
     const uint2  m_Size;
+
+    RefCntAutoPtr<IObject> m_pUserData;
 };
 
 

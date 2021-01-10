@@ -153,6 +153,18 @@ public:
         return m_UniqueID.GetID();
     }
 
+    /// Implementation of IDeviceObject::SetUserData.
+    virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final
+    {
+        m_pUserData = pUserData;
+    }
+
+    /// Implementation of IDeviceObject::GetUserData.
+    virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final
+    {
+        return m_pUserData.RawPtr<IObject>();
+    }
+
     static bool IsSameObject(const DeviceObjectBase* pObj1, const DeviceObjectBase* pObj2)
     {
         UniqueIdentifier Id1 = (pObj1 != nullptr) ? pObj1->GetUniqueID() : 0;
@@ -173,6 +185,8 @@ protected:
     // different groups of objects
     UniqueIdHelper<BaseInterface> m_UniqueID;
     const bool                    m_bIsDeviceInternal;
+
+    RefCntAutoPtr<IObject> m_pUserData;
 };
 
 } // namespace Diligent

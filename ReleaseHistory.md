@@ -1,3 +1,6 @@
+## Current Progress
+
+* Added `IDeviceObject::SetUserData()` and `IDeviceObject::GetUserData()` methods (API Version 240081)
 
 ## v2.4.g
 

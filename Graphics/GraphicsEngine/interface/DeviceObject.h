@@ -46,6 +46,8 @@ static const INTERFACE_ID IID_DeviceObject =
     IObjectInclusiveMethods;          \
     IDeviceObjectMethods DeviceObject
 
+// clang-format off
+
 /// Base interface for all objects created by the render device Diligent::IRenderDevice
 DILIGENT_BEGIN_INTERFACE(IDeviceObject, IObject)
 {
@@ -70,8 +72,31 @@ DILIGENT_BEGIN_INTERFACE(IDeviceObject, IObject)
     ///          Valid identifiers are always positive values. Zero and negative values can never be
     ///          assigned to an object and are always guaranteed to be invalid.
     VIRTUAL Int32 METHOD(GetUniqueID)(THIS) CONST PURE;
+
+
+    /// Stores a pointer to the user-provided data object, which
+    /// may later be retreived through GetUserData().
+    ///
+    /// \param [in] pUserData - Pointer to the user data object to store.
+    ///
+    /// \note   The method is not thread-safe and an application
+    ///         must externally synchronize the access.
+    VIRTUAL void METHOD(SetUserData)(THIS_
+                                     IObject* pUserData) PURE;
+
+
+    /// Returns a pointer to the user data object previously
+    /// set with SetUserData() method.
+    ///
+    /// \return     The pointer to the user data object.
+    /// 
+    /// \remarks    The method does *NOT* call AddRef()
+    ///             for the object being returned.
+    VIRTUAL IObject* METHOD(GetUserData)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
+
+// clang-format on
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -81,6 +106,8 @@ DILIGENT_END_INTERFACE
 
 #    define IDeviceObject_GetDesc(This)     CALL_IFACE_METHOD(DeviceObject, GetDesc,     This)
 #    define IDeviceObject_GetUniqueID(This) CALL_IFACE_METHOD(DeviceObject, GetUniqueID, This)
+#    define IDeviceObject_SetUserData(This) CALL_IFACE_METHOD(DeviceObject, SetUserData, This, __VA_ARGS__)
+#    define IDeviceObject_GetUserData(This) CALL_IFACE_METHOD(DeviceObject, GetUserData, This)
 
 // clang-format on
 
