@@ -104,10 +104,10 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IDeviceObject_GetDesc(This)     CALL_IFACE_METHOD(DeviceObject, GetDesc,     This)
-#    define IDeviceObject_GetUniqueID(This) CALL_IFACE_METHOD(DeviceObject, GetUniqueID, This)
-#    define IDeviceObject_SetUserData(This) CALL_IFACE_METHOD(DeviceObject, SetUserData, This, __VA_ARGS__)
-#    define IDeviceObject_GetUserData(This) CALL_IFACE_METHOD(DeviceObject, GetUserData, This)
+#    define IDeviceObject_GetDesc(This)          CALL_IFACE_METHOD(DeviceObject, GetDesc,     This)
+#    define IDeviceObject_GetUniqueID(This)      CALL_IFACE_METHOD(DeviceObject, GetUniqueID, This)
+#    define IDeviceObject_SetUserData(This, ...) CALL_IFACE_METHOD(DeviceObject, SetUserData, This, __VA_ARGS__)
+#    define IDeviceObject_GetUserData(This)      CALL_IFACE_METHOD(DeviceObject, GetUserData, This)
 
 // clang-format on
 

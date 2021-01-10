@@ -42,5 +42,9 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject)
     if (UniqueId == 0)
         ++num_errors;
 
+    IDeviceObject_SetUserData(pDeviceObject, NULL);
+    if (IDeviceObject_GetUserData(pDeviceObject) != NULL)
+        ++num_errors;
+
     return num_errors;
 }
