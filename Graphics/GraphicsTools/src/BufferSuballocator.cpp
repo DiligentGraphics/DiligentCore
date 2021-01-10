@@ -92,6 +92,16 @@ public:
 
     virtual IBufferSuballocator* GetAllocator() override final;
 
+    virtual void SetUserData(IObject* pUserData) override final
+    {
+        m_pUserData = pUserData;
+    }
+
+    virtual IObject* GetUserData() const override final
+    {
+        return m_pUserData.RawPtr<IObject>();
+    }
+
 private:
     RefCntAutoPtr<BufferSuballocatorImpl> m_pParentAllocator;
 
@@ -99,6 +109,8 @@ private:
 
     const Uint32 m_Offset;
     const Uint32 m_Size;
+
+    RefCntAutoPtr<IObject> m_pUserData;
 };
 
 class BufferSuballocatorImpl final : public ObjectBase<IBufferSuballocator>

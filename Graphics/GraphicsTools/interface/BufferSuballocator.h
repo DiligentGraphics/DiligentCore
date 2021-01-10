@@ -60,6 +60,21 @@ struct IBufferSuballocation : public IObject
 
     /// Returns the pointer to the parent allocator.
     virtual IBufferSuballocator* GetAllocator() = 0;
+
+    /// Stores a pointer to the user-provided data object, which
+    /// may later be retreived through GetUserData().
+    ///
+    /// \param [in] pUserData - Pointer to the user data object to store.
+    ///
+    /// \note   The method is not thread-safe and an application
+    ///         must externally synchronize the access.
+    virtual void SetUserData(IObject* pUserData) = 0;
+
+    /// Returns the pointer to the user data object previously
+    /// set with SetUserData() method.
+    ///
+    /// \return     Pointer to the user data object
+    virtual IObject* GetUserData() const = 0;
 };
 
 
