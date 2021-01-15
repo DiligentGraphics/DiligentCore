@@ -39,7 +39,7 @@
 #include "VulkanDynamicHeap.hpp"
 #include "ResourceReleaseQueue.hpp"
 #include "DescriptorPoolManager.hpp"
-#include "PipelineLayout.hpp"
+#include "PipelineLayoutVk.hpp"
 #include "GenerateMipsVkHelper.hpp"
 #include "BufferVkImpl.hpp"
 #include "TextureVkImpl.hpp"
@@ -53,6 +53,7 @@
 #include "BottomLevelASVkImpl.hpp"
 #include "TopLevelASVkImpl.hpp"
 #include "ShaderBindingTableVkImpl.hpp"
+#include "ShaderResourceBindingVkImpl.hpp"
 
 
 namespace Diligent
@@ -396,6 +397,7 @@ private:
     void               CommitVkVertexBuffers();
     void               CommitViewports();
     void               CommitScissorRects();
+    void               BindShaderResources(PipelineStateVkImpl* pPipelineStateVk);
 
     __forceinline void TransitionOrVerifyBufferState(BufferVkImpl&                  Buffer,
                                                      RESOURCE_STATE_TRANSITION_MODE TransitionMode,
@@ -476,6 +478,14 @@ private:
     } m_State;
 
 
+    /// AZ TODO: comment
+    using DescSetBindingInfoArray = std::array<PipelineLayoutVk::DescriptorSetBindInfo, 3>;
+    DescSetBindingInfoArray m_DescrSetBindInfo;
+
+    /// AZ TODO: comment
+    using ShaderResourcePerPipelineType = std::array<std::array<RefCntAutoPtr<ShaderResourceBindingVkImpl>, MAX_RESOURCE_SIGNATURES>, 3>;
+    ShaderResourcePerPipelineType m_ShaderResources;
+
     /// Render pass that matches currently bound render targets.
     /// This render pass may or may not be currently set in the command buffer
     VkRenderPass m_vkRenderPass = VK_NULL_HANDLE;
@@ -531,7 +541,6 @@ private:
     VulkanDynamicHeap                        m_DynamicHeap;
     DynamicDescriptorSetAllocator            m_DynamicDescrSetAllocator;
 
-    PipelineLayout::DescriptorSetBindInfo m_DescrSetBindInfo;
     std::shared_ptr<GenerateMipsVkHelper> m_GenerateMipsHelper;
     RefCntAutoPtr<IShaderResourceBinding> m_GenerateMipsSRB;
 

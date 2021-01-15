@@ -25,37 +25,18 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "DiligentCore/Graphics/GraphicsEngine/interface/PipelineResourceSignature.h"
 
-/// \file
-/// Definition of the engine constants
+void TestPipelineResourceSignature(struct IPipelineResourceSignature* pSign)
+{
+    PipelineResourceSignature_CreateShaderResourceBinding(pSign, (struct IShaderResourceBinding**)NULL, true);
 
-#include "../../../Primitives/interface/BasicTypes.h"
+    struct IShaderResourceVariable* pVar1 = PipelineResourceSignature_GetStaticVariableByName(SHADER_TYPE_UNKNOWN, "name");
+    void(pVar1);
 
-DILIGENT_BEGIN_NAMESPACE(Diligent)
+    struct IShaderResourceVariable* pVar2 = PipelineResourceSignature_GetStaticVariableByIndex(SHADER_TYPE_UNKNOWN, 0);
+    void(pVar2);
 
-// clang-format off
-
-/// Maximum number of input buffer slots.
-/// D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT == 32
-#define DILIGENT_MAX_BUFFER_SLOTS 32
-
-/// Maximum number of simultaneous render targets.
-#define DILIGENT_MAX_RENDER_TARGETS 8
-
-/// Maximum number of viewports.
-#define DILIGENT_MAX_VIEWPORTS 16
-
-static const Uint32 MAX_BUFFER_SLOTS   = DILIGENT_MAX_BUFFER_SLOTS;
-static const Uint32 MAX_RENDER_TARGETS = DILIGENT_MAX_RENDER_TARGETS;
-static const Uint32 MAX_VIEWPORTS      = DILIGENT_MAX_VIEWPORTS;
-
-/// Maximum number of shader stages in a pipeline.
-/// (Vertex, Hull, Domain, Geometry, Pixel) or (Amplification, Mesh, Pixel), or (Compute) or (RayGen, Miss, ClosestHit, AnyHit, Intersection, Callable)
-static const Uint32 MAX_SHADERS_IN_PIPELINE = 6;
-
-static const Uint32 MAX_RESOURCE_SIGNATURES = 8;
-
-// clang-format on
-
-DILIGENT_END_NAMESPACE // namespace Diligent
+    Uint32 Count = PipelineResourceSignature_GetStaticVariableCount(pSign, SHADER_TYPE_UNKNOWN);
+    void(Count);
+}

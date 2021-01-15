@@ -76,7 +76,7 @@ bool StripReflection(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
 }
 
 void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&        LogicalDevice,
-                              ShaderResourceLayoutVk::TShaderStages&             ShaderStages,
+                              PipelineStateVkImpl::TShaderStages&                ShaderStages,
                               std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages)
 {
@@ -131,7 +131,7 @@ void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&       
 
 void CreateComputePipeline(RenderDeviceVkImpl*                           pDeviceVk,
                            std::vector<VkPipelineShaderStageCreateInfo>& Stages,
-                           const PipelineLayout&                         Layout,
+                           const PipelineLayoutVk&                       Layout,
                            const PipelineStateDesc&                      PSODesc,
                            VulkanUtilities::PipelineWrapper&             Pipeline)
 {
@@ -156,7 +156,7 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
 
 void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDeviceVk,
                             std::vector<VkPipelineShaderStageCreateInfo>& Stages,
-                            const PipelineLayout&                         Layout,
+                            const PipelineLayoutVk&                       Layout,
                             const PipelineStateDesc&                      PSODesc,
                             const GraphicsPipelineDesc&                   GraphicsPipeline,
                             VulkanUtilities::PipelineWrapper&             Pipeline,
@@ -341,7 +341,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
 void CreateRayTracingPipeline(RenderDeviceVkImpl*                                      pDeviceVk,
                               const std::vector<VkPipelineShaderStageCreateInfo>&      vkStages,
                               const std::vector<VkRayTracingShaderGroupCreateInfoKHR>& vkShaderGroups,
-                              const PipelineLayout&                                    Layout,
+                              const PipelineLayoutVk&                                  Layout,
                               const PipelineStateDesc&                                 PSODesc,
                               const RayTracingPipelineDesc&                            RayTracingPipeline,
                               VulkanUtilities::PipelineWrapper&                        Pipeline)
@@ -375,7 +375,7 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
 std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
     const RayTracingPipelineStateCreateInfo&                                      CreateInfo,
     const std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
-    const ShaderResourceLayoutVk::TShaderStages&                                  ShaderStages)
+    const PipelineStateVkImpl::TShaderStages&                                     ShaderStages)
 {
     // Returns the shader module index in the PSO create info
     auto GetShaderModuleIndex = [&ShaderStages](const IShader* pShader) {
@@ -505,6 +505,42 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
 } // namespace
 
 
+PipelineStateVkImpl::ShaderStageInfo::ShaderStageInfo(const ShaderVkImpl* pShader) :
+    Type{pShader->GetDesc().ShaderType},
+    Shaders{pShader},
+    SPIRVs{pShader->GetSPIRV()}
+{
+}
+
+void PipelineStateVkImpl::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
+{
+    VERIFY_EXPR(pShader != nullptr);
+    VERIFY(std::find(Shaders.begin(), Shaders.end(), pShader) == Shaders.end(),
+           "Shader '", pShader->GetDesc().Name, "' already exists in the stage. Shaders must be deduplicated.");
+
+    const auto NewShaderType = pShader->GetDesc().ShaderType;
+    if (Type == SHADER_TYPE_UNKNOWN)
+    {
+        VERIFY_EXPR(Shaders.empty() && SPIRVs.empty());
+        Type = NewShaderType;
+    }
+    else
+    {
+        VERIFY(Type == NewShaderType, "The type (", GetShaderTypeLiteralName(NewShaderType),
+               ") of shader '", pShader->GetDesc().Name, "' being added to the stage is incosistent with the stage type (",
+               GetShaderTypeLiteralName(Type), ").");
+    }
+    Shaders.push_back(pShader);
+    SPIRVs.push_back(pShader->GetSPIRV());
+}
+
+size_t PipelineStateVkImpl::ShaderStageInfo::Count() const
+{
+    VERIFY_EXPR(Shaders.size() == SPIRVs.size());
+    return Shaders.size();
+}
+
+
 RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
     Uint32                                                        NumRenderTargets,
     const TEXTURE_FORMAT                                          RTVFormats[],
@@ -589,65 +625,102 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
     return RPDesc;
 }
 
-void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
-                                              TShaderStages&                 ShaderStages)
+void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
+                                             TShaderStages&                 ShaderStages)
 {
-    auto* const pDeviceVk     = GetDevice();
-    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+    std::array<IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> Signatures;
+    RefCntAutoPtr<IPipelineResourceSignature>                        TempSignature;
 
-    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    Uint32 SignatureCount = CreateInfo.ResourceSignaturesCount;
+
+    for (Uint32 i = 0; i < SignatureCount; ++i)
     {
-        auto&      StageInfo     = ShaderStages[s];
-        const auto ShaderType    = StageInfo.Type;
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
-
-        m_ResourceLayoutIndex[ShaderTypeInd] = static_cast<Int8>(s);
-
-        auto& StaticResLayout = m_ShaderResourceLayouts[GetNumShaderStages() + s];
-        StaticResLayout.InitializeStaticResourceLayout(StageInfo.Shaders, GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
-
-        m_StaticVarsMgrs[s].Initialize(StaticResLayout, GetRawAllocator(), nullptr, 0);
+        Signatures[i] = CreateInfo.ppResourceSignatures[i];
     }
 
-    // Initialize shader resource layouts and assign bindings and descriptor sets in shader SPIRVs
-    ShaderResourceLayoutVk::Initialize(pDeviceVk, ShaderStages, m_ShaderResourceLayouts, GetRawAllocator(),
-                                       m_Desc.ResourceLayout, m_PipelineLayout,
-                                       (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
-                                       (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS) == 0);
-    m_PipelineLayout.Finalize(LogicalDevice);
-
-    if (m_Desc.SRBAllocationGranularity > 1)
+    if (SignatureCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
     {
-        std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
-        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-        {
-            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+        using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
 
-            Uint32 UnusedNumVars       = 0;
-            ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(m_ShaderResourceLayouts[s], AllowedVarTypes, _countof(AllowedVarTypes), UnusedNumVars);
+        std::vector<PipelineResourceDesc> Resources;
+        ResourceNameToIndex_t             UniqueNames;
+        const PipelineResourceLayoutDesc& LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
+
+        for (auto& Stage : ShaderStages)
+        {
+            UniqueNames.clear();
+            for (auto* pShader : Stage.Shaders)
+            {
+                pShader->GetShaderResources().ProcessResources(
+                    [&](const SPIRVShaderResourceAttribs& Res, Uint32) //
+                    {
+                        bool IsNewResource = UniqueNames.emplace(HashMapStringKey{Res.Name}, static_cast<Uint32>(Resources.size())).second;
+                        if (IsNewResource)
+                        {
+                            Resources.emplace_back(Res.Name, Res.ArraySize, Res.GetShaderResourceType(Res.Type), Stage.Type, CreateInfo.PSODesc.ResourceLayout.DefaultVariableType);
+                        }
+                    });
+
+                for (Uint32 i = 0; i < LayoutDesc.NumVariables; ++i)
+                {
+                    const auto& Var = LayoutDesc.Variables[i];
+                    if (Var.ShaderStages & Stage.Type)
+                    {
+                        auto Iter = UniqueNames.find(HashMapStringKey{Var.Name});
+                        if (Iter != UniqueNames.end() && Iter->second < Resources.size())
+                            Resources[Iter->second].VarType = Var.Type;
+                    }
+                }
+            }
         }
 
-        Uint32 NumSets            = 0;
-        auto   DescriptorSetSizes = m_PipelineLayout.GetDescriptorSetSizes(NumSets);
-        auto   CacheMemorySize    = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
+        PipelineResourceSignatureDesc ResSignDesc;
+        ResSignDesc.Resources            = Resources.data();
+        ResSignDesc.NumResources         = static_cast<Uint32>(Resources.size());
+        ResSignDesc.ImmutableSamplers    = LayoutDesc.ImmutableSamplers;
+        ResSignDesc.NumImmutableSamplers = LayoutDesc.NumImmutableSamplers;
+        ResSignDesc.BindingIndex         = 0;
 
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
+        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, &TempSignature);
+        if (TempSignature == nullptr)
+            LOG_ERROR_AND_THROW("");
+
+        Signatures[0]  = TempSignature;
+        SignatureCount = 1;
     }
 
-    m_HasStaticResources    = false;
-    m_HasNonStaticResources = false;
-    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
+    m_PipelineLayout = GetDevice()->GetPipelineLayoutCache().GetLayout(Signatures.data(), SignatureCount);
+
+    // verify that pipeline layout is compatible with shader resources and
+    // remap resource bindings
+    for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        const auto& Layout = m_ShaderResourceLayouts[s];
-        if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0)
-            m_HasStaticResources = true;
+        const auto& Shaders    = ShaderStages[s].Shaders;
+        auto&       SPIRVs     = ShaderStages[s].SPIRVs;
+        const auto  ShaderType = ShaderStages[s].Type;
 
-        if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE) != 0 ||
-            Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) != 0)
-            m_HasNonStaticResources = true;
+        VERIFY_EXPR(Shaders.size() == SPIRVs.size());
+
+        for (size_t i = 0; i < Shaders.size(); ++i)
+        {
+            auto* pShader = Shaders[i];
+            auto& SPIRV   = SPIRVs[i];
+
+            pShader->GetShaderResources().ProcessResources(
+                [&](const SPIRVShaderResourceAttribs& Res, Uint32) //
+                {
+                    PipelineLayoutVk::ResourceInfo Info;
+                    if (!m_PipelineLayout->GetResourceInfo(Res.Name, ShaderType, Info))
+                    {
+                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Res.Name,
+                                            "' that is not presented in any pipeline resource signature that used to create pipeline state '",
+                                            m_Desc.Name, "'.");
+                    }
+                    SPIRV[Res.BindingDecorationOffset]       = Info.BindingIndex;
+                    SPIRV[Res.DescriptorSetDecorationOffset] = Info.DescrSetIndex;
+                });
+        }
     }
-
-    m_ShaderResourceLayoutHash = m_PipelineLayout.GetHash();
 }
 
 template <typename PSOCreateInfoType>
@@ -656,19 +729,12 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
     std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
     std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules)
 {
-    m_ResourceLayoutIndex.fill(-1);
-
     TShaderStages ShaderStages;
     ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
 
+    InitPipelineLayout(CreateInfo, ShaderStages);
+
     FixedLinearAllocator MemPool{GetRawAllocator()};
-
-    const auto NumShaderStages = GetNumShaderStages();
-    VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
-
-    MemPool.AddSpace<ShaderResourceCacheVk>(NumShaderStages);
-    MemPool.AddSpace<ShaderResourceLayoutVk>(NumShaderStages * 2);
-    MemPool.AddSpace<ShaderVariableManagerVk>(NumShaderStages);
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
 
@@ -676,38 +742,23 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
 
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
 
-    m_StaticResCaches = MemPool.ConstructArray<ShaderResourceCacheVk>(NumShaderStages, ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
-
-    // The memory is now owned by PipelineStateVkImpl and will be freed by Destruct().
-    auto* Ptr = MemPool.ReleaseOwnership();
-    VERIFY_EXPR(Ptr == m_StaticResCaches);
-    (void)Ptr;
-
-    m_ShaderResourceLayouts = MemPool.ConstructArray<ShaderResourceLayoutVk>(NumShaderStages * 2, LogicalDevice);
-
-    m_StaticVarsMgrs = MemPool.Allocate<ShaderVariableManagerVk>(NumShaderStages);
-    for (Uint32 s = 0; s < NumShaderStages; ++s)
-        new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, m_StaticResCaches[s]};
-
     InitializePipelineDesc(CreateInfo, MemPool);
 
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitResourceLayouts(CreateInfo, ShaderStages);
+    //InitResourceLayouts(CreateInfo, ShaderStages);
 
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);
 
+    m_pRawMem = MemPool.ReleaseOwnership();
+
     return ShaderStages;
 }
 
-
-PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    pRefCounters,
-                                         RenderDeviceVkImpl*                    pDeviceVk,
-                                         const GraphicsPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo},
-    m_SRBMemAllocator{GetRawAllocator()}
+PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const GraphicsPipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
     try
     {
@@ -716,7 +767,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
+        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, *m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
     }
     catch (...)
     {
@@ -725,12 +776,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
     }
 }
 
-
-PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   pRefCounters,
-                                         RenderDeviceVkImpl*                   pDeviceVk,
-                                         const ComputePipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo},
-    m_SRBMemAllocator{GetRawAllocator()}
+PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const ComputePipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
     try
     {
@@ -739,7 +786,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   p
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
+        CreateComputePipeline(pDeviceVk, vkShaderStages, *m_PipelineLayout, m_Desc, m_Pipeline);
     }
     catch (...)
     {
@@ -748,11 +795,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   p
     }
 }
 
-PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                      pRefCounters,
-                                         RenderDeviceVkImpl*                      pDeviceVk,
-                                         const RayTracingPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo},
-    m_SRBMemAllocator{GetRawAllocator()}
+PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const RayTracingPipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
     try
     {
@@ -765,7 +809,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 
         const auto vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
 
-        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
+        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, *m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
 
         VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == vkShaderGroups.size(),
                "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");
@@ -791,9 +835,16 @@ void PipelineStateVkImpl::Destruct()
     TPipelineStateBase::Destruct();
 
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
-    m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
 
     auto& RawAllocator = GetRawAllocator();
+    if (m_pRawMem)
+    {
+        RawAllocator.Free(m_pRawMem);
+        m_pRawMem = nullptr;
+    }
+
+    // AZ TODO:
+    /*
     for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         if (m_StaticVarsMgrs != nullptr)
@@ -802,253 +853,22 @@ void PipelineStateVkImpl::Destruct()
             m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
         }
 
-        if (m_ShaderResourceLayouts != nullptr)
-        {
-            m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
-            m_ShaderResourceLayouts[GetNumShaderStages() + s].~ShaderResourceLayoutVk();
-        }
-
         if (m_StaticResCaches != nullptr)
         {
             m_StaticResCaches[s].~ShaderResourceCacheVk();
         }
     }
-
-    // All internal objects are allocted in contiguous chunks of memory.
-    if (void* pRawMem = m_StaticResCaches)
-    {
-        RawAllocator.Free(pRawMem);
-    }
-}
-
-void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
-{
-    auto& SRBAllocator  = m_pDevice->GetSRBAllocator();
-    auto  pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this, false);
-    if (InitStaticResources)
-        pResBindingVk->InitializeStaticResources(nullptr);
-    pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
+    */
 }
 
 bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 {
-    VERIFY_EXPR(pPSO != nullptr);
-
-    if (pPSO == this)
-        return true;
-
-    const PipelineStateVkImpl* pPSOVk = ValidatedCast<const PipelineStateVkImpl>(pPSO);
-    if (m_ShaderResourceLayoutHash != pPSOVk->m_ShaderResourceLayoutHash)
-        return false;
-
-    auto IsSamePipelineLayout = m_PipelineLayout.IsSameAs(pPSOVk->m_PipelineLayout);
-#ifdef DILIGENT_DEBUG
-    {
-        bool IsCompatibleShaders = true;
-        if (GetNumShaderStages() != pPSOVk->GetNumShaderStages())
-            IsCompatibleShaders = false;
-
-        if (IsCompatibleShaders)
-        {
-            for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-            {
-                if (GetShaderStageType(s) != pPSOVk->GetShaderStageType(s))
-                {
-                    IsCompatibleShaders = false;
-                    break;
-                }
-
-                const auto& Res0 = GetShaderResLayout(s);
-                const auto& Res1 = pPSOVk->GetShaderResLayout(s);
-                if (!Res0.IsCompatibleWith(Res1))
-                {
-                    IsCompatibleShaders = false;
-                    break;
-                }
-            }
-        }
-
-        if (IsCompatibleShaders)
-            VERIFY(IsSamePipelineLayout, "Compatible shaders must have same pipeline layouts");
-    }
-#endif
-
-    return IsSamePipelineLayout;
-}
-
-
-void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBinding*                pShaderResourceBinding,
-                                                             DeviceContextVkImpl*                   pCtxVkImpl,
-                                                             bool                                   CommitResources,
-                                                             RESOURCE_STATE_TRANSITION_MODE         StateTransitionMode,
-                                                             PipelineLayout::DescriptorSetBindInfo* pDescrSetBindInfo) const
-{
-    VERIFY(CommitResources || StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION, "Resources should be transitioned or committed or both");
-
-    if (!m_HasStaticResources && !m_HasNonStaticResources)
-        return;
-
-#ifdef DILIGENT_DEVELOPMENT
-    if (pShaderResourceBinding == nullptr)
-    {
-        LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to ",
-                          (CommitResources ? "commit" : "transition"), " resources, but none is provided.");
-        return;
-    }
-#endif
-
-    auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
-    auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
-
-#ifdef DILIGENT_DEVELOPMENT
-    {
-        auto* pRefPSO = pResBindingVkImpl->GetPipelineState();
-        if (IsIncompatibleWith(pRefPSO))
-        {
-            LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state '", m_Desc.Name, "'. Operation will be ignored.");
-            return;
-        }
-    }
-
-    if (CommitResources)
-    {
-        if (m_HasStaticResources && !pResBindingVkImpl->StaticResourcesInitialized())
-        {
-            LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", m_Desc.Name, "'. Please call IShaderResourceBinding::InitializeStaticResources().");
-        }
-
-        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-        {
-            m_ShaderResourceLayouts[s].dvpVerifyBindings(ResourceCache);
-        }
-    }
-#endif
-#ifdef DILIGENT_DEBUG
-    ResourceCache.DbgVerifyDynamicBuffersCounter();
-#endif
-
-    if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
-    {
-        ResourceCache.TransitionResources<false>(pCtxVkImpl);
-    }
-#ifdef DILIGENT_DEVELOPMENT
-    else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
-    {
-        ResourceCache.TransitionResources<true>(pCtxVkImpl);
-    }
-#endif
-
-    if (CommitResources)
-    {
-        VkDescriptorSet DynamicDescrSet              = VK_NULL_HANDLE;
-        auto            DynamicDescriptorSetVkLayout = m_PipelineLayout.GetDynamicDescriptorSetVkLayout();
-        if (DynamicDescriptorSetVkLayout != VK_NULL_HANDLE)
-        {
-            const char* DynamicDescrSetName = "Dynamic Descriptor Set";
-#ifdef DILIGENT_DEVELOPMENT
-            std::string _DynamicDescrSetName(m_Desc.Name);
-            _DynamicDescrSetName.append(" - dynamic set");
-            DynamicDescrSetName = _DynamicDescrSetName.c_str();
-#endif
-            // Allocate vulkan descriptor set for dynamic resources
-            DynamicDescrSet = pCtxVkImpl->AllocateDynamicDescriptorSet(DynamicDescriptorSetVkLayout, DynamicDescrSetName);
-            // Commit all dynamic resource descriptors
-            for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-            {
-                const auto& Layout = m_ShaderResourceLayouts[s];
-                if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) != 0)
-                    Layout.CommitDynamicResources(ResourceCache, DynamicDescrSet);
-            }
-        }
-
-
-        VkPipelineBindPoint BindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-        switch (m_Desc.PipelineType)
-        {
-            // clang-format off
-            case PIPELINE_TYPE_GRAPHICS:
-            case PIPELINE_TYPE_MESH:        BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;        break;
-            case PIPELINE_TYPE_COMPUTE:     BindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;         break;
-            case PIPELINE_TYPE_RAY_TRACING: BindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR; break;
-            // clang-format on
-            default: UNEXPECTED("Unknown pipeline type");
-        }
-
-        VERIFY_EXPR(pDescrSetBindInfo != nullptr);
-        // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
-        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, BindPoint, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
-        // Dynamic descriptor sets are not released individually. Instead, all dynamic descriptor pools
-        // are released at the end of the frame by DeviceContextVkImpl::FinishFrame().
-    }
+    return m_PipelineLayout == ValidatedCast<const PipelineStateVkImpl>(pPSO)->m_PipelineLayout;
 }
 
 void PipelineStateVkImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-    {
-        auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
-        if ((ShaderType & ShaderFlags) != 0)
-        {
-            auto& StaticVarMgr = GetStaticVarMgr(s);
-            StaticVarMgr.BindResources(pResourceMapping, Flags);
-        }
-    }
-}
-
-Uint32 PipelineStateVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
-{
-    const auto LayoutInd = GetStaticVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
-    if (LayoutInd < 0)
-        return 0;
-
-    auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
-    return StaticVarMgr.GetVariableCount();
-}
-
-IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
-{
-    const auto LayoutInd = GetStaticVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
-    if (LayoutInd < 0)
-        return nullptr;
-
-    auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
-    return StaticVarMgr.GetVariable(Name);
-}
-
-IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
-{
-    const auto LayoutInd = GetStaticVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
-    if (LayoutInd < 0)
-        return nullptr;
-
-    const auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
-    return StaticVarMgr.GetVariable(Index);
-}
-
-
-void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const
-{
-    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-    {
-        const auto& StaticResLayout = GetStaticShaderResLayout(s);
-        const auto& StaticResCache  = GetStaticResCache(s);
-
-#ifdef DILIGENT_DEVELOPMENT
-        if (!StaticResLayout.dvpVerifyBindings(StaticResCache))
-        {
-            LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", GetDesc().Name,
-                              "' will not be successfully initialized because not all static resource bindings in shader '",
-                              GetShaderTypeLiteralName(GetShaderStageType(s)),
-                              "' are valid. Please make sure you bind all static resources to PSO before calling InitializeStaticResources() "
-                              "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
-        }
-#endif
-        const auto& ShaderResourceLayouts = GetShaderResLayout(s);
-        ShaderResourceLayouts.InitializeStaticResources(StaticResLayout, StaticResCache, ResourceCache);
-    }
-#ifdef DILIGENT_DEBUG
-    ResourceCache.DbgVerifyDynamicBuffersCounter();
-#endif
+    //m_StaticVarsMgr.BindResources(ShaderFlags, pResourceMapping, Flags);
 }
 
 } // namespace Diligent

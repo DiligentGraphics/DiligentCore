@@ -50,6 +50,7 @@
 #include "BottomLevelAS.h"
 #include "TopLevelAS.h"
 #include "ShaderBindingTable.h"
+#include "PipelineResourceSignature.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -272,6 +273,11 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateSBT)(THIS_
                                    const ShaderBindingTableDesc REF Desc,
                                    IShaderBindingTable**            ppSBT) PURE;
+
+    /// AZ TODO: comment
+    VIRTUAL void METHOD(CreatePipelineResourceSignature)(THIS_
+                                                         const PipelineResourceSignatureDesc REF Desc,
+                                                         IPipelineResourceSignature**            ppSignature) PURE;
 
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details

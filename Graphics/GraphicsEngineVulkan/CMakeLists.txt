@@ -16,7 +16,8 @@ set(INCLUDE
     include/FramebufferCache.hpp
     include/GenerateMipsVkHelper.hpp
     include/pch.h
-    include/PipelineLayout.hpp
+    include/PipelineLayoutVk.hpp
+    include/PipelineLayoutCacheVk.hpp
     include/PipelineStateVkImpl.hpp
     include/QueryManagerVk.hpp
     include/QueryVkImpl.hpp
@@ -28,7 +29,6 @@ set(INCLUDE
     include/ManagedVulkanObject.hpp
     include/ShaderResourceBindingVkImpl.hpp
     include/ShaderResourceCacheVk.hpp
-    include/ShaderResourceLayoutVk.hpp
     include/ShaderVariableVk.hpp
     include/SwapChainVkImpl.hpp
     include/TextureVkImpl.hpp
@@ -39,6 +39,7 @@ set(INCLUDE
     include/BottomLevelASVkImpl.hpp
     include/TopLevelASVkImpl.hpp
     include/ShaderBindingTableVkImpl.hpp
+    include/PipelineResourceSignatureVkImpl.hpp
 )
 
 set(VULKAN_UTILS_INCLUDE 
@@ -92,7 +93,8 @@ set(SRC
     src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
     src/GenerateMipsVkHelper.cpp
-    src/PipelineLayout.cpp
+    src/PipelineLayoutCacheVk.cpp
+    src/PipelineLayoutVk.cpp
     src/PipelineStateVkImpl.cpp
     src/QueryManagerVk.cpp
     src/QueryVkImpl.cpp
@@ -103,7 +105,6 @@ set(SRC
     src/ShaderVkImpl.cpp
     src/ShaderResourceBindingVkImpl.cpp
     src/ShaderResourceCacheVk.cpp
-    src/ShaderResourceLayoutVk.cpp
     src/ShaderVariableVk.cpp
     src/SwapChainVkImpl.cpp
     src/TextureVkImpl.cpp
@@ -113,6 +114,7 @@ set(SRC
     src/BottomLevelASVkImpl.cpp
     src/TopLevelASVkImpl.cpp
     src/ShaderBindingTableVkImpl.cpp
+    src/PipelineResourceSignatureVkImpl.cpp
 )
 
 set(VULKAN_UTILS_SRC

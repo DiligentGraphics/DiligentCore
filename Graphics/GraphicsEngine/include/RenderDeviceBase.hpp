@@ -235,6 +235,9 @@ public:
 
         /// Size of the SBT object (ShaderBindingTableD3D12Impl, ShaderBindingtableVkImpl, etc.), in bytes
         const size_t SBTObjSize;
+
+        /// AZ TODO: comment
+        const size_t PipeResSignObjSize;
     };
 
     /// \param pRefCounters        - Reference counters object that controls the lifetime of this render device
@@ -274,6 +277,7 @@ public:
         m_BLASAllocator         {RawMemAllocator, ObjectSizes.BLASObjSize,        16  },
         m_TLASAllocator         {RawMemAllocator, ObjectSizes.TLASObjSize,        16  },
         m_SBTAllocator          {RawMemAllocator, ObjectSizes.SBTObjSize,         16  },
+        m_PipeResSignAllocator  {RawMemAllocator, ObjectSizes.PipeResSignObjSize, 128 },
         m_DeviceProperties      {}
     // clang-format on
     {
@@ -459,6 +463,7 @@ protected:
     FixedBlockMemoryAllocator m_BLASAllocator;        ///< Allocator for bottom-level acceleration structure objects
     FixedBlockMemoryAllocator m_TLASAllocator;        ///< Allocator for top-level acceleration structure objects
     FixedBlockMemoryAllocator m_SBTAllocator;         ///< Allocator for shader binding table objects
+    FixedBlockMemoryAllocator m_PipeResSignAllocator; ///< Allocator for pipeline resource signature objects
 };
 
 

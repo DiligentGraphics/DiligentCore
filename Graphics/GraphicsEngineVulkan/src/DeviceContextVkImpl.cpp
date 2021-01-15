@@ -231,6 +231,8 @@ inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(Uint32 CmdQueue, Uint64
 void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
     auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
+    BindShaderResources(pPipelineStateVk);
+
     if (PipelineStateVkImpl::IsSameObject(m_pPipelineState, pPipelineStateVk))
         return;
 
@@ -306,21 +308,84 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         default:
             UNEXPECTED("unknown pipeline type");
     }
-
-    m_DescrSetBindInfo.Reset();
 }
 
-void DeviceContextVkImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
+static Uint32 PipelineTypeToBindPointIndex(PIPELINE_TYPE Type)
 {
-    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must mot be null");
+    const Uint8 Indices[] = {
+        0, // PIPELINE_TYPE_GRAPHICS
+        1, // PIPELINE_TYPE_COMPUTE
+        0, // PIPELINE_TYPE_MESH
+        2  // PIPELINE_TYPE_RAY_TRACING
+    };
+    static_assert(_countof(Indices) == Uint32{PIPELINE_TYPE_LAST} + 1, "AZ TODO");
+    return Indices[Uint32{Type}];
+}
+
+static VkPipelineBindPoint PipelineTypeToBindPoint(PIPELINE_TYPE Type)
+{
+    const VkPipelineBindPoint BindPoints[] = {
+        VK_PIPELINE_BIND_POINT_GRAPHICS,       // PIPELINE_TYPE_GRAPHICS
+        VK_PIPELINE_BIND_POINT_COMPUTE,        // PIPELINE_TYPE_COMPUTE
+        VK_PIPELINE_BIND_POINT_GRAPHICS,       // PIPELINE_TYPE_MESH
+        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR // PIPELINE_TYPE_RAY_TRACING
+    };
+    static_assert(_countof(BindPoints) == Uint32{PIPELINE_TYPE_LAST} + 1, "AZ TODO");
+    return BindPoints[Uint32{Type}];
+}
+
+void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl* pPipelineStateVk)
+{
+    VERIFY_EXPR(pPipelineStateVk != nullptr);
+
+    const auto& Layout           = pPipelineStateVk->GetPipelineLayout();
+    auto&       Resources        = m_ShaderResources[PipelineTypeToBindPointIndex(Layout.GetPipelineType())];
+    auto&       DescrSetBindInfo = m_DescrSetBindInfo[PipelineTypeToBindPointIndex(Layout.GetPipelineType())];
+
+#ifdef DILIGENT_DEVELOPMENT
+    for (Uint32 i = 0, Count = Layout.GetSignatureCount(); i < Count; ++i)
+    {
+        auto* LayoutSign = Layout.GetSignature(i);
+        auto* ResSign    = Resources[i] ? Resources[i]->GetPipelineResourceSignature() : nullptr;
+
+        if (LayoutSign != ResSign)
+        {
+            LOG_ERROR_MESSAGE("Shader resource binding '", (ResSign ? ResSign->GetDesc().Name : ""),
+                              "' is not compatible with pipeline layout in current pipeline '", pPipelineStateVk->GetDesc().Name, "'.");
+            Resources[i] = nullptr;
+        }
+    }
+#endif
+
+    // the number of bound descriptor sets and dynamic offsets may be greater then actually used in pipeline layout,
+    // see https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets-compatibility
+    VERIFY_EXPR(Layout.GetDescriptorSetCount() <= DescrSetBindInfo.SetCout);
+    VERIFY_EXPR(Layout.GetDynamicOffsetCount() <= DescrSetBindInfo.DynamicOffsetCount);
+
+    // AZ TODO: optimize - bind DS that was changed
+    GetCommandBuffer().BindDescriptorSets(PipelineTypeToBindPoint(Layout.GetPipelineType()), Layout.GetVkPipelineLayout(), 0, Layout.GetDescriptorSetCount(), DescrSetBindInfo.vkSets.data(), Layout.GetDynamicOffsetCount(), DescrSetBindInfo.DynamicOffsets.data());
+}
+
+void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderResourceBinding* pShaderResourceBinding)
+{
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pActiveRenderPass)
     {
         LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
         return;
     }
 
-    auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
-    pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, nullptr);
+    if (pShaderResourceBinding == nullptr)
+    {
+        LOG_ERROR_MESSAGE("TODO");
+        return;
+    }
+#endif
+
+    auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
+    auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
+
+    ResourceCache.TransitionResources<false>(this);
 }
 
 void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -328,7 +393,32 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
         return;
 
-    m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, StateTransitionMode, &m_DescrSetBindInfo);
+    auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
+    auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
+
+#ifdef DILIGENT_DEBUG
+    ResourceCache.DbgVerifyDynamicBuffersCounter();
+#endif
+
+    if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+    {
+        ResourceCache.TransitionResources<false>(this);
+    }
+#ifdef DILIGENT_DEVELOPMENT
+    else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+    {
+        ResourceCache.TransitionResources<true>(this);
+    }
+#endif
+
+    Uint32 Index            = PipelineTypeToBindPointIndex(pResBindingVkImpl->GetPipelineType());
+    auto&  DescrSetBindInfo = m_DescrSetBindInfo[Index];
+    auto&  ResourceBinding  = m_ShaderResources[Index];
+
+    // AZ TODO: create dynamic descriptor set
+    (void)(DescrSetBindInfo);
+
+    ResourceBinding[pResBindingVkImpl->GetBindingIndex()] = pResBindingVkImpl;
 }
 
 void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -468,15 +558,17 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     }
 #endif
 
-    if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
+    auto& DescrSetBindInfo = m_DescrSetBindInfo[0];
+
+    if (DescrSetBindInfo.DynamicOffsetCount != 0)
     {
         // First time we must always bind descriptor sets with dynamic offsets.
         // If there are no dynamic buffers bound in the resource cache, for all subsequent
         // cals we do not need to bind the sets again.
-        if (!m_DescrSetBindInfo.DynamicDescriptorsBound ||
-            (m_DescrSetBindInfo.DynamicBuffersPresent && (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0))
+        if (!DescrSetBindInfo.DynamicDescriptorsBound ||
+            (DescrSetBindInfo.DynamicBuffersPresent && (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0))
         {
-            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, DescrSetBindInfo);
         }
     }
 #if 0
@@ -621,11 +713,13 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         m_CommandBuffer.EndRenderPass();
 
-    if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
+    auto& DescrSetBindInfo = m_DescrSetBindInfo[1];
+
+    if (DescrSetBindInfo.DynamicOffsetCount != 0)
     {
-        if (!m_DescrSetBindInfo.DynamicDescriptorsBound || m_DescrSetBindInfo.DynamicBuffersPresent)
+        if (!DescrSetBindInfo.DynamicDescriptorsBound || DescrSetBindInfo.DynamicBuffersPresent)
         {
-            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, DescrSetBindInfo);
         }
     }
 #if 0
@@ -643,11 +737,13 @@ void DeviceContextVkImpl::PrepareForRayTracing()
 {
     EnsureVkCmdBuffer();
 
-    if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
+    auto& DescrSetBindInfo = m_DescrSetBindInfo[2];
+
+    if (DescrSetBindInfo.DynamicOffsetCount != 0)
     {
-        if (!m_DescrSetBindInfo.DynamicDescriptorsBound || m_DescrSetBindInfo.DynamicBuffersPresent)
+        if (!DescrSetBindInfo.DynamicDescriptorsBound || DescrSetBindInfo.DynamicBuffersPresent)
         {
-            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, DescrSetBindInfo);
         }
     }
 }
@@ -1030,8 +1126,13 @@ void DeviceContextVkImpl::Flush()
         DisposeCurrentCmdBuffer(m_CommandQueueId, SubmittedFenceValue);
     }
 
+    for (auto& BindInfo : m_DescrSetBindInfo)
+        BindInfo.Reset();
+
+    for (auto& ResourcesPerBindPoint : m_ShaderResources)
+        ResourcesPerBindPoint.fill({});
+
     m_State = ContextState{};
-    m_DescrSetBindInfo.Reset();
     m_CommandBuffer.Reset();
     m_pPipelineState    = nullptr;
     m_pActiveRenderPass = nullptr;
@@ -1067,7 +1168,13 @@ void DeviceContextVkImpl::InvalidateState()
     m_State         = ContextState{};
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
-    m_DescrSetBindInfo.Reset();
+
+    for (auto& BindInfo : m_DescrSetBindInfo)
+        BindInfo.Reset();
+
+    for (auto& ResourcesPerBindPoint : m_ShaderResources)
+        ResourcesPerBindPoint.fill({});
+
     VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unifinished render pass");
     m_CommandBuffer.Reset();
 }
@@ -2091,8 +2198,7 @@ void DeviceContextVkImpl::FinishCommandList(class ICommandList** ppCommandList)
     pCmdListVk->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
 
     m_CommandBuffer.Reset();
-    m_State = ContextState{};
-    m_DescrSetBindInfo.Reset();
+    m_State          = ContextState{};
     m_pPipelineState = nullptr;
 
     InvalidateState();

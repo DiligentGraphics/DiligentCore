@@ -44,6 +44,7 @@
 #include "Shader.h"
 #include "Sampler.h"
 #include "RenderPass.h"
+#include "PipelineResourceSignature.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -95,37 +96,6 @@ struct ShaderResourceVariableDesc
 };
 typedef struct ShaderResourceVariableDesc ShaderResourceVariableDesc;
 
-
-/// Immutable sampler description.
-
-/// An immutable sampler is compiled into the pipeline state and can't be changed.
-/// It is generally more efficient than a regular sampler and should be used
-/// whenever possible.
-struct ImmutableSamplerDesc
-{
-    /// Shader stages that this immutable sampler applies to. More than one shader stage can be specified.
-    SHADER_TYPE ShaderStages         DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
-
-    /// The name of the sampler itself or the name of the texture variable that 
-    /// this immutable sampler is assigned to if combined texture samplers are used.
-    const Char* SamplerOrTextureName DEFAULT_INITIALIZER(nullptr);
-
-    /// Sampler description
-    struct SamplerDesc Desc;
-
-#if DILIGENT_CPP_INTERFACE
-    ImmutableSamplerDesc()noexcept{}
-
-    ImmutableSamplerDesc(SHADER_TYPE        _ShaderStages,
-                         const Char*        _SamplerOrTextureName,
-                         const SamplerDesc& _Desc)noexcept : 
-        ShaderStages        {_ShaderStages        },
-        SamplerOrTextureName{_SamplerOrTextureName},
-        Desc                {_Desc                }
-    {}
-#endif
-};
-typedef struct ImmutableSamplerDesc ImmutableSamplerDesc;
 
 /// Pipeline layout description
 struct PipelineResourceLayoutDesc
@@ -396,6 +366,12 @@ struct PipelineStateCreateInfo
 
     /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
     PSO_CREATE_FLAGS  Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
+
+    /// AZ TODO
+    IPipelineResourceSignature** ppResourceSignatures DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32 ResourceSignaturesCount DEFAULT_INITIALIZER(0);
 };
 typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
 
@@ -524,6 +500,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// This method must only be called for a ray tracing pipeline.
     VIRTUAL const RayTracingPipelineDesc REF METHOD(GetRayTracingPipelineDesc)(THIS) CONST PURE;
 
+
     /// Binds resources for all shaders in the pipeline state
 
     /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
@@ -535,8 +512,9 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
                                              IResourceMapping*  pResourceMapping,
                                              Uint32             Flags) PURE;
 
-
+    
     /// Returns the number of static shader resource variables.
+    /// Deprecated: use GetResourceSignature() and call IPipelineResourceSignature::GetStaticVariableCount().
 
     /// \param [in] ShaderType - Type of the shader.
     /// \remark Only static variables (that can be accessed directly through the PSO) are counted.
@@ -544,9 +522,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     VIRTUAL Uint32 METHOD(GetStaticVariableCount)(THIS_
                                                   SHADER_TYPE ShaderType) CONST PURE;
 
-
+    
     /// Returns static shader resource variable. If the variable is not found,
     /// returns nullptr.
+    /// Deprecated: use GetResourceSignature() and call IPipelineResourceSignature::GetStaticVariableByName().
     
     /// \param [in] ShaderType - Type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
@@ -557,8 +536,9 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
                                                                      SHADER_TYPE ShaderType,
                                                                      const Char* Name) PURE;
 
-
+    
     /// Returns static shader resource variable by its index.
+    /// Deprecated: use GetResourceSignature() and call IPipelineResourceSignature::GetStaticVariableByIndex().
 
     /// \param [in] ShaderType - Type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
@@ -573,7 +553,8 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
                                                                       Uint32      Index) PURE;
 
 
-    /// Creates a shader resource binding object
+    /// Creates a shader resource binding object.
+    /// Deprecated: use GetResourceSignature() and call IPipelineResourceSignature::CreateShaderResourceBinding().
 
     /// \param [out] ppShaderResourceBinding - memory location where pointer to the new shader resource
     ///                                        binding object is written.
@@ -601,6 +582,14 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///             into account vertex shader input layout, number of outputs, etc.
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineState* pPSO) CONST PURE;
+
+    
+    /// AZ TODO: comment
+    VIRTUAL Uint32 METHOD(GetResourceSignatureCount)(THIS) CONST PURE;
+
+    /// AZ TODO: comment
+    VIRTUAL IPipelineResourceSignature* METHOD(GetResourceSignature)(THIS_
+                                                                     Uint32 Index) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -620,6 +609,8 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_GetStaticVariableByIndex(This, ...)    CALL_IFACE_METHOD(PipelineState, GetStaticVariableByIndex,    This, __VA_ARGS__)
 #    define IPipelineState_CreateShaderResourceBinding(This, ...) CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding, This, __VA_ARGS__)
 #    define IPipelineState_IsCompatibleWith(This, ...)            CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,            This, __VA_ARGS__)
+#    define IPipelineState_GetResourceSignatureCount(This)        CALL_IFACE_METHOD(PipelineState, GetResourceSignatureCount,   This)
+#    define IPipelineState_GetResourceSignature(This, ...)        CALL_IFACE_METHOD(PipelineState, GetResourceSignature,        This, __VA_ARGS__)
 
 // clang-format on
 

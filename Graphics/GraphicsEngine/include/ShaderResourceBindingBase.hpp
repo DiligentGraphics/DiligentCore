@@ -47,52 +47,73 @@ namespace Diligent
 /// \tparam BaseInterface - Base interface that this class will inheret
 ///                         (Diligent::IShaderResourceBindingGL, Diligent::IShaderResourceBindingD3D11,
 ///                          Diligent::IShaderResourceBindingD3D12 or Diligent::IShaderResourceBindingVk).
-/// \tparam PipelineStateImplType - Type of the pipeline state implementation
-///                                 (Diligent::PipelineStateD3D12Impl, Diligent::PipelineStateVkImpl, etc.)
-template <class BaseInterface, class PipelineStateImplType>
+/// \tparam ResourceSignatureType - Type of the pipeline resource signature implementation
+///                                 (Diligent::PipelineResourceSignatureD3D12Impl, Diligent::PipelineResourceSignatureVkImpl, etc.)
+template <class BaseInterface, class ResourceSignatureType>
 class ShaderResourceBindingBase : public ObjectBase<BaseInterface>
 {
 public:
     typedef ObjectBase<BaseInterface> TObjectBase;
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this SRB.
-    /// \param pPSO         - Pipeline state that this SRB belongs to.
-    /// \param IsInternal   - Flag indicating if the shader resource binding is an internal PSO object and
-    ///                       must not keep a strong reference to the PSO.
-    ShaderResourceBindingBase(IReferenceCounters* pRefCounters, PipelineStateImplType* pPSO, bool IsInternal = false) :
+    /// \param pPRS         - Pipeline resource signature that this SRB belongs to.
+    /// \param IsInternal   - Flag indicating if the shader resource binding is an internal object and
+    ///                       must not keep a strong reference to the pipeline resource signature.
+    ShaderResourceBindingBase(IReferenceCounters* pRefCounters, ResourceSignatureType* pPRS, bool IsInternal = false) :
         TObjectBase{pRefCounters},
-        m_spPSO{IsInternal ? nullptr : pPSO},
-        m_pPSO{pPSO}
+        m_spPRS{IsInternal ? nullptr : pPRS},
+        m_pPRS{pPRS}
     {}
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBinding, TObjectBase)
 
     /// Implementation of IShaderResourceBinding::GetPipelineState().
-    virtual IPipelineState* DILIGENT_CALL_TYPE GetPipelineState() override final
+    //virtual IPipelineState* DILIGENT_CALL_TYPE GetPipelineState() override final
+    //{
+    //    return m_pPSO;
+    //}
+
+    //template <typename PSOType>
+    //PSOType* GetPipelineState()
+    //{
+    //    return ValidatedCast<PSOType>(m_pPSO);
+    //}
+
+    //template <typename PSOType>
+    //PSOType* GetPipelineState() const
+    //{
+    //    return ValidatedCast<PSOType>(m_pPSO);
+    //}
+
+    Uint32 GetBindingIndex() const
     {
-        return m_pPSO;
+        return m_pPRS->GetDesc().BindingIndex;
     }
 
-    template <typename PSOType>
-    PSOType* GetPipelineState()
+    PIPELINE_TYPE GetPipelineType() const
     {
-        return ValidatedCast<PSOType>(m_pPSO);
+        return ValidatedCast<ResourceSignatureType>(m_pPRS)->GetPipelineType();
     }
 
-    template <typename PSOType>
-    PSOType* GetPipelineState() const
+    /// Implementation of IShaderResourceBinding::GetPipelineResourceSignature().
+    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetPipelineResourceSignature() override final
     {
-        return ValidatedCast<PSOType>(m_pPSO);
+        return m_pPRS;
+    }
+
+    ResourceSignatureType* GetSignature() const
+    {
+        return ValidatedCast<ResourceSignatureType>(m_pPRS);
     }
 
 protected:
     Int8 GetVariableByNameHelper(SHADER_TYPE ShaderType, const char* Name, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
-        const auto PipelineType = m_pPSO->GetDesc().PipelineType;
+        const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'.");
+                                " as the stage is invalid for ", GetPipelineTypeString(PipelineType), " pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
             return -1;
         }
 
@@ -101,7 +122,7 @@ protected:
         if (ResLayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'.");
+                                " as the stage is inactive in pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
         }
 
         return ResLayoutInd;
@@ -109,11 +130,11 @@ protected:
 
     Int8 GetVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
-        const auto PipelineType = m_pPSO->GetDesc().PipelineType;
+        const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'.");
+                                " as the stage is invalid for ", GetPipelineTypeString(PipelineType), " pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
             return -1;
         }
 
@@ -122,7 +143,7 @@ protected:
         if (ResLayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'.");
+                                " as the stage is inactive in pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
         }
 
         return ResLayoutInd;
@@ -130,11 +151,11 @@ protected:
 
     Int8 GetVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
-        const auto PipelineType = m_pPSO->GetDesc().PipelineType;
+        const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'.");
+                                " as the stage is invalid for ", GetPipelineTypeString(PipelineType), " pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
             return -1;
         }
 
@@ -143,17 +164,19 @@ protected:
         if (ResLayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'.");
+                                " as the stage is inactive in pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
         }
 
         return ResLayoutInd;
     }
 
-    /// Strong reference to PSO. We must use strong reference, because
-    /// shader resource binding uses PSO's memory allocator to allocate
+protected:
+    /// Strong reference to pipeline resource signature. We must use strong reference, because
+    /// shader resource binding uses pipeline resource signature's memory allocator to allocate
     /// memory for shader resource cache.
-    RefCntAutoPtr<PipelineStateImplType> m_spPSO;
-    PipelineStateImplType* const         m_pPSO;
+    RefCntAutoPtr<ResourceSignatureType> m_spPRS;
+
+    IPipelineResourceSignature* m_pPRS = nullptr;
 };
 
 } // namespace Diligent

@@ -35,14 +35,14 @@
 namespace Diligent
 {
 
-ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pRefCounters,
-                                                         PipelineStateVkImpl* pPSO,
-                                                         bool                 IsPSOInternal) :
+ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*              pRefCounters,
+                                                         PipelineResourceSignatureVkImpl* pPRS,
+                                                         bool                             IsPSOInternal) :
     // clang-format off
     TBase
     {
         pRefCounters,
-        pPSO,
+        pPRS,
         IsPSOInternal
     },
     m_ShaderResourceCache{ShaderResourceCacheVk::DbgCacheContentType::SRBResources}
@@ -50,9 +50,9 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pR
 {
     try
     {
-        m_ResourceLayoutIndex.fill(-1);
+        m_ShaderVarIndex.fill(-1);
 
-        m_NumShaders = static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaderStages());
+        m_NumShaders = static_cast<decltype(m_NumShaders)>(pPRS->GetNumShaderStages());
 
         FixedLinearAllocator MemPool{GetRawAllocator()};
         MemPool.AddSpace<ShaderVariableManagerVk>(m_NumShaders);
@@ -67,29 +67,28 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pR
         // It is important to construct all objects before initializing them because if an exception is thrown,
         // destructors will be called for all objects
 
-        auto* pRenderDeviceVkImpl = pPSO->GetDevice();
         // This will only allocate memory and initialize descriptor sets in the resource cache
         // Resources will be initialized by InitializeResourceMemoryInCache()
-        auto& ResourceCacheDataAllocator = pPSO->GetSRBMemoryAllocator().GetResourceCacheDataAllocator(0);
-        pPSO->GetPipelineLayout().InitResourceCache(pRenderDeviceVkImpl, m_ShaderResourceCache, ResourceCacheDataAllocator, pPSO->GetDesc().Name);
+        auto& SRBMemAllocator            = pPRS->GetSRBMemoryAllocator();
+        auto& ResourceCacheDataAllocator = SRBMemAllocator.GetResourceCacheDataAllocator(0);
+        pPRS->InitResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
 
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            auto ShaderInd = GetShaderTypePipelineIndex(pPSO->GetShaderStageType(s), pPSO->GetDesc().PipelineType);
+            auto ShaderInd = GetShaderTypePipelineIndex(pPRS->GetShaderStageType(s), pPRS->GetPipelineType());
 
-            m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
+            m_ShaderVarIndex[ShaderInd] = static_cast<Int8>(s);
 
-            auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
+            auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
 
-            const auto& SrcLayout = pPSO->GetShaderResLayout(s);
             // Use source layout to initialize resource memory in the cache
-            SrcLayout.InitializeResourceMemoryInCache(m_ShaderResourceCache);
+            pPRS->InitializeResourceMemoryInCache(m_ShaderResourceCache);
 
             // Create shader variable manager in place
             // Initialize vars manager to reference mutable and dynamic variables
             // Note that the cache has space for all variable types
             const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-            m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, VarTypes, _countof(VarTypes));
+            m_pShaderVarMgrs[s].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes));
         }
 #ifdef DILIGENT_DEBUG
         m_ShaderResourceCache.DbgVerifyResourceInitialization();
@@ -111,7 +110,7 @@ void ShaderResourceBindingVkImpl::Destruct()
 {
     if (m_pShaderVarMgrs != nullptr)
     {
-        auto& SRBMemAllocator = m_pPSO->GetSRBMemoryAllocator();
+        auto& SRBMemAllocator = GetSignature()->GetSRBMemoryAllocator();
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
             auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
@@ -125,50 +124,37 @@ void ShaderResourceBindingVkImpl::Destruct()
 
 void ShaderResourceBindingVkImpl::BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)
 {
-    const auto PipelineType = m_pPSO->GetDesc().PipelineType;
-    for (Int32 ShaderInd = 0; ShaderInd < static_cast<Int32>(m_ResourceLayoutIndex.size()); ++ShaderInd)
-    {
-        auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
-        if (ResLayoutInd >= 0)
-        {
-            // ShaderInd is the shader type pipeline index here
-            const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
-            if (ShaderFlags & ShaderType)
-            {
-                m_pShaderVarMgrs[ResLayoutInd].BindResources(pResMapping, Flags);
-            }
-        }
-    }
-}
-
-IShaderResourceVariable* ShaderResourceBindingVkImpl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
-{
-    auto ResLayoutInd = GetVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
-    if (ResLayoutInd < 0)
-        return nullptr;
-
-    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumShaders});
-    return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
+    // AZ TODO
 }
 
 Uint32 ShaderResourceBindingVkImpl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
-    auto ResLayoutInd = GetVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
-    if (ResLayoutInd < 0)
+    const auto VarMngrInd = GetVariableCountHelper(ShaderType, m_ShaderVarIndex);
+    if (VarMngrInd < 0)
         return 0;
 
-    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumShaders});
-    return m_pShaderVarMgrs[ResLayoutInd].GetVariableCount();
+    auto& ShaderVarMgr = m_pShaderVarMgrs[VarMngrInd];
+    return ShaderVarMgr.GetVariableCount();
+}
+
+IShaderResourceVariable* ShaderResourceBindingVkImpl::GetVariableByName(SHADER_TYPE ShaderType, const Char* Name)
+{
+    const auto VarMngrInd = GetVariableByNameHelper(ShaderType, Name, m_ShaderVarIndex);
+    if (VarMngrInd < 0)
+        return nullptr;
+
+    auto& ShaderVarMgr = m_pShaderVarMgrs[VarMngrInd];
+    return ShaderVarMgr.GetVariable(Name);
 }
 
 IShaderResourceVariable* ShaderResourceBindingVkImpl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    auto ResLayoutInd = GetVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
-    if (ResLayoutInd < 0)
+    const auto VarMngrInd = GetVariableByIndexHelper(ShaderType, Index, m_ShaderVarIndex);
+    if (VarMngrInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumShaders});
-    return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Index);
+    const auto& ShaderVarMgr = m_pShaderVarMgrs[VarMngrInd];
+    return ShaderVarMgr.GetVariable(Index);
 }
 
 void ShaderResourceBindingVkImpl::InitializeStaticResources(const IPipelineState* pPipelineState)
@@ -181,17 +167,28 @@ void ShaderResourceBindingVkImpl::InitializeStaticResources(const IPipelineState
 
     if (pPipelineState == nullptr)
     {
-        pPipelineState = GetPipelineState();
+        InitializeStaticResourcesWithSignature(nullptr);
     }
     else
     {
-        DEV_CHECK_ERR(pPipelineState->IsCompatibleWith(GetPipelineState()), "The pipeline state '", pPipelineState->GetDesc().Name,
-                      "' is not compatible with the pipeline state '", m_pPSO->GetDesc().Name,
-                      "' this SRB was created from and cannot be used to initialize static resources.");
-    }
+        auto* pSign = pPipelineState->GetResourceSignature(GetBindingIndex());
+        if (pSign == nullptr)
+        {
+            LOG_ERROR_MESSAGE("Shader resource binding is not compatible with pipeline state.");
+            return;
+        }
 
-    auto* pPSOVK = ValidatedCast<const PipelineStateVkImpl>(pPipelineState);
-    pPSOVK->InitializeStaticSRBResources(m_ShaderResourceCache);
+        InitializeStaticResourcesWithSignature(pSign);
+    }
+}
+
+void ShaderResourceBindingVkImpl::InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature)
+{
+    if (pResourceSignature == nullptr)
+        pResourceSignature = GetPipelineResourceSignature();
+
+    auto* pPRSVk = ValidatedCast<const PipelineResourceSignatureVkImpl>(pResourceSignature);
+    pPRSVk->InitializeStaticSRBResources(m_ShaderResourceCache);
     m_bStaticResourcesInitialized = true;
 }
 

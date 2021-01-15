@@ -34,9 +34,10 @@ int TestShaderResourceBindingCInterface(struct IShaderResourceBinding* pSRB)
     IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct IPipelineState*   pPSO     = NULL;
-    IShaderResourceVariable* pVar     = NULL;
-    Uint32                   VarCount = 0;
+    struct IPipelineState*             pPSO     = NULL;
+    struct IPipelineResourceSignature* pPRS     = NULL;
+    IShaderResourceVariable*           pVar     = NULL;
+    Uint32                             VarCount = 0;
 
     int num_errors = TestObjectCInterface((struct IObject*)pSRB);
 
@@ -55,8 +56,12 @@ int TestShaderResourceBindingCInterface(struct IShaderResourceBinding* pSRB)
     if (RefCnt2 != RefCnt1 - 1)
         ++num_errors;
 
-    pPSO = IShaderResourceBinding_GetPipelineState(pSRB);
-    if (pPSO == NULL)
+    //pPSO = IShaderResourceBinding_GetPipelineState(pSRB);
+    //if (pPSO == NULL)
+    //    ++num_errors;
+
+    pPRS = IShaderResourceBinding_GetPipelineResourceSignature(pSRB);
+    if (pPRS == NULL)
         ++num_errors;
 
     pVar = IShaderResourceBinding_GetVariableByName(pSRB, SHADER_TYPE_VERTEX, "g_tex2D_Mut");

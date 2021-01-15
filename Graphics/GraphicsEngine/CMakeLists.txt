@@ -30,6 +30,7 @@ set(INCLUDE
     include/BottomLevelASBase.hpp
     include/TopLevelASBase.hpp
     include/ShaderBindingTableBase.hpp
+    include/PipelineResourceSignatureBase.hpp
 )
 
 set(INTERFACE 
@@ -48,6 +49,7 @@ set(INTERFACE
     interface/GraphicsTypes.h
     interface/InputLayout.h
     interface/PipelineState.h
+    interface/PipelineResourceSignature.h
     interface/Query.h
     interface/RasterizerState.h
     interface/RenderDevice.h

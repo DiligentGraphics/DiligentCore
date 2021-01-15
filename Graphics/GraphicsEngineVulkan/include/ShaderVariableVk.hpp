@@ -61,13 +61,14 @@
 
 #include <memory>
 
-#include "ShaderResourceLayoutVk.hpp"
 #include "ShaderResourceVariableBase.hpp"
+#include "ShaderResourceCacheVk.hpp"
 
 namespace Diligent
 {
 
 class ShaderVariableVkImpl;
+class PipelineResourceSignatureVkImpl;
 
 // sizeof(ShaderVariableManagerVk) == 32 (x64, msvc, Release)
 class ShaderVariableManagerVk
@@ -79,10 +80,10 @@ public:
         m_ResourceCache{ResourceCache}
     {}
 
-    void Initialize(const ShaderResourceLayoutVk&        SrcLayout,
-                    IMemoryAllocator&                    Allocator,
-                    const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                    Uint32                               NumAllowedTypes);
+    void Initialize(const PipelineResourceSignatureVkImpl& SrcLayout,
+                    IMemoryAllocator&                      Allocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                    Uint32                                 NumAllowedTypes);
 
     ~ShaderVariableManagerVk();
 
@@ -93,19 +94,35 @@ public:
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const;
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk&        Layout,
-                                        const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                        Uint32                               NumAllowedTypes,
-                                        Uint32&                              NumVariables);
+    static size_t GetRequiredMemorySize(const PipelineResourceSignatureVkImpl& Layout,
+                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                        Uint32                                 NumAllowedTypes,
+                                        Uint32&                                NumVariables);
 
     Uint32 GetVariableCount() const { return m_NumVariables; }
 
 private:
     friend ShaderVariableVkImpl;
+    using PackedBindingIndex = PipelineResourceSignatureVkImpl::PackedBindingIndex;
 
     Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
 
+    const PipelineResourceDesc& GetResource(Uint32 Index) const
+    {
+        VERIFY_EXPR(m_pSignature);
+        return m_pSignature->GetResource(Index);
+    }
+    const PackedBindingIndex& GetBinding(Uint32 Index) const
+    {
+        VERIFY_EXPR(m_pSignature);
+        return m_pSignature->GetBinding(Index);
+    }
+
+private:
+    PipelineResourceSignatureVkImpl const* m_pSignature = nullptr;
+
     IObject& m_Owner;
+
     // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
     // static resource cache owned by the same PSO object), or by SRB object (in which case
     // m_ResourceCache references the cache in the SRB). Thus the cache and the resource layout
@@ -123,14 +140,12 @@ private:
 #endif
 };
 
-// sizeof(ShaderVariableVkImpl) == 24 (x64)
+// sizeof(ShaderVariableVkImpl) == 16 (x64)
 class ShaderVariableVkImpl final : public IShaderResourceVariable
 {
 public:
-    ShaderVariableVkImpl(ShaderVariableManagerVk&                  ParentManager,
-                         const ShaderResourceLayoutVk::VkResource& Resource) :
-        m_ParentManager{ParentManager},
-        m_Resource{Resource}
+    explicit ShaderVariableVkImpl(ShaderVariableManagerVk& ParentManager) :
+        m_ParentManager{ParentManager}
     {}
 
     // clang-format off
@@ -171,48 +186,101 @@ public:
 
     virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
     {
-        return m_Resource.GetVariableType();
+        return GetDesc().VarType;
     }
 
-    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-    {
-        m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache);
-    }
+    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final;
 
     virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
                                              Uint32                FirstElement,
-                                             Uint32                NumElements) override final
-    {
-        VerifyAndCorrectSetArrayArguments(m_Resource.Name, m_Resource.ArraySize, FirstElement, NumElements);
-        for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
-            m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
-    }
+                                             Uint32                NumElements) override final;
 
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
-        ResourceDesc = m_Resource.GetResourceDesc();
+        const auto& Desc       = GetDesc();
+        ResourceDesc.Name      = Desc.Name;
+        ResourceDesc.Type      = Desc.ResourceType;
+        ResourceDesc.ArraySize = Desc.ArraySize;
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
     {
-        return m_ParentManager.GetVariableIndex(*this);
+        VERIFY_EXPR(m_ParentManager.m_pVariables);
+        return Uint32(size_t(this - m_ParentManager.m_pVariables));
     }
 
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-    {
-        return m_Resource.IsBound(ArrayIndex, m_ParentManager.m_ResourceCache);
-    }
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final;
 
-    const ShaderResourceLayoutVk::VkResource& GetResource() const
-    {
-        return m_Resource;
-    }
+    String GetPrintName(Uint32 ArrayInd) const;
+
+    RESOURCE_DIMENSION GetResourceDimension() const;
+
+    bool IsMultisample() const;
 
 private:
     friend ShaderVariableManagerVk;
+    using PackedBindingIndex = PipelineResourceSignatureVkImpl::PackedBindingIndex;
 
-    ShaderVariableManagerVk&                  m_ParentManager;
-    const ShaderResourceLayoutVk::VkResource& m_Resource;
+    const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResource(GetIndex()); }
+    const PackedBindingIndex&   GetBinding() const { return m_ParentManager.GetBinding(GetIndex()); }
+
+    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const;
+
+    struct UpdateInfo
+    {
+        ShaderResourceCacheVk::Resource&    DstRes;
+        const VkDescriptorSet               vkDescrSet;
+        const Uint32                        ArrayIndex;
+        const SHADER_RESOURCE_VARIABLE_TYPE VarType;
+        const Uint16                        Binding;
+        const Uint8                         SamplerInd;
+        char const* const                   Name;
+    };
+
+    void CacheUniformBuffer(IDeviceObject* pBuffer,
+                            UpdateInfo&    Info,
+                            Uint16&        DynamicBuffersCounter) const;
+
+    void CacheStorageBuffer(IDeviceObject* pBufferView,
+                            UpdateInfo&    Info,
+                            Uint16&        DynamicBuffersCounter) const;
+
+    void CacheTexelBuffer(IDeviceObject* pBufferView,
+                          UpdateInfo&    Info,
+                          Uint16&        DynamicBuffersCounter) const;
+
+    template <typename TCacheSampler>
+    void CacheImage(IDeviceObject* pTexView,
+                    UpdateInfo&    Info,
+                    TCacheSampler  CacheSampler) const;
+
+    void CacheSeparateSampler(IDeviceObject* pSampler,
+                              UpdateInfo&    Info) const;
+
+    void CacheInputAttachment(IDeviceObject* pTexView,
+                              UpdateInfo&    Info) const;
+
+    void CacheAccelerationStructure(IDeviceObject* pTLAS,
+                                    UpdateInfo&    Info) const;
+
+    template <typename ObjectType, typename TPreUpdateObject>
+    bool UpdateCachedResource(UpdateInfo&                 Info,
+                              RefCntAutoPtr<ObjectType>&& pObject,
+                              TPreUpdateObject            PreUpdateObject) const;
+
+    bool IsImmutableSamplerAssigned() const;
+
+    // Updates resource descriptor in the descriptor set
+    inline void UpdateDescriptorHandle(UpdateInfo&                                         Info,
+                                       const VkDescriptorImageInfo*                        pImageInfo,
+                                       const VkDescriptorBufferInfo*                       pBufferInfo,
+                                       const VkBufferView*                                 pTexelBufferView,
+                                       const VkWriteDescriptorSetAccelerationStructureKHR* pAccelStructInfo = nullptr) const;
+
+    static constexpr Uint8 InvalidSamplerInd = PipelineResourceSignatureVkImpl::InvalidSamplerInd;
+
+private:
+    ShaderVariableManagerVk& m_ParentManager;
 };
 
 } // namespace Diligent

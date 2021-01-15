@@ -495,19 +495,10 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::CommitShader
                   "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
-    if (!m_pPipelineState)
+    if (pShaderResourceBinding == nullptr)
     {
-        LOG_ERROR_MESSAGE("No pipeline state is bound to the pipeline");
+        LOG_ERROR_MESSAGE("TODO");
         return false;
-    }
-
-    if (pShaderResourceBinding)
-    {
-        if (m_pPipelineState->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
-        {
-            LOG_ERROR_MESSAGE("Shader resource binding object is not compatible with the currently bound pipeline state '", m_pPipelineState->GetDesc().Name, '\'');
-            return false;
-        }
     }
 #endif
 

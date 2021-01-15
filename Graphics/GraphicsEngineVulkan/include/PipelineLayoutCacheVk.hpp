@@ -28,34 +28,55 @@
 #pragma once
 
 /// \file
-/// Definition of the engine constants
+/// Declaration of Diligent::PipelineLayoutCacheVk class
 
-#include "../../../Primitives/interface/BasicTypes.h"
+#include <unordered_set>
+#include <mutex>
+#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "PipelineLayoutVk.hpp"
 
-DILIGENT_BEGIN_NAMESPACE(Diligent)
+namespace Diligent
+{
 
-// clang-format off
+class PipelineLayoutCacheVk
+{
+public:
+    PipelineLayoutCacheVk(RenderDeviceVkImpl& DeviceVKImpl) :
+        m_DeviceVk{DeviceVKImpl}
+    {}
 
-/// Maximum number of input buffer slots.
-/// D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT == 32
-#define DILIGENT_MAX_BUFFER_SLOTS 32
+    // clang-format off
+    PipelineLayoutCacheVk             (const PipelineLayoutCacheVk&) = delete;
+    PipelineLayoutCacheVk             (PipelineLayoutCacheVk&&)      = delete;
+    PipelineLayoutCacheVk& operator = (const PipelineLayoutCacheVk&) = delete;
+    PipelineLayoutCacheVk& operator = (PipelineLayoutCacheVk&&)      = delete;
+    // clang-format on
 
-/// Maximum number of simultaneous render targets.
-#define DILIGENT_MAX_RENDER_TARGETS 8
+    ~PipelineLayoutCacheVk();
 
-/// Maximum number of viewports.
-#define DILIGENT_MAX_VIEWPORTS 16
+    RefCntAutoPtr<PipelineLayoutVk> GetLayout(IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount);
 
-static const Uint32 MAX_BUFFER_SLOTS   = DILIGENT_MAX_BUFFER_SLOTS;
-static const Uint32 MAX_RENDER_TARGETS = DILIGENT_MAX_RENDER_TARGETS;
-static const Uint32 MAX_VIEWPORTS      = DILIGENT_MAX_VIEWPORTS;
+    void OnDestroyLayout(PipelineLayoutVk* pLayout);
 
-/// Maximum number of shader stages in a pipeline.
-/// (Vertex, Hull, Domain, Geometry, Pixel) or (Amplification, Mesh, Pixel), or (Compute) or (RayGen, Miss, ClosestHit, AnyHit, Intersection, Callable)
-static const Uint32 MAX_SHADERS_IN_PIPELINE = 6;
+private:
+    struct PipelineLayoutHash
+    {
+        std::size_t operator()(const PipelineLayoutVk* Key) const noexcept
+        {
+            return Key->GetHash();
+        }
+    };
 
-static const Uint32 MAX_RESOURCE_SIGNATURES = 8;
+    struct PipelineLayoutCompare
+    {
+        bool operator()(const PipelineLayoutVk* lhs, const PipelineLayoutVk* rhs) const noexcept;
+    };
 
-// clang-format on
+    RenderDeviceVkImpl& m_DeviceVk;
 
-DILIGENT_END_NAMESPACE // namespace Diligent
+    std::mutex m_Mutex;
+
+    std::unordered_set<PipelineLayoutVk*, PipelineLayoutHash, PipelineLayoutCompare> m_Cache;
+};
+
+} // namespace Diligent

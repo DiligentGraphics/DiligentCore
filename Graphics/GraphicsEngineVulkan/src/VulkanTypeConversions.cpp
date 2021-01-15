@@ -1632,6 +1632,18 @@ VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
     }
 }
 
+VkShaderStageFlags ShaderTypesToVkShaderStageFlags(SHADER_TYPE ShaderTypes)
+{
+    VkShaderStageFlags Result = 0;
+    while (ShaderTypes != SHADER_TYPE_UNKNOWN)
+    {
+        auto Type = static_cast<SHADER_TYPE>(1u << PlatformMisc::GetLSB(Uint32{ShaderTypes}));
+        Result |= ShaderTypeToVkShaderStageFlagBit(Type);
+        ShaderTypes = ShaderTypes & ~Type;
+    }
+    return Result;
+}
+
 VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags)
 {
     static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == RAYTRACING_BUILD_AS_LOW_MEMORY,
@@ -1640,7 +1652,7 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
     VkBuildAccelerationStructureFlagsKHR Result = 0;
     while (Flags != RAYTRACING_BUILD_AS_NONE)
     {
-        auto FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        auto FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1u << PlatformMisc::GetLSB(Uint32{Flags}));
         switch (FlagBit)
         {
             // clang-format off

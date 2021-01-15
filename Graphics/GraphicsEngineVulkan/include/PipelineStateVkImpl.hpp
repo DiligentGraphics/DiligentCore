@@ -35,21 +35,20 @@
 #include "RenderDeviceVk.h"
 #include "PipelineStateVk.h"
 #include "PipelineStateBase.hpp"
-#include "PipelineLayout.hpp"
-#include "ShaderResourceLayoutVk.hpp"
 #include "ShaderVariableVk.hpp"
 #include "FixedBlockMemoryAllocator.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
-#include "PipelineLayout.hpp"
 #include "RenderDeviceVkImpl.hpp"
+#include "PipelineLayoutVk.hpp"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 class ShaderVariableManagerVk;
+class ShaderVkImpl;
 
 /// Pipeline state object implementation in Vulkan backend.
 class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>
@@ -64,9 +63,6 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateVk, TPipelineStateBase)
 
-    /// Implementation of IPipelineState::CreateShaderResourceBinding() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final;
-
     /// Implementation of IPipelineState::IsCompatibleWith() in Vulkan backend.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
@@ -79,41 +75,21 @@ public:
     /// Implementation of IPipelineState::BindStaticResources() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final;
 
-    /// Implementation of IPipelineState::GetStaticVariableCount() in Vulkan backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
+    /// Implementation of IPipelineState::GetResourceSignatureCount() in Vulkan backend.
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_PipelineLayout->GetSignatureCount(); }
 
-    /// Implementation of IPipelineState::GetStaticVariableByName() in Vulkan backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
+    /// Implementation of IPipelineState::GetResourceSignature() in Vulkan backend.
+    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final { return m_PipelineLayout->GetSignature(Index); }
 
-    /// Implementation of IPipelineState::GetStaticVariableByIndex() in Vulkan backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
-
-    void CommitAndTransitionShaderResources(IShaderResourceBinding*                pShaderResourceBinding,
-                                            DeviceContextVkImpl*                   pCtxVkImpl,
-                                            bool                                   CommitResources,
-                                            RESOURCE_STATE_TRANSITION_MODE         StateTransitionMode,
-                                            PipelineLayout::DescriptorSetBindInfo* pDescrSetBindInfo) const;
-
-    __forceinline void BindDescriptorSetsWithDynamicOffsets(VulkanUtilities::VulkanCommandBuffer&  CmdBuffer,
-                                                            Uint32                                 CtxId,
-                                                            DeviceContextVkImpl*                   pCtxVkImpl,
-                                                            PipelineLayout::DescriptorSetBindInfo& BindInfo)
+    __forceinline void BindDescriptorSetsWithDynamicOffsets(VulkanUtilities::VulkanCommandBuffer&    CmdBuffer,
+                                                            Uint32                                   CtxId,
+                                                            DeviceContextVkImpl*                     pCtxVkImpl,
+                                                            PipelineLayoutVk::DescriptorSetBindInfo& BindInfo)
     {
-        m_PipelineLayout.BindDescriptorSetsWithDynamicOffsets(CmdBuffer, CtxId, pCtxVkImpl, BindInfo);
+        m_PipelineLayout->BindDescriptorSetsWithDynamicOffsets(CmdBuffer, CtxId, pCtxVkImpl, BindInfo);
     }
 
-    const PipelineLayout& GetPipelineLayout() const { return m_PipelineLayout; }
-
-    const ShaderResourceLayoutVk& GetShaderResLayout(Uint32 ShaderInd) const
-    {
-        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
-        return m_ShaderResourceLayouts[ShaderInd];
-    }
-
-    SRBMemoryAllocator& GetSRBMemoryAllocator()
-    {
-        return m_SRBMemAllocator;
-    }
+    const PipelineLayoutVk& GetPipelineLayout() const { return *m_PipelineLayout; }
 
     static RenderPassDesc GetImplicitRenderPassDesc(Uint32                                                        NumRenderTargets,
                                                     const TEXTURE_FORMAT                                          RTVFormats[],
@@ -126,50 +102,45 @@ public:
 
     void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
 
-private:
-    using TShaderStages = ShaderResourceLayoutVk::TShaderStages;
+    bool IsIncompatibleWith(IPipelineResourceSignature* pPRS) const
+    {
+        return !m_PipelineLayout->HasSignature(pPRS);
+    }
 
+    struct ShaderStageInfo
+    {
+        ShaderStageInfo() {}
+        ShaderStageInfo(const ShaderVkImpl* pShader);
+
+        void   Append(const ShaderVkImpl* pShader);
+        size_t Count() const;
+
+        // Shader stage type. All shaders in the stage must have the same type.
+        SHADER_TYPE Type = SHADER_TYPE_UNKNOWN;
+
+        std::vector<const ShaderVkImpl*>   Shaders;
+        std::vector<std::vector<uint32_t>> SPIRVs;
+    };
+    using TShaderStages = std::vector<ShaderStageInfo>;
+
+private:
     template <typename PSOCreateInfoType>
     TShaderStages InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
                                       std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
                                       std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules);
+
+    void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
+                            TShaderStages&                 ShaderStages);
 
     void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
                              TShaderStages&                 ShaderStages);
 
     void Destruct();
 
-    const ShaderResourceLayoutVk& GetStaticShaderResLayout(Uint32 ShaderInd) const
-    {
-        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
-        return m_ShaderResourceLayouts[GetNumShaderStages() + ShaderInd];
-    }
-
-    const ShaderResourceCacheVk& GetStaticResCache(Uint32 ShaderInd) const
-    {
-        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
-        return m_StaticResCaches[ShaderInd];
-    }
-
-    const ShaderVariableManagerVk& GetStaticVarMgr(Uint32 ShaderInd) const
-    {
-        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
-        return m_StaticVarsMgrs[ShaderInd];
-    }
-
-    ShaderResourceLayoutVk*  m_ShaderResourceLayouts = nullptr; // [m_NumShaderStages * 2]
-    ShaderResourceCacheVk*   m_StaticResCaches       = nullptr; // [m_NumShaderStages]
-    ShaderVariableManagerVk* m_StaticVarsMgrs        = nullptr; // [m_NumShaderStages]
-
-    SRBMemoryAllocator m_SRBMemAllocator;
+    void* m_pRawMem = nullptr; // AZ TODO: remove
 
     VulkanUtilities::PipelineWrapper m_Pipeline;
-    PipelineLayout                   m_PipelineLayout;
-
-    // Resource layout index in m_ShaderResourceLayouts array for every shader stage,
-    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
-    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
+    RefCntAutoPtr<PipelineLayoutVk>  m_PipelineLayout;
 
     bool m_HasStaticResources    = false;
     bool m_HasNonStaticResources = false;

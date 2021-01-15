@@ -68,15 +68,14 @@ public:
         return m_SPIRV;
     }
 
-    const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources() const { return m_pShaderResources; }
+    const SPIRVShaderResources& GetShaderResources() const { return *m_pShaderResources; }
 
     const char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
 private:
     void MapHLSLVertexShaderInputs();
 
-    // SPIRVShaderResources class instance must be referenced through the shared pointer, because
-    // it is referenced by ShaderResourceLayoutVk class instances
+    // AZ TODO: remove shared pointer
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
 
     std::string           m_EntryPoint;

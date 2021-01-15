@@ -47,6 +47,7 @@
 #include "VulkanUploadHeap.hpp"
 #include "FramebufferCache.hpp"
 #include "RenderPassCache.hpp"
+#include "PipelineLayoutCacheVk.hpp"
 #include "CommandPoolManager.hpp"
 #include "DXCompiler.hpp"
 
@@ -130,6 +131,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
                                               IShaderBindingTable**         ppSBT) override final;
 
+    /// Implementation of IRenderDevice::CreatePipelineResourceSignature() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                                    IPipelineResourceSignature**         ppSignature) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 
@@ -190,6 +195,8 @@ public:
     FramebufferCache& GetFramebufferCache() { return m_FramebufferCache; }
     RenderPassCache&  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache; }
 
+    PipelineLayoutCacheVk& GetPipelineLayoutCache() { return m_PipelineLayoutCache; }
+
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties, VkMemoryAllocateFlags AllocateFlags = 0)
     {
         return m_MemoryMgr.Allocate(MemReqs, MemoryProperties, AllocateFlags);
@@ -224,6 +231,8 @@ public:
         return m_Properties;
     }
 
+    void CreatePipelineLayout(IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount, PipelineLayoutVk** ppPipelineLayout);
+
 private:
     template <typename PSOCreateInfoType>
     void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);
@@ -244,6 +253,7 @@ private:
     EngineVkCreateInfo m_EngineAttribs;
 
     FramebufferCache       m_FramebufferCache;
+    PipelineLayoutCacheVk  m_PipelineLayoutCache;
     RenderPassCache        m_ImplicitRenderPassCache;
     DescriptorSetAllocator m_DescriptorSetAllocator;
     DescriptorPoolManager  m_DynamicDescriptorPool;
@@ -260,6 +270,8 @@ private:
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
 
     Properties m_Properties;
+
+    FixedBlockMemoryAllocator m_PipelineLayoutAllocator;
 };
 
 } // namespace Diligent

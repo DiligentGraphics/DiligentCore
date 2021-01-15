@@ -36,22 +36,23 @@
 #include "ShaderBase.hpp"
 #include "ShaderResourceCacheVk.hpp"
 #include "ShaderVariableVk.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
 
-class PipelineStateVkImpl;
+class PipelineResourceSignatureVkImpl;
 
 /// Implementation of the Diligent::IShaderResourceBindingVk interface
 // sizeof(ShaderResourceBindingVkImpl) == 72 (x64, msvc, Release)
-class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineStateVkImpl>
+class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineResourceSignatureVkImpl>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineStateVkImpl>;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineResourceSignatureVkImpl>;
 
-    ShaderResourceBindingVkImpl(IReferenceCounters*  pRefCounters,
-                                PipelineStateVkImpl* pPSO,
-                                bool                 IsPSOInternal);
+    ShaderResourceBindingVkImpl(IReferenceCounters*              pRefCounters,
+                                PipelineResourceSignatureVkImpl* pPRS,
+                                bool                             IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingVk, TBase)
@@ -71,6 +72,9 @@ public:
     /// Implementation of IShaderResourceBinding::InitializeStaticResources() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override final;
 
+    /// Implementation of IShaderResourceBinding::InitializeStaticResourcesWithSignature() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature) override final;
+
     ShaderResourceCacheVk& GetResourceCache() { return m_ShaderResourceCache; }
 
     bool StaticResourcesInitialized() const { return m_bStaticResourcesInitialized; }
@@ -78,13 +82,11 @@ public:
 private:
     void Destruct();
 
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ShaderVarIndex = {-1, -1, -1, -1, -1, -1};
+    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
+
     ShaderResourceCacheVk    m_ShaderResourceCache;
     ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
-
-    // Resource layout index in m_ShaderResourceCache array for every shader stage,
-    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
-    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
     bool  m_bStaticResourcesInitialized = false;
     Uint8 m_NumShaders                  = 0;

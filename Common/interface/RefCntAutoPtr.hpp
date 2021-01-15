@@ -31,7 +31,7 @@
 #include "../../Platforms/interface/Atomics.hpp"
 #include "ValidatedCast.hpp"
 #include "RefCountedObjectImpl.hpp"
-
+#include "CompilerDefinitions.h"
 
 namespace Diligent
 {
@@ -136,7 +136,7 @@ public:
         m_pObject = pObj;
     }
 
-    T* Detach() noexcept
+    NODISCARD T* Detach() noexcept
     {
         T* pObj   = m_pObject;
         m_pObject = nullptr;

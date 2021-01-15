@@ -42,6 +42,7 @@
 #include "BottomLevelASVkImpl.hpp"
 #include "TopLevelASVkImpl.hpp"
 #include "ShaderBindingTableVkImpl.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -82,6 +83,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(BottomLevelASVkImpl),
             sizeof(TopLevelASVkImpl),
             sizeof(ShaderBindingTableVkImpl),
+            sizeof(PipelineResourceSignatureVkImpl),
         }
     },
     m_VulkanInstance         {Instance                 },
@@ -89,6 +91,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_LogicalVkDevice        {std::move(LogicalDevice) },
     m_EngineAttribs          {EngineCI                 },
     m_FramebufferCache       {*this                    },
+    m_PipelineLayoutCache    {*this                    },
     m_ImplicitRenderPassCache{*this                    },
     m_DescriptorSetAllocator
     {
@@ -168,11 +171,12 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount,
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayRecursionDepth,
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayDispatchInvocationCount
-    }
+    },
+    m_PipelineLayoutAllocator{GetRawAllocator(), sizeof(PipelineLayoutVk), 128}
 // clang-format on
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
-    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 16, "Please add new objects to DeviceObjectSizes constructor");
 
     // set device properties
     {
@@ -825,6 +829,24 @@ void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
                            pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
                            OnCreateDeviceObject(pSBTVk);
                        });
+}
+
+void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                         IPipelineResourceSignature**         ppSignature)
+{
+    CreateDeviceObject("PipelineResourceSignature", Desc, ppSignature,
+                       [&]() //
+                       {
+                           PipelineResourceSignatureVkImpl* pPRSVk(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignatureVkImpl instance", PipelineResourceSignatureVkImpl)(this, Desc));
+                           pPRSVk->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
+                           OnCreateDeviceObject(pPRSVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreatePipelineLayout(IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount, PipelineLayoutVk** ppPipelineLayout)
+{
+    PipelineLayoutVk* pPLVk(NEW_RC_OBJ(m_PipelineLayoutAllocator, "PipelineLayoutVk instance", PipelineLayoutVk)(this, ppSignatures, SignatureCount));
+    *ppPipelineLayout = pPLVk;
 }
 
 } // namespace Diligent

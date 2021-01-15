@@ -223,7 +223,8 @@ public:
     // it can potentially give false negatives
     bool IsIncompatibleWith(const IPipelineState* pPSO) const
     {
-        return m_ShaderResourceLayoutHash != ValidatedCast<const PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
+        return false;
+        //return m_ShaderResourceLayoutHash != ValidatedCast<const PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
     }
 
     virtual const GraphicsPipelineDesc& DILIGENT_CALL_TYPE GetGraphicsPipelineDesc() const override final
@@ -238,6 +239,49 @@ public:
         VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
         VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
         return m_pRayTracingPipelineData->Desc;
+    }
+
+    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
+                                                                bool                     InitStaticResources) override final
+    {
+        auto* pSign = GetResourceSignature(0);
+        if (pSign)
+            return pSign->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
+    }
+
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
+                                                                                const Char* Name) override final
+    {
+        VERIFY_EXPR(GetResourceSignatureCount() == 1);
+
+        auto* pSign = GetResourceSignature(0);
+        if (pSign)
+            return pSign->GetStaticVariableByName(ShaderType, Name);
+
+        return nullptr;
+    }
+
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
+                                                                                 Uint32      Index) override final
+    {
+        VERIFY_EXPR(GetResourceSignatureCount() == 1);
+
+        auto* pSign = GetResourceSignature(0);
+        if (pSign)
+            return pSign->GetStaticVariableByIndex(ShaderType, Index);
+
+        return nullptr;
+    }
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
+    {
+        VERIFY_EXPR(GetResourceSignatureCount() == 1);
+
+        auto* pSign = GetResourceSignature(0);
+        if (pSign)
+            return pSign->GetStaticVariableCount(ShaderType);
+
+        return 0;
     }
 
     inline void CopyShaderHandle(const char* Name, void* pData, size_t DataSize) const
@@ -267,67 +311,6 @@ public:
 
 protected:
     using TNameToGroupIndexMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
-
-    Int8 GetStaticVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
-    {
-        if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
-        {
-            LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'.");
-            return -1;
-        }
-
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, this->m_Desc.PipelineType);
-        const auto LayoutInd     = ResourceLayoutIndex[ShaderTypeInd];
-        if (LayoutInd < 0)
-        {
-            LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
-        }
-
-        return LayoutInd;
-    }
-
-    Int8 GetStaticVariableByNameHelper(SHADER_TYPE ShaderType, const Char* Name, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
-    {
-        if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
-        {
-            LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'.");
-            return -1;
-        }
-
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, this->m_Desc.PipelineType);
-        const auto LayoutInd     = ResourceLayoutIndex[ShaderTypeInd];
-        if (LayoutInd < 0)
-        {
-            LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
-        }
-
-        return LayoutInd;
-    }
-
-    Int8 GetStaticVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
-    {
-        if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
-        {
-            LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'.");
-            return -1;
-        }
-
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, this->m_Desc.PipelineType);
-        const auto LayoutInd     = ResourceLayoutIndex[ShaderTypeInd];
-        if (LayoutInd < 0)
-        {
-            LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
-        }
-
-        return LayoutInd;
-    }
-
 
     void ReserveSpaceForPipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
                                      FixedLinearAllocator&                  MemPool) noexcept
@@ -746,8 +729,6 @@ private:
     }
 
 protected:
-    size_t m_ShaderResourceLayoutHash = 0; ///< Hash computed from the shader resource layout
-
     Uint32* m_pStrides        = nullptr;
     Uint8   m_BufferSlotsUsed = 0;
 

@@ -87,6 +87,7 @@ VkAccessFlags        AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags);
 
 
 VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType);
+VkShaderStageFlags    ShaderTypesToVkShaderStageFlags(SHADER_TYPE ShaderTypes);
 
 VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags);
 VkGeometryFlagsKHR                   GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags);
