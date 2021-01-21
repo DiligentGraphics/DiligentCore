@@ -204,7 +204,7 @@ attaches to the one initialized by the app. An example of the engine initializat
 <a name="initialization_macos"></a>
 ### MacOS
 
-On MacOS, Diligent Engine supports OpenGL and Vulkan backends. Initialization of GL context on MacOS is
+On MacOS, Diligent Engine supports OpenGL, Vulkan and Metal backends. Initialization of GL context on MacOS is
 performed by the application, and the engine attaches to the context created by the app; see
 [GLView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/OSX/GLView.m)
 for details. Vulkan backend is initialized similar to other platforms. See 
@@ -213,7 +213,7 @@ for details. Vulkan backend is initialized similar to other platforms. See
 <a name="initialization_android"></a>
 ### Android
 
-On Android, you can only create OpenGLES device. The following code snippet shows an example:
+On Android, you can create OpenGLES or Vulkan device. The following code snippet shows an example:
 
 ```cpp
 auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
@@ -241,7 +241,7 @@ static
 <a name="initialization_ios"></a>
 ### iOS
 
-iOS implementation only supports OpenGLES backend. Initialization of GL context on iOS is
+iOS implementation supports OpenGLES and Metal backend. Initialization of GL context on iOS is
 performed by the application, and the engine attaches to the context initialized by the app; see
 [EAGLView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/iOS/EAGLView.m)
 for details.
