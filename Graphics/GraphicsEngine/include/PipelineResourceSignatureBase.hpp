@@ -40,6 +40,8 @@
 namespace Diligent
 {
 
+void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false);
+
 /// Template class implementing base functionality of the pipeline resource signature object.
 
 /// \tparam BaseInterface        - Base interface that this class will inheret
@@ -52,10 +54,10 @@ class PipelineResourceSignatureBase : public DeviceObjectBase<BaseInterface, Ren
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineResourceSignatureDesc>;
 
-    /// \param pRefCounters      - Reference counters object that controls the lifetime of this BLAS.
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this resource signature.
     /// \param pDevice           - Pointer to the device.
-    /// \param Desc              - TLAS description.
-    /// \param bIsDeviceInternal - Flag indicating if the BLAS is an internal device object and
+    /// \param Desc              - Resource signature description.
+    /// \param bIsDeviceInternal - Flag indicating if this resource signature is an internal device object and
     ///							   must not keep a strong reference to the device.
     PipelineResourceSignatureBase(IReferenceCounters*                  pRefCounters,
                                   RenderDeviceImplType*                pDevice,
@@ -66,6 +68,16 @@ public:
         this->m_Desc.Resources             = nullptr;
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
+
+        try
+        {
+            ValidatePipelineResourceSignatureDesc(Desc);
+        }
+        catch (...)
+        {
+            Destruct();
+            throw;
+        }
     }
 
     ~PipelineResourceSignatureBase()
@@ -85,8 +97,6 @@ public:
     bool IsUsingSeparateSamplers() const { return !IsUsingCombinedSamplers(); }
 
 protected:
-#define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
-
     void ReserveSpaceForDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) const noexcept(false)
     {
         Allocator.AddSpace<PipelineResourceDesc>(Desc.NumResources);
@@ -96,22 +106,17 @@ protected:
         {
             const auto& Res = Desc.Resources[i];
 
-            if (Res.Name == nullptr)
-                LOG_PRS_ERROR_AND_THROW("AZ TODO");
-
-            if (Res.ShaderStages == SHADER_TYPE_UNKNOWN)
-                LOG_PRS_ERROR_AND_THROW("AZ TODO");
-
-            if (Res.ArraySize == 0)
-                LOG_PRS_ERROR_AND_THROW("AZ TODO");
+            VERIFY(Res.Name != nullptr, "Name can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+            VERIFY(Res.ShaderStages != SHADER_TYPE_UNKNOWN, "ShaderStages can't be SHADER_TYPE_UNKNOWN. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+            VERIFY(Res.ArraySize != 0, "ArraySize can't be 0. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
 
             Allocator.AddSpaceForString(Res.Name);
         }
 
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
-            if (Desc.ImmutableSamplers[i].SamplerOrTextureName == nullptr)
-                LOG_PRS_ERROR_AND_THROW("AZ TODO");
+            VERIFY(Desc.ImmutableSamplers[i].SamplerOrTextureName != nullptr,
+                   "SamplerOrTextureName can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
 
             Allocator.AddSpaceForString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
         }
@@ -161,8 +166,6 @@ protected:
         m_IsDestructed = true;
 #endif
     }
-
-#undef LOG_PRS_ERROR_AND_THROW
 
     Int8 GetStaticVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& StaticVarIndex) const
     {
@@ -227,7 +230,7 @@ protected:
 protected:
     size_t m_Hash = 0;
 
-    PIPELINE_TYPE m_PipelineType = PIPELINE_TYPE(0xFF);
+    PIPELINE_TYPE m_PipelineType = static_cast<PIPELINE_TYPE>(0xFF);
 
 #ifdef DILIGENT_DEBUG
     bool m_IsDestructed = false;

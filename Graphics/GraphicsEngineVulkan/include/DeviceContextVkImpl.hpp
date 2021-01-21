@@ -476,10 +476,10 @@ private:
         Uint32 NumCommands = 0;
     } m_State;
 
-    // graphics, compute, ray tracing
-    static constexpr Uint32 PIPELINE_BIND_POINTS = 3;
+    // Graphics/mesh, compute, ray tracing
+    static constexpr Uint32 NUM_PIPELINE_BIND_POINTS = 3;
 
-    // static and dynamic descriptor sets
+    // Static/mutable and dynamic descriptor sets
     static constexpr Uint32 MAX_DESCR_SET_PER_SIGNATURE = 2;
 
     struct DescriptorSetBindInfo
@@ -490,9 +490,9 @@ private:
 
         ShaderResourceArray Resources;
         VkDescSetArray      vkSets                    = {};
-        BoolArray           PendingVkSet              = {0}; // 'true' if new descriptor set must be bound
-        BoolArray           PendingDynamicDescriptors = {0}; // 'true' if dynamic descriptor set must be bound
-        BoolArray           DynamicBuffersPresent     = {0};
+        BoolArray           PendingVkSet              = {}; // 'true' if new descriptor set must be bound
+        BoolArray           PendingDynamicDescriptors = {}; // 'true' if dynamic descriptor set must be bound
+        BoolArray           DynamicBuffersPresent     = {};
 
         DescriptorSetBindInfo()
         {}
@@ -519,8 +519,8 @@ private:
     void BindDescriptorSetsWithDynamicOffsets(DescriptorSetBindInfo& DescrSetBindInfo);
     void ValidateShaderResources();
 
-    /// AZ TODO: comment
-    std::array<DescriptorSetBindInfo, PIPELINE_BIND_POINTS> m_DescrSetBindInfo;
+    /// Descriptor set binding information for each pipeline type (graphics/mesh, compute, ray tracing)
+    std::array<DescriptorSetBindInfo, NUM_PIPELINE_BIND_POINTS> m_DescrSetBindInfo;
 
     /// AZ TODO: comment
     std::vector<Uint32> m_DynamicBufferOffsets;

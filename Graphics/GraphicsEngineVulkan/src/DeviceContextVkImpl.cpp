@@ -314,26 +314,38 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
 static Uint32 PipelineTypeToBindPointIndex(PIPELINE_TYPE Type)
 {
-    const Uint8 Indices[] = {
+    // clang-format off
+    static_assert(PIPELINE_TYPE_GRAPHICS    == 0, "PIPELINE_TYPE_GRAPHICS == 0 is expected");
+    static_assert(PIPELINE_TYPE_COMPUTE     == 1, "PIPELINE_TYPE_COMPUTE == 1 is expected");
+    static_assert(PIPELINE_TYPE_MESH        == 2, "PIPELINE_TYPE_MESH == 2 is expected");
+    static_assert(PIPELINE_TYPE_RAY_TRACING == 3, "PIPELINE_TYPE_RAY_TRACING == 3 is expected");
+    // clang-format on
+    constexpr Uint8 Indices[] = {
         0, // PIPELINE_TYPE_GRAPHICS
         1, // PIPELINE_TYPE_COMPUTE
         0, // PIPELINE_TYPE_MESH
         2  // PIPELINE_TYPE_RAY_TRACING
     };
-    static_assert(_countof(Indices) == Uint32{PIPELINE_TYPE_LAST} + 1, "AZ TODO");
+    static_assert(_countof(Indices) == Uint32{PIPELINE_TYPE_LAST} + 1, "Please add the new pipeline type to the list above");
     return Indices[Uint32{Type}];
 }
 
-static VkPipelineBindPoint PipelineTypeToBindPoint(PIPELINE_TYPE Type)
+static VkPipelineBindPoint PipelineTypeToVkBindPoint(PIPELINE_TYPE Type)
 {
-    const VkPipelineBindPoint BindPoints[] = {
+    // clang-format off
+    static_assert(PIPELINE_TYPE_GRAPHICS    == 0, "PIPELINE_TYPE_GRAPHICS == 0 is expected");
+    static_assert(PIPELINE_TYPE_COMPUTE     == 1, "PIPELINE_TYPE_COMPUTE == 1 is expected");
+    static_assert(PIPELINE_TYPE_MESH        == 2, "PIPELINE_TYPE_MESH == 2 is expected");
+    static_assert(PIPELINE_TYPE_RAY_TRACING == 3, "PIPELINE_TYPE_RAY_TRACING == 3 is expected");
+    // clang-format on
+    const VkPipelineBindPoint vkBindPoints[] = {
         VK_PIPELINE_BIND_POINT_GRAPHICS,       // PIPELINE_TYPE_GRAPHICS
         VK_PIPELINE_BIND_POINT_COMPUTE,        // PIPELINE_TYPE_COMPUTE
         VK_PIPELINE_BIND_POINT_GRAPHICS,       // PIPELINE_TYPE_MESH
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR // PIPELINE_TYPE_RAY_TRACING
     };
-    static_assert(_countof(BindPoints) == Uint32{PIPELINE_TYPE_LAST} + 1, "AZ TODO");
-    return BindPoints[Uint32{Type}];
+    static_assert(_countof(vkBindPoints) == Uint32{PIPELINE_TYPE_LAST} + 1, "Please add the new pipeline type to the list above");
+    return vkBindPoints[Uint32{Type}];
 }
 
 void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl* pPipelineStateVk)
@@ -344,7 +356,6 @@ void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl* pPipelineStat
     const auto  BindIndex       = PipelineTypeToBindPointIndex(pPipelineStateVk->GetDesc().PipelineType);
     auto&       BindInfo        = m_DescrSetBindInfo[BindIndex];
     auto&       Resources       = BindInfo.Resources;
-    const auto  BindPoint       = PipelineTypeToBindPoint(pPipelineStateVk->GetDesc().PipelineType);
     const auto  SignCount       = Layout.GetSignatureCount();
     Uint32      CompatSignCount = SignCount;
 
@@ -354,6 +365,9 @@ void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl* pPipelineStat
     // a pipeline change, and the same resources will be accessible to the newly bound pipeline.
     // (14.2.2. Pipeline Layouts, clause 'Pipeline Layout Compatibility')
     // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets-compatibility
+
+    // AZ TODO: do we need to unbind incompatible descriptor sets here or
+    //          should the user handle this?
 
     // unbind incompatible descriptor sets
     for (Uint32 i = 0; i < SignCount; ++i)
@@ -390,7 +404,7 @@ void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBind
     const auto& Layout           = pPipelineStateVk->GetPipelineLayout();
     const auto  BindIndex        = PipelineTypeToBindPointIndex(pPipelineStateVk->GetDesc().PipelineType);
     auto&       Resources        = BindInfo.Resources;
-    const auto  BindPoint        = PipelineTypeToBindPoint(pPipelineStateVk->GetDesc().PipelineType);
+    const auto  BindPoint        = PipelineTypeToVkBindPoint(pPipelineStateVk->GetDesc().PipelineType);
     const auto  SignCount        = Layout.GetSignatureCount();
     auto&       Offsets          = m_DynamicBufferOffsets;
     const auto  VkLayout         = Layout.GetVkPipelineLayout();

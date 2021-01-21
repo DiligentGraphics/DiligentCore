@@ -30,7 +30,7 @@
 // clang-format off
 
 /// \file
-/// Definition of the Diligent::IRenderDevice interface and related data structures
+/// Definition of the Diligent::IPipelineResourceSignature interface and related data structures
 
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Platforms/interface/PlatformDefinitions.h"
@@ -75,36 +75,62 @@ struct ImmutableSamplerDesc
 typedef struct ImmutableSamplerDesc ImmutableSamplerDesc;
 
 
-/// AZ TODO: comment
+/// Flags that define pipeline resource properties
 DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
 {
+    /// Resource has no special properties
     PIPELINE_RESOURCE_FLAG_UNKNOWN            = 0x00,
-    PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS = 0x01, ///< Vulkan only, for SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_TYPE_BUFFER_SRV
-    PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE     = 0x02, ///< For SHADER_RESOURCE_TYPE_TEXTURE_SRV
-    PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER       = 0x04, ///< For SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_TYPE_BUFFER_SRV
+
+    /// Indicates that dynamic buffers will never be bound to the resource
+    /// variable. Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 
+    /// SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_TYPE_BUFFER_SRV resources.
+    ///
+    /// \remarks    In Vulkan and Direct3D12 backends, dynamic buffers require extra work
+    ///             at run time. If an application knows it will never bind a dynamic buffer to
+    ///             the variable, it should use PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag
+    ///             to improve performance. This flag is not required and non-dynamic buffers
+    ///             will still work even if the flag is not used. It is an error to bind a
+    ///             dynamic buffer to resource that uses
+    ///             PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.
+    PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS = 0x01,
+
+    /// Indicates that a texture SRV will be combined with a sampler.
+    /// Applies to SHADER_RESOURCE_TYPE_TEXTURE_SRV resources.
+    PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE     = 0x02,
+
+    /// Indicates that this variable will be used to bind formatted buffers.
+    /// Applies to SHADER_RESOURCE_TYPE_BUFFER_UAV and SHADER_RESOURCE_TYPE_BUFFER_SRV
+    /// resources.
+    ///
+    /// \remarks    In Vulkan backend formatted buffers require another descriptor type
+    ///             as opposed to structured buffers. If an application will be using
+    ///             formatted buffers with buffer UAVs and SRVs, it must specify the
+    ///             PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER flag.
+    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 0x04
 };
 DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_RESOURCE_FLAGS);
 
 
-/// AZ TODO: comment
+/// Pipeline resource description.
 struct PipelineResourceDesc
 {
-    /// AZ TODO: comment
+    /// Resource name in the shader
     const char*                    Name          DEFAULT_INITIALIZER(nullptr);
 
-    /// AZ TODO: comment
+    /// Shader stages that this resource applies to. When multiple shader stages are specified,
+    /// all stages will share the same resource.
     SHADER_TYPE                    ShaderStages  DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
-    /// AZ TODO: comment
+    /// Resource array size (must be 1 for non-array resources).
     Uint32                         ArraySize     DEFAULT_INITIALIZER(1);
 
-    /// AZ TODO: comment
+    /// Resource type, see Diligent::SHADER_RESOURCE_TYPE.
     SHADER_RESOURCE_TYPE           ResourceType  DEFAULT_INITIALIZER(SHADER_RESOURCE_TYPE_UNKNOWN);
 
-    /// AZ TODO: comment
+    /// Resource variable type, see Diligent::SHADER_RESOURCE_VARIABLE_TYPE.
     SHADER_RESOURCE_VARIABLE_TYPE  VarType       DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
     
-    /// AZ TODO: comment
+    /// Special resource flags, see Diligent::PIPELINE_RESOURCE_FLAGS.
     PIPELINE_RESOURCE_FLAGS        Flags         DEFAULT_INITIALIZER(PIPELINE_RESOURCE_FLAG_UNKNOWN);
 
 #if DILIGENT_CPP_INTERFACE
@@ -128,19 +154,19 @@ struct PipelineResourceDesc
 typedef struct PipelineResourceDesc PipelineResourceDesc;
 
 
-/// AZ TODO: comment
+/// Pipeline resource signature description.
 struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
-    /// AZ TODO: comment
+    /// A pointer to array of resource descriptions. See Diligent::PipelineResourceDesc.
     const PipelineResourceDesc*  Resources  DEFAULT_INITIALIZER(nullptr);
     
-    /// AZ TODO: comment
+    /// The number of resources in Resources array.
     Uint32  NumResources  DEFAULT_INITIALIZER(0);
     
-    /// AZ TODO: comment
+    /// A pointer to array of immutable samplers. See Diligent::ImmutableSamplerDesc.
     const ImmutableSamplerDesc*  ImmutableSamplers  DEFAULT_INITIALIZER(nullptr);
     
-    /// AZ TODO: comment
+    /// The number of immutable samplers in ImmutableSamplers array.
     Uint32  NumImmutableSamplers  DEFAULT_INITIALIZER(0);
     
     /// AZ TODO: comment
@@ -149,6 +175,9 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// AZ TODO: comment
     Uint16 BindingOffsets [SHADER_RESOURCE_TYPE_LAST + 1]  DEFAULT_INITIALIZER({});
     
+    
+    // AZ TODO: add UseCombinedTextureSamplers back?
+
     /// If UseCombinedTextureSamplers is true, defines the suffix added to the
     /// texture variable name to get corresponding sampler name.  For example,
     /// for default value "_sampler", a texture named "tex" will be combined
@@ -178,11 +207,11 @@ static const INTERFACE_ID IID_PipelineResourceSignature =
 
 // clang-format off
 
-/// Pipeline state interface
+/// Pipeline resource signature interface
 DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO: comment
+    /// Returns the pipeline resource signature description, see Diligent::PipelineResourceSignatureDesc.
     virtual const PipelineResourceSignatureDesc& METHOD(GetDesc)() const override = 0;
 #endif
     
@@ -198,7 +227,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
                                                      bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
     
 
-    /// Binds resources for all shaders in the pipeline resource signature
+    /// Binds static resources for all shaders in the pipeline resource signature
 
     /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
     ///                           Any combination of Diligent::SHADER_TYPE may be used.

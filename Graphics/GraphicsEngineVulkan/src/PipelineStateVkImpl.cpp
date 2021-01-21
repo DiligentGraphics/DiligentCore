@@ -526,12 +526,12 @@ void GetShaderResourceTypeAndFlags(SPIRVShaderResourceAttribs::ResourceType Type
 
         case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
             OutType  = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            OutFlags = PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER;
+            OutFlags = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
             break;
 
         case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
             OutType  = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            OutFlags = PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER;
+            OutFlags = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
             break;
 
         case SPIRVShaderResourceAttribs::ResourceType::StorageImage:

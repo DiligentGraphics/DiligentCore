@@ -90,10 +90,10 @@ private:
     Uint32 m_DynamicOffsetCount : 25;
 
     Uint32 m_SignatureCount : 3;
-    static_assert(MAX_RESOURCE_SIGNATURES == (1 << 3), "update m_SignatureCount bits count");
+    static_assert(MAX_RESOURCE_SIGNATURES == (1 << 3), "Update m_SignatureCount bits count");
 
     Uint32 m_DescrSetCount : 4;
-    static_assert(MAX_RESOURCE_SIGNATURES * 2 == (1 << 4), "update m_DescrSetCount bits count");
+    static_assert(MAX_RESOURCE_SIGNATURES * 2 == (1 << 4), "Update m_DescrSetCount bits count");
 
     using SignatureArray     = std::array<RefCntAutoPtr<PipelineResourceSignatureVkImpl>, MAX_RESOURCE_SIGNATURES>;
     using DescSetOffsetArray = std::array<Uint8, MAX_RESOURCE_SIGNATURES>;

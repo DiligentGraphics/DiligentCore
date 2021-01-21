@@ -34,28 +34,25 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-// clang-format off
-
-/// Maximum number of input buffer slots.
+/// The maximum number of input buffer slots.
 /// D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT == 32
 #define DILIGENT_MAX_BUFFER_SLOTS 32
 
-/// Maximum number of simultaneous render targets.
+/// The maximum number of simultaneous render targets.
 #define DILIGENT_MAX_RENDER_TARGETS 8
 
-/// Maximum number of viewports.
+/// The maximum number of viewports.
 #define DILIGENT_MAX_VIEWPORTS 16
 
 static const Uint32 MAX_BUFFER_SLOTS   = DILIGENT_MAX_BUFFER_SLOTS;
 static const Uint32 MAX_RENDER_TARGETS = DILIGENT_MAX_RENDER_TARGETS;
 static const Uint32 MAX_VIEWPORTS      = DILIGENT_MAX_VIEWPORTS;
 
-/// Maximum number of shader stages in a pipeline.
+/// The maximum number of shader stages in a pipeline.
 /// (Vertex, Hull, Domain, Geometry, Pixel) or (Amplification, Mesh, Pixel), or (Compute) or (RayGen, Miss, ClosestHit, AnyHit, Intersection, Callable)
 static const Uint32 MAX_SHADERS_IN_PIPELINE = 6;
 
+/// The maximum number of resource signatures that one pipeline can use
 static const Uint32 MAX_RESOURCE_SIGNATURES = 8;
-
-// clang-format on
 
 DILIGENT_END_NAMESPACE // namespace Diligent

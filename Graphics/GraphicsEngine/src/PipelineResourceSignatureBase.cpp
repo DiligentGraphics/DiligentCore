@@ -25,23 +25,37 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsEngine/interface/PipelineResourceSignature.h"
+#include "PipelineResourceSignatureBase.hpp"
 
-void TestPipelineResourceSignature(struct IPipelineResourceSignature* pSign)
+namespace Diligent
 {
-    IPipelineResourceSignature_CreateShaderResourceBinding(pSign, (struct IShaderResourceBinding**)NULL, true);
 
-    struct IShaderResourceVariable* pVar1 = IPipelineResourceSignature_GetStaticVariableByName(pSign, SHADER_TYPE_UNKNOWN, "name");
-    (void)pVar1;
+#define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
-    struct IShaderResourceVariable* pVar2 = IPipelineResourceSignature_GetStaticVariableByIndex(pSign, SHADER_TYPE_UNKNOWN, 0);
-    (void)pVar2;
+void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false)
+{
+    for (Uint32 i = 0; i < Desc.NumResources; ++i)
+    {
+        const auto& Res = Desc.Resources[i];
 
-    Uint32 Count = IPipelineResourceSignature_GetStaticVariableCount(pSign, SHADER_TYPE_UNKNOWN);
-    (void)Count;
+        if (Res.Name == nullptr)
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Name must not be null");
 
-    IPipelineResourceSignature_BindStaticResources(pSign, SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, (struct IResourceMapping*)NULL, BIND_SHADER_RESOURCES_UPDATE_STATIC);
+        if (Res.ShaderStages == SHADER_TYPE_UNKNOWN)
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN");
 
-    bool Comp = IPipelineResourceSignature_IsCompatibleWith(pSign, (const struct IPipelineResourceSignature*)NULL);
-    (void)Comp;
+        if (Res.ArraySize == 0)
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must not be 0");
+    }
+
+    for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
+    {
+        if (Desc.ImmutableSamplers[i].SamplerOrTextureName == nullptr)
+            LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be null");
+    }
 }
+
+#undef LOG_PRS_ERROR_AND_THROW
+
+
+} // namespace Diligent

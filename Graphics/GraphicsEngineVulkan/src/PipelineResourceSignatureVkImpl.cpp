@@ -71,19 +71,19 @@ VkDescriptorType GetVkDescriptorType(DescriptorType Type)
 
 DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
 {
-    const bool WithDynamicOffset = !(Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS);
+    const bool WithDynamicOffset = !(Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS);
     const bool CombinedSampler   = (Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE);
-    const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER);
+    const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER);
 
     static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
     switch (Res.ResourceType)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-            VERIFY_EXPR(!(Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS));
+            VERIFY_EXPR(!(Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS));
             return WithDynamicOffset ? DescriptorType::UniformBufferDynamic : DescriptorType::UniformBuffer;
 
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-            VERIFY_EXPR(!(Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS | PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER)));
+            VERIFY_EXPR(!(Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)));
             return UseTexelBuffer ? DescriptorType::StorageTexelBuffer :
                                     (WithDynamicOffset ? DescriptorType::StorageBufferDynamic : DescriptorType::StorageBuffer);
 
@@ -92,7 +92,7 @@ DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
             return CombinedSampler ? DescriptorType::CombinedImageSampler : DescriptorType::SeparateImage;
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-            VERIFY_EXPR(!(Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS | PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER)));
+            VERIFY_EXPR(!(Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)));
             return UseTexelBuffer ? DescriptorType::UniformTexelBuffer :
                                     (WithDynamicOffset ? DescriptorType::StorageBufferDynamic_ReadOnly : DescriptorType::StorageBuffer_ReadOnly);
 

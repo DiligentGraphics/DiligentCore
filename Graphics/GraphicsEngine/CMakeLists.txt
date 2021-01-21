@@ -75,6 +75,7 @@ set(SOURCE
     src/DeviceContextBase.cpp
     src/EngineMemory.cpp
     src/FramebufferBase.cpp
+    src/PipelineResourceSignatureBase.cpp
     src/PipelineStateBase.cpp
     src/ResourceMappingBase.cpp
     src/ShaderBindingTableBase.cpp
