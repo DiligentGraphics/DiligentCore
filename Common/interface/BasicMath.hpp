@@ -2189,6 +2189,20 @@ inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
     return x | (y << 1u);
 }
 
+template <typename T>
+inline T ExtractBit(T& bits)
+{
+    static_assert(std::is_enum<T>::value || std::is_integral<T>::value, "T must be enum or integer type");
+
+    using U = std::conditional_t<(sizeof(T) > sizeof(Uint32)), Uint64, Uint32>;
+    VERIFY_EXPR(static_cast<U>(bits) > 0);
+
+    const U result = static_cast<U>(bits) & ~(static_cast<U>(bits) - U{1});
+    bits           = static_cast<T>(static_cast<U>(bits) & ~result);
+
+    return static_cast<T>(result);
+}
+
 } // namespace Diligent
 
 

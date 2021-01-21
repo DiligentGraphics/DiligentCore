@@ -73,22 +73,23 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*    
         auto& ResourceCacheDataAllocator = SRBMemAllocator.GetResourceCacheDataAllocator(0);
         pPRS->InitResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
 
+        // Use resource signature to initialize resource memory in the cache
+        pPRS->InitializeResourceMemoryInCache(m_ShaderResourceCache);
+
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            auto ShaderInd = GetShaderTypePipelineIndex(pPRS->GetShaderStageType(s), pPRS->GetPipelineType());
+            const auto ShaderType = pPRS->GetShaderStageType(s);
+            const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
 
             m_ShaderVarIndex[ShaderInd] = static_cast<Int8>(s);
 
             auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
 
-            // Use source layout to initialize resource memory in the cache
-            pPRS->InitializeResourceMemoryInCache(m_ShaderResourceCache);
-
             // Create shader variable manager in place
             // Initialize vars manager to reference mutable and dynamic variables
             // Note that the cache has space for all variable types
             const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-            m_pShaderVarMgrs[s].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes));
+            m_pShaderVarMgrs[s].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes), ShaderType);
         }
 #ifdef DILIGENT_DEBUG
         m_ShaderResourceCache.DbgVerifyResourceInitialization();
@@ -124,7 +125,20 @@ void ShaderResourceBindingVkImpl::Destruct()
 
 void ShaderResourceBindingVkImpl::BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)
 {
-    // AZ TODO
+    const auto PipelineType = GetPipelineType();
+    for (Uint32 ShaderInd = 0; ShaderInd < m_ShaderVarIndex.size(); ++ShaderInd)
+    {
+        const auto VarMngrInd = m_ShaderVarIndex[ShaderInd];
+        if (VarMngrInd >= 0)
+        {
+            // ShaderInd is the shader type pipeline index here
+            const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
+            if (ShaderFlags & ShaderType)
+            {
+                m_pShaderVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
+            }
+        }
+    }
 }
 
 Uint32 ShaderResourceBindingVkImpl::GetVariableCount(SHADER_TYPE ShaderType) const

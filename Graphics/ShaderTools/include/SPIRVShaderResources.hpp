@@ -89,7 +89,7 @@ struct SPIRVShaderResourceAttribs
 private:
       // Defines the mapping between separate samplers and seperate images when HLSL-style
       // combined texture samplers are in use (i.e. texture2D g_Tex + sampler g_Tex_sampler).
-/* 12 */      Uint32                SepSmplrOrImgInd        = InvalidSepSmplrOrImgInd;
+/* 12 */      Uint32                SepSmplrOrImgInd        = InvalidSepSmplrOrImgInd; // AZ TODO: remove
 public:
       // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
 /* 16 */const uint32_t              BindingDecorationOffset;

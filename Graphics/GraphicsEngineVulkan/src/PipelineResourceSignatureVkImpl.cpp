@@ -30,124 +30,231 @@
 #include "ShaderResourceBindingVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
+#include "SamplerVkImpl.hpp"
+#include "TextureViewVkImpl.hpp"
+#include "TopLevelASVkImpl.hpp"
+#include "BasicMath.hpp"
+#include "DynamicLinearAllocator.hpp"
 
 namespace Diligent
 {
+namespace
+{
+VkDescriptorType GetVkDescriptorType(DescriptorType Type)
+{
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
+    switch (Type)
+    {
+        // clang-format off
+        case DescriptorType::Sampler:                       return VK_DESCRIPTOR_TYPE_SAMPLER;
+        case DescriptorType::CombinedImageSampler:          return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        case DescriptorType::SeparateImage:                 return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        case DescriptorType::StorageImage:                  return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        case DescriptorType::StorageImage_ReadOnly:         return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        case DescriptorType::UniformTexelBuffer:            return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        case DescriptorType::StorageTexelBuffer:            return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        case DescriptorType::StorageTexelBuffer_ReadOnly:   return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        case DescriptorType::UniformBuffer:                 return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        case DescriptorType::UniformBufferDynamic:          return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        case DescriptorType::StorageBuffer:                 return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        case DescriptorType::StorageBuffer_ReadOnly:        return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        case DescriptorType::StorageBufferDynamic:          return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        case DescriptorType::StorageBufferDynamic_ReadOnly: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        case DescriptorType::InputAttachment:               return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        case DescriptorType::AccelerationStructure:         return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+            // clang-format on
+        default:
+            UNEXPECTED("unknown descriptor type");
+            return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+    }
+}
 
-VkDescriptorType PipelineResourceSignatureVkImpl::GetVkDescriptorType(const PipelineResourceDesc& Res)
+DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
 {
     const bool WithDynamicOffset = !(Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS);
     const bool CombinedSampler   = (Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE);
     const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER);
 
-    VERIFY_EXPR(WithDynamicOffset ^ UseTexelBuffer);
-    VERIFY_EXPR(CombinedSampler ? !(WithDynamicOffset | UseTexelBuffer) : true);
-
     static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
     switch (Res.ResourceType)
     {
-        // clang-format off
-        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return WithDynamicOffset ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return UseTexelBuffer ? VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER : (WithDynamicOffset ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return CombinedSampler ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER : VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return UseTexelBuffer ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER : (WithDynamicOffset ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        case SHADER_RESOURCE_TYPE_SAMPLER:          return VK_DESCRIPTOR_TYPE_SAMPLER;
-        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-        case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-        default:                                    UNEXPECTED("unknown resource type");
-            // clang-format on
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
+            VERIFY_EXPR(!(Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS));
+            return WithDynamicOffset ? DescriptorType::UniformBufferDynamic : DescriptorType::UniformBuffer;
+
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:
+            VERIFY_EXPR(!(Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS | PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER)));
+            return UseTexelBuffer ? DescriptorType::StorageTexelBuffer :
+                                    (WithDynamicOffset ? DescriptorType::StorageBufferDynamic : DescriptorType::StorageBuffer);
+
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
+            VERIFY_EXPR(!(Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE));
+            return CombinedSampler ? DescriptorType::CombinedImageSampler : DescriptorType::SeparateImage;
+
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:
+            VERIFY_EXPR(!(Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS | PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER)));
+            return UseTexelBuffer ? DescriptorType::UniformTexelBuffer :
+                                    (WithDynamicOffset ? DescriptorType::StorageBufferDynamic_ReadOnly : DescriptorType::StorageBuffer_ReadOnly);
+
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
+            VERIFY_EXPR(!Res.Flags);
+            return DescriptorType::StorageImage;
+
+        case SHADER_RESOURCE_TYPE_SAMPLER:
+            VERIFY_EXPR(!Res.Flags);
+            return DescriptorType::Sampler;
+
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
+            VERIFY_EXPR(!Res.Flags);
+            return DescriptorType::InputAttachment;
+
+        case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
+            VERIFY_EXPR(!Res.Flags);
+            return DescriptorType::AccelerationStructure;
+
+        default:
+            UNEXPECTED("unknown resource type");
+            return DescriptorType::Unknown;
     }
-    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
+
+BUFFER_VIEW_TYPE DescriptorTypeToBufferView(DescriptorType Type)
+{
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
+    switch (Type)
+    {
+        // clang-format off
+        case DescriptorType::UniformTexelBuffer:
+        case DescriptorType::StorageTexelBuffer_ReadOnly:
+        case DescriptorType::StorageBuffer_ReadOnly:
+        case DescriptorType::StorageBufferDynamic_ReadOnly: return BUFFER_VIEW_SHADER_RESOURCE;
+        case DescriptorType::StorageTexelBuffer:
+        case DescriptorType::StorageBuffer:
+        case DescriptorType::StorageBufferDynamic:          return BUFFER_VIEW_UNORDERED_ACCESS;
+            // clang-format on
+        default:
+            UNEXPECTED("unsupported descriptor type for buffer view");
+            return BUFFER_VIEW_UNDEFINED;
+    }
+}
+
+TEXTURE_VIEW_TYPE DescriptorTypeToTextureView(DescriptorType Type)
+{
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
+    switch (Type)
+    {
+        // clang-format off
+        case DescriptorType::StorageImage:          return TEXTURE_VIEW_UNORDERED_ACCESS;
+        case DescriptorType::CombinedImageSampler:
+        case DescriptorType::SeparateImage:
+        case DescriptorType::StorageImage_ReadOnly:
+        case DescriptorType::InputAttachment:       return TEXTURE_VIEW_SHADER_RESOURCE;
+            // clang-format on
+        default:
+            UNEXPECTED("unsupported descriptor type for texture view");
+            return TEXTURE_VIEW_UNDEFINED;
+    }
+}
+
+Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
+                           DescriptorType                       DescType,
+                           const PipelineResourceSignatureDesc& Desc,
+                           const char*                          SamplerSuffix)
+{
+    if (DescType == DescriptorType::CombinedImageSampler)
+    {
+        SamplerSuffix = nullptr;
+    }
+    else if (DescType == DescriptorType::Sampler)
+    {
+        // Use SamplerSuffix. If HLSL-style combined images samplers are not used,
+        // SamplerSuffix will be null and we will be looking for the sampler itself.
+    }
+    else
+    {
+        UNEXPECTED("Immutable sampler can only be assigned to a sampled image or separate sampler");
+        return -1;
+    }
+
+    for (Uint32 s = 0; s < Desc.NumImmutableSamplers; ++s)
+    {
+        const auto& ImtblSam = Desc.ImmutableSamplers[s];
+        if (((ImtblSam.ShaderStages & Res.ShaderStages) != 0) && StreqSuff(Res.Name, ImtblSam.SamplerOrTextureName, SamplerSuffix))
+        {
+            VERIFY_EXPR((ImtblSam.ShaderStages & Res.ShaderStages) == Res.ShaderStages);
+            return s;
+        }
+    }
+
+    return -1;
+}
+} // namespace
+
+
+RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
+{
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
+    switch (Type)
+    {
+        // clang-format off
+        case DescriptorType::Sampler:                       return RESOURCE_STATE_UNKNOWN;
+        case DescriptorType::CombinedImageSampler:          return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::SeparateImage:                 return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::StorageImage:                  return RESOURCE_STATE_UNORDERED_ACCESS;
+        case DescriptorType::StorageImage_ReadOnly:         return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::UniformTexelBuffer:            return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::StorageTexelBuffer:            return RESOURCE_STATE_UNORDERED_ACCESS;
+        case DescriptorType::StorageTexelBuffer_ReadOnly:   return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::UniformBuffer:                 return RESOURCE_STATE_CONSTANT_BUFFER;
+        case DescriptorType::UniformBufferDynamic:          return RESOURCE_STATE_CONSTANT_BUFFER;
+        case DescriptorType::StorageBuffer:                 return RESOURCE_STATE_UNORDERED_ACCESS;
+        case DescriptorType::StorageBuffer_ReadOnly:        return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::StorageBufferDynamic:          return RESOURCE_STATE_UNORDERED_ACCESS;
+        case DescriptorType::StorageBufferDynamic_ReadOnly: return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::InputAttachment:               return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::AccelerationStructure:         return RESOURCE_STATE_SHADER_RESOURCE;
+            // clang-format on
+        default:
+            UNEXPECTED("unknown descriptor type");
+            return RESOURCE_STATE_UNKNOWN;
+    }
+}
+
+
+#define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
 PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
                                                                  RenderDeviceVkImpl*                  pDevice,
                                                                  const PipelineResourceSignatureDesc& Desc,
                                                                  bool                                 bIsDeviceInternal) :
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
-    m_SRBMemAllocator{GetRawAllocator()}
+    m_SRBMemAllocator{GetRawAllocator()},
+    m_DynamicBufferCount{0},
+    m_NumShaders{0}
 {
-#define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
-
     try
     {
         FixedLinearAllocator MemPool{GetRawAllocator()};
 
-        MemPool.AddSpace<PackedBindingIndex>(Desc.NumResources);
+        // reserve at least 1 element because m_pResourceAttribs must hold pointer to memory
+        MemPool.AddSpace<ResourceAttribs>(std::max(1u, Desc.NumResources));
+        MemPool.AddSpace<ImmutableSamplerPtrType>(Desc.NumImmutableSamplers);
 
         ReserveSpaceForDescription(MemPool, Desc);
 
         Int8   StaticVarStageCount = 0;
         Uint32 StaticVarCount      = 0;
-        {
-            // get active shader stages
-            SHADER_TYPE Stages          = SHADER_TYPE_UNKNOWN;
-            SHADER_TYPE StaticResStages = SHADER_TYPE_UNKNOWN;
-
-            for (Uint32 i = 0; i < Desc.NumResources; ++i)
-            {
-                const auto& Res = Desc.Resources[i];
-                Stages |= Res.ShaderStages;
-
-                if (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                {
-                    StaticResStages |= Res.ShaderStages;
-                    StaticVarCount += Res.ArraySize;
-                }
-            }
-
-            m_ShaderStages = Stages;
-            m_NumShaders   = static_cast<Uint8>(PlatformMisc::CountOneBits(static_cast<Uint32>(Stages)));
-
-            if (Stages == SHADER_TYPE_COMPUTE)
-            {
-                m_PipelineType = PIPELINE_TYPE_COMPUTE;
-            }
-            else if (Stages & (SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH))
-            {
-                m_PipelineType = PIPELINE_TYPE_MESH;
-            }
-            else if (Stages < SHADER_TYPE_COMPUTE)
-            {
-                m_PipelineType = PIPELINE_TYPE_GRAPHICS;
-            }
-            else if (Stages >= SHADER_TYPE_RAY_GEN)
-            {
-                m_PipelineType = PIPELINE_TYPE_RAY_TRACING;
-            }
-            else
-            {
-                LOG_PRS_ERROR_AND_THROW("can not deduce pipeline type - used incompatible shader stages");
-            }
-
-            m_StaticVarIndex.fill(-1);
-
-            for (; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageCount)
-            {
-                auto StageBit   = static_cast<SHADER_TYPE>(1 << PlatformMisc::GetLSB(Uint32{StaticResStages}));
-                StaticResStages = StaticResStages & ~StageBit;
-
-                const auto ShaderTypeInd        = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
-                m_StaticVarIndex[ShaderTypeInd] = StaticVarStageCount;
-            }
-
-            if (StaticVarStageCount > 0)
-            {
-                MemPool.AddSpace<ShaderResourceCacheVk>(1);
-                MemPool.AddSpace<ShaderVariableManagerVk>(StaticVarStageCount);
-            }
-        }
-
+        Uint8  DSMapping[2]        = {};
+        ReserveSpaceForStaticVarsMgrs(Desc, MemPool, StaticVarStageCount, StaticVarCount, DSMapping);
 
         MemPool.Reserve();
 
-
-        m_pBindingIndices = MemPool.Allocate<PackedBindingIndex>(m_Desc.NumResources);
+        m_pResourceAttribs  = MemPool.ConstructArray<ResourceAttribs>(std::max(1u, m_Desc.NumResources));
+        m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerPtrType>(m_Desc.NumImmutableSamplers);
 
         // The memory is now owned by PipelineResourceSignatureVkImpl and will be freed by Destruct().
         auto* Ptr = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_pBindingIndices);
+        VERIFY_EXPR(Ptr == m_pResourceAttribs);
         (void)Ptr;
 
         CopyDescription(MemPool, Desc);
@@ -161,79 +268,245 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
             const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
 
-            for (Int8 i = 0; i < StaticVarStageCount; ++i)
+            for (Uint32 i = 0; i < m_StaticVarIndex.size(); ++i)
             {
-                new (m_StaticVarsMgrs + i) ShaderVariableManagerVk{*this, *m_pResourceCache};
-                m_StaticVarsMgrs[i].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes));
+                Int8 Idx = m_StaticVarIndex[i];
+                if (Idx >= 0)
+                {
+                    VERIFY_EXPR(Idx < StaticVarStageCount);
+                    const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
+                    new (m_StaticVarsMgrs + Idx) ShaderVariableManagerVk{*this, *m_pResourceCache};
+                    m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
+                }
             }
         }
 
-        std::vector<VkDescriptorSetLayoutBinding> LayoutBindings[2];
-
-        for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
-        {
-            const auto& Res     = m_Desc.Resources[i];
-            auto&       Binding = m_pBindingIndices[i];
-
-            Binding.DescSet    = (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0);
-            Binding.Binding    = static_cast<Uint16>(LayoutBindings[Binding.DescSet].size());
-            Binding.SamplerInd = 0; // AZ TODO
-
-            LayoutBindings[Binding.DescSet].emplace_back();
-            auto& LayoutBinding = LayoutBindings[Binding.DescSet].back();
-
-            LayoutBinding.binding            = Binding.Binding;
-            LayoutBinding.descriptorCount    = Res.ArraySize;
-            LayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(Res.ShaderStages);
-            LayoutBinding.pImmutableSamplers = nullptr;
-            LayoutBinding.descriptorType     = GetVkDescriptorType(Res);
-
-            if (!(Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_OFFSETS))
-                m_DynamicBufferCount += static_cast<Uint16>(Res.ArraySize);
-
-            if (m_pResourceCache && Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                m_pResourceCache->InitializeResources(0, Binding.Binding, Res.ArraySize, LayoutBinding.descriptorType);
-        }
-
-        if (m_Desc.SRBAllocationGranularity > 1)
-        {
-            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-
-            Uint32       UnusedNumVars          = 0;
-            const size_t ShaderVariableDataSize = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), UnusedNumVars);
-
-            const Uint32 NumSets              = !LayoutBindings[0].empty() + !LayoutBindings[1].empty();
-            const Uint32 DescriptorSetSizes[] = {static_cast<Uint32>(LayoutBindings[0].size()), static_cast<Uint32>(LayoutBindings[1].size())};
-            const size_t CacheMemorySize      = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes);
-
-            m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, 1, &ShaderVariableDataSize, 1, &CacheMemorySize);
-        }
-
-        VkDescriptorSetLayoutCreateInfo SetLayoutCI = {};
-
-        SetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        SetLayoutCI.pNext = nullptr;
-        SetLayoutCI.flags = 0;
-
-        const auto& LogicalDevice = pDevice->GetLogicalDevice();
-
-        for (Uint32 i = 0; i < _countof(LayoutBindings); ++i)
-        {
-            auto& LayoutBinding = LayoutBindings[i];
-            if (LayoutBinding.empty())
-                continue;
-
-            SetLayoutCI.bindingCount = static_cast<Uint32>(LayoutBinding.size());
-            SetLayoutCI.pBindings    = LayoutBinding.data();
-            m_VkDescSetLayouts[i]    = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
-        }
+        CreateLayout(StaticVarCount, DSMapping);
     }
     catch (...)
     {
         Destruct();
         throw;
     }
+}
+
+void PipelineResourceSignatureVkImpl::ReserveSpaceForStaticVarsMgrs(const PipelineResourceSignatureDesc& Desc,
+                                                                    FixedLinearAllocator&                MemPool,
+                                                                    Int8&                                StaticVarStageCount,
+                                                                    Uint32&                              StaticVarCount,
+                                                                    Uint8                                DSMapping[2])
+{
+    // get active shader stages
+    SHADER_TYPE Stages          = SHADER_TYPE_UNKNOWN;
+    SHADER_TYPE StaticResStages = SHADER_TYPE_UNKNOWN;
+
+    bool VarExist[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] = {};
+
+    for (Uint32 i = 0; i < Desc.NumResources; ++i)
+    {
+        const auto& Res = Desc.Resources[i];
+        Stages |= Res.ShaderStages;
+
+        if (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            StaticResStages |= Res.ShaderStages;
+            StaticVarCount += Res.ArraySize;
+        }
+
+        VarExist[Res.VarType] = true;
+    }
+
+    // initialize descriptor set mapping table
+    {
+        Uint8 Idx = 0;
+        if (VarExist[SHADER_RESOURCE_VARIABLE_TYPE_STATIC] || VarExist[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE])
+            DSMapping[0] = Idx++;
+        else
+            DSMapping[0] = 0xFF;
+
+        if (VarExist[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC])
+            DSMapping[1] = Idx;
+        else
+            DSMapping[1] = 0xFF;
+    }
+
+    m_ShaderStages = Stages;
+    m_NumShaders   = PlatformMisc::CountOneBits(static_cast<Uint32>(Stages));
+
+    if (Stages == SHADER_TYPE_COMPUTE)
+    {
+        m_PipelineType = PIPELINE_TYPE_COMPUTE;
+    }
+    else if (Stages & (SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH))
+    {
+        m_PipelineType = PIPELINE_TYPE_MESH;
+    }
+    else if (Stages < SHADER_TYPE_COMPUTE)
+    {
+        m_PipelineType = PIPELINE_TYPE_GRAPHICS;
+    }
+    else if (Stages >= SHADER_TYPE_RAY_GEN)
+    {
+        m_PipelineType = PIPELINE_TYPE_RAY_TRACING;
+    }
+    else
+    {
+        LOG_PRS_ERROR_AND_THROW("can not deduce pipeline type - used incompatible shader stages");
+    }
+
+    m_StaticVarIndex.fill(-1);
+
+    for (; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageCount)
+    {
+        const auto StageBit             = ExtractBit(StaticResStages);
+        const auto ShaderTypeInd        = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
+        m_StaticVarIndex[ShaderTypeInd] = StaticVarStageCount;
+    }
+
+    if (StaticVarStageCount > 0)
+    {
+        MemPool.AddSpace<ShaderResourceCacheVk>(1);
+        MemPool.AddSpace<ShaderVariableManagerVk>(StaticVarStageCount);
+    }
+}
 #undef LOG_PRS_ERROR_AND_THROW
+
+void PipelineResourceSignatureVkImpl::CreateLayout(Uint32 StaticVarCount, const Uint8 DSMapping[2])
+{
+    std::vector<VkDescriptorSetLayoutBinding> LayoutBindings[2];
+    DynamicLinearAllocator                    TempAllocator{GetRawAllocator()};
+
+    Uint32 CacheOffsets[Uint32{SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES}] = {0, StaticVarCount, 0};
+
+    for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
+    {
+        const auto&  Res         = m_Desc.Resources[i];
+        auto&        Attribs     = m_pResourceAttribs[i];
+        auto&        CacheOffset = CacheOffsets[Uint32{Res.VarType}];
+        const Uint32 SetIdx      = (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0);
+
+        // If all resources are dynamic then signature contains only one descriptor set layout with index 0,
+        // so remap SetIdx to actual descriptor set index.
+        VERIFY_EXPR(DSMapping[SetIdx] <= 1);
+
+        Attribs.DescrSet     = DSMapping[SetIdx];
+        Attribs.BindingIndex = static_cast<Uint16>(LayoutBindings[SetIdx].size());
+        Attribs.CacheOffset  = CacheOffset;
+        Attribs.Type         = GetDescriptorType(Res);
+
+        CacheOffset += Res.ArraySize;
+
+        LayoutBindings[SetIdx].emplace_back();
+        auto& LayoutBinding = LayoutBindings[SetIdx].back();
+
+        LayoutBinding.binding            = Attribs.BindingIndex;
+        LayoutBinding.descriptorCount    = Res.ArraySize;
+        LayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(Res.ShaderStages);
+        LayoutBinding.pImmutableSamplers = nullptr;
+        LayoutBinding.descriptorType     = GetVkDescriptorType(Attribs.Type);
+
+        if (Attribs.Type == DescriptorType::SeparateImage)
+        {
+            Attribs.SamplerInd = FindAssignedSampler(Res);
+        }
+
+        if (Attribs.Type == DescriptorType::CombinedImageSampler ||
+            Attribs.Type == DescriptorType::Sampler)
+        {
+            // Only search for the immutable sampler for combined image samplers and separate samplers
+            Int32 SrcImmutableSamplerInd = FindImmutableSampler(Res, Attribs.Type, m_Desc, GetCombinedSamplerSuffix());
+            if (SrcImmutableSamplerInd >= 0)
+            {
+                auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
+                const auto& ImmutableSamplerDesc = m_Desc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
+                if (!ImmutableSampler)
+                    GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
+
+                const VkSampler VkImmutableSampler = ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler();
+                VkSampler*      SamplerArray       = TempAllocator.Allocate<VkSampler>(Res.ArraySize);
+                for (Uint32 a = 0; a < Res.ArraySize; ++a)
+                    SamplerArray[a] = VkImmutableSampler;
+
+                LayoutBinding.pImmutableSamplers = SamplerArray;
+                Attribs.ImmutableSamplerAssigned = true;
+            }
+        }
+
+        if (Attribs.Type == DescriptorType::UniformBufferDynamic ||
+            Attribs.Type == DescriptorType::StorageBufferDynamic ||
+            Attribs.Type == DescriptorType::StorageBufferDynamic_ReadOnly)
+        {
+            m_DynamicBufferCount += Res.ArraySize;
+        }
+
+        if (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            m_pResourceCache->InitializeResources(Attribs.DescrSet, Attribs.CacheOffset, Res.ArraySize, Attribs.Type);
+    }
+    VERIFY_EXPR(CacheOffsets[0] == StaticVarCount);
+
+    if (m_Desc.SRBAllocationGranularity > 1)
+    {
+        std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
+        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
+        {
+            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+
+            Uint32 UnusedNumVars       = 0;
+            ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetShaderStageType(s), UnusedNumVars);
+        }
+
+        Uint32       DescriptorSetSizes[2] = {CacheOffsets[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE], CacheOffsets[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC]};
+        const Uint32 NumSets               = !!DescriptorSetSizes[0] + !!DescriptorSetSizes[1];
+
+        if (DescriptorSetSizes[0] == 0)
+            DescriptorSetSizes[0] = DescriptorSetSizes[1];
+
+        const size_t CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes);
+
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
+    }
+
+    VkDescriptorSetLayoutCreateInfo SetLayoutCI = {};
+
+    SetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    SetLayoutCI.pNext = nullptr;
+    SetLayoutCI.flags = 0;
+
+    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
+
+    for (Uint32 i = 0; i < _countof(LayoutBindings); ++i)
+    {
+        auto& LayoutBinding = LayoutBindings[i];
+        if (LayoutBinding.empty())
+            continue;
+
+        SetLayoutCI.bindingCount = static_cast<Uint32>(LayoutBinding.size());
+        SetLayoutCI.pBindings    = LayoutBinding.data();
+        m_VkDescSetLayouts[i]    = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
+    }
+}
+
+Uint32 PipelineResourceSignatureVkImpl::FindAssignedSampler(const PipelineResourceDesc& SepImg) const
+{
+    Uint32 SamplerInd = InvalidSamplerInd;
+    if (IsUsingCombinedSamplers())
+    {
+        for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
+        {
+            const auto& Res = m_Desc.Resources[i];
+
+            if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
+                SepImg.VarType == Res.VarType &&
+                (SepImg.ShaderStages & Res.ShaderStages) &&
+                StreqSuff(Res.Name, SepImg.Name, GetCombinedSamplerSuffix()))
+            {
+                VERIFY_EXPR((Res.ShaderStages & SepImg.ShaderStages) == SepImg.ShaderStages);
+                SamplerInd = i;
+                break;
+            }
+        }
+    }
+    return SamplerInd;
 }
 
 PipelineResourceSignatureVkImpl::~PipelineResourceSignatureVkImpl()
@@ -251,21 +524,25 @@ void PipelineResourceSignatureVkImpl::Destruct()
             m_pDevice->SafeReleaseDeviceObject(std::move(Layout), ~0ull);
     }
 
-    if (m_pBindingIndices == nullptr)
+    if (m_pResourceAttribs == nullptr)
         return; // memory is not allocated
 
     auto& RawAllocator = GetRawAllocator();
 
-    for (size_t i = 0; m_StaticVarsMgrs && i < m_StaticVarIndex.size(); ++i)
+    if (m_StaticVarsMgrs != nullptr)
     {
-        Int8 Idx = m_StaticVarIndex[i];
-        if (Idx >= 0)
+        for (size_t i = 0; i < m_StaticVarIndex.size(); ++i)
         {
-            m_StaticVarsMgrs[Idx].DestroyVariables(RawAllocator);
-            m_StaticVarsMgrs[Idx].~ShaderVariableManagerVk();
+            Int8 Idx = m_StaticVarIndex[i];
+            if (Idx >= 0)
+            {
+                m_StaticVarsMgrs[Idx].DestroyVariables(RawAllocator);
+                m_StaticVarsMgrs[Idx].~ShaderVariableManagerVk();
+            }
         }
+        m_StaticVarIndex.fill(-1);
+        m_StaticVarsMgrs = nullptr;
     }
-    m_StaticVarsMgrs = nullptr;
 
     if (m_pResourceCache != nullptr)
     {
@@ -273,11 +550,68 @@ void PipelineResourceSignatureVkImpl::Destruct()
         m_pResourceCache = nullptr;
     }
 
-    if (void* pRawMem = m_pBindingIndices)
+    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+    {
+        m_ImmutableSamplers[i].~ImmutableSamplerPtrType();
+    }
+    m_ImmutableSamplers = nullptr;
+
+    if (void* pRawMem = m_pResourceAttribs)
     {
         RawAllocator.Free(pRawMem);
-        m_pBindingIndices = nullptr;
+        m_pResourceAttribs = nullptr;
     }
+}
+
+bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSignatureVkImpl& Other) const
+{
+    if (this == &Other)
+        return true;
+
+    if (GetHash() != Other.GetHash())
+        return false;
+
+    if (GetDesc().BindingIndex != Other.GetDesc().BindingIndex)
+        return false;
+
+    const Uint32 LCount = GetTotalResourceCount();
+    const Uint32 RCount = Other.GetTotalResourceCount();
+
+    if (LCount != RCount)
+        return false;
+
+    for (Uint32 r = 0; r < LCount; ++r)
+    {
+        const auto& LAttr = GetAttribs(r);
+        const auto& RAttr = Other.GetAttribs(r);
+
+        if (LAttr.Type != RAttr.Type ||
+            LAttr.DescrSet != RAttr.DescrSet ||
+            LAttr.BindingIndex != RAttr.BindingIndex ||
+            LAttr.CacheOffset != RAttr.CacheOffset ||
+            LAttr.ImmutableSamplerAssigned != RAttr.ImmutableSamplerAssigned)
+        {
+            return false;
+        }
+    }
+
+    const Uint32 LSampCount = GetDesc().NumImmutableSamplers;
+    const Uint32 RSampCount = Other.GetDesc().NumImmutableSamplers;
+
+    if (LSampCount != RSampCount)
+        return false;
+
+    for (Uint32 s = 0; s < LSampCount; ++s)
+    {
+        const auto& LSamp = GetDesc().ImmutableSamplers[s];
+        const auto& RSamp = Other.GetDesc().ImmutableSamplers[s];
+
+        if (LSamp.ShaderStages != RSamp.ShaderStages ||
+            !(LSamp.Desc == RSamp.Desc))
+            return false;
+    }
+
+    return true;
 }
 
 void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
@@ -288,78 +622,6 @@ void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourc
     if (InitStaticResources)
         pResBindingVk->InitializeStaticResources(nullptr);
     pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
-}
-
-void PipelineResourceSignatureVkImpl::PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkImpl,
-                                                            VkPipelineBindPoint          BindPoint,
-                                                            const ShaderResourceCacheVk& ResourceCache,
-                                                            DescriptorSetBindInfo&       BindInfo,
-                                                            VkDescriptorSet              VkDynamicDescrSet) const
-{
-    /*
-#ifdef DILIGENT_DEBUG
-    BindInfo.vkSets.clear();
-#endif
-
-    // Do not use vector::resize for BindInfo.vkSets and BindInfo.DynamicOffsets as this
-    // causes unnecessary work to zero-initialize new elements
-
-    VERIFY(m_LayoutMgr.GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE_STATIC).SetIndex == m_LayoutMgr.GetDescriptorSet(SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE).SetIndex,
-           "Static and mutable variables are expected to share the same descriptor set");
-    Uint32 TotalDynamicDescriptors = 0;
-
-    BindInfo.SetCout = 0;
-    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
-    {
-        const auto& Set = m_LayoutMgr.GetDescriptorSet(VarType);
-        if (Set.SetIndex >= 0)
-        {
-            BindInfo.SetCout = std::max(BindInfo.SetCout, static_cast<Uint32>(Set.SetIndex + 1));
-            if (BindInfo.SetCout > BindInfo.vkSets.size())
-                BindInfo.vkSets.resize(BindInfo.SetCout);
-            VERIFY_EXPR(BindInfo.vkSets[Set.SetIndex] == VK_NULL_HANDLE);
-            if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
-                BindInfo.vkSets[Set.SetIndex] = ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet();
-            else
-            {
-                VERIFY_EXPR(ResourceCache.GetDescriptorSet(Set.SetIndex).GetVkDescriptorSet() == VK_NULL_HANDLE);
-                BindInfo.vkSets[Set.SetIndex] = VkDynamicDescrSet;
-            }
-            VERIFY(BindInfo.vkSets[Set.SetIndex] != VK_NULL_HANDLE, "Descriptor set must not be null");
-        }
-        TotalDynamicDescriptors += Set.NumDynamicDescriptors;
-    }
-
-#ifdef DILIGENT_DEBUG
-    for (const auto& set : BindInfo.vkSets)
-        VERIFY(set != VK_NULL_HANDLE, "Descriptor set must not be null");
-#endif
-
-    BindInfo.DynamicOffsetCount = TotalDynamicDescriptors;
-    if (TotalDynamicDescriptors > BindInfo.DynamicOffsets.size())
-        BindInfo.DynamicOffsets.resize(TotalDynamicDescriptors);
-    BindInfo.BindPoint      = BindPoint;
-    BindInfo.pResourceCache = &ResourceCache;
-#ifdef DILIGENT_DEBUG
-    BindInfo.pDbgPipelineLayout = this;
-#endif
-    BindInfo.DynamicBuffersPresent = ResourceCache.GetNumDynamicBuffers() > 0;
-
-    if (TotalDynamicDescriptors == 0)
-    {
-        // There are no dynamic descriptors, so we can bind descriptor sets right now
-        auto& CmdBuffer = pCtxVkImpl->GetCommandBuffer();
-        CmdBuffer.BindDescriptorSets(BindInfo.BindPoint,
-                                     m_LayoutMgr.GetVkPipelineLayout(),
-                                     0, // First set
-                                     BindInfo.SetCout,
-                                     BindInfo.vkSets.data(), // BindInfo.vkSets is never empty
-                                     0,
-                                     nullptr);
-    }
-
-    BindInfo.DynamicDescriptorsBound = false;
-    */
 }
 
 Uint32 PipelineResourceSignatureVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
@@ -392,21 +654,48 @@ IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByInd
     return StaticVarMgr.GetVariable(Index);
 }
 
+void PipelineResourceSignatureVkImpl::BindStaticResources(Uint32            ShaderFlags,
+                                                          IResourceMapping* pResMapping,
+                                                          Uint32            Flags)
+{
+    const auto PipelineType = GetPipelineType();
+    for (Uint32 ShaderInd = 0; ShaderInd < m_StaticVarIndex.size(); ++ShaderInd)
+    {
+        const auto VarMngrInd = m_StaticVarIndex[ShaderInd];
+        if (VarMngrInd >= 0)
+        {
+            // ShaderInd is the shader type pipeline index here
+            const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
+            if (ShaderFlags & ShaderType)
+            {
+                m_StaticVarsMgrs[VarMngrInd].BindResources(pResMapping, Flags);
+            }
+        }
+    }
+}
+
 void PipelineResourceSignatureVkImpl::InitResourceCache(ShaderResourceCacheVk& ResourceCache,
                                                         IMemoryAllocator&      CacheMemAllocator,
                                                         const char*            DbgPipelineName) const
 {
     std::array<Uint32, 2> VarCount = {};
+    Uint32                NumSets  = static_cast<Uint32>(VarCount.size());
+
     for (Uint32 r = 0; r < m_Desc.NumResources; ++r)
     {
         const auto& Res  = GetResource(r);
-        const auto& Bind = GetBinding(r);
-        VarCount[Bind.DescSet] += Res.ArraySize;
+        const auto& Attr = GetAttribs(r);
+        VarCount[Attr.DescrSet] += Res.ArraySize;
     }
+
+    if (VarCount[1] == 0)
+        --NumSets;
+
+    VERIFY_EXPR(NumSets > 0 && VarCount[0] > 0);
 
     // This call only initializes descriptor sets (ShaderResourceCacheVk::DescriptorSet) in the resource cache
     // Resources are initialized by source layout when shader resource binding objects are created
-    ResourceCache.InitializeSets(CacheMemAllocator, static_cast<Uint32>(VarCount.size()), VarCount.data());
+    ResourceCache.InitializeSets(CacheMemAllocator, NumSets, VarCount.data());
 
     if (auto VkLayout = GetStaticVkDescriptorSetLayout())
     {
@@ -417,7 +706,7 @@ void PipelineResourceSignatureVkImpl::InitResourceCache(ShaderResourceCacheVk& R
         DescrSetName = _DescrSetName.c_str();
 #endif
         DescriptorSetAllocation SetAllocation = GetDevice()->AllocateDescriptorSet(~Uint64{0}, VkLayout, DescrSetName);
-        ResourceCache.GetDescriptorSet(0).AssignDescriptorSetAllocation(std::move(SetAllocation));
+        ResourceCache.GetDescriptorSet(GetStaticDescrSetIndex()).AssignDescriptorSetAllocation(std::move(SetAllocation));
     }
 }
 
@@ -426,8 +715,7 @@ SHADER_TYPE PipelineResourceSignatureVkImpl::GetShaderStageType(Uint32 StageInde
     SHADER_TYPE Stages = m_ShaderStages;
     for (Uint32 Index = 0; Stages != SHADER_TYPE_UNKNOWN; ++Index)
     {
-        auto StageBit = static_cast<SHADER_TYPE>(1 << PlatformMisc::GetLSB(Uint32{Stages}));
-        Stages        = Stages & ~StageBit;
+        auto StageBit = ExtractBit(Stages);
 
         if (Index == StageIndex)
             return StageBit;
@@ -437,29 +725,843 @@ SHADER_TYPE PipelineResourceSignatureVkImpl::GetShaderStageType(Uint32 StageInde
     return SHADER_TYPE_UNKNOWN;
 }
 
+Uint32 PipelineResourceSignatureVkImpl::GetNumDescriptorSets() const
+{
+    return Uint32{m_VkDescSetLayouts[0] != VK_NULL_HANDLE} + Uint32{m_VkDescSetLayouts[1] != VK_NULL_HANDLE};
+}
+
 void PipelineResourceSignatureVkImpl::InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache) const
 {
     auto TotalResources = GetTotalResourceCount();
     for (Uint32 r = 0; r < TotalResources; ++r)
     {
         const auto& Res  = GetResource(r);
-        const auto& Bind = GetBinding(r);
-        ResourceCache.InitializeResources(Bind.DescSet, Bind.Binding, Res.ArraySize, GetVkDescriptorType(Res));
+        const auto& Attr = GetAttribs(r);
+        ResourceCache.InitializeResources(Attr.DescrSet, Attr.CacheOffset, Res.ArraySize, Attr.Type);
     }
 }
 
 void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& DstResourceCache) const
 {
-    const auto& SrcResourceCache = *m_pResourceCache;
-    (void)(SrcResourceCache);
+    if (GetStaticVkDescriptorSetLayout() == VK_NULL_HANDLE || m_pResourceCache == nullptr)
+        return;
 
-    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
+    // SrcResourceCache contains only static resources.
+    // DstResourceCache contains static and mutable resources.
+    const auto& SrcResourceCache = *m_pResourceCache;
+    const auto& SrcDescrSet      = SrcResourceCache.GetDescriptorSet(GetStaticDescrSetIndex());
+    auto&       DstDescrSet      = DstResourceCache.GetDescriptorSet(GetStaticDescrSetIndex());
+
+    // AZ TODO: optimize
+    for (Uint32 r = 0; r < GetTotalResourceCount(); ++r)
     {
-        // AZ TODO
+        const auto& Res  = GetResource(r);
+        const auto& Attr = GetAttribs(r);
+
+        if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && Attr.ImmutableSamplerAssigned)
+            continue; // Skip immutable separate samplers
+
+        if (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            for (Uint32 ArrInd = 0; ArrInd < Res.ArraySize; ++ArrInd)
+            {
+                auto           CacheOffset  = Attr.CacheOffset + ArrInd;
+                const auto&    SrcCachedRes = SrcDescrSet.GetResource(CacheOffset);
+                IDeviceObject* pObject      = SrcCachedRes.pObject.RawPtr<IDeviceObject>();
+                if (!pObject)
+                    LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetPrintName(Res, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
+
+                IDeviceObject* pCachedResource = DstDescrSet.GetResource(CacheOffset).pObject;
+                if (pCachedResource != pObject)
+                {
+                    VERIFY(pCachedResource == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
+                    BindResource(pObject, ArrInd, r, DstResourceCache);
+                }
+            }
+        }
     }
+
 #ifdef DILIGENT_DEBUG
     DstResourceCache.DbgVerifyDynamicBuffersCounter();
 #endif
+}
+
+Uint32 PipelineResourceSignatureVkImpl::GetStaticDescrSetIndex() const
+{
+    return m_VkDescSetLayouts[0] != VK_NULL_HANDLE ? 0 : ~0u;
+}
+
+Uint32 PipelineResourceSignatureVkImpl::GetDynamicDescrSetIndex() const
+{
+    return m_VkDescSetLayouts[1] != VK_NULL_HANDLE ? Uint32{m_VkDescSetLayouts[0] != VK_NULL_HANDLE} : ~0u;
+}
+
+void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
+                                                             VkDescriptorSet              vkDynamicDescriptorSet) const
+{
+    VERIFY(HasDynamicDescrSet(), "This shader resource layout does not contain dynamic resources");
+    VERIFY_EXPR(vkDynamicDescriptorSet != VK_NULL_HANDLE);
+
+#ifdef DILIGENT_DEBUG
+    static constexpr size_t ImgUpdateBatchSize          = 4;
+    static constexpr size_t BuffUpdateBatchSize         = 2;
+    static constexpr size_t TexelBuffUpdateBatchSize    = 2;
+    static constexpr size_t AccelStructBatchSize        = 2;
+    static constexpr size_t WriteDescriptorSetBatchSize = 2;
+#else
+    static constexpr size_t ImgUpdateBatchSize          = 128;
+    static constexpr size_t BuffUpdateBatchSize         = 64;
+    static constexpr size_t TexelBuffUpdateBatchSize    = 32;
+    static constexpr size_t AccelStructBatchSize        = 32;
+    static constexpr size_t WriteDescriptorSetBatchSize = 32;
+#endif
+
+    // Do not zero-initiaize arrays!
+    std::array<VkDescriptorImageInfo, ImgUpdateBatchSize>                          DescrImgInfoArr;
+    std::array<VkDescriptorBufferInfo, BuffUpdateBatchSize>                        DescrBuffInfoArr;
+    std::array<VkBufferView, TexelBuffUpdateBatchSize>                             DescrBuffViewArr;
+    std::array<VkWriteDescriptorSetAccelerationStructureKHR, AccelStructBatchSize> DescrAccelStructArr;
+    std::array<VkWriteDescriptorSet, WriteDescriptorSetBatchSize>                  WriteDescrSetArr;
+
+    auto DescrImgIt      = DescrImgInfoArr.begin();
+    auto DescrBuffIt     = DescrBuffInfoArr.begin();
+    auto BuffViewIt      = DescrBuffViewArr.begin();
+    auto AccelStructIt   = DescrAccelStructArr.begin();
+    auto WriteDescrSetIt = WriteDescrSetArr.begin();
+
+    const auto& SetResources  = ResourceCache.GetDescriptorSet(GetDynamicDescrSetIndex());
+    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
+
+    // AZ TODO: optimize
+    for (Uint32 ResNum = 0, ArrElem = 0, Count = GetTotalResourceCount(); ResNum < Count;)
+    {
+        const auto& Res  = GetResource(ResNum);
+        const auto& Attr = GetAttribs(ResNum);
+
+        if (Res.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VERIFY_EXPR(ArrElem == 0);
+            ++ResNum;
+            continue;
+        }
+
+        WriteDescrSetIt->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        WriteDescrSetIt->pNext = nullptr;
+        VERIFY(SetResources.GetVkDescriptorSet() == VK_NULL_HANDLE, "Dynamic descriptor set must not be assigned to the resource cache");
+        WriteDescrSetIt->dstSet = vkDynamicDescriptorSet;
+        VERIFY(WriteDescrSetIt->dstSet != VK_NULL_HANDLE, "Vulkan descriptor set must not be null");
+        WriteDescrSetIt->dstBinding      = Attr.BindingIndex;
+        WriteDescrSetIt->dstArrayElement = ArrElem;
+        // descriptorType must be the same type as that specified in VkDescriptorSetLayoutBinding for dstSet at dstBinding.
+        // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
+        WriteDescrSetIt->descriptorType = GetVkDescriptorType(Attr.Type);
+
+        // For every resource type, try to batch as many descriptor updates as we can
+        static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
+        switch (Attr.Type)
+        {
+            case DescriptorType::UniformBuffer:
+            case DescriptorType::UniformBufferDynamic:
+                WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
+                while (ArrElem < Res.ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
+                {
+                    const auto& CachedRes = SetResources.GetResource(Attr.CacheOffset + ArrElem);
+                    *DescrBuffIt          = CachedRes.GetUniformBufferDescriptorWriteInfo();
+                    ++DescrBuffIt;
+                    ++ArrElem;
+                }
+                break;
+
+            case DescriptorType::StorageBuffer:
+            case DescriptorType::StorageBufferDynamic:
+            case DescriptorType::StorageBuffer_ReadOnly:
+            case DescriptorType::StorageBufferDynamic_ReadOnly:
+                WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
+                while (ArrElem < Res.ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
+                {
+                    const auto& CachedRes = SetResources.GetResource(Attr.CacheOffset + ArrElem);
+                    *DescrBuffIt          = CachedRes.GetStorageBufferDescriptorWriteInfo();
+                    ++DescrBuffIt;
+                    ++ArrElem;
+                }
+                break;
+
+            case DescriptorType::UniformTexelBuffer:
+            case DescriptorType::StorageTexelBuffer:
+            case DescriptorType::StorageTexelBuffer_ReadOnly:
+                WriteDescrSetIt->pTexelBufferView = &(*BuffViewIt);
+                while (ArrElem < Res.ArraySize && BuffViewIt != DescrBuffViewArr.end())
+                {
+                    const auto& CachedRes = SetResources.GetResource(Attr.CacheOffset + ArrElem);
+                    *BuffViewIt           = CachedRes.GetBufferViewWriteInfo();
+                    ++BuffViewIt;
+                    ++ArrElem;
+                }
+                break;
+
+            case DescriptorType::CombinedImageSampler:
+            case DescriptorType::SeparateImage:
+            case DescriptorType::StorageImage:
+            case DescriptorType::StorageImage_ReadOnly:
+            case DescriptorType::InputAttachment:
+                WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
+                while (ArrElem < Res.ArraySize && DescrImgIt != DescrImgInfoArr.end())
+                {
+                    const auto& CachedRes = SetResources.GetResource(Attr.CacheOffset + ArrElem);
+                    *DescrImgIt           = CachedRes.GetImageDescriptorWriteInfo(Attr.ImmutableSamplerAssigned);
+                    ++DescrImgIt;
+                    ++ArrElem;
+                }
+                break;
+
+            case DescriptorType::Sampler:
+                // Immutable samplers are permanently bound into the set layout; later binding a sampler
+                // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
+                if (!Attr.ImmutableSamplerAssigned)
+                {
+                    WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
+                    while (ArrElem < Res.ArraySize && DescrImgIt != DescrImgInfoArr.end())
+                    {
+                        const auto& CachedRes = SetResources.GetResource(Attr.CacheOffset + ArrElem);
+                        *DescrImgIt           = CachedRes.GetSamplerDescriptorWriteInfo();
+                        ++DescrImgIt;
+                        ++ArrElem;
+                    }
+                }
+                else
+                {
+                    ArrElem                          = Res.ArraySize;
+                    WriteDescrSetIt->dstArrayElement = Res.ArraySize;
+                }
+                break;
+
+            case DescriptorType::AccelerationStructure:
+                WriteDescrSetIt->pNext = &(*AccelStructIt);
+                while (ArrElem < Res.ArraySize && AccelStructIt != DescrAccelStructArr.end())
+                {
+                    const auto& CachedRes = SetResources.GetResource(Attr.CacheOffset + ArrElem);
+                    *AccelStructIt        = CachedRes.GetAccelerationStructureWriteInfo();
+                    ++AccelStructIt;
+                    ++ArrElem;
+                }
+                break;
+
+            default:
+                UNEXPECTED("Unexpected resource type");
+        }
+
+        WriteDescrSetIt->descriptorCount = ArrElem - WriteDescrSetIt->dstArrayElement;
+        if (ArrElem == Res.ArraySize)
+        {
+            ArrElem = 0;
+            ++ResNum;
+        }
+        // descriptorCount == 0 for immutable separate samplers
+        if (WriteDescrSetIt->descriptorCount > 0)
+            ++WriteDescrSetIt;
+
+        // If we ran out of space in any of the arrays or if we processed all resources,
+        // flush pending updates and reset iterators
+        if (DescrImgIt == DescrImgInfoArr.end() ||
+            DescrBuffIt == DescrBuffInfoArr.end() ||
+            BuffViewIt == DescrBuffViewArr.end() ||
+            AccelStructIt == DescrAccelStructArr.end() ||
+            WriteDescrSetIt == WriteDescrSetArr.end())
+        {
+            auto DescrWriteCount = static_cast<Uint32>(std::distance(WriteDescrSetArr.begin(), WriteDescrSetIt));
+            if (DescrWriteCount > 0)
+                LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
+
+            DescrImgIt      = DescrImgInfoArr.begin();
+            DescrBuffIt     = DescrBuffInfoArr.begin();
+            BuffViewIt      = DescrBuffViewArr.begin();
+            AccelStructIt   = DescrAccelStructArr.begin();
+            WriteDescrSetIt = WriteDescrSetArr.begin();
+        }
+    }
+
+    auto DescrWriteCount = static_cast<Uint32>(std::distance(WriteDescrSetArr.begin(), WriteDescrSetIt));
+    if (DescrWriteCount > 0)
+        LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
+}
+
+String PipelineResourceSignatureVkImpl::GetPrintName(const PipelineResourceDesc& ResDesc, Uint32 ArrayInd)
+{
+    VERIFY_EXPR(ArrayInd < ResDesc.ArraySize);
+
+    if (ResDesc.ArraySize > 1)
+    {
+        std::stringstream ss;
+        ss << ResDesc.Name << '[' << ArrayInd << ']';
+        return ss.str();
+    }
+    else
+        return ResDesc.Name;
+}
+
+namespace
+{
+struct BindResourceHelper
+{
+    // AZ TODO: cache DstRes.Type and ResDesc.VarType for better performace ???
+    ShaderResourceCacheVk::Resource&                        DstRes;
+    const PipelineResourceDesc&                             ResDesc;
+    const PipelineResourceSignatureVkImpl::ResourceAttribs& Attribs;
+    const Uint32                                            ArrayIndex;
+    const VkDescriptorSet                                   vkDescrSet;
+    PipelineResourceSignatureVkImpl const&                  Signature;
+    ShaderResourceCacheVk&                                  ResourceCache;
+
+    void BindResource(IDeviceObject* pObj) const;
+
+    String GetPrintName(Uint32 ArrayInd) const;
+
+    RESOURCE_DIMENSION GetResourceDimension() const;
+
+    bool IsMultisample() const;
+
+private:
+    void CacheUniformBuffer(IDeviceObject* pBuffer,
+                            Uint16&        DynamicBuffersCounter) const;
+
+    void CacheStorageBuffer(IDeviceObject* pBufferView,
+                            Uint16&        DynamicBuffersCounter) const;
+
+    void CacheTexelBuffer(IDeviceObject* pBufferView,
+                          Uint16&        DynamicBuffersCounter) const;
+
+    void CacheImage(IDeviceObject* pTexView) const;
+
+    void CacheSeparateSampler(IDeviceObject* pSampler) const;
+
+    void CacheInputAttachment(IDeviceObject* pTexView) const;
+
+    void CacheAccelerationStructure(IDeviceObject* pTLAS) const;
+
+    template <typename ObjectType, typename TPreUpdateObject>
+    bool UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject,
+                              TPreUpdateObject            PreUpdateObject) const;
+
+    bool IsImmutableSamplerAssigned() const { return Attribs.ImmutableSamplerAssigned; }
+
+    // Updates resource descriptor in the descriptor set
+    inline void UpdateDescriptorHandle(const VkDescriptorImageInfo*                        pImageInfo,
+                                       const VkDescriptorBufferInfo*                       pBufferInfo,
+                                       const VkBufferView*                                 pTexelBufferView,
+                                       const VkWriteDescriptorSetAccelerationStructureKHR* pAccelStructInfo = nullptr) const;
+};
+
+void BindResourceHelper::BindResource(IDeviceObject* pObj) const
+{
+#ifdef DILIGENT_DEBUG
+    if (ResourceCache.DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
+    {
+        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC || ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+        {
+            VERIFY(vkDescrSet != VK_NULL_HANDLE, "Static and mutable variables must have valid vulkan descriptor set assigned");
+            // Dynamic variables do not have vulkan descriptor set only until they are assigned one the first time
+        }
+    }
+    else if (ResourceCache.DbgGetContentType() == ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources)
+    {
+        VERIFY(vkDescrSet == VK_NULL_HANDLE, "Static shader resource cache should not have vulkan descriptor set allocation");
+    }
+    else
+    {
+        UNEXPECTED("Unexpected shader resource cache content type");
+    }
+#endif
+
+    if (pObj)
+    {
+        static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
+        switch (DstRes.Type)
+        {
+            case DescriptorType::UniformBuffer:
+            case DescriptorType::UniformBufferDynamic:
+                CacheUniformBuffer(pObj, ResourceCache.GetDynamicBuffersCounter());
+                break;
+
+            case DescriptorType::StorageBuffer:
+            case DescriptorType::StorageBuffer_ReadOnly:
+            case DescriptorType::StorageBufferDynamic:
+            case DescriptorType::StorageBufferDynamic_ReadOnly:
+                CacheStorageBuffer(pObj, ResourceCache.GetDynamicBuffersCounter());
+                break;
+
+            case DescriptorType::UniformTexelBuffer:
+            case DescriptorType::StorageTexelBuffer:
+            case DescriptorType::StorageTexelBuffer_ReadOnly:
+                CacheTexelBuffer(pObj, ResourceCache.GetDynamicBuffersCounter());
+                break;
+
+            case DescriptorType::StorageImage:
+            case DescriptorType::StorageImage_ReadOnly:
+            case DescriptorType::SeparateImage:
+            case DescriptorType::CombinedImageSampler:
+                CacheImage(pObj);
+                break;
+
+            case DescriptorType::Sampler:
+                if (!IsImmutableSamplerAssigned())
+                {
+                    CacheSeparateSampler(pObj);
+                }
+                else
+                {
+                    // Immutable samplers are permanently bound into the set layout; later binding a sampler
+                    // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
+                    LOG_ERROR_MESSAGE("Attempting to assign a sampler to an immutable sampler '", ResDesc.Name, '\'');
+                }
+                break;
+
+            case DescriptorType::InputAttachment:
+                CacheInputAttachment(pObj);
+                break;
+
+            case DescriptorType::AccelerationStructure:
+                CacheAccelerationStructure(pObj);
+                break;
+
+            default: UNEXPECTED("Unknown resource type ", static_cast<Int32>(DstRes.Type));
+        }
+    }
+    else
+    {
+        if (DstRes.pObject && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            LOG_ERROR_MESSAGE("Shader variable '", ResDesc.Name, "' is not dynamic but being unbound. This is an error and may cause unpredicted behavior. ",
+                              "Use another shader resource binding instance or label shader variable as dynamic if you need to bind another resource.");
+        }
+
+        DstRes.pObject.Release();
+    }
+}
+
+template <typename ObjectType, typename TPreUpdateObject>
+bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject,
+                                              TPreUpdateObject            PreUpdateObject) const
+{
+    // We cannot use ValidatedCast<> here as the resource retrieved from the
+    // resource mapping can be of wrong type
+    if (pObject)
+    {
+        if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
+        {
+            // Do not update resource if one is already bound unless it is dynamic. This may be
+            // dangerous as writing descriptors while they are used by the GPU is an undefined behavior
+            return false;
+        }
+
+        PreUpdateObject(DstRes.pObject.template RawPtr<const ObjectType>(), pObject.template RawPtr<const ObjectType>());
+        DstRes.pObject.Attach(pObject.Detach());
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer,
+                                            Uint16&        DynamicBuffersCounter) const
+{
+    // clang-format off
+    VERIFY(DstRes.Type == DescriptorType::UniformBuffer ||
+           DstRes.Type == DescriptorType::UniformBufferDynamic,
+           "Uniform buffer resource is expected");
+    // clang-format on
+    RefCntAutoPtr<BufferVkImpl> pBufferVk{pBuffer, IID_BufferVk};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyConstantBufferBinding(*this, ResDesc.VarType, ArrayIndex, pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr());
+
+    // AZ TODO
+    /*if (pBufferVk->GetDesc().uiSizeInBytes < BufferStaticSize)
+    {
+        // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
+        LOG_WARNING_MESSAGE("Error binding uniform buffer '", pBufferVk->GetDesc().Name, "' to shader variable '",
+                            GetDesc().Name, "': buffer size in the shader (",
+                            BufferStaticSize, ") is incompatible with the actual buffer size (", pBufferVk->GetDesc().uiSizeInBytes, ").");
+    }*/
+#endif
+
+    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferVkImpl* pOldBuffer, const BufferVkImpl* pNewBuffer) {
+        if (pOldBuffer != nullptr && pOldBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
+            --DynamicBuffersCounter;
+        }
+        if (pNewBuffer != nullptr && pNewBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+            ++DynamicBuffersCounter;
+    };
+    if (UpdateCachedResource(std::move(pBufferVk), UpdateDynamicBuffersCounter))
+    {
+        // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
+        // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+
+        // Do not update descriptor for a dynamic uniform buffer. All dynamic resource
+        // descriptors are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkDescriptorBufferInfo DescrBuffInfo = DstRes.GetUniformBufferDescriptorWriteInfo();
+            UpdateDescriptorHandle(nullptr, &DescrBuffInfo, nullptr);
+        }
+    }
+}
+
+void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView,
+                                            Uint16&        DynamicBuffersCounter) const
+{
+    // clang-format off
+    VERIFY(DstRes.Type == DescriptorType::StorageBuffer ||
+           DstRes.Type == DescriptorType::StorageBuffer_ReadOnly ||
+           DstRes.Type == DescriptorType::StorageBufferDynamic ||
+           DstRes.Type == DescriptorType::StorageBufferDynamic_ReadOnly,
+           "Storage buffer resource is expected");
+    // clang-format on
+
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{pBufferView, IID_BufferViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        auto RequiredViewType = DescriptorTypeToBufferView(DstRes.Type);
+        VerifyResourceViewBinding(*this, ResDesc.VarType, ArrayIndex, pBufferView, pBufferViewVk.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr());
+        if (pBufferViewVk != nullptr)
+        {
+            const auto& ViewDesc = pBufferViewVk->GetDesc();
+            const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
+            if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED && BuffDesc.Mode != BUFFER_MODE_RAW)
+            {
+                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                  ResDesc.Name, "': structured buffer view is expected.");
+            }
+
+            // AZ TODO
+            /*if (BufferStride == 0 && ViewDesc.ByteWidth < BufferStaticSize)
+            {
+                // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
+                LOG_WARNING_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                    Name, "': buffer size in the shader (",
+                                    BufferStaticSize, ") is incompatible with the actual buffer view size (", ViewDesc.ByteWidth, ").");
+            }
+
+            if (BufferStride > 0 && (ViewDesc.ByteWidth < BufferStaticSize || (ViewDesc.ByteWidth - BufferStaticSize) % BufferStride != 0))
+            {
+                // For buffers with dynamic arrays we know only static part size and array element stride.
+                // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.
+                LOG_WARNING_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                    Name, "': static buffer size in the shader (",
+                                    BufferStaticSize, ") and array element stride (", BufferStride, ") are incompatible with the actual buffer view size (", ViewDesc.ByteWidth, "),",
+                                    " this may be the result of the array element size mismatch.");
+            }*/
+        }
+    }
+#endif
+
+    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferViewVkImpl* pOldBufferView, const BufferViewVkImpl* pNewBufferView) {
+        if (pOldBufferView != nullptr && pOldBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
+            --DynamicBuffersCounter;
+        }
+        if (pNewBufferView != nullptr && pNewBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+            ++DynamicBuffersCounter;
+    };
+
+    if (UpdateCachedResource(std::move(pBufferViewVk), UpdateDynamicBuffersCounter))
+    {
+        // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type
+        // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
+
+        // Do not update descriptor for a dynamic storage buffer. All dynamic resource
+        // descriptors are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkDescriptorBufferInfo DescrBuffInfo = DstRes.GetStorageBufferDescriptorWriteInfo();
+            UpdateDescriptorHandle(nullptr, &DescrBuffInfo, nullptr);
+        }
+    }
+}
+
+void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView,
+                                          Uint16&        DynamicBuffersCounter) const
+{
+    // clang-format off
+    VERIFY(DstRes.Type == DescriptorType::UniformTexelBuffer || 
+           DstRes.Type == DescriptorType::StorageTexelBuffer ||
+           DstRes.Type == DescriptorType::StorageTexelBuffer_ReadOnly,
+           "Uniform or storage buffer resource is expected");
+    // clang-format on
+
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{pBufferView, IID_BufferViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        auto RequiredViewType = DescriptorTypeToBufferView(DstRes.Type);
+        VerifyResourceViewBinding(*this, ResDesc.VarType, ArrayIndex, pBufferView, pBufferViewVk.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr());
+        if (pBufferViewVk != nullptr)
+        {
+            const auto& ViewDesc = pBufferViewVk->GetDesc();
+            const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
+            if (!((BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED) || BuffDesc.Mode == BUFFER_MODE_RAW))
+            {
+                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                  ResDesc.Name, "': formatted buffer view is expected.");
+            }
+        }
+    }
+#endif
+
+    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferViewVkImpl* pOldBufferView, const BufferViewVkImpl* pNewBufferView) {
+        if (pOldBufferView != nullptr && pOldBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
+            --DynamicBuffersCounter;
+        }
+        if (pNewBufferView != nullptr && pNewBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+            ++DynamicBuffersCounter;
+    };
+
+    if (UpdateCachedResource(std::move(pBufferViewVk), UpdateDynamicBuffersCounter))
+    {
+        // The following bits must have been set at buffer creation time:
+        //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
+        //  * VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
+
+        // Do not update descriptor for a dynamic texel buffer. All dynamic resource descriptors
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkBufferView BuffView = DstRes.pObject.RawPtr<BufferViewVkImpl>()->GetVkBufferView();
+            UpdateDescriptorHandle(nullptr, nullptr, &BuffView);
+        }
+    }
+}
+
+void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
+{
+    // clang-format off
+    VERIFY(DstRes.Type == DescriptorType::StorageImage || 
+           DstRes.Type == DescriptorType::StorageImage_ReadOnly ||
+           DstRes.Type == DescriptorType::SeparateImage ||
+           DstRes.Type == DescriptorType::CombinedImageSampler,
+           "Storage image, separate image or sampled image resource is expected");
+    // clang-format on
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{pTexView, IID_TextureViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        auto RequiredViewType = DescriptorTypeToTextureView(DstRes.Type);
+        VerifyResourceViewBinding(*this, ResDesc.VarType, ArrayIndex, pTexView, pTexViewVk0.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr());
+    }
+#endif
+    if (UpdateCachedResource(std::move(pTexViewVk0), [](const TextureViewVkImpl*, const TextureViewVkImpl*) {}))
+    {
+        // We can do RawPtr here safely since UpdateCachedResource() returned true
+        auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
+#ifdef DILIGENT_DEVELOPMENT
+        if (DstRes.Type == DescriptorType::CombinedImageSampler && !IsImmutableSamplerAssigned())
+        {
+            if (pTexViewVk->GetSampler() == nullptr)
+            {
+                LOG_ERROR_MESSAGE("Error binding texture view '", pTexViewVk->GetDesc().Name, "' to variable '", GetPrintName(ArrayIndex),
+                                  "'. No sampler is assigned to the view");
+            }
+        }
+#endif
+
+        // Do not update descriptor for a dynamic image. All dynamic resource descriptors
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkDescriptorImageInfo DescrImgInfo = DstRes.GetImageDescriptorWriteInfo(IsImmutableSamplerAssigned());
+            UpdateDescriptorHandle(&DescrImgInfo, nullptr, nullptr);
+        }
+
+        if (Attribs.SamplerInd != PipelineResourceSignatureVkImpl::InvalidSamplerInd)
+        {
+            VERIFY(DstRes.Type == DescriptorType::SeparateImage,
+                   "Only separate images can be assigned separate samplers when using HLSL-style combined samplers.");
+            VERIFY(!IsImmutableSamplerAssigned(), "Separate image can't be assigned an immutable sampler.");
+
+            auto& SamplerResDesc = Signature.GetResource(Attribs.SamplerInd);
+            auto& SamplerAttribs = Signature.GetAttribs(Attribs.SamplerInd);
+            VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+
+            if (!SamplerAttribs.ImmutableSamplerAssigned)
+            {
+                auto* pSampler = pTexViewVk->GetSampler();
+                if (pSampler != nullptr)
+                {
+                    VERIFY_EXPR(DstRes.Type == DescriptorType::SeparateImage);
+                    DEV_CHECK_ERR(SamplerResDesc.ArraySize == 1 || SamplerResDesc.ArraySize == ResDesc.ArraySize,
+                                  "Array size (", SamplerResDesc.ArraySize,
+                                  ") of separate sampler variable '",
+                                  SamplerResDesc.Name,
+                                  "' must be one or the same as the array size (", ResDesc.ArraySize,
+                                  ") of separate image variable '", ResDesc.Name, "' it is assigned to");
+
+                    auto&      DstDescrSet   = ResourceCache.GetDescriptorSet(SamplerAttribs.DescrSet);
+                    const auto SamplerArrInd = SamplerResDesc.ArraySize == 1 ? 0 : ArrayIndex;
+                    auto&      SampleDstRes  = DstDescrSet.GetResource(SamplerAttribs.CacheOffset + SamplerArrInd);
+
+                    BindResourceHelper SeparateSampler{
+                        SampleDstRes,
+                        SamplerResDesc,
+                        SamplerAttribs,
+                        SamplerArrInd,
+                        DstDescrSet.GetVkDescriptorSet(),
+                        Signature,
+                        ResourceCache};
+                    SeparateSampler.BindResource(pSampler);
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE("Failed to bind sampler to sampler variable '", SamplerResDesc.Name,
+                                      "' assigned to separate image '", GetPrintName(ArrayIndex),
+                                      "': no sampler is set in texture view '", pTexViewVk->GetDesc().Name, '\'');
+                }
+            }
+        }
+    }
+}
+
+void BindResourceHelper::CacheSeparateSampler(IDeviceObject* pSampler) const
+{
+    VERIFY(DstRes.Type == DescriptorType::Sampler, "Separate sampler resource is expected");
+    VERIFY(!IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler");
+
+    RefCntAutoPtr<SamplerVkImpl> pSamplerVk{pSampler, IID_Sampler};
+#ifdef DILIGENT_DEVELOPMENT
+    if (pSampler != nullptr && pSamplerVk == nullptr)
+    {
+        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '", GetPrintName(ArrayIndex),
+                          "'. Unexpected object type: sampler is expected");
+    }
+    if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr && DstRes.pObject != pSamplerVk)
+    {
+        auto VarTypeStr = GetShaderVariableTypeLiteralName(ResDesc.VarType);
+        LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", GetPrintName(ArrayIndex),
+                          "'. Attempting to bind another sampler or null is an error and may "
+                          "cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.");
+    }
+#endif
+    if (UpdateCachedResource(std::move(pSamplerVk), [](const SamplerVkImpl*, const SamplerVkImpl*) {}))
+    {
+        // Do not update descriptor for a dynamic sampler. All dynamic resource descriptors
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkDescriptorImageInfo DescrImgInfo = DstRes.GetSamplerDescriptorWriteInfo();
+            UpdateDescriptorHandle(&DescrImgInfo, nullptr, nullptr);
+        }
+    }
+}
+
+void BindResourceHelper::CacheInputAttachment(IDeviceObject* pTexView) const
+{
+    VERIFY(DstRes.Type == DescriptorType::InputAttachment, "Input attachment resource is expected");
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{pTexView, IID_TextureViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyResourceViewBinding(*this, ResDesc.VarType, ArrayIndex, pTexView, pTexViewVk0.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, DstRes.pObject.RawPtr());
+#endif
+    if (UpdateCachedResource(std::move(pTexViewVk0), [](const TextureViewVkImpl*, const TextureViewVkImpl*) {}))
+    {
+        // Do not update descriptor for a dynamic image. All dynamic resource descriptors
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkDescriptorImageInfo DescrImgInfo = DstRes.GetInputAttachmentDescriptorWriteInfo();
+            UpdateDescriptorHandle(&DescrImgInfo, nullptr, nullptr);
+        }
+        //
+    }
+}
+
+void BindResourceHelper::CacheAccelerationStructure(IDeviceObject* pTLAS) const
+{
+    VERIFY(DstRes.Type == DescriptorType::AccelerationStructure, "Acceleration Structure resource is expected");
+    RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyTLASResourceBinding(*this, ResDesc.VarType, ArrayIndex, pTLASVk.RawPtr(), DstRes.pObject.RawPtr());
+#endif
+    if (UpdateCachedResource(std::move(pTLASVk), [](const TopLevelASVkImpl*, const TopLevelASVkImpl*) {}))
+    {
+        // Do not update descriptor for a dynamic TLAS. All dynamic resource descriptors
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkWriteDescriptorSetAccelerationStructureKHR DescrASInfo = DstRes.GetAccelerationStructureWriteInfo();
+            UpdateDescriptorHandle(nullptr, nullptr, nullptr, &DescrASInfo);
+        }
+        //
+    }
+}
+
+void BindResourceHelper::UpdateDescriptorHandle(const VkDescriptorImageInfo*                        pImageInfo,
+                                                const VkDescriptorBufferInfo*                       pBufferInfo,
+                                                const VkBufferView*                                 pTexelBufferView,
+                                                const VkWriteDescriptorSetAccelerationStructureKHR* pAccelStructInfo) const
+{
+    VERIFY_EXPR(vkDescrSet != VK_NULL_HANDLE);
+
+    VkWriteDescriptorSet WriteDescrSet;
+    WriteDescrSet.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    WriteDescrSet.pNext           = pAccelStructInfo;
+    WriteDescrSet.dstSet          = vkDescrSet;
+    WriteDescrSet.dstBinding      = Attribs.BindingIndex;
+    WriteDescrSet.dstArrayElement = ArrayIndex;
+    WriteDescrSet.descriptorCount = 1;
+    // descriptorType must be the same type as that specified in VkDescriptorSetLayoutBinding for dstSet at dstBinding.
+    // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
+    WriteDescrSet.descriptorType   = GetVkDescriptorType(DstRes.Type);
+    WriteDescrSet.pImageInfo       = pImageInfo;
+    WriteDescrSet.pBufferInfo      = pBufferInfo;
+    WriteDescrSet.pTexelBufferView = pTexelBufferView;
+
+    Signature.GetDevice()->GetLogicalDevice().UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
+}
+
+String BindResourceHelper::GetPrintName(Uint32 ArrayInd) const
+{
+    return PipelineResourceSignatureVkImpl::GetPrintName(ResDesc, ArrayInd);
+}
+
+RESOURCE_DIMENSION BindResourceHelper::GetResourceDimension() const
+{
+    return RESOURCE_DIM_UNDEFINED; // AZ TODO
+}
+
+bool BindResourceHelper::IsMultisample() const
+{
+    return false; // AZ TODO
+}
+
+} // namespace
+
+void PipelineResourceSignatureVkImpl::BindResource(IDeviceObject*         pObj,
+                                                   Uint32                 ArrayIndex,
+                                                   Uint32                 ResIndex,
+                                                   ShaderResourceCacheVk& ResourceCache) const
+{
+    auto& ResDesc     = GetResource(ResIndex);
+    auto& Attribs     = GetAttribs(ResIndex);
+    auto& DstDescrSet = ResourceCache.GetDescriptorSet(Attribs.DescrSet);
+    auto& DstRes      = DstDescrSet.GetResource(Attribs.CacheOffset + ArrayIndex);
+
+    VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
+    VERIFY(DstRes.Type == Attribs.Type, "Inconsistent types");
+
+    BindResourceHelper Helper{
+        DstRes,
+        ResDesc,
+        Attribs,
+        ArrayIndex,
+        DstDescrSet.GetVkDescriptorSet(),
+        *this,
+        ResourceCache};
+
+    Helper.BindResource(pObj);
 }
 
 } // namespace Diligent

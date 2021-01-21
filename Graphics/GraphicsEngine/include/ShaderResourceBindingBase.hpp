@@ -67,24 +67,6 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBinding, TObjectBase)
 
-    /// Implementation of IShaderResourceBinding::GetPipelineState().
-    //virtual IPipelineState* DILIGENT_CALL_TYPE GetPipelineState() override final
-    //{
-    //    return m_pPSO;
-    //}
-
-    //template <typename PSOType>
-    //PSOType* GetPipelineState()
-    //{
-    //    return ValidatedCast<PSOType>(m_pPSO);
-    //}
-
-    //template <typename PSOType>
-    //PSOType* GetPipelineState() const
-    //{
-    //    return ValidatedCast<PSOType>(m_pPSO);
-    //}
-
     Uint32 GetBindingIndex() const
     {
         return m_pPRS->GetDesc().BindingIndex;

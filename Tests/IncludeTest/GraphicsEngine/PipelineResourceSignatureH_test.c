@@ -29,14 +29,19 @@
 
 void TestPipelineResourceSignature(struct IPipelineResourceSignature* pSign)
 {
-    PipelineResourceSignature_CreateShaderResourceBinding(pSign, (struct IShaderResourceBinding**)NULL, true);
+    IPipelineResourceSignature_CreateShaderResourceBinding(pSign, (struct IShaderResourceBinding**)NULL, true);
 
-    struct IShaderResourceVariable* pVar1 = PipelineResourceSignature_GetStaticVariableByName(SHADER_TYPE_UNKNOWN, "name");
-    void(pVar1);
+    struct IShaderResourceVariable* pVar1 = IPipelineResourceSignature_GetStaticVariableByName(pSign, SHADER_TYPE_UNKNOWN, "name");
+    (void)(pVar1);
 
-    struct IShaderResourceVariable* pVar2 = PipelineResourceSignature_GetStaticVariableByIndex(SHADER_TYPE_UNKNOWN, 0);
-    void(pVar2);
+    struct IShaderResourceVariable* pVar2 = IPipelineResourceSignature_GetStaticVariableByIndex(pSign, SHADER_TYPE_UNKNOWN, 0);
+    (void)(pVar2);
 
-    Uint32 Count = PipelineResourceSignature_GetStaticVariableCount(pSign, SHADER_TYPE_UNKNOWN);
-    void(Count);
+    Uint32 Count = IPipelineResourceSignature_GetStaticVariableCount(pSign, SHADER_TYPE_UNKNOWN);
+    (void)(Count);
+
+    IPipelineResourceSignature_BindStaticResources(pSign, SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, (struct IResourceMapping*)NULL, BIND_SHADER_RESOURCES_UPDATE_STATIC);
+
+    bool Comp = IPipelineResourceSignature_IsCompatibleWith(pSign, (const struct IPipelineResourceSignature*)NULL);
+    (void)(Comp);
 }

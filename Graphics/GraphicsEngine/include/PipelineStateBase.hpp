@@ -216,16 +216,8 @@ public:
         return m_BufferSlotsUsed;
     }
 
-    SHADER_TYPE GetShaderStageType(Uint32 Stage) const { return m_ShaderStageTypes[Stage]; }
-    Uint32      GetNumShaderStages() const { return m_NumShaderStages; }
-
-    // This function only compares shader resource layout hashes, so
-    // it can potentially give false negatives
-    bool IsIncompatibleWith(const IPipelineState* pPSO) const
-    {
-        return false;
-        //return m_ShaderResourceLayoutHash != ValidatedCast<const PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
-    }
+    //SHADER_TYPE GetShaderStageType(Uint32 Stage) const { return m_ShaderStageTypes[Stage]; }
+    //Uint32      GetNumShaderStages() const { return m_NumShaderStages; }
 
     virtual const GraphicsPipelineDesc& DILIGENT_CALL_TYPE GetGraphicsPipelineDesc() const override final
     {
@@ -244,44 +236,46 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                 bool                     InitStaticResources) override final
     {
-        auto* pSign = GetResourceSignature(0);
-        if (pSign)
-            return pSign->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
+        *ppShaderResourceBinding = nullptr;
+
+        if (GetResourceSignatureCount() != 1)
+            return;
+
+        return GetResourceSignature(0)->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
     }
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
                                                                                 const Char* Name) override final
     {
-        VERIFY_EXPR(GetResourceSignatureCount() == 1);
+        if (GetResourceSignatureCount() != 1)
+            return nullptr;
 
-        auto* pSign = GetResourceSignature(0);
-        if (pSign)
-            return pSign->GetStaticVariableByName(ShaderType, Name);
-
-        return nullptr;
+        return GetResourceSignature(0)->GetStaticVariableByName(ShaderType, Name);
     }
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
                                                                                  Uint32      Index) override final
     {
-        VERIFY_EXPR(GetResourceSignatureCount() == 1);
+        if (GetResourceSignatureCount() != 1)
+            return nullptr;
 
-        auto* pSign = GetResourceSignature(0);
-        if (pSign)
-            return pSign->GetStaticVariableByIndex(ShaderType, Index);
-
-        return nullptr;
+        return GetResourceSignature(0)->GetStaticVariableByIndex(ShaderType, Index);
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
     {
-        VERIFY_EXPR(GetResourceSignatureCount() == 1);
+        if (GetResourceSignatureCount() != 1)
+            return 0;
 
-        auto* pSign = GetResourceSignature(0);
-        if (pSign)
-            return pSign->GetStaticVariableCount(ShaderType);
+        return GetResourceSignature(0)->GetStaticVariableCount(ShaderType);
+    }
 
-        return 0;
+    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final
+    {
+        if (GetResourceSignatureCount() != 1)
+            return;
+
+        return GetResourceSignature(0)->BindStaticResources(ShaderFlags, pResourceMapping, Flags);
     }
 
     inline void CopyShaderHandle(const char* Name, void* pData, size_t DataSize) const
@@ -729,13 +723,15 @@ private:
     }
 
 protected:
+    //size_t m_ShaderResourceLayoutHash = 0;
+
     Uint32* m_pStrides        = nullptr;
     Uint8   m_BufferSlotsUsed = 0;
 
     Uint8 m_NumShaderStages = 0; ///< Number of shader stages in this PSO
 
     /// Array of shader types for every shader stage used by this PSO
-    std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_ShaderStageTypes = {};
+    std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_ShaderStageTypes = {}; // AZ TODO: remove ?
 
     RefCntAutoPtr<IRenderPass> m_pRenderPass; ///< Strong reference to the render pass object
 

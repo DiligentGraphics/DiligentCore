@@ -124,10 +124,9 @@ protected:
         pEnv->Reset();
     }
 
-    static void CreateDrawTrisPSO(IRenderPass*                           pRenderPass,
-                                  Uint8                                  SampleCount,
-                                  RefCntAutoPtr<IPipelineState>&         pPSO,
-                                  RefCntAutoPtr<IShaderResourceBinding>& pSRB)
+    static void CreateDrawTrisPSO(IRenderPass*                   pRenderPass,
+                                  Uint8                          SampleCount,
+                                  RefCntAutoPtr<IPipelineState>& pPSO)
     {
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
@@ -151,21 +150,17 @@ protected:
 
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
         ASSERT_NE(pPSO, nullptr);
-        pPSO->CreateShaderResourceBinding(&pSRB);
-        ASSERT_NE(pSRB, nullptr);
     }
 
-    static void DrawTris(IRenderPass*            pRenderPass,
-                         IFramebuffer*           pFramebuffer,
-                         IPipelineState*         pPSO,
-                         IShaderResourceBinding* pSRB,
-                         const float             ClearColor[])
+    static void DrawTris(IRenderPass*    pRenderPass,
+                         IFramebuffer*   pFramebuffer,
+                         IPipelineState* pPSO,
+                         const float     ClearColor[])
     {
         auto* pEnv     = TestingEnvironment::GetInstance();
         auto* pContext = pEnv->GetDeviceContext();
 
         pContext->SetPipelineState(pPSO);
-        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         BeginRenderPassAttribs RPBeginInfo;
         RPBeginInfo.pRenderPass  = pRenderPass;
@@ -585,10 +580,9 @@ TEST_F(RenderPassTest, Draw)
     pDevice->CreateRenderPass(RPDesc, &pRenderPass);
     ASSERT_NE(pRenderPass, nullptr);
 
-    RefCntAutoPtr<IPipelineState>         pPSO;
-    RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    CreateDrawTrisPSO(pRenderPass, 1, pPSO, pSRB);
-    ASSERT_TRUE(pPSO != nullptr && pSRB != nullptr);
+    RefCntAutoPtr<IPipelineState> pPSO;
+    CreateDrawTrisPSO(pRenderPass, 1, pPSO);
+    ASSERT_TRUE(pPSO != nullptr);
 
     ITextureView* pRTAttachments[] = {pSwapChain->GetCurrentBackBufferRTV()};
 
@@ -601,7 +595,7 @@ TEST_F(RenderPassTest, Draw)
     pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
     ASSERT_TRUE(pFramebuffer);
 
-    DrawTris(pRenderPass, pFramebuffer, pPSO, pSRB, ClearColor);
+    DrawTris(pRenderPass, pFramebuffer, pPSO, ClearColor);
 
     Present();
 }
@@ -725,10 +719,9 @@ TEST_F(RenderPassTest, MSResolve)
     pDevice->CreateRenderPass(RPDesc, &pRenderPass);
     ASSERT_NE(pRenderPass, nullptr);
 
-    RefCntAutoPtr<IPipelineState>         pPSO;
-    RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    CreateDrawTrisPSO(pRenderPass, 4, pPSO, pSRB);
-    ASSERT_TRUE(pPSO != nullptr && pSRB != nullptr);
+    RefCntAutoPtr<IPipelineState> pPSO;
+    CreateDrawTrisPSO(pRenderPass, 4, pPSO);
+    ASSERT_TRUE(pPSO != nullptr);
 
     ITextureView* pRTAttachments[] = //
         {
@@ -745,7 +738,7 @@ TEST_F(RenderPassTest, MSResolve)
     pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
     ASSERT_TRUE(pFramebuffer);
 
-    DrawTris(pRenderPass, pFramebuffer, pPSO, pSRB, ClearColor);
+    DrawTris(pRenderPass, pFramebuffer, pPSO, ClearColor);
 
     Present();
 }
@@ -887,10 +880,9 @@ TEST_F(RenderPassTest, InputAttachment)
     pDevice->CreateRenderPass(RPDesc, &pRenderPass);
     ASSERT_NE(pRenderPass, nullptr);
 
-    RefCntAutoPtr<IPipelineState>         pPSO;
-    RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    CreateDrawTrisPSO(pRenderPass, 1, pPSO, pSRB);
-    ASSERT_TRUE(pPSO != nullptr && pSRB != nullptr);
+    RefCntAutoPtr<IPipelineState> pPSO;
+    CreateDrawTrisPSO(pRenderPass, 1, pPSO);
+    ASSERT_TRUE(pPSO != nullptr);
 
     RefCntAutoPtr<IPipelineState>         pInputAttachmentPSO;
     RefCntAutoPtr<IShaderResourceBinding> pInputAttachmentSRB;
@@ -969,7 +961,6 @@ TEST_F(RenderPassTest, InputAttachment)
     ASSERT_TRUE(pFramebuffer);
 
     pContext->SetPipelineState(pPSO);
-    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     BeginRenderPassAttribs RPBeginInfo;
     RPBeginInfo.pRenderPass  = pRenderPass;

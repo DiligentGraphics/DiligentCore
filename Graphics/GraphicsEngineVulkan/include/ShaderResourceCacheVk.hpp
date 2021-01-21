@@ -57,6 +57,7 @@
 #include "DescriptorPoolManager.hpp"
 #include "SPIRVShaderResources.hpp"
 #include "BufferVkImpl.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
@@ -93,13 +94,13 @@ public:
     static size_t GetRequiredMemorySize(Uint32 NumSets, const Uint32* SetSizes);
 
     void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes);
-    void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, VkDescriptorType Type);
+    void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type);
 
     // sizeof(Resource) == 16 (x64, msvc, Release)
     struct Resource
     {
         // clang-format off
-        explicit Resource(VkDescriptorType _Type) noexcept :
+        explicit Resource(DescriptorType _Type) noexcept :
             Type{_Type}
         {}
 
@@ -108,8 +109,8 @@ public:
         Resource& operator = (const Resource&) = delete;
         Resource& operator = (Resource&&)      = delete;
 
-/* 0 */ const VkDescriptorType       Type;
-/*4-7*/ // Unused
+/* 0 */ const DescriptorType       Type;
+/*1-7*/ // Unused
 /* 8 */ RefCntAutoPtr<IDeviceObject> pObject;
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo ()                    const;
@@ -244,27 +245,25 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
     for (Uint32 set = 0; set < m_NumSets; ++set)
     {
         const auto& DescrSet = GetDescriptorSet(set);
-        Uint32      res      = 0;
 
         // AZ TODO: optimize
-        while (res < DescrSet.GetSize())
+        for (Uint32 res = 0; res < DescrSet.GetSize(); ++res)
         {
             const auto& Res = DescrSet.GetResource(res);
 
-            if (Res.Type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+            if (Res.Type == DescriptorType::UniformBufferDynamic)
             {
                 const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
                 auto        Offset    = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
                 Offsets[OffsetInd++]  = Offset;
             }
-            if (Res.Type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
+            if (Res.Type == DescriptorType::StorageBufferDynamic || Res.Type == DescriptorType::StorageBufferDynamic_ReadOnly)
             {
                 const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
                 const auto* pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBufferVk() : 0;
                 auto        Offset        = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
                 Offsets[OffsetInd++]      = Offset;
             }
-            ++res;
         }
     }
     return OffsetInd;

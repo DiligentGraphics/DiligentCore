@@ -106,9 +106,6 @@ struct PipelineResourceDesc
     
     /// AZ TODO: comment
     PIPELINE_RESOURCE_FLAGS        Flags         DEFAULT_INITIALIZER(PIPELINE_RESOURCE_FLAG_UNKNOWN);
-    
-    /// AZ TODO: comment
-    RESOURCE_DIMENSION             ResourceDim   DEFAULT_INITIALIZER(RESOURCE_DIM_UNDEFINED);
 
 #if DILIGENT_CPP_INTERFACE
     PipelineResourceDesc()noexcept{}
@@ -118,15 +115,13 @@ struct PipelineResourceDesc
                          SHADER_RESOURCE_TYPE          _ResourceType,
                          SHADER_TYPE                   _ShaderStages,
                          SHADER_RESOURCE_VARIABLE_TYPE _VarType,
-                         RESOURCE_DIMENSION            _Dim   = RESOURCE_DIM_UNDEFINED,
                          PIPELINE_RESOURCE_FLAGS       _Flags = PIPELINE_RESOURCE_FLAG_UNKNOWN)noexcept : 
         Name        {_Name        },
         ArraySize   {_ArraySize   },
         ResourceType{_ResourceType},
         ShaderStages{_ShaderStages},
         VarType     {_VarType     },
-        Flags       {_Flags       },
-        ResourceDim {_Dim         }
+        Flags       {_Flags       }
     {}
 #endif
 };
@@ -153,6 +148,13 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     
     /// AZ TODO: comment
     Uint16 BindingOffsets [SHADER_RESOURCE_TYPE_LAST + 1]  DEFAULT_INITIALIZER({});
+    
+    /// If UseCombinedTextureSamplers is true, defines the suffix added to the
+    /// texture variable name to get corresponding sampler name.  For example,
+    /// for default value "_sampler", a texture named "tex" will be combined
+    /// with sampler named "tex_sampler".
+    /// If UseCombinedTextureSamplers is false, this member is ignored.
+    const Char* CombinedSamplerSuffix DEFAULT_INITIALIZER("_sampler");
 
     /// Shader resource binding allocation granularity
 
@@ -196,6 +198,18 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
                                                      bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
     
 
+    /// Binds resources for all shaders in the pipeline resource signature
+
+    /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
+    ///                           Any combination of Diligent::SHADER_TYPE may be used.
+    /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
+    /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
+    VIRTUAL void METHOD(BindStaticResources)(THIS_
+                                             Uint32             ShaderFlags,
+                                             IResourceMapping*  pResourceMapping,
+                                             Uint32             Flags) PURE;
+
+
     /// Returns static shader resource variable. If the variable is not found,
     /// returns nullptr.
     
@@ -231,6 +245,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     ///         Mutable and dynamic variables are accessed through Shader Resource Binding object.
     VIRTUAL Uint32 METHOD(GetStaticVariableCount)(THIS_
                                                   SHADER_TYPE ShaderType) CONST PURE;
+    
+    /// AZ TODO: comment
+    VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
+                                          const struct IPipelineResourceSignature* pPRS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -243,9 +261,11 @@ DILIGENT_END_INTERFACE
 #    define IPipelineResourceSignature_GetDesc(This) (const struct PipelineResourceSignatureDesc*)IDeviceObject_GetDesc(This)
 
 #    define IPipelineResourceSignature_CreateShaderResourceBinding(This, ...)  CALL_IFACE_METHOD(PipelineResourceSignature, CreateShaderResourceBinding, This, __VA_ARGS__)
+#    define IPipelineResourceSignature_BindStaticResources(This, ...)          CALL_IFACE_METHOD(PipelineResourceSignature, BindStaticResources,         This, __VA_ARGS__)
 #    define IPipelineResourceSignature_GetStaticVariableByName(This, ...)      CALL_IFACE_METHOD(PipelineResourceSignature, GetStaticVariableByName,     This, __VA_ARGS__)
 #    define IPipelineResourceSignature_GetStaticVariableByIndex(This, ...)     CALL_IFACE_METHOD(PipelineResourceSignature, GetStaticVariableByIndex,    This, __VA_ARGS__)
 #    define IPipelineResourceSignature_GetStaticVariableCount(This, ...)       CALL_IFACE_METHOD(PipelineResourceSignature, GetStaticVariableCount,      This, __VA_ARGS__)
+#    define IPipelineResourceSignature_IsCompatibleWith(This, ...)             CALL_IFACE_METHOD(PipelineResourceSignature, IsCompatibleWith,            This, __VA_ARGS__)
 
 // clang-format on
 

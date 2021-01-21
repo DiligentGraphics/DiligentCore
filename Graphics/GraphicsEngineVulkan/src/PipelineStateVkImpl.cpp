@@ -502,6 +502,98 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
     return ShaderGroups;
 }
 
+void GetShaderResourceTypeAndFlags(SPIRVShaderResourceAttribs::ResourceType Type,
+                                   SHADER_RESOURCE_TYPE&                    OutType,
+                                   PIPELINE_RESOURCE_FLAGS&                 OutFlags)
+{
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type below");
+    OutFlags = PIPELINE_RESOURCE_FLAG_UNKNOWN;
+    switch (Type)
+    {
+        case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
+            OutType = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
+            // Read-only storage buffers map to buffer SRV
+            // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide#read-write-vs-read-only-resources-for-hlsl
+            OutType = SHADER_RESOURCE_TYPE_BUFFER_SRV;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
+            OutType = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
+            OutType  = SHADER_RESOURCE_TYPE_BUFFER_SRV;
+            OutFlags = PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
+            OutType  = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            OutFlags = PIPELINE_RESOURCE_FLAG_TEXEL_BUFFER;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
+            OutType = SHADER_RESOURCE_TYPE_TEXTURE_UAV;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
+            OutType  = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+            OutFlags = PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
+            LOG_WARNING_MESSAGE("There is no appropriate shader resource type for atomic counter");
+            OutType = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
+            OutType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
+            OutType = SHADER_RESOURCE_TYPE_SAMPLER;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::InputAttachment:
+            OutType = SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT;
+            break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure:
+            OutType = SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
+            break;
+
+        default:
+            UNEXPECTED("Unknown SPIRV resource type");
+            OutType = SHADER_RESOURCE_TYPE_UNKNOWN;
+            break;
+    }
+}
+
+void VerifyResourceMerge(const SPIRVShaderResourceAttribs& ExistingRes,
+                         const SPIRVShaderResourceAttribs& NewResAttribs)
+{
+    DEV_CHECK_ERR(ExistingRes.Type == NewResAttribs.Type,
+                  "Shader variable '", NewResAttribs.Name,
+                  "' exists in multiple shaders from the same shader stage, but its type is not consistent between "
+                  "shaders. All variables with the same name from the same shader stage must have the same type.");
+
+    DEV_CHECK_ERR(ExistingRes.ResourceDim == NewResAttribs.ResourceDim,
+                  "Shader variable '", NewResAttribs.Name,
+                  "' exists in multiple shaders from the same shader stage, but its resource dimension is not consistent between "
+                  "shaders. All variables with the same name from the same shader stage must have the same resource dimension.");
+
+    DEV_CHECK_ERR(ExistingRes.ArraySize == NewResAttribs.ArraySize,
+                  "Shader variable '", NewResAttribs.Name,
+                  "' exists in multiple shaders from the same shader stage, but its array size is not consistent between "
+                  "shaders. All variables with the same name from the same shader stage must have the same array size.");
+
+    DEV_CHECK_ERR(ExistingRes.IsMS == NewResAttribs.IsMS,
+                  "Shader variable '", NewResAttribs.Name,
+                  "' exists in multiple shaders from the same shader stage, but its multisample flag is not consistent between "
+                  "shaders. All variables with the same name from the same shader stage must either be multisample or non-multisample.");
+}
 } // namespace
 
 
@@ -509,8 +601,7 @@ PipelineStateVkImpl::ShaderStageInfo::ShaderStageInfo(const ShaderVkImpl* pShade
     Type{pShader->GetDesc().ShaderType},
     Shaders{pShader},
     SPIRVs{pShader->GetSPIRV()}
-{
-}
+{}
 
 void PipelineStateVkImpl::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
 {
@@ -640,26 +731,57 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 
     if (SignatureCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
     {
-        using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
+        struct UniqueResource
+        {
+            SPIRVShaderResourceAttribs const* Attribs   = nullptr;
+            Uint32                            DescIndex = ~0u;
+        };
+        using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, UniqueResource, HashMapStringKey::Hasher>;
 
         std::vector<PipelineResourceDesc> Resources;
         ResourceNameToIndex_t             UniqueNames;
-        const PipelineResourceLayoutDesc& LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
+        const char*                       pCombinedSamplerSuffix = nullptr;
+        const auto&                       LayoutDesc             = CreateInfo.PSODesc.ResourceLayout;
 
         for (auto& Stage : ShaderStages)
         {
             UniqueNames.clear();
             for (auto* pShader : Stage.Shaders)
             {
-                pShader->GetShaderResources().ProcessResources(
+                const auto DefaultVarType  = LayoutDesc.DefaultVariableType;
+                auto&      ShaderResources = pShader->GetShaderResources();
+
+                ShaderResources.ProcessResources(
                     [&](const SPIRVShaderResourceAttribs& Res, Uint32) //
                     {
-                        bool IsNewResource = UniqueNames.emplace(HashMapStringKey{Res.Name}, static_cast<Uint32>(Resources.size())).second;
-                        if (IsNewResource)
+                        auto IterAndAssigned = UniqueNames.emplace(HashMapStringKey{Res.Name}, UniqueResource{&Res, static_cast<Uint32>(Resources.size())});
+                        if (IterAndAssigned.second)
                         {
-                            Resources.emplace_back(Res.Name, Res.ArraySize, Res.GetShaderResourceType(Res.Type), Stage.Type, CreateInfo.PSODesc.ResourceLayout.DefaultVariableType);
+                            SHADER_RESOURCE_TYPE    Type;
+                            PIPELINE_RESOURCE_FLAGS Flags;
+                            GetShaderResourceTypeAndFlags(Res.Type, Type, Flags);
+
+                            Resources.emplace_back(Res.Name, Res.ArraySize, Type, Stage.Type, DefaultVarType, Flags);
+                        }
+                        else
+                        {
+                            VerifyResourceMerge(*IterAndAssigned.first->second.Attribs, Res);
                         }
                     });
+
+                // merge combined sampler suffixes
+                if (ShaderResources.IsUsingCombinedSamplers() && ShaderResources.GetNumSepSmplrs() > 0)
+                {
+                    if (pCombinedSamplerSuffix != nullptr)
+                    {
+                        if (strcmp(pCombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
+                            LOG_ERROR_AND_THROW("AZ TODO");
+                    }
+                    else
+                    {
+                        pCombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
+                    }
+                }
 
                 for (Uint32 i = 0; i < LayoutDesc.NumVariables; ++i)
                 {
@@ -667,29 +789,47 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                     if (Var.ShaderStages & Stage.Type)
                     {
                         auto Iter = UniqueNames.find(HashMapStringKey{Var.Name});
-                        if (Iter != UniqueNames.end() && Iter->second < Resources.size())
-                            Resources[Iter->second].VarType = Var.Type;
+                        if (Iter != UniqueNames.end())
+                        {
+                            auto& Res   = Resources[Iter->second.DescIndex];
+                            Res.VarType = Var.Type;
+
+                            // apply new variable type to sampler too
+                            if (ShaderResources.IsUsingCombinedSamplers() && Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+                            {
+                                String SampName = String{Var.Name} + ShaderResources.GetCombinedSamplerSuffix();
+                                auto   SampIter = UniqueNames.find(HashMapStringKey{SampName.c_str()});
+                                if (SampIter != UniqueNames.end())
+                                    Resources[SampIter->second.DescIndex].VarType = Var.Type;
+                            }
+                        }
                     }
                 }
             }
         }
 
-        PipelineResourceSignatureDesc ResSignDesc;
-        ResSignDesc.Resources            = Resources.data();
-        ResSignDesc.NumResources         = static_cast<Uint32>(Resources.size());
-        ResSignDesc.ImmutableSamplers    = LayoutDesc.ImmutableSamplers;
-        ResSignDesc.NumImmutableSamplers = LayoutDesc.NumImmutableSamplers;
-        ResSignDesc.BindingIndex         = 0;
+        if (Resources.size())
+        {
+            PipelineResourceSignatureDesc ResSignDesc;
+            ResSignDesc.Resources                = Resources.data();
+            ResSignDesc.NumResources             = static_cast<Uint32>(Resources.size());
+            ResSignDesc.ImmutableSamplers        = LayoutDesc.ImmutableSamplers;
+            ResSignDesc.NumImmutableSamplers     = LayoutDesc.NumImmutableSamplers;
+            ResSignDesc.BindingIndex             = 0;
+            ResSignDesc.SRBAllocationGranularity = CreateInfo.PSODesc.SRBAllocationGranularity;
+            ResSignDesc.CombinedSamplerSuffix    = pCombinedSamplerSuffix;
 
-        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, &TempSignature);
-        if (TempSignature == nullptr)
-            LOG_ERROR_AND_THROW("");
+            GetDevice()->CreatePipelineResourceSignature(ResSignDesc, &TempSignature, true);
 
-        Signatures[0]  = TempSignature;
-        SignatureCount = 1;
+            if (TempSignature == nullptr)
+                LOG_ERROR_AND_THROW("AZ TODO");
+
+            Signatures[0]  = TempSignature;
+            SignatureCount = 1;
+        }
     }
 
-    m_PipelineLayout = GetDevice()->GetPipelineLayoutCache().GetLayout(Signatures.data(), SignatureCount);
+    m_PipelineLayout.Create(GetDevice(), Signatures.data(), SignatureCount);
 
     // verify that pipeline layout is compatible with shader resources and
     // remap resource bindings
@@ -710,10 +850,10 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                 [&](const SPIRVShaderResourceAttribs& Res, Uint32) //
                 {
                     PipelineLayoutVk::ResourceInfo Info;
-                    if (!m_PipelineLayout->GetResourceInfo(Res.Name, ShaderType, Info))
+                    if (!m_PipelineLayout.GetResourceInfo(Res.Name, ShaderType, Info))
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Res.Name,
-                                            "' that is not presented in any pipeline resource signature that used to create pipeline state '",
+                                            "' that is not presented in any pipeline resource signature that is used to create pipeline state '",
                                             m_Desc.Name, "'.");
                     }
                     SPIRV[Res.BindingDecorationOffset]       = Info.BindingIndex;
@@ -744,11 +884,6 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
-    // It is important to construct all objects before initializing them because if an exception is thrown,
-    // destructors will be called for all objects
-
-    //InitResourceLayouts(CreateInfo, ShaderStages);
-
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);
 
@@ -767,7 +902,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, *m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
+        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
     }
     catch (...)
     {
@@ -786,7 +921,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateComputePipeline(pDeviceVk, vkShaderStages, *m_PipelineLayout, m_Desc, m_Pipeline);
+        CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
     }
     catch (...)
     {
@@ -809,7 +944,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         const auto vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
 
-        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, *m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
+        CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
 
         VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == vkShaderGroups.size(),
                "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");
@@ -835,6 +970,7 @@ void PipelineStateVkImpl::Destruct()
     TPipelineStateBase::Destruct();
 
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
+    m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
 
     auto& RawAllocator = GetRawAllocator();
     if (m_pRawMem)
@@ -842,33 +978,23 @@ void PipelineStateVkImpl::Destruct()
         RawAllocator.Free(m_pRawMem);
         m_pRawMem = nullptr;
     }
-
-    // AZ TODO:
-    /*
-    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-    {
-        if (m_StaticVarsMgrs != nullptr)
-        {
-            m_StaticVarsMgrs[s].DestroyVariables(GetRawAllocator());
-            m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
-        }
-
-        if (m_StaticResCaches != nullptr)
-        {
-            m_StaticResCaches[s].~ShaderResourceCacheVk();
-        }
-    }
-    */
 }
 
 bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 {
-    return m_PipelineLayout == ValidatedCast<const PipelineStateVkImpl>(pPSO)->m_PipelineLayout;
-}
+    const auto& lhs = m_PipelineLayout;
+    const auto& rhs = ValidatedCast<const PipelineStateVkImpl>(pPSO)->m_PipelineLayout;
 
-void PipelineStateVkImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
-{
-    //m_StaticVarsMgr.BindResources(ShaderFlags, pResourceMapping, Flags);
+    if (lhs.GetSignatureCount() != rhs.GetSignatureCount())
+        return false;
+
+    if (lhs.GetSignatureCount() == 0)
+        return true;
+
+    if (lhs.GetSignatureCount() == 1)
+        return lhs.GetSignature(0)->IsCompatibleWith(*rhs.GetSignature(0));
+
+    return false;
 }
 
 } // namespace Diligent

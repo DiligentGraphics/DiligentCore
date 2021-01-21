@@ -91,7 +91,6 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_LogicalVkDevice        {std::move(LogicalDevice) },
     m_EngineAttribs          {EngineCI                 },
     m_FramebufferCache       {*this                    },
-    m_PipelineLayoutCache    {*this                    },
     m_ImplicitRenderPassCache{*this                    },
     m_DescriptorSetAllocator
     {
@@ -105,8 +104,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              EngineCI.MainDescriptorPoolSize.NumStorageImageDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,       EngineCI.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,       EngineCI.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,           EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,           EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,             EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,           EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
@@ -127,8 +126,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              EngineCI.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,       EngineCI.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,       EngineCI.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,           EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,           EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,             EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,             EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,           EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
@@ -171,8 +170,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount,
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayRecursionDepth,
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayDispatchInvocationCount
-    },
-    m_PipelineLayoutAllocator{GetRawAllocator(), sizeof(PipelineLayoutVk), 128}
+    }
 // clang-format on
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
@@ -278,10 +276,16 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     SamCaps.BorderSamplingModeSupported   = True;
     SamCaps.AnisotropicFilteringSupported = vkEnabledFeatures.samplerAnisotropy;
     SamCaps.LODBiasSupported              = True;
+
+    PipelineResourceSignatureDesc Desc;
+    Desc.Name = "Empty resource signature";
+    CreatePipelineResourceSignature(Desc, &m_pEmptySignature, true);
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
 {
+    m_pEmptySignature.Release();
+
     // Explicitly destroy dynamic heap. This will move resources owned by
     // the heap into release queues
     m_DynamicMemoryManager.Destroy();
@@ -834,19 +838,20 @@ void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
 void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                          IPipelineResourceSignature**         ppSignature)
 {
+    CreatePipelineResourceSignature(Desc, ppSignature, false);
+}
+
+void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                         IPipelineResourceSignature**         ppSignature,
+                                                         bool                                 IsDeviceInternal)
+{
     CreateDeviceObject("PipelineResourceSignature", Desc, ppSignature,
                        [&]() //
                        {
-                           PipelineResourceSignatureVkImpl* pPRSVk(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignatureVkImpl instance", PipelineResourceSignatureVkImpl)(this, Desc));
+                           PipelineResourceSignatureVkImpl* pPRSVk(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignatureVkImpl instance", PipelineResourceSignatureVkImpl)(this, Desc, IsDeviceInternal));
                            pPRSVk->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
                            OnCreateDeviceObject(pPRSVk);
                        });
-}
-
-void RenderDeviceVkImpl::CreatePipelineLayout(IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount, PipelineLayoutVk** ppPipelineLayout)
-{
-    PipelineLayoutVk* pPLVk(NEW_RC_OBJ(m_PipelineLayoutAllocator, "PipelineLayoutVk instance", PipelineLayoutVk)(this, ppSignatures, SignatureCount));
-    *ppPipelineLayout = pPLVk;
 }
 
 } // namespace Diligent

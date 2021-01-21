@@ -17,7 +17,6 @@ set(INCLUDE
     include/GenerateMipsVkHelper.hpp
     include/pch.h
     include/PipelineLayoutVk.hpp
-    include/PipelineLayoutCacheVk.hpp
     include/PipelineStateVkImpl.hpp
     include/QueryManagerVk.hpp
     include/QueryVkImpl.hpp
@@ -93,7 +92,6 @@ set(SRC
     src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
     src/GenerateMipsVkHelper.cpp
-    src/PipelineLayoutCacheVk.cpp
     src/PipelineLayoutVk.cpp
     src/PipelineStateVkImpl.cpp
     src/QueryManagerVk.cpp

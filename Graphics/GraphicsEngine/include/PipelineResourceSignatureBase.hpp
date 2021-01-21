@@ -63,8 +63,9 @@ public:
                                   bool                                 bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        this->m_Desc.Resources         = nullptr;
-        this->m_Desc.ImmutableSamplers = nullptr;
+        this->m_Desc.Resources             = nullptr;
+        this->m_Desc.ImmutableSamplers     = nullptr;
+        this->m_Desc.CombinedSamplerSuffix = nullptr;
     }
 
     ~PipelineResourceSignatureBase()
@@ -74,82 +75,20 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineResourceSignature, TDeviceObjectBase)
 
-    Uint32 GetVariableCount(SHADER_TYPE ShaderType) const
-    {
-        // AZ TODO: optimize
-        Uint32 Count = 0;
-        for (Uint32 i = 0; i < this->m_Desc.NumResources; ++i)
-        {
-            auto& Res = this->m_Desc.Resources[i];
-            if (Res.VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC && (Res.ShaderStages & ShaderType))
-                ++Count;
-        }
-        return Count;
-    }
-
-    Uint32 GetVariableGlobalIndexByName(SHADER_TYPE ShaderType, const char* Name) const
-    {
-        // AZ TODO: optimize
-        for (Uint32 i = 0; i < this->m_Desc.NumResources; ++i)
-        {
-            auto& Res = this->m_Desc.Resources[i];
-            if (Res.VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC && (Res.ShaderStages & ShaderType))
-            {
-                if (strcmp(Name, Res.Name) == 0)
-                    return i;
-            }
-        }
-        return ~0u;
-    }
-
-    Uint32 GetVariableGlobalIndexByIndex(SHADER_TYPE ShaderType, Uint32 Index) const
-    {
-        // AZ TODO: optimize
-        Uint32 Count = 0;
-        for (Uint32 i = 0; i < this->m_Desc.NumResources; ++i)
-        {
-            auto& Res = this->m_Desc.Resources[i];
-            if (Res.VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC && (Res.ShaderStages & ShaderType))
-            {
-                if (Index == Count)
-                    return i;
-
-                ++Count;
-            }
-        }
-        return ~0u;
-    }
-
-    Uint32 GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE VarType) const
-    {
-        // AZ TODO: optimize
-        Uint32 Count = 0;
-        for (Uint32 i = 0; i < this->m_Desc.NumResources; ++i)
-        {
-            auto& Res = this->m_Desc.Resources[i];
-            if (Res.VarType == VarType)
-                Count += Res.ArraySize;
-        }
-        return Count;
-    }
-
-    PipelineResourceDesc GetResource(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 Index) const
-    {
-        return {};
-    }
-
     size_t GetHash() const { return m_Hash; }
 
     PIPELINE_TYPE GetPipelineType() const { return m_PipelineType; }
 
+    const char* GetCombinedSamplerSuffix() const { return this->m_Desc.CombinedSamplerSuffix; }
+
+    bool IsUsingCombinedSamplers() const { return this->m_Desc.CombinedSamplerSuffix != nullptr; }
+    bool IsUsingSeparateSamplers() const { return !IsUsingCombinedSamplers(); }
+
 protected:
 #define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
-    void ReserveSpaceForDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) noexcept(false)
+    void ReserveSpaceForDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) const noexcept(false)
     {
-        if (Desc.NumResources == 0)
-            LOG_PRS_ERROR_AND_THROW("AZ TODO");
-
         Allocator.AddSpace<PipelineResourceDesc>(Desc.NumResources);
         Allocator.AddSpace<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
 
@@ -176,6 +115,8 @@ protected:
 
             Allocator.AddSpaceForString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
         }
+
+        Allocator.AddSpaceForString(Desc.CombinedSamplerSuffix);
     }
 
     void CopyDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) noexcept(false)
@@ -183,7 +124,7 @@ protected:
         PipelineResourceDesc* pResources = Allocator.Allocate<PipelineResourceDesc>(this->m_Desc.NumResources);
         ImmutableSamplerDesc* pSamplers  = Allocator.Allocate<ImmutableSamplerDesc>(this->m_Desc.NumImmutableSamplers);
 
-        m_Hash = ComputeHash(Desc.NumResources, Desc.NumImmutableSamplers);
+        m_Hash = ComputeHash(Desc.NumResources, Desc.NumImmutableSamplers, Desc.BindingIndex);
 
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
@@ -191,7 +132,7 @@ protected:
             Dst       = Desc.Resources[i];
             Dst.Name  = Allocator.CopyString(Desc.Resources[i].Name);
 
-            HashCombine(m_Hash, CStringHash<char>{}(Dst.Name), Dst.ArraySize, Dst.ResourceType, Dst.ShaderStages, Dst.VarType, Dst.Flags);
+            HashCombine(m_Hash, Dst.ArraySize, Dst.ResourceType, Dst.ShaderStages, Dst.VarType, Dst.Flags);
         }
 
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
@@ -200,19 +141,21 @@ protected:
             Dst                      = Desc.ImmutableSamplers[i];
             Dst.SamplerOrTextureName = Allocator.CopyString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
 
-            //HashCombine(m_Hash, CStringHash<char>{}(Dst.Name), Dst.ShaderStages, Dst.Desc); // AZ TODO
+            HashCombine(m_Hash, Dst.ShaderStages, Dst.Desc);
         }
 
-        this->m_Desc.Resources         = pResources;
-        this->m_Desc.ImmutableSamplers = pSamplers;
+        this->m_Desc.Resources             = pResources;
+        this->m_Desc.ImmutableSamplers     = pSamplers;
+        this->m_Desc.CombinedSamplerSuffix = Allocator.CopyString(Desc.CombinedSamplerSuffix);
     }
 
     void Destruct()
     {
         VERIFY(!m_IsDestructed, "This object has already been destructed");
 
-        this->m_Desc.Resources         = nullptr;
-        this->m_Desc.ImmutableSamplers = nullptr;
+        this->m_Desc.Resources             = nullptr;
+        this->m_Desc.ImmutableSamplers     = nullptr;
+        this->m_Desc.CombinedSamplerSuffix = nullptr;
 
 #if DILIGENT_DEBUG
         m_IsDestructed = true;
@@ -231,14 +174,14 @@ protected:
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto LayoutInd     = StaticVarIndex[ShaderTypeInd];
-        if (LayoutInd < 0)
+        const auto VarMngrInd    = StaticVarIndex[ShaderTypeInd];
+        if (VarMngrInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
-        return LayoutInd;
+        return VarMngrInd;
     }
 
     Int8 GetStaticVariableByNameHelper(SHADER_TYPE ShaderType, const Char* Name, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& StaticVarIndex) const
@@ -251,14 +194,14 @@ protected:
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto LayoutInd     = StaticVarIndex[ShaderTypeInd];
-        if (LayoutInd < 0)
+        const auto VarMngrInd    = StaticVarIndex[ShaderTypeInd];
+        if (VarMngrInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
-        return LayoutInd;
+        return VarMngrInd;
     }
 
     Int8 GetStaticVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& StaticVarIndex) const
@@ -271,14 +214,14 @@ protected:
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto LayoutInd     = StaticVarIndex[ShaderTypeInd];
-        if (LayoutInd < 0)
+        const auto VarMngrInd    = StaticVarIndex[ShaderTypeInd];
+        if (VarMngrInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
-        return LayoutInd;
+        return VarMngrInd;
     }
 
 protected:

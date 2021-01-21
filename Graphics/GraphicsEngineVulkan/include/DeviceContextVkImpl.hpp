@@ -397,7 +397,6 @@ private:
     void               CommitVkVertexBuffers();
     void               CommitViewports();
     void               CommitScissorRects();
-    void               BindShaderResources(PipelineStateVkImpl* pPipelineStateVk);
 
     __forceinline void TransitionOrVerifyBufferState(BufferVkImpl&                  Buffer,
                                                      RESOURCE_STATE_TRANSITION_MODE TransitionMode,
@@ -477,14 +476,54 @@ private:
         Uint32 NumCommands = 0;
     } m_State;
 
+    // graphics, compute, ray tracing
+    static constexpr Uint32 PIPELINE_BIND_POINTS = 3;
+
+    // static and dynamic descriptor sets
+    static constexpr Uint32 MAX_DESCR_SET_PER_SIGNATURE = 2;
+
+    struct DescriptorSetBindInfo
+    {
+        using ShaderResourceArray = std::array<RefCntAutoPtr<ShaderResourceBindingVkImpl>, MAX_RESOURCE_SIGNATURES>;
+        using VkDescSetArray      = std::array<VkDescriptorSet, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE>;
+        using BoolArray           = std::bitset<MAX_RESOURCE_SIGNATURES>;
+
+        ShaderResourceArray Resources;
+        VkDescSetArray      vkSets                    = {};
+        BoolArray           PendingVkSet              = {0}; // 'true' if new descriptor set must be bound
+        BoolArray           PendingDynamicDescriptors = {0}; // 'true' if dynamic descriptor set must be bound
+        BoolArray           DynamicBuffersPresent     = {0};
+
+        DescriptorSetBindInfo()
+        {}
+
+        void Reset()
+        {
+            PendingVkSet.reset();
+            DynamicBuffersPresent.reset();
+            PendingDynamicDescriptors.reset();
+            Resources.fill({});
+
+#ifdef DILIGENT_DEBUG
+            vkSets.fill(VK_NULL_HANDLE);
+#endif
+        }
+
+        __forceinline bool RequireUpdate(bool Intact = false) const
+        {
+            return PendingVkSet.any() || PendingDynamicDescriptors.any() || (DynamicBuffersPresent.any() && !Intact);
+        }
+    };
+
+    void BindShaderResources(PipelineStateVkImpl* pPipelineStateVk);
+    void BindDescriptorSetsWithDynamicOffsets(DescriptorSetBindInfo& DescrSetBindInfo);
+    void ValidateShaderResources();
 
     /// AZ TODO: comment
-    using DescSetBindingInfoArray = std::array<PipelineLayoutVk::DescriptorSetBindInfo, 3>;
-    DescSetBindingInfoArray m_DescrSetBindInfo;
+    std::array<DescriptorSetBindInfo, PIPELINE_BIND_POINTS> m_DescrSetBindInfo;
 
     /// AZ TODO: comment
-    using ShaderResourcePerPipelineType = std::array<std::array<RefCntAutoPtr<ShaderResourceBindingVkImpl>, MAX_RESOURCE_SIGNATURES>, 3>;
-    ShaderResourcePerPipelineType m_ShaderResources;
+    std::vector<Uint32> m_DynamicBufferOffsets;
 
     /// Render pass that matches currently bound render targets.
     /// This render pass may or may not be currently set in the command buffer

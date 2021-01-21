@@ -488,7 +488,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                 SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer :
                 SPIRVShaderResourceAttribs::ResourceType::SeparateImage;
 
-            Uint32 SamplerInd = SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd;
+            Uint32 SamplerInd = SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd; // AZ TODO: remove
             if (CombinedSamplerSuffix != nullptr)
             {
                 auto NumSepSmpls = GetNumSepSmplrs();

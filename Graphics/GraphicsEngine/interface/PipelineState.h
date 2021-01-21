@@ -316,6 +316,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// This member defines allocation granularity for internal resources required by the shader resource
     /// binding object instances.
+    /// Has no effect if used pipeline resource signature.
     Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
 
     /// Defines which command queues this pipeline state can be used with
@@ -367,10 +368,10 @@ struct PipelineStateCreateInfo
     /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
     PSO_CREATE_FLAGS  Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
 
-    /// AZ TODO
+    /// AZ TODO: comment
     IPipelineResourceSignature** ppResourceSignatures DEFAULT_INITIALIZER(nullptr);
     
-    /// AZ TODO
+    /// AZ TODO: comment
     Uint32 ResourceSignaturesCount DEFAULT_INITIALIZER(0);
 };
 typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
@@ -567,6 +568,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 
 
     /// Checks if this pipeline state object is compatible with another PSO
+    // Deprecated: use IsCompatibleWith() for pipeline resource signature.
 
     /// If two pipeline state objects are compatible, they can use shader resource binding
     /// objects interchangebly, i.e. SRBs created by one PSO can be committed

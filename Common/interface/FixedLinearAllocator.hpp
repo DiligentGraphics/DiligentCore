@@ -136,13 +136,14 @@ public:
 
     void AddSpaceForString(const Char* str) noexcept
     {
-        VERIFY_EXPR(str != nullptr);
-        AddSpace(strlen(str) + 1, 1);
+        if (str != nullptr)
+            AddSpace<Char>(strlen(str) + 1);
     }
 
     void AddSpaceForString(const String& str) noexcept
     {
-        AddSpaceForString(str.c_str());
+        if (!str.empty())
+            AddSpace<String::value_type>(str.length() + 1);
     }
 
     void Reserve(size_t size)

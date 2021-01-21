@@ -32,6 +32,7 @@
 #include "VulkanTypeConversions.hpp"
 #include "PlatformMisc.hpp"
 #include "Align.hpp"
+#include "BasicMath.hpp"
 
 namespace Diligent
 {
@@ -1194,9 +1195,8 @@ VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE Sta
     VkPipelineStageFlags vkPipelineStages = 0;
     while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
-        auto StateBit = static_cast<RESOURCE_STATE>(1 << PlatformMisc::GetLSB(Uint32{StateFlags}));
+        auto StateBit = ExtractBit(StateFlags);
         vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit, vkShaderStages);
-        StateFlags &= ~StateBit;
     }
     return vkPipelineStages;
 }
@@ -1299,7 +1299,7 @@ VkAccessFlags AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
     Uint32        Bits        = StateFlags;
     while (Bits != 0)
     {
-        auto Bit = static_cast<RESOURCE_STATE>(1 << PlatformMisc::GetLSB(Bits));
+        auto Bit = ExtractBit(Bits);
         switch (Bit)
         {
             // clang-format off
@@ -1309,7 +1309,6 @@ VkAccessFlags AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
             default:                            UNEXPECTED("Unexpected resource state flag");
                 // clang-format on
         }
-        Bits &= ~Bit;
     }
     return AccessFlags;
 }
@@ -1637,9 +1636,8 @@ VkShaderStageFlags ShaderTypesToVkShaderStageFlags(SHADER_TYPE ShaderTypes)
     VkShaderStageFlags Result = 0;
     while (ShaderTypes != SHADER_TYPE_UNKNOWN)
     {
-        auto Type = static_cast<SHADER_TYPE>(1u << PlatformMisc::GetLSB(Uint32{ShaderTypes}));
+        auto Type = ExtractBit(ShaderTypes);
         Result |= ShaderTypeToVkShaderStageFlagBit(Type);
-        ShaderTypes = ShaderTypes & ~Type;
     }
     return Result;
 }
@@ -1652,7 +1650,7 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
     VkBuildAccelerationStructureFlagsKHR Result = 0;
     while (Flags != RAYTRACING_BUILD_AS_NONE)
     {
-        auto FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1u << PlatformMisc::GetLSB(Uint32{Flags}));
+        auto FlagBit = ExtractBit(Flags);
         switch (FlagBit)
         {
             // clang-format off
@@ -1664,7 +1662,6 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
             // clang-format on
             default: UNEXPECTED("unknown build AS flag");
         }
-        Flags = Flags & ~FlagBit;
     }
     return Result;
 }
@@ -1677,16 +1674,15 @@ VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flag
     VkGeometryFlagsKHR Result = 0;
     while (Flags != RAYTRACING_GEOMETRY_FLAG_NONE)
     {
-        auto FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        auto FlagBit = ExtractBit(Flags);
         switch (FlagBit)
         {
             // clang-format off
-            case RAYTRACING_GEOMETRY_FLAG_OPAQUE:                          Result |= VK_GEOMETRY_OPAQUE_BIT_KHR; break;
+            case RAYTRACING_GEOMETRY_FLAG_OPAQUE:                          Result |= VK_GEOMETRY_OPAQUE_BIT_KHR;                          break;
             case RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR; break;
             // clang-format on
             default: UNEXPECTED("unknown geometry flag");
         }
-        Flags = Flags & ~FlagBit;
     }
     return Result;
 }
@@ -1699,18 +1695,17 @@ VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INS
     VkGeometryInstanceFlagsKHR Result = 0;
     while (Flags != RAYTRACING_INSTANCE_NONE)
     {
-        auto FlagBit = static_cast<RAYTRACING_INSTANCE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        auto FlagBit = ExtractBit(Flags);
         switch (FlagBit)
         {
             // clang-format off
-            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR; break;
+            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;    break;
             case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: Result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR; break;
-            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    Result |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR; break;
-            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 Result |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR; break;
+            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    Result |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;                    break;
+            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 Result |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR;                 break;
             // clang-format on
             default: UNEXPECTED("unknown instance flag");
         }
-        Flags = Flags & ~FlagBit;
     }
     return Result;
 }

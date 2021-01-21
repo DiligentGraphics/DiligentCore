@@ -72,24 +72,13 @@ public:
     /// Implementation of IPipelineStateVk::GetVkPipeline().
     virtual VkPipeline DILIGENT_CALL_TYPE GetVkPipeline() const override final { return m_Pipeline; }
 
-    /// Implementation of IPipelineState::BindStaticResources() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final;
-
     /// Implementation of IPipelineState::GetResourceSignatureCount() in Vulkan backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_PipelineLayout->GetSignatureCount(); }
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_PipelineLayout.GetSignatureCount(); }
 
     /// Implementation of IPipelineState::GetResourceSignature() in Vulkan backend.
-    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final { return m_PipelineLayout->GetSignature(Index); }
+    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final { return m_PipelineLayout.GetSignature(Index); }
 
-    __forceinline void BindDescriptorSetsWithDynamicOffsets(VulkanUtilities::VulkanCommandBuffer&    CmdBuffer,
-                                                            Uint32                                   CtxId,
-                                                            DeviceContextVkImpl*                     pCtxVkImpl,
-                                                            PipelineLayoutVk::DescriptorSetBindInfo& BindInfo)
-    {
-        m_PipelineLayout->BindDescriptorSetsWithDynamicOffsets(CmdBuffer, CtxId, pCtxVkImpl, BindInfo);
-    }
-
-    const PipelineLayoutVk& GetPipelineLayout() const { return *m_PipelineLayout; }
+    const PipelineLayoutVk& GetPipelineLayout() const { return m_PipelineLayout; }
 
     static RenderPassDesc GetImplicitRenderPassDesc(Uint32                                                        NumRenderTargets,
                                                     const TEXTURE_FORMAT                                          RTVFormats[],
@@ -101,11 +90,6 @@ public:
 
 
     void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
-
-    bool IsIncompatibleWith(IPipelineResourceSignature* pPRS) const
-    {
-        return !m_PipelineLayout->HasSignature(pPRS);
-    }
 
     struct ShaderStageInfo
     {
@@ -137,13 +121,10 @@ private:
 
     void Destruct();
 
-    void* m_pRawMem = nullptr; // AZ TODO: remove
+    void* m_pRawMem = nullptr; // AZ TODO: move to base class
 
     VulkanUtilities::PipelineWrapper m_Pipeline;
-    RefCntAutoPtr<PipelineLayoutVk>  m_PipelineLayout;
-
-    bool m_HasStaticResources    = false;
-    bool m_HasNonStaticResources = false;
+    PipelineLayoutVk                 m_PipelineLayout;
 };
 
 } // namespace Diligent
