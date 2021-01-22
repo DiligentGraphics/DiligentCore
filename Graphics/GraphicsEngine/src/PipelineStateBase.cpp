@@ -160,31 +160,62 @@ void CorrectBlendStateDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
 
 void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
+    const auto& PSODesc = CreateInfo.PSODesc;
+
+    if (CreateInfo.ResourceSignaturesCount != 0 && CreateInfo.ppResourceSignatures == nullptr)
+        LOG_PSO_ERROR_AND_THROW("ppResourceSignatures is null, but ResourceSignaturesCount (", CreateInfo.ResourceSignaturesCount, ") is not zero.");
+
+    if (CreateInfo.ppResourceSignatures != nullptr && CreateInfo.ResourceSignaturesCount == 0)
+        LOG_PSO_ERROR_AND_THROW("ppResourceSignatures is not null, but ResourceSignaturesCount is zero.");
+
     if (CreateInfo.ppResourceSignatures == nullptr)
         return;
 
-    const auto& PSODesc = CreateInfo.PSODesc;
+    if (CreateInfo.PSODesc.ResourceLayout.NumVariables != 0)
+    {
+        LOG_PSO_ERROR_AND_THROW("The number of variables defined through resource layout (", CreateInfo.PSODesc.ResourceLayout.NumVariables,
+                                ") must be zero when resource signatures are used.");
+    }
+
+    if (CreateInfo.PSODesc.ResourceLayout.NumImmutableSamplers != 0)
+    {
+        LOG_PSO_ERROR_AND_THROW("The number of immutable samplers defined through resource layout (", CreateInfo.PSODesc.ResourceLayout.NumImmutableSamplers,
+                                ") must be zero when resource signatures are used.");
+    }
+
+    std::unordered_map<HashMapStringKey, const IPipelineResourceSignature*, HashMapStringKey::Hasher> AllResources;
 
     std::array<const IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> ppSignatures = {};
     for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
     {
-        auto* pSignature = CreateInfo.ppResourceSignatures[i];
+        const auto* const pSignature = CreateInfo.ppResourceSignatures[i];
         if (pSignature == nullptr)
             LOG_PSO_ERROR_AND_THROW("Pipeline resource signature at index ", i, " is null");
 
-        const auto& SigDesc = pSignature->GetDesc();
-        VERIFY(SigDesc.BindingIndex < MAX_RESOURCE_SIGNATURES,
+        const auto& SignDesc = pSignature->GetDesc();
+        VERIFY(SignDesc.BindingIndex < MAX_RESOURCE_SIGNATURES,
                "Resource signature binding index exceeds the limit. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
 
-        if (ppSignatures[SigDesc.BindingIndex] != nullptr)
+        if (ppSignatures[SignDesc.BindingIndex] != nullptr)
         {
-            LOG_PSO_ERROR_AND_THROW("Pipeline resource signature '", pSignature->GetDesc().Name, "' at binding index ", Uint32{SigDesc.BindingIndex},
-                                    " conflicts with another resource signature '", ppSignatures[SigDesc.BindingIndex]->GetDesc().Name,
+            LOG_PSO_ERROR_AND_THROW("Pipeline resource signature '", pSignature->GetDesc().Name, "' at binding index ", Uint32{SignDesc.BindingIndex},
+                                    " conflicts with another resource signature '", ppSignatures[SignDesc.BindingIndex]->GetDesc().Name,
                                     "' that uses the same index.");
+        }
+
+        for (Uint32 res = 0; res < SignDesc.NumResources; ++res)
+        {
+            const auto& ResDesc = SignDesc.Resources[res];
+
+            auto insert_res = AllResources.emplace(ResDesc.Name, pSignature);
+            if (!insert_res.second)
+            {
+                LOG_PSO_ERROR_AND_THROW("Shader resource '", ResDesc.Name, "' is found in more than one resource signature ('", SignDesc.Name,
+                                        "' and '", insert_res.first->second->GetDesc().Name, "'). Every shader resource in PSO must be unambiguously defined by only resource signature.");
+            }
         }
     }
 }
-
 
 } // namespace
 
