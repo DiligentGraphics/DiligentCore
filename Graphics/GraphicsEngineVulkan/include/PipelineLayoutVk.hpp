@@ -33,8 +33,6 @@
 
 #include "PipelineResourceSignatureVkImpl.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
 
 namespace Diligent
 {
@@ -47,6 +45,7 @@ class PipelineLayoutVk
 {
 public:
     PipelineLayoutVk();
+    ~PipelineLayoutVk();
 
     void Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
@@ -64,16 +63,18 @@ public:
         return m_Signatures[index].RawPtr<PipelineResourceSignatureVkImpl>();
     }
 
-    Uint32 GetDescrSetIndex(const IPipelineResourceSignature* pPRS) const
+    // Returns the index of the first descriptor set used by the given resource signature
+    Uint32 GetFirstDescrSetIndex(const IPipelineResourceSignature* pPRS) const
     {
         Uint32 Index = pPRS->GetDesc().BindingIndex;
-        return Index < m_SignatureCount ? m_DescSetOffset[Index] : ~0u;
+        return Index < m_SignatureCount ? m_FirstDescrSetIndex[Index] : ~0u;
     }
 
-    Uint32 GetDynamicBufferOffset(const IPipelineResourceSignature* pPRS) const
+    // Returns the index of the first dynamic buffer used by the given resource signature
+    Uint32 GetFirstDynamicBufferIndex(const IPipelineResourceSignature* pPRS) const
     {
         Uint32 Index = pPRS->GetDesc().BindingIndex;
-        return Index < m_SignatureCount ? m_DynBufOffset[Index] : 0;
+        return Index < m_SignatureCount ? m_FirstDynBuffIndex[Index] : 0;
     }
 
     struct ResourceInfo
@@ -87,21 +88,28 @@ public:
 private:
     VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
 
-    Uint32 m_DynamicOffsetCount : 25;
+    // The total number of dynamic offsets in this pipeline layout
+    Uint32 m_DynamicOffsetCount = 0;
 
-    Uint32 m_SignatureCount : 3;
-    static_assert(MAX_RESOURCE_SIGNATURES == (1 << 3), "Update m_SignatureCount bits count");
+    // The number of resource signatures used by this pipeline layout
+    // (Maximum is MAX_RESOURCE_SIGNATURES)
+    Uint16 m_SignatureCount = 0;
 
-    Uint32 m_DescrSetCount : 4;
-    static_assert(MAX_RESOURCE_SIGNATURES * 2 == (1 << 4), "Update m_DescrSetCount bits count");
+    // The total number of descriptor sets used by this pipeline layout.
+    // (Maximum is MAX_RESOURCE_SIGNATURES * 2)
+    Uint16 m_DescrSetCount = 0;
 
-    using SignatureArray     = std::array<RefCntAutoPtr<PipelineResourceSignatureVkImpl>, MAX_RESOURCE_SIGNATURES>;
-    using DescSetOffsetArray = std::array<Uint8, MAX_RESOURCE_SIGNATURES>;
-    using DynBufOffsetArray  = std::array<Uint16, MAX_RESOURCE_SIGNATURES>;
+    using SignatureArrayType          = std::array<RefCntAutoPtr<PipelineResourceSignatureVkImpl>, MAX_RESOURCE_SIGNATURES>;
+    using FirstDescrSetIndexArrayType = std::array<Uint8, MAX_RESOURCE_SIGNATURES>;
+    using FirstDynBuffIndexArrayType  = std::array<Uint16, MAX_RESOURCE_SIGNATURES>;
 
-    SignatureArray     m_Signatures;
-    DescSetOffsetArray m_DescSetOffset = {};
-    DynBufOffsetArray  m_DynBufOffset  = {};
+    SignatureArrayType m_Signatures;
+
+    // Index of the first descriptor set, for every resource signature
+    FirstDescrSetIndexArrayType m_FirstDescrSetIndex = {};
+
+    // Index of the first dynamic buffer, for every resource signature
+    FirstDynBuffIndexArrayType m_FirstDynBuffIndex = {};
 };
 
 } // namespace Diligent

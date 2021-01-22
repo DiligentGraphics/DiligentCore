@@ -416,7 +416,7 @@ void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBind
         if ((BindInfo.PendingVkSet[i] || BindInfo.PendingDynamicDescriptors[i]) && Resources[i] != nullptr)
         {
             const auto*  pSignature    = Resources[i]->GetSignature();
-            const Uint32 DescrSetIdx   = Layout.GetDescrSetIndex(pSignature);
+            const Uint32 DescrSetIdx   = Layout.GetFirstDescrSetIndex(pSignature);
             const auto&  ResourceCache = Resources[i]->GetResourceCache();
             const Uint32 DSCount       = ResourceCache.GetNumDescriptorSets();
             const auto   DSOffset      = i * MAX_DESCR_SET_PER_SIGNATURE;

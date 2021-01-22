@@ -34,6 +34,9 @@ namespace Diligent
 
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false)
 {
+    if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
+        LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Desc.BindingIndex, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
+
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
         const auto& Res = Desc.Resources[i];

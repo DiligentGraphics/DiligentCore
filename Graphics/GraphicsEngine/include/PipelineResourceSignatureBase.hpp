@@ -69,15 +69,7 @@ public:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
-        try
-        {
-            ValidatePipelineResourceSignatureDesc(Desc);
-        }
-        catch (...)
-        {
-            Destruct();
-            throw;
-        }
+        ValidatePipelineResourceSignatureDesc(Desc);
     }
 
     ~PipelineResourceSignatureBase()

@@ -28,6 +28,8 @@
 #include "PipelineStateBase.hpp"
 
 #include <unordered_set>
+#include <unordered_map>
+#include <array>
 
 #include "HashUtils.hpp"
 
@@ -155,6 +157,35 @@ void CorrectBlendStateDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
     }
 }
 
+
+void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInfo) noexcept(false)
+{
+    if (CreateInfo.ppResourceSignatures == nullptr)
+        return;
+
+    const auto& PSODesc = CreateInfo.PSODesc;
+
+    std::array<const IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> ppSignatures = {};
+    for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+    {
+        auto* pSignature = CreateInfo.ppResourceSignatures[i];
+        if (pSignature == nullptr)
+            LOG_PSO_ERROR_AND_THROW("Pipeline resource signature at index ", i, " is null");
+
+        const auto& SigDesc = pSignature->GetDesc();
+        VERIFY(SigDesc.BindingIndex < MAX_RESOURCE_SIGNATURES,
+               "Resource signature binding index exceeds the limit. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+
+        if (ppSignatures[SigDesc.BindingIndex] != nullptr)
+        {
+            LOG_PSO_ERROR_AND_THROW("Pipeline resource signature '", pSignature->GetDesc().Name, "' at binding index ", Uint32{SigDesc.BindingIndex},
+                                    " conflicts with another resource signature '", ppSignatures[SigDesc.BindingIndex]->GetDesc().Name,
+                                    "' that uses the same index.");
+        }
+    }
+}
+
+
 } // namespace
 
 #define VALIDATE_SHADER_TYPE(Shader, ExpectedType, ShaderName)                                                                           \
@@ -168,6 +199,8 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_GRAPHICS && PSODesc.PipelineType != PIPELINE_TYPE_MESH)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be GRAPHICS or MESH.");
+
+    ValidatePipelineResourceSignatures(CreateInfo);
 
     const auto& GraphicsPipeline = CreateInfo.GraphicsPipeline;
 
@@ -246,6 +279,8 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
     if (PSODesc.PipelineType != PIPELINE_TYPE_COMPUTE)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be COMPUTE.");
 
+    ValidatePipelineResourceSignatures(CreateInfo);
+
     if (CreateInfo.pCS == nullptr)
         LOG_PSO_ERROR_AND_THROW("Compute shader must not be null.");
 
@@ -257,6 +292,8 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING.");
+
+    ValidatePipelineResourceSignatures(CreateInfo);
 
     if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
     {
