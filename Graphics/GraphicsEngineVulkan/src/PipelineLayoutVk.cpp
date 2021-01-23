@@ -40,7 +40,6 @@ namespace Diligent
 PipelineLayoutVk::PipelineLayoutVk()
 {
     m_FirstDescrSetIndex.fill(std::numeric_limits<FirstDescrSetIndexArrayType::value_type>::max());
-    m_FirstDynBuffIndex.fill(std::numeric_limits<FirstDynBuffIndexArrayType::value_type>::max());
 }
 
 PipelineLayoutVk::~PipelineLayoutVk()
@@ -58,7 +57,7 @@ void PipelineLayoutVk::Release(RenderDeviceVkImpl* pDeviceVk, Uint64 CommandQueu
 
 void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount)
 {
-    VERIFY(m_DynamicOffsetCount == 0 && m_SignatureCount == 0 && m_DescrSetCount == 0,
+    VERIFY(m_SignatureCount == 0 && m_DescrSetCount == 0,
            "This pipeline layout is already initialized");
 
     for (Uint32 i = 0; i < SignatureCount; ++i)
@@ -66,7 +65,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
         auto* pSignature = ValidatedCast<PipelineResourceSignatureVkImpl>(ppSignatures[i]);
         VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null.  This error should've been caught by ValidatePipelineResourceSignatures.");
 
-        const Uint32 Index = pSignature->GetDesc().BindingIndex;
+        const Uint8 Index = pSignature->GetDesc().BindingIndex;
 
         VERIFY(Index < m_Signatures.size(),
                "Pipeline resource signature specifies binding index ", Uint32{Index}, " that exceeds the limit (", m_Signatures.size() - 1,
@@ -77,7 +76,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
                " conflicts with another resource signature '", m_Signatures[Index]->GetDesc().Name,
                "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
 
-        m_SignatureCount    = std::max(m_SignatureCount, static_cast<Uint16>(Index + 1));
+        m_SignatureCount    = std::max<Uint8>(m_SignatureCount, Index + 1);
         m_Signatures[Index] = pSignature;
     }
 
@@ -89,11 +88,9 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
             m_Signatures[i] = pEmptySign;
     }
 
-    std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * 2> DescSetLayouts;
+    std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE> DescSetLayouts;
 
-    Uint32 DescSetLayoutCount = 0;
-    Uint32 DynamicOffsetCount = 0;
-
+    Uint32 DescSetLayoutCount        = 0;
     Uint32 DynamicUniformBufferCount = 0;
     Uint32 DynamicStorageBufferCount = 0;
 
@@ -106,45 +103,16 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
                "Descriptor set layout count (", DescSetLayoutCount, ") exceeds the maximum representable value");
         m_FirstDescrSetIndex[i] = static_cast<FirstDescrSetIndexArrayType::value_type>(DescSetLayoutCount);
 
-        VERIFY(DescSetLayoutCount <= std::numeric_limits<FirstDynBuffIndexArrayType::value_type>::max(),
-               "Dynamic buffer count (", DynamicOffsetCount, ") exceeds the maximum representable value");
-        m_FirstDynBuffIndex[i] = static_cast<FirstDynBuffIndexArrayType::value_type>(DynamicOffsetCount);
-
         auto StaticDSLayout  = pSignature->GetStaticVkDescriptorSetLayout();
         auto DynamicDSLayout = pSignature->GetDynamicVkDescriptorSetLayout();
 
         if (StaticDSLayout != VK_NULL_HANDLE) DescSetLayouts[DescSetLayoutCount++] = StaticDSLayout;
         if (DynamicDSLayout != VK_NULL_HANDLE) DescSetLayouts[DescSetLayoutCount++] = DynamicDSLayout;
 
-        DynamicOffsetCount += pSignature->GetDynamicBufferCount();
-
-        for (Uint32 r = 0, ResCount = pSignature->GetTotalResourceCount(); r < ResCount; ++r)
-        {
-            const auto& Attr = pSignature->GetAttribs(r);
-
-            if (Attr.Type == DescriptorType::UniformBufferDynamic)
-            {
-                ++DynamicUniformBufferCount;
-            }
-            else if (Attr.Type == DescriptorType::StorageBufferDynamic ||
-                     Attr.Type == DescriptorType::StorageBufferDynamic_ReadOnly)
-            {
-                ++DynamicStorageBufferCount;
-            }
-        }
+        DynamicUniformBufferCount += pSignature->GetDynamicUniformBufferCount();
+        DynamicStorageBufferCount += pSignature->GetDynamicStorageBufferCount();
     }
     VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
-
-    VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
-
-    PipelineLayoutCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    PipelineLayoutCI.pNext                  = nullptr;
-    PipelineLayoutCI.flags                  = 0; // reserved for future use
-    PipelineLayoutCI.setLayoutCount         = DescSetLayoutCount;
-    PipelineLayoutCI.pSetLayouts            = DescSetLayoutCount ? DescSetLayouts.data() : nullptr;
-    PipelineLayoutCI.pushConstantRangeCount = 0;
-    PipelineLayoutCI.pPushConstantRanges    = nullptr;
-    m_VkPipelineLayout                      = pDeviceVk->GetLogicalDevice().CreatePipelineLayout(PipelineLayoutCI);
 
     const auto& Limits = pDeviceVk->GetPhysicalDevice().GetProperties().limits;
     if (DescSetLayoutCount > Limits.maxBoundDescriptorSets)
@@ -167,8 +135,19 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
 
     VERIFY(m_DescrSetCount <= std::numeric_limits<decltype(m_DescrSetCount)>::max(),
            "Descriptor set count (", DescSetLayoutCount, ") exceeds the maximum representable value");
-    m_DescrSetCount      = static_cast<decltype(m_DescrSetCount)>(DescSetLayoutCount);
-    m_DynamicOffsetCount = DynamicOffsetCount;
+
+    VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
+
+    PipelineLayoutCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    PipelineLayoutCI.pNext                  = nullptr;
+    PipelineLayoutCI.flags                  = 0; // reserved for future use
+    PipelineLayoutCI.setLayoutCount         = DescSetLayoutCount;
+    PipelineLayoutCI.pSetLayouts            = DescSetLayoutCount ? DescSetLayouts.data() : nullptr;
+    PipelineLayoutCI.pushConstantRangeCount = 0;
+    PipelineLayoutCI.pPushConstantRanges    = nullptr;
+    m_VkPipelineLayout                      = pDeviceVk->GetLogicalDevice().CreatePipelineLayout(PipelineLayoutCI);
+
+    m_DescrSetCount = static_cast<Uint8>(DescSetLayoutCount);
 }
 
 size_t PipelineLayoutVk::GetHash() const
@@ -185,7 +164,6 @@ size_t PipelineLayoutVk::GetHash() const
 
 bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, ResourceInfo& Info) const
 {
-    // AZ TODO: optimize
     for (Uint32 i = 0, DSCount = GetSignatureCount(); i < DSCount; ++i)
     {
         auto* pSignature = GetSignature(i);
@@ -200,7 +178,7 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
             {
                 Info.Type          = Res.ResourceType;
                 Info.BindingIndex  = static_cast<Uint16>(Attr.BindingIndex);
-                Info.DescrSetIndex = m_FirstDescrSetIndex[i] + Attr.DescrSet;
+                Info.DescrSetIndex = m_FirstDescrSetIndex[i] + static_cast<Uint16>(Attr.DescrSet);
                 return true;
             }
         }

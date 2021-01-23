@@ -497,7 +497,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::CommitShader
 
     if (pShaderResourceBinding == nullptr)
     {
-        LOG_ERROR_MESSAGE("TODO");
+        LOG_ERROR_MESSAGE("pShaderResourceBinding must not be null");
         return false;
     }
 #endif

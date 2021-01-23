@@ -348,7 +348,7 @@ static VkPipelineBindPoint PipelineTypeToVkBindPoint(PIPELINE_TYPE Type)
     return vkBindPoints[Uint32{Type}];
 }
 
-void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl* pPipelineStateVk)
+__forceinline void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl* pPipelineStateVk)
 {
     VERIFY_EXPR(pPipelineStateVk != nullptr);
 
@@ -366,36 +366,37 @@ void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl* pPipelineStat
     // (14.2.2. Pipeline Layouts, clause 'Pipeline Layout Compatibility')
     // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets-compatibility
 
-    // AZ TODO: do we need to unbind incompatible descriptor sets here or
-    //          should the user handle this?
 
+#ifdef DILIGENT_DEBUG
     // unbind incompatible descriptor sets
     for (Uint32 i = 0; i < SignCount; ++i)
     {
-        auto* LayoutSign = Layout.GetSignature(i);
-        VERIFY_EXPR(LayoutSign != nullptr);
+        const auto* LayoutSign = Layout.GetSignature(i);
+        const auto* ResSign    = Resources[i] != nullptr ? Resources[i]->GetSignature() : ValidatedCast<RenderDeviceVkImpl>(GetDevice())->GetEmptySignatureVk();
 
-        if (Resources[i] != nullptr && LayoutSign->IsIncompatibleWith(*Resources[i]->GetSignature()))
+        VERIFY_EXPR(LayoutSign != nullptr);
+        VERIFY_EXPR(ResSign != nullptr);
+
+        if (LayoutSign->IsIncompatibleWith(*ResSign))
         {
-            Resources[i]    = nullptr;
-            CompatSignCount = std::min(CompatSignCount, i + 1);
+            CompatSignCount = i;
+            break;
         }
     }
 
     // reset unused states
     for (Uint32 i = CompatSignCount; i < MAX_RESOURCE_SIGNATURES; ++i)
     {
-        Resources[i] = nullptr;
-
-        BindInfo.PendingVkSet[i]              = false; // AZ TODO: can be optimized
+        BindInfo.PendingVkSet[i]              = false;
         BindInfo.PendingDynamicDescriptors[i] = false;
         BindInfo.DynamicBuffersPresent[i]     = false;
 
-#ifdef DILIGENT_DEBUG
+        Resources[i] = nullptr;
+
         BindInfo.vkSets[i * MAX_DESCR_SET_PER_SIGNATURE + 0] = VK_NULL_HANDLE;
         BindInfo.vkSets[i * MAX_DESCR_SET_PER_SIGNATURE + 1] = VK_NULL_HANDLE;
-#endif
     }
+#endif
 }
 
 void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBindInfo& BindInfo)
@@ -425,12 +426,12 @@ void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBind
             for (Uint32 s = 0; s < DSCount; ++s)
                 VERIFY_EXPR(BindInfo.vkSets[DSOffset + s] != VK_NULL_HANDLE);
 #endif
-            if (pSignature->GetDynamicBufferCount() > 0)
+            if (pSignature->GetDynamicOffsetCount() > 0)
             {
-                Offsets.resize(pSignature->GetDynamicBufferCount());
+                Offsets.resize(pSignature->GetDynamicOffsetCount());
 
                 auto NumOffsetsWritten = ResourceCache.GetDynamicBufferOffsets(m_ContextId, this, Offsets);
-                VERIFY_EXPR(NumOffsetsWritten == pSignature->GetDynamicBufferCount());
+                VERIFY_EXPR(NumOffsetsWritten == pSignature->GetDynamicOffsetCount());
 
                 // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
                 // and this buffer is not resizable, so the buffer handle can never change.
@@ -517,7 +518,7 @@ void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderReso
 
     if (pShaderResourceBinding == nullptr)
     {
-        LOG_ERROR_MESSAGE("AZ TODO");
+        LOG_ERROR_MESSAGE("pShaderResourceBinding must not be null");
         return;
     }
 #endif
@@ -525,6 +526,7 @@ void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderReso
     auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
 
+    // AZ TODO: exclude stages that is not supported by pipeline
     ResourceCache.TransitionResources<false>(this);
 }
 
@@ -542,6 +544,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
+        // AZ TODO: exclude stages that is not supported by pipeline
         ResourceCache.TransitionResources<false>(this);
     }
 #ifdef DILIGENT_DEVELOPMENT
@@ -592,7 +595,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         ++DSIndex;
     }
 
-    if (pSignature->GetDynamicBufferCount() > 0)
+    if (pSignature->GetDynamicOffsetCount() > 0)
         BindInfo.PendingDynamicDescriptors[Index] = true;
 
     VERIFY_EXPR(DSIndex == DSCount);

@@ -180,8 +180,13 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// AZ TODO: comment
     Uint16 BindingOffsets [SHADER_RESOURCE_TYPE_LAST + 1]  DEFAULT_INITIALIZER({});
     
-    
-    // AZ TODO: add UseCombinedTextureSamplers back?
+    /// If set to true, textures will be combined with texture samplers.
+    /// The CombinedSamplerSuffix member defines the suffix added to the texture variable
+    /// name to get corresponding sampler name. When using combined samplers,
+    /// the sampler assigned to the shader resource view is automatically set when
+    /// the view is bound. Otherwise samplers need to be explicitly set similar to other
+    /// shader variables.
+    bool UseCombinedTextureSamplers DEFAULT_INITIALIZER(false);
 
     /// If UseCombinedTextureSamplers is true, defines the suffix added to the
     /// texture variable name to get corresponding sampler name.  For example,

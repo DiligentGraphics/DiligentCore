@@ -49,6 +49,7 @@
 #include "RenderPassCache.hpp"
 #include "CommandPoolManager.hpp"
 #include "DXCompiler.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
@@ -232,7 +233,8 @@ public:
         return m_Properties;
     }
 
-    IPipelineResourceSignature* GetEmptySignature() const { return m_pEmptySignature.RawPtr<IPipelineResourceSignature>(); }
+    IPipelineResourceSignature*      GetEmptySignature() const { return m_pEmptySignature.RawPtr<IPipelineResourceSignature>(); }
+    PipelineResourceSignatureVkImpl* GetEmptySignatureVk() const { return m_pEmptySignature.RawPtr<PipelineResourceSignatureVkImpl>(); }
 
 private:
     template <typename PSOCreateInfoType>

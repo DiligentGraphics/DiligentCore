@@ -49,6 +49,23 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         if (Res.ArraySize == 0)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must not be 0");
+
+#ifdef DILIGENT_DEBUG
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) &&
+            (Res.ResourceType != SHADER_RESOURCE_TYPE_CONSTANT_BUFFER &&
+             Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&
+             Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV))
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contains PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS if ResourceType is not buffer");
+
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE) &&
+            Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contains PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE if ResourceType is not SHADER_RESOURCE_TYPE_TEXTURE_SRV");
+
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) &&
+            (Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&
+             Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_SRV))
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contains PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER if ResourceType is not buffer");
+#endif
     }
 
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)

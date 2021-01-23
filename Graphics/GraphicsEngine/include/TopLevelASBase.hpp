@@ -69,10 +69,10 @@ private:
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, TopLevelASDesc>;
 
-    /// \param pRefCounters      - Reference counters object that controls the lifetime of this BLAS.
+    /// \param pRefCounters      - Reference counters object that controls the lifetime of this TLAS.
     /// \param pDevice           - Pointer to the device.
     /// \param Desc              - TLAS description.
-    /// \param bIsDeviceInternal - Flag indicating if the BLAS is an internal device object and
+    /// \param bIsDeviceInternal - Flag indicating if the TLAS is an internal device object and
     ///							   must not keep a strong reference to the device.
     TopLevelASBase(IReferenceCounters*   pRefCounters,
                    RenderDeviceImplType* pDevice,
