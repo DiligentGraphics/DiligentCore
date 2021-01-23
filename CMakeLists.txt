@@ -227,7 +227,7 @@ if(MSVC)
     # - w4100 - unreferenced formal parameter
     # - w4505 - unreferenced local function has been removed
     # - w4201 - nonstandard extension used: nameless struct/union
-    target_compile_options(Diligent-BuildSettings INTERFACE /W4 /WX /wd4100 /wd4505 /wd4201)
+    target_compile_options(Diligent-BuildSettings INTERFACE /W4 /WX /wd4100 /wd4505 /wd4201 /MP)
     # In all release modes also:
     # - disable w4189 - local variable is initialized but not referenced
     # - Disable RTTI (/GR-)

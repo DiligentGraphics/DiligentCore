@@ -44,8 +44,12 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// The maximum number of viewports.
 #define DILIGENT_MAX_VIEWPORTS 16
 
-static const Uint32 MAX_BUFFER_SLOTS   = DILIGENT_MAX_BUFFER_SLOTS;
-static const Uint32 MAX_RENDER_TARGETS = DILIGENT_MAX_RENDER_TARGETS;
-static const Uint32 MAX_VIEWPORTS      = DILIGENT_MAX_VIEWPORTS;
+/// The maximum number of resource signatures that one pipeline can use
+#define DILIGENT_MAX_RESOURCE_SIGNATURES 8
+
+static const Uint32 MAX_BUFFER_SLOTS        = DILIGENT_MAX_BUFFER_SLOTS;
+static const Uint32 MAX_RENDER_TARGETS      = DILIGENT_MAX_RENDER_TARGETS;
+static const Uint32 MAX_VIEWPORTS           = DILIGENT_MAX_VIEWPORTS;
+static const Uint32 MAX_RESOURCE_SIGNATURES = DILIGENT_MAX_RESOURCE_SIGNATURES;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

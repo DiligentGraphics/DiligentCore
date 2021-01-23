@@ -481,7 +481,8 @@ private:
 
     struct DescriptorSetBindInfo
     {
-        using ShaderResourceArray = std::array<RefCntAutoPtr<ShaderResourceBindingVkImpl>, MAX_RESOURCE_SIGNATURES>;
+        // Do not use strong references!
+        using ShaderResourceArray = std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES>;
         using VkDescSetArray      = std::array<VkDescriptorSet, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE>;
         using BoolArray           = std::bitset<MAX_RESOURCE_SIGNATURES>;
 

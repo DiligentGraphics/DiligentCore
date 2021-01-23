@@ -37,7 +37,6 @@
 namespace Diligent
 {
 
-class DeviceContextVkImpl;
 class ShaderResourceCacheVk;
 
 /// Implementation of the Diligent::PipelineLayoutVk class
@@ -71,9 +70,10 @@ public:
 
     struct ResourceInfo
     {
-        SHADER_RESOURCE_TYPE Type          = SHADER_RESOURCE_TYPE_UNKNOWN;
-        Uint16               DescrSetIndex = 0;
-        Uint16               BindingIndex  = 0;
+        SHADER_RESOURCE_TYPE Type = SHADER_RESOURCE_TYPE_UNKNOWN;
+
+        Uint32 DescrSetIndex = 0;
+        Uint32 BindingIndex  = 0;
     };
     bool GetResourceInfo(const char* Name, SHADER_TYPE Stage, ResourceInfo& Info) const;
 
@@ -83,14 +83,14 @@ private:
 
     VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
 
-    // Index of the first descriptor set, for every resource signature
+    // Index of the first descriptor set, for every resource signature.
     FirstDescrSetIndexArrayType m_FirstDescrSetIndex = {};
 
     // The number of resource signatures used by this pipeline layout
     // (Maximum is MAX_RESOURCE_SIGNATURES)
     Uint8 m_SignatureCount = 0;
 
-    // The total number of descriptor sets used by this pipeline layout.
+    // The total number of descriptor sets used by this pipeline layout
     // (Maximum is MAX_RESOURCE_SIGNATURES * 2)
     Uint8 m_DescrSetCount = 0;
 

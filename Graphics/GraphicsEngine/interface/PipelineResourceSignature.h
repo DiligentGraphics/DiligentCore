@@ -119,6 +119,9 @@ struct PipelineResourceDesc
 
     /// Shader stages that this resource applies to. When multiple shader stages are specified,
     /// all stages will share the same resource.
+    ///
+    /// \remarks    There may be multiple resources with the same name in different shader stages,
+    ///             but the stages specified for different resources with the same name must not overlap.
     SHADER_TYPE                    ShaderStages  DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Resource array size (must be 1 for non-array resources).
@@ -157,13 +160,13 @@ typedef struct PipelineResourceDesc PipelineResourceDesc;
 /// Pipeline resource signature description.
 struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
-    /// A pointer to array of resource descriptions. See Diligent::PipelineResourceDesc.
+    /// A pointer to an array of resource descriptions. See Diligent::PipelineResourceDesc.
     const PipelineResourceDesc*  Resources  DEFAULT_INITIALIZER(nullptr);
     
     /// The number of resources in Resources array.
     Uint32  NumResources  DEFAULT_INITIALIZER(0);
     
-    /// A pointer to array of immutable samplers. See Diligent::ImmutableSamplerDesc.
+    /// A pointer to an array of immutable samplers. See Diligent::ImmutableSamplerDesc.
     const ImmutableSamplerDesc*  ImmutableSamplers  DEFAULT_INITIALIZER(nullptr);
     
     /// The number of immutable samplers in ImmutableSamplers array.
@@ -197,8 +200,8 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Shader resource binding allocation granularity
 
-    /// This member defines allocation granularity for internal resources required by the shader resource
-    /// binding object instances.
+    /// This member defines the allocation granularity for internal resources required by
+    /// the shader resource binding object instances.
     Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
 };
 typedef struct PipelineResourceSignatureDesc PipelineResourceSignatureDesc;
@@ -227,9 +230,9 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     
     /// Creates a shader resource binding object
 
-    /// \param [out] ppShaderResourceBinding - memory location where pointer to the new shader resource
+    /// \param [out] ppShaderResourceBinding - Memory location where pointer to the new shader resource
     ///                                        binding object is written.
-    /// \param [in] InitStaticResources      - if set to true, the method will initialize static resources in
+    /// \param [in] InitStaticResources      - If set to true, the method will initialize static resources in
     ///                                        the created object, which has the exact same effect as calling 
     ///                                        IShaderResourceBinding::InitializeStaticResources().
     VIRTUAL void METHOD(CreateShaderResourceBinding)(THIS_
@@ -237,12 +240,12 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
                                                      bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
     
 
-    /// Binds static resources for all shaders in the pipeline resource signature
+    /// Binds static resources for the specified shader stages in the pipeline resource signature.
 
-    /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
-    ///                           Any combination of Diligent::SHADER_TYPE may be used.
+    /// \param [in] ShaderFlags      - Flags that specify shader stages, for which resources will be bound.
+    ///                                Any combination of Diligent::SHADER_TYPE may be used.
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
-    /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
+    /// \param [in] Flags            - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
     VIRTUAL void METHOD(BindStaticResources)(THIS_
                                              Uint32             ShaderFlags,
                                              IResourceMapping*  pResourceMapping,
@@ -254,9 +257,21 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     
     /// \param [in] ShaderType - Type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
-    /// \param [in] Name - Name of the variable.
-    /// \remark The method does not increment the reference counter
-    ///         of the returned interface.
+    /// \param [in] Name       - Name of the variable.
+    ///
+    /// \remarks    If a variable is shared between multiple shader stages,
+    ///             it can be accessed using any of those shader stages. Even
+    ///             though IShaderResourceVariable instances returned by the method
+    ///             may be different for different stages, internally they will
+    ///             reference the same resource.
+    ///
+    ///             Only static shader resource variables can be accessed using this method.
+    ///             Mutable and dynamic variables are accessed through Shader Resource 
+    ///             Binding object.
+    ///
+    ///             The method does not increment the reference counter of the 
+    ///             returned interface, and the application must *not* call Release()
+    ///             unless it explicitly called AddRef().
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByName)(THIS_
                                                                      SHADER_TYPE ShaderType,
                                                                      const Char* Name) PURE;
@@ -266,12 +281,24 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
 
     /// \param [in] ShaderType - Type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
-    /// \param [in] Index - Shader variable index. The index must be between
-    ///                     0 and the total number of variables returned by 
-    ///                     GetStaticVariableCount().
-    /// \remark Only static shader resource variables can be accessed through this method.
-    ///         Mutable and dynamic variables are accessed through Shader Resource 
-    ///         Binding object
+    /// \param [in] Index      - Shader variable index. The index must be between
+    ///                          0 and the total number of variables returned by 
+    ///                          GetStaticVariableCount().
+    ///
+    ///
+    /// \remarks    If a variable is shared between multiple shader stages,
+    ///             it can be accessed using any of those shader stages. Even
+    ///             though IShaderResourceVariable instances returned by the method
+    ///             may be different for different stages, internally they will
+    ///             reference the same resource.
+    ///
+    ///             Only static shader resource variables can be accessed using this method.
+    ///             Mutable and dynamic variables are accessed through Shader Resource 
+    ///             Binding object.
+    ///
+    ///             The method does not increment the reference counter of the 
+    ///             returned interface, and the application must *not* call Release()
+    ///             unless it explicitly called AddRef().
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByIndex)(THIS_
                                                                       SHADER_TYPE ShaderType,
                                                                       Uint32      Index) PURE;
@@ -280,8 +307,9 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     /// Returns the number of static shader resource variables.
 
     /// \param [in] ShaderType - Type of the shader.
-    /// \remark Only static variables (that can be accessed directly through the PSO) are counted.
-    ///         Mutable and dynamic variables are accessed through Shader Resource Binding object.
+    ///
+    /// \remarks   Only static variables (that can be accessed directly through the PSO) are counted.
+    ///            Mutable and dynamic variables are accessed through Shader Resource Binding object.
     VIRTUAL Uint32 METHOD(GetStaticVariableCount)(THIS_
                                                   SHADER_TYPE ShaderType) CONST PURE;
     

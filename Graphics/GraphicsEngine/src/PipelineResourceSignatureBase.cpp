@@ -27,6 +27,10 @@
 
 #include "PipelineResourceSignatureBase.hpp"
 
+#include <unordered_map>
+
+#include "HashUtils.hpp"
+
 namespace Diligent
 {
 
@@ -36,6 +40,8 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 {
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
         LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Desc.BindingIndex, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
+
+    std::unordered_map<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResourceShaderStages;
 
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
@@ -50,7 +56,15 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         if (Res.ArraySize == 0)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must not be 0");
 
-#ifdef DILIGENT_DEBUG
+        auto& UsedStages = ResourceShaderStages[Res.Name];
+        if ((UsedStages & Res.ShaderStages) != 0)
+        {
+            LOG_PRS_ERROR_AND_THROW("Multiple resources with name '", Res.Name,
+                                    "' specify overlapping shader stages. There may be multiple resources with the same name in different shader stages, "
+                                    "but the stages specified for different resources with the same name must not overlap.");
+        }
+        UsedStages |= Res.ShaderStages;
+
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) &&
             (Res.ResourceType != SHADER_RESOURCE_TYPE_CONSTANT_BUFFER &&
              Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&
@@ -65,7 +79,6 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             (Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&
              Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_SRV))
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contains PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER if ResourceType is not buffer");
-#endif
     }
 
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)

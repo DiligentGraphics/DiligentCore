@@ -28,6 +28,7 @@
 #include <array>
 
 #include "GraphicsAccessories.hpp"
+#include "../../../Graphics/GraphicsEngine/include/PrivateConstants.h"
 
 #include "gtest/gtest.h"
 

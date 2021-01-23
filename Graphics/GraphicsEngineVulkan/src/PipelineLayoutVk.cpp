@@ -57,13 +57,13 @@ void PipelineLayoutVk::Release(RenderDeviceVkImpl* pDeviceVk, Uint64 CommandQueu
 
 void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount)
 {
-    VERIFY(m_SignatureCount == 0 && m_DescrSetCount == 0,
+    VERIFY(m_SignatureCount == 0 && m_DescrSetCount == 0 && !m_VkPipelineLayout,
            "This pipeline layout is already initialized");
 
     for (Uint32 i = 0; i < SignatureCount; ++i)
     {
         auto* pSignature = ValidatedCast<PipelineResourceSignatureVkImpl>(ppSignatures[i]);
-        VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null.  This error should've been caught by ValidatePipelineResourceSignatures.");
+        VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
 
         const Uint8 Index = pSignature->GetDesc().BindingIndex;
 
@@ -74,7 +74,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
         VERIFY(m_Signatures[Index] == nullptr,
                "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
                " conflicts with another resource signature '", m_Signatures[Index]->GetDesc().Name,
-               "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+               "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
 
         m_SignatureCount    = std::max<Uint8>(m_SignatureCount, Index + 1);
         m_Signatures[Index] = pSignature;
@@ -88,7 +88,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
             m_Signatures[i] = pEmptySign;
     }
 
-    std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE> DescSetLayouts;
+    std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES* MAX_DESCR_SET_PER_SIGNATURE> DescSetLayouts = {};
 
     Uint32 DescSetLayoutCount        = 0;
     Uint32 DynamicUniformBufferCount = 0;
@@ -117,20 +117,20 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
     const auto& Limits = pDeviceVk->GetPhysicalDevice().GetProperties().limits;
     if (DescSetLayoutCount > Limits.maxBoundDescriptorSets)
     {
-        LOG_ERROR_AND_THROW("The total number of descriptor sets used by the pipeline layout (", DescSetLayoutCount,
-                            ") exceeds device limit (", Limits.maxBoundDescriptorSets, ")");
+        LOG_ERROR_AND_THROW("The total number of descriptor sets (", DescSetLayoutCount,
+                            ") used by the pipeline layout exceeds device limit (", Limits.maxBoundDescriptorSets, ")");
     }
 
     if (DynamicUniformBufferCount > Limits.maxDescriptorSetUniformBuffersDynamic)
     {
-        LOG_ERROR_AND_THROW("The number of dynamic uniform buffers (", DynamicUniformBufferCount,
-                            ") exceeds device limit (", Limits.maxDescriptorSetUniformBuffersDynamic, ")");
+        LOG_ERROR_AND_THROW("The number of dynamic uniform buffers  (", DynamicUniformBufferCount,
+                            ") used by the pipeline layout exceeds device limit (", Limits.maxDescriptorSetUniformBuffersDynamic, ")");
     }
 
     if (DynamicStorageBufferCount > Limits.maxDescriptorSetStorageBuffersDynamic)
     {
         LOG_ERROR_AND_THROW("The number of dynamic storage buffers (", DynamicStorageBufferCount,
-                            ") exceeds device limit (", Limits.maxDescriptorSetStorageBuffersDynamic, ")");
+                            ") used by the pipeline layout exceeds device limit (", Limits.maxDescriptorSetStorageBuffersDynamic, ")");
     }
 
     VERIFY(m_DescrSetCount <= std::numeric_limits<decltype(m_DescrSetCount)>::max(),
@@ -177,8 +177,8 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
             if ((Res.ShaderStages & Stage) && strcmp(Res.Name, Name) == 0)
             {
                 Info.Type          = Res.ResourceType;
-                Info.BindingIndex  = static_cast<Uint16>(Attr.BindingIndex);
-                Info.DescrSetIndex = m_FirstDescrSetIndex[i] + static_cast<Uint16>(Attr.DescrSet);
+                Info.BindingIndex  = Attr.BindingIndex;
+                Info.DescrSetIndex = m_FirstDescrSetIndex[i] + Attr.DescrSet;
                 return true;
             }
         }

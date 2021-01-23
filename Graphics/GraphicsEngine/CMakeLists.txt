@@ -15,6 +15,7 @@ set(INCLUDE
     include/FenceBase.hpp
     include/FramebufferBase.hpp
     include/PipelineStateBase.hpp
+    include/PrivateConstants.h
     include/QueryBase.hpp
     include/RenderDeviceBase.hpp
     include/RenderPassBase.hpp
