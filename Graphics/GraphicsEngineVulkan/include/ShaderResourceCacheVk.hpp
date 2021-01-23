@@ -68,21 +68,16 @@ class DeviceContextVkImpl;
 class ShaderResourceCacheVk
 {
 public:
-    // This enum is used for debug purposes only
-    enum DbgCacheContentType
-    {
-        StaticShaderResources,
-        SRBResources
-    };
+    using CacheContentType = PipelineResourceSignatureVkImpl::CacheContentType;
 
-    // clang-format off
-    explicit ShaderResourceCacheVk(DbgCacheContentType dbgContentType) noexcept
-#ifdef DILIGENT_DEBUG
-        : m_DbgContentType{dbgContentType}
-#endif
+    explicit ShaderResourceCacheVk(CacheContentType ContentType) noexcept :
+        m_TotalResources{0},
+        m_ContentType{static_cast<Uint32>(ContentType)}
     {
+        VERIFY_EXPR(GetContentType() == ContentType);
     }
 
+    // clang-format off
     ShaderResourceCacheVk             (const ShaderResourceCacheVk&) = delete;
     ShaderResourceCacheVk             (ShaderResourceCacheVk&&)      = delete;
     ShaderResourceCacheVk& operator = (const ShaderResourceCacheVk&) = delete;
@@ -189,11 +184,12 @@ public:
 
     Uint16& GetDynamicBuffersCounter() { return m_NumDynamicBuffers; }
 
+    CacheContentType GetContentType() const { return static_cast<CacheContentType>(m_ContentType); }
+
 #ifdef DILIGENT_DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
-    DbgCacheContentType DbgGetContentType() const { return m_DbgContentType; }
-    void                DbgVerifyResourceInitialization() const;
-    void                DbgVerifyDynamicBuffersCounter() const;
+    void DbgVerifyResourceInitialization() const;
+    void DbgVerifyDynamicBuffersCounter() const;
 #endif
 
     template <bool VerifyOnly>
@@ -215,14 +211,15 @@ private:
     void*             m_pMemory    = nullptr;
     Uint16            m_NumSets    = 0;
 
-    // Total number of dynamic buffers bound in the resource cache regardless of the variable type.
-    // This variable is not equal to dynamic offsets count, it just a indicator that dynamic descriptor has dynamic buffers.
+    // Total number of dynamic buffers (that was created with USAGE_DYNAMIC) bound in the resource cache regardless of the variable type.
+    // This variable is not equal to dynamic offsets count.
     Uint16 m_NumDynamicBuffers = 0;
-    Uint32 m_TotalResources    = 0;
+    Uint32 m_TotalResources : 31;
+
+    // Indicates what types of resources are stored in the cache
+    const Uint32 m_ContentType : 1;
 
 #ifdef DILIGENT_DEBUG
-    // Only for debug purposes: indicates what types of resources are stored in the cache
-    const DbgCacheContentType m_DbgContentType;
     // Debug array that stores flags indicating if resources in the cache have been initialized
     std::vector<std::vector<bool>> m_DbgInitializedResources;
 #endif
@@ -245,26 +242,50 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
     for (Uint32 set = 0; set < m_NumSets; ++set)
     {
         const auto& DescrSet = GetDescriptorSet(set);
+        Uint32      res      = 0;
 
-        // AZ TODO: optimize
-        for (Uint32 res = 0; res < DescrSet.GetSize(); ++res)
+        while (res < DescrSet.GetSize())
         {
             const auto& Res = DescrSet.GetResource(res);
-
             if (Res.Type == DescriptorType::UniformBufferDynamic)
             {
                 const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
                 auto        Offset    = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
                 Offsets[OffsetInd++]  = Offset;
+                ++res;
             }
-            if (Res.Type == DescriptorType::StorageBufferDynamic || Res.Type == DescriptorType::StorageBufferDynamic_ReadOnly)
+            else
+                break;
+        }
+
+        while (res < DescrSet.GetSize())
+        {
+            const auto& Res = DescrSet.GetResource(res);
+            if (Res.Type == DescriptorType::StorageBufferDynamic ||
+                Res.Type == DescriptorType::StorageBufferDynamic_ReadOnly)
             {
                 const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
                 const auto* pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBufferVk() : 0;
                 auto        Offset        = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
                 Offsets[OffsetInd++]      = Offset;
+                ++res;
             }
+            else
+                break;
         }
+
+#ifdef DILIGENT_DEBUG
+        for (; res < DescrSet.GetSize(); ++res)
+        {
+            const auto& Res = DescrSet.GetResource(res);
+            // clang-format off
+            VERIFY(Res.Type != DescriptorType::UniformBufferDynamic && 
+                   Res.Type != DescriptorType::StorageBufferDynamic &&
+                   Res.Type != DescriptorType::StorageBufferDynamic_ReadOnly, 
+                   "All uniform and storage buffers are expected to go first in the beginning of each descriptor set");
+            // clang-format on
+        }
+#endif
     }
     return OffsetInd;
 }

@@ -775,7 +775,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                     if (pCombinedSamplerSuffix != nullptr)
                     {
                         if (strcmp(pCombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
-                            LOG_ERROR_AND_THROW("AZ TODO");
+                            LOG_ERROR_AND_THROW("CombinedSamplerSuffix is not compatible between shaders");
                     }
                     else
                     {
@@ -811,18 +811,19 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
         if (Resources.size())
         {
             PipelineResourceSignatureDesc ResSignDesc;
-            ResSignDesc.Resources                = Resources.data();
-            ResSignDesc.NumResources             = static_cast<Uint32>(Resources.size());
-            ResSignDesc.ImmutableSamplers        = LayoutDesc.ImmutableSamplers;
-            ResSignDesc.NumImmutableSamplers     = LayoutDesc.NumImmutableSamplers;
-            ResSignDesc.BindingIndex             = 0;
-            ResSignDesc.SRBAllocationGranularity = CreateInfo.PSODesc.SRBAllocationGranularity;
-            ResSignDesc.CombinedSamplerSuffix    = pCombinedSamplerSuffix;
+            ResSignDesc.Resources                  = Resources.data();
+            ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
+            ResSignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;
+            ResSignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
+            ResSignDesc.BindingIndex               = 0;
+            ResSignDesc.SRBAllocationGranularity   = CreateInfo.PSODesc.SRBAllocationGranularity;
+            ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
+            ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
 
             GetDevice()->CreatePipelineResourceSignature(ResSignDesc, &TempSignature, true);
 
             if (TempSignature == nullptr)
-                LOG_ERROR_AND_THROW("AZ TODO");
+                LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
 
             Signatures[0]  = TempSignature;
             SignatureCount = 1;

@@ -32,6 +32,7 @@
 
 #include <array>
 
+#include "PrivateConstants.h"
 #include "ShaderResourceBinding.h"
 #include "ObjectBase.hpp"
 #include "GraphicsTypes.h"

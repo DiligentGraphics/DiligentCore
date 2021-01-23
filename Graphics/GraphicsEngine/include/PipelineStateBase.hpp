@@ -35,6 +35,7 @@
 #include <unordered_set>
 #include <cstring>
 
+#include "PrivateConstants.h"
 #include "PipelineState.h"
 #include "DeviceObjectBase.hpp"
 #include "STDAllocator.hpp"
@@ -238,44 +239,44 @@ public:
     {
         *ppShaderResourceBinding = nullptr;
 
-        if (GetResourceSignatureCount() != 1)
+        if (this->GetResourceSignatureCount() != 1)
             return;
 
-        return GetResourceSignature(0)->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
+        return this->GetResourceSignature(0)->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
     }
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
                                                                                 const Char* Name) override final
     {
-        if (GetResourceSignatureCount() != 1)
+        if (this->GetResourceSignatureCount() != 1)
             return nullptr;
 
-        return GetResourceSignature(0)->GetStaticVariableByName(ShaderType, Name);
+        return this->GetResourceSignature(0)->GetStaticVariableByName(ShaderType, Name);
     }
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
                                                                                  Uint32      Index) override final
     {
-        if (GetResourceSignatureCount() != 1)
+        if (this->GetResourceSignatureCount() != 1)
             return nullptr;
 
-        return GetResourceSignature(0)->GetStaticVariableByIndex(ShaderType, Index);
+        return this->GetResourceSignature(0)->GetStaticVariableByIndex(ShaderType, Index);
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
     {
-        if (GetResourceSignatureCount() != 1)
+        if (this->GetResourceSignatureCount() != 1)
             return 0;
 
-        return GetResourceSignature(0)->GetStaticVariableCount(ShaderType);
+        return this->GetResourceSignature(0)->GetStaticVariableCount(ShaderType);
     }
 
     virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final
     {
-        if (GetResourceSignatureCount() != 1)
+        if (this->GetResourceSignatureCount() != 1)
             return;
 
-        return GetResourceSignature(0)->BindStaticResources(ShaderFlags, pResourceMapping, Flags);
+        return this->GetResourceSignature(0)->BindStaticResources(ShaderFlags, pResourceMapping, Flags);
     }
 
     inline void CopyShaderHandle(const char* Name, void* pData, size_t DataSize) const

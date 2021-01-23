@@ -255,7 +255,6 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
             case DescriptorType::CombinedImageSampler:
             case DescriptorType::SeparateImage:
             case DescriptorType::StorageImage:
-            case DescriptorType::StorageImage_ReadOnly:
             {
                 auto* pTextureViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
                 auto* pTextureVk     = pTextureViewVk != nullptr ? ValidatedCast<TextureVkImpl>(pTextureViewVk->GetTexture()) : nullptr;
@@ -446,7 +445,6 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
 {
     // clang-format off
     VERIFY(Type == DescriptorType::StorageImage ||
-           Type == DescriptorType::StorageImage_ReadOnly ||
            Type == DescriptorType::SeparateImage ||
            Type == DescriptorType::CombinedImageSampler,
            "Storage image, separate image or sampled image resource is expected");

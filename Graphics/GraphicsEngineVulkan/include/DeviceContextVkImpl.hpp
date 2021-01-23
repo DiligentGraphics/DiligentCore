@@ -479,9 +479,6 @@ private:
     // Graphics/mesh, compute, ray tracing
     static constexpr Uint32 NUM_PIPELINE_BIND_POINTS = 3;
 
-    // Static/mutable and dynamic descriptor sets
-    static constexpr Uint32 MAX_DESCR_SET_PER_SIGNATURE = 2;
-
     struct DescriptorSetBindInfo
     {
         using ShaderResourceArray = std::array<RefCntAutoPtr<ShaderResourceBindingVkImpl>, MAX_RESOURCE_SIGNATURES>;
@@ -491,7 +488,7 @@ private:
         ShaderResourceArray Resources;
         VkDescSetArray      vkSets                    = {};
         BoolArray           PendingVkSet              = {}; // 'true' if new descriptor set must be bound
-        BoolArray           PendingDynamicDescriptors = {}; // 'true' if dynamic descriptor set must be bound
+        BoolArray           PendingDynamicDescriptors = {}; // 'true' if dynamic descriptor set must be bound // AZ TODO: remove ?
         BoolArray           DynamicBuffersPresent     = {};
 
         DescriptorSetBindInfo()
@@ -522,7 +519,7 @@ private:
     /// Descriptor set binding information for each pipeline type (graphics/mesh, compute, ray tracing)
     std::array<DescriptorSetBindInfo, NUM_PIPELINE_BIND_POINTS> m_DescrSetBindInfo;
 
-    /// AZ TODO: comment
+    /// Memory to store dynamic buffer offsets for descriptor sets.
     std::vector<Uint32> m_DynamicBufferOffsets;
 
     /// Render pass that matches currently bound render targets.

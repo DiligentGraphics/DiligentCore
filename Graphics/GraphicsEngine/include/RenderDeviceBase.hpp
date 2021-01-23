@@ -236,7 +236,7 @@ public:
         /// Size of the SBT object (ShaderBindingTableD3D12Impl, ShaderBindingtableVkImpl, etc.), in bytes
         const size_t SBTObjSize;
 
-        /// AZ TODO: comment
+        /// Size of the pipeline resource signature object (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.), in bytes
         const size_t PipeResSignObjSize;
     };
 

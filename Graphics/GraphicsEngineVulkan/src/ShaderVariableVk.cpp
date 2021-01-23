@@ -44,24 +44,29 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const PipelineResourceSign
     const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     const bool   UsingSeparateSamplers = Layout.IsUsingSeparateSamplers();
 
-    for (Uint32 r = 0, Count = Layout.GetTotalResourceCount(); r < Count; ++r)
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
-        const auto& Res  = Layout.GetResource(r);
-        const auto& Attr = Layout.GetAttribs(r);
+        if (IsAllowedType(VarType, AllowedTypeBits))
+        {
+            const auto ResIdxRange = Layout.GetResourceIndexRange(VarType);
+            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
+            {
+                const auto& Res  = Layout.GetResource(r);
+                const auto& Attr = Layout.GetAttribs(r);
+                VERIFY_EXPR(Res.VarType == VarType);
 
-        if (!IsAllowedType(Res.VarType, AllowedTypeBits))
-            continue;
+                if (!(Res.ShaderStages & ShaderStages))
+                    continue;
 
-        if (!(Res.ShaderStages & ShaderStages))
-            continue;
+                // When using HLSL-style combined image samplers, we need to skip separate samplers.
+                // Also always skip immutable separate samplers.
+                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
+                    (!UsingSeparateSamplers || Attr.IsImmutableSamplerAssigned()))
+                    continue;
 
-        // When using HLSL-style combined image samplers, we need to skip separate samplers.
-        // Also always skip immutable separate samplers.
-        if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-            (!UsingSeparateSamplers || Attr.ImmutableSamplerAssigned))
-            continue;
-
-        ++NumVariables;
+                ++NumVariables;
+            }
+        }
     }
 
     return NumVariables * sizeof(ShaderVariableVkImpl);
@@ -93,24 +98,29 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
     Uint32     VarInd                = 0;
     const bool UsingSeparateSamplers = SrcLayout.IsUsingSeparateSamplers();
 
-    for (Uint32 r = 0, Count = SrcLayout.GetTotalResourceCount(); r < Count; ++r)
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
-        const auto& Res  = SrcLayout.GetResource(r);
-        const auto& Attr = SrcLayout.GetAttribs(r);
+        if (IsAllowedType(VarType, AllowedTypeBits))
+        {
+            const auto ResIdxRange = SrcLayout.GetResourceIndexRange(VarType);
+            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
+            {
+                const auto& Res  = SrcLayout.GetResource(r);
+                const auto& Attr = SrcLayout.GetAttribs(r);
+                VERIFY_EXPR(Res.VarType == VarType);
 
-        if (!IsAllowedType(Res.VarType, AllowedTypeBits))
-            continue;
+                if (!(Res.ShaderStages & ShaderType))
+                    continue;
 
-        if (!(Res.ShaderStages & ShaderType))
-            continue;
+                // Skip separate samplers when using combined HLSL-style image samplers. Also always skip immutable separate samplers.
+                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
+                    (!UsingSeparateSamplers || Attr.IsImmutableSamplerAssigned()))
+                    continue;
 
-        // Skip separate samplers when using combined HLSL-style image samplers. Also always skip immutable separate samplers.
-        if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-            (!UsingSeparateSamplers || Attr.ImmutableSamplerAssigned))
-            continue;
-
-        ::new (m_pVariables + VarInd) ShaderVariableVkImpl(*this, r);
-        ++VarInd;
+                ::new (m_pVariables + VarInd) ShaderVariableVkImpl(*this, r);
+                ++VarInd;
+            }
+        }
     }
     VERIFY_EXPR(VarInd == m_NumVariables);
 
@@ -201,7 +211,7 @@ void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, 
         const auto& Attr = Var.GetAttribs();
 
         // There should be no immutable separate samplers
-        VERIFY(Attr.Type != DescriptorType::Sampler || !Attr.ImmutableSamplerAssigned,
+        VERIFY(Attr.Type() != DescriptorType::Sampler || !Attr.IsImmutableSamplerAssigned(),
                "There must be no shader resource variables for immutable separate samplers");
 
         if ((Flags & (1u << Res.VarType)) == 0)
@@ -251,10 +261,10 @@ void ShaderVariableVkImpl::SetArray(IDeviceObject* const* ppObjects,
 
 bool ShaderVariableVkImpl::IsBound(Uint32 ArrayIndex) const
 {
-    auto&       ResourceCache = m_ParentManager.m_ResourceCache;
-    const auto& ResDesc       = GetDesc();
-    const auto& Attribs       = GetAttribs();
-    Uint32      CacheOffset   = Attribs.CacheOffset;
+    auto&        ResourceCache = m_ParentManager.m_ResourceCache;
+    const auto&  ResDesc       = GetDesc();
+    const auto&  Attribs       = GetAttribs();
+    const Uint32 CacheOffset   = Attribs.CacheOffset(ResourceCache.GetContentType());
 
     VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
 

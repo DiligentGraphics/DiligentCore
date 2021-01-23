@@ -122,7 +122,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
 
 
     /// Initializes static resources
-    // Deprecated: use 
+    // Deprecated: use InitializeStaticResourcesWithSignature()
 
     /// If the parent pipeline state object contain static resources
     /// (see Diligent::SHADER_RESOURCE_VARIABLE_TYPE_STATIC), this method must be called

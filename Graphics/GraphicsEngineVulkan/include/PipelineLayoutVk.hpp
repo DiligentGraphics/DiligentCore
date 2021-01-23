@@ -54,8 +54,7 @@ public:
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }
     Uint32           GetSignatureCount() const { return m_SignatureCount; }
-    Uint32           GetDescriptorSetCount() const { return m_DescrSetCount; }
-    Uint32           GetDynamicOffsetCount() const { return m_DynamicOffsetCount; }
+    //Uint32           GetDescriptorSetCount() const { return m_DescrSetCount; }
 
     PipelineResourceSignatureVkImpl* GetSignature(Uint32 index) const
     {
@@ -70,13 +69,6 @@ public:
         return Index < m_SignatureCount ? m_FirstDescrSetIndex[Index] : ~0u;
     }
 
-    // Returns the index of the first dynamic buffer used by the given resource signature
-    Uint32 GetFirstDynamicBufferIndex(const IPipelineResourceSignature* pPRS) const
-    {
-        Uint32 Index = pPRS->GetDesc().BindingIndex;
-        return Index < m_SignatureCount ? m_FirstDynBuffIndex[Index] : 0;
-    }
-
     struct ResourceInfo
     {
         SHADER_RESOURCE_TYPE Type          = SHADER_RESOURCE_TYPE_UNKNOWN;
@@ -86,30 +78,23 @@ public:
     bool GetResourceInfo(const char* Name, SHADER_TYPE Stage, ResourceInfo& Info) const;
 
 private:
-    VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
-
-    // The total number of dynamic offsets in this pipeline layout
-    Uint32 m_DynamicOffsetCount = 0;
-
-    // The number of resource signatures used by this pipeline layout
-    // (Maximum is MAX_RESOURCE_SIGNATURES)
-    Uint16 m_SignatureCount = 0;
-
-    // The total number of descriptor sets used by this pipeline layout.
-    // (Maximum is MAX_RESOURCE_SIGNATURES * 2)
-    Uint16 m_DescrSetCount = 0;
-
-    using SignatureArrayType          = std::array<RefCntAutoPtr<PipelineResourceSignatureVkImpl>, MAX_RESOURCE_SIGNATURES>;
+    using SignatureArray              = std::array<RefCntAutoPtr<PipelineResourceSignatureVkImpl>, MAX_RESOURCE_SIGNATURES>;
     using FirstDescrSetIndexArrayType = std::array<Uint8, MAX_RESOURCE_SIGNATURES>;
-    using FirstDynBuffIndexArrayType  = std::array<Uint16, MAX_RESOURCE_SIGNATURES>;
 
-    SignatureArrayType m_Signatures;
+    VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
 
     // Index of the first descriptor set, for every resource signature
     FirstDescrSetIndexArrayType m_FirstDescrSetIndex = {};
 
-    // Index of the first dynamic buffer, for every resource signature
-    FirstDynBuffIndexArrayType m_FirstDynBuffIndex = {};
+    // The number of resource signatures used by this pipeline layout
+    // (Maximum is MAX_RESOURCE_SIGNATURES)
+    Uint8 m_SignatureCount = 0;
+
+    // The total number of descriptor sets used by this pipeline layout.
+    // (Maximum is MAX_RESOURCE_SIGNATURES * 2)
+    Uint8 m_DescrSetCount = 0;
+
+    SignatureArray m_Signatures;
 };
 
 } // namespace Diligent

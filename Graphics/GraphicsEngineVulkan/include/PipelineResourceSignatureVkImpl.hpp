@@ -51,7 +51,6 @@ enum class DescriptorType : Uint8
     CombinedImageSampler,
     SeparateImage,
     StorageImage,
-    StorageImage_ReadOnly,
     UniformTexelBuffer,
     StorageTexelBuffer,
     StorageTexelBuffer_ReadOnly,
@@ -82,26 +81,57 @@ public:
                                     bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureVkImpl();
 
-    Uint32      GetDynamicBufferCount() const { return m_DynamicBufferCount; }
-    Uint8       GetNumShaderStages() const { return m_NumShaders; }
+    Uint32 GetDynamicOffsetCount() const { return m_DynamicUniformBufferCount + m_DynamicStorageBufferCount; }
+    Uint32 GetDynamicUniformBufferCount() const { return m_DynamicUniformBufferCount; }
+    Uint32 GetDynamicStorageBufferCount() const { return m_DynamicStorageBufferCount; }
+    Uint32 GetNumDescriptorSets() const;
+
+    Uint32      GetNumShaderStages() const { return m_NumShaders; }
     SHADER_TYPE GetShaderStageType(Uint32 StageIndex) const;
-    Uint32      GetTotalResourceCount() const { return m_Desc.NumResources; }
-    Uint32      GetNumDescriptorSets() const;
 
-    static constexpr Uint32 InvalidSamplerInd = ~0u;
+    static constexpr Uint32 InvalidSamplerInd = (1u << 16) - 1;
 
+    enum class CacheContentType
+    {
+        Signature = 0, // only static resources
+        SRB       = 1  // in SRB
+    };
+
+    // sizeof(ResourceAttribs) == 16, x64
     struct ResourceAttribs
     {
-        DescriptorType Type;
-        Uint32         CacheOffset; // for ShaderResourceCacheVk
-        Uint16         BindingIndex;
-        Uint8          DescrSet : 1;
-        Uint8          ImmutableSamplerAssigned : 1;
-        Uint32         SamplerInd;
+    private:
+        static constexpr Uint32 _DescrTypeBits       = 4;
+        static constexpr Uint32 _DescrSetBits        = 1;
+        static constexpr Uint32 _BindingIndexBits    = 16;
+        static constexpr Uint32 _SamplerIndBits      = 16;
+        static constexpr Uint32 _SamplerAssignedBits = 1;
+        static constexpr Uint32 _BitsSumm            = ((sizeof(Uint32) * 8 * 2) + _DescrTypeBits + _DescrSetBits + _BindingIndexBits + _SamplerIndBits + _SamplerAssignedBits + 31) & ~31;
 
-        ResourceAttribs() :
-            CacheOffset{~0u}, BindingIndex{0xFFFF}, DescrSet{0}, SamplerInd{InvalidSamplerInd}, ImmutableSamplerAssigned{0}
-        {}
+        static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "not enought bits to store DescriptorType values");
+        static_assert((1u << _SamplerIndBits) - 1 == InvalidSamplerInd, "InvalidSamplerInd is incorrect");
+        static_assert((1u << _DescrSetBits) == MAX_DESCR_SET_PER_SIGNATURE, "not enoght bits to store descriptor set index");
+        static_assert((1u << _BindingIndexBits) >= MAX_RESOURCES_IN_SIGNATURE, "not enoght bits to store resource binding index");
+
+    public:
+        // clang-format off
+        Uint32  BindingIndex         : _BindingIndexBits;
+        Uint32  SamplerInd           : _SamplerIndBits;     // index in m_Desc.Resources and m_pResourceAttribs
+        Uint32  DescrType            : _DescrTypeBits;
+        Uint32  DescrSet             : _DescrSetBits;
+        Uint32  ImtblSamplerAssigned : _SamplerAssignedBits;
+        Uint32  CacheOffsets[2];                            // static and static/mutable/dynamic offsets for ShaderResourceCacheVk
+
+        ResourceAttribs()
+        {
+            static_assert(_BitsSumm == sizeof(ResourceAttribs) * 8, "fields is not properly packed");
+        }
+
+        Uint32 CacheOffset(CacheContentType CacheType) const { return CacheOffsets[static_cast<Uint32>(CacheType)]; }
+
+        DescriptorType Type()                       const { return static_cast<DescriptorType>(DescrType); }
+        bool           IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned; }
+        // clang-format on
     };
 
     const ResourceAttribs& GetAttribs(Uint32 ResIndex) const
@@ -172,15 +202,24 @@ public:
     }
 
 private:
+    using ImmutableSamplerPtrType = RefCntAutoPtr<ISampler>;
+    using CacheOffsetsType        = std::array<Uint32, 3 * MAX_DESCR_SET_PER_SIGNATURE>; // [dynamic uniform buffers, dynamic storage buffers, other] * [descriptor sets] includes ArraySize
+    using BindingCountType        = std::array<Uint32, 3 * MAX_DESCR_SET_PER_SIGNATURE>; // [dynamic uniform buffers, dynamic storage buffers, other] * [descriptor sets] without ArraySize
+
     void Destruct();
 
     void ReserveSpaceForStaticVarsMgrs(const PipelineResourceSignatureDesc& Desc,
-                                       FixedLinearAllocator&                MemPool,
                                        Int8&                                StaticVarStageCount,
                                        Uint32&                              StaticVarCount,
-                                       Uint8                                DSMapping[2]);
+                                       CacheOffsetsType&                    CacheSizes,
+                                       BindingCountType&                    BindingCount,
+                                       Uint8                                DSMapping[MAX_DESCR_SET_PER_SIGNATURE]);
 
-    void CreateLayout(Uint32 StaticVarCount, const Uint8 DSMapping[2]);
+    void CreateLayout(const CacheOffsetsType& CacheSizes,
+                      const BindingCountType& BindingCount,
+                      const Uint8             DSMapping[MAX_DESCR_SET_PER_SIGNATURE]);
+
+    size_t CalculateHash() const;
 
     Uint32 FindAssignedSampler(const PipelineResourceDesc& SepImg) const;
 
@@ -188,20 +227,20 @@ private:
     Uint32 GetStaticDescrSetIndex() const;
     Uint32 GetDynamicDescrSetIndex() const;
 
-    using ImmutableSamplerPtrType = RefCntAutoPtr<ISampler>;
-
 private:
-    VulkanUtilities::DescriptorSetLayoutWrapper m_VkDescSetLayouts[2];
+    VulkanUtilities::DescriptorSetLayoutWrapper m_VkDescSetLayouts[MAX_DESCR_SET_PER_SIGNATURE];
 
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
     SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;
 
-    Uint32 m_DynamicBufferCount : 29; // buffers with dynamic offsets
-    Uint32 m_NumShaders : 3;
+    Uint16 m_DynamicUniformBufferCount = 0;
+    Uint16 m_DynamicStorageBufferCount = 0;
 
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
+
+    Uint8 m_NumShaders = 0;
 
     ShaderResourceCacheVk*   m_pResourceCache = nullptr;
     ShaderVariableManagerVk* m_StaticVarsMgrs = nullptr; // [m_NumShaders]

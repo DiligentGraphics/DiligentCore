@@ -29,9 +29,11 @@
 
 /// \file
 /// Implementation of the Diligent::PipelineResourceSignatureBase template class
-#include <unordered_map>
+#include <array>
+#include <limits>
 #include <algorithm>
 
+#include "PrivateConstants.h"
 #include "PipelineResourceSignature.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
@@ -58,13 +60,14 @@ public:
     /// \param pDevice           - Pointer to the device.
     /// \param Desc              - Resource signature description.
     /// \param bIsDeviceInternal - Flag indicating if this resource signature is an internal device object and
-    ///							   must not keep a strong reference to the device.
+    ///                            must not keep a strong reference to the device.
     PipelineResourceSignatureBase(IReferenceCounters*                  pRefCounters,
                                   RenderDeviceImplType*                pDevice,
                                   const PipelineResourceSignatureDesc& Desc,
                                   bool                                 bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
+        // Don't read from m_Desc until it was allocated and copied in CopyDescription()
         this->m_Desc.Resources             = nullptr;
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
@@ -87,6 +90,13 @@ public:
 
     bool IsUsingCombinedSamplers() const { return this->m_Desc.CombinedSamplerSuffix != nullptr; }
     bool IsUsingSeparateSamplers() const { return !IsUsingCombinedSamplers(); }
+
+    Uint32 GetTotalResourceCount() const { return this->m_Desc.NumResources; }
+
+    std::pair<Uint32, Uint32> GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE VarType) const
+    {
+        return std::pair<Uint32, Uint32>{m_ResourceOffsets[VarType], m_ResourceOffsets[VarType + 1]};
+    }
 
 protected:
     void ReserveSpaceForDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) const noexcept(false)
@@ -113,15 +123,14 @@ protected:
             Allocator.AddSpaceForString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
         }
 
-        Allocator.AddSpaceForString(Desc.CombinedSamplerSuffix);
+        if (Desc.UseCombinedTextureSamplers)
+            Allocator.AddSpaceForString(Desc.CombinedSamplerSuffix);
     }
 
     void CopyDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) noexcept(false)
     {
-        PipelineResourceDesc* pResources = Allocator.Allocate<PipelineResourceDesc>(this->m_Desc.NumResources);
-        ImmutableSamplerDesc* pSamplers  = Allocator.Allocate<ImmutableSamplerDesc>(this->m_Desc.NumImmutableSamplers);
-
-        m_Hash = ComputeHash(Desc.NumResources, Desc.NumImmutableSamplers, Desc.BindingIndex);
+        PipelineResourceDesc* pResources = Allocator.Allocate<PipelineResourceDesc>(Desc.NumResources);
+        ImmutableSamplerDesc* pSamplers  = Allocator.Allocate<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
 
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
@@ -129,21 +138,31 @@ protected:
             Dst       = Desc.Resources[i];
             Dst.Name  = Allocator.CopyString(Desc.Resources[i].Name);
 
-            HashCombine(m_Hash, Dst.ArraySize, Dst.ResourceType, Dst.ShaderStages, Dst.VarType, Dst.Flags);
+            ++m_ResourceOffsets[Dst.VarType + 1];
         }
+
+        std::sort(pResources, pResources + Desc.NumResources,
+                  [](const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs) {
+                      return lhs.VarType < rhs.VarType;
+                  });
+
+        for (size_t i = 1; i < m_ResourceOffsets.size(); ++i)
+            m_ResourceOffsets[i] += m_ResourceOffsets[i - 1];
+
+        VERIFY_EXPR(m_ResourceOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] == Desc.NumResources);
 
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
             auto& Dst                = pSamplers[i];
             Dst                      = Desc.ImmutableSamplers[i];
             Dst.SamplerOrTextureName = Allocator.CopyString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
-
-            HashCombine(m_Hash, Dst.ShaderStages, Dst.Desc);
         }
 
-        this->m_Desc.Resources             = pResources;
-        this->m_Desc.ImmutableSamplers     = pSamplers;
-        this->m_Desc.CombinedSamplerSuffix = Allocator.CopyString(Desc.CombinedSamplerSuffix);
+        this->m_Desc.Resources         = pResources;
+        this->m_Desc.ImmutableSamplers = pSamplers;
+
+        if (Desc.UseCombinedTextureSamplers)
+            this->m_Desc.CombinedSamplerSuffix = Allocator.CopyString(Desc.CombinedSamplerSuffix);
     }
 
     void Destruct()
@@ -221,6 +240,8 @@ protected:
 
 protected:
     size_t m_Hash = 0;
+
+    std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_ResourceOffsets = {};
 
     PIPELINE_TYPE m_PipelineType = static_cast<PIPELINE_TYPE>(0xFF);
 

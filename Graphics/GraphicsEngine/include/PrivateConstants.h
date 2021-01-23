@@ -28,24 +28,24 @@
 #pragma once
 
 /// \file
-/// Definition of the engine constants
+/// Definition of the engine private constants
 
-#include "../../../Primitives/interface/BasicTypes.h"
+#include "Constants.h"
 
-DILIGENT_BEGIN_NAMESPACE(Diligent)
+namespace Diligent
+{
 
-/// The maximum number of input buffer slots.
-/// D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT == 32
-#define DILIGENT_MAX_BUFFER_SLOTS 32
+/// The maximum number of shader stages in a pipeline.
+/// (Vertex, Hull, Domain, Geometry, Pixel) or (Amplification, Mesh, Pixel), or (Compute) or (RayGen, Miss, ClosestHit, AnyHit, Intersection, Callable)
+static constexpr Uint32 MAX_SHADERS_IN_PIPELINE = 6;
 
-/// The maximum number of simultaneous render targets.
-#define DILIGENT_MAX_RENDER_TARGETS 8
+/// The maximum number of resource signatures that one pipeline can use
+static constexpr Uint32 MAX_RESOURCE_SIGNATURES = 8;
 
-/// The maximum number of viewports.
-#define DILIGENT_MAX_VIEWPORTS 16
+// Static/mutable and dynamic descriptor sets (Vulkan only)
+static constexpr Uint32 MAX_DESCR_SET_PER_SIGNATURE = 2;
 
-static const Uint32 MAX_BUFFER_SLOTS   = DILIGENT_MAX_BUFFER_SLOTS;
-static const Uint32 MAX_RENDER_TARGETS = DILIGENT_MAX_RENDER_TARGETS;
-static const Uint32 MAX_VIEWPORTS      = DILIGENT_MAX_VIEWPORTS;
+// The maximum number of resources in pipeline resources signature.
+static constexpr Uint32 MAX_RESOURCES_IN_SIGNATURE = 1u << 16;
 
-DILIGENT_END_NAMESPACE // namespace Diligent
+} // namespace Diligent

@@ -38,6 +38,7 @@
 #include "ShaderVariableVk.hpp"
 #include "FixedBlockMemoryAllocator.hpp"
 #include "SRBMemoryAllocator.hpp"
+#include "PipelineLayoutVk.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
 #include "RenderDeviceVkImpl.hpp"
