@@ -169,7 +169,12 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// The number of immutable samplers in ImmutableSamplers array.
     Uint32  NumImmutableSamplers  DEFAULT_INITIALIZER(0);
     
-    /// AZ TODO: comment
+    /// Binding index that this resource signature uses.
+
+    /// Every resource signature must be assign to one signature slot.
+    /// The total number of slots is given by MAX_RESOURCE_SIGNATURES constant.
+    /// All resource signatures used by a pipeline state must be assigned
+    /// to different slots.
     Uint8  BindingIndex DEFAULT_INITIALIZER(0);
     
     /// AZ TODO: comment
