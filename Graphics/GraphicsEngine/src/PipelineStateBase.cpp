@@ -171,6 +171,11 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
     if (CreateInfo.ppResourceSignatures == nullptr)
         return;
 
+    if (CreateInfo.PSODesc.SRBAllocationGranularity != 1)
+    {
+        LOG_WARNING_MESSAGE("PSODesc.SRBAllocationGranularity is ignored when explicit resource signatures are used. Use default value (1) to silence this warning.");
+    }
+
     if (CreateInfo.PSODesc.ResourceLayout.NumVariables != 0)
     {
         LOG_PSO_ERROR_AND_THROW("The number of variables defined through resource layout (", CreateInfo.PSODesc.ResourceLayout.NumVariables,

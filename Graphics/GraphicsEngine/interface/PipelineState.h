@@ -316,7 +316,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// This member defines allocation granularity for internal resources required by the shader resource
     /// binding object instances.
-    /// Has no effect if used pipeline resource signature.
+    /// Has no effect if the PSO is created with explicit pipeline resource signature(s).
     Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
 
     /// Defines which command queues this pipeline state can be used with
@@ -368,10 +368,19 @@ struct PipelineStateCreateInfo
     /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
     PSO_CREATE_FLAGS  Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
 
-    /// AZ TODO: comment
+    /// An array of ResourceSignaturesCount shader resource signatures that 
+    /// define the layout of shader resources in this pipeline state object.
+    /// See Diligent::IPipelineResourceSignature.
+    ///
+    /// \remarks    When this member is null, the pipeline resource layout will be defined
+    ///             by PSODesc.ResourceLayout member. In this case the PSO will implicitly
+    ///             create a resource signature that can be queried through GetResourceSignature()
+    ///             method.
+    ///             When ppResourceSignatures is not null, PSODesc.ResourceLayout is ignored and
+    ///             should be in it default state.
     IPipelineResourceSignature** ppResourceSignatures DEFAULT_INITIALIZER(nullptr);
     
-    /// AZ TODO: comment
+    /// The number of elements in ppResourceSignatures array.
     Uint32 ResourceSignaturesCount DEFAULT_INITIALIZER(0);
 };
 typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
@@ -531,8 +540,8 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \param [in] ShaderType - Type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param [in] Name - Name of the variable.
-    /// \remark The method does not increment the reference counter
-    ///         of the returned interface.
+    /// \remarks The method does not increment the reference counter
+    ///          of the returned interface.
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByName)(THIS_
                                                                      SHADER_TYPE ShaderType,
                                                                      const Char* Name) PURE;
@@ -546,9 +555,9 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \param [in] Index - Shader variable index. The index must be between
     ///                     0 and the total number of variables returned by 
     ///                     GetStaticVariableCount().
-    /// \remark Only static shader resource variables can be accessed through this method.
-    ///         Mutable and dynamic variables are accessed through Shader Resource 
-    ///         Binding object
+    /// \remarks Only static shader resource variables can be accessed through this method.
+    ///          Mutable and dynamic variables are accessed through Shader Resource 
+    ///          Binding object
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByIndex)(THIS_
                                                                       SHADER_TYPE ShaderType,
                                                                       Uint32      Index) PURE;
