@@ -650,4 +650,25 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromPipelineIndex)
     TestPipelineType(PIPELINE_TYPE_MESH);
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, PipelineTypeFromShaderStages)
+{
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_VERTEX), PIPELINE_TYPE_GRAPHICS);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_PIXEL), PIPELINE_TYPE_GRAPHICS);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_GEOMETRY), PIPELINE_TYPE_GRAPHICS);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_HULL), PIPELINE_TYPE_GRAPHICS);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_DOMAIN), PIPELINE_TYPE_GRAPHICS);
+
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_COMPUTE), PIPELINE_TYPE_COMPUTE);
+
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_AMPLIFICATION), PIPELINE_TYPE_MESH);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_MESH), PIPELINE_TYPE_MESH);
+
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_GEN), PIPELINE_TYPE_RAY_TRACING);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_MISS), PIPELINE_TYPE_RAY_TRACING);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_CLOSEST_HIT), PIPELINE_TYPE_RAY_TRACING);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_ANY_HIT), PIPELINE_TYPE_RAY_TRACING);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_INTERSECTION), PIPELINE_TYPE_RAY_TRACING);
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_CALLABLE), PIPELINE_TYPE_RAY_TRACING);
+}
+
 } // namespace

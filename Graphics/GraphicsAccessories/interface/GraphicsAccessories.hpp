@@ -479,9 +479,10 @@ inline SHADER_TYPE GetShaderTypeFromIndex(Int32 Index)
 }
 
 
-bool        IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType);
-Int32       GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType);
-SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType);
+bool          IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType);
+Int32         GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType);
+SHADER_TYPE   GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType);
+PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages);
 
 /// Returns an offset from the beginning of the buffer backing a staging texture
 /// to the specified location within the given subresource.

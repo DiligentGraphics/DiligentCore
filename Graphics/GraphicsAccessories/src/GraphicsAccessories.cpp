@@ -1440,6 +1440,38 @@ SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineTy
     }
 }
 
+PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages)
+{
+    if (ShaderStages & SHADER_TYPE_ALL_GRAPHICS)
+    {
+        VERIFY((ShaderStages & SHADER_TYPE_ALL_GRAPHICS) == ShaderStages,
+               "Graphics pipeline stages can't be combined with other shader stages");
+        return PIPELINE_TYPE_GRAPHICS;
+    }
+    else if (ShaderStages & SHADER_TYPE_COMPUTE)
+    {
+        VERIFY((ShaderStages & SHADER_TYPE_COMPUTE) == ShaderStages,
+               "Compute stage can't be combined with any other shader stage");
+        return PIPELINE_TYPE_COMPUTE;
+    }
+    else if (ShaderStages & SHADER_TYPE_ALL_MESH)
+    {
+        VERIFY((ShaderStages & SHADER_TYPE_ALL_MESH) == ShaderStages,
+               "Mesh shading pipeline stages can't be combined with other shader stages");
+        return PIPELINE_TYPE_MESH;
+    }
+    else if (ShaderStages & SHADER_TYPE_ALL_RAY_TRACING)
+    {
+        VERIFY((ShaderStages & SHADER_TYPE_ALL_RAY_TRACING) == ShaderStages,
+               "Ray tracing pipeline stages can't be combined with other shader stages");
+        return PIPELINE_TYPE_RAY_TRACING;
+    }
+    else
+    {
+        UNEXPECTED("Unknown shader stage");
+        return PIPELINE_TYPE_INVALID;
+    }
+}
 
 Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
                                        Uint32             ArraySlice,

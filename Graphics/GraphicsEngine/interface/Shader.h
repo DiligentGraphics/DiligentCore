@@ -60,10 +60,28 @@ DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
     SHADER_TYPE_RAY_ANY_HIT      = 0x0800, ///< Ray any hit shader
     SHADER_TYPE_RAY_INTERSECTION = 0x1000, ///< Ray intersection shader
     SHADER_TYPE_CALLABLE         = 0x2000, ///< Callable shader
-    SHADER_TYPE_LAST             = SHADER_TYPE_CALLABLE
+    SHADER_TYPE_LAST             = SHADER_TYPE_CALLABLE,
+
+    /// All graphics pipeline shader stages
+    SHADER_TYPE_ALL_GRAPHICS    = SHADER_TYPE_VERTEX   |
+                                  SHADER_TYPE_PIXEL    |
+                                  SHADER_TYPE_GEOMETRY | 
+                                  SHADER_TYPE_HULL     | 
+                                  SHADER_TYPE_DOMAIN,
+
+    /// All mesh shading pipeline stages
+    SHADER_TYPE_ALL_MESH        = SHADER_TYPE_AMPLIFICATION |
+                                  SHADER_TYPE_MESH,
+
+    /// All ray-tracing pipeline shader stages
+    SHADER_TYPE_ALL_RAY_TRACING    = SHADER_TYPE_RAY_GEN          |
+                                     SHADER_TYPE_RAY_MISS         |
+                                     SHADER_TYPE_RAY_CLOSEST_HIT  |
+                                     SHADER_TYPE_RAY_ANY_HIT      |
+                                     SHADER_TYPE_RAY_INTERSECTION |
+                                     SHADER_TYPE_CALLABLE
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
-
 
 /// Describes the shader source code language
 DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
