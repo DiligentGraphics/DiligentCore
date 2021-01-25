@@ -854,7 +854,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                     if (!m_PipelineLayout.GetResourceInfo(Res.Name, ShaderType, Info))
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Res.Name,
-                                            "' that is not presented in any pipeline resource signature that is used to create pipeline state '",
+                                            "' that is not present in any pipeline resource signature that is used to create pipeline state '",
                                             m_Desc.Name, "'.");
                     }
                     SPIRV[Res.BindingDecorationOffset]       = Info.BindingIndex;

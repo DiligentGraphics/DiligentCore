@@ -326,4 +326,86 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     pContext->Draw(DrawAttrs);
 }
 
+
+TEST_F(PipelineResourceSignatureTest, StaticSamplers)
+{
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto*       pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/PipelineResourceSignature", &pShaderSourceFactory);
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.FilePath                   = "StaticSamplers.hlsl";
+
+    RefCntAutoPtr<IShader> pVS, pPS;
+    {
+        ShaderCI.Desc.Name       = "Res signature static samplers test: VS";
+        ShaderCI.EntryPoint      = "VSMain";
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    {
+        ShaderCI.Desc.Name       = "Res signature static samplers test: PS";
+        ShaderCI.EntryPoint      = "PSMain";
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Variable types test";
+
+    constexpr auto SHADER_TYPE_VS_PS = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
+    // clang-format off
+    PipelineResourceDesc Resources[]
+    {
+        {SHADER_TYPE_VS_PS, "g_Tex2D_Static", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VS_PS, "g_Tex2D_Mut",    1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VS_PS, "g_Tex2D_Dyn",    1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+    };
+    // clang-format on
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+
+    ImmutableSamplerDesc ImmutableSamplers[] = //
+        {
+            {SHADER_TYPE_VERTEX, "g_Sampler", SamplerDesc{}},
+            {SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{}} //
+        };
+    PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+    PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+    ASSERT_TRUE(pPRS);
+
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, pTexSRV);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPRS->CreateShaderResourceBinding(&pSRB, true);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRV);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRV);
+
+    auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
+    ASSERT_TRUE(pPSO);
+
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    ITextureView* ppRTVs[] = {pRTV};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+
+    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    pContext->Draw(DrawAttrs);
+}
+
 } // namespace Diligent
