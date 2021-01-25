@@ -276,16 +276,10 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     SamCaps.BorderSamplingModeSupported   = True;
     SamCaps.AnisotropicFilteringSupported = vkEnabledFeatures.samplerAnisotropy;
     SamCaps.LODBiasSupported              = True;
-
-    PipelineResourceSignatureDesc Desc;
-    Desc.Name = "Empty resource signature";
-    CreatePipelineResourceSignature(Desc, &m_pEmptySignature, true);
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
 {
-    m_pEmptySignature.Release();
-
     // Explicitly destroy dynamic heap. This will move resources owned by
     // the heap into release queues
     m_DynamicMemoryManager.Destroy();

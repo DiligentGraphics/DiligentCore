@@ -233,9 +233,6 @@ public:
         return m_Properties;
     }
 
-    IPipelineResourceSignature*      GetEmptySignature() const { return m_pEmptySignature.RawPtr<IPipelineResourceSignature>(); }
-    PipelineResourceSignatureVkImpl* GetEmptySignatureVk() const { return m_pEmptySignature.RawPtr<PipelineResourceSignatureVkImpl>(); }
-
 private:
     template <typename PSOCreateInfoType>
     void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);
@@ -272,8 +269,6 @@ private:
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
 
     Properties m_Properties;
-
-    RefCntAutoPtr<IPipelineResourceSignature> m_pEmptySignature;
 };
 
 } // namespace Diligent

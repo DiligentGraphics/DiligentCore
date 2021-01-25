@@ -352,12 +352,12 @@ __forceinline void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl*
 {
     VERIFY_EXPR(pPipelineStateVk != nullptr);
 
-    const auto& Layout          = pPipelineStateVk->GetPipelineLayout();
-    const auto  BindIndex       = PipelineTypeToBindPointIndex(pPipelineStateVk->GetDesc().PipelineType);
-    auto&       BindInfo        = m_DescrSetBindInfo[BindIndex];
-    auto&       Resources       = BindInfo.Resources;
-    const auto  SignCount       = Layout.GetSignatureCount();
-    Uint32      CompatSignCount = SignCount;
+    const auto& Layout    = pPipelineStateVk->GetPipelineLayout();
+    const auto  BindIndex = PipelineTypeToBindPointIndex(pPipelineStateVk->GetDesc().PipelineType);
+    auto&       BindInfo  = m_DescrSetBindInfo[BindIndex];
+    const auto  SignCount = Layout.GetSignatureCount();
+
+    BindInfo.ActiveSRBMask = (1u << SignCount) - 1;
 
     // Layout compatibility means that descriptor sets can be bound to a command buffer
     // for use by any pipeline created with a compatible pipeline layout, and without having bound
@@ -366,32 +366,31 @@ __forceinline void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl*
     // (14.2.2. Pipeline Layouts, clause 'Pipeline Layout Compatibility')
     // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets-compatibility
 
-
 #ifdef DILIGENT_DEBUG
-    // unbind incompatible descriptor sets
+    auto&  Resources       = BindInfo.Resources;
+    Uint32 CompatSignCount = SignCount;
+
+    // find first incompatible shader resource bindings
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         const auto* LayoutSign = Layout.GetSignature(i);
-        const auto* ResSign    = Resources[i] != nullptr ? Resources[i]->GetSignature() : ValidatedCast<RenderDeviceVkImpl>(GetDevice())->GetEmptySignatureVk();
+        if (LayoutSign == nullptr)
+            continue;
 
-        VERIFY_EXPR(LayoutSign != nullptr);
-        VERIFY_EXPR(ResSign != nullptr);
-
-        if (LayoutSign->IsIncompatibleWith(*ResSign))
+        if (Resources[i] == nullptr || LayoutSign->IsIncompatibleWith(*Resources[i]->GetSignature()))
         {
             CompatSignCount = i;
             break;
         }
     }
 
-    // reset unused states
-    for (Uint32 i = CompatSignCount; i < MAX_RESOURCE_SIGNATURES; ++i)
+    // unbind incompatible shader resource bindings
+    for (Uint32 i = CompatSignCount; i < SignCount; ++i)
     {
-        BindInfo.PendingVkSet[i]              = false;
-        BindInfo.PendingDynamicDescriptors[i] = false;
-        BindInfo.DynamicBuffersPresent[i]     = false;
-
         Resources[i] = nullptr;
+
+        BindInfo.ResetPendingSRB(i);
+        BindInfo.ResetDynamicBuffersPresent(i);
 
         BindInfo.vkSets[i * MAX_DESCR_SET_PER_SIGNATURE + 0] = VK_NULL_HANDLE;
         BindInfo.vkSets[i * MAX_DESCR_SET_PER_SIGNATURE + 1] = VK_NULL_HANDLE;
@@ -410,12 +409,15 @@ void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBind
     auto&       Offsets          = m_DynamicBufferOffsets;
     const auto  VkLayout         = Layout.GetVkPipelineLayout();
 
-    for (Uint32 i = 0; i < SignCount; ++i)
+    while (true)
     {
-        VERIFY_EXPR(Resources[i] != nullptr);
+        Uint32 i = PlatformMisc::GetLSB(Uint32{BindInfo.PendingSRB});
 
-        if ((BindInfo.PendingVkSet[i] || BindInfo.PendingDynamicDescriptors[i]) && Resources[i] != nullptr)
+        if (i < SignCount)
         {
+            VERIFY_EXPR(Resources[i] != nullptr);
+            BindInfo.ResetPendingSRB(i);
+
             const auto*  pSignature    = Resources[i]->GetSignature();
             const Uint32 DescrSetIdx   = Layout.GetFirstDescrSetIndex(pSignature);
             const auto&  ResourceCache = Resources[i]->GetResourceCache();
@@ -441,20 +443,17 @@ void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBind
                 // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
                 // applied via these sets are no longer valid (13.2.5)
                 m_CommandBuffer.BindDescriptorSets(BindPoint, VkLayout, DescrSetIdx, DSCount, &BindInfo.vkSets[DSOffset], static_cast<Uint32>(Offsets.size()), Offsets.data());
-                BindInfo.PendingDynamicDescriptors[i] = false;
             }
             else
             {
-                VERIFY_EXPR(!BindInfo.PendingDynamicDescriptors[i]);
                 m_CommandBuffer.BindDescriptorSets(BindPoint, VkLayout, DescrSetIdx, DSCount, &BindInfo.vkSets[DSOffset], 0, nullptr);
             }
-
-            BindInfo.PendingVkSet[i] = false;
         }
+        else
+            break;
     }
 
-    VERIFY_EXPR(!BindInfo.PendingVkSet.any());
-    VERIFY_EXPR(!BindInfo.PendingDynamicDescriptors.any());
+    VERIFY_EXPR(!(BindInfo.PendingSRB & BindInfo.ActiveSRBMask));
 }
 
 void DeviceContextVkImpl::ValidateShaderResources()
@@ -470,10 +469,7 @@ void DeviceContextVkImpl::ValidateShaderResources()
     {
         auto* LayoutSign = Layout.GetSignature(i);
         if (LayoutSign == nullptr)
-        {
-            LOG_ERROR_MESSAGE("Pipeline resource signature for index (", i, ") is null, this may indicate a bug");
-            return;
-        }
+            continue;
 
         if (BindInfo.Resources[i] == nullptr)
         {
@@ -491,8 +487,7 @@ void DeviceContextVkImpl::ValidateShaderResources()
         }
 
         // You must call BindDescriptorSetsWithDynamicOffsets() before validation.
-        VERIFY_EXPR(!BindInfo.PendingVkSet[i]);
-        VERIFY_EXPR(!BindInfo.PendingDynamicDescriptors[i]);
+        VERIFY_EXPR(!(BindInfo.PendingSRB & BindInfo.ActiveSRBMask));
 
         const auto DSCount  = LayoutSign->GetNumDescriptorSets();
         const auto DSOffset = i * MAX_DESCR_SET_PER_SIGNATURE;
@@ -562,9 +557,12 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     const auto  DSCount    = ResourceCache.GetNumDescriptorSets();
     Uint32      DSIndex    = 0;
 
-    BindInfo.PendingVkSet[Index]              = true;
-    BindInfo.PendingDynamicDescriptors[Index] = false;
-    BindInfo.DynamicBuffersPresent[Index]     = ResourceCache.GetNumDynamicBuffers() > 0;
+    BindInfo.SetPendingSRB(Index);
+
+    if (ResourceCache.GetNumDynamicBuffers() > 0)
+        BindInfo.SetDynamicBuffersPresent(Index);
+    else
+        BindInfo.ResetDynamicBuffersPresent(Index);
 
     if (pSignature->HasStaticDescrSet())
     {
@@ -594,9 +592,6 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         BindInfo.vkSets[DSOffset + DSIndex] = DynamicDescrSet;
         ++DSIndex;
     }
-
-    if (pSignature->GetDynamicOffsetCount() > 0)
-        BindInfo.PendingDynamicDescriptors[Index] = true;
 
     VERIFY_EXPR(DSIndex == DSCount);
 

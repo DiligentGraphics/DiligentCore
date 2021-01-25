@@ -486,23 +486,24 @@ private:
         // Do not use strong references!
         using ShaderResourceArray = std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES>;
         using VkDescSetArray      = std::array<VkDescriptorSet, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE>;
-        using BoolArray           = std::bitset<MAX_RESOURCE_SIGNATURES>;
+        using Bitfield            = Uint8;
+        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "AZ TODO");
 
-        ShaderResourceArray Resources                 = {};
-        VkDescSetArray      vkSets                    = {};
-        BoolArray           PendingVkSet              = {}; // 'true' if new descriptor set must be bound
-        BoolArray           PendingDynamicDescriptors = {}; // 'true' if dynamic descriptor set must be bound // AZ TODO: remove ?
-        BoolArray           DynamicBuffersPresent     = {};
+        Bitfield            ActiveSRBMask         = 0; // indicates which SRB is active in current PSO
+        Bitfield            PendingSRB            = 0; // 1 bit if new descriptor set must be bound
+        Bitfield            DynamicBuffersPresent = 0;
+        ShaderResourceArray Resources             = {};
+        VkDescSetArray      vkSets                = {};
 
         DescriptorSetBindInfo()
         {}
 
         void Reset()
         {
-            PendingVkSet.reset();
-            DynamicBuffersPresent.reset();
-            PendingDynamicDescriptors.reset();
-            Resources.fill({});
+            ActiveSRBMask         = 0;
+            PendingSRB            = 0;
+            DynamicBuffersPresent = 0;
+            Resources.fill(nullptr);
 
 #ifdef DILIGENT_DEBUG
             vkSets.fill(VK_NULL_HANDLE);
@@ -511,8 +512,14 @@ private:
 
         __forceinline bool RequireUpdate(bool Intact = false) const
         {
-            return PendingVkSet.any() || PendingDynamicDescriptors.any() || (DynamicBuffersPresent.any() && !Intact);
+            return (PendingSRB & ActiveSRBMask) || ((DynamicBuffersPresent & ActiveSRBMask) && !Intact);
         }
+
+        void SetPendingSRB(Uint32 Index) { PendingSRB |= static_cast<Bitfield>(1u << Index); }
+        void ResetPendingSRB(Uint32 Index) { PendingSRB &= static_cast<Bitfield>(~(1u << Index)); }
+
+        void SetDynamicBuffersPresent(Uint32 Index) { DynamicBuffersPresent |= static_cast<Bitfield>(1u << Index); }
+        void ResetDynamicBuffersPresent(Uint32 Index) { DynamicBuffersPresent &= static_cast<Bitfield>(~(1u << Index)); }
     };
 
     void BindShaderResources(PipelineStateVkImpl* pPipelineStateVk);

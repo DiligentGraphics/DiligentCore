@@ -53,7 +53,6 @@ public:
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }
     Uint32           GetSignatureCount() const { return m_SignatureCount; }
-    //Uint32           GetDescriptorSetCount() const { return m_DescrSetCount; }
 
     PipelineResourceSignatureVkImpl* GetSignature(Uint32 index) const
     {

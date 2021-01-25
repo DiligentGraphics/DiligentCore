@@ -80,15 +80,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
         m_Signatures[Index] = pSignature;
     }
 
-    auto* pEmptySign = ValidatedCast<PipelineResourceSignatureVkImpl>(pDeviceVk->GetEmptySignature());
-
-    for (Uint32 i = 0; i < m_SignatureCount; ++i)
-    {
-        if (m_Signatures[i] == nullptr)
-            m_Signatures[i] = pEmptySign;
-    }
-
-    std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES* MAX_DESCR_SET_PER_SIGNATURE> DescSetLayouts = {};
+    std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE> DescSetLayouts;
 
     Uint32 DescSetLayoutCount        = 0;
     Uint32 DynamicUniformBufferCount = 0;
@@ -97,7 +89,8 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
     for (Uint32 i = 0; i < m_SignatureCount; ++i)
     {
         const auto& pSignature = m_Signatures[i];
-        VERIFY_EXPR(pSignature != nullptr);
+        if (pSignature == nullptr)
+            continue;
 
         VERIFY(DescSetLayoutCount <= std::numeric_limits<FirstDescrSetIndexArrayType::value_type>::max(),
                "Descriptor set layout count (", DescSetLayoutCount, ") exceeds the maximum representable value");
@@ -156,8 +149,10 @@ size_t PipelineLayoutVk::GetHash() const
     HashCombine(hash, m_SignatureCount);
     for (Uint32 i = 0; i < m_SignatureCount; ++i)
     {
-        VERIFY_EXPR(m_Signatures[i] != nullptr);
-        HashCombine(hash, m_Signatures[i]->GetHash());
+        if (m_Signatures[i] != nullptr)
+            HashCombine(hash, m_Signatures[i]->GetHash());
+        else
+            HashCombine(hash, 0);
     }
     return hash;
 }
@@ -167,7 +162,8 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
     for (Uint32 i = 0, DSCount = GetSignatureCount(); i < DSCount; ++i)
     {
         auto* pSignature = GetSignature(i);
-        VERIFY_EXPR(pSignature != nullptr);
+        if (pSignature == nullptr)
+            continue;
 
         for (Uint32 r = 0, ResCount = pSignature->GetTotalResourceCount(); r < ResCount; ++r)
         {

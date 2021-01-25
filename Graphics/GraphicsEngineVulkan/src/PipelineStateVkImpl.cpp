@@ -998,4 +998,49 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
     return false;
 }
 
+void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
+                                                      bool                     InitStaticResources)
+{
+    *ppShaderResourceBinding = nullptr;
+
+    if (GetResourceSignatureCount() != 1)
+        return;
+
+    return GetResourceSignature(0)->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
+}
+
+IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByName(SHADER_TYPE ShaderType,
+                                                                      const Char* Name)
+{
+    if (GetResourceSignatureCount() != 1)
+        return nullptr;
+
+    return GetResourceSignature(0)->GetStaticVariableByName(ShaderType, Name);
+}
+
+IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType,
+                                                                       Uint32      Index)
+{
+    if (GetResourceSignatureCount() != 1)
+        return nullptr;
+
+    return GetResourceSignature(0)->GetStaticVariableByIndex(ShaderType, Index);
+}
+
+Uint32 PipelineStateVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
+{
+    if (GetResourceSignatureCount() != 1)
+        return 0;
+
+    return GetResourceSignature(0)->GetStaticVariableCount(ShaderType);
+}
+
+void PipelineStateVkImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
+{
+    if (GetResourceSignatureCount() != 1)
+        return;
+
+    return GetResourceSignature(0)->BindStaticResources(ShaderFlags, pResourceMapping, Flags);
+}
+
 } // namespace Diligent
