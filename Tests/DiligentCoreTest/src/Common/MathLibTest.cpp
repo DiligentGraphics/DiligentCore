@@ -1618,6 +1618,74 @@ TEST(Common_BasicMath, BitInterleave16)
     }
 }
 
+TEST(Common_BasicMath, ExtractLSB)
+{
+    {
+        Uint32 Bits = 0;
+        EXPECT_EQ(ExtractLSB(Bits), 0U);
+        EXPECT_EQ(Bits, 0U);
+    }
+
+    for (Uint8 i = 0; i < 8; ++i)
+    {
+        const Uint8 Bit = 1 << i;
+
+        Uint8 Bits = Bit;
+        EXPECT_EQ(ExtractLSB(Bits), Bit);
+        EXPECT_EQ(Bits, 0U);
+    }
+
+    for (Uint32 i = 0; i < 32; ++i)
+    {
+        const Uint32 Bit = 1 << i;
+
+        Uint32 Bits = Bit;
+        EXPECT_EQ(ExtractLSB(Bits), Bit);
+        EXPECT_EQ(Bits, 0U);
+    }
+
+    for (Uint64 i = 0; i < 64; ++i)
+    {
+        const Uint64 Bit = Uint64{1} << i;
+
+        Uint64 Bits = Bit;
+        EXPECT_EQ(ExtractLSB(Bits), Bit);
+        EXPECT_EQ(Bits, 0U);
+    }
+
+    for (Uint32 i = 0; i < 32; ++i)
+    {
+        for (Uint32 j = i + 1; j < 32; ++j)
+        {
+            const Uint32 LSB = 1 << i;
+            const Uint32 MSB = 1 << j;
+
+            Uint32 Bits = LSB | MSB;
+            EXPECT_EQ(ExtractLSB(Bits), LSB);
+            EXPECT_EQ(ExtractLSB(Bits), MSB);
+            EXPECT_EQ(Bits, 0U);
+        }
+    }
+
+    {
+        enum FLAG_ENUM : Uint32
+        {
+            FLAG_ENUM_00 = 0x00,
+            FLAG_ENUM_01 = 0x01,
+            FLAG_ENUM_02 = 0x02,
+            FLAG_ENUM_10 = 0x10
+        };
+        FLAG_ENUM Bits = static_cast<FLAG_ENUM>(FLAG_ENUM_01 | FLAG_ENUM_02 | FLAG_ENUM_10);
+        EXPECT_EQ(ExtractLSB(Bits), FLAG_ENUM_01);
+        EXPECT_EQ(Bits, static_cast<FLAG_ENUM>(FLAG_ENUM_02 | FLAG_ENUM_10));
+        EXPECT_EQ(ExtractLSB(Bits), FLAG_ENUM_02);
+        EXPECT_EQ(Bits, FLAG_ENUM_10);
+        EXPECT_EQ(ExtractLSB(Bits), FLAG_ENUM_10);
+        EXPECT_EQ(Bits, FLAG_ENUM_00);
+    }
+}
+
+
 TEST(Common_AdvancedMath, IsPointInsideTriangleF)
 {
     {

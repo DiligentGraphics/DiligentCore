@@ -2189,18 +2189,24 @@ inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
     return x | (y << 1u);
 }
 
+/// Returns the least-signficant bit and clears it in the input argument
 template <typename T>
-inline T ExtractBit(T& bits)
+typename std::enable_if<std::is_integral<T>::value, T>::type ExtractLSB(T& bits)
 {
-    static_assert(std::is_enum<T>::value || std::is_integral<T>::value, "T must be enum or integer type");
+    if (bits == T{0})
+        return 0;
 
-    using U = std::conditional_t<(sizeof(T) > sizeof(Uint32)), Uint64, Uint32>;
-    VERIFY_EXPR(static_cast<U>(bits) > 0);
+    const T bit = bits & ~(bits - T{1});
+    bits &= ~bit;
 
-    const U result = static_cast<U>(bits) & ~(static_cast<U>(bits) - U{1});
-    bits           = static_cast<T>(static_cast<U>(bits) & ~result);
+    return bit;
+}
 
-    return static_cast<T>(result);
+/// Returns the enum value representing the least-signficant bit and clears it in the input argument
+template <typename T>
+typename std::enable_if<std::is_enum<T>::value, T>::type ExtractLSB(T& bits)
+{
+    return static_cast<T>(ExtractLSB(reinterpret_cast<std::underlying_type<T>::type&>(bits)));
 }
 
 } // namespace Diligent
