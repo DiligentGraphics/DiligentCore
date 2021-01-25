@@ -39,7 +39,7 @@ namespace Diligent
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false)
 {
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
-        LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Desc.BindingIndex, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
+        LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Uint32{Desc.BindingIndex}, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
 
     std::unordered_map<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResourceShaderStages;
 
@@ -69,16 +69,16 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             (Res.ResourceType != SHADER_RESOURCE_TYPE_CONSTANT_BUFFER &&
              Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&
              Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV))
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contains PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS if ResourceType is not buffer");
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS if ResourceType is not buffer");
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE) &&
             Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contains PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE if ResourceType is not SHADER_RESOURCE_TYPE_TEXTURE_SRV");
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE if ResourceType is not SHADER_RESOURCE_TYPE_TEXTURE_SRV");
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) &&
             (Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&
              Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_SRV))
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contains PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER if ResourceType is not buffer");
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER if ResourceType is not buffer");
     }
 
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)

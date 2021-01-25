@@ -29,13 +29,11 @@
 
 /// \file
 /// Declaration of Diligent::PipelineResourceSignatureVkImpl class
+
 #include <array>
-#include <bitset>
 
 #include "PipelineResourceSignatureBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
 #include "SRBMemoryAllocator.hpp"
 
 namespace Diligent
@@ -43,7 +41,6 @@ namespace Diligent
 class RenderDeviceVkImpl;
 class ShaderResourceCacheVk;
 class ShaderVariableManagerVk;
-class DeviceContextVkImpl;
 
 enum class DescriptorType : Uint8
 {

@@ -285,7 +285,7 @@ struct ShaderCreateInfo
     /// the sampler assigned to the shader resource view is automatically set when
     /// the view is bound. Otherwise samplers need to be explicitly set similar to other
     /// shader variables.
-    /// Has no effect if used pipeline resource signature.
+    /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
     bool UseCombinedTextureSamplers DEFAULT_INITIALIZER(false);
 
     /// If UseCombinedTextureSamplers is true, defines the suffix added to the
@@ -293,7 +293,7 @@ struct ShaderCreateInfo
     /// for default value "_sampler", a texture named "tex" will be combined
     /// with sampler named "tex_sampler".
     /// If UseCombinedTextureSamplers is false, this member is ignored.
-    /// Has no effect if used pipeline resource signature.
+    /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
     const Char* CombinedSamplerSuffix DEFAULT_INITIALIZER("_sampler");
 
     /// Shader description. See Diligent::ShaderDesc.

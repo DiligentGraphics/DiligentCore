@@ -139,10 +139,10 @@ struct PipelineResourceDesc
 #if DILIGENT_CPP_INTERFACE
     PipelineResourceDesc()noexcept{}
 
-    PipelineResourceDesc(const char*                   _Name,
+    PipelineResourceDesc(SHADER_TYPE                   _ShaderStages,
+                         const char*                   _Name,
                          Uint32                        _ArraySize,
                          SHADER_RESOURCE_TYPE          _ResourceType,
-                         SHADER_TYPE                   _ShaderStages,
                          SHADER_RESOURCE_VARIABLE_TYPE _VarType,
                          PIPELINE_RESOURCE_FLAGS       _Flags = PIPELINE_RESOURCE_FLAG_UNKNOWN)noexcept : 
         Name        {_Name        },

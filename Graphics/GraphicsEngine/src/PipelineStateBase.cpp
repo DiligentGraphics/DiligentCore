@@ -30,6 +30,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <array>
+#include <vector>
 
 #include "HashUtils.hpp"
 
@@ -188,7 +189,8 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
                                 ") must be zero when resource signatures are used.");
     }
 
-    std::unordered_map<HashMapStringKey, const IPipelineResourceSignature*, HashMapStringKey::Hasher> AllResources;
+
+    std::unordered_map<HashMapStringKey, std::vector<std::pair<SHADER_TYPE, const IPipelineResourceSignature*>>, HashMapStringKey::Hasher> AllResources;
 
     std::array<const IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> ppSignatures = {};
     for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
@@ -207,17 +209,22 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
                                     " conflicts with another resource signature '", ppSignatures[SignDesc.BindingIndex]->GetDesc().Name,
                                     "' that uses the same index.");
         }
+        ppSignatures[SignDesc.BindingIndex] = pSignature;
 
         for (Uint32 res = 0; res < SignDesc.NumResources; ++res)
         {
             const auto& ResDesc = SignDesc.Resources[res];
 
-            auto insert_res = AllResources.emplace(ResDesc.Name, pSignature);
-            if (!insert_res.second)
+            auto& StageSignatures = AllResources[ResDesc.Name];
+            for (auto& StageSig : StageSignatures)
             {
-                LOG_PSO_ERROR_AND_THROW("Shader resource '", ResDesc.Name, "' is found in more than one resource signature ('", SignDesc.Name,
-                                        "' and '", insert_res.first->second->GetDesc().Name, "'). Every shader resource in PSO must be unambiguously defined by only resource signature.");
+                if ((StageSig.first & ResDesc.ShaderStages) != 0)
+                {
+                    LOG_PSO_ERROR_AND_THROW("Shader resource '", ResDesc.Name, "' is found in more than one resource signature in the same stage ('", SignDesc.Name,
+                                            "' and '", StageSig.second->GetDesc().Name, "'). Every shader resource in PSO must be unambiguously defined by only one resource signature.");
+                }
             }
+            StageSignatures.emplace_back(ResDesc.ShaderStages, pSignature);
         }
     }
 }

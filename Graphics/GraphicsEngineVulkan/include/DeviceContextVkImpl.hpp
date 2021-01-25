@@ -29,7 +29,9 @@
 
 /// \file
 /// Declaration of Diligent::DeviceContextVkImpl class
+
 #include <unordered_map>
+#include <bitset>
 
 #include "DeviceContextVk.h"
 #include "DeviceContextNextGenBase.hpp"

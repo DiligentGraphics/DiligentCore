@@ -82,7 +82,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///                          Immutable buffers (USAGE_IMMUTABLE) must be initialized at creation time.
     /// \param [out] ppBuffer  - Address of the memory location where the pointer to the
     ///                          buffer interface will be stored. The function calls AddRef(),
-    ///                          so that the new buffer will contain one reference and must be
+    ///                          so that the new buffer will have one reference and must be
     ///                          released by a call to Release().
     ///
     /// \remarks
@@ -99,7 +99,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in] ShaderCI  - Shader create info, see Diligent::ShaderCreateInfo for details.
     /// \param [out] ppShader - Address of the memory location where the pointer to the
     ///                         shader interface will be stored.
-    ///                         The function calls AddRef(), so that the new object will contain
+    ///                         The function calls AddRef(), so that the new object will have
     ///                         one reference.
     VIRTUAL void METHOD(CreateShader)(THIS_
                                       const ShaderCreateInfo REF ShaderCI,
@@ -114,7 +114,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///
     /// \param [out] ppTexture - Address of the memory location where the pointer to the
     ///                          texture interface will be stored.
-    ///                          The function calls AddRef(), so that the new object will contain
+    ///                          The function calls AddRef(), so that the new object will have
     ///                          one reference.
     /// \remarks
     /// To create all mip levels, set the TexDesc.MipLevels to zero.\n
@@ -137,7 +137,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  SamDesc   - Sampler description, see Diligent::SamplerDesc for details.
     /// \param [out] ppSampler - Address of the memory location where the pointer to the
     ///                          sampler interface will be stored.
-    ///                          The function calls AddRef(), so that the new object will contain
+    ///                          The function calls AddRef(), so that the new object will have
     ///                          one reference.
     /// \remark If an application attempts to create a sampler interface with the same attributes
     ///         as an existing interface, the same interface will be returned.
@@ -151,7 +151,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  MappingDesc - Resource mapping description, see Diligent::ResourceMappingDesc for details.
     /// \param [out] ppMapping   - Address of the memory location where the pointer to the
     ///                            resource mapping interface will be stored.
-    ///                            The function calls AddRef(), so that the new object will contain
+    ///                            The function calls AddRef(), so that the new object will have
     ///                            one reference.
     VIRTUAL void METHOD(CreateResourceMapping)(THIS_
                                                const ResourceMappingDesc REF MappingDesc,
@@ -162,7 +162,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  PSOCreateInfo   - Graphics pipeline state create info, see Diligent::GraphicsPipelineStateCreateInfo for details.
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored.
-    ///                                The function calls AddRef(), so that the new object will contain
+    ///                                The function calls AddRef(), so that the new object will have
     ///                                one reference.
     VIRTUAL void METHOD(CreateGraphicsPipelineState)(THIS_
                                                      const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
@@ -173,7 +173,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  PSOCreateInfo   - Compute pipeline state create info, see Diligent::ComputePipelineStateCreateInfo for details.
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored.
-    ///                                The function calls AddRef(), so that the new object will contain
+    ///                                The function calls AddRef(), so that the new object will have
     ///                                one reference.
     VIRTUAL void METHOD(CreateComputePipelineState)(THIS_
                                                     const ComputePipelineStateCreateInfo REF PSOCreateInfo,
@@ -184,7 +184,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  PSOCreateInfo   - Ray tracing pipeline state create info, see Diligent::RayTracingPipelineStateCreateInfo for details.
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored.
-    ///                                The function calls AddRef(), so that the new object will contain
+    ///                                The function calls AddRef(), so that the new object will have
     ///                                one reference.
     VIRTUAL void METHOD(CreateRayTracingPipelineState)(THIS_
                                                        const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
@@ -195,7 +195,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  Desc    - Fence description, see Diligent::FenceDesc for details.
     /// \param [out] ppFence - Address of the memory location where the pointer to the
     ///                        fence interface will be stored.
-    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        The function calls AddRef(), so that the new object will have
     ///                        one reference.
     VIRTUAL void METHOD(CreateFence)(THIS_
                                      const FenceDesc REF Desc,
@@ -207,7 +207,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  Desc    - Query description, see Diligent::QueryDesc for details.
     /// \param [out] ppQuery - Address of the memory location where the pointer to the
     ///                        query interface will be stored.
-    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        The function calls AddRef(), so that the new object will have
     ///                        one reference.
     VIRTUAL void METHOD(CreateQuery)(THIS_
                                      const QueryDesc REF Desc,
@@ -219,7 +219,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  Desc         - Render pass description, see Diligent::RenderPassDesc for details.
     /// \param [out] ppRenderPass - Address of the memory location where the pointer to the
     ///                             render pass interface will be stored.
-    ///                             The function calls AddRef(), so that the new object will contain
+    ///                             The function calls AddRef(), so that the new object will have
     ///                             one reference.
     VIRTUAL void METHOD(CreateRenderPass)(THIS_
                                           const RenderPassDesc REF Desc,
@@ -232,7 +232,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  Desc          - Framebuffer description, see Diligent::FramebufferDesc for details.
     /// \param [out] ppFramebuffer - Address of the memory location where the pointer to the
     ///                              framebuffer interface will be stored.
-    ///                              The function calls AddRef(), so that the new object will contain
+    ///                              The function calls AddRef(), so that the new object will have
     ///                              one reference.
     VIRTUAL void METHOD(CreateFramebuffer)(THIS_
                                            const FramebufferDesc REF Desc,
@@ -244,7 +244,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  Desc    - BLAS description, see Diligent::BottomLevelASDesc for details.
     /// \param [out] ppBLAS  - Address of the memory location where the pointer to the
     ///                        BLAS interface will be stored.
-    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        The function calls AddRef(), so that the new object will have
     ///                        one reference.
     VIRTUAL void METHOD(CreateBLAS)(THIS_
                                     const BottomLevelASDesc REF Desc,
@@ -256,7 +256,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  Desc    - TLAS description, see Diligent::TopLevelASDesc for details.
     /// \param [out] ppTLAS  - Address of the memory location where the pointer to the
     ///                        TLAS interface will be stored.
-    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        The function calls AddRef(), so that the new object will have
     ///                        one reference.
     VIRTUAL void METHOD(CreateTLAS)(THIS_
                                     const TopLevelASDesc REF Desc,
@@ -268,13 +268,19 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in]  Desc    - SBT description, see Diligent::ShaderBindingTableDesc for details.
     /// \param [out] ppSBT   - Address of the memory location where the pointer to the
     ///                        SBT interface will be stored.
-    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        The function calls AddRef(), so that the new object will have
     ///                        one reference.
     VIRTUAL void METHOD(CreateSBT)(THIS_
                                    const ShaderBindingTableDesc REF Desc,
                                    IShaderBindingTable**            ppSBT) PURE;
 
-    /// AZ TODO: comment
+    /// Creates a pipeline resource signature object.
+
+    /// \param [in]  Desc         - Resource signature description, see Diligent::PipelineResourceSignatureDesc for details.
+    /// \param [out] ppSignature  - Address of the memory location where the pointer to the
+    ///                             pipeline resource signature interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will have
+    ///                             one reference.
     VIRTUAL void METHOD(CreatePipelineResourceSignature)(THIS_
                                                          const PipelineResourceSignatureDesc REF Desc,
                                                          IPipelineResourceSignature**            ppSignature) PURE;

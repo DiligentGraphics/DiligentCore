@@ -761,7 +761,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                             PIPELINE_RESOURCE_FLAGS Flags;
                             GetShaderResourceTypeAndFlags(Res.Type, Type, Flags);
 
-                            Resources.emplace_back(Res.Name, Res.ArraySize, Type, Stage.Type, DefaultVarType, Flags);
+                            Resources.emplace_back(Stage.Type, Res.Name, Res.ArraySize, Type, DefaultVarType, Flags);
                         }
                         else
                         {

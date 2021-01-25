@@ -61,6 +61,7 @@ protected:
 
     static void TearDownTestSuite()
     {
+        pRTV.Release();
         TestingEnvironment::GetInstance()->Reset();
     }
 

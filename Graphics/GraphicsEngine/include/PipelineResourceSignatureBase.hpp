@@ -29,6 +29,7 @@
 
 /// \file
 /// Implementation of the Diligent::PipelineResourceSignatureBase template class
+
 #include <array>
 #include <limits>
 #include <algorithm>
@@ -141,6 +142,7 @@ protected:
             ++m_ResourceOffsets[Dst.VarType + 1];
         }
 
+        // Sort resources by variable type
         std::sort(pResources, pResources + Desc.NumResources,
                   [](const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs) {
                       return lhs.VarType < rhs.VarType;
@@ -149,7 +151,15 @@ protected:
         for (size_t i = 1; i < m_ResourceOffsets.size(); ++i)
             m_ResourceOffsets[i] += m_ResourceOffsets[i - 1];
 
+#ifdef DILIGENT_DEBUG
         VERIFY_EXPR(m_ResourceOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] == Desc.NumResources);
+        for (Uint32 VarType = 0; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++VarType)
+        {
+            auto IdxRange = GetResourceIndexRange(static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType));
+            for (Uint32 idx = IdxRange.first; idx < IdxRange.second; ++idx)
+                VERIFY(pResources[idx].VarType == VarType, "Unexpected resource var type");
+        }
+#endif
 
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
