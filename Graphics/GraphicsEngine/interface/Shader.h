@@ -71,7 +71,8 @@ DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
 
     /// All mesh shading pipeline stages
     SHADER_TYPE_ALL_MESH        = SHADER_TYPE_AMPLIFICATION |
-                                  SHADER_TYPE_MESH,
+                                  SHADER_TYPE_MESH |
+                                  SHADER_TYPE_PIXEL,
 
     /// All ray-tracing pipeline shader stages
     SHADER_TYPE_ALL_RAY_TRACING    = SHADER_TYPE_RAY_GEN          |

@@ -830,7 +830,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
         }
     }
 
-    m_PipelineLayout.Create(GetDevice(), Signatures.data(), SignatureCount);
+    m_PipelineLayout.Create(GetDevice(), CreateInfo.PSODesc.PipelineType, Signatures.data(), SignatureCount);
 
     // verify that pipeline layout is compatible with shader resources and
     // remap resource bindings

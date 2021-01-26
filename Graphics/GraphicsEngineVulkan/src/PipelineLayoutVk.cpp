@@ -56,7 +56,7 @@ void PipelineLayoutVk::Release(RenderDeviceVkImpl* pDeviceVk, Uint64 CommandQueu
     }
 }
 
-void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount)
+void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE PipelineType, IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount)
 {
     VERIFY(m_SignatureCount == 0 && m_DescrSetCount == 0 && !m_VkPipelineLayout,
            "This pipeline layout is already initialized");
@@ -68,6 +68,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
 
         const Uint8 Index = pSignature->GetDesc().BindingIndex;
 
+#ifdef DILIGENT_DEBUG
         VERIFY(Index < m_Signatures.size(),
                "Pipeline resource signature specifies binding index ", Uint32{Index}, " that exceeds the limit (", m_Signatures.size() - 1,
                "). This error should've been caught by ValidatePipelineResourceSignatureDesc.");
@@ -76,6 +77,16 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSi
                "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
                " conflicts with another resource signature '", m_Signatures[Index]->GetDesc().Name,
                "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
+
+        for (Uint32 s = 0, StageCount = pSignature->GetNumShaderStages(); s < StageCount; ++s)
+        {
+            const auto ShaderType = pSignature->GetShaderStageType(s);
+            VERIFY(IsConsistentShaderType(ShaderType, PipelineType),
+                   "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
+                   " has shader stage '", GetShaderTypeLiteralName(ShaderType), "' that is not compatible with pipeline type '",
+                   GetPipelineTypeString(PipelineType), "'.");
+        }
+#endif
 
         m_SignatureCount    = std::max<Uint8>(m_SignatureCount, Index + 1);
         m_Signatures[Index] = pSignature;

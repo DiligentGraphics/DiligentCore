@@ -46,7 +46,7 @@ public:
     PipelineLayoutVk();
     ~PipelineLayoutVk();
 
-    void Create(RenderDeviceVkImpl* pDeviceVk, IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount);
+    void Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE PipelineType, IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
 
     size_t GetHash() const;
@@ -69,10 +69,10 @@ public:
 
     struct ResourceInfo
     {
-        SHADER_RESOURCE_TYPE Type = SHADER_RESOURCE_TYPE_UNKNOWN;
-
-        Uint32 DescrSetIndex = 0;
-        Uint32 BindingIndex  = 0;
+        IPipelineResourceSignature* Signature     = nullptr;
+        SHADER_RESOURCE_TYPE        Type          = SHADER_RESOURCE_TYPE_UNKNOWN;
+        Uint32                      DescrSetIndex = 0;
+        Uint32                      BindingIndex  = 0;
     };
     bool GetResourceInfo(const char* Name, SHADER_TYPE Stage, ResourceInfo& Info) const;
 
