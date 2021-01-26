@@ -52,13 +52,15 @@ cbuffer Constants
 void main(uint uiVertexId : SV_VertexID,
           out VSOutput Out)
 {
-    float4 Positions[2];
+    float4 Positions[3];
     Positions[0] = float4(-0.5, -0.5, 0.0, 1.0) * g_Weight1;
     Positions[1] = float4(+0.5, +0.5, 0.0, 1.0) * g_Weight1;
+    Positions[2] = float4(-0.5, +0.5, 0.0, 1.0) * g_Weight1;
 
-    float3 Color[2];
+    float3 Color[3];
     Color[0] = float3(0.5, 0.0, 0.0);
     Color[1] = float3(0.0, 0.0, 0.5);
+    Color[2] = float3(0.0, 0.5, 0.0);
 
     Out.f4Position = Positions[uiVertexId];
     Out.f2Texcoord = Positions[uiVertexId].xy;
@@ -69,7 +71,7 @@ void main(uint uiVertexId : SV_VertexID,
 
 const std::string PRSTest1_PS{
 R"(
-struct DSOutput
+struct PSInput
 {
     float4 f4Position : SV_Position;
     float2 f2Texcoord : TEXCOORD0;
@@ -85,7 +87,7 @@ cbuffer Constants
 Texture2D    g_Texture;
 SamplerState g_Texture_sampler;
 
-void main(DSOutput In,
+void main(PSInput In,
           out float4 Color : SV_Target)
 {
     Color = float4(In.f3Color, 1.0) * g_Weight2;
@@ -93,13 +95,11 @@ void main(DSOutput In,
 }
 )"
 };
-// clang-format on
 
 
-// clang-format off
 const std::string PRSTest2_PS{
 R"(
-struct DSOutput
+struct PSInput
 {
     float4 f4Position : SV_Position;
     float2 f2Texcoord : TEXCOORD0;
@@ -118,7 +118,7 @@ SamplerState g_Texture_sampler;
 Texture2D    g_Texture2;
 SamplerState g_Texture2_sampler;
 
-void main(DSOutput In,
+void main(PSInput In,
           out float4 Color : SV_Target)
 {
     Color = float4(In.f3Color, 1.0) * g_Weight2;
@@ -127,8 +127,8 @@ void main(DSOutput In,
 }
 )"
 };
-// clang-format on
 
+// clang-format on
 } // namespace HLSL
 
 } // namespace

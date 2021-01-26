@@ -550,16 +550,19 @@ const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarTy
 
 const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, bool bGetFullName)
 {
+    static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
     switch (ResourceType)
     {
         // clang-format off
-        case SHADER_RESOURCE_TYPE_UNKNOWN:         return bGetFullName ?  "SHADER_RESOURCE_TYPE_UNKNOWN"         : "unknown";
-        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER: return bGetFullName ?  "SHADER_RESOURCE_TYPE_CONSTANT_BUFFER" : "constant buffer";
-        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_TEXTURE_SRV"     : "texture SRV";
-        case SHADER_RESOURCE_TYPE_BUFFER_SRV:      return bGetFullName ?  "SHADER_RESOURCE_TYPE_BUFFER_SRV"      : "buffer SRV";
-        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_TEXTURE_UAV"     : "texture UAV";
-        case SHADER_RESOURCE_TYPE_BUFFER_UAV:      return bGetFullName ?  "SHADER_RESOURCE_TYPE_BUFFER_UAV"      : "buffer UAV";
-        case SHADER_RESOURCE_TYPE_SAMPLER:         return bGetFullName ?  "SHADER_RESOURCE_TYPE_SAMPLER"         : "sampler";
+        case SHADER_RESOURCE_TYPE_UNKNOWN:          return bGetFullName ?  "SHADER_RESOURCE_TYPE_UNKNOWN"          : "unknown";
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return bGetFullName ?  "SHADER_RESOURCE_TYPE_CONSTANT_BUFFER"  : "constant buffer";
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return bGetFullName ?  "SHADER_RESOURCE_TYPE_TEXTURE_SRV"      : "texture SRV";
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return bGetFullName ?  "SHADER_RESOURCE_TYPE_BUFFER_SRV"       : "buffer SRV";
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return bGetFullName ?  "SHADER_RESOURCE_TYPE_TEXTURE_UAV"      : "texture UAV";
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return bGetFullName ?  "SHADER_RESOURCE_TYPE_BUFFER_UAV"       : "buffer UAV";
+        case SHADER_RESOURCE_TYPE_SAMPLER:          return bGetFullName ?  "SHADER_RESOURCE_TYPE_SAMPLER"          : "sampler";
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return bGetFullName ?  "SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT" : "input attachment";
+        case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_ACCEL_STRUCT"     : "acceleration structure";
         // clang-format on
         default:
             UNEXPECTED("Unexepcted resource type (", Uint32{ResourceType}, ")");
@@ -569,6 +572,7 @@ const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, 
 
 const Char* GetFilterTypeLiteralName(FILTER_TYPE FilterType, bool bGetFullName)
 {
+    static_assert(FILTER_TYPE_NUM_FILTERS == 13, "Please update the switch below to handle the new filter type");
     switch (FilterType)
     {
         // clang-format off
@@ -594,6 +598,7 @@ const Char* GetFilterTypeLiteralName(FILTER_TYPE FilterType, bool bGetFullName)
 
 const Char* GetTextureAddressModeLiteralName(TEXTURE_ADDRESS_MODE AddressMode, bool bGetFullName)
 {
+    static_assert(TEXTURE_ADDRESS_NUM_MODES == 6, "Please update the switch below to handle the new texture address mode");
     switch (AddressMode)
     {
         // clang-format off
@@ -612,6 +617,7 @@ const Char* GetTextureAddressModeLiteralName(TEXTURE_ADDRESS_MODE AddressMode, b
 
 const Char* GetComparisonFunctionLiteralName(COMPARISON_FUNCTION ComparisonFunc, bool bGetFullName)
 {
+    static_assert(COMPARISON_FUNC_NUM_FUNCTIONS == 9, "Please update the switch below to handle the new comparison function");
     switch (ComparisonFunc)
     {
         // clang-format off
@@ -636,6 +642,7 @@ const Char* GetStencilOpLiteralName(STENCIL_OP StencilOp)
 #define STENCIL_OP_TO_STR(Op) \
     case Op: return #Op
 
+    static_assert(STENCIL_OP_NUM_OPS == 9, "Please update the switch below to handle the new stencil op");
     switch (StencilOp)
     {
         STENCIL_OP_TO_STR(STENCIL_OP_UNDEFINED);
@@ -660,6 +667,7 @@ const Char* GetBlendFactorLiteralName(BLEND_FACTOR BlendFactor)
 #define BLEND_FACTOR_TO_STR(Factor) \
     case Factor: return #Factor
 
+    static_assert(BLEND_FACTOR_NUM_FACTORS == 18, "Please update the switch below to handle the new blend factor");
     switch (BlendFactor)
     {
         BLEND_FACTOR_TO_STR(BLEND_FACTOR_UNDEFINED);
@@ -693,6 +701,7 @@ const Char* GetBlendOperationLiteralName(BLEND_OPERATION BlendOp)
 #define BLEND_OP_TO_STR(BlendOp) \
     case BlendOp: return #BlendOp
 
+    static_assert(BLEND_OPERATION_NUM_OPERATIONS == 6, "Please update the switch below to handle the new blend op");
     switch (BlendOp)
     {
         BLEND_OP_TO_STR(BLEND_OPERATION_UNDEFINED);
@@ -714,6 +723,7 @@ const Char* GetFillModeLiteralName(FILL_MODE FillMode)
 #define FILL_MODE_TO_STR(Mode) \
     case Mode: return #Mode
 
+    static_assert(FILL_MODE_NUM_MODES == 3, "Please update the switch below to handle the new filter mode");
     switch (FillMode)
     {
         FILL_MODE_TO_STR(FILL_MODE_UNDEFINED);
@@ -732,6 +742,7 @@ const Char* GetCullModeLiteralName(CULL_MODE CullMode)
 #define CULL_MODE_TO_STR(Mode) \
     case Mode: return #Mode
 
+    static_assert(CULL_MODE_NUM_MODES == 4, "Please update the switch below to handle the new cull mode");
     switch (CullMode)
     {
         CULL_MODE_TO_STR(CULL_MODE_UNDEFINED);

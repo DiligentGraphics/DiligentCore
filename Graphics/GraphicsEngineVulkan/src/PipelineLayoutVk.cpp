@@ -33,6 +33,7 @@
 #include "PipelineLayoutVk.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
+#include "StringTools.hpp"
 
 namespace Diligent
 {
@@ -175,6 +176,22 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
                 Info.Type          = ResDesc.ResourceType;
                 Info.BindingIndex  = Attr.BindingIndex;
                 Info.DescrSetIndex = m_FirstDescrSetIndex[i] + Attr.DescrSet;
+                Info.Signature     = pSignature;
+                return true;
+            }
+        }
+
+        for (Uint32 s = 0, SampCount = pSignature->GetImmutableSamplerCount(); s < SampCount; ++s)
+        {
+            const auto& Desc = pSignature->GetImmutableSamplerDesc(s);
+            const auto& Attr = pSignature->GetImmutableSamplerAttribs(s);
+
+            if (Attr.Ptr && (Desc.ShaderStages & Stage) && StreqSuff(Name, Desc.SamplerOrTextureName, pSignature->GetCombinedSamplerSuffix()))
+            {
+                Info.Type          = SHADER_RESOURCE_TYPE_SAMPLER;
+                Info.BindingIndex  = Attr.BindingIndex;
+                Info.DescrSetIndex = m_FirstDescrSetIndex[i] + Attr.DescrSet;
+                Info.Signature     = pSignature;
                 return true;
             }
         }

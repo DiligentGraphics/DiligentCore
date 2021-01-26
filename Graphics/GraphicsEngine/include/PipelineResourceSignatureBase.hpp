@@ -93,6 +93,7 @@ public:
     bool IsUsingSeparateSamplers() const { return !IsUsingCombinedSamplers(); }
 
     Uint32 GetTotalResourceCount() const { return this->m_Desc.NumResources; }
+    Uint32 GetImmutableSamplerCount() const { return this->m_Desc.NumImmutableSamplers; }
 
     std::pair<Uint32, Uint32> GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE VarType) const
     {

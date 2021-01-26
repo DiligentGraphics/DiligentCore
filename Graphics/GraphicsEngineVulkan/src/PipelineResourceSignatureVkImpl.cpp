@@ -283,7 +283,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
         // Reserve at least 1 element because m_pResourceAttribs must hold a pointer to memory
         MemPool.AddSpace<ResourceAttribs>(std::max(1u, Desc.NumResources));
-        MemPool.AddSpace<ImmutableSamplerPtrType>(Desc.NumImmutableSamplers);
+        MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
 
         ReserveSpaceForDescription(MemPool, Desc);
 
@@ -335,7 +335,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
         MemPool.Reserve();
 
         m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(std::max(1u, m_Desc.NumResources));
-        m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerPtrType>(m_Desc.NumImmutableSamplers);
+        m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
 
         // The memory is now owned by PipelineResourceSignatureVkImpl and will be freed by Destruct().
         auto* Ptr = MemPool.ReleaseOwnership();
@@ -457,10 +457,10 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
             {
                 auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
                 const auto& ImmutableSamplerDesc = m_Desc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
-                if (!ImmutableSampler)
-                    GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
+                if (!ImmutableSampler.Ptr)
+                    GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler.Ptr);
 
-                pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler());
+                pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler());
             }
         }
 
@@ -511,6 +511,36 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_UB_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR]);
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_SB_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR]);
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_OTHER_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] + BindingCount[CACHE_GROUP_OTHER_DYN_VAR]);
+
+    // Add immutable samplers that is not exist in m_Desc.Resources
+    // If static/mutable descriptor set layout is empty, then add samplers to dynamic layout.
+    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+    {
+        auto&        ImmutableSampler = m_ImmutableSamplers[i];
+        const auto&  SamplerDesc      = m_Desc.ImmutableSamplers[i];
+        const Uint32 SetIdx           = (DSMapping[0] < MAX_DESCR_SET_PER_SIGNATURE ? 0 : 1);
+        auto&        BindingIndex     = BindingIndices[SetIdx * 3 + 2];
+
+        if (ImmutableSampler.Ptr)
+            continue;
+
+        GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
+
+        ImmutableSampler.DescrSet     = DSMapping[SetIdx];
+        ImmutableSampler.BindingIndex = BindingIndex;
+
+        VERIFY_EXPR(ImmutableSampler.BindingIndex == BindingIndex);
+        ++BindingIndex;
+
+        vkSetLayoutBindings[SetIdx].emplace_back();
+        auto& vkSetLayoutBinding = vkSetLayoutBindings[SetIdx].back();
+
+        vkSetLayoutBinding.binding            = ImmutableSampler.BindingIndex;
+        vkSetLayoutBinding.descriptorCount    = 1;
+        vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(SamplerDesc.ShaderStages);
+        vkSetLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
+        vkSetLayoutBinding.pImmutableSamplers = TempAllocator.Construct<VkSampler>(ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler());
+    }
 
     if (m_Desc.SRBAllocationGranularity > 1)
     {
@@ -647,7 +677,7 @@ void PipelineResourceSignatureVkImpl::Destruct()
 
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        m_ImmutableSamplers[i].~ImmutableSamplerPtrType();
+        m_ImmutableSamplers[i].~ImmutableSamplerAttribs();
     }
     m_ImmutableSamplers = nullptr;
 

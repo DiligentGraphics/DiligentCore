@@ -83,6 +83,7 @@ public:
     Uint32 GetDynamicStorageBufferCount() const { return m_DynamicStorageBufferCount; }
     Uint32 GetNumDescriptorSets() const;
 
+    SHADER_TYPE GetActiveShaderStages() const { return m_ShaderStages; }
     Uint32      GetNumShaderStages() const { return m_NumShaderStages; }
     SHADER_TYPE GetShaderStageType(Uint32 StageIndex) const;
 
@@ -92,16 +93,15 @@ public:
         SRB       = 1  // in SRB
     };
 
-    // sizeof(ResourceAttribs) == 12, x64
+    // sizeof(ResourceAttribs) == 16, x64
     struct ResourceAttribs
     {
     private:
         static constexpr Uint32 _DescrTypeBits       = 4;
         static constexpr Uint32 _DescrSetBits        = 1;
         static constexpr Uint32 _BindingIndexBits    = 16;
-        static constexpr Uint32 _SamplerIndBits      = 10;
+        static constexpr Uint32 _SamplerIndBits      = 16;
         static constexpr Uint32 _SamplerAssignedBits = 1;
-        static_assert((_DescrTypeBits + _DescrSetBits + _BindingIndexBits + _SamplerIndBits + _SamplerAssignedBits) % 8 == 0, "Fields are not properly packed");
 
         static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
         static_assert((1u << _DescrSetBits) >= MAX_DESCR_SET_PER_SIGNATURE, "Not enough bits to store descriptor set index");
@@ -162,6 +162,28 @@ public:
     {
         VERIFY_EXPR(ResIndex < m_Desc.NumResources);
         return m_Desc.Resources[ResIndex];
+    }
+
+    struct ImmutableSamplerAttribs
+    {
+        RefCntAutoPtr<ISampler> Ptr;
+        Uint32                  DescrSet : 16;
+        Uint32                  BindingIndex : 16;
+
+        ImmutableSamplerAttribs() :
+            DescrSet{~0u}, BindingIndex{~0u} {}
+    };
+
+    const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const
+    {
+        VERIFY_EXPR(SampIndex < m_Desc.NumImmutableSamplers);
+        return m_ImmutableSamplers[SampIndex];
+    }
+
+    const ImmutableSamplerDesc& GetImmutableSamplerDesc(Uint32 SampIndex) const
+    {
+        VERIFY_EXPR(SampIndex < m_Desc.NumImmutableSamplers);
+        return m_Desc.ImmutableSamplers[SampIndex];
     }
 
     VkDescriptorSetLayout GetStaticVkDescriptorSetLayout() const { return m_VkDescSetLayouts[0]; }
@@ -275,10 +297,7 @@ private:
     ShaderResourceCacheVk*   m_pResourceCache = nullptr;
     ShaderVariableManagerVk* m_StaticVarsMgrs = nullptr; // [m_NumShaderStages]
 
-
-    using ImmutableSamplerPtrType = RefCntAutoPtr<ISampler>;
-
-    ImmutableSamplerPtrType* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
+    ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
     SRBMemoryAllocator       m_SRBMemAllocator;
 };
 

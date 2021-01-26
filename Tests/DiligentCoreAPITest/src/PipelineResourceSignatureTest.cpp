@@ -411,7 +411,7 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers)
 }
 
 
-TEST_F(PipelineResourceSignatureTest, Test1)
+TEST_F(PipelineResourceSignatureTest, StaticSamplers2)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
@@ -436,13 +436,14 @@ TEST_F(PipelineResourceSignatureTest, Test1)
     RefCntAutoPtr<IPipelineResourceSignature> pSignature2;
     {
         const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-            {SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+            {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
 
         SamplerDesc SamLinearWrapDesc{
             FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
             TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
-        ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_PIXEL, "g_Texture", SamLinearWrapDesc}};
+        ImmutableSamplerDesc ImmutableSamplers[] = {//
+                                                    {SHADER_TYPE_PIXEL, "g_Texture", SamLinearWrapDesc},
+                                                    {SHADER_TYPE_PIXEL, "g_Sampler", SamLinearWrapDesc}};
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources                  = Resources;
@@ -561,12 +562,12 @@ TEST_F(PipelineResourceSignatureTest, Test1)
 
     pContext->SetPipelineState(pPSO);
 
-    DrawAttribs drawAttrs(4, DRAW_FLAG_VERIFY_ALL);
+    DrawAttribs drawAttrs(3, DRAW_FLAG_VERIFY_ALL);
     pContext->Draw(drawAttrs);
 }
 
 
-TEST_F(PipelineResourceSignatureTest, Test2)
+TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
@@ -777,11 +778,12 @@ TEST_F(PipelineResourceSignatureTest, Test2)
 
     pContext->SetPipelineState(pPSO1);
 
-    DrawAttribs drawAttrs(4, DRAW_FLAG_VERIFY_ALL);
+    DrawAttribs drawAttrs(3, DRAW_FLAG_VERIFY_ALL);
     pContext->Draw(drawAttrs);
 
     // draw 2
     pContext->CommitShaderResources(pSRB3, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    // reuse pSRB1, pSRB2
 
     pContext->SetPipelineState(pPSO2);
 
