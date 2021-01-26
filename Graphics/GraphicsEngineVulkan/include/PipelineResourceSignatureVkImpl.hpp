@@ -167,11 +167,9 @@ public:
     struct ImmutableSamplerAttribs
     {
         RefCntAutoPtr<ISampler> Ptr;
-        Uint32                  DescrSet : 16;
-        Uint32                  BindingIndex : 16;
 
-        ImmutableSamplerAttribs() :
-            DescrSet{~0u}, BindingIndex{~0u} {}
+        Uint32 DescrSet     = ~0u;
+        Uint32 BindingIndex = ~0u;
     };
 
     const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const

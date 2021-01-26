@@ -88,8 +88,9 @@ private:
     ShaderResourceCacheVk    m_ShaderResourceCache;
     ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
 
-    bool  m_bStaticResourcesInitialized = false;
-    Uint8 m_NumShaders                  = 0;
+    bool m_bStaticResourcesInitialized = false;
+
+    const Uint8 m_NumShaders = 0;
 };
 
 } // namespace Diligent

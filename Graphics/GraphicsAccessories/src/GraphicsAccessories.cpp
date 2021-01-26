@@ -1453,7 +1453,7 @@ SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineTy
 
 PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages)
 {
-    if ((ShaderStages & ~SHADER_TYPE_PIXEL) & SHADER_TYPE_ALL_MESH)
+    if (ShaderStages & (SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH))
     {
         VERIFY((ShaderStages & SHADER_TYPE_ALL_MESH) == ShaderStages,
                "Mesh shading pipeline stages can't be combined with other shader stages");

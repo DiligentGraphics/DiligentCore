@@ -512,17 +512,21 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_SB_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR]);
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_OTHER_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] + BindingCount[CACHE_GROUP_OTHER_DYN_VAR]);
 
-    // Add immutable samplers that is not exist in m_Desc.Resources
-    // If static/mutable descriptor set layout is empty, then add samplers to dynamic layout.
+    // Add immutable samplers that do not exist in m_Desc.Resources.
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        auto&        ImmutableSampler = m_ImmutableSamplers[i];
-        const auto&  SamplerDesc      = m_Desc.ImmutableSamplers[i];
-        const Uint32 SetIdx           = (DSMapping[0] < MAX_DESCR_SET_PER_SIGNATURE ? 0 : 1);
-        auto&        BindingIndex     = BindingIndices[SetIdx * 3 + 2];
-
+        auto& ImmutableSampler = m_ImmutableSamplers[i];
         if (ImmutableSampler.Ptr)
             continue;
+
+        const auto& SamplerDesc = m_Desc.ImmutableSamplers[i];
+        // If static/mutable descriptor set layout is empty, then add samplers to dynamic set.
+        const Uint32 SetIdx = (DSMapping[0] < MAX_DESCR_SET_PER_SIGNATURE ? 0 : 1);
+        DEV_CHECK_ERR(DSMapping[SetIdx] < MAX_DESCR_SET_PER_SIGNATURE,
+                      "There are no descriptor sets in this singature, which indicates there are no other "
+                      "resources besides immutable samplers. This is not currently allowed.");
+
+        auto& BindingIndex = BindingIndices[SetIdx * 3 + CACHE_GROUP_OTHER];
 
         GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
 

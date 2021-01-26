@@ -46,30 +46,48 @@ class PipelineResourceSignatureTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv = TestingEnvironment::GetInstance();
+        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pDevice = pEnv->GetDevice();
 
         {
-            auto pRenderTarget = pEnv->CreateTexture("ShaderResourceLayoutTest: test RTV", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 512, 512);
+            auto pRenderTarget = pEnv->CreateTexture("PipelineResourceSignatureTest: test RTV", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 512, 512);
             ASSERT_NE(pRenderTarget, nullptr);
             pRTV = pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+            ASSERT_NE(pRTV, nullptr);
         }
 
-        {
-            auto pTexture = pEnv->CreateTexture("ShaderResourceLayoutTest: test RTV", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 512, 512);
-            ASSERT_NE(pTexture, nullptr);
-            pTexSRV = pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
-        }
         {
             SamplerDesc SamDesc;
             pEnv->GetDevice()->CreateSampler(SamDesc, &pSampler);
+        }
+
+        for (auto& pTexSRV : pTexSRVs)
+        {
+            auto pTexture = pEnv->CreateTexture("PipelineResourceSignatureTest: test SRV", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 512, 512);
+            ASSERT_NE(pTexture, nullptr);
+            pTexSRV = pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+            ASSERT_NE(pTexSRV, nullptr);
             pTexSRV->SetSampler(pSampler);
+        }
+
+        {
+            float      ConstData[256] = {};
+            BufferDesc BuffDesc;
+            BuffDesc.uiSizeInBytes = sizeof(ConstData);
+            BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
+            BuffDesc.Usage         = USAGE_IMMUTABLE;
+            BufferData BuffData{ConstData, sizeof(ConstData)};
+            pDevice->CreateBuffer(BuffDesc, &BuffData, &pConstBuff);
+            ASSERT_NE(pConstBuff, nullptr);
         }
     }
 
     static void TearDownTestSuite()
     {
-        pRTV.Release();
-        pTexSRV.Release();
+        pSampler.Release();
+        for (auto& pTexSRV : pTexSRVs)
+            pTexSRV.Release();
+        pConstBuff.Release();
         TestingEnvironment::GetInstance()->Reset();
     }
 
@@ -109,14 +127,16 @@ protected:
     }
 
 
-    static RefCntAutoPtr<ITextureView> pRTV;
-    static RefCntAutoPtr<ITextureView> pTexSRV;
-    static RefCntAutoPtr<ISampler>     pSampler;
+    static RefCntAutoPtr<ITextureView>                pRTV;
+    static std::array<RefCntAutoPtr<ITextureView>, 4> pTexSRVs;
+    static RefCntAutoPtr<ISampler>                    pSampler;
+    static RefCntAutoPtr<IBuffer>                     pConstBuff;
 };
 
-RefCntAutoPtr<ITextureView> PipelineResourceSignatureTest::pRTV;
-RefCntAutoPtr<ITextureView> PipelineResourceSignatureTest::pTexSRV;
-RefCntAutoPtr<ISampler>     PipelineResourceSignatureTest::pSampler;
+RefCntAutoPtr<ITextureView>                PipelineResourceSignatureTest::pRTV;
+std::array<RefCntAutoPtr<ITextureView>, 4> PipelineResourceSignatureTest::pTexSRVs;
+RefCntAutoPtr<ISampler>                    PipelineResourceSignatureTest::pSampler;
+RefCntAutoPtr<IBuffer>                     PipelineResourceSignatureTest::pConstBuff;
 
 
 #define SET_STATIC_VAR(PRS, ShaderFlags, VarName, SetMethod, ...)                                \
@@ -205,19 +225,19 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
     auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
     ASSERT_TRUE(pPSO);
 
-    std::array<IDeviceObject*, 4> pTexSRVs = {pTexSRV, pTexSRV, pTexSRV, pTexSRV};
+    std::array<IDeviceObject*, 4> ppSRVs = {pTexSRVs[0], pTexSRVs[1], pTexSRVs[2], pTexSRVs[3]};
 
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, pTexSRVs[0]);
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SetArray, pTexSRVs.data(), 0, StaticTexArraySize);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, ppSRVs[0]);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SetArray, ppSRVs.data(), 0, StaticTexArraySize);
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Sampler", Set, pSampler);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut", SetArray, pTexSRVs.data(), 0, MutableTexArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut", SetArray, ppSRVs.data(), 0, MutableTexArraySize);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data(), 0, DynamicTexArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, ppSRVs.data(), 0, DynamicTexArraySize);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -298,21 +318,21 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS[0], pPRS[1], pPRS[2]});
     ASSERT_TRUE(pPSO);
 
-    SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRV);
-    SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_3", Set, pTexSRV);
+    SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRVs[0]);
+    SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_3", Set, pTexSRVs[1]);
     SET_STATIC_VAR(pPRS[2], SHADER_TYPE_PIXEL, "g_Sampler", Set, pSampler);
     for (Uint32 i = 0; i < _countof(pPRS); ++i)
     {
         pPRS[i]->CreateShaderResourceBinding(&pSRB[i], true);
     }
 
-    SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_2", Set, pTexSRV);
-    SET_SRB_VAR(pSRB[1], SHADER_TYPE_PIXEL, "g_Tex2D_1", Set, pTexSRV);
-    SET_SRB_VAR(pSRB[2], SHADER_TYPE_PIXEL, "g_Tex2D_4", Set, pTexSRV);
+    SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_2", Set, pTexSRVs[2]);
+    SET_SRB_VAR(pSRB[1], SHADER_TYPE_PIXEL, "g_Tex2D_1", Set, pTexSRVs[3]);
+    SET_SRB_VAR(pSRB[2], SHADER_TYPE_PIXEL, "g_Tex2D_4", Set, pTexSRVs[0]);
 
-    SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_3", Set, pTexSRV);
-    SET_SRB_VAR(pSRB[1], SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, pTexSRV);
-    SET_SRB_VAR(pSRB[2], SHADER_TYPE_VERTEX, "g_Tex2D_4", Set, pTexSRV);
+    SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_3", Set, pTexSRVs[1]);
+    SET_SRB_VAR(pSRB[1], SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, pTexSRVs[2]);
+    SET_SRB_VAR(pSRB[2], SHADER_TYPE_VERTEX, "g_Tex2D_4", Set, pTexSRVs[3]);
 
     for (Uint32 i = 0; i < _countof(pSRB); ++i)
     {
@@ -388,13 +408,13 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers)
     pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
     ASSERT_TRUE(pPRS);
 
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, pTexSRV);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, pTexSRVs[0]);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRV);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRV);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRVs[1]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[2]);
 
     auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
     ASSERT_TRUE(pPSO);
@@ -421,8 +441,10 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers2)
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature1;
     {
-        const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Constants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+        const PipelineResourceDesc Resources[] =
+            {
+                {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Constants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+            };
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources    = Resources;
@@ -435,15 +457,19 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers2)
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature2;
     {
-        const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
+        const PipelineResourceDesc Resources[] =
+            {
+                {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC} //
+            };
 
         SamplerDesc SamLinearWrapDesc{
             FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
             TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
-        ImmutableSamplerDesc ImmutableSamplers[] = {//
-                                                    {SHADER_TYPE_PIXEL, "g_Texture", SamLinearWrapDesc},
-                                                    {SHADER_TYPE_PIXEL, "g_Sampler", SamLinearWrapDesc}};
+        ImmutableSamplerDesc ImmutableSamplers[] =
+            {
+                {SHADER_TYPE_PIXEL, "g_Texture", SamLinearWrapDesc},
+                {SHADER_TYPE_PIXEL, "g_Sampler", SamLinearWrapDesc} //
+            };
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources                  = Resources;
@@ -522,37 +548,8 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers2)
     pSignature2->CreateShaderResourceBinding(&pSRB2, true);
     ASSERT_NE(pSRB2, nullptr);
 
-    RefCntAutoPtr<IBuffer> pConstBuf;
-    {
-        float      ConstData[8] = {};
-        BufferDesc BuffDesc;
-        BuffDesc.uiSizeInBytes = sizeof(ConstData);
-        BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
-        BufferData BuffData{ConstData, sizeof(ConstData)};
-        pDevice->CreateBuffer(BuffDesc, &BuffData, &pConstBuf);
-        ASSERT_NE(pConstBuf, nullptr);
-    }
-
-    RefCntAutoPtr<ITexture> pTexture;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = 256;
-        TexDesc.Height    = 256;
-        TexDesc.Usage     = USAGE_IMMUTABLE;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_SHADER_RESOURCE;
-
-        std::vector<Uint8> Data(TexDesc.Width * TexDesc.Height * 4, 128);
-        TextureSubResData  TexSubData{Data.data(), TexDesc.Width * 4};
-        TextureData        TexData{&TexSubData, 1};
-        pDevice->CreateTexture(TexDesc, &TexData, &pTexture);
-        ASSERT_NE(pTexture, nullptr);
-    }
-
-    pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuf);
-    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+    pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
+    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVs[0]);
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -577,8 +574,10 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature1;
     {
-        const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Constants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+        const PipelineResourceDesc Resources[] =
+            {
+                {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Constants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+            };
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources    = Resources;
@@ -591,9 +590,11 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature2;
     {
-        const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-            {SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+        const PipelineResourceDesc Resources[] =
+            {
+                {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+            };
 
         SamplerDesc SamLinearWrapDesc{
             FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
@@ -615,9 +616,11 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature3;
     {
-        const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_PIXEL, "g_Texture2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-            {SHADER_TYPE_PIXEL, "g_Texture2_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+        const PipelineResourceDesc Resources[] =
+            {
+                {SHADER_TYPE_PIXEL, "g_Texture2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_PIXEL, "g_Texture2_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+            };
 
         SamplerDesc SamLinearWrapDesc{
             FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
@@ -733,41 +736,9 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
     pSignature3->CreateShaderResourceBinding(&pSRB3, true);
     ASSERT_NE(pSRB3, nullptr);
 
-    RefCntAutoPtr<IBuffer> pConstBuf;
-    {
-        float      ConstData[8] = {};
-        BufferDesc BuffDesc;
-        BuffDesc.uiSizeInBytes = sizeof(ConstData);
-        BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
-        BufferData BuffData{ConstData, sizeof(ConstData)};
-        pDevice->CreateBuffer(BuffDesc, &BuffData, &pConstBuf);
-        ASSERT_NE(pConstBuf, nullptr);
-    }
-
-    RefCntAutoPtr<ITexture> pTexture;
-    RefCntAutoPtr<ITexture> pTexture2;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = 256;
-        TexDesc.Height    = 256;
-        TexDesc.Usage     = USAGE_IMMUTABLE;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_SHADER_RESOURCE;
-
-        std::vector<Uint8> Data(TexDesc.Width * TexDesc.Height * 4, 128);
-        TextureSubResData  TexSubData{Data.data(), TexDesc.Width * 4};
-        TextureData        TexData{&TexSubData, 1};
-        pDevice->CreateTexture(TexDesc, &TexData, &pTexture);
-        ASSERT_NE(pTexture, nullptr);
-        pDevice->CreateTexture(TexDesc, &TexData, &pTexture2);
-        ASSERT_NE(pTexture2, nullptr);
-    }
-
-    pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuf);
-    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
-    pSRB3->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pTexture2->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+    pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
+    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVs[0]);
+    pSRB3->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pTexSRVs[1]);
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -804,9 +775,11 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignaturePS;
     {
-        const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-            {SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+        const PipelineResourceDesc Resources[] =
+            {
+                {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+            };
 
         SamplerDesc SamLinearWrapDesc{
             FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
@@ -828,8 +801,10 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignatureVS;
     {
-        const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_VERTEX, "Constants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+        const PipelineResourceDesc Resources[] =
+            {
+                {SHADER_TYPE_VERTEX, "Constants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+            };
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources    = Resources;
@@ -842,8 +817,10 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignatureMS;
     {
-        const PipelineResourceDesc Resources[] = {
-            {SHADER_TYPE_MESH, "Constants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
+        const PipelineResourceDesc Resources[] =
+            {
+                {SHADER_TYPE_MESH, "Constants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC} //
+            };
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources    = Resources;
@@ -940,36 +917,6 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     ASSERT_EQ(pMeshPSO->GetResourceSignature(0), pSignaturePS);
     ASSERT_EQ(pMeshPSO->GetResourceSignature(1), pSignatureMS);
 
-
-    RefCntAutoPtr<IBuffer> pConstBuf;
-    {
-        float      ConstData[8] = {};
-        BufferDesc BuffDesc;
-        BuffDesc.uiSizeInBytes = sizeof(ConstData);
-        BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
-        BufferData BuffData{ConstData, sizeof(ConstData)};
-        pDevice->CreateBuffer(BuffDesc, &BuffData, &pConstBuf);
-        ASSERT_NE(pConstBuf, nullptr);
-    }
-
-    RefCntAutoPtr<ITexture> pTexture;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = 256;
-        TexDesc.Height    = 256;
-        TexDesc.Usage     = USAGE_IMMUTABLE;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_SHADER_RESOURCE;
-
-        std::vector<Uint8> Data(TexDesc.Width * TexDesc.Height * 4, 128);
-        TextureSubResData  TexSubData{Data.data(), TexDesc.Width * 4};
-        TextureData        TexData{&TexSubData, 1};
-        pDevice->CreateTexture(TexDesc, &TexData, &pTexture);
-        ASSERT_NE(pTexture, nullptr);
-    }
-
     RefCntAutoPtr<IShaderResourceBinding> PixelSRB;
     pSignaturePS->CreateShaderResourceBinding(&PixelSRB, true);
     ASSERT_NE(PixelSRB, nullptr);
@@ -982,9 +929,9 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     pSignatureMS->CreateShaderResourceBinding(&MeshSRB, true);
     ASSERT_NE(MeshSRB, nullptr);
 
-    PixelSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
-    VertexSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuf);
-    MeshSRB->GetVariableByName(SHADER_TYPE_MESH, "Constants")->Set(pConstBuf);
+    PixelSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVs[0]);
+    VertexSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
+    MeshSRB->GetVariableByName(SHADER_TYPE_MESH, "Constants")->Set(pConstBuff);
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);

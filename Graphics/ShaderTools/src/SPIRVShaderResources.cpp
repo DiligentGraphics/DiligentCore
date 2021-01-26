@@ -378,12 +378,14 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
             const auto& name = GetUBName(Compiler, UB, ParsedIRSource);
             const auto& Type = Compiler.get_type(UB.type_id);
             const auto  Size = Compiler.get_declared_struct_size(Type);
-            new (&GetUB(CurrUB++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           UB,
-                                           ResourceNamesPool.CopyString(name),
-                                           SPIRVShaderResourceAttribs::ResourceType::UniformBuffer,
-                                           static_cast<Uint32>(Size));
+            new (&GetUB(CurrUB++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    UB,
+                    ResourceNamesPool.CopyString(name),
+                    SPIRVShaderResourceAttribs::ResourceType::UniformBuffer,
+                    static_cast<Uint32>(Size) //
+                };
         }
         VERIFY_EXPR(CurrUB == GetNumUBs());
     }
@@ -400,13 +402,15 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
             const auto& Type   = Compiler.get_type(SB.type_id);
             const auto  Size   = Compiler.get_declared_struct_size(Type);
             const auto  Stride = Compiler.get_declared_struct_size_runtime_array(Type, 1) - Size;
-            new (&GetSB(CurrSB++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           SB,
-                                           ResourceNamesPool.CopyString(SB.name),
-                                           ResType,
-                                           static_cast<Uint32>(Size),
-                                           static_cast<Uint32>(Stride));
+            new (&GetSB(CurrSB++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    SB,
+                    ResourceNamesPool.CopyString(SB.name),
+                    ResType,
+                    static_cast<Uint32>(Size),
+                    static_cast<Uint32>(Stride) //
+                };
         }
         VERIFY_EXPR(CurrSB == GetNumSBs());
     }
@@ -419,11 +423,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
             auto        ResType = type.image.dim == spv::DimBuffer ?
                 SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer :
                 SPIRVShaderResourceAttribs::ResourceType::SampledImage;
-            new (&GetSmpldImg(CurrSmplImg++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           SmplImg,
-                                           ResourceNamesPool.CopyString(SmplImg.name),
-                                           ResType);
+            new (&GetSmpldImg(CurrSmplImg++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    SmplImg,
+                    ResourceNamesPool.CopyString(SmplImg.name),
+                    ResType //
+                };
         }
         VERIFY_EXPR(CurrSmplImg == GetNumSmpldImgs());
     }
@@ -436,11 +442,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
             auto        ResType = type.image.dim == spv::DimBuffer ?
                 SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer :
                 SPIRVShaderResourceAttribs::ResourceType::StorageImage;
-            new (&GetImg(CurrImg++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           Img,
-                                           ResourceNamesPool.CopyString(Img.name),
-                                           ResType);
+            new (&GetImg(CurrImg++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    Img,
+                    ResourceNamesPool.CopyString(Img.name),
+                    ResType //
+                };
         }
         VERIFY_EXPR(CurrImg == GetNumImgs());
     }
@@ -449,11 +457,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         Uint32 CurrAC = 0;
         for (const auto& AC : resources.atomic_counters)
         {
-            new (&GetAC(CurrAC++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           AC,
-                                           ResourceNamesPool.CopyString(AC.name),
-                                           SPIRVShaderResourceAttribs::ResourceType::AtomicCounter);
+            new (&GetAC(CurrAC++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    AC,
+                    ResourceNamesPool.CopyString(AC.name),
+                    SPIRVShaderResourceAttribs::ResourceType::AtomicCounter //
+                };
         }
         VERIFY_EXPR(CurrAC == GetNumACs());
     }
@@ -462,11 +472,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         Uint32 CurrSepSmpl = 0;
         for (const auto& SepSam : resources.separate_samplers)
         {
-            new (&GetSepSmplr(CurrSepSmpl++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           SepSam,
-                                           ResourceNamesPool.CopyString(SepSam.name),
-                                           SPIRVShaderResourceAttribs::ResourceType::SeparateSampler);
+            new (&GetSepSmplr(CurrSepSmpl++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    SepSam,
+                    ResourceNamesPool.CopyString(SepSam.name),
+                    SPIRVShaderResourceAttribs::ResourceType::SeparateSampler //
+                };
         }
         VERIFY_EXPR(CurrSepSmpl == GetNumSepSmplrs());
     }
@@ -476,15 +488,17 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         for (const auto& SepImg : resources.separate_images)
         {
             const auto& type    = Compiler.get_type(SepImg.type_id);
-            auto        ResType = type.image.dim == spv::DimBuffer ?
+            const auto  ResType = type.image.dim == spv::DimBuffer ?
                 SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer :
                 SPIRVShaderResourceAttribs::ResourceType::SeparateImage;
 
-            new (&GetSepImg(CurrSepImg++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           SepImg,
-                                           ResourceNamesPool.CopyString(SepImg.name),
-                                           ResType);
+            new (&GetSepImg(CurrSepImg++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    SepImg,
+                    ResourceNamesPool.CopyString(SepImg.name),
+                    ResType //
+                };
         }
         VERIFY_EXPR(CurrSepImg == GetNumSepImgs());
     }
@@ -493,11 +507,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         Uint32 CurrSubpassInput = 0;
         for (const auto& SubpassInput : resources.subpass_inputs)
         {
-            new (&GetInptAtt(CurrSubpassInput++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           SubpassInput,
-                                           ResourceNamesPool.CopyString(SubpassInput.name),
-                                           SPIRVShaderResourceAttribs::ResourceType::InputAttachment);
+            new (&GetInptAtt(CurrSubpassInput++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    SubpassInput,
+                    ResourceNamesPool.CopyString(SubpassInput.name),
+                    SPIRVShaderResourceAttribs::ResourceType::InputAttachment //
+                };
         }
         VERIFY_EXPR(CurrSubpassInput == GetNumInptAtts());
     }
@@ -506,11 +522,13 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         Uint32 CurrAccelStruct = 0;
         for (const auto& AccelStruct : resources.acceleration_structures)
         {
-            new (&GetAccelStruct(CurrAccelStruct++))
-                SPIRVShaderResourceAttribs(Compiler,
-                                           AccelStruct,
-                                           ResourceNamesPool.CopyString(AccelStruct.name),
-                                           SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure);
+            new (&GetAccelStruct(CurrAccelStruct++)) SPIRVShaderResourceAttribs //
+                {
+                    Compiler,
+                    AccelStruct,
+                    ResourceNamesPool.CopyString(AccelStruct.name),
+                    SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure //
+                };
         }
         VERIFY_EXPR(CurrAccelStruct == GetNumAccelStructs());
     }
@@ -532,8 +550,11 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
             if (Compiler.has_decoration(Input.id, spv::Decoration::DecorationHlslSemanticGOOGLE))
             {
                 const auto& Semantic = Compiler.get_decoration_string(Input.id, spv::Decoration::DecorationHlslSemanticGOOGLE);
-                new (&GetShaderStageInputAttribs(CurrStageInput++))
-                    SPIRVShaderStageInputAttribs(ResourceNamesPool.CopyString(Semantic), GetDecorationOffset(Compiler, Input, spv::Decoration::DecorationLocation));
+                new (&GetShaderStageInputAttribs(CurrStageInput++)) SPIRVShaderStageInputAttribs //
+                    {
+                        ResourceNamesPool.CopyString(Semantic),
+                        GetDecorationOffset(Compiler, Input, spv::Decoration::DecorationLocation) //
+                    };
             }
         }
         VERIFY_EXPR(CurrStageInput == GetNumShaderStageInputs());

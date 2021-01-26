@@ -79,18 +79,20 @@ struct SPIRVShaderResourceAttribs
 
     // clang-format off
 
-/*  0  */const char* const           Name;
-/*  8  */const Uint16                ArraySize;
-/* 10  */const ResourceType          Type;
-/* 11.0*/const Uint8                 ResourceDim   : 7;
-/* 11.7*/const Uint8                 IsMS          : 1;
-      // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
-/* 12 */const uint32_t              BindingDecorationOffset;
-/* 16 */const uint32_t              DescriptorSetDecorationOffset;
+/*  0  */const char* const      Name;
+/*  8  */const Uint16           ArraySize;
+/* 10  */const ResourceType     Type;
+/* 11.0*/const Uint8            ResourceDim   : 7;
+/* 11.7*/const Uint8            IsMS          : 1;
 
-/* 20 */const Uint32                BufferStaticSize;
-/* 24 */const Uint32                BufferStride;
-/* 28 */ // End of structure
+      // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
+/* 12 */const uint32_t          BindingDecorationOffset;
+/* 16 */const uint32_t          DescriptorSetDecorationOffset;
+
+/* 20 */const Uint32            BufferStaticSize;
+/* 24 */const Uint32            BufferStride;
+/* 28 */
+/* 32 */ // End of structure
 
     // clang-format on
 
