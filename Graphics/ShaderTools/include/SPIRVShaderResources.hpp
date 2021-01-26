@@ -79,25 +79,18 @@ struct SPIRVShaderResourceAttribs
 
     // clang-format off
 
-    static constexpr const Uint32   InvalidSepSmplrOrImgInd = static_cast<Uint32>(-1);
-
 /*  0  */const char* const           Name;
 /*  8  */const Uint16                ArraySize;
 /* 10  */const ResourceType          Type;
 /* 11.0*/const Uint8                 ResourceDim   : 7;
 /* 11.7*/const Uint8                 IsMS          : 1;
-private:
-      // Defines the mapping between separate samplers and seperate images when HLSL-style
-      // combined texture samplers are in use (i.e. texture2D g_Tex + sampler g_Tex_sampler).
-/* 12 */      Uint32                SepSmplrOrImgInd        = InvalidSepSmplrOrImgInd; // AZ TODO: remove
-public:
       // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
-/* 16 */const uint32_t              BindingDecorationOffset;
-/* 20 */const uint32_t              DescriptorSetDecorationOffset;
+/* 12 */const uint32_t              BindingDecorationOffset;
+/* 16 */const uint32_t              DescriptorSetDecorationOffset;
 
-/* 24 */const Uint32                BufferStaticSize;
-/* 28 */const Uint32                BufferStride;
-/* 32 */ // End of structure
+/* 20 */const Uint32                BufferStaticSize;
+/* 24 */const Uint32                BufferStride;
+/* 28 */ // End of structure
 
     // clang-format on
 
@@ -105,54 +98,8 @@ public:
                                const diligent_spirv_cross::Resource& Res,
                                const char*                           _Name,
                                ResourceType                          _Type,
-                               Uint32                                _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd,
-                               Uint32                                _BufferStaticSize   = 0,
-                               Uint32                                _BufferStride       = 0) noexcept;
-
-    bool IsValidSepSamplerAssigned() const
-    {
-        VERIFY_EXPR(Type == ResourceType::SeparateImage);
-        return SepSmplrOrImgInd != InvalidSepSmplrOrImgInd;
-    }
-
-    bool IsValidSepImageAssigned() const
-    {
-        VERIFY_EXPR(Type == ResourceType::SeparateSampler);
-        return SepSmplrOrImgInd != InvalidSepSmplrOrImgInd;
-    }
-
-    Uint32 GetAssignedSepSamplerInd() const
-    {
-        VERIFY_EXPR(Type == ResourceType::SeparateImage);
-        return SepSmplrOrImgInd;
-    }
-
-    Uint32 GetAssignedSepImageInd() const
-    {
-        VERIFY_EXPR(Type == ResourceType::SeparateSampler);
-        return SepSmplrOrImgInd;
-    }
-
-    void AssignSeparateSampler(Uint32 SemSamplerInd)
-    {
-        VERIFY_EXPR(Type == ResourceType::SeparateImage);
-        SepSmplrOrImgInd = SemSamplerInd;
-    }
-
-    void AssignSeparateImage(Uint32 SepImageInd)
-    {
-        VERIFY_EXPR(Type == ResourceType::SeparateSampler);
-        SepSmplrOrImgInd = SepImageInd;
-    }
-
-    bool IsCompatibleWith(const SPIRVShaderResourceAttribs& Attribs) const
-    {
-        // clang-format off
-        return ArraySize        == Attribs.ArraySize        && 
-               Type             == Attribs.Type             &&
-               SepSmplrOrImgInd == Attribs.SepSmplrOrImgInd;
-        // clang-format on
-    }
+                               Uint32                                _BufferStaticSize = 0,
+                               Uint32                                _BufferStride     = 0) noexcept;
 
     ShaderResourceDesc GetResourceDesc() const
     {
@@ -239,13 +186,6 @@ public:
         VERIFY(n < m_NumShaderStageInputs, "Shader stage input index (", n, ") is out of range. Total input count: ", m_NumShaderStageInputs);
         auto* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
         return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ResourceMemoryEnd)[n];
-    }
-
-    const SPIRVShaderResourceAttribs& GetAssignedSepSampler(const SPIRVShaderResourceAttribs& SepImg) const
-    {
-        VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Separate samplers can only be assigned to separate images");
-        VERIFY(SepImg.IsValidSepSamplerAssigned(), "This separate image is not assigned a separate sampler");
-        return GetSepSmplr(SepImg.GetAssignedSepSamplerInd());
     }
 
     struct ResourceCounters
@@ -351,8 +291,6 @@ public:
     }
 
     std::string DumpResources();
-
-    bool IsCompatibleWith(const SPIRVShaderResources& Resources) const;
 
     // clang-format off
 
