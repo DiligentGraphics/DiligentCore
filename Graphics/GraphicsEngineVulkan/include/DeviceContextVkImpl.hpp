@@ -488,7 +488,7 @@ private:
         using VkDescSetArray      = std::array<VkDescriptorSet, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE>;
         using BoolArray           = std::bitset<MAX_RESOURCE_SIGNATURES>;
 
-        ShaderResourceArray Resources;
+        ShaderResourceArray Resources                 = {};
         VkDescSetArray      vkSets                    = {};
         BoolArray           PendingVkSet              = {}; // 'true' if new descriptor set must be bound
         BoolArray           PendingDynamicDescriptors = {}; // 'true' if dynamic descriptor set must be bound // AZ TODO: remove ?
