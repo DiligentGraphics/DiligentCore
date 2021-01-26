@@ -752,13 +752,14 @@ void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPas
 
 void RenderDeviceVkImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
 {
-    CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
-                       [&]() //
-                       {
-                           FramebufferVkImpl* pFramebufferVk(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferVkImpl instance", FramebufferVkImpl)(this, Desc));
-                           pFramebufferVk->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
-                           OnCreateDeviceObject(pFramebufferVk);
-                       });
+    CreateDeviceObject(
+        "Framebuffer", Desc, ppFramebuffer,
+        [&]() //
+        {
+            FramebufferVkImpl* pFramebufferVk(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferVkImpl instance", FramebufferVkImpl)(this, Desc));
+            pFramebufferVk->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
+            OnCreateDeviceObject(pFramebufferVk);
+        });
 }
 
 void RenderDeviceVkImpl::CreateBLASFromVulkanResource(VkAccelerationStructureKHR vkBLAS,
@@ -780,13 +781,14 @@ void RenderDeviceVkImpl::CreateBLASFromVulkanResource(VkAccelerationStructureKHR
 void RenderDeviceVkImpl::CreateBLAS(const BottomLevelASDesc& Desc,
                                     IBottomLevelAS**         ppBLAS)
 {
-    CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
-                       [&]() //
-                       {
-                           BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc));
-                           pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
-                           OnCreateDeviceObject(pBottomLevelASVk);
-                       });
+    CreateDeviceObject(
+        "BottomLevelAS", Desc, ppBLAS,
+        [&]() //
+        {
+            BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc));
+            pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+            OnCreateDeviceObject(pBottomLevelASVk);
+        });
 }
 
 void RenderDeviceVkImpl::CreateTLASFromVulkanResource(VkAccelerationStructureKHR vkTLAS,
@@ -808,25 +810,27 @@ void RenderDeviceVkImpl::CreateTLASFromVulkanResource(VkAccelerationStructureKHR
 void RenderDeviceVkImpl::CreateTLAS(const TopLevelASDesc& Desc,
                                     ITopLevelAS**         ppTLAS)
 {
-    CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
-                       [&]() //
-                       {
-                           TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc));
-                           pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
-                           OnCreateDeviceObject(pTopLevelASVk);
-                       });
+    CreateDeviceObject(
+        "TopLevelAS", Desc, ppTLAS,
+        [&]() //
+        {
+            TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc));
+            pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+            OnCreateDeviceObject(pTopLevelASVk);
+        });
 }
 
 void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
                                    IShaderBindingTable**         ppSBT)
 {
-    CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
-                       [&]() //
-                       {
-                           ShaderBindingTableVkImpl* pSBTVk(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableVkImpl instance", ShaderBindingTableVkImpl)(this, Desc));
-                           pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
-                           OnCreateDeviceObject(pSBTVk);
-                       });
+    CreateDeviceObject(
+        "ShaderBindingTable", Desc, ppSBT,
+        [&]() //
+        {
+            ShaderBindingTableVkImpl* pSBTVk(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableVkImpl instance", ShaderBindingTableVkImpl)(this, Desc));
+            pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
+            OnCreateDeviceObject(pSBTVk);
+        });
 }
 
 void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
@@ -839,13 +843,14 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
                                                          IPipelineResourceSignature**         ppSignature,
                                                          bool                                 IsDeviceInternal)
 {
-    CreateDeviceObject("PipelineResourceSignature", Desc, ppSignature,
-                       [&]() //
-                       {
-                           PipelineResourceSignatureVkImpl* pPRSVk(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignatureVkImpl instance", PipelineResourceSignatureVkImpl)(this, Desc, IsDeviceInternal));
-                           pPRSVk->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
-                           OnCreateDeviceObject(pPRSVk);
-                       });
+    CreateDeviceObject(
+        "PipelineResourceSignature", Desc, ppSignature,
+        [&]() //
+        {
+            PipelineResourceSignatureVkImpl* pPRSVk(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignatureVkImpl instance", PipelineResourceSignatureVkImpl)(this, Desc, IsDeviceInternal));
+            pPRSVk->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
+            OnCreateDeviceObject(pPRSVk);
+        });
 }
 
 } // namespace Diligent

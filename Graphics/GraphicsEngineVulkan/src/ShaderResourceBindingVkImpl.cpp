@@ -37,22 +37,21 @@ namespace Diligent
 
 ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*              pRefCounters,
                                                          PipelineResourceSignatureVkImpl* pPRS,
-                                                         bool                             IsPSOInternal) :
+                                                         bool                             IsDeviceInternal) :
     // clang-format off
     TBase
     {
         pRefCounters,
         pPRS,
-        IsPSOInternal
+        IsDeviceInternal
     },
-    m_ShaderResourceCache{ShaderResourceCacheVk::CacheContentType::SRB}
+    m_ShaderResourceCache{ShaderResourceCacheVk::CacheContentType::SRB},
+    m_NumShaders{static_cast<decltype(m_NumShaders)>(pPRS->GetNumShaderStages())}
 // clang-format on
 {
     try
     {
         m_ShaderVarIndex.fill(-1);
-
-        m_NumShaders = static_cast<decltype(m_NumShaders)>(pPRS->GetNumShaderStages());
 
         FixedLinearAllocator MemPool{GetRawAllocator()};
         MemPool.AddSpace<ShaderVariableManagerVk>(m_NumShaders);

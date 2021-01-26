@@ -487,7 +487,7 @@ private:
         using ShaderResourceArray = std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES>;
         using VkDescSetArray      = std::array<VkDescriptorSet, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE>;
         using Bitfield            = Uint8;
-        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "AZ TODO");
+        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
 
         Bitfield            ActiveSRBMask         = 0; // indicates which SRB is active in current PSO
         Bitfield            PendingSRB            = 0; // 1 bit if new descriptor set must be bound

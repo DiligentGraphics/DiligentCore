@@ -63,12 +63,12 @@
 
 #include "ShaderResourceVariableBase.hpp"
 #include "ShaderResourceCacheVk.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
 
 class ShaderVariableVkImpl;
-class PipelineResourceSignatureVkImpl;
 
 // sizeof(ShaderVariableManagerVk) == 32 (x64, msvc, Release)
 class ShaderVariableManagerVk

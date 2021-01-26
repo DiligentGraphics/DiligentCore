@@ -994,6 +994,11 @@ void PipelineStateVkImpl::Destruct()
 
 bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 {
+    VERIFY_EXPR(pPSO != nullptr);
+
+    if (pPSO == this)
+        return true;
+
     const auto& lhs = m_PipelineLayout;
     const auto& rhs = ValidatedCast<const PipelineStateVkImpl>(pPSO)->m_PipelineLayout;
 
@@ -1015,8 +1020,11 @@ void PipelineStateVkImpl::CreateShaderResourceBinding(IShaderResourceBinding** p
     *ppShaderResourceBinding = nullptr;
 
     if (GetResourceSignatureCount() != 1)
+    {
+        LOG_ERROR_MESSAGE("PipelineState::CreateShaderResourceBinding is only allowed for pipelines that use a single "
+                          "resource signature. Use IPipelineResourceSignature::CreateShaderResourceBinding instead.");
         return;
-
+    }
     return GetResourceSignature(0)->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
 }
 
@@ -1024,8 +1032,11 @@ IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByName(SHADER_TYP
                                                                       const Char* Name)
 {
     if (GetResourceSignatureCount() != 1)
+    {
+        LOG_ERROR_MESSAGE("PipelineState::GetStaticVariableByName is only allowed for pipelines that use a single "
+                          "resource signature. Use IPipelineResourceSignature::GetStaticVariableByName instead.");
         return nullptr;
-
+    }
     return GetResourceSignature(0)->GetStaticVariableByName(ShaderType, Name);
 }
 
@@ -1033,24 +1044,33 @@ IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByIndex(SHADER_TY
                                                                        Uint32      Index)
 {
     if (GetResourceSignatureCount() != 1)
+    {
+        LOG_ERROR_MESSAGE("PipelineState::GetStaticVariableByIndex is only allowed for pipelines that use a single "
+                          "resource signature. Use IPipelineResourceSignature::GetStaticVariableByIndex instead.");
         return nullptr;
-
+    }
     return GetResourceSignature(0)->GetStaticVariableByIndex(ShaderType, Index);
 }
 
 Uint32 PipelineStateVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
     if (GetResourceSignatureCount() != 1)
+    {
+        LOG_ERROR_MESSAGE("PipelineState::GetStaticVariableCount is only allowed for pipelines that use a single "
+                          "resource signature. Use IPipelineResourceSignature::GetStaticVariableCount instead.");
         return 0;
-
+    }
     return GetResourceSignature(0)->GetStaticVariableCount(ShaderType);
 }
 
 void PipelineStateVkImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
     if (GetResourceSignatureCount() != 1)
+    {
+        LOG_ERROR_MESSAGE("PipelineState::BindStaticResources is only allowed for pipelines that use a single "
+                          "resource signature. Use IPipelineResourceSignature::BindStaticResources instead.");
         return;
-
+    }
     return GetResourceSignature(0)->BindStaticResources(ShaderFlags, pResourceMapping, Flags);
 }
 

@@ -52,7 +52,7 @@ public:
 
     ShaderResourceBindingVkImpl(IReferenceCounters*              pRefCounters,
                                 PipelineResourceSignatureVkImpl* pPRS,
-                                bool                             IsPSOInternal);
+                                bool                             IsDeviceInternal);
     ~ShaderResourceBindingVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingVk, TBase)
