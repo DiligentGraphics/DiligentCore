@@ -109,10 +109,10 @@ private:
 
     Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
 
-    const PipelineResourceDesc& GetResource(Uint32 Index) const
+    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const
     {
         VERIFY_EXPR(m_pSignature);
-        return m_pSignature->GetResource(Index);
+        return m_pSignature->GetResourceDesc(Index);
     }
     const ResourceAttribs& GetAttribs(Uint32 Index) const
     {
@@ -218,7 +218,7 @@ private:
     friend ShaderVariableManagerVk;
     using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
 
-    const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResource(m_ResIndex); }
+    const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
     const ResourceAttribs&      GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
 
     void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const;

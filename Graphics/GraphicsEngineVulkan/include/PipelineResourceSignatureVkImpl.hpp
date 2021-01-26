@@ -83,10 +83,8 @@ public:
     Uint32 GetDynamicStorageBufferCount() const { return m_DynamicStorageBufferCount; }
     Uint32 GetNumDescriptorSets() const;
 
-    Uint32      GetNumShaderStages() const { return m_NumShaders; }
+    Uint32      GetNumShaderStages() const { return m_NumShaderStages; }
     SHADER_TYPE GetShaderStageType(Uint32 StageIndex) const;
-
-    static constexpr Uint32 InvalidSamplerInd = (1u << 16) - 1;
 
     enum class CacheContentType
     {
@@ -94,41 +92,64 @@ public:
         SRB       = 1  // in SRB
     };
 
-    // sizeof(ResourceAttribs) == 16, x64
+    // sizeof(ResourceAttribs) == 12, x64
     struct ResourceAttribs
     {
     private:
         static constexpr Uint32 _DescrTypeBits       = 4;
         static constexpr Uint32 _DescrSetBits        = 1;
         static constexpr Uint32 _BindingIndexBits    = 16;
-        static constexpr Uint32 _SamplerIndBits      = 16;
+        static constexpr Uint32 _SamplerIndBits      = 10;
         static constexpr Uint32 _SamplerAssignedBits = 1;
-        static constexpr Uint32 _BitsSumm            = ((sizeof(Uint32) * 8 * 2) + _DescrTypeBits + _DescrSetBits + _BindingIndexBits + _SamplerIndBits + _SamplerAssignedBits + 31) & ~31;
+        static_assert((_DescrTypeBits + _DescrSetBits + _BindingIndexBits + _SamplerIndBits + _SamplerAssignedBits) % 8 == 0, "Fields are not properly packed");
 
-        static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "not enought bits to store DescriptorType values");
-        static_assert((1u << _SamplerIndBits) - 1 == InvalidSamplerInd, "InvalidSamplerInd is incorrect");
-        static_assert((1u << _DescrSetBits) == MAX_DESCR_SET_PER_SIGNATURE, "not enoght bits to store descriptor set index");
-        static_assert((1u << _BindingIndexBits) >= MAX_RESOURCES_IN_SIGNATURE, "not enoght bits to store resource binding index");
+        static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
+        static_assert((1u << _DescrSetBits) >= MAX_DESCR_SET_PER_SIGNATURE, "Not enough bits to store descriptor set index");
+        static_assert((1u << _BindingIndexBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store resource binding index");
 
     public:
-        // clang-format off
-        Uint32  BindingIndex         : _BindingIndexBits;
-        Uint32  SamplerInd           : _SamplerIndBits;     // index in m_Desc.Resources and m_pResourceAttribs
-        Uint32  DescrType            : _DescrTypeBits;
-        Uint32  DescrSet             : _DescrSetBits;
-        Uint32  ImtblSamplerAssigned : _SamplerAssignedBits;
-        Uint32  CacheOffsets[2];                            // static and static/mutable/dynamic offsets for ShaderResourceCacheVk
+        static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
 
-        ResourceAttribs()
+        // clang-format off
+        const Uint32  BindingIndex         : _BindingIndexBits;    // Binding in the descriptor set
+        const Uint32  SamplerInd           : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
+        const Uint32  DescrType            : _DescrTypeBits;       // Descriptor type (DescriptorType)
+        const Uint32  DescrSet             : _DescrSetBits;        // Descriptor set (0 or 1)
+        const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
+        const Uint32  SRBCacheOffset;                              // Offset in the SRB resource cache
+        const Uint32  StaticCacheOffset;                           // Offset in the static resource cache
+        // clang-format on
+
+        ResourceAttribs(Uint32         _BindingIndex,
+                        Uint32         _SamplerInd,
+                        DescriptorType _DescrType,
+                        Uint32         _DescrSet,
+                        bool           ImtblSamplerAssigned,
+                        Uint32         _SRBCacheOffset,
+                        Uint32         _StaticCacheOffset) noexcept :
+            // clang-format off
+            BindingIndex         {_BindingIndex                  },   
+            SamplerInd           {_SamplerInd                    },
+            DescrType            {static_cast<Uint32>(_DescrType)},
+            DescrSet             {_DescrSet                      },
+            ImtblSamplerAssigned {ImtblSamplerAssigned ? 1u : 0u },
+            SRBCacheOffset       {_SRBCacheOffset                },
+            StaticCacheOffset    {_StaticCacheOffset             }
+        // clang-format on
         {
-            static_assert(_BitsSumm == sizeof(ResourceAttribs) * 8, "fields is not properly packed");
+            VERIFY(BindingIndex == _BindingIndex, "Binding index (", _BindingIndex, ") exceeds maximum representable value");
+            VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
+            VERIFY(Type() == _DescrType, "Descriptor type (", static_cast<Uint32>(_DescrType), ") exceeds maximum representable value");
+            VERIFY(DescrSet == _DescrSet, "Descriptor set (", _DescrSet, ") exceeds maximum representable value");
         }
 
-        Uint32 CacheOffset(CacheContentType CacheType) const { return CacheOffsets[static_cast<Uint32>(CacheType)]; }
+        Uint32 CacheOffset(CacheContentType CacheType) const
+        {
+            return CacheType == CacheContentType::SRB ? SRBCacheOffset : StaticCacheOffset;
+        }
 
-        DescriptorType Type()                       const { return static_cast<DescriptorType>(DescrType); }
-        bool           IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned; }
-        // clang-format on
+        DescriptorType Type() const { return static_cast<DescriptorType>(DescrType); }
+        bool           IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
     };
 
     const ResourceAttribs& GetAttribs(Uint32 ResIndex) const
@@ -137,7 +158,7 @@ public:
         return m_pResourceAttribs[ResIndex];
     }
 
-    const PipelineResourceDesc& GetResource(Uint32 ResIndex) const
+    const PipelineResourceDesc& GetResourceDesc(Uint32 ResIndex) const
     {
         VERIFY_EXPR(ResIndex < m_Desc.NumResources);
         return m_Desc.Resources[ResIndex];
@@ -199,22 +220,31 @@ public:
     }
 
 private:
-    using ImmutableSamplerPtrType = RefCntAutoPtr<ISampler>;
-    using CacheOffsetsType        = std::array<Uint32, 3 * MAX_DESCR_SET_PER_SIGNATURE>; // [dynamic uniform buffers, dynamic storage buffers, other] * [descriptor sets] includes ArraySize
-    using BindingCountType        = std::array<Uint32, 3 * MAX_DESCR_SET_PER_SIGNATURE>; // [dynamic uniform buffers, dynamic storage buffers, other] * [descriptor sets] without ArraySize
+    enum CACHE_GROUP : size_t
+    {
+        CACHE_GROUP_DYN_UB = 0, // Uniform buffer with dynamic offset
+        CACHE_GROUP_DYN_SB,     // Storage buffer with dynamic offset
+        CACHE_GROUP_OTHER,      // Other resource type
+
+        CACHE_GROUP_DYN_UB_STAT_VAR = CACHE_GROUP_DYN_UB, // Uniform buffer with dynamic offset, static variable
+        CACHE_GROUP_DYN_SB_STAT_VAR = CACHE_GROUP_DYN_SB, // Storage buffer with dynamic offset, static variable
+        CACHE_GROUP_OTHER_STAT_VAR  = CACHE_GROUP_OTHER,  // Other resource type, static variable
+
+        CACHE_GROUP_DYN_UB_DYN_VAR, // Uniform buffer with dynamic offset, dynamic variable
+        CACHE_GROUP_DYN_SB_DYN_VAR, // Storage buffer with dynamic offset, dynamic variable
+        CACHE_GROUP_OTHER_DYN_VAR,  // Other resource type, dynamic variable
+
+        CACHE_GROUP_COUNT
+    };
+    static_assert(CACHE_GROUP_COUNT == 3 * MAX_DESCR_SET_PER_SIGNATURE, "Inconsistent cache group count");
+
+    using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] including ArraySize
+    using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] not counting ArraySize
 
     void Destruct();
 
-    void ReserveSpaceForStaticVarsMgrs(const PipelineResourceSignatureDesc& Desc,
-                                       Int8&                                StaticVarStageCount,
-                                       Uint32&                              StaticVarCount,
-                                       CacheOffsetsType&                    CacheSizes,
-                                       BindingCountType&                    BindingCount,
-                                       Uint8                                DSMapping[MAX_DESCR_SET_PER_SIGNATURE]);
-
     void CreateLayout(const CacheOffsetsType& CacheSizes,
-                      const BindingCountType& BindingCount,
-                      const Uint8             DSMapping[MAX_DESCR_SET_PER_SIGNATURE]);
+                      const BindingCountType& BindingCount);
 
     size_t CalculateHash() const;
 
@@ -223,6 +253,8 @@ private:
     // returns descriptor set index in resource cache
     Uint32 GetStaticDescrSetIndex() const;
     Uint32 GetDynamicDescrSetIndex() const;
+
+    static CACHE_GROUP ResourceToCacheGroup(const PipelineResourceDesc& Res);
 
 private:
     VulkanUtilities::DescriptorSetLayoutWrapper m_VkDescSetLayouts[MAX_DESCR_SET_PER_SIGNATURE];
@@ -237,10 +269,14 @@ private:
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
-    Uint8 m_NumShaders = 0;
+    // The number of shader stages that have resources.
+    Uint8 m_NumShaderStages = 0;
 
     ShaderResourceCacheVk*   m_pResourceCache = nullptr;
-    ShaderVariableManagerVk* m_StaticVarsMgrs = nullptr; // [m_NumShaders]
+    ShaderVariableManagerVk* m_StaticVarsMgrs = nullptr; // [m_NumShaderStages]
+
+
+    using ImmutableSamplerPtrType = RefCntAutoPtr<ISampler>;
 
     ImmutableSamplerPtrType* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
     SRBMemoryAllocator       m_SRBMemAllocator;

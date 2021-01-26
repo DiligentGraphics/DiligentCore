@@ -253,7 +253,7 @@ protected:
 
     std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_ResourceOffsets = {};
 
-    PIPELINE_TYPE m_PipelineType = static_cast<PIPELINE_TYPE>(0xFF);
+    PIPELINE_TYPE m_PipelineType = PIPELINE_TYPE_INVALID;
 
 #ifdef DILIGENT_DEBUG
     bool m_IsDestructed = false;

@@ -1195,7 +1195,7 @@ VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE Sta
     VkPipelineStageFlags vkPipelineStages = 0;
     while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
-        auto StateBit = ExtractBit(StateFlags);
+        auto StateBit = ExtractLSB(StateFlags);
         vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit, vkShaderStages);
     }
     return vkPipelineStages;
@@ -1299,7 +1299,7 @@ VkAccessFlags AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
     Uint32        Bits        = StateFlags;
     while (Bits != 0)
     {
-        auto Bit = ExtractBit(Bits);
+        auto Bit = ExtractLSB(Bits);
         switch (Bit)
         {
             // clang-format off
@@ -1636,7 +1636,7 @@ VkShaderStageFlags ShaderTypesToVkShaderStageFlags(SHADER_TYPE ShaderTypes)
     VkShaderStageFlags Result = 0;
     while (ShaderTypes != SHADER_TYPE_UNKNOWN)
     {
-        auto Type = ExtractBit(ShaderTypes);
+        auto Type = ExtractLSB(ShaderTypes);
         Result |= ShaderTypeToVkShaderStageFlagBit(Type);
     }
     return Result;
@@ -1650,7 +1650,7 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
     VkBuildAccelerationStructureFlagsKHR Result = 0;
     while (Flags != RAYTRACING_BUILD_AS_NONE)
     {
-        auto FlagBit = ExtractBit(Flags);
+        auto FlagBit = ExtractLSB(Flags);
         switch (FlagBit)
         {
             // clang-format off
@@ -1674,7 +1674,7 @@ VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flag
     VkGeometryFlagsKHR Result = 0;
     while (Flags != RAYTRACING_GEOMETRY_FLAG_NONE)
     {
-        auto FlagBit = ExtractBit(Flags);
+        auto FlagBit = ExtractLSB(Flags);
         switch (FlagBit)
         {
             // clang-format off
@@ -1695,7 +1695,7 @@ VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INS
     VkGeometryInstanceFlagsKHR Result = 0;
     while (Flags != RAYTRACING_INSTANCE_NONE)
     {
-        auto FlagBit = ExtractBit(Flags);
+        auto FlagBit = ExtractLSB(Flags);
         switch (FlagBit)
         {
             // clang-format off

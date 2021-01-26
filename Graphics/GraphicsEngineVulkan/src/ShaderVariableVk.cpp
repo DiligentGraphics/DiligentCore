@@ -51,7 +51,7 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const PipelineResourceSign
             const auto ResIdxRange = Layout.GetResourceIndexRange(VarType);
             for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
             {
-                const auto& Res  = Layout.GetResource(r);
+                const auto& Res  = Layout.GetResourceDesc(r);
                 const auto& Attr = Layout.GetAttribs(r);
                 VERIFY_EXPR(Res.VarType == VarType);
 
@@ -105,7 +105,7 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
             const auto ResIdxRange = SrcLayout.GetResourceIndexRange(VarType);
             for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
             {
-                const auto& Res  = SrcLayout.GetResource(r);
+                const auto& Res  = SrcLayout.GetResourceDesc(r);
                 const auto& Attr = SrcLayout.GetAttribs(r);
                 VERIFY_EXPR(Res.VarType == VarType);
 

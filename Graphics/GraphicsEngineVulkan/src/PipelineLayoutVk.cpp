@@ -171,12 +171,12 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
 
         for (Uint32 r = 0, ResCount = pSignature->GetTotalResourceCount(); r < ResCount; ++r)
         {
-            const auto& Res  = pSignature->GetResource(r);
-            const auto& Attr = pSignature->GetAttribs(r);
+            const auto& ResDesc = pSignature->GetResourceDesc(r);
+            const auto& Attr    = pSignature->GetAttribs(r);
 
-            if ((Res.ShaderStages & Stage) && strcmp(Res.Name, Name) == 0)
+            if ((ResDesc.ShaderStages & Stage) && strcmp(ResDesc.Name, Name) == 0)
             {
-                Info.Type          = Res.ResourceType;
+                Info.Type          = ResDesc.ResourceType;
                 Info.BindingIndex  = Attr.BindingIndex;
                 Info.DescrSetIndex = m_FirstDescrSetIndex[i] + Attr.DescrSet;
                 return true;

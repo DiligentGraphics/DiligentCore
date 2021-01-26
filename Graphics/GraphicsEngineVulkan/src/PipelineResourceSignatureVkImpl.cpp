@@ -38,11 +38,25 @@
 
 namespace Diligent
 {
+
 namespace
 {
 
-bool operator==(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
+bool ResourcesCompatible(const PipelineResourceSignatureVkImpl::ResourceAttribs& lhs,
+                         const PipelineResourceSignatureVkImpl::ResourceAttribs& rhs)
 {
+    // Ignore sampler index and cache offsets.
+    // clang-format off
+    return lhs.BindingIndex         == rhs.BindingIndex &&
+           lhs.DescrType            == rhs.DescrType    &&
+           lhs.DescrSet             == rhs.DescrSet     &&
+           lhs.ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
+    // clang-format on
+}
+
+bool ResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
+{
+    // Ignore resource names.
     // clang-format off
     return lhs.ShaderStages == rhs.ShaderStages &&
            lhs.ArraySize    == rhs.ArraySize    &&
@@ -52,34 +66,9 @@ bool operator==(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs
     // clang-format on
 }
 
-bool operator==(const PipelineResourceSignatureVkImpl::ResourceAttribs& lhs,
-                const PipelineResourceSignatureVkImpl::ResourceAttribs& rhs)
+inline Uint32 GetDescriptorSetIdx(SHADER_RESOURCE_VARIABLE_TYPE VarType)
 {
-    // clang-format off
-    return lhs.DescrType    == rhs.DescrType    &&
-           lhs.BindingIndex == rhs.BindingIndex &&
-           lhs.DescrSet     == rhs.DescrSet     &&
-            //lhs.CacheOffset== rhs.CacheOffset  &&
-           //lhs.SamplerInd == rhs.SamplerInd   &&
-           lhs.ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
-    // clang-format on
-}
-
-__forceinline Uint32 ResourceToCacheOffsetIndex(const PipelineResourceDesc& Res)
-{
-    const Uint32 SetIdx            = (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0) * 3;
-    const bool   WithDynamicOffset = !(Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS);
-    const bool   UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER);
-
-    if (WithDynamicOffset && !UseTexelBuffer)
-    {
-        if (Res.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
-            return SetIdx;
-
-        if (Res.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV || Res.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV)
-            return SetIdx + 1;
-    }
-    return SetIdx + 2;
+    return VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0;
 }
 
 VkDescriptorType GetVkDescriptorType(DescriptorType Type)
@@ -105,56 +94,56 @@ VkDescriptorType GetVkDescriptorType(DescriptorType Type)
         case DescriptorType::AccelerationStructure:         return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
             // clang-format on
         default:
-            UNEXPECTED("unknown descriptor type");
+            UNEXPECTED("Unknown descriptor type");
             return VK_DESCRIPTOR_TYPE_MAX_ENUM;
     }
 }
 
 DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
 {
-    const bool WithDynamicOffset = !(Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS);
-    const bool CombinedSampler   = (Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE);
-    const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER);
+    const bool WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
+    const bool CombinedSampler   = (Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE) != 0;
+    const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
 
     static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
     switch (Res.ResourceType)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-            VERIFY_EXPR(!(Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS));
+            VERIFY_EXPR((Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0);
             return WithDynamicOffset ? DescriptorType::UniformBufferDynamic : DescriptorType::UniformBuffer;
 
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-            VERIFY_EXPR(!(Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)));
+            VERIFY_EXPR((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) == 0);
             return UseTexelBuffer ? DescriptorType::StorageTexelBuffer :
                                     (WithDynamicOffset ? DescriptorType::StorageBufferDynamic : DescriptorType::StorageBuffer);
 
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
-            VERIFY_EXPR(!(Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE));
+            VERIFY_EXPR((Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE) == 0);
             return CombinedSampler ? DescriptorType::CombinedImageSampler : DescriptorType::SeparateImage;
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-            VERIFY_EXPR(!(Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)));
+            VERIFY_EXPR((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) == 0);
             return UseTexelBuffer ? DescriptorType::UniformTexelBuffer :
                                     (WithDynamicOffset ? DescriptorType::StorageBufferDynamic_ReadOnly : DescriptorType::StorageBuffer_ReadOnly);
 
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
-            VERIFY_EXPR(!Res.Flags);
+            VERIFY_EXPR(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN);
             return DescriptorType::StorageImage;
 
         case SHADER_RESOURCE_TYPE_SAMPLER:
-            VERIFY_EXPR(!Res.Flags);
+            VERIFY_EXPR(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN);
             return DescriptorType::Sampler;
 
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
-            VERIFY_EXPR(!Res.Flags);
+            VERIFY_EXPR(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN);
             return DescriptorType::InputAttachment;
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
-            VERIFY_EXPR(!Res.Flags);
+            VERIFY_EXPR(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN);
             return DescriptorType::AccelerationStructure;
 
         default:
-            UNEXPECTED("unknown resource type");
+            UNEXPECTED("Unknown resource type");
             return DescriptorType::Unknown;
     }
 }
@@ -174,7 +163,7 @@ BUFFER_VIEW_TYPE DescriptorTypeToBufferView(DescriptorType Type)
         case DescriptorType::StorageBufferDynamic:          return BUFFER_VIEW_UNORDERED_ACCESS;
             // clang-format on
         default:
-            UNEXPECTED("unsupported descriptor type for buffer view");
+            UNEXPECTED("Unsupported descriptor type for buffer view");
             return BUFFER_VIEW_UNDEFINED;
     }
 }
@@ -191,7 +180,7 @@ TEXTURE_VIEW_TYPE DescriptorTypeToTextureView(DescriptorType Type)
         case DescriptorType::InputAttachment:       return TEXTURE_VIEW_SHADER_RESOURCE;
             // clang-format on
         default:
-            UNEXPECTED("unsupported descriptor type for texture view");
+            UNEXPECTED("Unsupported descriptor type for texture view");
             return TEXTURE_VIEW_UNDEFINED;
     }
 }
@@ -221,15 +210,34 @@ Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
         const auto& ImtblSam = Desc.ImmutableSamplers[s];
         if (((ImtblSam.ShaderStages & Res.ShaderStages) != 0) && StreqSuff(Res.Name, ImtblSam.SamplerOrTextureName, SamplerSuffix))
         {
-            VERIFY_EXPR((ImtblSam.ShaderStages & Res.ShaderStages) == Res.ShaderStages);
+            DEV_CHECK_ERR((ImtblSam.ShaderStages & Res.ShaderStages) == Res.ShaderStages,
+                          "Immutable sampler '", ImtblSam.SamplerOrTextureName,
+                          "' is specified for only some of the shader stages that resource '", Res.Name, "' is defined for.");
             return s;
         }
     }
 
     return -1;
 }
+
 } // namespace
 
+inline PipelineResourceSignatureVkImpl::CACHE_GROUP PipelineResourceSignatureVkImpl::ResourceToCacheGroup(const PipelineResourceDesc& Res)
+{
+    const Uint32 SetIdx            = GetDescriptorSetIdx(Res.VarType);
+    const bool   WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
+    const bool   UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
+
+    if (WithDynamicOffset && !UseTexelBuffer)
+    {
+        if (Res.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
+            return static_cast<CACHE_GROUP>(SetIdx * 3 + CACHE_GROUP_DYN_UB);
+
+        if (Res.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV || Res.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV)
+            return static_cast<CACHE_GROUP>(SetIdx * 3 + CACHE_GROUP_DYN_SB);
+    }
+    return static_cast<CACHE_GROUP>(SetIdx * 3 + CACHE_GROUP_OTHER);
+}
 
 RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
 {
@@ -260,8 +268,6 @@ RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
 }
 
 
-#define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
-
 PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
                                                                  RenderDeviceVkImpl*                  pDevice,
                                                                  const PipelineResourceSignatureDesc& Desc,
@@ -269,23 +275,57 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
     m_SRBMemAllocator{GetRawAllocator()}
 {
+    m_StaticVarIndex.fill(-1);
+
     try
     {
         FixedLinearAllocator MemPool{GetRawAllocator()};
 
-        // reserve at least 1 element because m_pResourceAttribs must hold pointer to memory
+        // Reserve at least 1 element because m_pResourceAttribs must hold a pointer to memory
         MemPool.AddSpace<ResourceAttribs>(std::max(1u, Desc.NumResources));
         MemPool.AddSpace<ImmutableSamplerPtrType>(Desc.NumImmutableSamplers);
 
         ReserveSpaceForDescription(MemPool, Desc);
 
-        Int8             StaticVarStageCount                    = 0;
-        Uint32           StaticVarCount                         = 0;
-        Uint8            DSMapping[MAX_DESCR_SET_PER_SIGNATURE] = {};
-        CacheOffsetsType CacheSizes                             = {};
-        BindingCountType BindingCount                           = {};
-        ReserveSpaceForStaticVarsMgrs(Desc, StaticVarStageCount, StaticVarCount, CacheSizes, BindingCount, DSMapping);
+        Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
+                                        // accounting for array sizes.
 
+        CacheOffsetsType CacheSizes   = {};
+        BindingCountType BindingCount = {};
+
+        SHADER_TYPE StaticResStages = SHADER_TYPE_UNKNOWN; // Shader stages that have static resources
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        {
+            const auto& ResDesc    = Desc.Resources[i];
+            const auto  SetIdx     = GetDescriptorSetIdx(ResDesc.VarType);
+            const auto  CacheGroup = ResourceToCacheGroup(ResDesc);
+
+            m_ShaderStages |= ResDesc.ShaderStages;
+
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                StaticResStages |= ResDesc.ShaderStages;
+                StaticResourceCount += ResDesc.ArraySize;
+            }
+
+            BindingCount[CacheGroup] += 1;
+            CacheSizes[CacheGroup] += ResDesc.ArraySize;
+        }
+
+        m_NumShaderStages = static_cast<Uint8>(PlatformMisc::CountOneBits(static_cast<Uint32>(m_ShaderStages)));
+        if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
+        {
+            m_PipelineType = PipelineTypeFromShaderStages(m_ShaderStages);
+            DEV_CHECK_ERR(m_PipelineType != PIPELINE_TYPE_INVALID, "Failed to deduce pipeline type from shader stages");
+        }
+
+        int StaticVarStageCount = 0; // The number of shader stages that have static variables
+        for (; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageCount)
+        {
+            const auto StageBit             = ExtractLSB(StaticResStages);
+            const auto ShaderTypeInd        = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
+            m_StaticVarIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageCount);
+        }
         if (StaticVarStageCount > 0)
         {
             MemPool.AddSpace<ShaderResourceCacheVk>(1);
@@ -309,10 +349,10 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
             m_pResourceCache = MemPool.Construct<ShaderResourceCacheVk>(CacheContentType::Signature);
             m_StaticVarsMgrs = MemPool.Allocate<ShaderVariableManagerVk>(StaticVarStageCount);
 
-            m_pResourceCache->InitializeSets(GetRawAllocator(), 1, &StaticVarCount);
+            m_pResourceCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount);
         }
 
-        CreateLayout(CacheSizes, BindingCount, DSMapping);
+        CreateLayout(CacheSizes, BindingCount);
 
         if (StaticVarStageCount > 0)
         {
@@ -340,143 +380,79 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     }
 }
 
-void PipelineResourceSignatureVkImpl::ReserveSpaceForStaticVarsMgrs(const PipelineResourceSignatureDesc& Desc,
-                                                                    Int8&                                StaticVarStageCount,
-                                                                    Uint32&                              StaticVarCount,
-                                                                    CacheOffsetsType&                    CacheSizes,
-                                                                    BindingCountType&                    BindingCount,
-                                                                    Uint8                                DSMapping[MAX_DESCR_SET_PER_SIGNATURE])
+void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& CacheSizes,
+                                                   const BindingCountType& BindingCount)
 {
-    // get active shader stages
-    SHADER_TYPE Stages          = SHADER_TYPE_UNKNOWN;
-    SHADER_TYPE StaticResStages = SHADER_TYPE_UNKNOWN;
-
-    for (Uint32 i = 0; i < Desc.NumResources; ++i)
+    // Descriptor set mapping (static/mutable (0) or dynamic (1) -> set index)
+    std::array<Uint32, MAX_DESCR_SET_PER_SIGNATURE> DSMapping = {};
     {
-        const auto&  Res    = Desc.Resources[i];
-        const Uint32 SetIdx = (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0);
-        const Uint32 COIdx  = ResourceToCacheOffsetIndex(Res);
+        const auto TotalStaticBindings =
+            BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] +
+            BindingCount[CACHE_GROUP_DYN_SB_STAT_VAR] +
+            BindingCount[CACHE_GROUP_OTHER_STAT_VAR];
+        const auto TotalDynamicBindings =
+            BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] +
+            BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] +
+            BindingCount[CACHE_GROUP_OTHER_DYN_VAR];
 
-        Stages |= Res.ShaderStages;
-
-        if (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-        {
-            StaticResStages |= Res.ShaderStages;
-            StaticVarCount += Res.ArraySize;
-        }
-
-        ++BindingCount[COIdx];
-        CacheSizes[COIdx] += Res.ArraySize;
-    }
-
-    // initialize descriptor set mapping table
-    {
-        Uint8 Idx    = 0;
-        DSMapping[0] = (BindingCount[0] + BindingCount[1] + BindingCount[2] ? Idx++ : 0xFF);
-        DSMapping[1] = (BindingCount[3] + BindingCount[4] + BindingCount[5] ? Idx++ : 0xFF);
+        Uint32 Idx   = 0;
+        DSMapping[0] = (TotalStaticBindings != 0 ? Idx++ : 0xFF);
+        DSMapping[1] = (TotalDynamicBindings != 0 ? Idx++ : 0xFF);
         VERIFY_EXPR(Idx <= MAX_DESCR_SET_PER_SIGNATURE);
     }
 
-    m_ShaderStages = Stages;
-    m_NumShaders   = static_cast<Uint8>(PlatformMisc::CountOneBits(static_cast<Uint32>(Stages)));
+    CacheOffsetsType CacheOffsets =
+        {
+            // static/mutable set
+            0,
+            CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR],
+            CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_STAT_VAR],
+            // dynamic set
+            0,
+            CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR],
+            CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_DYN_VAR] //
+        };
+    BindingCountType BindingIndices =
+        {
+            // static/mutable set
+            0,
+            BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR],
+            BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] + BindingCount[CACHE_GROUP_DYN_SB_STAT_VAR],
+            // dynamic set
+            0,
+            BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR],
+            BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] //
+        };
+    Uint32 StaticCacheOffset = 0;
 
-    if (Stages == SHADER_TYPE_COMPUTE)
-    {
-        m_PipelineType = PIPELINE_TYPE_COMPUTE;
-    }
-    else if (Stages & (SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH))
-    {
-        m_PipelineType = PIPELINE_TYPE_MESH;
-    }
-    else if (Stages < SHADER_TYPE_COMPUTE)
-    {
-        m_PipelineType = PIPELINE_TYPE_GRAPHICS;
-    }
-    else if (Stages >= SHADER_TYPE_RAY_GEN)
-    {
-        m_PipelineType = PIPELINE_TYPE_RAY_TRACING;
-    }
-    else
-    {
-        LOG_PRS_ERROR_AND_THROW("can not deduce pipeline type - used incompatible shader stages");
-    }
-
-    m_StaticVarIndex.fill(-1);
-
-    for (; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageCount)
-    {
-        const auto StageBit             = ExtractBit(StaticResStages);
-        const auto ShaderTypeInd        = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
-        m_StaticVarIndex[ShaderTypeInd] = StaticVarStageCount;
-    }
-}
-#undef LOG_PRS_ERROR_AND_THROW
-
-void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& CacheSizes,
-                                                   const BindingCountType& BindingCount,
-                                                   const Uint8             DSMapping[MAX_DESCR_SET_PER_SIGNATURE])
-{
-    std::vector<VkDescriptorSetLayoutBinding> LayoutBindings[MAX_DESCR_SET_PER_SIGNATURE];
+    std::vector<VkDescriptorSetLayoutBinding> vkSetLayoutBindings[MAX_DESCR_SET_PER_SIGNATURE];
     DynamicLinearAllocator                    TempAllocator{GetRawAllocator()};
-
-    // clang-format off
-    CacheOffsetsType CacheOffsets      = {0, CacheSizes[0],   CacheSizes[0]   + CacheSizes[1],    // static/mutable set
-                                          0, CacheSizes[3],   CacheSizes[3]   + CacheSizes[4]};   // dynamic set
-    BindingCountType BindingIndices    = {0, BindingCount[0], BindingCount[0] + BindingCount[1],  // static/mutable set
-                                          0, BindingCount[3], BindingCount[3] + BindingCount[4]}; // dynamic set
-    Uint32           StaticCacheOffset = 0;
-    // clang-format on
 
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
-        const auto&  Res         = m_Desc.Resources[i];
-        const auto   DescrType   = GetDescriptorType(Res);
-        auto&        Attribs     = m_pResourceAttribs[i];
-        const Uint32 SetIdx      = (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0);
-        const Uint32 COIdx       = ResourceToCacheOffsetIndex(Res);
-        auto&        CacheOffset = CacheOffsets[COIdx];
+        const auto& ResDesc    = m_Desc.Resources[i];
+        const auto  DescrType  = GetDescriptorType(ResDesc);
+        const auto  SetIdx     = GetDescriptorSetIdx(ResDesc.VarType);
+        const auto  CacheGroup = ResourceToCacheGroup(ResDesc);
 
-        // If all resources are dynamic then signature contains only one descriptor set layout with index 0,
-        // so remap SetIdx to actual descriptor set index.
+        VERIFY(i == 0 || ResDesc.VarType >= m_Desc.Resources[i - 1].VarType, "Resources must be sorted by variable type");
+
+        // If all resources are dynamic, then the signature contains only one descriptor set layout with index 0,
+        // so remap SetIdx to the actual descriptor set index.
         VERIFY_EXPR(DSMapping[SetIdx] < MAX_DESCR_SET_PER_SIGNATURE);
 
-        Attribs.CacheOffsets[static_cast<Uint32>(CacheContentType::Signature)] = ~0u;
-        Attribs.CacheOffsets[static_cast<Uint32>(CacheContentType::SRB)]       = CacheOffset;
+        // The sampler may not be yet initialized, but this is OK as all resources are initialized
+        // in the same order as in m_Desc.Resources
+        const auto AssignedSamplerInd = DescrType == DescriptorType::SeparateImage ?
+            FindAssignedSampler(ResDesc) :
+            ResourceAttribs::InvalidSamplerInd;
 
-        Attribs.DescrType            = static_cast<Uint32>(DescrType);
-        Attribs.DescrSet             = DSMapping[SetIdx];
-        Attribs.BindingIndex         = BindingIndices[COIdx];
-        Attribs.SamplerInd           = InvalidSamplerInd;
-        Attribs.ImtblSamplerAssigned = false;
-
-        // verify that data is not missed during bit packing
-        VERIFY_EXPR(Attribs.CacheOffsets[static_cast<Uint32>(CacheContentType::SRB)] == CacheOffset);
-        VERIFY_EXPR(Attribs.DescrType == static_cast<Uint32>(DescrType));
-        VERIFY_EXPR(Attribs.DescrSet == DSMapping[SetIdx]);
-        VERIFY_EXPR(Attribs.BindingIndex == BindingIndices[COIdx]);
-
-        CacheOffset += Res.ArraySize;
-        ++BindingIndices[COIdx];
-
-        LayoutBindings[SetIdx].emplace_back();
-        auto& LayoutBinding = LayoutBindings[SetIdx].back();
-
-        LayoutBinding.binding            = Attribs.BindingIndex;
-        LayoutBinding.descriptorCount    = Res.ArraySize;
-        LayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(Res.ShaderStages);
-        LayoutBinding.pImmutableSamplers = nullptr;
-        LayoutBinding.descriptorType     = GetVkDescriptorType(Attribs.Type());
-
-        if (Attribs.Type() == DescriptorType::SeparateImage)
+        VkSampler* pVkImmutableSamplers = nullptr;
+        if (DescrType == DescriptorType::CombinedImageSampler ||
+            DescrType == DescriptorType::Sampler)
         {
-            Attribs.SamplerInd = FindAssignedSampler(Res);
-        }
-
-        if (Attribs.Type() == DescriptorType::CombinedImageSampler ||
-            Attribs.Type() == DescriptorType::Sampler)
-        {
-            // Only search for the immutable sampler for combined image samplers and separate samplers
-            Int32 SrcImmutableSamplerInd = FindImmutableSampler(Res, Attribs.Type(), m_Desc, GetCombinedSamplerSuffix());
+            // Only search for immutable sampler for combined image samplers and separate samplers
+            Int32 SrcImmutableSamplerInd = FindImmutableSampler(ResDesc, DescrType, m_Desc, GetCombinedSamplerSuffix());
             if (SrcImmutableSamplerInd >= 0)
             {
                 auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
@@ -484,37 +460,57 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
                 if (!ImmutableSampler)
                     GetDevice()->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
 
-                LayoutBinding.pImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(Res.ArraySize, ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler());
-                Attribs.ImtblSamplerAssigned     = true;
+                pVkImmutableSamplers = TempAllocator.ConstructArray<VkSampler>(ResDesc.ArraySize, ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler());
             }
         }
 
-        if (Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        const auto* const pAttribs = new (m_pResourceAttribs + i) ResourceAttribs //
+            {
+                BindingIndices[CacheGroup],
+                AssignedSamplerInd,
+                DescrType,
+                DSMapping[SetIdx],
+                pVkImmutableSamplers != nullptr,
+                CacheOffsets[CacheGroup],
+                ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u //
+            };
+        BindingIndices[CacheGroup] += 1;
+        CacheOffsets[CacheGroup] += ResDesc.ArraySize;
+
+        vkSetLayoutBindings[SetIdx].emplace_back();
+        auto& vkSetLayoutBinding = vkSetLayoutBindings[SetIdx].back();
+
+        vkSetLayoutBinding.binding            = pAttribs->BindingIndex;
+        vkSetLayoutBinding.descriptorCount    = ResDesc.ArraySize;
+        vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
+        vkSetLayoutBinding.pImmutableSamplers = pVkImmutableSamplers;
+        vkSetLayoutBinding.descriptorType     = GetVkDescriptorType(pAttribs->Type());
+
+        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            Attribs.CacheOffsets[static_cast<Uint32>(CacheContentType::Signature)] = StaticCacheOffset;
-            m_pResourceCache->InitializeResources(Attribs.DescrSet, StaticCacheOffset, Res.ArraySize, Attribs.Type());
-            StaticCacheOffset += Res.ArraySize;
+            m_pResourceCache->InitializeResources(pAttribs->DescrSet, StaticCacheOffset, ResDesc.ArraySize, pAttribs->Type());
+            StaticCacheOffset += ResDesc.ArraySize;
         }
     }
 
-    m_DynamicUniformBufferCount = static_cast<Uint16>(CacheSizes[0] + CacheSizes[3]);
-    m_DynamicStorageBufferCount = static_cast<Uint16>(CacheSizes[1] + CacheSizes[4]);
+    m_DynamicUniformBufferCount = static_cast<Uint16>(CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR]);
+    m_DynamicStorageBufferCount = static_cast<Uint16>(CacheSizes[CACHE_GROUP_DYN_SB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_DYN_VAR]);
+    VERIFY_EXPR(m_DynamicUniformBufferCount == CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR]);
+    VERIFY_EXPR(m_DynamicStorageBufferCount == CacheSizes[CACHE_GROUP_DYN_SB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_DYN_VAR]);
 
     VERIFY_EXPR(m_pResourceCache == nullptr || m_pResourceCache->GetDescriptorSet(0).GetSize() == StaticCacheOffset);
-    VERIFY_EXPR(m_DynamicUniformBufferCount == CacheSizes[0] + CacheSizes[3]);
-    VERIFY_EXPR(m_DynamicStorageBufferCount == CacheSizes[1] + CacheSizes[4]);
-    VERIFY_EXPR(CacheOffsets[0] == CacheSizes[0]);
-    VERIFY_EXPR(CacheOffsets[1] == CacheSizes[0] + CacheSizes[1]);
-    VERIFY_EXPR(CacheOffsets[2] == CacheSizes[0] + CacheSizes[1] + CacheSizes[2]);
-    VERIFY_EXPR(CacheOffsets[3] == CacheSizes[3]);
-    VERIFY_EXPR(CacheOffsets[4] == CacheSizes[3] + CacheSizes[4]);
-    VERIFY_EXPR(CacheOffsets[5] == CacheSizes[3] + CacheSizes[4] + CacheSizes[5]);
-    VERIFY_EXPR(BindingIndices[0] == BindingCount[0]);
-    VERIFY_EXPR(BindingIndices[1] == BindingCount[0] + BindingCount[1]);
-    VERIFY_EXPR(BindingIndices[2] == BindingCount[0] + BindingCount[1] + BindingCount[2]);
-    VERIFY_EXPR(BindingIndices[3] == BindingCount[3]);
-    VERIFY_EXPR(BindingIndices[4] == BindingCount[3] + BindingCount[4]);
-    VERIFY_EXPR(BindingIndices[5] == BindingCount[3] + BindingCount[4] + BindingCount[5]);
+    VERIFY_EXPR(CacheOffsets[CACHE_GROUP_DYN_UB_STAT_VAR] == CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR]);
+    VERIFY_EXPR(CacheOffsets[CACHE_GROUP_DYN_SB_STAT_VAR] == CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_STAT_VAR]);
+    VERIFY_EXPR(CacheOffsets[CACHE_GROUP_OTHER_STAT_VAR] == CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_STAT_VAR] + CacheSizes[CACHE_GROUP_OTHER_STAT_VAR]);
+    VERIFY_EXPR(CacheOffsets[CACHE_GROUP_DYN_UB_DYN_VAR] == CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR]);
+    VERIFY_EXPR(CacheOffsets[CACHE_GROUP_DYN_SB_DYN_VAR] == CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_DYN_VAR]);
+    VERIFY_EXPR(CacheOffsets[CACHE_GROUP_OTHER_DYN_VAR] == CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_DYN_VAR] + CacheSizes[CACHE_GROUP_OTHER_DYN_VAR]);
+    VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_UB_STAT_VAR] == BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR]);
+    VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_SB_STAT_VAR] == BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] + BindingCount[CACHE_GROUP_DYN_SB_STAT_VAR]);
+    VERIFY_EXPR(BindingIndices[CACHE_GROUP_OTHER_STAT_VAR] == BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] + BindingCount[CACHE_GROUP_DYN_SB_STAT_VAR] + BindingCount[CACHE_GROUP_OTHER_STAT_VAR]);
+    VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_UB_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR]);
+    VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_SB_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR]);
+    VERIFY_EXPR(BindingIndices[CACHE_GROUP_OTHER_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] + BindingCount[CACHE_GROUP_OTHER_DYN_VAR]);
 
     if (m_Desc.SRBAllocationGranularity > 1)
     {
@@ -527,10 +523,14 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
             ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetShaderStageType(s), UnusedNumVars);
         }
 
-        Uint32       DescriptorSetSizes[2] = {CacheSizes[0] + CacheSizes[1] + CacheSizes[2], CacheSizes[3] + CacheSizes[4] + CacheSizes[5]};
-        const Uint32 NumSets               = !!DescriptorSetSizes[0] + !!DescriptorSetSizes[1];
-        static_assert(_countof(DescriptorSetSizes) == MAX_DESCR_SET_PER_SIGNATURE, "MAX_DESCR_SET_PER_SIGNATURE was changed, update code above");
+        Uint32 DescriptorSetSizes[2] = //
+            {
+                CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_STAT_VAR] + CacheSizes[CACHE_GROUP_OTHER_STAT_VAR],
+                CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_DYN_VAR] + CacheSizes[CACHE_GROUP_OTHER_DYN_VAR] //
+            };
+        static_assert(_countof(DescriptorSetSizes) == MAX_DESCR_SET_PER_SIGNATURE, "MAX_DESCR_SET_PER_SIGNATURE was changed, update the code above");
 
+        const Uint32 NumSets = (DescriptorSetSizes[0] != 0 ? 1 : 0) + (DescriptorSetSizes[1] != 0 ? 1 : 0);
         if (DescriptorSetSizes[0] == 0)
             DescriptorSetSizes[0] = DescriptorSetSizes[1];
 
@@ -547,21 +547,21 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
 
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
 
-    for (Uint32 i = 0; i < _countof(LayoutBindings); ++i)
+    for (Uint32 i = 0; i < _countof(vkSetLayoutBindings); ++i)
     {
-        auto& LayoutBinding = LayoutBindings[i];
-        if (LayoutBinding.empty())
+        auto& vkSetLayoutBinding = vkSetLayoutBindings[i];
+        if (vkSetLayoutBinding.empty())
             continue;
 
-        SetLayoutCI.bindingCount = static_cast<Uint32>(LayoutBinding.size());
-        SetLayoutCI.pBindings    = LayoutBinding.data();
+        SetLayoutCI.bindingCount = static_cast<Uint32>(vkSetLayoutBinding.size());
+        SetLayoutCI.pBindings    = vkSetLayoutBinding.data();
         m_VkDescSetLayouts[i]    = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
     }
 }
 
 Uint32 PipelineResourceSignatureVkImpl::FindAssignedSampler(const PipelineResourceDesc& SepImg) const
 {
-    Uint32 SamplerInd = InvalidSamplerInd;
+    Uint32 SamplerInd = ResourceAttribs::InvalidSamplerInd;
     if (IsUsingCombinedSamplers())
     {
         const auto IdxRange = GetResourceIndexRange(SepImg.VarType);
@@ -628,7 +628,7 @@ void PipelineResourceSignatureVkImpl::Destruct()
     {
         for (size_t i = 0; i < m_StaticVarIndex.size(); ++i)
         {
-            Int8 Idx = m_StaticVarIndex[i];
+            auto Idx = m_StaticVarIndex[i];
             if (Idx >= 0)
             {
                 m_StaticVarsMgrs[Idx].DestroyVariables(RawAllocator);
@@ -669,16 +669,16 @@ bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSig
     if (GetDesc().BindingIndex != Other.GetDesc().BindingIndex)
         return false;
 
-    const Uint32 LCount = GetTotalResourceCount();
-    const Uint32 RCount = Other.GetTotalResourceCount();
+    const Uint32 LResCount = GetTotalResourceCount();
+    const Uint32 RResCount = Other.GetTotalResourceCount();
 
-    if (LCount != RCount)
+    if (LResCount != RResCount)
         return false;
 
-    for (Uint32 r = 0; r < LCount; ++r)
+    for (Uint32 r = 0; r < LResCount; ++r)
     {
-        if (!(GetAttribs(r) == Other.GetAttribs(r)) ||
-            !(GetResource(r) == Other.GetResource(r)))
+        if (!ResourcesCompatible(GetAttribs(r), Other.GetAttribs(r)) ||
+            !ResourcesCompatible(GetResourceDesc(r), Other.GetResourceDesc(r)))
             return false;
     }
 
@@ -771,9 +771,9 @@ void PipelineResourceSignatureVkImpl::InitResourceCache(ShaderResourceCacheVk& R
 
     for (Uint32 r = 0; r < m_Desc.NumResources; ++r)
     {
-        const auto& Res  = GetResource(r);
-        const auto& Attr = GetAttribs(r);
-        VarCount[Attr.DescrSet] += Res.ArraySize;
+        const auto& ResDesc = GetResourceDesc(r);
+        const auto& Attr    = GetAttribs(r);
+        VarCount[Attr.DescrSet] += ResDesc.ArraySize;
     }
 
     if (VarCount[1] == 0)
@@ -800,16 +800,18 @@ void PipelineResourceSignatureVkImpl::InitResourceCache(ShaderResourceCacheVk& R
 
 SHADER_TYPE PipelineResourceSignatureVkImpl::GetShaderStageType(Uint32 StageIndex) const
 {
+    VERIFY_EXPR(StageIndex < m_NumShaderStages);
+
     SHADER_TYPE Stages = m_ShaderStages;
     for (Uint32 Index = 0; Stages != SHADER_TYPE_UNKNOWN; ++Index)
     {
-        auto StageBit = ExtractBit(Stages);
+        auto StageBit = ExtractLSB(Stages);
 
         if (Index == StageIndex)
             return StageBit;
     }
 
-    UNEXPECTED("index is out of range");
+    UNEXPECTED("Index is out of range");
     return SHADER_TYPE_UNKNOWN;
 }
 
@@ -824,9 +826,9 @@ void PipelineResourceSignatureVkImpl::InitializeResourceMemoryInCache(ShaderReso
     const auto CacheType      = ResourceCache.GetContentType();
     for (Uint32 r = 0; r < TotalResources; ++r)
     {
-        const auto& Res  = GetResource(r);
-        const auto& Attr = GetAttribs(r);
-        ResourceCache.InitializeResources(Attr.DescrSet, Attr.CacheOffset(CacheType), Res.ArraySize, Attr.Type());
+        const auto& ResDesc = GetResourceDesc(r);
+        const auto& Attr    = GetAttribs(r);
+        ResourceCache.InitializeResources(Attr.DescrSet, Attr.CacheOffset(CacheType), ResDesc.ArraySize, Attr.Type());
     }
 }
 
@@ -846,20 +848,20 @@ void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourc
 
     for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
     {
-        const auto& Res  = GetResource(r);
-        const auto& Attr = GetAttribs(r);
-        VERIFY_EXPR(Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        const auto& ResDesc = GetResourceDesc(r);
+        const auto& Attr    = GetAttribs(r);
+        VERIFY_EXPR(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
-        if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && Attr.IsImmutableSamplerAssigned())
+        if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && Attr.IsImmutableSamplerAssigned())
             continue; // Skip immutable separate samplers
 
-        for (Uint32 ArrInd = 0; ArrInd < Res.ArraySize; ++ArrInd)
+        for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
         {
             auto           SrcCacheOffset = Attr.CacheOffset(SrcCacheType) + ArrInd;
             const auto&    SrcCachedRes   = SrcDescrSet.GetResource(SrcCacheOffset);
             IDeviceObject* pObject        = SrcCachedRes.pObject.RawPtr<IDeviceObject>();
             if (!pObject)
-                LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetPrintName(Res, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
+                LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetPrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
             auto           DstCacheOffset  = Attr.CacheOffset(DstCacheType) + ArrInd;
             IDeviceObject* pCachedResource = DstDescrSet.GetResource(DstCacheOffset).pObject;
@@ -927,7 +929,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
 
     for (Uint32 ResNum = ResIdxRange.first, ArrElem = 0; ResNum < ResIdxRange.second;)
     {
-        const auto& Res         = GetResource(ResNum);
+        const auto& Res         = GetResourceDesc(ResNum);
         const auto& Attr        = GetAttribs(ResNum);
         const auto  CacheOffset = Attr.CacheOffset(CacheType);
 
@@ -1464,13 +1466,13 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
             UpdateDescriptorHandle(&DescrImgInfo, nullptr, nullptr);
         }
 
-        if (Attribs.SamplerInd != PipelineResourceSignatureVkImpl::InvalidSamplerInd)
+        if (Attribs.SamplerInd != PipelineResourceSignatureVkImpl::ResourceAttribs::InvalidSamplerInd)
         {
             VERIFY(DstRes.Type == DescriptorType::SeparateImage,
                    "Only separate images can be assigned separate samplers when using HLSL-style combined samplers.");
             VERIFY(!IsImmutableSamplerAssigned(), "Separate image can't be assigned an immutable sampler.");
 
-            auto& SamplerResDesc = Signature.GetResource(Attribs.SamplerInd);
+            auto& SamplerResDesc = Signature.GetResourceDesc(Attribs.SamplerInd);
             auto& SamplerAttribs = Signature.GetAttribs(Attribs.SamplerInd);
             VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
 
@@ -1631,7 +1633,7 @@ void PipelineResourceSignatureVkImpl::BindResource(IDeviceObject*         pObj,
                                                    Uint32                 ResIndex,
                                                    ShaderResourceCacheVk& ResourceCache) const
 {
-    auto&      ResDesc     = GetResource(ResIndex);
+    auto&      ResDesc     = GetResourceDesc(ResIndex);
     auto&      Attribs     = GetAttribs(ResIndex);
     const auto CacheType   = ResourceCache.GetContentType();
     auto&      DstDescrSet = ResourceCache.GetDescriptorSet(Attribs.DescrSet);
