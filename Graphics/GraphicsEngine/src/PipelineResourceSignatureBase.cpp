@@ -81,6 +81,42 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER if ResourceType is not buffer");
     }
 
+    if (Desc.UseCombinedTextureSamplers)
+    {
+        if (Desc.CombinedSamplerSuffix == nullptr)
+            LOG_PRS_ERROR_AND_THROW("Desc.UseCombinedTextureSamplers is true, but Desc.CombinedSamplerSuffix is null");
+
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        {
+            const auto& Res = Desc.Resources[i];
+            if (Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+            {
+                auto AssignedSamplerName = String{Res.Name} + Desc.CombinedSamplerSuffix;
+                for (Uint32 s = 0; s < Desc.NumResources; ++s)
+                {
+                    const auto& Sam = Desc.Resources[s];
+                    if (Sam.ResourceType != SHADER_RESOURCE_TYPE_SAMPLER)
+                        continue;
+
+                    if (AssignedSamplerName == Sam.Name && (Sam.ShaderStages & Res.ShaderStages) != 0)
+                    {
+                        if (Sam.ShaderStages != Res.ShaderStages)
+                        {
+                            LOG_PRS_ERROR_AND_THROW("Texture '", Res.Name, "' and sampler '", Sam.Name, "' assigned to it use different shader stages.");
+                        }
+
+                        if (Sam.VarType != Res.VarType)
+                        {
+                            LOG_PRS_ERROR_AND_THROW("The type (", GetShaderVariableTypeLiteralName(Res.VarType), ") of texture resource '", Res.Name,
+                                                    "' does not match the type (", GetShaderVariableTypeLiteralName(Sam.VarType),
+                                                    ") of sampler '", Sam.Name, "' that is assigned to it.");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
     {
         if (Desc.ImmutableSamplers[i].SamplerOrTextureName == nullptr)

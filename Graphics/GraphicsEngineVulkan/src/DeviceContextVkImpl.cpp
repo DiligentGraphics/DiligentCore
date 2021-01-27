@@ -366,7 +366,6 @@ __forceinline void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl*
     // (14.2.2. Pipeline Layouts, clause 'Pipeline Layout Compatibility')
     // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets-compatibility
 
-#ifdef DILIGENT_DEBUG
     auto&  Resources       = BindInfo.Resources;
     Uint32 CompatSignCount = SignCount;
 
@@ -395,7 +394,6 @@ __forceinline void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl*
         BindInfo.vkSets[i * MAX_DESCR_SET_PER_SIGNATURE + 0] = VK_NULL_HANDLE;
         BindInfo.vkSets[i * MAX_DESCR_SET_PER_SIGNATURE + 1] = VK_NULL_HANDLE;
     }
-#endif
 }
 
 void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBindInfo& BindInfo)
@@ -456,14 +454,13 @@ void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBind
     VERIFY_EXPR(!(BindInfo.PendingSRB & BindInfo.ActiveSRBMask));
 }
 
-void DeviceContextVkImpl::ValidateShaderResources()
+#ifdef DILIGENT_DEVELOPMENT
+void DeviceContextVkImpl::DvpValidateShaderResources()
 {
-#ifdef DILIGENT_DEBUG
-    auto*       pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(m_pPipelineState.RawPtr());
-    const auto& Layout           = pPipelineStateVk->GetPipelineLayout();
-    const auto  BindIndex        = PipelineTypeToBindPointIndex(pPipelineStateVk->GetDesc().PipelineType);
-    auto&       BindInfo         = m_DescrSetBindInfo[BindIndex];
-    const auto  SignCount        = Layout.GetSignatureCount();
+    const auto& Layout    = m_pPipelineState->GetPipelineLayout();
+    const auto  BindIndex = PipelineTypeToBindPointIndex(m_pPipelineState->GetDesc().PipelineType);
+    auto&       BindInfo  = m_DescrSetBindInfo[BindIndex];
+    const auto  SignCount = Layout.GetSignatureCount();
 
     for (Uint32 i = 0; i < SignCount; ++i)
     {
@@ -483,7 +480,7 @@ void DeviceContextVkImpl::ValidateShaderResources()
         if (!LayoutSign->IsCompatibleWith(*ResSign))
         {
             LOG_ERROR_MESSAGE("Shader resource binding with signature '", ResSign->GetDesc().Name,
-                              "' is not compatible with pipeline layout in current pipeline '", pPipelineStateVk->GetDesc().Name, "'.");
+                              "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");
         }
 
         // You must call BindDescriptorSetsWithDynamicOffsets() before validation.
@@ -499,8 +496,8 @@ void DeviceContextVkImpl::ValidateShaderResources()
                    LayoutSign->GetDesc().Name, "' binding index (", i, ").");
         }
     }
-#endif
 }
+#endif
 
 void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderResourceBinding* pShaderResourceBinding)
 {
@@ -521,7 +518,6 @@ void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderReso
     auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
 
-    // AZ TODO: exclude stages that is not supported by pipeline
     ResourceCache.TransitionResources<false>(this);
 }
 
@@ -539,7 +535,6 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
-        // AZ TODO: exclude stages that is not supported by pipeline
         ResourceCache.TransitionResources<false>(this);
     }
 #ifdef DILIGENT_DEVELOPMENT
@@ -579,8 +574,10 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         VkDescriptorSet DynamicDescrSet     = VK_NULL_HANDLE;
         const char*     DynamicDescrSetName = "Dynamic Descriptor Set";
 #ifdef DILIGENT_DEVELOPMENT
-        String _DynamicDescrSetName("AZ TODO");
-        _DynamicDescrSetName.append(" - dynamic set");
+        String _DynamicDescrSetName{DynamicDescrSetName};
+        _DynamicDescrSetName.append(" (");
+        _DynamicDescrSetName.append(pSignature->GetDesc().Name);
+        _DynamicDescrSetName += ')';
         DynamicDescrSetName = _DynamicDescrSetName.c_str();
 #endif
         // Allocate vulkan descriptor set for dynamic resources
@@ -768,7 +765,9 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
         CommitRenderPassAndFramebuffer((Flags & DRAW_FLAG_VERIFY_STATES) != 0);
     }
 
-    ValidateShaderResources();
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateShaderResources();
+#endif
 }
 
 BufferVkImpl* DeviceContextVkImpl::PrepareIndirectDrawAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode)
@@ -904,7 +903,9 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
 #    endif
 #endif
 
-    ValidateShaderResources();
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateShaderResources();
+#endif
 }
 
 void DeviceContextVkImpl::PrepareForRayTracing()
@@ -918,7 +919,9 @@ void DeviceContextVkImpl::PrepareForRayTracing()
         BindDescriptorSetsWithDynamicOffsets(DescrSetBindInfo);
     }
 
-    ValidateShaderResources();
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateShaderResources();
+#endif
 }
 
 void DeviceContextVkImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)

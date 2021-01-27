@@ -524,7 +524,9 @@ private:
 
     void BindShaderResources(PipelineStateVkImpl* pPipelineStateVk);
     void BindDescriptorSetsWithDynamicOffsets(DescriptorSetBindInfo& DescrSetBindInfo);
-    void ValidateShaderResources();
+#ifdef DILIGENT_DEVELOPMENT
+    void DvpValidateShaderResources();
+#endif
 
     /// Descriptor set binding information for each pipeline type (graphics/mesh, compute, ray tracing)
     std::array<DescriptorSetBindInfo, NUM_PIPELINE_BIND_POINTS> m_DescrSetBindInfo;

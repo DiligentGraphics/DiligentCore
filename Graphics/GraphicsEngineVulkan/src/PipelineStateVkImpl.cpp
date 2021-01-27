@@ -720,7 +720,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                                              TShaderStages&                 ShaderStages)
 {
     std::array<IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> Signatures;
-    RefCntAutoPtr<IPipelineResourceSignature>                        TempSignature;
+    RefCntAutoPtr<IPipelineResourceSignature>                        pImplicitSignature;
 
     Uint32 SignatureCount = CreateInfo.ResourceSignaturesCount;
 
@@ -745,6 +745,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 
         for (auto& Stage : ShaderStages)
         {
+            // Variables in all shader stages are separate in implicit layout
             UniqueNames.clear();
             for (auto* pShader : Stage.Shaders)
             {
@@ -794,7 +795,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                             auto& Res   = Resources[Iter->second.DescIndex];
                             Res.VarType = Var.Type;
 
-                            // apply new variable type to sampler too
+                            // Apply new variable type to sampler too
                             if (ShaderResources.IsUsingCombinedSamplers() && Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
                             {
                                 String SampName = String{Var.Name} + ShaderResources.GetCombinedSamplerSuffix();
@@ -820,20 +821,20 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
             ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
             ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
 
-            GetDevice()->CreatePipelineResourceSignature(ResSignDesc, &TempSignature, true);
+            GetDevice()->CreatePipelineResourceSignature(ResSignDesc, &pImplicitSignature, true);
 
-            if (TempSignature == nullptr)
+            if (pImplicitSignature == nullptr)
                 LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
 
-            Signatures[0]  = TempSignature;
+            Signatures[0]  = pImplicitSignature;
             SignatureCount = 1;
         }
     }
 
     m_PipelineLayout.Create(GetDevice(), CreateInfo.PSODesc.PipelineType, Signatures.data(), SignatureCount);
 
-    // verify that pipeline layout is compatible with shader resources and
-    // remap resource bindings
+    // Verify that pipeline layout is compatible with shader resources and
+    // remap resource bindings.
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
         const auto& Shaders    = ShaderStages[s].Shaders;
