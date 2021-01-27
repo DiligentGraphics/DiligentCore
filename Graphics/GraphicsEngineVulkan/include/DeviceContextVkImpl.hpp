@@ -476,6 +476,8 @@ private:
         bool CommittedIBUpToDate = false;
 
         Uint32 NumCommands = 0;
+
+        VkPipelineBindPoint vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
     } m_State;
 
     // Graphics/mesh, compute, ray tracing
@@ -516,14 +518,15 @@ private:
         }
 
         void SetPendingSRB(Uint32 Index) { PendingSRB |= static_cast<Bitfield>(1u << Index); }
-        void ResetPendingSRB(Uint32 Index) { PendingSRB &= static_cast<Bitfield>(~(1u << Index)); }
+        void ClearPendingSRB(Uint32 Index) { PendingSRB &= static_cast<Bitfield>(~(1u << Index)); }
 
         void SetDynamicBuffersPresent(Uint32 Index) { DynamicBuffersPresent |= static_cast<Bitfield>(1u << Index); }
-        void ResetDynamicBuffersPresent(Uint32 Index) { DynamicBuffersPresent &= static_cast<Bitfield>(~(1u << Index)); }
+        void ClearDynamicBuffersPresent(Uint32 Index) { DynamicBuffersPresent &= static_cast<Bitfield>(~(1u << Index)); }
     };
 
-    void BindShaderResources(PipelineStateVkImpl* pPipelineStateVk);
-    void BindDescriptorSetsWithDynamicOffsets(DescriptorSetBindInfo& DescrSetBindInfo);
+    __forceinline DescriptorSetBindInfo& GetDescriptorSetBindInfo(PIPELINE_TYPE Type);
+
+    void CommitDescriptorSets(DescriptorSetBindInfo& DescrSetBindInfo);
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateShaderResources();
 #endif

@@ -119,6 +119,7 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
     m_vkClearValues.reserve(16);
 
     m_DynamicBufferOffsets.reserve(64);
+    m_DynamicBufferOffsets.resize(1);
 
     CreateASCompactedSizeQueryPool();
 }
@@ -293,71 +294,30 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
             {
                 CommitScissorRects();
             }
+            m_State.vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
             break;
         }
         case PIPELINE_TYPE_COMPUTE:
         {
             m_CommandBuffer.BindComputePipeline(vkPipeline);
+            m_State.vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
             break;
         }
         case PIPELINE_TYPE_RAY_TRACING:
         {
             m_CommandBuffer.BindRayTracingPipeline(vkPipeline);
+            m_State.vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
             break;
         }
         default:
             UNEXPECTED("unknown pipeline type");
     }
 
-    BindShaderResources(pPipelineStateVk);
-}
-
-static Uint32 PipelineTypeToBindPointIndex(PIPELINE_TYPE Type)
-{
-    // clang-format off
-    static_assert(PIPELINE_TYPE_GRAPHICS    == 0, "PIPELINE_TYPE_GRAPHICS == 0 is expected");
-    static_assert(PIPELINE_TYPE_COMPUTE     == 1, "PIPELINE_TYPE_COMPUTE == 1 is expected");
-    static_assert(PIPELINE_TYPE_MESH        == 2, "PIPELINE_TYPE_MESH == 2 is expected");
-    static_assert(PIPELINE_TYPE_RAY_TRACING == 3, "PIPELINE_TYPE_RAY_TRACING == 3 is expected");
-    // clang-format on
-    constexpr Uint8 Indices[] = {
-        0, // PIPELINE_TYPE_GRAPHICS
-        1, // PIPELINE_TYPE_COMPUTE
-        0, // PIPELINE_TYPE_MESH
-        2  // PIPELINE_TYPE_RAY_TRACING
-    };
-    static_assert(_countof(Indices) == Uint32{PIPELINE_TYPE_LAST} + 1, "Please add the new pipeline type to the list above");
-    return Indices[Uint32{Type}];
-}
-
-static VkPipelineBindPoint PipelineTypeToVkBindPoint(PIPELINE_TYPE Type)
-{
-    // clang-format off
-    static_assert(PIPELINE_TYPE_GRAPHICS    == 0, "PIPELINE_TYPE_GRAPHICS == 0 is expected");
-    static_assert(PIPELINE_TYPE_COMPUTE     == 1, "PIPELINE_TYPE_COMPUTE == 1 is expected");
-    static_assert(PIPELINE_TYPE_MESH        == 2, "PIPELINE_TYPE_MESH == 2 is expected");
-    static_assert(PIPELINE_TYPE_RAY_TRACING == 3, "PIPELINE_TYPE_RAY_TRACING == 3 is expected");
-    // clang-format on
-    const VkPipelineBindPoint vkBindPoints[] = {
-        VK_PIPELINE_BIND_POINT_GRAPHICS,       // PIPELINE_TYPE_GRAPHICS
-        VK_PIPELINE_BIND_POINT_COMPUTE,        // PIPELINE_TYPE_COMPUTE
-        VK_PIPELINE_BIND_POINT_GRAPHICS,       // PIPELINE_TYPE_MESH
-        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR // PIPELINE_TYPE_RAY_TRACING
-    };
-    static_assert(_countof(vkBindPoints) == Uint32{PIPELINE_TYPE_LAST} + 1, "Please add the new pipeline type to the list above");
-    return vkBindPoints[Uint32{Type}];
-}
-
-__forceinline void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl* pPipelineStateVk)
-{
-    VERIFY_EXPR(pPipelineStateVk != nullptr);
-
     const auto& Layout    = pPipelineStateVk->GetPipelineLayout();
-    const auto  BindIndex = PipelineTypeToBindPointIndex(pPipelineStateVk->GetDesc().PipelineType);
-    auto&       BindInfo  = m_DescrSetBindInfo[BindIndex];
+    auto&       BindInfo  = GetDescriptorSetBindInfo(PSODesc.PipelineType);
     const auto  SignCount = Layout.GetSignatureCount();
 
-    BindInfo.ActiveSRBMask = (1u << SignCount) - 1;
+    BindInfo.ActiveSRBMask = (1u << SignCount) - 1u;
 
     // Layout compatibility means that descriptor sets can be bound to a command buffer
     // for use by any pipeline created with a compatible pipeline layout, and without having bound
@@ -369,7 +329,7 @@ __forceinline void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl*
     auto&  Resources       = BindInfo.Resources;
     Uint32 CompatSignCount = SignCount;
 
-    // find first incompatible shader resource bindings
+    // Find the first incompatible shader resource bindings
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         const auto* LayoutSign = Layout.GetSignature(i);
@@ -388,78 +348,91 @@ __forceinline void DeviceContextVkImpl::BindShaderResources(PipelineStateVkImpl*
     {
         Resources[i] = nullptr;
 
-        BindInfo.ResetPendingSRB(i);
-        BindInfo.ResetDynamicBuffersPresent(i);
+        BindInfo.ClearPendingSRB(i);
+        BindInfo.ClearDynamicBuffersPresent(i);
 
         BindInfo.vkSets[i * MAX_DESCR_SET_PER_SIGNATURE + 0] = VK_NULL_HANDLE;
         BindInfo.vkSets[i * MAX_DESCR_SET_PER_SIGNATURE + 1] = VK_NULL_HANDLE;
     }
 }
 
-void DeviceContextVkImpl::BindDescriptorSetsWithDynamicOffsets(DescriptorSetBindInfo& BindInfo)
+DeviceContextVkImpl::DescriptorSetBindInfo& DeviceContextVkImpl::GetDescriptorSetBindInfo(PIPELINE_TYPE Type)
 {
-    auto*       pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(m_pPipelineState.RawPtr());
-    const auto& Layout           = pPipelineStateVk->GetPipelineLayout();
-    const auto  BindIndex        = PipelineTypeToBindPointIndex(pPipelineStateVk->GetDesc().PipelineType);
-    auto&       Resources        = BindInfo.Resources;
-    const auto  BindPoint        = PipelineTypeToVkBindPoint(pPipelineStateVk->GetDesc().PipelineType);
-    const auto  SignCount        = Layout.GetSignatureCount();
-    auto&       Offsets          = m_DynamicBufferOffsets;
-    const auto  VkLayout         = Layout.GetVkPipelineLayout();
+    // clang-format off
+    static_assert(PIPELINE_TYPE_GRAPHICS    == 0, "PIPELINE_TYPE_GRAPHICS == 0 is expected");
+    static_assert(PIPELINE_TYPE_COMPUTE     == 1, "PIPELINE_TYPE_COMPUTE == 1 is expected");
+    static_assert(PIPELINE_TYPE_MESH        == 2, "PIPELINE_TYPE_MESH == 2 is expected");
+    static_assert(PIPELINE_TYPE_RAY_TRACING == 3, "PIPELINE_TYPE_RAY_TRACING == 3 is expected");
+    // clang-format on
+    constexpr size_t Indices[] = {
+        0, // PIPELINE_TYPE_GRAPHICS
+        1, // PIPELINE_TYPE_COMPUTE
+        0, // PIPELINE_TYPE_MESH
+        2  // PIPELINE_TYPE_RAY_TRACING
+    };
+    static_assert(_countof(Indices) == Uint32{PIPELINE_TYPE_LAST} + 1, "Please add the new pipeline type to the list above");
 
-    while (true)
+    return m_DescrSetBindInfo[Indices[Uint32{Type}]];
+}
+
+void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
+{
+    const auto& Layout    = m_pPipelineState->GetPipelineLayout();
+    auto&       Resources = BindInfo.Resources;
+    const auto  SignCount = Layout.GetSignatureCount();
+    const auto  vkLayout  = Layout.GetVkPipelineLayout();
+
+    auto UpdateSRBFlags = Uint32{BindInfo.PendingSRB} | Uint32{BindInfo.DynamicBuffersPresent};
+    while (UpdateSRBFlags != 0)
     {
-        Uint32 i = PlatformMisc::GetLSB(Uint32{BindInfo.PendingSRB});
+        Uint32 i = PlatformMisc::GetLSB(UpdateSRBFlags);
+        if (i >= SignCount)
+            break;
 
-        if (i < SignCount)
-        {
-            VERIFY_EXPR(Resources[i] != nullptr);
-            BindInfo.ResetPendingSRB(i);
+        VERIFY_EXPR(Resources[i] != nullptr);
+        UpdateSRBFlags &= ~(Uint32{1} << i);
 
-            const auto*  pSignature    = Resources[i]->GetSignature();
-            const Uint32 DescrSetIdx   = Layout.GetFirstDescrSetIndex(pSignature);
-            const auto&  ResourceCache = Resources[i]->GetResourceCache();
-            const Uint32 DSCount       = ResourceCache.GetNumDescriptorSets();
-            const auto   DSOffset      = i * MAX_DESCR_SET_PER_SIGNATURE;
+        const auto*  pSignature    = Resources[i]->GetSignature();
+        const Uint32 DSBindIdx     = Layout.GetFirstDescrSetIndex(pSignature);
+        const auto&  ResourceCache = Resources[i]->GetResourceCache();
+        const Uint32 DSCount       = ResourceCache.GetNumDescriptorSets();
+        const auto   FirstDSIdx    = i * MAX_DESCR_SET_PER_SIGNATURE;
 
 #ifdef DILIGENT_DEBUG
-            for (Uint32 s = 0; s < DSCount; ++s)
-                VERIFY_EXPR(BindInfo.vkSets[DSOffset + s] != VK_NULL_HANDLE);
+        for (Uint32 s = 0; s < DSCount; ++s)
+            VERIFY_EXPR(BindInfo.vkSets[FirstDSIdx + s] != VK_NULL_HANDLE);
 #endif
-            if (pSignature->GetDynamicOffsetCount() > 0)
-            {
-                Offsets.resize(pSignature->GetDynamicOffsetCount());
 
-                auto NumOffsetsWritten = ResourceCache.GetDynamicBufferOffsets(m_ContextId, this, Offsets);
-                VERIFY_EXPR(NumOffsetsWritten == pSignature->GetDynamicOffsetCount());
+        const auto DynamicOffsetCount = pSignature->GetDynamicOffsetCount();
+        if (DynamicOffsetCount > 0)
+        {
+            VERIFY(m_DynamicBufferOffsets.size() >= DynamicOffsetCount,
+                   "m_DynamicBufferOffsets must've been resized by CommitShaderResources to have enough space");
 
-                // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
-                // and this buffer is not resizable, so the buffer handle can never change.
-
-                // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the
-                // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands
-                // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
-                // applied via these sets are no longer valid (13.2.5)
-                m_CommandBuffer.BindDescriptorSets(BindPoint, VkLayout, DescrSetIdx, DSCount, &BindInfo.vkSets[DSOffset], static_cast<Uint32>(Offsets.size()), Offsets.data());
-            }
-            else
-            {
-                m_CommandBuffer.BindDescriptorSets(BindPoint, VkLayout, DescrSetIdx, DSCount, &BindInfo.vkSets[DSOffset], 0, nullptr);
-            }
+            auto NumOffsetsWritten = ResourceCache.GetDynamicBufferOffsets(m_ContextId, this, m_DynamicBufferOffsets);
+            VERIFY_EXPR(NumOffsetsWritten == DynamicOffsetCount);
         }
-        else
-            break;
+
+        // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
+        // and this buffer is not resizable, so the buffer handle can never change.
+
+        // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the
+        // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands
+        // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
+        // applied via these sets are no longer valid (13.2.5)
+        VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
+        m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, vkLayout, DSBindIdx, DSCount, &BindInfo.vkSets[FirstDSIdx], DynamicOffsetCount, m_DynamicBufferOffsets.data());
     }
 
-    VERIFY_EXPR(!(BindInfo.PendingSRB & BindInfo.ActiveSRBMask));
+    VERIFY_EXPR((UpdateSRBFlags & BindInfo.ActiveSRBMask) == 0);
+    BindInfo.PendingSRB &= ~BindInfo.ActiveSRBMask;
 }
 
 #ifdef DILIGENT_DEVELOPMENT
 void DeviceContextVkImpl::DvpValidateShaderResources()
 {
     const auto& Layout    = m_pPipelineState->GetPipelineLayout();
-    const auto  BindIndex = PipelineTypeToBindPointIndex(m_pPipelineState->GetDesc().PipelineType);
-    auto&       BindInfo  = m_DescrSetBindInfo[BindIndex];
+    auto&       BindInfo  = GetDescriptorSetBindInfo(m_pPipelineState->GetDesc().PipelineType);
     const auto  SignCount = Layout.GetSignatureCount();
 
     for (Uint32 i = 0; i < SignCount; ++i)
@@ -483,7 +456,7 @@ void DeviceContextVkImpl::DvpValidateShaderResources()
                               "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");
         }
 
-        // You must call BindDescriptorSetsWithDynamicOffsets() before validation.
+        // You must call CommitDescriptorSets() before validation.
         VERIFY_EXPR(!(BindInfo.PendingSRB & BindInfo.ActiveSRBMask));
 
         const auto DSCount  = LayoutSign->GetNumDescriptorSets();
@@ -544,20 +517,19 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     }
 #endif
 
-    const auto  BindIndex  = PipelineTypeToBindPointIndex(pResBindingVkImpl->GetPipelineType());
-    const auto  Index      = pResBindingVkImpl->GetBindingIndex();
-    auto&       BindInfo   = m_DescrSetBindInfo[BindIndex];
+    const auto  SRBIndex   = pResBindingVkImpl->GetBindingIndex();
+    auto&       BindInfo   = GetDescriptorSetBindInfo(pResBindingVkImpl->GetPipelineType());
     const auto* pSignature = pResBindingVkImpl->GetSignature();
-    const auto  DSOffset   = Index * MAX_DESCR_SET_PER_SIGNATURE;
+    const auto  DSOffset   = SRBIndex * MAX_DESCR_SET_PER_SIGNATURE;
     const auto  DSCount    = ResourceCache.GetNumDescriptorSets();
     Uint32      DSIndex    = 0;
 
-    BindInfo.SetPendingSRB(Index);
+    BindInfo.SetPendingSRB(SRBIndex);
 
     if (ResourceCache.GetNumDynamicBuffers() > 0)
-        BindInfo.SetDynamicBuffersPresent(Index);
+        BindInfo.SetDynamicBuffersPresent(SRBIndex);
     else
-        BindInfo.ResetDynamicBuffersPresent(Index);
+        BindInfo.ClearDynamicBuffersPresent(SRBIndex);
 
     if (pSignature->HasStaticDescrSet())
     {
@@ -592,7 +564,9 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
     VERIFY_EXPR(DSIndex == DSCount);
 
-    BindInfo.Resources[Index] = pResBindingVkImpl;
+    BindInfo.Resources[SRBIndex] = pResBindingVkImpl;
+
+    m_DynamicBufferOffsets.resize(std::max<size_t>(m_DynamicBufferOffsets.size(), pSignature->GetDynamicOffsetCount()));
 }
 
 void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -732,14 +706,14 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     }
 #endif
 
-    auto& DescrSetBindInfo = m_DescrSetBindInfo[PipelineTypeToBindPointIndex(PIPELINE_TYPE_GRAPHICS)];
+    auto& DescrSetBindInfo = GetDescriptorSetBindInfo(PIPELINE_TYPE_GRAPHICS);
 
     // First time we must always bind descriptor sets with dynamic offsets.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // cals we do not need to bind the sets again.
     if (DescrSetBindInfo.RequireUpdate(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
     {
-        BindDescriptorSetsWithDynamicOffsets(DescrSetBindInfo);
+        CommitDescriptorSets(DescrSetBindInfo);
     }
 #if 0
 #    ifdef DILIGENT_DEBUG
@@ -887,11 +861,11 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         m_CommandBuffer.EndRenderPass();
 
-    auto& DescrSetBindInfo = m_DescrSetBindInfo[PipelineTypeToBindPointIndex(PIPELINE_TYPE_COMPUTE)];
+    auto& DescrSetBindInfo = GetDescriptorSetBindInfo(PIPELINE_TYPE_COMPUTE);
 
     if (DescrSetBindInfo.RequireUpdate())
     {
-        BindDescriptorSetsWithDynamicOffsets(DescrSetBindInfo);
+        CommitDescriptorSets(DescrSetBindInfo);
     }
 #if 0
 #    ifdef DILIGENT_DEBUG
@@ -912,11 +886,10 @@ void DeviceContextVkImpl::PrepareForRayTracing()
 {
     EnsureVkCmdBuffer();
 
-    auto& DescrSetBindInfo = m_DescrSetBindInfo[PipelineTypeToBindPointIndex(PIPELINE_TYPE_RAY_TRACING)];
-
+    auto& DescrSetBindInfo = GetDescriptorSetBindInfo(PIPELINE_TYPE_RAY_TRACING);
     if (DescrSetBindInfo.RequireUpdate())
     {
-        BindDescriptorSetsWithDynamicOffsets(DescrSetBindInfo);
+        CommitDescriptorSets(DescrSetBindInfo);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
