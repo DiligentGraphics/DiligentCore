@@ -1696,4 +1696,105 @@ TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
     }
 }
 
+TEST_F(DrawCommandTest, DynamicVertexBufferUpdate)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pDevice  = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawPSO);
+
+    RefCntAutoPtr<IBuffer> pVB;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name           = "Dynamic vertex buffer";
+        BuffDesc.BindFlags      = BIND_VERTEX_BUFFER;
+        BuffDesc.Usage          = USAGE_DYNAMIC;
+        BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+        BuffDesc.uiSizeInBytes  = sizeof(Vertex) * 3;
+
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pVB);
+        ASSERT_NE(pVB, nullptr);
+    }
+
+    IBuffer* pVBs[]    = {pVB};
+    Uint32   Offsets[] = {0};
+    pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    {
+        MapHelper<Vertex> VertData{pContext, pVB, MAP_WRITE, MAP_FLAG_DISCARD};
+        for (Uint32 i = 0; i < 3; ++i)
+            VertData[i] = Vert[i];
+    }
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(drawAttrs);
+
+    {
+        MapHelper<Vertex> VertData{pContext, pVB, MAP_WRITE, MAP_FLAG_DISCARD};
+        for (Uint32 i = 0; i < 3; ++i)
+            VertData[i] = Vert[3 + i];
+    }
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DynamicIndexBufferUpdate)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pDevice  = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        Vert[0], Vert[1], Vert[2],
+        Vert[3], Vert[5], Vert[4]
+    };
+    // clang-format on
+
+    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+
+    RefCntAutoPtr<IBuffer> pIB;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name           = "Dynamic index buffer";
+        BuffDesc.BindFlags      = BIND_INDEX_BUFFER;
+        BuffDesc.Usage          = USAGE_DYNAMIC;
+        BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+        BuffDesc.uiSizeInBytes  = sizeof(Uint32) * 3;
+
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pIB);
+        ASSERT_NE(pIB, nullptr);
+    }
+
+
+    IBuffer* pVBs[]    = {pVB};
+    Uint32   Offsets[] = {0};
+    pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    {
+        MapHelper<Uint32> IndData{pContext, pIB, MAP_WRITE, MAP_FLAG_DISCARD};
+        for (Uint32 i = 0; i < 3; ++i)
+            IndData[i] = i;
+    }
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    pContext->DrawIndexed(drawAttrs);
+
+    {
+        MapHelper<Uint32> IndData{pContext, pIB, MAP_WRITE, MAP_FLAG_DISCARD};
+        for (Uint32 i = 0; i < 3; ++i)
+            IndData[i] = 3 + i;
+    }
+
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
 } // namespace
