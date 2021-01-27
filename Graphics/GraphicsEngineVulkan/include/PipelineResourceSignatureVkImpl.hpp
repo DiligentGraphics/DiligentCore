@@ -97,11 +97,14 @@ public:
     struct ResourceAttribs
     {
     private:
-        static constexpr Uint32 _DescrTypeBits       = 4;
-        static constexpr Uint32 _DescrSetBits        = 1;
         static constexpr Uint32 _BindingIndexBits    = 16;
         static constexpr Uint32 _SamplerIndBits      = 16;
+        static constexpr Uint32 _ArraySizeBits       = 26;
+        static constexpr Uint32 _DescrTypeBits       = 4;
+        static constexpr Uint32 _DescrSetBits        = 1;
         static constexpr Uint32 _SamplerAssignedBits = 1;
+
+        static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _DescrTypeBits + _DescrSetBits + _SamplerAssignedBits) % 4 == 0, "Bits are not optimally packed");
 
         static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
         static_assert((1u << _DescrSetBits) >= MAX_DESCR_SET_PER_SIGNATURE, "Not enough bits to store descriptor set index");
@@ -113,6 +116,7 @@ public:
         // clang-format off
         const Uint32  BindingIndex         : _BindingIndexBits;    // Binding in the descriptor set
         const Uint32  SamplerInd           : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
+        const Uint32  ArraySize            : _ArraySizeBits;       // Array size
         const Uint32  DescrType            : _DescrTypeBits;       // Descriptor type (DescriptorType)
         const Uint32  DescrSet             : _DescrSetBits;        // Descriptor set (0 or 1)
         const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
@@ -122,14 +126,16 @@ public:
 
         ResourceAttribs(Uint32         _BindingIndex,
                         Uint32         _SamplerInd,
+                        Uint32         _ArraySize,
                         DescriptorType _DescrType,
                         Uint32         _DescrSet,
                         bool           ImtblSamplerAssigned,
                         Uint32         _SRBCacheOffset,
                         Uint32         _StaticCacheOffset) noexcept :
             // clang-format off
-            BindingIndex         {_BindingIndex                  },   
+            BindingIndex         {_BindingIndex                  },  
             SamplerInd           {_SamplerInd                    },
+            ArraySize            {_ArraySize                     },
             DescrType            {static_cast<Uint32>(_DescrType)},
             DescrSet             {_DescrSet                      },
             ImtblSamplerAssigned {ImtblSamplerAssigned ? 1u : 0u },
@@ -138,6 +144,7 @@ public:
         // clang-format on
         {
             VERIFY(BindingIndex == _BindingIndex, "Binding index (", _BindingIndex, ") exceeds maximum representable value");
+            VERIFY(ArraySize == _ArraySize, "Array size (", _ArraySize, ") exceeds maximum representable value");
             VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
             VERIFY(Type() == _DescrType, "Descriptor type (", static_cast<Uint32>(_DescrType), ") exceeds maximum representable value");
             VERIFY(DescrSet == _DescrSet, "Descriptor set (", _DescrSet, ") exceeds maximum representable value");
