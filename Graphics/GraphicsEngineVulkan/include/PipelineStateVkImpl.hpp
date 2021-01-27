@@ -79,23 +79,6 @@ public:
     /// Implementation of IPipelineState::GetResourceSignature() in Vulkan backend.
     virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final { return m_PipelineLayout.GetSignature(Index); }
 
-    /// Implementation of IPipelineState::CreateShaderResourceBinding() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
-                                                                bool                     InitStaticResources) override final;
-
-    /// Implementation of IPipelineState::GetStaticVariableByName() in Vulkan backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
-                                                                                const Char* Name) override final;
-
-    /// Implementation of IPipelineState::GetStaticVariableByIndex() in Vulkan backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
-                                                                                 Uint32      Index) override final;
-
-    /// Implementation of IPipelineState::GetStaticVariableCount() in Vulkan backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
-
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final;
-
     const PipelineLayoutVk& GetPipelineLayout() const { return m_PipelineLayout; }
 
     static RenderPassDesc GetImplicitRenderPassDesc(Uint32                                                        NumRenderTargets,

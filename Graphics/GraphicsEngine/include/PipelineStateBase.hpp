@@ -259,6 +259,71 @@ public:
         UNEXPECTED("Can't find shader group '", Name, "'.");
     }
 
+    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
+                                                                bool                     InitStaticResources) override final
+    {
+        *ppShaderResourceBinding = nullptr;
+
+        if (this->GetResourceSignatureCount() != 1)
+        {
+            LOG_ERROR_MESSAGE("PipelineState::CreateShaderResourceBinding is only allowed for pipelines that use a single "
+                              "resource signature. Use IPipelineResourceSignature::CreateShaderResourceBinding instead.");
+            return;
+        }
+
+        return this->GetResourceSignature(0)->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
+    }
+
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
+                                                                                const Char* Name) override final
+    {
+        if (this->GetResourceSignatureCount() != 1)
+        {
+            LOG_ERROR_MESSAGE("PipelineState::CreateShaderResourceBinding is only allowed for pipelines that use a single "
+                              "resource signature. Use IPipelineResourceSignature::GetStaticVariableByName instead.");
+            return nullptr;
+        }
+
+        return this->GetResourceSignature(0)->GetStaticVariableByName(ShaderType, Name);
+    }
+
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
+                                                                                 Uint32      Index) override final
+    {
+        if (this->GetResourceSignatureCount() != 1)
+        {
+            LOG_ERROR_MESSAGE("PipelineState::GetStaticVariableByIndex is only allowed for pipelines that use a single "
+                              "resource signature. Use IPipelineResourceSignature::GetStaticVariableByIndex instead.");
+            return nullptr;
+        }
+
+        return this->GetResourceSignature(0)->GetStaticVariableByIndex(ShaderType, Index);
+    }
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
+    {
+        if (this->GetResourceSignatureCount() != 1)
+        {
+            LOG_ERROR_MESSAGE("PipelineState::GetStaticVariableCount is only allowed for pipelines that use a single "
+                              "resource signature. Use IPipelineResourceSignature::GetStaticVariableCount instead.");
+            return 0;
+        }
+
+        return this->GetResourceSignature(0)->GetStaticVariableCount(ShaderType);
+    }
+
+    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final
+    {
+        if (this->GetResourceSignatureCount() != 1)
+        {
+            LOG_ERROR_MESSAGE("PipelineState::BindStaticResources is only allowed for pipelines that use a single "
+                              "resource signature. Use IPipelineResourceSignature::BindStaticResources instead.");
+            return;
+        }
+
+        return this->GetResourceSignature(0)->BindStaticResources(ShaderFlags, pResourceMapping, Flags);
+    }
+
 protected:
     using TNameToGroupIndexMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
 
