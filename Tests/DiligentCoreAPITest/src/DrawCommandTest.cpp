@@ -28,6 +28,7 @@
 #include "TestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
+#include "MapHelper.hpp"
 
 #include "gtest/gtest.h"
 
@@ -118,6 +119,39 @@ void main(in  VSInput VSIn,
     PSIn.Pos.xy = VSIn.Pos.xy * VSIn.ScaleBias.xy + VSIn.ScaleBias.zw;
     PSIn.Pos.zw = VSIn.Pos.zw;
     PSIn.Color  = VSIn.Color;
+}
+)"
+};
+
+const std::string DrawTest_DynamicBuffers{
+R"(
+
+cbuffer DynamicCB0
+{
+    float4 Positions[4];
+}
+
+cbuffer DynamicCB1
+{
+    float4 Colors[4];
+}
+
+cbuffer ImmutableCB
+{
+    float4 PositionZW;
+}
+
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
+};
+
+void main(in  uint    VertId : SV_VertexID,
+          out PSInput PSIn) 
+{
+    PSIn.Pos   = float4(Positions[VertId].xy, PositionZW.xy);
+    PSIn.Color = Colors[VertId];
 }
 )"
 };
@@ -435,6 +469,15 @@ protected:
         VERIFY_EXPR(pBuffer);
         return pBuffer;
     }
+
+    static void TestDynamicBufferUpdates(IShader*                      pVS,
+                                         IShader*                      pPS,
+                                         IBuffer*                      pDynamicCB0,
+                                         IBuffer*                      pDynamicCB1,
+                                         IBuffer*                      pImmutableCB,
+                                         SHADER_RESOURCE_VARIABLE_TYPE DynamicCB0Type,
+                                         SHADER_RESOURCE_VARIABLE_TYPE DynamicCB1Type,
+                                         SHADER_RESOURCE_VARIABLE_TYPE ImmutableCBType);
 
     static RefCntAutoPtr<IPipelineState> sm_pDrawProceduralPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
@@ -1480,6 +1523,177 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
     pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff);
 
     Present();
+}
+
+void DrawCommandTest::TestDynamicBufferUpdates(IShader*                      pVS,
+                                               IShader*                      pPS,
+                                               IBuffer*                      pDynamicCB0,
+                                               IBuffer*                      pDynamicCB1,
+                                               IBuffer*                      pImmutableCB,
+                                               SHADER_RESOURCE_VARIABLE_TYPE DynamicCB0Type,
+                                               SHADER_RESOURCE_VARIABLE_TYPE DynamicCB1Type,
+                                               SHADER_RESOURCE_VARIABLE_TYPE ImmutableCBType)
+{
+    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.Name = "Draw command test - dynamic buffer update";
+
+    PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+    GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderResourceVariableDesc Variables[] =
+        {
+            {SHADER_TYPE_VERTEX, "DynamicCB0", DynamicCB0Type},
+            {SHADER_TYPE_VERTEX, "DynamicCB1", DynamicCB1Type},
+            {SHADER_TYPE_VERTEX, "ImmutableCB", ImmutableCBType} //
+        };
+    PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+    PSODesc.ResourceLayout.Variables    = Variables;
+
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pPS = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+
+    if (DynamicCB0Type == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "DynamicCB0")->Set(pDynamicCB0);
+    if (DynamicCB1Type == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "DynamicCB1")->Set(pDynamicCB1);
+    if (ImmutableCBType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "ImmutableCB")->Set(pImmutableCB);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, true);
+
+    if (DynamicCB0Type != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "DynamicCB0")->Set(pDynamicCB0);
+    if (DynamicCB1Type != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "DynamicCB1")->Set(pDynamicCB1);
+    if (ImmutableCBType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "ImmutableCB")->Set(pImmutableCB);
+
+    SetRenderTargets(pPSO);
+
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    {
+        MapHelper<float4> PosData{pContext, pDynamicCB0, MAP_WRITE, MAP_FLAG_DISCARD};
+        for (Uint32 i = 0; i < 3; ++i)
+        {
+            PosData[i] = Pos[i];
+        }
+    }
+
+    {
+        MapHelper<float4> ColorData{pContext, pDynamicCB1, MAP_WRITE, MAP_FLAG_DISCARD};
+        for (Uint32 i = 0; i < 3; ++i)
+            ColorData[i] = Color[i];
+    }
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(drawAttrs);
+
+    {
+        MapHelper<float4> PosData{pContext, pDynamicCB0, MAP_WRITE, MAP_FLAG_DISCARD};
+        for (Uint32 i = 0; i < 3; ++i)
+            PosData[i] = Pos[3 + i];
+    }
+
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+// Test dynamic buffer update between two draw calls without committing and SRB
+TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.UseCombinedTextureSamplers = true;
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Draw command test dynamic buffer updates - VS";
+        ShaderCI.Source          = HLSL::DrawTest_DynamicBuffers.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Draw command test dynamic buffer updates - PS";
+        ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    RefCntAutoPtr<IBuffer> pDynamicCB0;
+    RefCntAutoPtr<IBuffer> pDynamicCB1;
+    RefCntAutoPtr<IBuffer> pImmutableCB;
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name           = "Dynamic buffer update test - dynamic CB0";
+        BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+        BuffDesc.Usage          = USAGE_DYNAMIC;
+        BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+        BuffDesc.uiSizeInBytes  = sizeof(float) * 16;
+
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pDynamicCB0);
+        ASSERT_NE(pDynamicCB0, nullptr);
+
+        BuffDesc.Name = "Dynamic buffer update test - dynamic CB1";
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pDynamicCB1);
+        ASSERT_NE(pDynamicCB1, nullptr);
+
+        {
+            BuffDesc.Usage          = USAGE_IMMUTABLE;
+            BuffDesc.CPUAccessFlags = CPU_ACCESS_NONE;
+            BuffDesc.Name           = "Dynamic buffer update test - immutable CB";
+
+            float      Data[16] = {0, 1};
+            BufferData InitialData;
+            InitialData.pData    = Data;
+            InitialData.DataSize = sizeof(Data);
+            pDevice->CreateBuffer(BuffDesc, &InitialData, &pImmutableCB);
+            ASSERT_NE(pImmutableCB, nullptr);
+        }
+    }
+
+    for (Uint32 CB0Type = 0; CB0Type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++CB0Type)
+    {
+        for (Uint32 CB1Type = 0; CB1Type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++CB1Type)
+        {
+            for (Uint32 CB2Type = 0; CB2Type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++CB2Type)
+            {
+
+                TestDynamicBufferUpdates(pVS, pPS, pDynamicCB0, pDynamicCB1, pImmutableCB,
+                                         static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(CB0Type),
+                                         static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(CB1Type),
+                                         static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(CB2Type));
+            }
+        }
+    }
 }
 
 } // namespace
