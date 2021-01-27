@@ -80,6 +80,8 @@ protected:
             pDevice->CreateBuffer(BuffDesc, &BuffData, &pConstBuff);
             ASSERT_NE(pConstBuff, nullptr);
         }
+
+        pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/PipelineResourceSignature", &pShaderSourceFactory);
     }
 
     static void TearDownTestSuite()
@@ -126,17 +128,72 @@ protected:
         return pPSO;
     }
 
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE        ShaderType,
+                                                       const char*        File,
+                                                       const char*        EntryPoint,
+                                                       const char*        Name,
+                                                       bool               UseCombinedSamplers,
+                                                       const ShaderMacro* Macros = nullptr)
+    {
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.FilePath                   = File;
+        ShaderCI.Macros                     = Macros;
+        ShaderCI.Desc.Name                  = Name;
+        ShaderCI.EntryPoint                 = EntryPoint;
+        ShaderCI.Desc.ShaderType            = ShaderType;
+        ShaderCI.UseCombinedTextureSamplers = UseCombinedSamplers;
 
-    static RefCntAutoPtr<ITextureView>                pRTV;
-    static std::array<RefCntAutoPtr<ITextureView>, 4> pTexSRVs;
-    static RefCntAutoPtr<ISampler>                    pSampler;
-    static RefCntAutoPtr<IBuffer>                     pConstBuff;
+        RefCntAutoPtr<IShader> pShader;
+        TestingEnvironment::GetInstance()->GetDevice()->CreateShader(ShaderCI, &pShader);
+        return pShader;
+    }
+
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE        ShaderType,
+                                                       const char*        File,
+                                                       const char*        EntryPoint,
+                                                       const char*        Name,
+                                                       const ShaderMacro* Macros = nullptr)
+    {
+        return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, false, Macros);
+    }
+
+    static RefCntAutoPtr<IShader> CreateShaderFromSource(SHADER_TYPE        ShaderType,
+                                                         const char*        Source,
+                                                         const char*        EntryPoint,
+                                                         const char*        Name,
+                                                         bool               UseCombinedSamplers,
+                                                         const ShaderMacro* Macros = nullptr)
+    {
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.Source                     = Source;
+        ShaderCI.Macros                     = Macros;
+        ShaderCI.Desc.Name                  = Name;
+        ShaderCI.EntryPoint                 = EntryPoint;
+        ShaderCI.Desc.ShaderType            = ShaderType;
+        ShaderCI.UseCombinedTextureSamplers = UseCombinedSamplers;
+
+        RefCntAutoPtr<IShader> pShader;
+        TestingEnvironment::GetInstance()->GetDevice()->CreateShader(ShaderCI, &pShader);
+        return pShader;
+    }
+
+
+    static RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    static RefCntAutoPtr<ITextureView>                    pRTV;
+    static std::array<RefCntAutoPtr<ITextureView>, 4>     pTexSRVs;
+    static RefCntAutoPtr<ISampler>                        pSampler;
+    static RefCntAutoPtr<IBuffer>                         pConstBuff;
 };
 
-RefCntAutoPtr<ITextureView>                PipelineResourceSignatureTest::pRTV;
-std::array<RefCntAutoPtr<ITextureView>, 4> PipelineResourceSignatureTest::pTexSRVs;
-RefCntAutoPtr<ISampler>                    PipelineResourceSignatureTest::pSampler;
-RefCntAutoPtr<IBuffer>                     PipelineResourceSignatureTest::pConstBuff;
+RefCntAutoPtr<IShaderSourceInputStreamFactory> PipelineResourceSignatureTest::pShaderSourceFactory;
+RefCntAutoPtr<ITextureView>                    PipelineResourceSignatureTest::pRTV;
+std::array<RefCntAutoPtr<ITextureView>, 4>     PipelineResourceSignatureTest::pTexSRVs;
+RefCntAutoPtr<ISampler>                        PipelineResourceSignatureTest::pSampler;
+RefCntAutoPtr<IBuffer>                         PipelineResourceSignatureTest::pConstBuff;
 
 
 #define SET_STATIC_VAR(PRS, ShaderFlags, VarName, SetMethod, ...)                                \
@@ -166,13 +223,6 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
-    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/PipelineResourceSignature", &pShaderSourceFactory);
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.FilePath                   = "VariableTypes.hlsl";
-
     static constexpr Uint32 StaticTexArraySize  = 2;
     static constexpr Uint32 MutableTexArraySize = 4;
     static constexpr Uint32 DynamicTexArraySize = 3;
@@ -180,24 +230,10 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
     Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
     Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
     Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
-    ShaderCI.Macros = Macros;
 
-    RefCntAutoPtr<IShader> pVS, pPS;
-    {
-        ShaderCI.Desc.Name       = "Res signature variable types test: VS";
-        ShaderCI.EntryPoint      = "VSMain";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        pDevice->CreateShader(ShaderCI, &pVS);
-        ASSERT_NE(pVS, nullptr);
-    }
-
-    {
-        ShaderCI.Desc.Name       = "Res signature variable types test: PS";
-        ShaderCI.EntryPoint      = "PSMain";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        pDevice->CreateShader(ShaderCI, &pPS);
-        ASSERT_NE(pPS, nullptr);
-    }
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "VariableTypes.hlsl", "VSMain", "PRS variable types test: VS", Macros);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "VariableTypes.hlsl", "PSMain", "PRS variable types test: PS", Macros);
+    ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Variable types test";
@@ -259,29 +295,9 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
-    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/PipelineResourceSignature", &pShaderSourceFactory);
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.FilePath                   = "MultiSignatures.hlsl";
-
-    RefCntAutoPtr<IShader> pVS, pPS;
-    {
-        ShaderCI.Desc.Name       = "Multi signatures test: VS";
-        ShaderCI.EntryPoint      = "VSMain";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        pDevice->CreateShader(ShaderCI, &pVS);
-        ASSERT_NE(pVS, nullptr);
-    }
-
-    {
-        ShaderCI.Desc.Name       = "Multi signatures test: PS";
-        ShaderCI.EntryPoint      = "PSMain";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        pDevice->CreateShader(ShaderCI, &pPS);
-        ASSERT_NE(pPS, nullptr);
-    }
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "MultiSignatures.hlsl", "VSMain", "PRS multi signatures test: VS");
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "MultiSignatures.hlsl", "PSMain", "PRS multi signatures test: PS");
+    ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
 
@@ -348,7 +364,6 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     pContext->Draw(DrawAttrs);
 }
 
-
 TEST_F(PipelineResourceSignatureTest, StaticSamplers)
 {
     auto* const pEnv     = TestingEnvironment::GetInstance();
@@ -357,29 +372,9 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
-    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/PipelineResourceSignature", &pShaderSourceFactory);
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.FilePath                   = "StaticSamplers.hlsl";
-
-    RefCntAutoPtr<IShader> pVS, pPS;
-    {
-        ShaderCI.Desc.Name       = "Res signature static samplers test: VS";
-        ShaderCI.EntryPoint      = "VSMain";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        pDevice->CreateShader(ShaderCI, &pVS);
-        ASSERT_NE(pVS, nullptr);
-    }
-
-    {
-        ShaderCI.Desc.Name       = "Res signature static samplers test: PS";
-        ShaderCI.EntryPoint      = "PSMain";
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        pDevice->CreateShader(ShaderCI, &pPS);
-        ASSERT_NE(pPS, nullptr);
-    }
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "StaticSamplers.hlsl", "VSMain", "PRS static samplers test: VS");
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "StaticSamplers.hlsl", "PSMain", "PRS static samplers test: PS");
+    ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Variable types test";
@@ -498,30 +493,9 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers2)
     GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-    ShaderCI.UseCombinedTextureSamplers = true;
-
-    RefCntAutoPtr<IShader> pVS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "PRS test - VS";
-        ShaderCI.Source          = HLSL::PRSTest1_VS.c_str();
-        pDevice->CreateShader(ShaderCI, &pVS);
-        ASSERT_NE(pVS, nullptr);
-    }
-
-    RefCntAutoPtr<IShader> pPS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "PRS test - PS";
-        ShaderCI.Source          = HLSL::PRSTest1_PS.c_str();
-        pDevice->CreateShader(ShaderCI, &pPS);
-        ASSERT_NE(pPS, nullptr);
-    }
+    auto pVS = CreateShaderFromSource(SHADER_TYPE_VERTEX, HLSL::PRSTest1_VS.c_str(), "main", "PRS test 1 - VS", true);
+    auto pPS = CreateShaderFromSource(SHADER_TYPE_PIXEL, HLSL::PRSTest1_PS.c_str(), "main", "PRS test 1 - PS", true);
+    ASSERT_TRUE(pVS && pPS);
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
@@ -654,40 +628,10 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
     GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-    ShaderCI.UseCombinedTextureSamplers = true;
-
-    RefCntAutoPtr<IShader> pVS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "PRS test - VS";
-        ShaderCI.Source          = HLSL::PRSTest1_VS.c_str();
-        pDevice->CreateShader(ShaderCI, &pVS);
-        ASSERT_NE(pVS, nullptr);
-    }
-
-    RefCntAutoPtr<IShader> pPS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "PRS test - PS";
-        ShaderCI.Source          = HLSL::PRSTest1_PS.c_str();
-        pDevice->CreateShader(ShaderCI, &pPS);
-        ASSERT_NE(pPS, nullptr);
-    }
-
-    RefCntAutoPtr<IShader> pPS2;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "PRS test 2 - PS";
-        ShaderCI.Source          = HLSL::PRSTest2_PS.c_str();
-        pDevice->CreateShader(ShaderCI, &pPS2);
-        ASSERT_NE(pPS, nullptr);
-    }
+    auto pVS  = CreateShaderFromSource(SHADER_TYPE_VERTEX, HLSL::PRSTest1_VS.c_str(), "main", "PRS test - VS", true);
+    auto pPS  = CreateShaderFromSource(SHADER_TYPE_PIXEL, HLSL::PRSTest1_PS.c_str(), "main", "PRS test - PS", true);
+    auto pPS2 = CreateShaderFromSource(SHADER_TYPE_PIXEL, HLSL::PRSTest2_PS.c_str(), "main", "PRS test 2 - PS", true);
+    ASSERT_TRUE(pVS && pPS && pPS2);
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
@@ -845,30 +789,9 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.ShaderCompiler             = SHADER_COMPILER_DXC;
-    ShaderCI.UseCombinedTextureSamplers = true;
-
-    RefCntAutoPtr<IShader> pVS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "PRS test - VS";
-        ShaderCI.Source          = HLSL::PRSTest3_VS.c_str();
-        pDevice->CreateShader(ShaderCI, &pVS);
-        ASSERT_NE(pVS, nullptr);
-    }
-
-    RefCntAutoPtr<IShader> pPS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "PRS test - PS";
-        ShaderCI.Source          = HLSL::PRSTest3_PS.c_str();
-        pDevice->CreateShader(ShaderCI, &pPS);
-        ASSERT_NE(pPS, nullptr);
-    }
+    auto pVS = CreateShaderFromSource(SHADER_TYPE_VERTEX, HLSL::PRSTest3_VS.c_str(), "main", "PRS test 3 - VS", true);
+    auto pPS = CreateShaderFromSource(SHADER_TYPE_PIXEL, HLSL::PRSTest3_PS.c_str(), "main", "PRS test 3 - PS", true);
+    ASSERT_TRUE(pVS && pPS);
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
@@ -886,16 +809,7 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     ASSERT_EQ(pGraphicsPSO->GetResourceSignature(0), pSignaturePS);
     ASSERT_EQ(pGraphicsPSO->GetResourceSignature(1), pSignatureVS);
 
-
-    RefCntAutoPtr<IShader> pMS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_MESH;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "PRS test - MS";
-        ShaderCI.Source          = HLSL::PRSTest3_MS.c_str();
-        pDevice->CreateShader(ShaderCI, &pMS);
-        ASSERT_NE(pMS, nullptr);
-    }
+    auto pMS = CreateShaderFromSource(SHADER_TYPE_VERTEX, HLSL::PRSTest3_MS.c_str(), "main", "PRS test - MS", true);
 
     PSODesc.PipelineType               = PIPELINE_TYPE_MESH;
     GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_UNDEFINED; // unused
