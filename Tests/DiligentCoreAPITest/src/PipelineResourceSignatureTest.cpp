@@ -30,6 +30,7 @@
 
 #include "TestingEnvironment.hpp"
 #include "ShaderMacroHelper.hpp"
+#include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
 
@@ -362,6 +363,83 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
 
     DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
     pContext->Draw(DrawAttrs);
+}
+
+
+TEST_F(PipelineResourceSignatureTest, SingleVarType)
+{
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto*       pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "SingleVarType.hlsl", "VSMain", "PRS single var type test: VS");
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "SingleVarType.hlsl", "PSMain", "PRS single var type test: PS");
+    ASSERT_TRUE(pVS && pPS);
+
+    for (Uint32 var_type = 0; var_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++var_type)
+    {
+        const auto VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(var_type);
+
+        const PipelineResourceDesc Resources[] = //
+            {
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
+            };
+
+        std::string Name = std::string{"PRS test - "} + GetShaderVariableTypeLiteralName(VarType) + " vars";
+
+        PipelineResourceSignatureDesc PRSDesc;
+        PRSDesc.Name         = Name.c_str();
+        PRSDesc.Resources    = Resources;
+        PRSDesc.NumResources = _countof(Resources);
+
+        ImmutableSamplerDesc ImmutableSamplers[] = //
+            {
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Sampler", SamplerDesc{}} //
+            };
+        PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+        PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+
+        RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+        pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+        ASSERT_TRUE(pPRS);
+
+        if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRVs[0]);
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, pTexSRVs[0]);
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, pConstBuff);
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, pConstBuff);
+        }
+
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+
+        auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
+        ASSERT_TRUE(pPSO);
+
+        pPRS->CreateShaderResourceBinding(&pSRB, true);
+        if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRVs[0]);
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, pTexSRVs[0]);
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, pConstBuff);
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, pConstBuff);
+        }
+
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        ITextureView* ppRTVs[] = {pRTV};
+        pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pContext->SetPipelineState(pPSO);
+
+        DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+        pContext->Draw(DrawAttrs);
+    }
 }
 
 TEST_F(PipelineResourceSignatureTest, StaticSamplers)
