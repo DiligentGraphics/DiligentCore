@@ -117,7 +117,7 @@ private:
     const ResourceAttribs& GetAttribs(Uint32 Index) const
     {
         VERIFY_EXPR(m_pSignature);
-        return m_pSignature->GetAttribs(Index);
+        return m_pSignature->GetResourceAttribs(Index);
     }
 
 private:

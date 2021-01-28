@@ -531,14 +531,14 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     else
         BindInfo.ClearDynamicBuffersPresent(SRBIndex);
 
-    if (pSignature->HasStaticDescrSet())
+    if (pSignature->HasDescriptorSet(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE))
     {
         VERIFY_EXPR(DSIndex < DSCount);
         BindInfo.vkSets[DSOffset + DSIndex] = ResourceCache.GetDescriptorSet(DSIndex).GetVkDescriptorSet();
         ++DSIndex;
     }
 
-    if (auto VkLayout = pSignature->GetDynamicVkDescriptorSetLayout())
+    if (auto vkLayout = pSignature->GetVkDescriptorSetLayout(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC))
     {
         VERIFY_EXPR(DSIndex < DSCount);
         VERIFY_EXPR(ResourceCache.GetDescriptorSet(DSIndex).GetVkDescriptorSet() == VK_NULL_HANDLE);
@@ -553,7 +553,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         DynamicDescrSetName = _DynamicDescrSetName.c_str();
 #endif
         // Allocate vulkan descriptor set for dynamic resources
-        DynamicDescrSet = AllocateDynamicDescriptorSet(VkLayout, DynamicDescrSetName);
+        DynamicDescrSet = AllocateDynamicDescriptorSet(vkLayout, DynamicDescrSetName);
 
         // Commit all dynamic resource descriptors
         pSignature->CommitDynamicResources(ResourceCache, DynamicDescrSet);

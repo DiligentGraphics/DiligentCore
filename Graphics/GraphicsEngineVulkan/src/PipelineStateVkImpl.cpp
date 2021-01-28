@@ -594,6 +594,7 @@ void VerifyResourceMerge(const SPIRVShaderResourceAttribs& ExistingRes,
                   "' exists in multiple shaders from the same shader stage, but its multisample flag is not consistent between "
                   "shaders. All variables with the same name from the same shader stage must either be multisample or non-multisample.");
 }
+
 } // namespace
 
 

@@ -41,6 +41,9 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
         LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Uint32{Desc.BindingIndex}, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
 
+    if (Desc.NumResources > MAX_RESOURCES_IN_SIGNATURE)
+        LOG_PRS_ERROR_AND_THROW("Desc.NumResources (", Uint32{Desc.NumResources}, ") exceeds the maximum allowed value (", MAX_RESOURCES_IN_SIGNATURE, ").");
+
     std::unordered_map<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResourceShaderStages;
 
     for (Uint32 i = 0; i < Desc.NumResources; ++i)

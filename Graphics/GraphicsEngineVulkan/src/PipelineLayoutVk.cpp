@@ -78,9 +78,9 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
                " conflicts with another resource signature '", m_Signatures[Index]->GetDesc().Name,
                "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
 
-        for (Uint32 s = 0, StageCount = pSignature->GetNumShaderStages(); s < StageCount; ++s)
+        for (Uint32 s = 0, StageCount = pSignature->GetNumActiveShaderStages(); s < StageCount; ++s)
         {
-            const auto ShaderType = pSignature->GetShaderStageType(s);
+            const auto ShaderType = pSignature->GetActiveShaderStageType(s);
             VERIFY(IsConsistentShaderType(ShaderType, PipelineType),
                    "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
                    " has shader stage '", GetShaderTypeLiteralName(ShaderType), "' that is not compatible with pipeline type '",
@@ -92,7 +92,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
         m_Signatures[Index] = pSignature;
     }
 
-    std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE> DescSetLayouts;
+    std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureVkImpl::MAX_DESCRIPTOR_SETS> DescSetLayouts;
 
     Uint32 DescSetLayoutCount        = 0;
     Uint32 DynamicUniformBufferCount = 0;
@@ -108,11 +108,11 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
                "Descriptor set layout count (", DescSetLayoutCount, ") exceeds the maximum representable value");
         m_FirstDescrSetIndex[i] = static_cast<FirstDescrSetIndexArrayType::value_type>(DescSetLayoutCount);
 
-        auto StaticDSLayout  = pSignature->GetStaticVkDescriptorSetLayout();
-        auto DynamicDSLayout = pSignature->GetDynamicVkDescriptorSetLayout();
+        auto vkStaticDSLayout  = pSignature->GetVkDescriptorSetLayout(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE);
+        auto vkDynamicDSLayout = pSignature->GetVkDescriptorSetLayout(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC);
 
-        if (StaticDSLayout != VK_NULL_HANDLE) DescSetLayouts[DescSetLayoutCount++] = StaticDSLayout;
-        if (DynamicDSLayout != VK_NULL_HANDLE) DescSetLayouts[DescSetLayoutCount++] = DynamicDSLayout;
+        if (vkStaticDSLayout != VK_NULL_HANDLE) DescSetLayouts[DescSetLayoutCount++] = vkStaticDSLayout;
+        if (vkDynamicDSLayout != VK_NULL_HANDLE) DescSetLayouts[DescSetLayoutCount++] = vkDynamicDSLayout;
 
         DynamicUniformBufferCount += pSignature->GetDynamicUniformBufferCount();
         DynamicStorageBufferCount += pSignature->GetDynamicStorageBufferCount();
@@ -180,7 +180,7 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
         for (Uint32 r = 0, ResCount = pSignature->GetTotalResourceCount(); r < ResCount; ++r)
         {
             const auto& ResDesc = pSignature->GetResourceDesc(r);
-            const auto& Attr    = pSignature->GetAttribs(r);
+            const auto& Attr    = pSignature->GetResourceAttribs(r);
 
             if ((ResDesc.ShaderStages & Stage) && strcmp(ResDesc.Name, Name) == 0)
             {

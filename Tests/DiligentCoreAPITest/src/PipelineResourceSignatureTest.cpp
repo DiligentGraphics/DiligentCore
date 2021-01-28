@@ -946,4 +946,5 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     DrawMeshAttribs drawMeshAttrs(1, DRAW_FLAG_VERIFY_ALL);
     pContext->DrawMesh(drawMeshAttrs);
 }
+
 } // namespace Diligent

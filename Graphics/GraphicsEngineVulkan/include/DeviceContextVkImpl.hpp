@@ -483,6 +483,8 @@ private:
     // Graphics/mesh, compute, ray tracing
     static constexpr Uint32 NUM_PIPELINE_BIND_POINTS = 3;
 
+    static constexpr Uint32 MAX_DESCR_SET_PER_SIGNATURE = PipelineResourceSignatureVkImpl::MAX_DESCRIPTOR_SETS;
+
     struct DescriptorSetBindInfo
     {
         // Do not use strong references!

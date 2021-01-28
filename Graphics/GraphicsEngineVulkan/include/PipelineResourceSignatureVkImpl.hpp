@@ -38,6 +38,7 @@
 
 namespace Diligent
 {
+
 class RenderDeviceVkImpl;
 class ShaderResourceCacheVk;
 class ShaderVariableManagerVk;
@@ -72,6 +73,21 @@ class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBa
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceVkImpl>;
 
+    // Descriptor set identifier (this is not the descriptor set index in the set layout!)
+    enum DESCRIPTOR_SET_ID : size_t
+    {
+        // Static/mutable variables descriptor set id
+        DESCRIPTOR_SET_ID_STATIC_MUTABLE = 0,
+
+        // Dynamic variables descriptor set id
+        DESCRIPTOR_SET_ID_DYNAMIC,
+
+        DESCRIPTOR_SET_ID_NUM_SETS
+    };
+
+    // Static/mutable and dynamic descriptor sets
+    static constexpr Uint32 MAX_DESCRIPTOR_SETS = DESCRIPTOR_SET_ID_NUM_SETS;
+
     PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
                                     RenderDeviceVkImpl*                  pDevice,
                                     const PipelineResourceSignatureDesc& Desc,
@@ -81,11 +97,20 @@ public:
     Uint32 GetDynamicOffsetCount() const { return m_DynamicUniformBufferCount + m_DynamicStorageBufferCount; }
     Uint32 GetDynamicUniformBufferCount() const { return m_DynamicUniformBufferCount; }
     Uint32 GetDynamicStorageBufferCount() const { return m_DynamicStorageBufferCount; }
-    Uint32 GetNumDescriptorSets() const;
+    Uint32 GetNumDescriptorSets() const
+    {
+        static_assert(DESCRIPTOR_SET_ID_NUM_SETS == 2, "Please update this method with new descriptor set id");
+        return (HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) ? 1 : 0) + (HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC) ? 1 : 0);
+    }
 
+    // Returns shader stages that have resources.
     SHADER_TYPE GetActiveShaderStages() const { return m_ShaderStages; }
-    Uint32      GetNumShaderStages() const { return m_NumShaderStages; }
-    SHADER_TYPE GetShaderStageType(Uint32 StageIndex) const;
+
+    // Returns the number of shader stages that have resources.
+    Uint32 GetNumActiveShaderStages() const { return m_NumShaderStages; }
+
+    // Returns the type of the active shader stage with the given index.
+    SHADER_TYPE GetActiveShaderStageType(Uint32 StageIndex) const;
 
     enum class CacheContentType
     {
@@ -107,8 +132,8 @@ public:
         static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _DescrTypeBits + _DescrSetBits + _SamplerAssignedBits) % 4 == 0, "Bits are not optimally packed");
 
         static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
-        static_assert((1u << _DescrSetBits) >= MAX_DESCR_SET_PER_SIGNATURE, "Not enough bits to store descriptor set index");
-        static_assert((1u << _BindingIndexBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store resource binding index");
+        static_assert((1u << _DescrSetBits) >= MAX_DESCRIPTOR_SETS, "Not enough bits to store descriptor set index");
+        static_assert((1u << _BindingIndexBits) >= MAX_DESCRIPTOR_SETS, "Not enough bits to store resource binding index");
 
     public:
         static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
@@ -120,6 +145,7 @@ public:
         const Uint32  DescrType            : _DescrTypeBits;       // Descriptor type (DescriptorType)
         const Uint32  DescrSet             : _DescrSetBits;        // Descriptor set (0 or 1)
         const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
+
         const Uint32  SRBCacheOffset;                              // Offset in the SRB resource cache
         const Uint32  StaticCacheOffset;                           // Offset in the static resource cache
         // clang-format on
@@ -146,7 +172,7 @@ public:
             VERIFY(BindingIndex == _BindingIndex, "Binding index (", _BindingIndex, ") exceeds maximum representable value");
             VERIFY(ArraySize == _ArraySize, "Array size (", _ArraySize, ") exceeds maximum representable value");
             VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
-            VERIFY(Type() == _DescrType, "Descriptor type (", static_cast<Uint32>(_DescrType), ") exceeds maximum representable value");
+            VERIFY(GetDescriptorType() == _DescrType, "Descriptor type (", static_cast<Uint32>(_DescrType), ") exceeds maximum representable value");
             VERIFY(DescrSet == _DescrSet, "Descriptor set (", _DescrSet, ") exceeds maximum representable value");
         }
 
@@ -155,11 +181,11 @@ public:
             return CacheType == CacheContentType::SRB ? SRBCacheOffset : StaticCacheOffset;
         }
 
-        DescriptorType Type() const { return static_cast<DescriptorType>(DescrType); }
+        DescriptorType GetDescriptorType() const { return static_cast<DescriptorType>(DescrType); }
         bool           IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
     };
 
-    const ResourceAttribs& GetAttribs(Uint32 ResIndex) const
+    const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
     {
         VERIFY_EXPR(ResIndex < m_Desc.NumResources);
         return m_pResourceAttribs[ResIndex];
@@ -191,11 +217,9 @@ public:
         return m_Desc.ImmutableSamplers[SampIndex];
     }
 
-    VkDescriptorSetLayout GetStaticVkDescriptorSetLayout() const { return m_VkDescSetLayouts[0]; }
-    VkDescriptorSetLayout GetDynamicVkDescriptorSetLayout() const { return m_VkDescSetLayouts[1]; }
+    VkDescriptorSetLayout GetVkDescriptorSetLayout(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId]; }
 
-    bool HasStaticDescrSet() const { return GetStaticVkDescriptorSetLayout() != VK_NULL_HANDLE; }
-    bool HasDynamicDescrSet() const { return GetDynamicVkDescriptorSetLayout() != VK_NULL_HANDLE; }
+    bool HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
 
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                 bool                     InitStaticResources) override final;
@@ -227,15 +251,19 @@ public:
     // Initializes resource slots in the ResourceCache
     void InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache) const;
 
+    // Copies static resources from the static resource cache to the destination cache
     void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
 
     static String GetPrintName(const PipelineResourceDesc& ResDesc, Uint32 ArrayInd);
 
+    // Binds object pObj to resource with index ResIndex in m_Desc.Resources and
+    // array index ArrayIndex.
     void BindResource(IDeviceObject*         pObj,
                       Uint32                 ArrayIndex,
                       Uint32                 ResIndex,
                       ShaderResourceCacheVk& ResourceCache) const;
 
+    // Commits dynamic resources from ResourceCache to vkDynamicDescriptorSet
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
 
@@ -247,6 +275,7 @@ public:
     }
 
 private:
+    // Resource cache group identifier
     enum CACHE_GROUP : size_t
     {
         CACHE_GROUP_DYN_UB = 0, // Uniform buffer with dynamic offset
@@ -263,36 +292,44 @@ private:
 
         CACHE_GROUP_COUNT
     };
-    static_assert(CACHE_GROUP_COUNT == 3 * MAX_DESCR_SET_PER_SIGNATURE, "Inconsistent cache group count");
+    static_assert(CACHE_GROUP_COUNT == 3 * MAX_DESCRIPTOR_SETS, "Inconsistent cache group count");
 
     using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] including ArraySize
     using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] not counting ArraySize
 
     void Destruct();
 
-    void CreateLayout(const CacheOffsetsType& CacheSizes,
-                      const BindingCountType& BindingCount);
+    void CreateSetLayouts(const CacheOffsetsType& CacheSizes,
+                          const BindingCountType& BindingCount);
 
     size_t CalculateHash() const;
 
+    // Finds a separate sampler assigned to the image SepImg and returns its index in m_Desc.Resources.
     Uint32 FindAssignedSampler(const PipelineResourceDesc& SepImg) const;
 
-    // returns descriptor set index in resource cache
-    Uint32 GetStaticDescrSetIndex() const;
-    Uint32 GetDynamicDescrSetIndex() const;
+    // Returns the descriptor set index in the resource cache
+    template <DESCRIPTOR_SET_ID SetId>
+    Uint32 GetDescriptorSetIndex() const;
 
-    static CACHE_GROUP ResourceToCacheGroup(const PipelineResourceDesc& Res);
+    template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
+    template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>() const;
+
+    static inline CACHE_GROUP       GetResourceCacheGroup(const PipelineResourceDesc& Res);
+    static inline DESCRIPTOR_SET_ID GetDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
 
 private:
-    VulkanUtilities::DescriptorSetLayoutWrapper m_VkDescSetLayouts[MAX_DESCR_SET_PER_SIGNATURE];
+    std::array<VulkanUtilities::DescriptorSetLayoutWrapper, MAX_DESCRIPTOR_SETS> m_VkDescrSetLayouts;
 
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
+    // Shader stages that have resources.
     SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;
 
     Uint16 m_DynamicUniformBufferCount = 0;
     Uint16 m_DynamicStorageBufferCount = 0;
 
+    // Mapping from shader type index given by GetShaderTypePipelineIndex() to
+    // static variable manager index in m_StaticVarsMgrs array.
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
@@ -305,6 +342,5 @@ private:
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
     SRBMemoryAllocator       m_SRBMemAllocator;
 };
-
 
 } // namespace Diligent

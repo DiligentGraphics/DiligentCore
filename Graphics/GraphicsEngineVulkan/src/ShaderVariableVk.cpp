@@ -52,7 +52,7 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const PipelineResourceSign
             for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
             {
                 const auto& Res  = Layout.GetResourceDesc(r);
-                const auto& Attr = Layout.GetAttribs(r);
+                const auto& Attr = Layout.GetResourceAttribs(r);
                 VERIFY_EXPR(Res.VarType == VarType);
 
                 if (!(Res.ShaderStages & ShaderStages))
@@ -106,7 +106,7 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
             for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
             {
                 const auto& Res  = SrcLayout.GetResourceDesc(r);
-                const auto& Attr = SrcLayout.GetAttribs(r);
+                const auto& Attr = SrcLayout.GetResourceAttribs(r);
                 VERIFY_EXPR(Res.VarType == VarType);
 
                 if (!(Res.ShaderStages & ShaderType))
@@ -211,7 +211,7 @@ void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, 
         const auto& Attr = Var.GetAttribs();
 
         // There should be no immutable separate samplers
-        VERIFY(Attr.Type() != DescriptorType::Sampler || !Attr.IsImmutableSamplerAssigned(),
+        VERIFY(Attr.GetDescriptorType() != DescriptorType::Sampler || !Attr.IsImmutableSamplerAssigned(),
                "There must be no shader resource variables for immutable separate samplers");
 
         if ((Flags & (1u << Res.VarType)) == 0)

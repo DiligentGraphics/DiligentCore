@@ -46,7 +46,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*    
         IsDeviceInternal
     },
     m_ShaderResourceCache{ShaderResourceCacheVk::CacheContentType::SRB},
-    m_NumShaders{static_cast<decltype(m_NumShaders)>(pPRS->GetNumShaderStages())}
+    m_NumShaders{static_cast<decltype(m_NumShaders)>(pPRS->GetNumActiveShaderStages())}
 // clang-format on
 {
     try
@@ -77,7 +77,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*    
 
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            const auto ShaderType = pPRS->GetShaderStageType(s);
+            const auto ShaderType = pPRS->GetActiveShaderStageType(s);
             const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
 
             m_ShaderVarIndex[ShaderInd] = static_cast<Int8>(s);

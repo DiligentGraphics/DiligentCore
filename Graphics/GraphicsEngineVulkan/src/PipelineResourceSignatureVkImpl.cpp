@@ -42,19 +42,20 @@ namespace Diligent
 namespace
 {
 
-bool ResourcesCompatible(const PipelineResourceSignatureVkImpl::ResourceAttribs& lhs,
-                         const PipelineResourceSignatureVkImpl::ResourceAttribs& rhs)
+inline bool ResourcesCompatible(const PipelineResourceSignatureVkImpl::ResourceAttribs& lhs,
+                                const PipelineResourceSignatureVkImpl::ResourceAttribs& rhs)
 {
     // Ignore sampler index and cache offsets.
     // clang-format off
     return lhs.BindingIndex         == rhs.BindingIndex &&
+           lhs.ArraySize            == rhs.ArraySize    &&
            lhs.DescrType            == rhs.DescrType    &&
            lhs.DescrSet             == rhs.DescrSet     &&
            lhs.ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
     // clang-format on
 }
 
-bool ResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
+inline bool ResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
 {
     // Ignore resource names.
     // clang-format off
@@ -66,12 +67,7 @@ bool ResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResource
     // clang-format on
 }
 
-inline Uint32 GetDescriptorSetIdx(SHADER_RESOURCE_VARIABLE_TYPE VarType)
-{
-    return VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? 1 : 0;
-}
-
-VkDescriptorType GetVkDescriptorType(DescriptorType Type)
+inline VkDescriptorType GetVkDescriptorType(DescriptorType Type)
 {
     static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
     switch (Type)
@@ -148,7 +144,7 @@ DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
     }
 }
 
-BUFFER_VIEW_TYPE DescriptorTypeToBufferView(DescriptorType Type)
+inline BUFFER_VIEW_TYPE DescriptorTypeToBufferView(DescriptorType Type)
 {
     static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
     switch (Type)
@@ -168,7 +164,7 @@ BUFFER_VIEW_TYPE DescriptorTypeToBufferView(DescriptorType Type)
     }
 }
 
-TEXTURE_VIEW_TYPE DescriptorTypeToTextureView(DescriptorType Type)
+inline TEXTURE_VIEW_TYPE DescriptorTypeToTextureView(DescriptorType Type)
 {
     static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
     switch (Type)
@@ -196,7 +192,7 @@ Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
     }
     else if (DescType == DescriptorType::Sampler)
     {
-        // Use SamplerSuffix. If HLSL-style combined images samplers are not used,
+        // Use SamplerSuffix. If HLSL-style combined image samplers are not used,
         // SamplerSuffix will be null and we will be looking for the sampler itself.
     }
     else
@@ -222,22 +218,30 @@ Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
 
 } // namespace
 
-inline PipelineResourceSignatureVkImpl::CACHE_GROUP PipelineResourceSignatureVkImpl::ResourceToCacheGroup(const PipelineResourceDesc& Res)
+inline PipelineResourceSignatureVkImpl::CACHE_GROUP PipelineResourceSignatureVkImpl::GetResourceCacheGroup(const PipelineResourceDesc& Res)
 {
-    const Uint32 SetIdx            = GetDescriptorSetIdx(Res.VarType);
-    const bool   WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
-    const bool   UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
+    // NB: SetId is always 0 for static/mutable variables, and 1 - for dynamic ones.
+    //     It is not the actual descriptor set index in the set layout!
+    const auto SetId             = GetDescriptorSetId(Res.VarType);
+    const bool WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
+    const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
 
     if (WithDynamicOffset && !UseTexelBuffer)
     {
         if (Res.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
-            return static_cast<CACHE_GROUP>(SetIdx * 3 + CACHE_GROUP_DYN_UB);
+            return static_cast<CACHE_GROUP>(SetId * 3 + CACHE_GROUP_DYN_UB);
 
         if (Res.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV || Res.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV)
-            return static_cast<CACHE_GROUP>(SetIdx * 3 + CACHE_GROUP_DYN_SB);
+            return static_cast<CACHE_GROUP>(SetId * 3 + CACHE_GROUP_DYN_SB);
     }
-    return static_cast<CACHE_GROUP>(SetIdx * 3 + CACHE_GROUP_OTHER);
+    return static_cast<CACHE_GROUP>(SetId * 3 + CACHE_GROUP_OTHER);
 }
+
+inline PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID PipelineResourceSignatureVkImpl::GetDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType)
+{
+    return VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? DESCRIPTOR_SET_ID_DYNAMIC : DESCRIPTOR_SET_ID_STATIC_MUTABLE;
+}
+
 
 RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
 {
@@ -297,8 +301,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
             const auto& ResDesc    = Desc.Resources[i];
-            const auto  SetIdx     = GetDescriptorSetIdx(ResDesc.VarType);
-            const auto  CacheGroup = ResourceToCacheGroup(ResDesc);
+            const auto  CacheGroup = GetResourceCacheGroup(ResDesc);
 
             m_ShaderStages |= ResDesc.ShaderStages;
 
@@ -352,7 +355,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
             m_pResourceCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount);
         }
 
-        CreateLayout(CacheSizes, BindingCount);
+        CreateSetLayouts(CacheSizes, BindingCount);
 
         if (StaticVarStageCount > 0)
         {
@@ -380,11 +383,11 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     }
 }
 
-void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& CacheSizes,
-                                                   const BindingCountType& BindingCount)
+void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& CacheSizes,
+                                                       const BindingCountType& BindingCount)
 {
     // Descriptor set mapping (static/mutable (0) or dynamic (1) -> set index)
-    std::array<Uint32, MAX_DESCR_SET_PER_SIGNATURE> DSMapping = {};
+    std::array<Uint32, DESCRIPTOR_SET_ID_NUM_SETS> DSMapping = {};
     {
         const auto TotalStaticBindings =
             BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] +
@@ -395,10 +398,11 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
             BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] +
             BindingCount[CACHE_GROUP_OTHER_DYN_VAR];
 
-        Uint32 Idx   = 0;
-        DSMapping[0] = (TotalStaticBindings != 0 ? Idx++ : 0xFF);
-        DSMapping[1] = (TotalDynamicBindings != 0 ? Idx++ : 0xFF);
-        VERIFY_EXPR(Idx <= MAX_DESCR_SET_PER_SIGNATURE);
+        Uint32 Idx = 0;
+
+        DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] = (TotalStaticBindings != 0 ? Idx++ : 0xFF);
+        DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]        = (TotalDynamicBindings != 0 ? Idx++ : 0xFF);
+        VERIFY_EXPR(Idx <= MAX_DESCRIPTOR_SETS);
     }
 
     CacheOffsetsType CacheOffsets =
@@ -425,21 +429,24 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
         };
     Uint32 StaticCacheOffset = 0;
 
-    std::vector<VkDescriptorSetLayoutBinding> vkSetLayoutBindings[MAX_DESCR_SET_PER_SIGNATURE];
-    DynamicLinearAllocator                    TempAllocator{GetRawAllocator()};
+    std::array<std::vector<VkDescriptorSetLayoutBinding>, MAX_DESCRIPTOR_SETS> vkSetLayoutBindings;
+
+    DynamicLinearAllocator TempAllocator{GetRawAllocator()};
 
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
-        const auto& ResDesc    = m_Desc.Resources[i];
-        const auto  DescrType  = GetDescriptorType(ResDesc);
-        const auto  SetIdx     = GetDescriptorSetIdx(ResDesc.VarType);
-        const auto  CacheGroup = ResourceToCacheGroup(ResDesc);
+        const auto& ResDesc   = m_Desc.Resources[i];
+        const auto  DescrType = GetDescriptorType(ResDesc);
+        // NB: SetId is always 0 for static/mutable variables, and 1 - for dynamic ones.
+        //     It is not the actual descriptor set index in the set layout!
+        const auto SetId      = GetDescriptorSetId(ResDesc.VarType);
+        const auto CacheGroup = GetResourceCacheGroup(ResDesc);
 
         VERIFY(i == 0 || ResDesc.VarType >= m_Desc.Resources[i - 1].VarType, "Resources must be sorted by variable type");
 
         // If all resources are dynamic, then the signature contains only one descriptor set layout with index 0,
         // so remap SetIdx to the actual descriptor set index.
-        VERIFY_EXPR(DSMapping[SetIdx] < MAX_DESCR_SET_PER_SIGNATURE);
+        VERIFY_EXPR(DSMapping[SetId] < MAX_DESCRIPTOR_SETS);
 
         // The sampler may not be yet initialized, but this is OK as all resources are initialized
         // in the same order as in m_Desc.Resources
@@ -470,7 +477,7 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
                 AssignedSamplerInd,
                 ResDesc.ArraySize,
                 DescrType,
-                DSMapping[SetIdx],
+                DSMapping[SetId],
                 pVkImmutableSamplers != nullptr,
                 CacheOffsets[CacheGroup],
                 ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u //
@@ -478,18 +485,18 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
         BindingIndices[CacheGroup] += 1;
         CacheOffsets[CacheGroup] += ResDesc.ArraySize;
 
-        vkSetLayoutBindings[SetIdx].emplace_back();
-        auto& vkSetLayoutBinding = vkSetLayoutBindings[SetIdx].back();
+        vkSetLayoutBindings[SetId].emplace_back();
+        auto& vkSetLayoutBinding = vkSetLayoutBindings[SetId].back();
 
         vkSetLayoutBinding.binding            = pAttribs->BindingIndex;
         vkSetLayoutBinding.descriptorCount    = ResDesc.ArraySize;
         vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
         vkSetLayoutBinding.pImmutableSamplers = pVkImmutableSamplers;
-        vkSetLayoutBinding.descriptorType     = GetVkDescriptorType(pAttribs->Type());
+        vkSetLayoutBinding.descriptorType     = GetVkDescriptorType(pAttribs->GetDescriptorType());
 
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            m_pResourceCache->InitializeResources(pAttribs->DescrSet, StaticCacheOffset, ResDesc.ArraySize, pAttribs->Type());
+            m_pResourceCache->InitializeResources(pAttribs->DescrSet, StaticCacheOffset, ResDesc.ArraySize, pAttribs->GetDescriptorType());
             StaticCacheOffset += ResDesc.ArraySize;
         }
     }
@@ -522,23 +529,23 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
 
         const auto& SamplerDesc = m_Desc.ImmutableSamplers[i];
         // If static/mutable descriptor set layout is empty, then add samplers to dynamic set.
-        const Uint32 SetIdx = (DSMapping[0] < MAX_DESCR_SET_PER_SIGNATURE ? 0 : 1);
-        DEV_CHECK_ERR(DSMapping[SetIdx] < MAX_DESCR_SET_PER_SIGNATURE,
+        const auto SetId = (DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] < MAX_DESCRIPTOR_SETS ? DESCRIPTOR_SET_ID_STATIC_MUTABLE : DESCRIPTOR_SET_ID_DYNAMIC);
+        DEV_CHECK_ERR(DSMapping[SetId] < MAX_DESCRIPTOR_SETS,
                       "There are no descriptor sets in this singature, which indicates there are no other "
                       "resources besides immutable samplers. This is not currently allowed.");
 
-        auto& BindingIndex = BindingIndices[SetIdx * 3 + CACHE_GROUP_OTHER];
+        auto& BindingIndex = BindingIndices[SetId * 3 + CACHE_GROUP_OTHER];
 
         GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
 
-        ImmutableSampler.DescrSet     = DSMapping[SetIdx];
+        ImmutableSampler.DescrSet     = DSMapping[SetId];
         ImmutableSampler.BindingIndex = BindingIndex;
 
         VERIFY_EXPR(ImmutableSampler.BindingIndex == BindingIndex);
         ++BindingIndex;
 
-        vkSetLayoutBindings[SetIdx].emplace_back();
-        auto& vkSetLayoutBinding = vkSetLayoutBindings[SetIdx].back();
+        vkSetLayoutBindings[SetId].emplace_back();
+        auto& vkSetLayoutBinding = vkSetLayoutBindings[SetId].back();
 
         vkSetLayoutBinding.binding            = ImmutableSampler.BindingIndex;
         vkSetLayoutBinding.descriptorCount    = 1;
@@ -550,28 +557,32 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
     if (m_Desc.SRBAllocationGranularity > 1)
     {
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
-        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
+        for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
         {
             const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
 
             Uint32 UnusedNumVars       = 0;
-            ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetShaderStageType(s), UnusedNumVars);
+            ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
         }
 
-        Uint32 DescriptorSetSizes[2] = //
-            {
-                CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_STAT_VAR] + CacheSizes[CACHE_GROUP_OTHER_STAT_VAR],
-                CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR] + CacheSizes[CACHE_GROUP_DYN_SB_DYN_VAR] + CacheSizes[CACHE_GROUP_OTHER_DYN_VAR] //
-            };
-        static_assert(_countof(DescriptorSetSizes) == MAX_DESCR_SET_PER_SIGNATURE, "MAX_DESCR_SET_PER_SIGNATURE was changed, update the code above");
+        std::array<Uint32, DESCRIPTOR_SET_ID_NUM_SETS> DescriptorSetSizes;
+        DescriptorSetSizes[DESCRIPTOR_SET_ID_STATIC_MUTABLE] =
+            CacheSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
+            CacheSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
+            CacheSizes[CACHE_GROUP_OTHER_STAT_VAR];
+        DescriptorSetSizes[DESCRIPTOR_SET_ID_DYNAMIC] =
+            CacheSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
+            CacheSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
+            CacheSizes[CACHE_GROUP_OTHER_DYN_VAR];
+        static_assert(DescriptorSetSizes.size() == MAX_DESCRIPTOR_SETS, "MAX_DESCRIPTOR_SETS was changed, update the code above");
 
-        const Uint32 NumSets = (DescriptorSetSizes[0] != 0 ? 1 : 0) + (DescriptorSetSizes[1] != 0 ? 1 : 0);
-        if (DescriptorSetSizes[0] == 0)
-            DescriptorSetSizes[0] = DescriptorSetSizes[1];
+        const Uint32 NumSets = (DescriptorSetSizes[DESCRIPTOR_SET_ID_STATIC_MUTABLE] != 0 ? 1 : 0) + (DescriptorSetSizes[DESCRIPTOR_SET_ID_DYNAMIC] != 0 ? 1 : 0);
+        if (DescriptorSetSizes[DESCRIPTOR_SET_ID_STATIC_MUTABLE] == 0)
+            DescriptorSetSizes[DESCRIPTOR_SET_ID_STATIC_MUTABLE] = DescriptorSetSizes[DESCRIPTOR_SET_ID_DYNAMIC];
 
-        const size_t CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes);
+        const size_t CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
 
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
     }
 
     VkDescriptorSetLayoutCreateInfo SetLayoutCI = {};
@@ -582,7 +593,7 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
 
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
 
-    for (Uint32 i = 0; i < _countof(vkSetLayoutBindings); ++i)
+    for (size_t i = 0; i < vkSetLayoutBindings.size(); ++i)
     {
         auto& vkSetLayoutBinding = vkSetLayoutBindings[i];
         if (vkSetLayoutBinding.empty())
@@ -590,7 +601,7 @@ void PipelineResourceSignatureVkImpl::CreateLayout(const CacheOffsetsType& Cache
 
         SetLayoutCI.bindingCount = static_cast<Uint32>(vkSetLayoutBinding.size());
         SetLayoutCI.pBindings    = vkSetLayoutBinding.data();
-        m_VkDescSetLayouts[i]    = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
+        m_VkDescrSetLayouts[i]   = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
     }
 }
 
@@ -628,7 +639,7 @@ size_t PipelineResourceSignatureVkImpl::CalculateHash() const
         const auto& Res  = m_Desc.Resources[i];
         const auto& Attr = m_pResourceAttribs[i];
 
-        HashCombine(Hash, Res.ArraySize, Res.ShaderStages, Res.VarType, Attr.Type(), Attr.BindingIndex, Attr.DescrSet, Attr.IsImmutableSamplerAssigned());
+        HashCombine(Hash, Res.ArraySize, Res.ShaderStages, Res.VarType, Attr.GetDescriptorType(), Attr.BindingIndex, Attr.DescrSet, Attr.IsImmutableSamplerAssigned());
     }
 
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
@@ -648,7 +659,7 @@ void PipelineResourceSignatureVkImpl::Destruct()
 {
     TPipelineResourceSignatureBase::Destruct();
 
-    for (auto& Layout : m_VkDescSetLayouts)
+    for (auto& Layout : m_VkDescrSetLayouts)
     {
         if (Layout)
             m_pDevice->SafeReleaseDeviceObject(std::move(Layout), ~0ull);
@@ -712,7 +723,7 @@ bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSig
 
     for (Uint32 r = 0; r < LResCount; ++r)
     {
-        if (!ResourcesCompatible(GetAttribs(r), Other.GetAttribs(r)) ||
+        if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)) ||
             !ResourcesCompatible(GetResourceDesc(r), Other.GetResourceDesc(r)))
             return false;
     }
@@ -800,14 +811,14 @@ void PipelineResourceSignatureVkImpl::InitResourceCache(ShaderResourceCacheVk& R
                                                         IMemoryAllocator&      CacheMemAllocator,
                                                         const char*            DbgPipelineName) const
 {
-    std::array<Uint32, MAX_DESCR_SET_PER_SIGNATURE> VarCount = {};
+    std::array<Uint32, MAX_DESCRIPTOR_SETS> VarCount = {};
 
     Uint32 NumSets = static_cast<Uint32>(VarCount.size());
 
     for (Uint32 r = 0; r < m_Desc.NumResources; ++r)
     {
         const auto& ResDesc = GetResourceDesc(r);
-        const auto& Attr    = GetAttribs(r);
+        const auto& Attr    = GetResourceAttribs(r);
         VarCount[Attr.DescrSet] += ResDesc.ArraySize;
     }
 
@@ -820,7 +831,7 @@ void PipelineResourceSignatureVkImpl::InitResourceCache(ShaderResourceCacheVk& R
     // Resources are initialized by source layout when shader resource binding objects are created
     ResourceCache.InitializeSets(CacheMemAllocator, NumSets, VarCount.data());
 
-    if (auto VkLayout = GetStaticVkDescriptorSetLayout())
+    if (auto vkLayout = GetVkDescriptorSetLayout(DESCRIPTOR_SET_ID_STATIC_MUTABLE))
     {
         const char* DescrSetName = "Static/Mutable Descriptor Set";
 #ifdef DILIGENT_DEVELOPMENT
@@ -828,12 +839,12 @@ void PipelineResourceSignatureVkImpl::InitResourceCache(ShaderResourceCacheVk& R
         _DescrSetName.append(" - static/mutable set");
         DescrSetName = _DescrSetName.c_str();
 #endif
-        DescriptorSetAllocation SetAllocation = GetDevice()->AllocateDescriptorSet(~Uint64{0}, VkLayout, DescrSetName);
-        ResourceCache.GetDescriptorSet(GetStaticDescrSetIndex()).AssignDescriptorSetAllocation(std::move(SetAllocation));
+        DescriptorSetAllocation SetAllocation = GetDevice()->AllocateDescriptorSet(~Uint64{0}, vkLayout, DescrSetName);
+        ResourceCache.GetDescriptorSet(GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>()).AssignDescriptorSetAllocation(std::move(SetAllocation));
     }
 }
 
-SHADER_TYPE PipelineResourceSignatureVkImpl::GetShaderStageType(Uint32 StageIndex) const
+SHADER_TYPE PipelineResourceSignatureVkImpl::GetActiveShaderStageType(Uint32 StageIndex) const
 {
     VERIFY_EXPR(StageIndex < m_NumShaderStages);
 
@@ -850,11 +861,6 @@ SHADER_TYPE PipelineResourceSignatureVkImpl::GetShaderStageType(Uint32 StageInde
     return SHADER_TYPE_UNKNOWN;
 }
 
-Uint32 PipelineResourceSignatureVkImpl::GetNumDescriptorSets() const
-{
-    return (m_VkDescSetLayouts[0] != VK_NULL_HANDLE ? 1 : 0) + (m_VkDescSetLayouts[1] != VK_NULL_HANDLE ? 1 : 0);
-}
-
 void PipelineResourceSignatureVkImpl::InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache) const
 {
     const auto TotalResources = GetTotalResourceCount();
@@ -862,21 +868,22 @@ void PipelineResourceSignatureVkImpl::InitializeResourceMemoryInCache(ShaderReso
     for (Uint32 r = 0; r < TotalResources; ++r)
     {
         const auto& ResDesc = GetResourceDesc(r);
-        const auto& Attr    = GetAttribs(r);
-        ResourceCache.InitializeResources(Attr.DescrSet, Attr.CacheOffset(CacheType), ResDesc.ArraySize, Attr.Type());
+        const auto& Attr    = GetResourceAttribs(r);
+        ResourceCache.InitializeResources(Attr.DescrSet, Attr.CacheOffset(CacheType), ResDesc.ArraySize, Attr.GetDescriptorType());
     }
 }
 
 void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& DstResourceCache) const
 {
-    if (GetStaticVkDescriptorSetLayout() == VK_NULL_HANDLE || m_pResourceCache == nullptr)
+    if (!HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) || m_pResourceCache == nullptr)
         return;
 
     // SrcResourceCache contains only static resources.
     // DstResourceCache contains static and mutable resources.
     const auto& SrcResourceCache = *m_pResourceCache;
-    const auto& SrcDescrSet      = SrcResourceCache.GetDescriptorSet(GetStaticDescrSetIndex());
-    auto&       DstDescrSet      = DstResourceCache.GetDescriptorSet(GetStaticDescrSetIndex());
+    const auto  StaticSetIdx     = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>();
+    const auto& SrcDescrSet      = SrcResourceCache.GetDescriptorSet(StaticSetIdx);
+    auto&       DstDescrSet      = DstResourceCache.GetDescriptorSet(StaticSetIdx);
     const auto  ResIdxRange      = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     const auto  SrcCacheType     = SrcResourceCache.GetContentType();
     const auto  DstCacheType     = DstResourceCache.GetContentType();
@@ -884,7 +891,7 @@ void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourc
     for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
     {
         const auto& ResDesc = GetResourceDesc(r);
-        const auto& Attr    = GetAttribs(r);
+        const auto& Attr    = GetResourceAttribs(r);
         VERIFY_EXPR(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && Attr.IsImmutableSamplerAssigned())
@@ -913,20 +920,24 @@ void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourc
 #endif
 }
 
-Uint32 PipelineResourceSignatureVkImpl::GetStaticDescrSetIndex() const
+template <>
+Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const
 {
-    return m_VkDescSetLayouts[0] != VK_NULL_HANDLE ? 0 : ~0u;
+    VERIFY(HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE), "This signature does not have static/mutable descriptor set");
+    return 0;
 }
 
-Uint32 PipelineResourceSignatureVkImpl::GetDynamicDescrSetIndex() const
+template <>
+Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC>() const
 {
-    return m_VkDescSetLayouts[1] != VK_NULL_HANDLE ? (m_VkDescSetLayouts[0] != VK_NULL_HANDLE ? 1 : 0) : ~0u;
+    VERIFY(HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC), "This signature does not have dynamic descriptor set");
+    return HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) ? 1 : 0;
 }
 
 void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                                              VkDescriptorSet              vkDynamicDescriptorSet) const
 {
-    VERIFY(HasDynamicDescrSet(), "This shader resource layout does not contain dynamic resources");
+    VERIFY(HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC), "This shader resource layout does not contain dynamic resources");
     VERIFY_EXPR(vkDynamicDescriptorSet != VK_NULL_HANDLE);
     VERIFY_EXPR(ResourceCache.GetContentType() == CacheContentType::SRB);
 
@@ -957,7 +968,8 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
     auto AccelStructIt   = DescrAccelStructArr.begin();
     auto WriteDescrSetIt = WriteDescrSetArr.begin();
 
-    const auto& SetResources  = ResourceCache.GetDescriptorSet(GetDynamicDescrSetIndex());
+    const auto  DynamicSetIdx = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>();
+    const auto& SetResources  = ResourceCache.GetDescriptorSet(DynamicSetIdx);
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
     const auto  ResIdxRange   = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
@@ -965,9 +977,10 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
 
     for (Uint32 ResNum = ResIdxRange.first, ArrElem = 0; ResNum < ResIdxRange.second;)
     {
-        const auto& Attr        = GetAttribs(ResNum);
+        const auto& Attr        = GetResourceAttribs(ResNum);
         const auto  CacheOffset = Attr.CacheOffset(CacheType);
         const auto  ArraySize   = Attr.ArraySize;
+        const auto  DescrType   = Attr.GetDescriptorType();
 
 #ifdef DILIGENT_DEBUG
         {
@@ -986,11 +999,11 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         WriteDescrSetIt->dstArrayElement = ArrElem;
         // descriptorType must be the same type as that specified in VkDescriptorSetLayoutBinding for dstSet at dstBinding.
         // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
-        WriteDescrSetIt->descriptorType = GetVkDescriptorType(Attr.Type());
+        WriteDescrSetIt->descriptorType = GetVkDescriptorType(DescrType);
 
         // For every resource type, try to batch as many descriptor updates as we can
         static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
-        switch (Attr.Type())
+        switch (DescrType)
         {
             case DescriptorType::UniformBuffer:
             case DescriptorType::UniformBufferDynamic:
@@ -1513,7 +1526,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
             VERIFY(!IsImmutableSamplerAssigned(), "Separate image can't be assigned an immutable sampler.");
 
             auto& SamplerResDesc = Signature.GetResourceDesc(Attribs.SamplerInd);
-            auto& SamplerAttribs = Signature.GetAttribs(Attribs.SamplerInd);
+            auto& SamplerAttribs = Signature.GetResourceAttribs(Attribs.SamplerInd);
             VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
 
             if (!SamplerAttribs.IsImmutableSamplerAssigned())
@@ -1674,13 +1687,13 @@ void PipelineResourceSignatureVkImpl::BindResource(IDeviceObject*         pObj,
                                                    ShaderResourceCacheVk& ResourceCache) const
 {
     auto&      ResDesc     = GetResourceDesc(ResIndex);
-    auto&      Attribs     = GetAttribs(ResIndex);
+    auto&      Attribs     = GetResourceAttribs(ResIndex);
     const auto CacheType   = ResourceCache.GetContentType();
     auto&      DstDescrSet = ResourceCache.GetDescriptorSet(Attribs.DescrSet);
     auto&      DstRes      = DstDescrSet.GetResource(Attribs.CacheOffset(CacheType) + ArrayIndex);
 
     VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
-    VERIFY(DstRes.Type == Attribs.Type(), "Inconsistent types");
+    VERIFY(DstRes.Type == Attribs.GetDescriptorType(), "Inconsistent types");
 
     BindResourceHelper Helper{
         DstRes,

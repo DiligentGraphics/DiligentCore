@@ -39,10 +39,7 @@ namespace Diligent
 /// (Vertex, Hull, Domain, Geometry, Pixel) or (Amplification, Mesh, Pixel), or (Compute) or (RayGen, Miss, ClosestHit, AnyHit, Intersection, Callable)
 static constexpr Uint32 MAX_SHADERS_IN_PIPELINE = 6;
 
-// Static/mutable and dynamic descriptor sets (Vulkan only)
-static constexpr Uint32 MAX_DESCR_SET_PER_SIGNATURE = 2;
-
 // The maximum number of resources in pipeline resources signature.
-static constexpr Uint32 MAX_RESOURCES_IN_SIGNATURE = 1u << 16;
+static constexpr Uint32 MAX_RESOURCES_IN_SIGNATURE = (1u << 16u) - 1u;
 
 } // namespace Diligent
