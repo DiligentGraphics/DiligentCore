@@ -42,6 +42,7 @@ namespace Diligent
 class RenderDeviceVkImpl;
 class ShaderResourceCacheVk;
 class ShaderVariableManagerVk;
+struct SPIRVShaderResourceAttribs;
 
 enum class DescriptorType : Uint8
 {
@@ -53,9 +54,9 @@ enum class DescriptorType : Uint8
     StorageTexelBuffer,
     StorageTexelBuffer_ReadOnly,
     UniformBuffer,
+    UniformBufferDynamic,
     StorageBuffer,
     StorageBuffer_ReadOnly,
-    UniformBufferDynamic,
     StorageBufferDynamic,
     StorageBufferDynamic_ReadOnly,
     InputAttachment,
@@ -273,6 +274,10 @@ public:
     {
         return GetHash() != Other.GetHash();
     }
+
+#ifdef DILIGENT_DEVELOPMENT
+    bool DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs, Uint32 ResIndex, ShaderResourceCacheVk& ResourceCache) const;
+#endif
 
 private:
     // Resource cache group identifier

@@ -31,6 +31,7 @@
 /// Declaration of Diligent::PipelineStateVkImpl class
 
 #include <array>
+#include <memory>
 
 #include "RenderDeviceVk.h"
 #include "PipelineStateVk.h"
@@ -50,6 +51,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 class ShaderVariableManagerVk;
 class ShaderVkImpl;
+class ShaderResourceBindingVkImpl;
 
 /// Pipeline state object implementation in Vulkan backend.
 class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>
@@ -108,6 +110,13 @@ public:
     };
     using TShaderStages = std::vector<ShaderStageInfo>;
 
+#ifdef DILIGENT_DEVELOPMENT
+    // Performs validation of SRB resource parameters that are not possible to validate
+    // when resource is bound.
+    using SRBArray = std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES>;
+    void DvpVerifySRBResources(SRBArray& SRBs) const;
+#endif
+
 private:
     template <typename PSOCreateInfoType>
     TShaderStages InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
@@ -126,6 +135,13 @@ private:
 
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayoutVk                 m_PipelineLayout;
+
+#ifdef DILIGENT_DEVELOPMENT
+    // Shader resources for all shaders in all shader stages
+    std::vector<std::shared_ptr<const SPIRVShaderResources>> m_ShaderResources;
+    // Resource info for every resource in m_ShaderResources, in the same order
+    std::vector<PipelineLayoutVk::ResourceInfo> m_ResInfo;
+#endif
 };
 
 } // namespace Diligent

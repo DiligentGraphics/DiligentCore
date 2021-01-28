@@ -35,6 +35,7 @@
 #include "TopLevelASVkImpl.hpp"
 #include "BasicMath.hpp"
 #include "DynamicLinearAllocator.hpp"
+#include "SPIRVShaderResources.hpp"
 
 namespace Diligent
 {
@@ -1131,20 +1132,12 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
 
 String PipelineResourceSignatureVkImpl::GetPrintName(const PipelineResourceDesc& ResDesc, Uint32 ArrayInd)
 {
-    VERIFY_EXPR(ArrayInd < ResDesc.ArraySize);
-
-    if (ResDesc.ArraySize > 1)
-    {
-        std::stringstream ss;
-        ss << ResDesc.Name << '[' << ArrayInd << ']';
-        return ss.str();
-    }
-    else
-        return ResDesc.Name;
+    return GetShaderResourcePrintName(ResDesc, ArrayInd);
 }
 
 namespace
 {
+
 struct BindResourceHelper
 {
     ShaderResourceCacheVk::Resource&                        DstRes;
@@ -1316,15 +1309,6 @@ void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer,
     RefCntAutoPtr<BufferVkImpl> pBufferVk{pBuffer, IID_BufferVk};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(*this, ResDesc.VarType, ArrayIndex, pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr());
-
-    // AZ TODO
-    /*if (pBufferVk->GetDesc().uiSizeInBytes < BufferStaticSize)
-    {
-        // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
-        LOG_WARNING_MESSAGE("Error binding uniform buffer '", pBufferVk->GetDesc().Name, "' to shader variable '",
-                            GetDesc().Name, "': buffer size in the shader (",
-                            BufferStaticSize, ") is incompatible with the actual buffer size (", pBufferVk->GetDesc().uiSizeInBytes, ").");
-    }*/
 #endif
 
     auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferVkImpl* pOldBuffer, const BufferVkImpl* pNewBuffer) {
@@ -1377,25 +1361,6 @@ void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView,
                 LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
                                   ResDesc.Name, "': structured buffer view is expected.");
             }
-
-            // AZ TODO
-            /*if (BufferStride == 0 && ViewDesc.ByteWidth < BufferStaticSize)
-            {
-                // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
-                LOG_WARNING_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                    Name, "': buffer size in the shader (",
-                                    BufferStaticSize, ") is incompatible with the actual buffer view size (", ViewDesc.ByteWidth, ").");
-            }
-
-            if (BufferStride > 0 && (ViewDesc.ByteWidth < BufferStaticSize || (ViewDesc.ByteWidth - BufferStaticSize) % BufferStride != 0))
-            {
-                // For buffers with dynamic arrays we know only static part size and array element stride.
-                // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.
-                LOG_WARNING_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                    Name, "': static buffer size in the shader (",
-                                    BufferStaticSize, ") and array element stride (", BufferStride, ") are incompatible with the actual buffer view size (", ViewDesc.ByteWidth, "),",
-                                    " this may be the result of the array element size mismatch.");
-            }*/
         }
     }
 #endif
@@ -1671,12 +1636,16 @@ String BindResourceHelper::GetPrintName(Uint32 ArrayInd) const
 
 RESOURCE_DIMENSION BindResourceHelper::GetResourceDimension() const
 {
-    return RESOURCE_DIM_UNDEFINED; // AZ TODO
+    // Required resource dimension is not known to the root signature as
+    // shader resources are only known to PSO.
+    return RESOURCE_DIM_UNDEFINED;
 }
 
 bool BindResourceHelper::IsMultisample() const
 {
-    return false; // AZ TODO
+    // Required multisample state is not known to the root signature as
+    // shader resources are only known to PSO.
+    return false;
 }
 
 } // namespace
@@ -1706,5 +1675,172 @@ void PipelineResourceSignatureVkImpl::BindResource(IDeviceObject*         pObj,
 
     Helper.BindResource(pObj);
 }
+
+template <typename TextureViewImplType>
+bool ValidateTextureDimension(const PipelineResourceDesc& ResDesc,
+                              Uint32                      ArrayInd,
+                              const TextureViewImplType*  pTexView,
+                              RESOURCE_DIMENSION          ExpectedResourceDim,
+                              bool                        IsMultisample)
+{
+    VERIFY_EXPR(ExpectedResourceDim != RESOURCE_DIM_UNDEFINED);
+
+    bool BindingsOK = true;
+
+    const auto ResourceDim = pTexView->GetDesc().TextureDim;
+    if (ResourceDim != ExpectedResourceDim)
+    {
+        LOG_ERROR_MESSAGE("The resource dimension of texture view '", pTexView->GetDesc().Name,
+                          "' bound to variable '", GetShaderResourcePrintName(ResDesc, ArrayInd), "' is ", GetResourceDimString(ResourceDim),
+                          ", but resource dimension expected by the shader is ", GetResourceDimString(ExpectedResourceDim), ".");
+    }
+
+    if (ResourceDim == RESOURCE_DIM_TEX_2D || ResourceDim == RESOURCE_DIM_TEX_2D_ARRAY)
+    {
+        auto SampleCount = pTexView->GetTexture()->GetDesc().SampleCount;
+        if (IsMultisample && SampleCount == 1)
+        {
+            LOG_ERROR_MESSAGE("Texture view '", pTexView->GetDesc().Name, "' bound to variable '",
+                              GetShaderResourcePrintName(ResDesc, ArrayInd), "' is invalid: multisample texture is expected.");
+            BindingsOK = false;
+        }
+        else if (!IsMultisample && SampleCount > 1)
+        {
+            LOG_ERROR_MESSAGE("Texture view '", pTexView->GetDesc().Name, "' bound to variable '",
+                              GetShaderResourcePrintName(ResDesc, ArrayInd), "' is invalid: single-sample texture is expected.");
+            BindingsOK = false;
+        }
+    }
+
+    return BindingsOK;
+}
+
+#ifdef DILIGENT_DEVELOPMENT
+bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs,
+                                                                   Uint32                            ResIndex,
+                                                                   ShaderResourceCacheVk&            ResourceCache) const
+{
+    VERIFY_EXPR(ResIndex < m_Desc.NumResources);
+    const auto& ResInfo    = m_Desc.Resources[ResIndex];
+    const auto& ResAttribs = m_pResourceAttribs[ResIndex];
+    VERIFY(strcmp(ResInfo.Name, SPIRVAttribs.Name) == 0, "Inconsistent resource names");
+
+    bool BindingsOK = true;
+
+    const auto& DescrSetResources = ResourceCache.GetDescriptorSet(ResAttribs.DescrSet);
+    const auto  CacheType         = ResourceCache.GetContentType();
+    const auto  CacheOffset       = ResAttribs.CacheOffset(CacheType);
+
+    switch (ResAttribs.GetDescriptorType())
+    {
+        case DescriptorType::UniformBuffer:
+        case DescriptorType::UniformBufferDynamic:
+        {
+            VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+            for (Uint32 i = 0; i < ResAttribs.ArraySize; ++i)
+            {
+                const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
+
+                // When can use raw cast here because the dynamic type is verified when the resource
+                // is bound. It will be null if the type is incorrect.
+                if (const auto* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>())
+                {
+                    if (pBufferVk->GetDesc().uiSizeInBytes < SPIRVAttribs.BufferStaticSize)
+                    {
+                        // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
+                        LOG_WARNING_MESSAGE("The size of uniform buffer '",
+                                            pBufferVk->GetDesc().Name, "' bound to shader variable '",
+                                            GetPrintName(ResInfo, i), "' is ", pBufferVk->GetDesc().uiSizeInBytes,
+                                            " bytes, but the shader expects at least ", SPIRVAttribs.BufferStaticSize,
+                                            " bytes.");
+                    }
+                }
+                else
+                {
+                    // Missing resource error is logged by BindResourceHelper::CacheUniformBuffer
+                }
+            }
+        }
+        break;
+
+        case DescriptorType::StorageBuffer:
+        case DescriptorType::StorageBuffer_ReadOnly:
+        case DescriptorType::StorageBufferDynamic:
+        case DescriptorType::StorageBufferDynamic_ReadOnly:
+        {
+            VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV || ResInfo.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
+            for (Uint32 i = 0; i < ResAttribs.ArraySize; ++i)
+            {
+                const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
+
+                // When can use raw cast here because the dynamic type is verified when the resource
+                // is bound. It will be null if the type is incorrect.
+                if (auto* pBufferViewVk = Res.pObject.RawPtr<BufferViewVkImpl>())
+                {
+                    const auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBufferViewVk->GetBuffer());
+                    const auto& ViewDesc  = pBufferViewVk->GetDesc();
+                    const auto& BuffDesc  = pBufferVk->GetDesc();
+
+                    if (BuffDesc.ElementByteStride == 0)
+                    {
+                        if (ViewDesc.ByteWidth < SPIRVAttribs.BufferStaticSize)
+                        {
+                            // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
+                            LOG_WARNING_MESSAGE("The size of buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
+                                                GetPrintName(ResInfo, i), "' is ", ViewDesc.ByteWidth, " bytes, but the shader expects at least ",
+                                                SPIRVAttribs.BufferStaticSize, " bytes.");
+                        }
+                    }
+                    else
+                    {
+                        if (ViewDesc.ByteWidth < SPIRVAttribs.BufferStaticSize || (ViewDesc.ByteWidth - SPIRVAttribs.BufferStaticSize) % BuffDesc.ElementByteStride != 0)
+                        {
+                            // For buffers with dynamic arrays we know only static part size and array element stride.
+                            // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.
+                            LOG_WARNING_MESSAGE("The size (", ViewDesc.ByteWidth, ") and stride (", BuffDesc.ElementByteStride, ") of buffer view '",
+                                                ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
+                                                GetPrintName(ResInfo, i), "' are incompatible with what the shader expects. This may be the result of the array element size mismatch.");
+                        }
+                    }
+                }
+                else
+                {
+                    // Missing resource error is logged by BindResourceHelper::CacheStorageBuffer
+                }
+            }
+        }
+        break;
+
+        case DescriptorType::StorageImage:
+        case DescriptorType::SeparateImage:
+        case DescriptorType::CombinedImageSampler:
+        {
+            VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResInfo.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+            for (Uint32 i = 0; i < ResAttribs.ArraySize; ++i)
+            {
+                const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
+                // When can use raw cast here because the dynamic type is verified when the resource
+                // is bound. It will be null if the type is incorrect.
+                if (const auto* pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>())
+                {
+                    if (!ValidateTextureDimension(ResInfo, i, pTexViewVk, SPIRVAttribs.GetResourceDimension(), SPIRVAttribs.IsMultisample()))
+                        BindingsOK = false;
+                }
+                else
+                {
+                    // Missing resource error is logged by BindResourceHelper::CacheImage
+                }
+            }
+        }
+        break;
+
+        default:
+            break;
+            // Nothing to do
+    }
+
+    return BindingsOK;
+}
+#endif
 
 } // namespace Diligent

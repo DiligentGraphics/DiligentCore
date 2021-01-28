@@ -69,10 +69,12 @@ public:
 
     struct ResourceInfo
     {
-        IPipelineResourceSignature* Signature     = nullptr;
-        SHADER_RESOURCE_TYPE        Type          = SHADER_RESOURCE_TYPE_UNKNOWN;
-        Uint32                      DescrSetIndex = 0;
-        Uint32                      BindingIndex  = 0;
+        PipelineResourceSignatureVkImpl* Signature = nullptr;
+        SHADER_RESOURCE_TYPE             Type      = SHADER_RESOURCE_TYPE_UNKNOWN;
+        // Index in m_Desc.Resources for a resource, or ~0U for an immutable sampler.
+        Uint32 ResIndex      = 0;
+        Uint32 DescrSetIndex = 0;
+        Uint32 BindingIndex  = 0;
     };
     bool GetResourceInfo(const char* Name, SHADER_TYPE Stage, ResourceInfo& Info) const;
 

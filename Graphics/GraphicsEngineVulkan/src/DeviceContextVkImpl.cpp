@@ -473,6 +473,8 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
         }
     }
 
+    m_pPipelineState->DvpVerifySRBResources(BindInfo.Resources);
+
     m_State.CommittedResourcesValidated = true;
 }
 #endif

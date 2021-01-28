@@ -36,6 +36,7 @@
 #include "ShaderResourceBindingVkImpl.hpp"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
+#include "ShaderResourceBindingVkImpl.hpp"
 
 
 #if !DILIGENT_NO_HLSL
@@ -750,8 +751,8 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
             UniqueNames.clear();
             for (auto* pShader : Stage.Shaders)
             {
-                const auto DefaultVarType  = LayoutDesc.DefaultVariableType;
-                auto&      ShaderResources = pShader->GetShaderResources();
+                const auto  DefaultVarType  = LayoutDesc.DefaultVariableType;
+                const auto& ShaderResources = *pShader->GetShaderResources();
 
                 ShaderResources.ProcessResources(
                     [&](const SPIRVShaderResourceAttribs& Res, Uint32) //
@@ -849,7 +850,12 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
             auto* pShader = Shaders[i];
             auto& SPIRV   = SPIRVs[i];
 
-            pShader->GetShaderResources().ProcessResources(
+            const auto& pShaderResources = pShader->GetShaderResources();
+#ifdef DILIGENT_DEVELOPMENT
+            m_ShaderResources.emplace_back(pShaderResources);
+#endif
+
+            pShaderResources->ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& Res, Uint32) //
                 {
                     PipelineLayoutVk::ResourceInfo Info;
@@ -872,6 +878,10 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 
                     SPIRV[Res.BindingDecorationOffset]       = Info.BindingIndex;
                     SPIRV[Res.DescriptorSetDecorationOffset] = Info.DescrSetIndex;
+
+#ifdef DILIGENT_DEVELOPMENT
+                    m_ResInfo.emplace_back(Info);
+#endif
                 });
         }
     }
@@ -1015,5 +1025,36 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 
     return false;
 }
+
+#ifdef DILIGENT_DEVELOPMENT
+void PipelineStateVkImpl::DvpVerifySRBResources(SRBArray& SRBs) const
+{
+    auto res_info = m_ResInfo.begin();
+    for (const auto& pResources : m_ShaderResources)
+    {
+        pResources->ProcessResources(
+            [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32) //
+            {
+                if (res_info->ResIndex != ~0u) // There are also immutable samplers in the list
+                {
+                    VERIFY_EXPR(res_info->Signature != nullptr);
+                    const auto& SignDesc      = res_info->Signature->GetDesc();
+                    const auto  SignBindIndex = SignDesc.BindingIndex;
+                    if (auto* pSRB = SRBs[SignBindIndex])
+                    {
+                        res_info->Signature->DvpValidateCommittedResource(ResAttribs, res_info->ResIndex, pSRB->GetResourceCache());
+                    }
+                    else
+                    {
+                        LOG_ERROR_MESSAGE("No SRB is bound to binding index ", SignBindIndex, " for signature '", SignDesc.Name, '\'');
+                    }
+                }
+                ++res_info;
+            } //
+        );
+    }
+    VERIFY_EXPR(res_info == m_ResInfo.end());
+}
+#endif
 
 } // namespace Diligent

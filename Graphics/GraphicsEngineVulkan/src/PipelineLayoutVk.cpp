@@ -171,9 +171,9 @@ size_t PipelineLayoutVk::GetHash() const
 
 bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, ResourceInfo& Info) const
 {
-    for (Uint32 i = 0, DSCount = GetSignatureCount(); i < DSCount; ++i)
+    for (Uint32 sign = 0, SignCount = GetSignatureCount(); sign < SignCount; ++sign)
     {
-        auto* pSignature = GetSignature(i);
+        auto* const pSignature = GetSignature(sign);
         if (pSignature == nullptr)
             continue;
 
@@ -185,8 +185,9 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
             if ((ResDesc.ShaderStages & Stage) && strcmp(ResDesc.Name, Name) == 0)
             {
                 Info.Type          = ResDesc.ResourceType;
+                Info.ResIndex      = r;
                 Info.BindingIndex  = Attr.BindingIndex;
-                Info.DescrSetIndex = m_FirstDescrSetIndex[i] + Attr.DescrSet;
+                Info.DescrSetIndex = m_FirstDescrSetIndex[sign] + Attr.DescrSet;
                 Info.Signature     = pSignature;
                 return true;
             }
@@ -200,8 +201,9 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
             if (Attr.Ptr && (Desc.ShaderStages & Stage) && StreqSuff(Name, Desc.SamplerOrTextureName, pSignature->GetCombinedSamplerSuffix()))
             {
                 Info.Type          = SHADER_RESOURCE_TYPE_SAMPLER;
+                Info.ResIndex      = ~0U;
                 Info.BindingIndex  = Attr.BindingIndex;
-                Info.DescrSetIndex = m_FirstDescrSetIndex[i] + Attr.DescrSet;
+                Info.DescrSetIndex = m_FirstDescrSetIndex[sign] + Attr.DescrSet;
                 Info.Signature     = pSignature;
                 return true;
             }
