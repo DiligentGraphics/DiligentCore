@@ -478,6 +478,8 @@ private:
         Uint32 NumCommands = 0;
 
         VkPipelineBindPoint vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+
+        bool CommittedResourcesValidated = false;
     } m_State;
 
     // Graphics/mesh, compute, ray tracing
@@ -530,7 +532,7 @@ private:
 
     void CommitDescriptorSets(DescriptorSetBindInfo& DescrSetBindInfo);
 #ifdef DILIGENT_DEVELOPMENT
-    void DvpValidateShaderResources();
+    void DvpValidateCommittedShaderResources();
 #endif
 
     /// Descriptor set binding information for each pipeline type (graphics/mesh, compute, ray tracing)

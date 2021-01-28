@@ -429,8 +429,11 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void DeviceContextVkImpl::DvpValidateShaderResources()
+void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
 {
+    if (m_State.CommittedResourcesValidated)
+        return;
+
     const auto& Layout    = m_pPipelineState->GetPipelineLayout();
     auto&       BindInfo  = GetDescriptorSetBindInfo(m_pPipelineState->GetDesc().PipelineType);
     const auto  SignCount = Layout.GetSignatureCount();
@@ -469,6 +472,8 @@ void DeviceContextVkImpl::DvpValidateShaderResources()
                    LayoutSign->GetDesc().Name, "' binding index (", i, ").");
         }
     }
+
+    m_State.CommittedResourcesValidated = true;
 }
 #endif
 
@@ -567,6 +572,8 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     BindInfo.Resources[SRBIndex] = pResBindingVkImpl;
 
     m_DynamicBufferOffsets.resize(std::max<size_t>(m_DynamicBufferOffsets.size(), pSignature->GetDynamicOffsetCount()));
+
+    m_State.CommittedResourcesValidated = false;
 }
 
 void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -740,7 +747,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateShaderResources();
+    DvpValidateCommittedShaderResources();
 #endif
 }
 
@@ -878,7 +885,7 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
 #endif
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateShaderResources();
+    DvpValidateCommittedShaderResources();
 #endif
 }
 
@@ -893,7 +900,7 @@ void DeviceContextVkImpl::PrepareForRayTracing()
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateShaderResources();
+    DvpValidateCommittedShaderResources();
 #endif
 }
 
