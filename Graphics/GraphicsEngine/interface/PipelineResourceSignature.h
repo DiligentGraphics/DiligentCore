@@ -96,7 +96,7 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
 
     /// Indicates that a texture SRV will be combined with a sampler.
     /// Applies to SHADER_RESOURCE_TYPE_TEXTURE_SRV resources.
-    PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE     = 0x02,
+    PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER   = 0x02,
 
     /// Indicates that this variable will be used to bind formatted buffers.
     /// Applies to SHADER_RESOURCE_TYPE_BUFFER_UAV and SHADER_RESOURCE_TYPE_BUFFER_SRV

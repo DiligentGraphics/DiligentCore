@@ -99,7 +99,7 @@ inline VkDescriptorType GetVkDescriptorType(DescriptorType Type)
 DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
 {
     const bool WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
-    const bool CombinedSampler   = (Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE) != 0;
+    const bool CombinedSampler   = (Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) != 0;
     const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
 
     static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
@@ -115,7 +115,7 @@ DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
                                     (WithDynamicOffset ? DescriptorType::StorageBufferDynamic : DescriptorType::StorageBuffer);
 
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
-            VERIFY_EXPR((Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE) == 0);
+            VERIFY_EXPR((Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) == 0);
             return CombinedSampler ? DescriptorType::CombinedImageSampler : DescriptorType::SeparateImage;
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:

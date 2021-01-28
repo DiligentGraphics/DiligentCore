@@ -74,9 +74,9 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
              Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV))
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS if ResourceType is not buffer");
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE) &&
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) &&
             Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE if ResourceType is not SHADER_RESOURCE_TYPE_TEXTURE_SRV");
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER if ResourceType is not SHADER_RESOURCE_TYPE_TEXTURE_SRV");
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) &&
             (Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&

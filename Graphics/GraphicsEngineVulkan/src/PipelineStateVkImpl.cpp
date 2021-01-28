@@ -541,7 +541,7 @@ void GetShaderResourceTypeAndFlags(SPIRVShaderResourceAttribs::ResourceType Type
 
         case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
             OutType  = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            OutFlags = PIPELINE_RESOURCE_FLAG_COMBINED_IMAGE;
+            OutFlags = PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
             break;
 
         case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
