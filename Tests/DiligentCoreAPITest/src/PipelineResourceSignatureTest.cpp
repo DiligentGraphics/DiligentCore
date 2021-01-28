@@ -1018,7 +1018,7 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
     auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
     ASSERT_TRUE(pPSO);
 
-    std::array<IDeviceObject*, 4> ppSRVs = {pTexSRVs[0], pTexSRVs[1]};
+    std::array<IDeviceObject*, 2> ppSRVs = {pTexSRVs[0], pTexSRVs[1]};
 
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_tex2D_Static", Set, ppSRVs[0]);
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_tex2D_StaticArr", SetArray, ppSRVs.data(), 0, 2);
@@ -1042,5 +1042,118 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
     pContext->Draw(DrawAttrs);
 }
 
+
+TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
+{
+    auto* const pEnv     = TestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto*       pContext = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.UseCombinedTextureSamplers = true;
+    ShaderCI.FilePath                   = "shaders/ShaderResourceLayout/FormattedBuffers.hlsl";
+
+    static constexpr Uint32 StaticBuffArraySize  = 4;
+    static constexpr Uint32 MutableBuffArraySize = 3;
+    static constexpr Uint32 DynamicBuffArraySize = 2;
+    ShaderMacroHelper       Macros;
+    Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", static_cast<int>(StaticBuffArraySize));
+    Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", static_cast<int>(MutableBuffArraySize));
+    Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", static_cast<int>(DynamicBuffArraySize));
+    ShaderCI.Macros = Macros;
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        ShaderCI.EntryPoint      = "VSMain";
+        ShaderCI.Desc.Name       = "FormattedBuffers - VS";
+        pDevice->CreateShader(ShaderCI, &pVS);
+    }
+    ASSERT_NE(pVS, nullptr);
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.EntryPoint      = "PSMain";
+        ShaderCI.Desc.Name       = "FormattedBuffers - PS";
+        pDevice->CreateShader(ShaderCI, &pPS);
+    }
+    ASSERT_NE(pPS, nullptr);
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Formatted buffer test";
+
+    constexpr auto SHADER_TYPE_VS_PS = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
+    // clang-format off
+    PipelineResourceDesc Resources[]
+    {
+        {SHADER_TYPE_VS_PS, "g_Buff_Static",   1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+        {SHADER_TYPE_VS_PS, "g_Buff_Mut",      1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+        {SHADER_TYPE_VS_PS, "g_Buff_Dyn",      1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+        {SHADER_TYPE_VS_PS, "g_BuffArr_Static",StaticBuffArraySize,  SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER},
+        {SHADER_TYPE_VS_PS, "g_BuffArr_Mut",   MutableBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER},
+        {SHADER_TYPE_VS_PS, "g_BuffArr_Dyn",   DynamicBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER}
+    };
+    // clang-format on
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+    ASSERT_TRUE(pPRS);
+
+    auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
+    ASSERT_TRUE(pPSO);
+
+    std::array<RefCntAutoPtr<IBuffer>, 4>     pBuffer;
+    std::array<RefCntAutoPtr<IBufferView>, 4> pBufferView;
+
+    for (size_t i = 0; i < pBuffer.size(); ++i)
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name              = "Formatted buffer";
+        BuffDesc.uiSizeInBytes     = 256;
+        BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
+        BuffDesc.Usage             = USAGE_DEFAULT;
+        BuffDesc.ElementByteStride = 16;
+        BuffDesc.Mode              = BUFFER_MODE_FORMATTED;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer[i]);
+        ASSERT_NE(pBuffer[i], nullptr);
+
+        BufferViewDesc BuffViewDesc;
+        BuffViewDesc.Name                 = "Formatted buffer SRV";
+        BuffViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
+        BuffViewDesc.Format.ValueType     = VT_FLOAT32;
+        BuffViewDesc.Format.NumComponents = 4;
+        BuffViewDesc.Format.IsNormalized  = false;
+        pBuffer[i]->CreateView(BuffViewDesc, &pBufferView[i]);
+    }
+    std::array<IDeviceObject*, 4> ppSRVs = {pBufferView[0], pBufferView[1], pBufferView[2], pBufferView[3]};
+
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Buff_Static", Set, ppSRVs[0]);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_BuffArr_Static", SetArray, ppSRVs.data(), 0, StaticBuffArraySize);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPRS->CreateShaderResourceBinding(&pSRB, true);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, ppSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Mut", SetArray, ppSRVs.data(), 0, MutableBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, ppSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, ppSRVs.data(), 0, DynamicBuffArraySize);
+
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    ITextureView* ppRTVs[] = {pRTV};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+
+    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    pContext->Draw(DrawAttrs);
+}
 
 } // namespace Diligent
