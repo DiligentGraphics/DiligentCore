@@ -270,7 +270,7 @@ elseif(PLATFORM_IOS)
     # The linker will issue a warning, but this will work for both device and the simulator.
     list(APPEND PRIVATE_DEPENDENCIES
         "${MoltenVK_FRAMEWORK}/ios-arm64/libMoltenVK.a"
-        "${MoltenVK_FRAMEWORK}/ios-x86_64-simulator/libMoltenVK.a"
+        "${MoltenVK_FRAMEWORK}/ios-arm64_x86_64-simulator/libMoltenVK.a"
     )
 
     find_library(CORE_GRAPHICS CoreGraphics)

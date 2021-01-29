@@ -1,5 +1,5 @@
 CMAKE_VERSION="3.18.2"
-VULKAN_SDK_VER="1.2.154.0"
+VULKAN_SDK_VER="1.2.162.1"
 
 if [ "$TRAVIS_OS_NAME" = "osx" ];  then
   wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz &&
