@@ -592,18 +592,24 @@ void CopyTextureSubresource(const TextureSubResData& SrcSubres,
                             Uint32                   DstRowStride,
                             Uint32                   DstDepthStride);
 
+
+inline String GetShaderResourcePrintName(const char* Name, Uint32 ArraySize, Uint32 ArrayIndex)
+{
+    VERIFY(ArrayIndex < ArraySize, "Array index is out of range");
+    String PrintName = Name;
+    if (ArraySize > 1)
+    {
+        PrintName.push_back('[');
+        PrintName.append(std::to_string(ArrayIndex));
+        PrintName.push_back(']');
+    }
+    return PrintName;
+}
+
 template <typename DescType>
 String GetShaderResourcePrintName(const DescType& ResDesc, Uint32 ArrayIndex = 0)
 {
-    VERIFY(ArrayIndex < ResDesc.ArraySize, "Array index is out of range");
-    String Name = ResDesc.Name;
-    if (ResDesc.ArraySize > 1)
-    {
-        Name.push_back('[');
-        Name.append(std::to_string(ArrayIndex));
-        Name.push_back(']');
-    }
-    return Name;
+    return GetShaderResourcePrintName(ResDesc.Name, ResDesc.ArraySize, ArrayIndex);
 }
 
 } // namespace Diligent

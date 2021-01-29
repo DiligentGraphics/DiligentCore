@@ -137,12 +137,11 @@ inline Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
 }
 
 
-
-
-template <typename ResourceAttribsType,
-          typename BufferImplType>
-bool VerifyConstantBufferBinding(const ResourceAttribsType&    Attribs,
+template <typename BufferImplType>
+bool VerifyConstantBufferBinding(const char*                   ResName,
+                                 Uint32                        ArraySize,
                                  SHADER_RESOURCE_VARIABLE_TYPE VarType,
+                                 PIPELINE_RESOURCE_FLAGS       ResFlags,
                                  Uint32                        ArrayIndex,
                                  const IDeviceObject*          pBuffer,
                                  const BufferImplType*         pBufferImpl,
@@ -152,7 +151,7 @@ bool VerifyConstantBufferBinding(const ResourceAttribsType&    Attribs,
     if (pBuffer != nullptr && pBufferImpl == nullptr)
     {
         std::stringstream ss;
-        ss << "Failed to bind resource '" << pBuffer->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        ss << "Failed to bind resource '" << pBuffer->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
             ss << " in shader '" << ShaderName << '\'';
@@ -163,17 +162,34 @@ bool VerifyConstantBufferBinding(const ResourceAttribsType&    Attribs,
     }
 
     bool BindingOK = true;
-    if (pBufferImpl != nullptr && (pBufferImpl->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) == 0)
+    if (pBufferImpl != nullptr)
     {
-        std::stringstream ss;
-        ss << "Error binding buffer '" << pBufferImpl->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
-        if (ShaderName != nullptr)
+        const auto& BuffDesc = pBufferImpl->GetDesc();
+        if ((BuffDesc.BindFlags & BIND_UNIFORM_BUFFER) == 0)
         {
-            ss << " in shader '" << ShaderName << '\'';
+            std::stringstream ss;
+            ss << "Error binding buffer '" << BuffDesc.Name << "' to variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
+            if (ShaderName != nullptr)
+            {
+                ss << " in shader '" << ShaderName << '\'';
+            }
+            ss << ". The buffer was not created with BIND_UNIFORM_BUFFER flag.";
+            LOG_ERROR_MESSAGE(ss.str());
+            BindingOK = false;
         }
-        ss << ". The buffer was not created with BIND_UNIFORM_BUFFER flag.";
-        LOG_ERROR_MESSAGE(ss.str());
-        BindingOK = false;
+
+        if (BuffDesc.Usage == USAGE_DYNAMIC && (ResFlags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS))
+        {
+            std::stringstream ss;
+            ss << "Error binding USAGE_DYNAMIC buffer '" << BuffDesc.Name << "' to variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
+            if (ShaderName != nullptr)
+            {
+                ss << " in shader '" << ShaderName << '\'';
+            }
+            ss << ". The variable uses PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.";
+            LOG_ERROR_MESSAGE(ss.str());
+            BindingOK = false;
+        }
     }
 
     if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedBuffer != nullptr && pCachedBuffer != pBufferImpl)
@@ -182,7 +198,7 @@ bool VerifyConstantBufferBinding(const ResourceAttribsType&    Attribs,
 
         std::stringstream ss;
         ss << "Non-null constant (uniform) buffer '" << pCachedBuffer->GetDesc().Name << "' is already bound to " << VarTypeStr
-           << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+           << " shader variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
             ss << " in shader '" << ShaderName << '\'';
@@ -242,15 +258,61 @@ inline Uint32 GetResourceSampleCount(const IBufferView* /*pBuffView*/)
     return 0;
 }
 
-template <typename ResourceAttribsType,
-          typename ResourceViewImplType,
+
+
+template <typename TextureViewImplType>
+bool ValidateResourceViewDimension(const char*                ResName,
+                                   Uint32                     ArraySize,
+                                   Uint32                     ArrayInd,
+                                   const TextureViewImplType* pViewImpl,
+                                   RESOURCE_DIMENSION         ExpectedResourceDim,
+                                   bool                       IsMultisample)
+{
+    bool BindingsOK = true;
+
+    if (ExpectedResourceDim != RESOURCE_DIM_UNDEFINED)
+    {
+        const auto ResourceDim = GetResourceViewDimension(pViewImpl);
+        if (ResourceDim != ExpectedResourceDim)
+        {
+            LOG_ERROR_MESSAGE("The dimension of resource view '", pViewImpl->GetDesc().Name,
+                              "' bound to variable '", GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is ", GetResourceDimString(ResourceDim),
+                              ", but resource dimension expected by the shader is ", GetResourceDimString(ExpectedResourceDim), ".");
+        }
+
+        if (ResourceDim == RESOURCE_DIM_TEX_2D || ResourceDim == RESOURCE_DIM_TEX_2D_ARRAY)
+        {
+            auto SampleCount = GetResourceSampleCount(pViewImpl);
+            if (IsMultisample && SampleCount == 1)
+            {
+                LOG_ERROR_MESSAGE("Texture view '", pViewImpl->GetDesc().Name, "' bound to variable '",
+                                  GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is invalid: multisample texture is expected.");
+                BindingsOK = false;
+            }
+            else if (!IsMultisample && SampleCount > 1)
+            {
+                LOG_ERROR_MESSAGE("Texture view '", pViewImpl->GetDesc().Name, "' bound to variable '",
+                                  GetShaderResourcePrintName(ResName, ArraySize, ArrayInd), "' is invalid: single-sample texture is expected.");
+                BindingsOK = false;
+            }
+        }
+    }
+
+    return BindingsOK;
+}
+
+
+template <typename ResourceViewImplType,
           typename ViewTypeEnumType>
-bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
+bool VerifyResourceViewBinding(const char*                             ResName,
+                               Uint32                                  ArraySize,
                                SHADER_RESOURCE_VARIABLE_TYPE           VarType,
                                Uint32                                  ArrayIndex,
                                const IDeviceObject*                    pView,
                                const ResourceViewImplType*             pViewImpl,
                                std::initializer_list<ViewTypeEnumType> ExpectedViewTypes,
+                               RESOURCE_DIMENSION                      ExpectedResourceDimension,
+                               bool                                    IsMultisample,
                                const IDeviceObject*                    pCachedView,
                                const char*                             ShaderName = nullptr)
 {
@@ -259,7 +321,7 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
     if (pView && !pViewImpl)
     {
         std::stringstream ss;
-        ss << "Failed to bind resource '" << pView->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        ss << "Failed to bind resource '" << pView->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
             ss << " in shader '" << ShaderName << '\'';
@@ -284,7 +346,7 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
         {
             std::stringstream ss;
             ss << "Error binding " << ExpectedResourceType << " '" << pViewImpl->GetDesc().Name << "' to variable '"
-               << Attribs.GetPrintName(ArrayIndex) << '\'';
+               << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
             if (ShaderName != nullptr)
             {
                 ss << " in shader '" << ShaderName << '\'';
@@ -306,37 +368,10 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
             BindingOK = false;
         }
 
-        const auto ExpectedResourceDim = Attribs.GetResourceDimension();
-        if (ExpectedResourceDim != RESOURCE_DIM_UNDEFINED)
+        if (!ValidateResourceViewDimension(ResName, ArraySize, ArrayIndex, pViewImpl,
+                                           ExpectedResourceDimension, IsMultisample))
         {
-            auto ResourceDim = GetResourceViewDimension(pViewImpl);
-            if (ResourceDim != ExpectedResourceDim)
-            {
-                LOG_ERROR_MESSAGE("Error binding ", ExpectedResourceType, " '", pViewImpl->GetDesc().Name, "' to variable '",
-                                  Attribs.GetPrintName(ArrayIndex), "': incorrect resource dimension: ",
-                                  GetResourceDimString(ExpectedResourceDim), " is expected, but the actual dimension is ",
-                                  GetResourceDimString(ResourceDim));
-
-                BindingOK = false;
-            }
-
-            if (ResourceDim == RESOURCE_DIM_TEX_2D || ResourceDim == RESOURCE_DIM_TEX_2D_ARRAY)
-            {
-                auto SampleCount = GetResourceSampleCount(pViewImpl);
-                auto IsMS        = Attribs.IsMultisample();
-                if (IsMS && SampleCount == 1)
-                {
-                    LOG_ERROR_MESSAGE("Error binding ", ExpectedResourceType, " '", pViewImpl->GetDesc().Name, "' to variable '",
-                                      Attribs.GetPrintName(ArrayIndex), "': multisample texture is expected.");
-                    BindingOK = false;
-                }
-                else if (!IsMS && SampleCount > 1)
-                {
-                    LOG_ERROR_MESSAGE("Error binding ", ExpectedResourceType, " '", pViewImpl->GetDesc().Name, "' to variable '",
-                                      Attribs.GetPrintName(ArrayIndex), "': single-sample texture is expected.");
-                    BindingOK = false;
-                }
-            }
+            BindingOK = false;
         }
     }
 
@@ -346,7 +381,7 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
 
         std::stringstream ss;
         ss << "Non-null resource '" << pCachedView->GetDesc().Name << "' is already bound to " << VarTypeStr
-           << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+           << " shader variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
             ss << " in shader '" << ShaderName << '\'';
@@ -369,18 +404,20 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
     return BindingOK;
 }
 
-template <typename ResourceAttribsType>
-bool VerifyTLASResourceBinding(const ResourceAttribsType&    Attribs,
+template <typename TLASImplType>
+bool VerifyTLASResourceBinding(const char*                   ResName,
+                               Uint32                        ArraySize,
                                SHADER_RESOURCE_VARIABLE_TYPE VarType,
                                Uint32                        ArrayIndex,
-                               const ITopLevelAS*            pTLAS,
+                               const IDeviceObject*          pTLAS,
+                               const TLASImplType*           pTLASImpl,
                                const IDeviceObject*          pCachedAS,
                                const char*                   ShaderName = nullptr)
 {
-    if (!pTLAS)
+    if (pTLAS != nullptr && pTLASImpl == nullptr)
     {
         std::stringstream ss;
-        ss << "Failed to bind resource '" << pTLAS->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        ss << "Failed to bind resource '" << pCachedAS->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
             ss << " in shader '" << ShaderName << '\'';
@@ -398,7 +435,7 @@ bool VerifyTLASResourceBinding(const ResourceAttribsType&    Attribs,
 
         std::stringstream ss;
         ss << "Non-null resource '" << pCachedAS->GetDesc().Name << "' is already bound to " << VarTypeStr
-           << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+           << " shader variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
             ss << " in shader '" << ShaderName << '\'';
@@ -465,7 +502,7 @@ struct DefaultShaderVariableIDComparator
     bool operator()(const INTERFACE_ID& IID) const
     {
         return IID == IID_ShaderResourceVariable || IID == IID_Unknown;
-    }
+    } // namespace Diligent
 };
 
 /// Base implementation of a shader variable

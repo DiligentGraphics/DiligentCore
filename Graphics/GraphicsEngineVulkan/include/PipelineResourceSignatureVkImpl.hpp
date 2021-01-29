@@ -255,8 +255,6 @@ public:
     // Copies static resources from the static resource cache to the destination cache
     void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
 
-    static String GetPrintName(const PipelineResourceDesc& ResDesc, Uint32 ArrayInd);
-
     // Binds object pObj to resource with index ResIndex in m_Desc.Resources and
     // array index ArrayIndex.
     void BindResource(IDeviceObject*         pObj,

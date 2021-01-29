@@ -234,7 +234,7 @@ void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, 
                 if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Var.IsBound(ArrInd))
                 {
                     LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '",
-                                      PipelineResourceSignatureVkImpl::GetPrintName(Res, ArrInd),
+                                      GetShaderResourcePrintName(Res, ArrInd),
                                       "': resource is not found in the resource mapping. "
                                       "Do not use BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag to suppress the message if this is not an issue.");
                 }

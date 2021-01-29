@@ -904,7 +904,7 @@ void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourc
             const auto&    SrcCachedRes   = SrcDescrSet.GetResource(SrcCacheOffset);
             IDeviceObject* pObject        = SrcCachedRes.pObject.RawPtr<IDeviceObject>();
             if (!pObject)
-                LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetPrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
+                LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
             auto           DstCacheOffset  = Attr.CacheOffset(DstCacheType) + ArrInd;
             IDeviceObject* pCachedResource = DstDescrSet.GetResource(DstCacheOffset).pObject;
@@ -1130,11 +1130,6 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
 }
 
-String PipelineResourceSignatureVkImpl::GetPrintName(const PipelineResourceDesc& ResDesc, Uint32 ArrayInd)
-{
-    return GetShaderResourcePrintName(ResDesc, ArrayInd);
-}
-
 namespace
 {
 
@@ -1149,12 +1144,6 @@ struct BindResourceHelper
     ShaderResourceCacheVk&                                  ResourceCache;
 
     void BindResource(IDeviceObject* pObj) const;
-
-    String GetPrintName(Uint32 ArrayInd) const;
-
-    RESOURCE_DIMENSION GetResourceDimension() const;
-
-    bool IsMultisample() const;
 
 private:
     void CacheUniformBuffer(IDeviceObject* pBuffer,
@@ -1308,7 +1297,8 @@ void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer,
     // clang-format on
     RefCntAutoPtr<BufferVkImpl> pBufferVk{pBuffer, IID_BufferVk};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyConstantBufferBinding(*this, ResDesc.VarType, ArrayIndex, pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr());
+    VerifyConstantBufferBinding(ResDesc.Name, ResDesc.ArraySize, ResDesc.VarType, ResDesc.Flags, ArrayIndex,
+                                pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr());
 #endif
 
     auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferVkImpl* pOldBuffer, const BufferVkImpl* pNewBuffer) {
@@ -1351,7 +1341,11 @@ void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView,
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
         auto RequiredViewType = DescriptorTypeToBufferView(DstRes.Type);
-        VerifyResourceViewBinding(*this, ResDesc.VarType, ArrayIndex, pBufferView, pBufferViewVk.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr());
+        VerifyResourceViewBinding(ResDesc.Name, ResDesc.ArraySize, ResDesc.VarType, ArrayIndex,
+                                  pBufferView, pBufferViewVk.RawPtr(),
+                                  {RequiredViewType}, RESOURCE_DIM_BUFFER,
+                                  false, // IsMultisample
+                                  DstRes.pObject.RawPtr());
         if (pBufferViewVk != nullptr)
         {
             const auto& ViewDesc = pBufferViewVk->GetDesc();
@@ -1405,7 +1399,11 @@ void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView,
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
         auto RequiredViewType = DescriptorTypeToBufferView(DstRes.Type);
-        VerifyResourceViewBinding(*this, ResDesc.VarType, ArrayIndex, pBufferView, pBufferViewVk.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr());
+        VerifyResourceViewBinding(ResDesc.Name, ResDesc.ArraySize, ResDesc.VarType, ArrayIndex,
+                                  pBufferView, pBufferViewVk.RawPtr(),
+                                  {RequiredViewType}, RESOURCE_DIM_BUFFER,
+                                  false, // IsMultisample
+                                  DstRes.pObject.RawPtr());
         if (pBufferViewVk != nullptr)
         {
             const auto& ViewDesc = pBufferViewVk->GetDesc();
@@ -1458,7 +1456,12 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
         auto RequiredViewType = DescriptorTypeToTextureView(DstRes.Type);
-        VerifyResourceViewBinding(*this, ResDesc.VarType, ArrayIndex, pTexView, pTexViewVk0.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr());
+        VerifyResourceViewBinding(ResDesc.Name, ResDesc.ArraySize, ResDesc.VarType, ArrayIndex,
+                                  pTexView, pTexViewVk0.RawPtr(),
+                                  {RequiredViewType},
+                                  RESOURCE_DIM_UNDEFINED, // Required resource dimension is not known
+                                  false,                  // IsMultisample
+                                  DstRes.pObject.RawPtr());
     }
 #endif
     if (UpdateCachedResource(std::move(pTexViewVk0), [](const TextureViewVkImpl*, const TextureViewVkImpl*) {}))
@@ -1470,7 +1473,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
         {
             if (pTexViewVk->GetSampler() == nullptr)
             {
-                LOG_ERROR_MESSAGE("Error binding texture view '", pTexViewVk->GetDesc().Name, "' to variable '", GetPrintName(ArrayIndex),
+                LOG_ERROR_MESSAGE("Error binding texture view '", pTexViewVk->GetDesc().Name, "' to variable '", GetShaderResourcePrintName(ResDesc, ArrayIndex),
                                   "'. No sampler is assigned to the view");
             }
         }
@@ -1525,7 +1528,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
                 else
                 {
                     LOG_ERROR_MESSAGE("Failed to bind sampler to sampler variable '", SamplerResDesc.Name,
-                                      "' assigned to separate image '", GetPrintName(ArrayIndex),
+                                      "' assigned to separate image '", GetShaderResourcePrintName(ResDesc, ArrayIndex),
                                       "': no sampler is set in texture view '", pTexViewVk->GetDesc().Name, '\'');
                 }
             }
@@ -1542,13 +1545,13 @@ void BindResourceHelper::CacheSeparateSampler(IDeviceObject* pSampler) const
 #ifdef DILIGENT_DEVELOPMENT
     if (pSampler != nullptr && pSamplerVk == nullptr)
     {
-        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '", GetPrintName(ArrayIndex),
+        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '", GetShaderResourcePrintName(ResDesc, ArrayIndex),
                           "'. Unexpected object type: sampler is expected");
     }
     if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr && DstRes.pObject != pSamplerVk)
     {
         auto VarTypeStr = GetShaderVariableTypeLiteralName(ResDesc.VarType);
-        LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", GetPrintName(ArrayIndex),
+        LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", GetShaderResourcePrintName(ResDesc, ArrayIndex),
                           "'. Attempting to bind another sampler or null is an error and may "
                           "cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.");
     }
@@ -1570,7 +1573,12 @@ void BindResourceHelper::CacheInputAttachment(IDeviceObject* pTexView) const
     VERIFY(DstRes.Type == DescriptorType::InputAttachment, "Input attachment resource is expected");
     RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{pTexView, IID_TextureViewVk};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyResourceViewBinding(*this, ResDesc.VarType, ArrayIndex, pTexView, pTexViewVk0.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, DstRes.pObject.RawPtr());
+    VerifyResourceViewBinding(ResDesc.Name, ResDesc.ArraySize, ResDesc.VarType, ArrayIndex,
+                              pTexView, pTexViewVk0.RawPtr(),
+                              {TEXTURE_VIEW_SHADER_RESOURCE},
+                              RESOURCE_DIM_UNDEFINED,
+                              false, // IsMultisample
+                              DstRes.pObject.RawPtr());
 #endif
     if (UpdateCachedResource(std::move(pTexViewVk0), [](const TextureViewVkImpl*, const TextureViewVkImpl*) {}))
     {
@@ -1590,7 +1598,7 @@ void BindResourceHelper::CacheAccelerationStructure(IDeviceObject* pTLAS) const
     VERIFY(DstRes.Type == DescriptorType::AccelerationStructure, "Acceleration Structure resource is expected");
     RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyTLASResourceBinding(*this, ResDesc.VarType, ArrayIndex, pTLASVk.RawPtr(), DstRes.pObject.RawPtr());
+    VerifyTLASResourceBinding(ResDesc.Name, ResDesc.ArraySize, ResDesc.VarType, ArrayIndex, pTLAS, pTLASVk.RawPtr(), DstRes.pObject.RawPtr());
 #endif
     if (UpdateCachedResource(std::move(pTLASVk), [](const TopLevelASVkImpl*, const TopLevelASVkImpl*) {}))
     {
@@ -1629,25 +1637,6 @@ void BindResourceHelper::UpdateDescriptorHandle(const VkDescriptorImageInfo*    
     Signature.GetDevice()->GetLogicalDevice().UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
 }
 
-String BindResourceHelper::GetPrintName(Uint32 ArrayInd) const
-{
-    return PipelineResourceSignatureVkImpl::GetPrintName(ResDesc, ArrayInd);
-}
-
-RESOURCE_DIMENSION BindResourceHelper::GetResourceDimension() const
-{
-    // Required resource dimension is not known to the root signature as
-    // shader resources are only known to PSO.
-    return RESOURCE_DIM_UNDEFINED;
-}
-
-bool BindResourceHelper::IsMultisample() const
-{
-    // Required multisample state is not known to the root signature as
-    // shader resources are only known to PSO.
-    return false;
-}
-
 } // namespace
 
 void PipelineResourceSignatureVkImpl::BindResource(IDeviceObject*         pObj,
@@ -1674,45 +1663,6 @@ void PipelineResourceSignatureVkImpl::BindResource(IDeviceObject*         pObj,
         ResourceCache};
 
     Helper.BindResource(pObj);
-}
-
-template <typename TextureViewImplType>
-bool ValidateTextureDimension(const PipelineResourceDesc& ResDesc,
-                              Uint32                      ArrayInd,
-                              const TextureViewImplType*  pTexView,
-                              RESOURCE_DIMENSION          ExpectedResourceDim,
-                              bool                        IsMultisample)
-{
-    VERIFY_EXPR(ExpectedResourceDim != RESOURCE_DIM_UNDEFINED);
-
-    bool BindingsOK = true;
-
-    const auto ResourceDim = pTexView->GetDesc().TextureDim;
-    if (ResourceDim != ExpectedResourceDim)
-    {
-        LOG_ERROR_MESSAGE("The resource dimension of texture view '", pTexView->GetDesc().Name,
-                          "' bound to variable '", GetShaderResourcePrintName(ResDesc, ArrayInd), "' is ", GetResourceDimString(ResourceDim),
-                          ", but resource dimension expected by the shader is ", GetResourceDimString(ExpectedResourceDim), ".");
-    }
-
-    if (ResourceDim == RESOURCE_DIM_TEX_2D || ResourceDim == RESOURCE_DIM_TEX_2D_ARRAY)
-    {
-        auto SampleCount = pTexView->GetTexture()->GetDesc().SampleCount;
-        if (IsMultisample && SampleCount == 1)
-        {
-            LOG_ERROR_MESSAGE("Texture view '", pTexView->GetDesc().Name, "' bound to variable '",
-                              GetShaderResourcePrintName(ResDesc, ArrayInd), "' is invalid: multisample texture is expected.");
-            BindingsOK = false;
-        }
-        else if (!IsMultisample && SampleCount > 1)
-        {
-            LOG_ERROR_MESSAGE("Texture view '", pTexView->GetDesc().Name, "' bound to variable '",
-                              GetShaderResourcePrintName(ResDesc, ArrayInd), "' is invalid: single-sample texture is expected.");
-            BindingsOK = false;
-        }
-    }
-
-    return BindingsOK;
 }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -1750,7 +1700,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                         // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                         LOG_WARNING_MESSAGE("The size of uniform buffer '",
                                             pBufferVk->GetDesc().Name, "' bound to shader variable '",
-                                            GetPrintName(ResInfo, i), "' is ", pBufferVk->GetDesc().uiSizeInBytes,
+                                            GetShaderResourcePrintName(ResInfo, i), "' is ", pBufferVk->GetDesc().uiSizeInBytes,
                                             " bytes, but the shader expects at least ", SPIRVAttribs.BufferStaticSize,
                                             " bytes.");
                     }
@@ -1787,7 +1737,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                         {
                             // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                             LOG_WARNING_MESSAGE("The size of buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
-                                                GetPrintName(ResInfo, i), "' is ", ViewDesc.ByteWidth, " bytes, but the shader expects at least ",
+                                                GetShaderResourcePrintName(ResInfo, i), "' is ", ViewDesc.ByteWidth, " bytes, but the shader expects at least ",
                                                 SPIRVAttribs.BufferStaticSize, " bytes.");
                         }
                     }
@@ -1799,7 +1749,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                             // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.
                             LOG_WARNING_MESSAGE("The size (", ViewDesc.ByteWidth, ") and stride (", BuffDesc.ElementByteStride, ") of buffer view '",
                                                 ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
-                                                GetPrintName(ResInfo, i), "' are incompatible with what the shader expects. This may be the result of the array element size mismatch.");
+                                                GetShaderResourcePrintName(ResInfo, i), "' are incompatible with what the shader expects. This may be the result of the array element size mismatch.");
                         }
                     }
                 }
@@ -1823,7 +1773,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                 // is bound. It will be null if the type is incorrect.
                 if (const auto* pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>())
                 {
-                    if (!ValidateTextureDimension(ResInfo, i, pTexViewVk, SPIRVAttribs.GetResourceDimension(), SPIRVAttribs.IsMultisample()))
+                    if (!ValidateResourceViewDimension(ResInfo.Name, ResInfo.ArraySize, i, pTexViewVk, SPIRVAttribs.GetResourceDimension(), SPIRVAttribs.IsMultisample()))
                         BindingsOK = false;
                 }
                 else
