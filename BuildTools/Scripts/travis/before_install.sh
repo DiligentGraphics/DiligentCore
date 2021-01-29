@@ -1,4 +1,4 @@
-CMAKE_VERSION="3.18.2"
+CMAKE_VERSION="3.19.3"
 VULKAN_SDK_VER="1.2.162.1"
 
 if [ "$TRAVIS_OS_NAME" = "osx" ];  then
