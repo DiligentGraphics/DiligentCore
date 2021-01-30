@@ -39,6 +39,7 @@
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
 #include "FixedLinearAllocator.hpp"
+#include "BasicMath.hpp"
 
 namespace Diligent
 {
@@ -98,6 +99,27 @@ public:
     std::pair<Uint32, Uint32> GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE VarType) const
     {
         return std::pair<Uint32, Uint32>{m_ResourceOffsets[VarType], m_ResourceOffsets[VarType + 1]};
+    }
+
+    // Returns the number of shader stages that have resources.
+    Uint32 GetNumActiveShaderStages() const { return m_NumShaderStages; }
+
+    // Returns the type of the active shader stage with the given index.
+    SHADER_TYPE GetActiveShaderStageType(Uint32 StageIndex) const
+    {
+        VERIFY_EXPR(StageIndex < m_NumShaderStages);
+
+        SHADER_TYPE Stages = m_ShaderStages;
+        for (Uint32 Index = 0; Stages != SHADER_TYPE_UNKNOWN; ++Index)
+        {
+            auto StageBit = ExtractLSB(Stages);
+
+            if (Index == StageIndex)
+                return StageBit;
+        }
+
+        UNEXPECTED("Index is out of range");
+        return SHADER_TYPE_UNKNOWN;
     }
 
 protected:
@@ -252,9 +274,15 @@ protected:
 protected:
     size_t m_Hash = 0;
 
+    // Shader stages that have resources.
+    SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;
+
     std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_ResourceOffsets = {};
 
     PIPELINE_TYPE m_PipelineType = PIPELINE_TYPE_INVALID;
+
+    // The number of shader stages that have resources.
+    Uint8 m_NumShaderStages = 0; // AZ TODO: remove ?
 
 #ifdef DILIGENT_DEBUG
     bool m_IsDestructed = false;

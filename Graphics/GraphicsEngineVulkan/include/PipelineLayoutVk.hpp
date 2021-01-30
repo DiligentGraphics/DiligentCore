@@ -61,10 +61,16 @@ public:
     }
 
     // Returns the index of the first descriptor set used by the given resource signature
-    Uint32 GetFirstDescrSetIndex(const IPipelineResourceSignature* pPRS) const
+    Uint32 GetFirstDescrSetIndex(const PipelineResourceSignatureVkImpl* pPRS) const
     {
+        VERIFY_EXPR(pPRS != nullptr);
         Uint32 Index = pPRS->GetDesc().BindingIndex;
-        return Index < m_SignatureCount ? m_FirstDescrSetIndex[Index] : ~0u;
+
+        VERIFY_EXPR(Index < m_SignatureCount);
+        VERIFY_EXPR(m_Signatures[Index] != nullptr);
+        VERIFY_EXPR(!m_Signatures[Index]->IsIncompatibleWith(*pPRS));
+
+        return m_FirstDescrSetIndex[Index];
     }
 
     struct ResourceInfo
