@@ -29,6 +29,14 @@ if(ENABLE_HLSL)
     list(APPEND INCLUDE include/HLSLUtils.hpp)
 endif()
 
+#if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
+    list(APPEND SOURCE
+        src/DXBCUtils.cpp
+        ../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.cpp)
+    list(APPEND INCLUDE
+        include/DXBCUtils.hpp
+        ../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.h)
+#endif()
 
 if((PLATFORM_WIN32 AND NOT MINGW_BUILD) OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX)
     set(DXC_SUPPORTED TRUE)
@@ -96,6 +104,10 @@ PRIVATE
 if (DXC_SUPPORTED)
     target_include_directories(Diligent-ShaderTools PUBLIC ../../ThirdParty/DirectXShaderCompiler)
 endif()
+
+#if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
+    target_include_directories(Diligent-ShaderTools PRIVATE ../../ThirdParty/GPUOpenShaderUtils)
+#endif()
 
 target_link_libraries(Diligent-ShaderTools 
 PRIVATE 
