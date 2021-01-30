@@ -70,22 +70,22 @@ DILIGENT_TYPED_ENUM(VALUE_TYPE, Uint8)
 /// - TextureDesc to describe bind flags for a texture
 DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
 {
-    BIND_NONE                = 0x0L,   ///< Undefined binding
-    BIND_VERTEX_BUFFER	     = 0x1L,   ///< A buffer can be bound as a vertex buffer
-    BIND_INDEX_BUFFER	     = 0x2L,   ///< A buffer can be bound as an index buffer
-    BIND_UNIFORM_BUFFER	     = 0x4L,   ///< A buffer can be bound as a uniform buffer
+    BIND_NONE                = 0x0,   ///< Undefined binding
+    BIND_VERTEX_BUFFER	     = 0x1,   ///< A buffer can be bound as a vertex buffer
+    BIND_INDEX_BUFFER	     = 0x2,   ///< A buffer can be bound as an index buffer
+    BIND_UNIFORM_BUFFER	     = 0x4,   ///< A buffer can be bound as a uniform buffer
                                        ///  \warning This flag may not be combined with any other bind flag
-    BIND_SHADER_RESOURCE	 = 0x8L,   ///< A buffer or a texture can be bound as a shader resource
+    BIND_SHADER_RESOURCE	 = 0x8,   ///< A buffer or a texture can be bound as a shader resource
                                        ///  \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag 
-    BIND_STREAM_OUTPUT	     = 0x10L,  ///< A buffer can be bound as a target for stream output stage
-    BIND_RENDER_TARGET	     = 0x20L,  ///< A texture can be bound as a render target
-    BIND_DEPTH_STENCIL	     = 0x40L,  ///< A texture can be bound as a depth-stencil target
-    BIND_UNORDERED_ACCESS	 = 0x80L,  ///< A buffer or a texture can be bound as an unordered access view
-    BIND_INDIRECT_DRAW_ARGS	 = 0x100L, ///< A buffer can be bound as the source buffer for indirect draw commands
-    BIND_INPUT_ATTACHMENT    = 0x200L, ///< A texture can be used as render pass input attachment
-    BIND_RAY_TRACING         = 0x400L, ///< A buffer can be used as a scratch buffer or as the source of primitive data 
-                                       ///  for acceleration structure building
-    BIND_FLAGS_LAST          = 0x400L
+    BIND_STREAM_OUTPUT	     = 0x10,  ///< A buffer can be bound as a target for stream output stage
+    BIND_RENDER_TARGET	     = 0x20,  ///< A texture can be bound as a render target
+    BIND_DEPTH_STENCIL	     = 0x40,  ///< A texture can be bound as a depth-stencil target
+    BIND_UNORDERED_ACCESS	 = 0x80,  ///< A buffer or a texture can be bound as an unordered access view
+    BIND_INDIRECT_DRAW_ARGS	 = 0x100, ///< A buffer can be bound as the source buffer for indirect draw commands
+    BIND_INPUT_ATTACHMENT    = 0x200, ///< A texture can be used as render pass input attachment
+    BIND_RAY_TRACING         = 0x400, ///< A buffer can be used as a scratch buffer or as the source of primitive data 
+                                      ///  for acceleration structure building
+    BIND_FLAGS_LAST          = 0x400
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
 

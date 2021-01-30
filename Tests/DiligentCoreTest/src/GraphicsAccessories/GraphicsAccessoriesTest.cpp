@@ -489,7 +489,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the test below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the test below to handle the new shader type");
 
     // clang-format off
     EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_UNKNOWN),             -1);
@@ -519,7 +519,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromIndex)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the test below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the test below to handle the new shader type");
 
     EXPECT_EQ(GetShaderTypeFromIndex(VSInd), SHADER_TYPE_VERTEX);
     EXPECT_EQ(GetShaderTypeFromIndex(PSInd), SHADER_TYPE_PIXEL);
@@ -671,6 +671,34 @@ TEST(GraphicsAccessories_GraphicsAccessories, PipelineTypeFromShaderStages)
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_ANY_HIT), PIPELINE_TYPE_RAY_TRACING);
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_INTERSECTION), PIPELINE_TYPE_RAY_TRACING);
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_CALLABLE), PIPELINE_TYPE_RAY_TRACING);
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineResourceFlagsString)
+{
+    static_assert(PIPELINE_RESOURCE_FLAG_LAST == 0x04, "Please add a test for the new flag here");
+
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_UNKNOWN, true).c_str(), "PIPELINE_RESOURCE_FLAG_UNKNOWN");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_UNKNOWN).c_str(), "UNKNOWN");
+
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS, true).c_str(), "PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, true).c_str(), "PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER, true).c_str(), "PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER");
+
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS).c_str(), "NO_DYNAMIC_BUFFERS");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER).c_str(), "COMBINED_SAMPLER");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER).c_str(), "FORMATTED_BUFFER");
+
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, true).c_str(),
+                 "PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS|PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER, true).c_str(),
+                 "PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS|PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER, true).c_str(),
+                 "PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER|PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER");
+
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER).c_str(),
+                 "NO_DYNAMIC_BUFFERS|FORMATTED_BUFFER");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER).c_str(),
+                 "NO_DYNAMIC_BUFFERS|COMBINED_SAMPLER|FORMATTED_BUFFER");
 }
 
 } // namespace

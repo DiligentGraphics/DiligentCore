@@ -106,7 +106,9 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     ///             as opposed to structured buffers. If an application will be using
     ///             formatted buffers with buffer UAVs and SRVs, it must specify the
     ///             PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER flag.
-    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 0x04
+    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 0x04,
+
+    PIPELINE_RESOURCE_FLAG_LAST               = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER
 };
 DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_RESOURCE_FLAGS);
 

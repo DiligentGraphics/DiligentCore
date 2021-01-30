@@ -30,6 +30,7 @@
 #include "GraphicsAccessories.hpp"
 #include "DebugUtilities.hpp"
 #include "Align.hpp"
+#include "BasicMath.hpp"
 
 namespace Diligent
 {
@@ -474,7 +475,7 @@ const Char* GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType)
 
 const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off
@@ -534,7 +535,7 @@ const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarTy
         FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE]  = "SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE";
         FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC]  = "SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC";
 
-        static_assert(SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC + 1, "Not all shader variable types initialized.");
+        static_assert(SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES == 3, "Not all shader variable types initialized.");
 
         bVarTypeStrsInit = true;
     }
@@ -550,7 +551,7 @@ const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarTy
 
 const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, bool bGetFullName)
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
     switch (ResourceType)
     {
         // clang-format off
@@ -815,7 +816,7 @@ const Char* GetResourceDimString(RESOURCE_DIMENSION TexType)
         TexTypeStrings[RESOURCE_DIM_TEX_3D]         = "Texture 3D";
         TexTypeStrings[RESOURCE_DIM_TEX_CUBE]       = "Texture Cube";
         TexTypeStrings[RESOURCE_DIM_TEX_CUBE_ARRAY] = "Texture Cube Array";
-        static_assert(RESOURCE_DIM_NUM_DIMENSIONS == RESOURCE_DIM_TEX_CUBE_ARRAY + 1, "Not all texture type strings initialized.");
+        static_assert(RESOURCE_DIM_NUM_DIMENSIONS == 9, "Not all texture type strings initialized.");
 
         bTexTypeStrsInit = true;
     }
@@ -832,7 +833,7 @@ const Char* GetBindFlagString(Uint32 BindFlag)
 {
     VERIFY((BindFlag & (BindFlag - 1)) == 0, "More than one bind flag is specified");
 
-    static_assert(BIND_FLAGS_LAST == BIND_RAY_TRACING, "Please handle the new bind flag in the switch below");
+    static_assert(BIND_FLAGS_LAST == 0x400L, "Please handle the new bind flag in the switch below");
     switch (BindFlag)
     {
 #define BIND_FLAG_STR_CASE(Flag) \
@@ -976,7 +977,7 @@ const Char* GetBufferModeString(BUFFER_MODE Mode)
         INIT_BUFF_MODE_STR( BUFFER_MODE_RAW );
 #undef  INIT_BUFF_MODE_STR
         // clang-format on
-        static_assert(BUFFER_MODE_NUM_MODES == BUFFER_MODE_RAW + 1, "Not all buffer mode strings initialized.");
+        static_assert(BUFFER_MODE_NUM_MODES == 4, "Not all buffer mode strings initialized.");
         bBuffModeStringsInit = true;
     }
     if (Mode >= BUFFER_MODE_UNDEFINED && Mode < BUFFER_MODE_NUM_MODES)
@@ -1044,7 +1045,7 @@ String GetBufferDescString(const BufferDesc& Desc)
 const Char* GetResourceStateFlagString(RESOURCE_STATE State)
 {
     VERIFY((State & (State - 1)) == 0, "Single state is expected");
-    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x80000, "Please update this function to handle the new resource state");
     switch (State)
     {
         // clang-format off
@@ -1143,7 +1144,7 @@ const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform)
 
 const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
 {
-    static_assert(PIPELINE_TYPE_LAST == PIPELINE_TYPE_RAY_TRACING, "Please update this function to handle the new pipeline type");
+    static_assert(PIPELINE_TYPE_LAST == 3, "Please update this function to handle the new pipeline type");
     switch (PipelineType)
     {
         // clang-format off
@@ -1160,7 +1161,7 @@ const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
 
 const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
 {
-    static_assert(SHADER_COMPILER_LAST == SHADER_COMPILER_FXC, "Please update this function to handle the new shader compiler");
+    static_assert(SHADER_COMPILER_LAST == 3, "Please update this function to handle the new shader compiler");
     switch (Compiler)
     {
         // clang-format off
@@ -1174,6 +1175,41 @@ const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
             return "UNKNOWN";
     }
 }
+
+String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/)
+{
+    if (Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN)
+        return GetFullName ? "PIPELINE_RESOURCE_FLAG_UNKNOWN" : "UNKNOWN";
+    String Str;
+    while (Flags != PIPELINE_RESOURCE_FLAG_UNKNOWN)
+    {
+        if (!Str.empty())
+            Str += '|';
+
+        auto Flag = ExtractLSB(Flags);
+
+        static_assert(PIPELINE_RESOURCE_FLAG_LAST == 0x04, "Please update the switch below to handle the new pipeline resource flag.");
+        switch (Flag)
+        {
+            case PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS:
+                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS" : "NO_DYNAMIC_BUFFERS");
+                break;
+
+            case PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER:
+                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER" : "COMBINED_SAMPLER");
+                break;
+
+            case PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER:
+                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER" : "FORMATTED_BUFFER");
+                break;
+
+            default:
+                UNEXPECTED("Unexpected pipeline resource flag");
+        }
+    }
+    return Str;
+}
+
 
 Uint32 ComputeMipLevelsCount(Uint32 Width)
 {
@@ -1199,7 +1235,7 @@ Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth)
 
 bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x80000, "Please update this function to handle the new resource state");
 
     // clang-format off
 #define VERIFY_EXCLUSIVE_STATE(ExclusiveState)\
@@ -1313,7 +1349,7 @@ ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
 
 bool IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
     switch (PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
@@ -1351,7 +1387,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
            " is inconsistent with pipeline type ", GetPipelineTypeString(PipelineType));
     VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "More than one shader type is specified");
 
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         case SHADER_TYPE_UNKNOWN:
@@ -1391,7 +1427,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
 
 SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
     switch (PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:

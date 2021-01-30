@@ -383,6 +383,7 @@ const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType);
 
 const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler);
 
+String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName = false);
 
 Uint32 ComputeMipLevelsCount(Uint32 Width);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
