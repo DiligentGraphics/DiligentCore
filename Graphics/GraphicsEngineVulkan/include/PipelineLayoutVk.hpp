@@ -72,11 +72,17 @@ public:
         PipelineResourceSignatureVkImpl* Signature = nullptr;
         SHADER_RESOURCE_TYPE             Type      = SHADER_RESOURCE_TYPE_UNKNOWN;
         // Index in m_Desc.Resources for a resource, or ~0U for an immutable sampler.
-        Uint32 ResIndex      = 0;
-        Uint32 DescrSetIndex = 0;
-        Uint32 BindingIndex  = 0;
+        Uint32 ResIndex      = ~0U;
+        Uint32 DescrSetIndex = ~0U;
+        Uint32 BindingIndex  = ~0U;
+
+        operator bool() const
+        {
+            return Signature != nullptr && Type != SHADER_RESOURCE_TYPE_UNKNOWN;
+        }
     };
-    bool GetResourceInfo(const char* Name, SHADER_TYPE Stage, ResourceInfo& Info) const;
+    ResourceInfo GetResourceInfo(const char* Name, SHADER_TYPE Stage) const;
+    ResourceInfo GetImmutableSamplerInfo(const char* Name, SHADER_TYPE Stage) const;
 
 private:
     using SignatureArray              = std::array<RefCntAutoPtr<PipelineResourceSignatureVkImpl>, MAX_RESOURCE_SIGNATURES>;

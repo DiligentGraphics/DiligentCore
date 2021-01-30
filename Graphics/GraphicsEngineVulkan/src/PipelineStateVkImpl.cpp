@@ -731,6 +731,8 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
         Signatures[i] = CreateInfo.ppResourceSignatures[i];
     }
 
+    const auto& LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
+
     if (SignatureCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
     {
         struct UniqueResource
@@ -743,7 +745,6 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
         std::vector<PipelineResourceDesc> Resources;
         ResourceNameToIndex_t             UniqueNames;
         const char*                       pCombinedSamplerSuffix = nullptr;
-        const auto&                       LayoutDesc             = CreateInfo.PSODesc.ResourceLayout;
 
         for (auto& Stage : ShaderStages)
         {
@@ -757,6 +758,16 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                 ShaderResources.ProcessResources(
                     [&](const SPIRVShaderResourceAttribs& Res, Uint32) //
                     {
+                        // We can't skip immutable samplers because immutable sampler arrays have to be defined
+                        // as both resource and sampler.
+                        //if (Res.Type == SPIRVShaderResourceAttribs::SeparateSampler &&
+                        //    FindImmutableSampler(LayoutDesc.ImmutableSamplers, LayoutDesc.NumImmutableSamplers, Stage.Type, Res.Name,
+                        //                         ShaderResources.GetCombinedSamplerSuffix()) >= 0)
+                        //{
+                        //    // Skip separate immutable samplers - they are not resources
+                        //    return;
+                        //}
+
                         auto IterAndAssigned = UniqueNames.emplace(HashMapStringKey{Res.Name}, UniqueResource{&Res, static_cast<Uint32>(Resources.size())});
                         if (IterAndAssigned.second)
                         {
@@ -861,8 +872,19 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
             pShaderResources->ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& Res, Uint32) //
                 {
-                    PipelineLayoutVk::ResourceInfo Info;
-                    if (!m_PipelineLayout.GetResourceInfo(Res.Name, ShaderType, Info))
+                    auto Info = m_PipelineLayout.GetResourceInfo(Res.Name, ShaderType);
+                    if (!Info && Res.Type == SPIRVShaderResourceAttribs::SeparateSampler)
+                    {
+                        DEV_CHECK_ERR(Res.ArraySize == 1, "Immutable sampler arrays must also be added to resource list");
+                        Info = m_PipelineLayout.GetImmutableSamplerInfo(Res.Name, ShaderType);
+                        if (Info)
+                        {
+                            VERIFY(Info.BindingIndex != ~0u && Info.DescrSetIndex != ~0u,
+                                   "Binding index and/or descriptor set index are not initialized. This indicates that the immutable sampler "
+                                   "is also present in the list of resources, so it should've been found by GetResourceInfo().");
+                        }
+                    }
+                    if (!Info)
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Res.Name,
                                             "' that is not present in any pipeline resource signature that is used to create pipeline state '",

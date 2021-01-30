@@ -30,6 +30,7 @@
 #include <unordered_map>
 
 #include "HashUtils.hpp"
+#include "StringTools.hpp"
 
 namespace Diligent
 {
@@ -43,6 +44,15 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
     if (Desc.NumResources > MAX_RESOURCES_IN_SIGNATURE)
         LOG_PRS_ERROR_AND_THROW("Desc.NumResources (", Uint32{Desc.NumResources}, ") exceeds the maximum allowed value (", MAX_RESOURCES_IN_SIGNATURE, ").");
+
+    if (Desc.NumResources != 0 && Desc.Resources == nullptr)
+        LOG_PRS_ERROR_AND_THROW("Desc.NumResources (", Uint32{Desc.NumResources}, ") is not zero, but Desc.Resources is null.");
+
+    if (Desc.NumImmutableSamplers != 0 && Desc.ImmutableSamplers == nullptr)
+        LOG_PRS_ERROR_AND_THROW("Desc.NumImmutableSamplers (", Uint32{Desc.NumImmutableSamplers}, ") is not zero, but Desc.ImmutableSamplers is null.");
+
+    if (Desc.UseCombinedTextureSamplers && (Desc.CombinedSamplerSuffix == nullptr || Desc.CombinedSamplerSuffix[0] == '\0'))
+        LOG_PRS_ERROR_AND_THROW("Desc.UseCombinedTextureSamplers is true, but Desc.CombinedSamplerSuffix is null or empty");
 
     std::unordered_map<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResourceShaderStages;
 
@@ -64,7 +74,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         {
             LOG_PRS_ERROR_AND_THROW("Multiple resources with name '", Res.Name,
                                     "' specify overlapping shader stages. There may be multiple resources with the same name in different shader stages, "
-                                    "but the stages specified for different resources with the same name must not overlap.");
+                                    "but the stages must not overlap.");
         }
         UsedStages |= Res.ShaderStages;
 
@@ -138,13 +148,22 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             default:
                 UNEXPECTED("Unexpected resource type");
         }
+
+        // NB: when creating immutable sampler array, we have to define the sampler as both resource and
+        //     immutable sampler. The sampler will not be exposed as a shader variable though.
+        //if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+        //{
+        //    if (FindImmutableSampler(Desc.ImmutableSamplers, Desc.NumImmutableSamplers, Res.ShaderStages, Res.Name,
+        //                             Desc.UseCombinedTextureSamplers ? Desc.CombinedSamplerSuffix : nullptr) >= 0)
+        //    {
+        //        LOG_PRS_ERROR_AND_THROW("Sampler '", Res.Name, "' is defined as both shader resource and immutable sampler.");
+        //    }
+        //}
     }
 
     if (Desc.UseCombinedTextureSamplers)
     {
-        if (Desc.CombinedSamplerSuffix == nullptr)
-            LOG_PRS_ERROR_AND_THROW("Desc.UseCombinedTextureSamplers is true, but Desc.CombinedSamplerSuffix is null");
-
+        VERIFY_EXPR(Desc.CombinedSamplerSuffix != nullptr);
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
             const auto& Res = Desc.Resources[i];
@@ -176,10 +195,21 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         }
     }
 
+    std::unordered_map<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ImtblSamShaderStages;
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
     {
-        if (Desc.ImmutableSamplers[i].SamplerOrTextureName == nullptr)
+        const auto& SamDesc = Desc.ImmutableSamplers[i];
+        if (SamDesc.SamplerOrTextureName == nullptr)
             LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be null");
+
+        auto& UsedStages = ImtblSamShaderStages[SamDesc.SamplerOrTextureName];
+        if ((UsedStages & SamDesc.ShaderStages) != 0)
+        {
+            LOG_PRS_ERROR_AND_THROW("Multiple immutable samplers with name '", SamDesc.SamplerOrTextureName,
+                                    "' specify overlapping shader stages. There may be multiple immutable samplers with the same name in different shader stages, "
+                                    "but the stages must not overlap.");
+        }
+        UsedStages |= SamDesc.ShaderStages;
     }
 }
 

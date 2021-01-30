@@ -487,6 +487,9 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
         if (DescrType == DescriptorType::CombinedImageSampler ||
             DescrType == DescriptorType::Sampler)
         {
+            // Only search for immutable sampler for combined image samplers and separate samplers.
+            // Note that for DescriptorType::SeparateImage with immutable sampler, we will initialize
+            // a separate immutable sampler below. It will not be assigned to the image variable.
             Int32 SrcImmutableSamplerInd = FindImmutableSampler(ResDesc, DescrType, m_Desc, GetCombinedSamplerSuffix());
             if (SrcImmutableSamplerInd >= 0)
             {
@@ -549,12 +552,28 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_DYN_SB_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR]);
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_OTHER_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] + BindingCount[CACHE_GROUP_OTHER_DYN_VAR]);
 
-    // Add immutable samplers that do not exist in m_Desc.Resources.
+    // Add immutable samplers that do not exist in m_Desc.Resources, as in the example below:
+    //
+    //  Shader:
+    //      Texture2D    g_Texture;
+    //      SamplerState g_Texture_sampler;
+    //
+    //  Host:
+    //      PipelineResourceDesc Resources[]         = {{SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, ...}};
+    //      ImmutableSamplerDesc ImmutableSamplers[] ={{SHADER_TYPE_PIXEL, "g_Texture", SamDesc}};
+    //
+    //  In the situation above, 'g_Texture_sampler' will not be assigned to separate image
+    // 'g_Texture'. Instead, we initialize an immutable sampler with name 'g_Texture'. It will then
+    // be retrieved by PSO with PipelineLayoutVk::GetImmutableSamplerInfo() when the PSO initializes
+    // 'g_Texture_sampler'.
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
         auto& ImmutableSampler = m_ImmutableSamplers[i];
         if (ImmutableSampler.Ptr)
+        {
+            // Immutable sampler has already been initialized as resource
             continue;
+        }
 
         const auto& SamplerDesc = m_Desc.ImmutableSamplers[i];
         // If static/mutable descriptor set layout is empty, then add samplers to dynamic set.
@@ -563,15 +582,11 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
                       "There are no descriptor sets in this singature, which indicates there are no other "
                       "resources besides immutable samplers. This is not currently allowed.");
 
-        auto& BindingIndex = BindingIndices[SetId * 3 + CACHE_GROUP_OTHER];
-
         GetDevice()->CreateSampler(SamplerDesc.Desc, &ImmutableSampler.Ptr);
 
+        auto& BindingIndex            = BindingIndices[SetId * 3 + CACHE_GROUP_OTHER];
         ImmutableSampler.DescrSet     = DSMapping[SetId];
-        ImmutableSampler.BindingIndex = BindingIndex;
-
-        VERIFY_EXPR(ImmutableSampler.BindingIndex == BindingIndex);
-        ++BindingIndex;
+        ImmutableSampler.BindingIndex = BindingIndex++;
 
         vkSetLayoutBindings[SetId].emplace_back();
         auto& vkSetLayoutBinding = vkSetLayoutBindings[SetId].back();
@@ -594,23 +609,32 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
             ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
         }
 
-        std::array<Uint32, DESCRIPTOR_SET_ID_NUM_SETS> DescriptorSetSizes;
-        DescriptorSetSizes[DESCRIPTOR_SET_ID_STATIC_MUTABLE] =
-            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
-            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
-            CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
-        DescriptorSetSizes[DESCRIPTOR_SET_ID_DYNAMIC] =
-            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
-            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
-            CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
-        static_assert(DescriptorSetSizes.size() == MAX_DESCRIPTOR_SETS, "MAX_DESCRIPTOR_SETS was changed, update the code above");
+        std::array<Uint32, MAX_DESCRIPTOR_SETS> DescriptorSetSizes = {~0U, ~0U};
 
-        const Uint32 NumSets = (DescriptorSetSizes[DESCRIPTOR_SET_ID_STATIC_MUTABLE] != 0 ? 1 : 0) + (DescriptorSetSizes[DESCRIPTOR_SET_ID_DYNAMIC] != 0 ? 1 : 0);
-        if (DescriptorSetSizes[DESCRIPTOR_SET_ID_STATIC_MUTABLE] == 0)
-            DescriptorSetSizes[DESCRIPTOR_SET_ID_STATIC_MUTABLE] = DescriptorSetSizes[DESCRIPTOR_SET_ID_DYNAMIC];
+        Uint32 NumSets = 0;
+        if (DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] < MAX_DESCRIPTOR_SETS)
+        {
+            DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE]] =
+                CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
+                CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
+                CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
+            ++NumSets;
+        }
+
+        if (DSMapping[DESCRIPTOR_SET_ID_DYNAMIC] < MAX_DESCRIPTOR_SETS)
+        {
+            DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]] =
+                CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
+                CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
+                CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
+            ++NumSets;
+        }
+#ifdef DILIGENT_DEBUG
+        for (Uint32 i = 0; i < NumSets; ++i)
+            VERIFY_EXPR(DescriptorSetSizes[i] != ~0U);
+#endif
 
         const size_t CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
-
         m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
     }
 
@@ -1195,8 +1219,6 @@ private:
     bool UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject,
                               TPreUpdateObject            PreUpdateObject) const;
 
-    bool IsImmutableSamplerAssigned() const { return Attribs.IsImmutableSamplerAssigned(); }
-
     // Updates resource descriptor in the descriptor set
     inline void UpdateDescriptorHandle(const VkDescriptorImageInfo*                        pImageInfo,
                                        const VkDescriptorBufferInfo*                       pBufferInfo,
@@ -1255,7 +1277,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                 break;
 
             case DescriptorType::Sampler:
-                if (!IsImmutableSamplerAssigned())
+                if (!Attribs.IsImmutableSamplerAssigned())
                 {
                     CacheSeparateSampler(pObj);
                 }
@@ -1497,7 +1519,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
         // We can do RawPtr here safely since UpdateCachedResource() returned true
         auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
 #ifdef DILIGENT_DEVELOPMENT
-        if (DstRes.Type == DescriptorType::CombinedImageSampler && !IsImmutableSamplerAssigned())
+        if (DstRes.Type == DescriptorType::CombinedImageSampler && !Attribs.IsImmutableSamplerAssigned())
         {
             if (pTexViewVk->GetSampler() == nullptr)
             {
@@ -1511,7 +1533,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
         // are updated at once by CommitDynamicResources() when SRB is committed.
         if (vkDescrSet != VK_NULL_HANDLE && ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         {
-            VkDescriptorImageInfo DescrImgInfo = DstRes.GetImageDescriptorWriteInfo(IsImmutableSamplerAssigned());
+            VkDescriptorImageInfo DescrImgInfo = DstRes.GetImageDescriptorWriteInfo(Attribs.IsImmutableSamplerAssigned());
             UpdateDescriptorHandle(&DescrImgInfo, nullptr, nullptr);
         }
 
@@ -1519,7 +1541,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
         {
             VERIFY(DstRes.Type == DescriptorType::SeparateImage,
                    "Only separate images can be assigned separate samplers when using HLSL-style combined samplers.");
-            VERIFY(!IsImmutableSamplerAssigned(), "Separate image can't be assigned an immutable sampler.");
+            VERIFY(!Attribs.IsImmutableSamplerAssigned(), "Separate image can't be assigned an immutable sampler.");
 
             auto& SamplerResDesc = Signature.GetResourceDesc(Attribs.SamplerInd);
             auto& SamplerAttribs = Signature.GetResourceAttribs(Attribs.SamplerInd);
@@ -1567,7 +1589,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
 void BindResourceHelper::CacheSeparateSampler(IDeviceObject* pSampler) const
 {
     VERIFY(DstRes.Type == DescriptorType::Sampler, "Separate sampler resource is expected");
-    VERIFY(!IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler");
+    VERIFY(!Attribs.IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler");
 
     RefCntAutoPtr<SamplerVkImpl> pSamplerVk{pSampler, IID_Sampler};
 #ifdef DILIGENT_DEVELOPMENT

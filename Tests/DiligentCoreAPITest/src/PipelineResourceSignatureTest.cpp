@@ -62,13 +62,19 @@ protected:
             pEnv->GetDevice()->CreateSampler(SamDesc, &pSampler);
         }
 
-        for (auto& pTexSRV : pTexSRVs)
+        for (size_t i = 0; i < pTexSRVs.size(); ++i)
         {
             auto pTexture = pEnv->CreateTexture("PipelineResourceSignatureTest: test SRV", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 512, 512);
             ASSERT_NE(pTexture, nullptr);
-            pTexSRV = pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
-            ASSERT_NE(pTexSRV, nullptr);
-            pTexSRV->SetSampler(pSampler);
+            pTexSRVs[i] = pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+            ASSERT_NE(pTexSRVs[i], nullptr);
+            pTexSRVs[i]->SetSampler(pSampler);
+
+            {
+                TextureViewDesc SRVDesc;
+                SRVDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+                pTexture->CreateView(SRVDesc, &pTexSRVsNoSampler[i]);
+            }
         }
 
         {
@@ -186,6 +192,7 @@ protected:
     static RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
     static RefCntAutoPtr<ITextureView>                    pRTV;
     static std::array<RefCntAutoPtr<ITextureView>, 4>     pTexSRVs;
+    static std::array<RefCntAutoPtr<ITextureView>, 4>     pTexSRVsNoSampler;
     static RefCntAutoPtr<ISampler>                        pSampler;
     static RefCntAutoPtr<IBuffer>                         pConstBuff;
 };
@@ -193,6 +200,7 @@ protected:
 RefCntAutoPtr<IShaderSourceInputStreamFactory> PipelineResourceSignatureTest::pShaderSourceFactory;
 RefCntAutoPtr<ITextureView>                    PipelineResourceSignatureTest::pRTV;
 std::array<RefCntAutoPtr<ITextureView>, 4>     PipelineResourceSignatureTest::pTexSRVs;
+std::array<RefCntAutoPtr<ITextureView>, 4>     PipelineResourceSignatureTest::pTexSRVsNoSampler;
 RefCntAutoPtr<ISampler>                        PipelineResourceSignatureTest::pSampler;
 RefCntAutoPtr<IBuffer>                         PipelineResourceSignatureTest::pConstBuff;
 
@@ -408,6 +416,9 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
         pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
         ASSERT_TRUE(pPRS);
 
+        EXPECT_EQ(pPRS->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Sampler"), nullptr);
+        EXPECT_EQ(pPRS->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
+
         if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
             SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRVs[0]);
@@ -422,6 +433,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
         ASSERT_TRUE(pPSO);
 
         pPRS->CreateShaderResourceBinding(&pSRB, true);
+
+        EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Sampler"), nullptr);
+        EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
+
         if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
             SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRVs[0]);
@@ -442,7 +457,7 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
     }
 }
 
-TEST_F(PipelineResourceSignatureTest, StaticSamplers)
+TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
 {
     auto* const pEnv     = TestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
@@ -481,10 +496,16 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers)
     pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
     ASSERT_TRUE(pPRS);
 
+    EXPECT_EQ(pPRS->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Sampler"), nullptr);
+    EXPECT_EQ(pPRS->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
+
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, pTexSRVs[0]);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
+
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Sampler"), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRVs[1]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[2]);
@@ -504,7 +525,7 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers)
 }
 
 
-TEST_F(PipelineResourceSignatureTest, StaticSamplers2)
+TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
@@ -555,6 +576,9 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers2)
 
         pDevice->CreatePipelineResourceSignature(Desc, &pSignature2);
         ASSERT_NE(pSignature2, nullptr);
+
+        EXPECT_EQ(pSignature2->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
+        EXPECT_EQ(pSignature2->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Texture_sampler"), nullptr);
     }
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
@@ -601,7 +625,7 @@ TEST_F(PipelineResourceSignatureTest, StaticSamplers2)
     ASSERT_NE(pSRB2, nullptr);
 
     pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
-    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVs[0]);
+    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVsNoSampler[0]);
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -759,8 +783,8 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
     ASSERT_NE(pSRB3, nullptr);
 
     pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
-    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVs[0]);
-    pSRB3->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pTexSRVs[1]);
+    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVsNoSampler[0]);
+    pSRB3->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pTexSRVsNoSampler[1]);
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -921,7 +945,7 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     pSignatureMS->CreateShaderResourceBinding(&MeshSRB, true);
     ASSERT_NE(MeshSRB, nullptr);
 
-    PixelSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVs[0]);
+    PixelSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVsNoSampler[0]);
     VertexSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
     MeshSRB->GetVariableByName(SHADER_TYPE_MESH, "Constants")->Set(pConstBuff);
 
@@ -1018,18 +1042,18 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
     auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
     ASSERT_TRUE(pPSO);
 
-    std::array<IDeviceObject*, 2> ppSRVs = {pTexSRVs[0], pTexSRVs[1]};
+    std::array<IDeviceObject*, 2> ppSRVsNoSampler = {pTexSRVsNoSampler[0], pTexSRVsNoSampler[1]};
 
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_tex2D_Static", Set, ppSRVs[0]);
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_tex2D_StaticArr", SetArray, ppSRVs.data(), 0, 2);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_tex2D_Static", Set, pTexSRVs[0]);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_tex2D_StaticArr", SetArray, ppSRVsNoSampler.data(), 0, 2);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_tex2D_Mut", Set, pTexSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_tex2D_MutArr", SetArray, ppSRVs.data(), 0, 2);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_tex2D_Dyn", Set, pTexSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_tex2D_DynArr", SetArray, ppSRVs.data(), 0, 2);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_tex2D_Mut", Set, pTexSRVs[1]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_tex2D_MutArr", SetArray, ppSRVsNoSampler.data(), 0, 2);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_tex2D_Dyn", Set, pTexSRVs[2]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_tex2D_DynArr", SetArray, ppSRVsNoSampler.data(), 0, 2);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 

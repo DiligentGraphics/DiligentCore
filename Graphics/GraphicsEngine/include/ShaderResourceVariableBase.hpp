@@ -128,8 +128,8 @@ inline Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
 {
     for (Uint32 s = 0; s < NumImtblSamplers; ++s)
     {
-        const auto& StSam = ImtblSamplers[s];
-        if (((StSam.ShaderStages & ShaderType) != 0) && StreqSuff(ResourceName, StSam.SamplerOrTextureName, SamplerSuffix))
+        const auto& Sam = ImtblSamplers[s];
+        if (((Sam.ShaderStages & ShaderType) != 0) && StreqSuff(ResourceName, Sam.SamplerOrTextureName, SamplerSuffix))
             return s;
     }
 

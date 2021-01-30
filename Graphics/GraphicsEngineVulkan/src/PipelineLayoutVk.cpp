@@ -169,9 +169,10 @@ size_t PipelineLayoutVk::GetHash() const
     return hash;
 }
 
-bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, ResourceInfo& Info) const
+PipelineLayoutVk::ResourceInfo PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage) const
 {
-    for (Uint32 sign = 0, SignCount = GetSignatureCount(); sign < SignCount; ++sign)
+    ResourceInfo Info;
+    for (Uint32 sign = 0, SignCount = GetSignatureCount(); sign < SignCount && !Info; ++sign)
     {
         auto* const pSignature = GetSignature(sign);
         if (pSignature == nullptr)
@@ -184,14 +185,26 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
 
             if ((ResDesc.ShaderStages & Stage) && strcmp(ResDesc.Name, Name) == 0)
             {
+                Info.Signature     = pSignature;
                 Info.Type          = ResDesc.ResourceType;
                 Info.ResIndex      = r;
                 Info.BindingIndex  = Attr.BindingIndex;
                 Info.DescrSetIndex = m_FirstDescrSetIndex[sign] + Attr.DescrSet;
-                Info.Signature     = pSignature;
-                return true;
+                break;
             }
         }
+    }
+    return Info;
+}
+
+PipelineLayoutVk::ResourceInfo PipelineLayoutVk::GetImmutableSamplerInfo(const char* Name, SHADER_TYPE Stage) const
+{
+    ResourceInfo Info;
+    for (Uint32 sign = 0, SignCount = GetSignatureCount(); sign < SignCount && !Info; ++sign)
+    {
+        auto* const pSignature = GetSignature(sign);
+        if (pSignature == nullptr)
+            continue;
 
         for (Uint32 s = 0, SampCount = pSignature->GetImmutableSamplerCount(); s < SampCount; ++s)
         {
@@ -200,16 +213,15 @@ bool PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage, Reso
 
             if (Attr.Ptr && (Desc.ShaderStages & Stage) && StreqSuff(Name, Desc.SamplerOrTextureName, pSignature->GetCombinedSamplerSuffix()))
             {
+                Info.Signature     = pSignature;
                 Info.Type          = SHADER_RESOURCE_TYPE_SAMPLER;
-                Info.ResIndex      = ~0U;
                 Info.BindingIndex  = Attr.BindingIndex;
                 Info.DescrSetIndex = m_FirstDescrSetIndex[sign] + Attr.DescrSet;
-                Info.Signature     = pSignature;
-                return true;
+                break;
             }
         }
     }
-    return false;
+    return Info;
 }
 
 } // namespace Diligent
