@@ -143,7 +143,7 @@ protected:
             ++m_ResourceOffsets[Dst.VarType + 1];
         }
 
-        // Sort resources by variable type
+        // Sort resources by variable type (all static -> all mutable -> all dynamic)
         std::sort(pResources, pResources + Desc.NumResources,
                   [](const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs) {
                       return lhs.VarType < rhs.VarType;

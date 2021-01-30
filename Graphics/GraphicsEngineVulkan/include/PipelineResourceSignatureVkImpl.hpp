@@ -130,7 +130,7 @@ public:
         static constexpr Uint32 _DescrSetBits        = 1;
         static constexpr Uint32 _SamplerAssignedBits = 1;
 
-        static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _DescrTypeBits + _DescrSetBits + _SamplerAssignedBits) % 4 == 0, "Bits are not optimally packed");
+        static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _DescrTypeBits + _DescrSetBits + _SamplerAssignedBits) % 32 == 0, "Bits are not optimally packed");
 
         static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
         static_assert((1u << _DescrSetBits) >= MAX_DESCRIPTOR_SETS, "Not enough bits to store descriptor set index");
@@ -141,7 +141,7 @@ public:
 
         // clang-format off
         const Uint32  BindingIndex         : _BindingIndexBits;    // Binding in the descriptor set
-        const Uint32  SamplerInd           : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
+        const Uint32  SamplerInd           : _SamplerIndBits;      // Index of the assigned sampler in m_Desc.Resources and m_pResourceAttribs
         const Uint32  ArraySize            : _ArraySizeBits;       // Array size
         const Uint32  DescrType            : _DescrTypeBits;       // Descriptor type (DescriptorType)
         const Uint32  DescrSet             : _DescrSetBits;        // Descriptor set (0 or 1)
@@ -156,7 +156,7 @@ public:
                         Uint32         _ArraySize,
                         DescriptorType _DescrType,
                         Uint32         _DescrSet,
-                        bool           ImtblSamplerAssigned,
+                        bool           _ImtblSamplerAssigned,
                         Uint32         _SRBCacheOffset,
                         Uint32         _StaticCacheOffset) noexcept :
             // clang-format off
@@ -165,7 +165,7 @@ public:
             ArraySize            {_ArraySize                     },
             DescrType            {static_cast<Uint32>(_DescrType)},
             DescrSet             {_DescrSet                      },
-            ImtblSamplerAssigned {ImtblSamplerAssigned ? 1u : 0u },
+            ImtblSamplerAssigned {_ImtblSamplerAssigned ? 1u : 0u},
             SRBCacheOffset       {_SRBCacheOffset                },
             StaticCacheOffset    {_StaticCacheOffset             }
         // clang-format on
@@ -222,19 +222,25 @@ public:
 
     bool HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
 
+    /// Implementation of IPipelineResourceSignature::CreateShaderResourceBinding.
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                 bool                     InitStaticResources) override final;
 
+    /// Implementation of IPipelineResourceSignature::GetStaticVariableByName.
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
 
+    /// Implementation of IPipelineResourceSignature::GetStaticVariableByIndex.
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
+    /// Implementation of IPipelineResourceSignature::GetStaticVariableCount.
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
 
+    /// Implementation of IPipelineResourceSignature::BindStaticResources.
     virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32            ShaderFlags,
                                                         IResourceMapping* pResourceMapping,
                                                         Uint32            Flags) override final;
 
+    /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
     {
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureVkImpl>(pPRS));
@@ -274,7 +280,10 @@ public:
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    bool DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs, Uint32 ResIndex, ShaderResourceCacheVk& ResourceCache) const;
+    /// Verifies committed resource attribs using the SPIRV resource attributes from the PSO.
+    bool DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs,
+                                      Uint32                            ResIndex,
+                                      ShaderResourceCacheVk&            ResourceCache) const;
 #endif
 
 private:
@@ -318,10 +327,10 @@ private:
     template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>() const;
 
     static inline CACHE_GROUP       GetResourceCacheGroup(const PipelineResourceDesc& Res);
-    static inline DESCRIPTOR_SET_ID GetDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
+    static inline DESCRIPTOR_SET_ID VarTypeToDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
 
 private:
-    std::array<VulkanUtilities::DescriptorSetLayoutWrapper, MAX_DESCRIPTOR_SETS> m_VkDescrSetLayouts;
+    std::array<VulkanUtilities::DescriptorSetLayoutWrapper, DESCRIPTOR_SET_ID_NUM_SETS> m_VkDescrSetLayouts;
 
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
@@ -339,11 +348,14 @@ private:
     // The number of shader stages that have resources.
     Uint8 m_NumShaderStages = 0;
 
-    ShaderResourceCacheVk*   m_pResourceCache = nullptr;
+    // Static resource cache for all static resources
+    ShaderResourceCacheVk* m_pStaticResCache = nullptr;
+    // Static variables manager for every shader stage
     ShaderVariableManagerVk* m_StaticVarsMgrs = nullptr; // [m_NumShaderStages]
 
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
-    SRBMemoryAllocator       m_SRBMemAllocator;
+
+    SRBMemoryAllocator m_SRBMemAllocator;
 };
 
 } // namespace Diligent
