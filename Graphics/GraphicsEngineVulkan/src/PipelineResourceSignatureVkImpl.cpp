@@ -106,37 +106,53 @@ DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
     switch (Res.ResourceType)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-            VERIFY_EXPR((Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0);
+            VERIFY((Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
+                   "NO_DYNAMIC_BUFFERS is the only valid flag allowed for constant buffers. "
+                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return WithDynamicOffset ? DescriptorType::UniformBufferDynamic : DescriptorType::UniformBuffer;
 
-        case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-            VERIFY_EXPR((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) == 0);
-            return UseTexelBuffer ? DescriptorType::StorageTexelBuffer :
-                                    (WithDynamicOffset ? DescriptorType::StorageBufferDynamic : DescriptorType::StorageBuffer);
-
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
-            VERIFY_EXPR((Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) == 0);
+            VERIFY((Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) == 0,
+                   "COMBINED_SAMPLER is the only valid flag for a texture SRV. "
+                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return CombinedSampler ? DescriptorType::CombinedImageSampler : DescriptorType::SeparateImage;
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-            VERIFY_EXPR((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) == 0);
+            VERIFY((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) == 0,
+                   "NO_DYNAMIC_BUFFERS and FORMATTED_BUFFER are the only valid flags for a buffer SRV. "
+                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return UseTexelBuffer ? DescriptorType::UniformTexelBuffer :
                                     (WithDynamicOffset ? DescriptorType::StorageBufferDynamic_ReadOnly : DescriptorType::StorageBuffer_ReadOnly);
 
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
-            VERIFY_EXPR(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN);
+            VERIFY(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN,
+                   "UNKNOWN is the only valid flag for a texture UAV. "
+                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return DescriptorType::StorageImage;
 
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:
+            VERIFY((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) == 0,
+                   "NO_DYNAMIC_BUFFERS and FORMATTED_BUFFER are the only valid flags for a buffer UAV. "
+                   "This should've been caught by ValidatePipelineResourceSignatureDesc.");
+            return UseTexelBuffer ? DescriptorType::StorageTexelBuffer :
+                                    (WithDynamicOffset ? DescriptorType::StorageBufferDynamic : DescriptorType::StorageBuffer);
+
         case SHADER_RESOURCE_TYPE_SAMPLER:
-            VERIFY_EXPR(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN);
+            VERIFY(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN,
+                   "UNKNOWN is the only valid flag for a sampler. "
+                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return DescriptorType::Sampler;
 
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
-            VERIFY_EXPR(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN);
+            VERIFY(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN,
+                   "UNKNOWN is the only valid flag for an input attachment. "
+                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return DescriptorType::InputAttachment;
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
-            VERIFY_EXPR(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN);
+            VERIFY(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN,
+                   "UNKNOWN is the only valid flag for an acceleration structure. "
+                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return DescriptorType::AccelerationStructure;
 
         default:
@@ -1681,13 +1697,15 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
     const auto  CacheType         = ResourceCache.GetContentType();
     const auto  CacheOffset       = ResAttribs.CacheOffset(CacheType);
 
+    VERIFY_EXPR(SPIRVAttribs.ArraySize <= ResAttribs.ArraySize);
+
     switch (ResAttribs.GetDescriptorType())
     {
         case DescriptorType::UniformBuffer:
         case DescriptorType::UniformBufferDynamic:
         {
             VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-            for (Uint32 i = 0; i < ResAttribs.ArraySize; ++i)
+            for (Uint32 i = 0; i < SPIRVAttribs.ArraySize; ++i)
             {
                 const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
 
@@ -1719,7 +1737,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
         case DescriptorType::StorageBufferDynamic_ReadOnly:
         {
             VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV || ResInfo.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
-            for (Uint32 i = 0; i < ResAttribs.ArraySize; ++i)
+            for (Uint32 i = 0; i < SPIRVAttribs.ArraySize; ++i)
             {
                 const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
 
@@ -1766,7 +1784,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
         case DescriptorType::CombinedImageSampler:
         {
             VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResInfo.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-            for (Uint32 i = 0; i < ResAttribs.ArraySize; ++i)
+            for (Uint32 i = 0; i < SPIRVAttribs.ArraySize; ++i)
             {
                 const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
                 // When can use raw cast here because the dynamic type is verified when the resource

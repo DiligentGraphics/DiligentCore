@@ -813,7 +813,10 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 
         if (Resources.size())
         {
+            String SignName = String{"Implicit signature for PSO '"} + m_Desc.Name + '\'';
+
             PipelineResourceSignatureDesc ResSignDesc;
+            ResSignDesc.Name                       = SignName.c_str();
             ResSignDesc.Resources                  = Resources.data();
             ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
             ResSignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;

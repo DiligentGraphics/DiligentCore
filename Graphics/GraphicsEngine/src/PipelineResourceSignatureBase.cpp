@@ -68,20 +68,76 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         }
         UsedStages |= Res.ShaderStages;
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) &&
-            (Res.ResourceType != SHADER_RESOURCE_TYPE_CONSTANT_BUFFER &&
-             Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&
-             Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_SRV))
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS if ResourceType is not buffer");
+        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please add the new resource type to the switch below");
+        switch (Res.ResourceType)
+        {
+            case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
+                if ((Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) != 0)
+                {
+                    LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                            "): NO_DYNAMIC_BUFFERS is the only valid flag for a constant buffer.");
+                }
+                break;
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) &&
-            Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER if ResourceType is not SHADER_RESOURCE_TYPE_TEXTURE_SRV");
+            case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
+                if ((Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) != 0)
+                {
+                    LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                            "): COMBINED_SAMPLER is the only valid flag for a texture SRV.");
+                }
+                break;
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) &&
-            (Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_UAV &&
-             Res.ResourceType != SHADER_RESOURCE_TYPE_BUFFER_SRV))
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Flags must not contain PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER if ResourceType is not buffer");
+            case SHADER_RESOURCE_TYPE_BUFFER_SRV:
+                if ((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) != 0)
+                {
+                    LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                            "): NO_DYNAMIC_BUFFERS and FORMATTED_BUFFER are the only valid flags for a buffer SRV.");
+                }
+                break;
+
+            case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
+                if (Res.Flags != PIPELINE_RESOURCE_FLAG_UNKNOWN)
+                {
+                    LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                            "): UNKNOWN is the only valid flag for a texture UAV.");
+                }
+                break;
+
+            case SHADER_RESOURCE_TYPE_BUFFER_UAV:
+                if ((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) != 0)
+                {
+                    LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                            "): NO_DYNAMIC_BUFFERS and FORMATTED_BUFFER are the only valid flags for a buffer UAV.");
+                }
+                break;
+
+            case SHADER_RESOURCE_TYPE_SAMPLER:
+                if (Res.Flags != PIPELINE_RESOURCE_FLAG_UNKNOWN)
+                {
+                    LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                            "): UNKNOWN is the only valid flag for a sampler.");
+                }
+                break;
+
+            case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
+                if (Res.Flags != PIPELINE_RESOURCE_FLAG_UNKNOWN)
+                {
+                    LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                            "): UNKNOWN is the only valid flag for an input attachment.");
+                }
+                break;
+
+            case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
+                if (Res.Flags != PIPELINE_RESOURCE_FLAG_UNKNOWN)
+                {
+                    LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                            "): UNKNOWN is the only valid flag for an acceleration structure.");
+                }
+                break;
+
+            default:
+                UNEXPECTED("Unexpected resource type");
+        }
     }
 
     if (Desc.UseCombinedTextureSamplers)
