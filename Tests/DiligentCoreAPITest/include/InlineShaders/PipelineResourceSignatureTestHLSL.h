@@ -129,7 +129,7 @@ void main(PSInput In,
 };
 
 
-const std::string PRSTest3_VS{
+const std::string GraphicsAndMeshShader_VS{
 R"(
 struct VSOutput
 {
@@ -164,7 +164,7 @@ void main(uint uiVertexId : SV_VertexID,
 )"
 };
 
-const std::string PRSTest3_MS{
+const std::string GraphicsAndMeshShader_MS{
 R"(
 struct MSOutput
 {
@@ -204,7 +204,7 @@ void main(uint I : SV_GroupIndex,
 )"
 };
 
-const std::string PRSTest3_PS{
+const std::string GraphicsAndMeshShader_PS{
 R"(
 struct PSInput
 {
@@ -219,6 +219,8 @@ SamplerState g_Texture_sampler;
 void main(PSInput In,
           out float4 Color : SV_Target)
 {
+    Color = float4(In.f3Color, 1.0);
+    Color *= g_Texture.Sample(g_Texture_sampler, In.f2Texcoord);
 }
 )"
 };
