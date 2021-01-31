@@ -1203,8 +1203,7 @@ private:
     void CacheStorageBuffer(IDeviceObject* pBufferView,
                             Uint16&        DynamicBuffersCounter) const;
 
-    void CacheTexelBuffer(IDeviceObject* pBufferView,
-                          Uint16&        DynamicBuffersCounter) const;
+    void CacheTexelBuffer(IDeviceObject* pBufferView) const;
 
     void CacheImage(IDeviceObject* pTexView) const;
 
@@ -1266,7 +1265,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
             case DescriptorType::UniformTexelBuffer:
             case DescriptorType::StorageTexelBuffer:
             case DescriptorType::StorageTexelBuffer_ReadOnly:
-                CacheTexelBuffer(pObj, ResourceCache.GetDynamicBuffersCounter());
+                CacheTexelBuffer(pObj);
                 break;
 
             case DescriptorType::StorageImage:
@@ -1284,7 +1283,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                 {
                     // Immutable samplers are permanently bound into the set layout; later binding a sampler
                     // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
-                    LOG_ERROR_MESSAGE("Attempting to assign a sampler to an immutable sampler '", ResDesc.Name, '\'');
+                    UNEXPECTED("Attempting to assign a sampler to an immutable sampler '", ResDesc.Name, '\'');
                 }
                 break;
 
@@ -1433,8 +1432,7 @@ void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView,
     }
 }
 
-void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView,
-                                          Uint16&        DynamicBuffersCounter) const
+void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView) const
 {
     // clang-format off
     VERIFY(DstRes.Type == DescriptorType::UniformTexelBuffer || 
@@ -1466,17 +1464,7 @@ void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView,
     }
 #endif
 
-    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferViewVkImpl* pOldBufferView, const BufferViewVkImpl* pNewBufferView) {
-        if (pOldBufferView != nullptr && pOldBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
-        {
-            VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
-            --DynamicBuffersCounter;
-        }
-        if (pNewBufferView != nullptr && pNewBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
-            ++DynamicBuffersCounter;
-    };
-
-    if (UpdateCachedResource(std::move(pBufferViewVk), UpdateDynamicBuffersCounter))
+    if (UpdateCachedResource(std::move(pBufferViewVk), [](const BufferViewVkImpl* pOldBufferView, const BufferViewVkImpl* pNewBufferView) {}))
     {
         // The following bits must have been set at buffer creation time:
         //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT

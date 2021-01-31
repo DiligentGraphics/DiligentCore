@@ -136,9 +136,6 @@ void ShaderResourceCacheVk::DbgVerifyDynamicBuffersCounter() const
             case DescriptorType::StorageBufferDynamic:
             case DescriptorType::StorageBuffer_ReadOnly:
             case DescriptorType::StorageBufferDynamic_ReadOnly:
-            case DescriptorType::UniformTexelBuffer:
-            case DescriptorType::StorageTexelBuffer:
-            case DescriptorType::StorageTexelBuffer_ReadOnly:
             {
                 if (Res.pObject && Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
                     ++NumDynamicBuffers;
