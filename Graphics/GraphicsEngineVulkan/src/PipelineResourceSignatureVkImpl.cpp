@@ -1197,11 +1197,9 @@ struct BindResourceHelper
     void BindResource(IDeviceObject* pObj) const;
 
 private:
-    void CacheUniformBuffer(IDeviceObject* pBuffer,
-                            Uint16&        DynamicBuffersCounter) const;
+    void CacheUniformBuffer(IDeviceObject* pBuffer) const;
 
-    void CacheStorageBuffer(IDeviceObject* pBufferView,
-                            Uint16&        DynamicBuffersCounter) const;
+    void CacheStorageBuffer(IDeviceObject* pBufferView) const;
 
     void CacheTexelBuffer(IDeviceObject* pBufferView) const;
 
@@ -1252,14 +1250,14 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
         {
             case DescriptorType::UniformBuffer:
             case DescriptorType::UniformBufferDynamic:
-                CacheUniformBuffer(pObj, ResourceCache.GetDynamicBuffersCounter());
+                CacheUniformBuffer(pObj);
                 break;
 
             case DescriptorType::StorageBuffer:
             case DescriptorType::StorageBuffer_ReadOnly:
             case DescriptorType::StorageBufferDynamic:
             case DescriptorType::StorageBufferDynamic_ReadOnly:
-                CacheStorageBuffer(pObj, ResourceCache.GetDynamicBuffersCounter());
+                CacheStorageBuffer(pObj);
                 break;
 
             case DescriptorType::UniformTexelBuffer:
@@ -1335,8 +1333,7 @@ bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObjec
     }
 }
 
-void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer,
-                                            Uint16&        DynamicBuffersCounter) const
+void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer) const
 {
     // clang-format off
     VERIFY(DstRes.Type == DescriptorType::UniformBuffer ||
@@ -1349,14 +1346,18 @@ void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer,
                                 pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr());
 #endif
 
-    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferVkImpl* pOldBuffer, const BufferVkImpl* pNewBuffer) {
+    auto UpdateDynamicBuffersCounter = [this](const BufferVkImpl* pOldBuffer, const BufferVkImpl* pNewBuffer) {
+        auto& DynamicBuffersCounter = ResourceCache.GetDynamicBuffersCounter();
         if (pOldBuffer != nullptr && pOldBuffer->GetDesc().Usage == USAGE_DYNAMIC)
         {
             VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
             --DynamicBuffersCounter;
         }
         if (pNewBuffer != nullptr && pNewBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+        {
             ++DynamicBuffersCounter;
+            VERIFY(DynamicBuffersCounter <= Signature.GetDynamicOffsetCount(), "Dynamic buffers counter exceeded the numer of dynamic offsets in the signature");
+        }
     };
     if (UpdateCachedResource(std::move(pBufferVk), UpdateDynamicBuffersCounter))
     {
@@ -1373,8 +1374,7 @@ void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer,
     }
 }
 
-void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView,
-                                            Uint16&        DynamicBuffersCounter) const
+void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView) const
 {
     // clang-format off
     VERIFY(DstRes.Type == DescriptorType::StorageBuffer ||
@@ -1407,14 +1407,18 @@ void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView,
     }
 #endif
 
-    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferViewVkImpl* pOldBufferView, const BufferViewVkImpl* pNewBufferView) {
+    auto UpdateDynamicBuffersCounter = [this](const BufferViewVkImpl* pOldBufferView, const BufferViewVkImpl* pNewBufferView) {
+        auto& DynamicBuffersCounter = ResourceCache.GetDynamicBuffersCounter();
         if (pOldBufferView != nullptr && pOldBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
         {
             VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
             --DynamicBuffersCounter;
         }
         if (pNewBufferView != nullptr && pNewBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+        {
             ++DynamicBuffersCounter;
+            VERIFY(DynamicBuffersCounter <= Signature.GetDynamicOffsetCount(), "Dynamic buffers counter exceeded the numer of dynamic offsets in the signature");
+        }
     };
 
     if (UpdateCachedResource(std::move(pBufferViewVk), UpdateDynamicBuffersCounter))
@@ -1681,11 +1685,11 @@ void PipelineResourceSignatureVkImpl::BindResource(IDeviceObject*         pObj,
                                                    Uint32                 ResIndex,
                                                    ShaderResourceCacheVk& ResourceCache) const
 {
-    auto&      ResDesc     = GetResourceDesc(ResIndex);
-    auto&      Attribs     = GetResourceAttribs(ResIndex);
-    const auto CacheType   = ResourceCache.GetContentType();
-    auto&      DstDescrSet = ResourceCache.GetDescriptorSet(Attribs.DescrSet);
-    auto&      DstRes      = DstDescrSet.GetResource(Attribs.CacheOffset(CacheType) + ArrayIndex);
+    const auto& ResDesc     = GetResourceDesc(ResIndex);
+    const auto& Attribs     = GetResourceAttribs(ResIndex);
+    const auto  CacheType   = ResourceCache.GetContentType();
+    auto&       DstDescrSet = ResourceCache.GetDescriptorSet(Attribs.DescrSet);
+    auto&       DstRes      = DstDescrSet.GetResource(Attribs.CacheOffset(CacheType) + ArrayIndex);
 
     VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
     VERIFY(DstRes.Type == Attribs.GetDescriptorType(), "Inconsistent types");

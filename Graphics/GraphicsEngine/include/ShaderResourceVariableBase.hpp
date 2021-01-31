@@ -186,7 +186,7 @@ bool VerifyConstantBufferBinding(const char*                   ResName,
             {
                 ss << " in shader '" << ShaderName << '\'';
             }
-            ss << ". The variable uses PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.";
+            ss << ". The variable was initialized with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.";
             LOG_ERROR_MESSAGE(ss.str());
             BindingOK = false;
         }
@@ -212,7 +212,11 @@ bool VerifyConstantBufferBinding(const char*                   ResName,
         {
             ss << "null";
         }
-        ss << " is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.";
+        ss << " is an error and may cause unpredicted behavior.";
+
+        if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+            ss << " Use another shader resource binding instance or label the variable as dynamic.";
+
         LOG_ERROR_MESSAGE(ss.str());
 
         BindingOK = false;
@@ -318,7 +322,7 @@ bool VerifyResourceViewBinding(const char*                             ResName,
 {
     const char* ExpectedResourceType = GetResourceTypeName<ViewTypeEnumType>();
 
-    if (pView && !pViewImpl)
+    if (pView != nullptr && pViewImpl == nullptr)
     {
         std::stringstream ss;
         ss << "Failed to bind resource '" << pView->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResName, ArraySize, ArrayIndex) << '\'';
@@ -395,7 +399,11 @@ bool VerifyResourceViewBinding(const char*                             ResName,
         {
             ss << "null";
         }
-        ss << " is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.";
+        ss << " is an error and may cause unpredicted behavior.";
+
+        if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+            ss << " Use another shader resource binding instance or label the variable as dynamic.";
+
         LOG_ERROR_MESSAGE(ss.str());
 
         BindingOK = false;
@@ -449,7 +457,11 @@ bool VerifyTLASResourceBinding(const char*                   ResName,
         {
             ss << "null";
         }
-        ss << " is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.";
+        ss << " is an error and may cause unpredicted behavior.";
+
+        if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+            ss << " Use another shader resource binding instance or label the variable as dynamic.";
+
         LOG_ERROR_MESSAGE(ss.str());
 
         BindingOK = false;
