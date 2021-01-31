@@ -126,21 +126,26 @@ void ShaderResourceCacheVk::DbgVerifyDynamicBuffersCounter() const
         switch (Res.Type)
         {
             case DescriptorType::UniformBuffer:
+                VERIFY(!Res.pObject || Res.pObject.RawPtr<const BufferVkImpl>()->GetDesc().Usage != USAGE_DYNAMIC,
+                       "Dynamic uniform buffer is bound to a non-dynamic descriptor. The buffer's dynamic offset will not be properly handled.");
+                break;
+
             case DescriptorType::UniformBufferDynamic:
-            {
                 if (Res.pObject && Res.pObject.RawPtr<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
                     ++NumDynamicBuffers;
                 break;
-            }
+
             case DescriptorType::StorageBuffer:
-            case DescriptorType::StorageBufferDynamic:
             case DescriptorType::StorageBuffer_ReadOnly:
+                VERIFY(!Res.pObject || Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage != USAGE_DYNAMIC,
+                       "Dynamic storage buffer is bound to a non-dynamic descriptor. The buffer's dynamic offset will not be properly handled.");
+                break;
+
+            case DescriptorType::StorageBufferDynamic:
             case DescriptorType::StorageBufferDynamic_ReadOnly:
-            {
                 if (Res.pObject && Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
                     ++NumDynamicBuffers;
                 break;
-            }
         }
     }
     VERIFY(NumDynamicBuffers == m_NumDynamicBuffers, "The number of dynamic buffers (", m_NumDynamicBuffers, ") does not match the actual number (", NumDynamicBuffers, ")");
@@ -332,8 +337,8 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                 auto* pTLASVk = Res.pObject.RawPtr<TopLevelASVkImpl>();
                 if (pTLASVk != nullptr && pTLASVk->IsInKnownState())
                 {
-                    constexpr RESOURCE_STATE RequiredState     = RESOURCE_STATE_RAY_TRACING;
-                    const bool               IsInRequiredState = pTLASVk->CheckState(RequiredState);
+                    constexpr auto RequiredState     = RESOURCE_STATE_RAY_TRACING;
+                    const bool     IsInRequiredState = pTLASVk->CheckState(RequiredState);
                     if (VerifyOnly)
                     {
                         if (!IsInRequiredState)
@@ -383,6 +388,8 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescript
     // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
     // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
     VERIFY_EXPR((pBuffVk->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) != 0);
+    VERIFY(Type == DescriptorType::UniformBufferDynamic || pBuffVk->GetDesc().Usage != USAGE_DYNAMIC,
+           "Dynamic buffer must be used with UniformBufferDynamic descriptor");
 
     VkDescriptorBufferInfo DescrBuffInfo;
     DescrBuffInfo.buffer = pBuffVk->GetVkBuffer();
@@ -404,9 +411,11 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
     // clang-format on
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get storage buffer write info: cached object is null");
 
-    auto*       pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
+    auto* const pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
     const auto& ViewDesc    = pBuffViewVk->GetDesc();
-    auto*       pBuffVk     = pBuffViewVk->GetBufferVk();
+    auto* const pBuffVk     = pBuffViewVk->GetBufferVk();
+    VERIFY(Type == DescriptorType::StorageBufferDynamic || Type == DescriptorType::StorageBufferDynamic_ReadOnly || pBuffVk->GetDesc().Usage != USAGE_DYNAMIC,
+           "Dynamic buffer must be used with StorageBufferDynamic or StorageBufferDynamic_ReadOnly descriptor");
 
     // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type
     // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
@@ -416,14 +425,16 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
         VERIFY(ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Attempting to bind buffer view '", ViewDesc.Name,
                "' as read-only storage buffer. Expected view type is BUFFER_VIEW_SHADER_RESOURCE. Actual type: ",
                GetBufferViewTypeLiteralName(ViewDesc.ViewType));
-        VERIFY((pBuffVk->GetDesc().BindFlags & BIND_SHADER_RESOURCE) != 0, "Buffer '", pBuffVk->GetDesc().Name, "' being set as read-only storage buffer was not created with BIND_SHADER_RESOURCE flag");
+        VERIFY((pBuffVk->GetDesc().BindFlags & BIND_SHADER_RESOURCE) != 0,
+               "Buffer '", pBuffVk->GetDesc().Name, "' being set as read-only storage buffer was not created with BIND_SHADER_RESOURCE flag");
     }
     else if (Type == DescriptorType::StorageBuffer || Type == DescriptorType::StorageBufferDynamic)
     {
         VERIFY(ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Attempting to bind buffer view '", ViewDesc.Name,
                "' as writable storage buffer. Expected view type is BUFFER_VIEW_UNORDERED_ACCESS. Actual type: ",
                GetBufferViewTypeLiteralName(ViewDesc.ViewType));
-        VERIFY((pBuffVk->GetDesc().BindFlags & BIND_UNORDERED_ACCESS) != 0, "Buffer '", pBuffVk->GetDesc().Name, "' being set as writable storage buffer was not created with BIND_UNORDERED_ACCESS flag");
+        VERIFY((pBuffVk->GetDesc().BindFlags & BIND_UNORDERED_ACCESS) != 0,
+               "Buffer '", pBuffVk->GetDesc().Name, "' being set as writable storage buffer was not created with BIND_UNORDERED_ACCESS flag");
     }
     else
     {

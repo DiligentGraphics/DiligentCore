@@ -337,7 +337,11 @@ private:
     // Shader stages that have resources.
     SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;
 
+    // The total number of uniform buffers with dynamic offsets in both descriptor sets,
+    // accounting for array size.
     Uint16 m_DynamicUniformBufferCount = 0;
+    // The total number storage buffers with dynamic offsets in both descriptor sets,
+    // accounting for array size.
     Uint16 m_DynamicStorageBufferCount = 0;
 
     // Mapping from shader type index given by GetShaderTypePipelineIndex() to

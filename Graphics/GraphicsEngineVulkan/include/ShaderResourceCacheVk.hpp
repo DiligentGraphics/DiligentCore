@@ -211,8 +211,8 @@ private:
     void*             m_pMemory    = nullptr;
     Uint16            m_NumSets    = 0;
 
-    // Total number of dynamic buffers (that was created with USAGE_DYNAMIC) bound in the resource cache regardless of the variable type.
-    // This variable is not equal to dynamic offsets count.
+    // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
+    // regardless of the variable type. Note this variable is not equal to dynamic offsets count, which is constant.
     Uint16 m_NumDynamicBuffers = 0;
     Uint32 m_TotalResources : 31;
 
@@ -236,15 +236,18 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
     // numbers (unclear if this is SPIRV binding or VkDescriptorSetLayoutBinding number) in the
     // descriptor set layouts; and within a binding array, elements are in order. (13.2.5)
 
-    // In each descriptor set, all uniform buffers for every shader stage come first,
-    // followed by all storage buffers for every shader stage, followed by all other resources
+    // In each descriptor set, all uniform buffers with dynamic offsets (DescriptorType::UniformBufferDynamic)
+    // for every shader stage come first, followed by all storage buffers with dynamic offsets
+    // (DescriptorType::StorageBufferDynamic and DescriptorType::StorageBufferDynamic_ReadOnly) for every shader stage,
+    // followed by all other resources.
     Uint32 OffsetInd = 0;
     for (Uint32 set = 0; set < m_NumSets; ++set)
     {
         const auto& DescrSet = GetDescriptorSet(set);
-        Uint32      res      = 0;
+        const auto  SetSize  = DescrSet.GetSize();
 
-        while (res < DescrSet.GetSize())
+        Uint32 res = 0;
+        while (res < SetSize)
         {
             const auto& Res = DescrSet.GetResource(res);
             if (Res.Type == DescriptorType::UniformBufferDynamic)
@@ -258,7 +261,7 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
                 break;
         }
 
-        while (res < DescrSet.GetSize())
+        while (res < SetSize)
         {
             const auto& Res = DescrSet.GetResource(res);
             if (Res.Type == DescriptorType::StorageBufferDynamic ||
@@ -275,7 +278,7 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
         }
 
 #ifdef DILIGENT_DEBUG
-        for (; res < DescrSet.GetSize(); ++res)
+        for (; res < SetSize; ++res)
         {
             const auto& Res = DescrSet.GetResource(res);
             // clang-format off
