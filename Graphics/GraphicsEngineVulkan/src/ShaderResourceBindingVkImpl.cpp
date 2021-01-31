@@ -70,10 +70,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*    
         // Resources will be initialized by InitializeResourceMemoryInCache()
         auto& SRBMemAllocator            = pPRS->GetSRBMemoryAllocator();
         auto& ResourceCacheDataAllocator = SRBMemAllocator.GetResourceCacheDataAllocator(0);
-        pPRS->InitResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
-
-        // Use resource signature to initialize resource memory in the cache
-        pPRS->InitializeResourceMemoryInCache(m_ShaderResourceCache);
+        pPRS->InitSRBResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
 
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
@@ -90,9 +87,6 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*    
             const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
             m_pShaderVarMgrs[s].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes), ShaderType);
         }
-#ifdef DILIGENT_DEBUG
-        m_ShaderResourceCache.DbgVerifyResourceInitialization();
-#endif
     }
     catch (...)
     {

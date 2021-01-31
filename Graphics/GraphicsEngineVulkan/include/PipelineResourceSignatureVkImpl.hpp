@@ -251,12 +251,9 @@ public:
         return m_SRBMemAllocator;
     }
 
-    void InitResourceCache(ShaderResourceCacheVk& ResourceCache,
-                           IMemoryAllocator&      CacheMemAllocator,
-                           const char*            DbgPipelineName) const;
-
-    // Initializes resource slots in the ResourceCache
-    void InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache) const;
+    void InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache,
+                              IMemoryAllocator&      CacheMemAllocator,
+                              const char*            DbgPipelineName) const;
 
     // Copies static resources from the static resource cache to the destination cache
     void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
@@ -331,6 +328,9 @@ private:
 
 private:
     std::array<VulkanUtilities::DescriptorSetLayoutWrapper, DESCRIPTOR_SET_ID_NUM_SETS> m_VkDescrSetLayouts;
+
+    // Descriptor set sizes indexed by the set index in the layout (not DESCRIPTOR_SET_ID!)
+    std::array<Uint32, MAX_DESCRIPTOR_SETS> m_DescriptorSetSizes = {~0U, ~0U};
 
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 

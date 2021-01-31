@@ -115,6 +115,7 @@ void ShaderResourceCacheVk::DbgVerifyResourceInitialization() const
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
     }
 }
+
 void ShaderResourceCacheVk::DbgVerifyDynamicBuffersCounter() const
 {
     const auto* pResources        = GetFirstResourcePtr();

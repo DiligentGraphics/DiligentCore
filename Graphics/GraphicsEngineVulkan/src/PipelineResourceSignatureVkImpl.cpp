@@ -333,6 +333,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
             }
 
             BindingCount[CacheGroup] += 1;
+            // Note that we may reserve space for separate immutable samplers, which will never be used, but this is OK.
             CacheGroupSizes[CacheGroup] += ResDesc.ArraySize;
         }
 
@@ -528,10 +529,18 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
 
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
+            VERIFY(pAttribs->DescrSet == 0, "Static resources must always be allocated in descriptor set 0");
             m_pStaticResCache->InitializeResources(pAttribs->DescrSet, StaticCacheOffset, ResDesc.ArraySize, pAttribs->GetDescriptorType());
             StaticCacheOffset += ResDesc.ArraySize;
         }
     }
+
+#ifdef DILIGENT_DEBUG
+    if (m_pStaticResCache != nullptr)
+    {
+        m_pStaticResCache->DbgVerifyResourceInitialization();
+    }
+#endif
 
     m_DynamicUniformBufferCount = static_cast<Uint16>(CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR]);
     m_DynamicStorageBufferCount = static_cast<Uint16>(CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR]);
@@ -598,6 +607,29 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
         vkSetLayoutBinding.pImmutableSamplers = TempAllocator.Construct<VkSampler>(ImmutableSampler.Ptr.RawPtr<SamplerVkImpl>()->GetVkSampler());
     }
 
+    Uint32 NumSets = 0;
+    if (DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] < MAX_DESCRIPTOR_SETS)
+    {
+        m_DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE]] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
+            CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
+        ++NumSets;
+    }
+
+    if (DSMapping[DESCRIPTOR_SET_ID_DYNAMIC] < MAX_DESCRIPTOR_SETS)
+    {
+        m_DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
+            CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
+        ++NumSets;
+    }
+#ifdef DILIGENT_DEBUG
+    for (Uint32 i = 0; i < NumSets; ++i)
+        VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U);
+#endif
+
     if (m_Desc.SRBAllocationGranularity > 1)
     {
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
@@ -609,32 +641,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
             ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
         }
 
-        std::array<Uint32, MAX_DESCRIPTOR_SETS> DescriptorSetSizes = {~0U, ~0U};
-
-        Uint32 NumSets = 0;
-        if (DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE] < MAX_DESCRIPTOR_SETS)
-        {
-            DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_STATIC_MUTABLE]] =
-                CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
-                CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
-                CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
-            ++NumSets;
-        }
-
-        if (DSMapping[DESCRIPTOR_SET_ID_DYNAMIC] < MAX_DESCRIPTOR_SETS)
-        {
-            DescriptorSetSizes[DSMapping[DESCRIPTOR_SET_ID_DYNAMIC]] =
-                CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
-                CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
-                CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
-            ++NumSets;
-        }
-#ifdef DILIGENT_DEBUG
-        for (Uint32 i = 0; i < NumSets; ++i)
-            VERIFY_EXPR(DescriptorSetSizes[i] != ~0U);
-#endif
-
-        const size_t CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
+        const size_t CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, m_DescriptorSetSizes.data());
         m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
     }
 
@@ -656,6 +663,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
         SetLayoutCI.pBindings    = vkSetLayoutBinding.data();
         m_VkDescrSetLayouts[i]   = LogicalDevice.CreateDescriptorSetLayout(SetLayoutCI);
     }
+
+    VERIFY_EXPR(NumSets == GetNumDescriptorSets());
 }
 
 Uint32 PipelineResourceSignatureVkImpl::FindAssignedSampler(const PipelineResourceDesc& SepImg) const
@@ -860,29 +869,30 @@ void PipelineResourceSignatureVkImpl::BindStaticResources(Uint32            Shad
     }
 }
 
-void PipelineResourceSignatureVkImpl::InitResourceCache(ShaderResourceCacheVk& ResourceCache,
-                                                        IMemoryAllocator&      CacheMemAllocator,
-                                                        const char*            DbgPipelineName) const
+void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache,
+                                                           IMemoryAllocator&      CacheMemAllocator,
+                                                           const char*            DbgPipelineName) const
 {
-    std::array<Uint32, MAX_DESCRIPTOR_SETS> VarCount = {};
+    const auto NumSets = GetNumDescriptorSets();
+#ifdef DILIGENT_DEBUG
+    for (Uint32 i = 0; i < NumSets; ++i)
+        VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U);
+#endif
 
-    Uint32 NumSets = static_cast<Uint32>(VarCount.size());
+    ResourceCache.InitializeSets(CacheMemAllocator, NumSets, m_DescriptorSetSizes.data());
 
-    for (Uint32 r = 0; r < m_Desc.NumResources; ++r)
+    const auto TotalResources = GetTotalResourceCount();
+    const auto CacheType      = ResourceCache.GetContentType();
+    for (Uint32 r = 0; r < TotalResources; ++r)
     {
         const auto& ResDesc = GetResourceDesc(r);
         const auto& Attr    = GetResourceAttribs(r);
-        VarCount[Attr.DescrSet] += ResDesc.ArraySize;
+        ResourceCache.InitializeResources(Attr.DescrSet, Attr.CacheOffset(CacheType), ResDesc.ArraySize, Attr.GetDescriptorType());
     }
 
-    if (VarCount[1] == 0)
-        --NumSets;
-
-    VERIFY_EXPR(NumSets > 0 && VarCount[0] > 0);
-
-    // This call only initializes descriptor sets (ShaderResourceCacheVk::DescriptorSet) in the resource cache
-    // Resources are initialized by source layout when shader resource binding objects are created
-    ResourceCache.InitializeSets(CacheMemAllocator, NumSets, VarCount.data());
+#ifdef DILIGENT_DEBUG
+    ResourceCache.DbgVerifyResourceInitialization();
+#endif
 
     if (auto vkLayout = GetVkDescriptorSetLayout(DESCRIPTOR_SET_ID_STATIC_MUTABLE))
     {
@@ -914,25 +924,13 @@ SHADER_TYPE PipelineResourceSignatureVkImpl::GetActiveShaderStageType(Uint32 Sta
     return SHADER_TYPE_UNKNOWN;
 }
 
-void PipelineResourceSignatureVkImpl::InitializeResourceMemoryInCache(ShaderResourceCacheVk& ResourceCache) const
-{
-    const auto TotalResources = GetTotalResourceCount();
-    const auto CacheType      = ResourceCache.GetContentType();
-    for (Uint32 r = 0; r < TotalResources; ++r)
-    {
-        const auto& ResDesc = GetResourceDesc(r);
-        const auto& Attr    = GetResourceAttribs(r);
-        ResourceCache.InitializeResources(Attr.DescrSet, Attr.CacheOffset(CacheType), ResDesc.ArraySize, Attr.GetDescriptorType());
-    }
-}
-
 void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& DstResourceCache) const
 {
     if (!HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) || m_pStaticResCache == nullptr)
         return;
 
     // SrcResourceCache contains only static resources.
-    // DstResourceCache contains static and mutable resources.
+    // DstResourceCache contains static, mutable and dynamic resources.
     const auto& SrcResourceCache = *m_pStaticResCache;
     const auto  StaticSetIdx     = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>();
     const auto& SrcDescrSet      = SrcResourceCache.GetDescriptorSet(StaticSetIdx);
@@ -952,17 +950,17 @@ void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourc
 
         for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
         {
-            auto           SrcCacheOffset = Attr.CacheOffset(SrcCacheType) + ArrInd;
+            const auto     SrcCacheOffset = Attr.CacheOffset(SrcCacheType) + ArrInd;
             const auto&    SrcCachedRes   = SrcDescrSet.GetResource(SrcCacheOffset);
             IDeviceObject* pObject        = SrcCachedRes.pObject.RawPtr<IDeviceObject>();
             if (!pObject)
                 LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-            auto           DstCacheOffset  = Attr.CacheOffset(DstCacheType) + ArrInd;
+            const auto     DstCacheOffset  = Attr.CacheOffset(DstCacheType) + ArrInd;
             IDeviceObject* pCachedResource = DstDescrSet.GetResource(DstCacheOffset).pObject;
             if (pCachedResource != pObject)
             {
-                VERIFY(pCachedResource == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
+                VERIFY(pCachedResource == nullptr, "Static resource has already been initialized, and the new resource does not match previously assigned resource");
                 BindResource(pObject, ArrInd, r, DstResourceCache);
             }
         }
@@ -990,7 +988,7 @@ Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSi
 void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                                              VkDescriptorSet              vkDynamicDescriptorSet) const
 {
-    VERIFY(HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC), "This shader resource layout does not contain dynamic resources");
+    VERIFY(HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC), "This signature does not contain dynamic resources");
     VERIFY_EXPR(vkDynamicDescriptorSet != VK_NULL_HANDLE);
     VERIFY_EXPR(ResourceCache.GetContentType() == CacheContentType::SRB);
 
@@ -1001,14 +999,14 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
     static constexpr size_t AccelStructBatchSize        = 2;
     static constexpr size_t WriteDescriptorSetBatchSize = 2;
 #else
-    static constexpr size_t ImgUpdateBatchSize          = 128;
-    static constexpr size_t BuffUpdateBatchSize         = 64;
-    static constexpr size_t TexelBuffUpdateBatchSize    = 32;
-    static constexpr size_t AccelStructBatchSize        = 32;
+    static constexpr size_t ImgUpdateBatchSize          = 64;
+    static constexpr size_t BuffUpdateBatchSize         = 32;
+    static constexpr size_t TexelBuffUpdateBatchSize    = 16;
+    static constexpr size_t AccelStructBatchSize        = 16;
     static constexpr size_t WriteDescriptorSetBatchSize = 32;
 #endif
 
-    // Do not zero-initiaize arrays!
+    // Do not zero-initialize arrays!
     std::array<VkDescriptorImageInfo, ImgUpdateBatchSize>                          DescrImgInfoArr;
     std::array<VkDescriptorBufferInfo, BuffUpdateBatchSize>                        DescrBuffInfoArr;
     std::array<VkBufferView, TexelBuffUpdateBatchSize>                             DescrBuffViewArr;
@@ -1021,24 +1019,24 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
     auto AccelStructIt   = DescrAccelStructArr.begin();
     auto WriteDescrSetIt = WriteDescrSetArr.begin();
 
-    const auto  DynamicSetIdx = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>();
-    const auto& SetResources  = ResourceCache.GetDescriptorSet(DynamicSetIdx);
-    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
-    const auto  ResIdxRange   = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+    const auto  DynamicSetIdx  = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>();
+    const auto& SetResources   = ResourceCache.GetDescriptorSet(DynamicSetIdx);
+    const auto& LogicalDevice  = GetDevice()->GetLogicalDevice();
+    const auto  DynResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
     constexpr auto CacheType = CacheContentType::SRB;
 
-    for (Uint32 ResNum = ResIdxRange.first, ArrElem = 0; ResNum < ResIdxRange.second;)
+    for (Uint32 ResIdx = DynResIdxRange.first, ArrElem = 0; ResIdx < DynResIdxRange.second;)
     {
-        const auto& Attr        = GetResourceAttribs(ResNum);
+        const auto& Attr        = GetResourceAttribs(ResIdx);
         const auto  CacheOffset = Attr.CacheOffset(CacheType);
         const auto  ArraySize   = Attr.ArraySize;
         const auto  DescrType   = Attr.GetDescriptorType();
 
 #ifdef DILIGENT_DEBUG
         {
-            const auto& Res = GetResourceDesc(ResNum);
-            VERIFY_EXPR(ArraySize == GetResourceDesc(ResNum).ArraySize);
+            const auto& Res = GetResourceDesc(ResIdx);
+            VERIFY_EXPR(ArraySize == GetResourceDesc(ResIdx).ArraySize);
             VERIFY_EXPR(Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
         }
 #endif
@@ -1127,6 +1125,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
                 }
                 else
                 {
+                    // Go to the next resource
                     ArrElem                          = ArraySize;
                     WriteDescrSetIt->dstArrayElement = ArraySize;
                 }
@@ -1151,7 +1150,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         if (ArrElem == ArraySize)
         {
             ArrElem = 0;
-            ++ResNum;
+            ++ResIdx;
         }
         // descriptorCount == 0 for immutable separate samplers
         if (WriteDescrSetIt->descriptorCount > 0)
