@@ -108,11 +108,11 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
                "Descriptor set layout count (", DescSetLayoutCount, ") exceeds the maximum representable value");
         m_FirstDescrSetIndex[i] = static_cast<FirstDescrSetIndexArrayType::value_type>(DescSetLayoutCount);
 
-        auto vkStaticDSLayout  = pSignature->GetVkDescriptorSetLayout(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE);
-        auto vkDynamicDSLayout = pSignature->GetVkDescriptorSetLayout(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC);
-
-        if (vkStaticDSLayout != VK_NULL_HANDLE) DescSetLayouts[DescSetLayoutCount++] = vkStaticDSLayout;
-        if (vkDynamicDSLayout != VK_NULL_HANDLE) DescSetLayouts[DescSetLayoutCount++] = vkDynamicDSLayout;
+        for (auto SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE, PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
+        {
+            if (pSignature->HasDescriptorSet(SetId))
+                DescSetLayouts[DescSetLayoutCount++] = pSignature->GetVkDescriptorSetLayout(SetId);
+        }
 
         DynamicUniformBufferCount += pSignature->GetDynamicUniformBufferCount();
         DynamicStorageBufferCount += pSignature->GetDynamicStorageBufferCount();

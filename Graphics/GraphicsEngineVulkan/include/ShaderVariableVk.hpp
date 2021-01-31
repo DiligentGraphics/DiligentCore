@@ -80,7 +80,7 @@ public:
         m_ResourceCache{ResourceCache}
     {}
 
-    void Initialize(const PipelineResourceSignatureVkImpl& SrcLayout,
+    void Initialize(const PipelineResourceSignatureVkImpl& Signature,
                     IMemoryAllocator&                      Allocator,
                     const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
                     Uint32                                 NumAllowedTypes,
@@ -95,7 +95,7 @@ public:
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const;
 
-    static size_t GetRequiredMemorySize(const PipelineResourceSignatureVkImpl& Layout,
+    static size_t GetRequiredMemorySize(const PipelineResourceSignatureVkImpl& Signature,
                                         const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
                                         Uint32                                 NumAllowedTypes,
                                         SHADER_TYPE                            ShaderStages,
@@ -119,6 +119,13 @@ private:
         VERIFY_EXPR(m_pSignature);
         return m_pSignature->GetResourceAttribs(Index);
     }
+
+    template <typename HandlerType>
+    static void ProcessSignatureResources(const PipelineResourceSignatureVkImpl& Signature,
+                                          const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                          Uint32                                 NumAllowedTypes,
+                                          SHADER_TYPE                            ShaderStages,
+                                          HandlerType                            Handler);
 
 private:
     PipelineResourceSignatureVkImpl const* m_pSignature = nullptr;
@@ -225,7 +232,7 @@ private:
 
 private:
     ShaderVariableManagerVk& m_ParentManager;
-    const Uint32             m_ResIndex;
+    const Uint32             m_ResIndex; // Index in Signatures' m_Desc.Resources
 };
 
 } // namespace Diligent

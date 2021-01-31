@@ -34,28 +34,29 @@
 namespace Diligent
 {
 
-size_t ShaderVariableManagerVk::GetRequiredMemorySize(const PipelineResourceSignatureVkImpl& Layout,
-                                                      const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                                      Uint32                                 NumAllowedTypes,
-                                                      SHADER_TYPE                            ShaderStages,
-                                                      Uint32&                                NumVariables)
+template <typename HandlerType>
+void ShaderVariableManagerVk::ProcessSignatureResources(const PipelineResourceSignatureVkImpl& Signature,
+                                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                                        Uint32                                 NumAllowedTypes,
+                                                        SHADER_TYPE                            ShaderStages,
+                                                        HandlerType                            Handler)
 {
-    NumVariables                       = 0;
     const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    const bool   UsingSeparateSamplers = Layout.IsUsingSeparateSamplers();
+    const bool   UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
 
-    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
+    for (Uint32 var_type = 0; var_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++var_type)
     {
+        const auto VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(var_type);
         if (IsAllowedType(VarType, AllowedTypeBits))
         {
-            const auto ResIdxRange = Layout.GetResourceIndexRange(VarType);
+            const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
             for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
             {
-                const auto& Res  = Layout.GetResourceDesc(r);
-                const auto& Attr = Layout.GetResourceAttribs(r);
+                const auto& Res  = Signature.GetResourceDesc(r);
+                const auto& Attr = Signature.GetResourceAttribs(r);
                 VERIFY_EXPR(Res.VarType == VarType);
 
-                if (!(Res.ShaderStages & ShaderStages))
+                if ((Res.ShaderStages & ShaderStages) == 0)
                     continue;
 
                 // When using HLSL-style combined image samplers, we need to skip separate samplers.
@@ -64,16 +65,30 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const PipelineResourceSign
                     (!UsingSeparateSamplers || Attr.IsImmutableSamplerAssigned()))
                     continue;
 
-                ++NumVariables;
+                Handler(r);
             }
         }
     }
+}
+
+size_t ShaderVariableManagerVk::GetRequiredMemorySize(const PipelineResourceSignatureVkImpl& Signature,
+                                                      const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                                      Uint32                                 NumAllowedTypes,
+                                                      SHADER_TYPE                            ShaderStages,
+                                                      Uint32&                                NumVariables)
+{
+    NumVariables = 0;
+    ProcessSignatureResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderStages,
+                              [&NumVariables](Uint32) //
+                              {
+                                  ++NumVariables;
+                              });
 
     return NumVariables * sizeof(ShaderVariableVkImpl);
 }
 
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
-void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& SrcLayout,
+void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& Signature,
                                          IMemoryAllocator&                      Allocator,
                                          const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
                                          Uint32                                 NumAllowedTypes,
@@ -87,7 +102,7 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
 
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
-    auto MemSize = GetRequiredMemorySize(SrcLayout, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
+    auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
 
     if (m_NumVariables == 0)
         return;
@@ -95,36 +110,16 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
     auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variables", MemSize);
     m_pVariables  = reinterpret_cast<ShaderVariableVkImpl*>(pRawMem);
 
-    Uint32     VarInd                = 0;
-    const bool UsingSeparateSamplers = SrcLayout.IsUsingSeparateSamplers();
-
-    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
-    {
-        if (IsAllowedType(VarType, AllowedTypeBits))
-        {
-            const auto ResIdxRange = SrcLayout.GetResourceIndexRange(VarType);
-            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
-            {
-                const auto& Res  = SrcLayout.GetResourceDesc(r);
-                const auto& Attr = SrcLayout.GetResourceAttribs(r);
-                VERIFY_EXPR(Res.VarType == VarType);
-
-                if (!(Res.ShaderStages & ShaderType))
-                    continue;
-
-                // Skip separate samplers when using combined HLSL-style image samplers. Also always skip immutable separate samplers.
-                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-                    (!UsingSeparateSamplers || Attr.IsImmutableSamplerAssigned()))
-                    continue;
-
-                ::new (m_pVariables + VarInd) ShaderVariableVkImpl(*this, r);
-                ++VarInd;
-            }
-        }
-    }
+    Uint32 VarInd = 0;
+    ProcessSignatureResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
+                              [this, &VarInd](Uint32 ResIndex) //
+                              {
+                                  ::new (m_pVariables + VarInd) ShaderVariableVkImpl{*this, ResIndex};
+                                  ++VarInd;
+                              });
     VERIFY_EXPR(VarInd == m_NumVariables);
 
-    m_pSignature = &SrcLayout;
+    m_pSignature = &Signature;
 }
 
 ShaderVariableManagerVk::~ShaderVariableManagerVk()
@@ -261,7 +256,7 @@ void ShaderVariableVkImpl::SetArray(IDeviceObject* const* ppObjects,
 
 bool ShaderVariableVkImpl::IsBound(Uint32 ArrayIndex) const
 {
-    auto&        ResourceCache = m_ParentManager.m_ResourceCache;
+    const auto&  ResourceCache = m_ParentManager.m_ResourceCache;
     const auto&  ResDesc       = GetDesc();
     const auto&  Attribs       = GetAttribs();
     const Uint32 CacheOffset   = Attribs.CacheOffset(ResourceCache.GetContentType());

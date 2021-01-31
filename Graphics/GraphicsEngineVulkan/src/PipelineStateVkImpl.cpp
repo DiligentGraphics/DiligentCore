@@ -721,7 +721,7 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
 void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
                                              TShaderStages&                 ShaderStages)
 {
-    std::array<IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> Signatures;
+    std::array<IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> Signatures = {};
     RefCntAutoPtr<IPipelineResourceSignature>                        pImplicitSignature;
 
     Uint32 SignatureCount = CreateInfo.ResourceSignaturesCount;
