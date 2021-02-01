@@ -489,48 +489,54 @@ private:
 
     struct DescriptorSetBindInfo
     {
+        struct ResourceInfo
+        {
+            // The SRB's shader resource cache
+            ShaderResourceCacheVk* pResourceCache = nullptr;
+
+            // Static/mutable and dynamic descriptor sets
+            std::array<VkDescriptorSet, MAX_DESCR_SET_PER_SIGNATURE> vkSets = {};
+
+            // Descriptor set base index given by Layout.GetFirstDescrSetIndex
+            Uint32 DescriptorSetBaseInd = 0;
+
+            // The total number of descriptors with dynamic offset, given by pSignature->GetDynamicOffsetCount().
+            // Note that this is not the actual number of dynamic buffers in the resource cache.
+            Uint32 DynamicOffsetCount = 0;
+        };
+        std::array<ResourceInfo, MAX_RESOURCE_SIGNATURES> Resources;
+
         // Do not use strong references!
-        using ShaderResourceArray = std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES>;
-        using VkDescSetArray      = std::array<VkDescriptorSet, MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE>;
-        using Bitfield            = Uint8;
+        std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES> SRBs = {};
+
+        using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
 
-        Bitfield            ActiveSRBMask         = 0; // indicates which SRB is active in current PSO
-        Bitfield            PendingSRB            = 0; // 1 bit if new descriptor set must be bound
-        Bitfield            DynamicBuffersPresent = 0;
-        ShaderResourceArray Resources             = {};
-        VkDescSetArray      vkSets                = {};
+        Bitfield ActiveSRBMask      = 0; // Indicates which SRBs are active in current PSO
+        Bitfield StaleSRBMask       = 0; // Indicates stale SRBs that have descriptor sets that need to be bound
+        Bitfield DynamicBuffersMask = 0; // Indicates which SRBs have dynamic buffers
+
+        // Pipeline layout of the currently bound pipeline
+        VkPipelineLayout vkPipelineLayout = VK_NULL_HANDLE;
 
         DescriptorSetBindInfo()
         {}
 
-        void Reset()
+        __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
         {
-            ActiveSRBMask         = 0;
-            PendingSRB            = 0;
-            DynamicBuffersPresent = 0;
-            Resources.fill(nullptr);
-
-#ifdef DILIGENT_DEBUG
-            vkSets.fill(VK_NULL_HANDLE);
-#endif
+            return (StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) && !DynamicBuffersIntact);
         }
 
-        __forceinline bool RequireUpdate(bool Intact = false) const
-        {
-            return (PendingSRB & ActiveSRBMask) || ((DynamicBuffersPresent & ActiveSRBMask) && !Intact);
-        }
+        void SetStaleSRBBit(Uint32 Index) { StaleSRBMask |= static_cast<Bitfield>(1u << Index); }
+        void ClearStaleSRBBit(Uint32 Index) { StaleSRBMask &= static_cast<Bitfield>(~(1u << Index)); }
 
-        void SetPendingSRB(Uint32 Index) { PendingSRB |= static_cast<Bitfield>(1u << Index); }
-        void ClearPendingSRB(Uint32 Index) { PendingSRB &= static_cast<Bitfield>(~(1u << Index)); }
-
-        void SetDynamicBuffersPresent(Uint32 Index) { DynamicBuffersPresent |= static_cast<Bitfield>(1u << Index); }
-        void ClearDynamicBuffersPresent(Uint32 Index) { DynamicBuffersPresent &= static_cast<Bitfield>(~(1u << Index)); }
+        void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<Bitfield>(1u << Index); }
+        void ClearDynamicBufferBit(Uint32 Index) { DynamicBuffersMask &= static_cast<Bitfield>(~(1u << Index)); }
     };
 
     __forceinline DescriptorSetBindInfo& GetDescriptorSetBindInfo(PIPELINE_TYPE Type);
 
-    void CommitDescriptorSets(DescriptorSetBindInfo& DescrSetBindInfo);
+    __forceinline void CommitDescriptorSets(DescriptorSetBindInfo& DescrSetBindInfo);
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();
 #endif

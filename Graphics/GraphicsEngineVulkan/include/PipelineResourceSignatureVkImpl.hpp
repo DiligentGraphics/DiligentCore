@@ -283,6 +283,13 @@ public:
                                       ShaderResourceCacheVk&            ResourceCache) const;
 #endif
 
+    // Returns the descriptor set index in the resource cache
+    template <DESCRIPTOR_SET_ID SetId>
+    Uint32 GetDescriptorSetIndex() const;
+
+    template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
+    template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>() const;
+
 private:
     // Resource cache group identifier
     enum CACHE_GROUP : size_t
@@ -315,13 +322,6 @@ private:
 
     // Finds a separate sampler assigned to the image SepImg and returns its index in m_Desc.Resources.
     Uint32 FindAssignedSampler(const PipelineResourceDesc& SepImg) const;
-
-    // Returns the descriptor set index in the resource cache
-    template <DESCRIPTOR_SET_ID SetId>
-    Uint32 GetDescriptorSetIndex() const;
-
-    template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
-    template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>() const;
 
     static inline CACHE_GROUP       GetResourceCacheGroup(const PipelineResourceDesc& Res);
     static inline DESCRIPTOR_SET_ID VarTypeToDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
