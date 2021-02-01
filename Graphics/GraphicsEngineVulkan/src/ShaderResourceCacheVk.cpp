@@ -146,6 +146,10 @@ void ShaderResourceCacheVk::DbgVerifyDynamicBuffersCounter() const
                 if (Res.pObject && Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
                     ++NumDynamicBuffers;
                 break;
+
+            default:
+                // Do nothing
+                break;
         }
     }
     VERIFY(NumDynamicBuffers == m_NumDynamicBuffers, "The number of dynamic buffers (", m_NumDynamicBuffers, ") does not match the actual number (", NumDynamicBuffers, ")");
