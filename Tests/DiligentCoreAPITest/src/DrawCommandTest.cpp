@@ -39,24 +39,79 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if D3D12_SUPPORTED
-void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if VULKAN_SUPPORTED
-void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if METAL_SUPPORTED
-void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
+
+void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        switch (deviceType)
+        {
+#if D3D11_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D11:
+                RenderDrawCommandReferenceD3D11(pSwapChain, pClearColor);
+                break;
+#endif
+
+#if D3D12_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D12:
+                RenderDrawCommandReferenceD3D12(pSwapChain, pClearColor);
+                break;
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
+                RenderDrawCommandReferenceGL(pSwapChain, pClearColor);
+                break;
+
+#endif
+
+#if VULKAN_SUPPORTED
+            case RENDER_DEVICE_TYPE_VULKAN:
+                RenderDrawCommandReferenceVk(pSwapChain, pClearColor);
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                RenderDrawCommandReferenceMtl(pSwapChain, pClearColor);
+                break;
+#endif
+
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
+        }
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+}
 
 } // namespace Testing
 
@@ -211,58 +266,10 @@ protected:
         auto* pEnv       = TestingEnvironment::GetInstance();
         auto* pDevice    = pEnv->GetDevice();
         auto* pSwapChain = pEnv->GetSwapChain();
-        auto* pContext   = pEnv->GetDeviceContext();
 
         TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-        if (pTestingSwapChain)
-        {
-            pContext->Flush();
-            pContext->InvalidateState();
-
-            auto deviceType = pDevice->GetDeviceCaps().DevType;
-            switch (deviceType)
-            {
-#if D3D11_SUPPORTED
-                case RENDER_DEVICE_TYPE_D3D11:
-                    RenderDrawCommandReferenceD3D11(pSwapChain);
-                    break;
-#endif
-
-#if D3D12_SUPPORTED
-                case RENDER_DEVICE_TYPE_D3D12:
-                    RenderDrawCommandReferenceD3D12(pSwapChain);
-                    break;
-#endif
-
-#if GL_SUPPORTED || GLES_SUPPORTED
-                case RENDER_DEVICE_TYPE_GL:
-                case RENDER_DEVICE_TYPE_GLES:
-                    RenderDrawCommandReferenceGL(pSwapChain);
-                    break;
-
-#endif
-
-#if VULKAN_SUPPORTED
-                case RENDER_DEVICE_TYPE_VULKAN:
-                    RenderDrawCommandReferenceVk(pSwapChain);
-                    break;
-#endif
-
-#if METAL_SUPPORTED
-                case RENDER_DEVICE_TYPE_METAL:
-                    RenderDrawCommandReferenceMtl(pSwapChain);
-                    break;
-#endif
-
-                default:
-                    LOG_ERROR_AND_THROW("Unsupported device type");
-            }
-
-            pTestingSwapChain->TakeSnapshot();
-        }
-
+        RenderDrawCommandReference(pSwapChain);
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 

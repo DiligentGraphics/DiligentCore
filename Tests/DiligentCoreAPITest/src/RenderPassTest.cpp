@@ -41,34 +41,31 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassMSResolveReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassInputAttachmentReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if D3D12_SUPPORTED
-void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassMSResolveReferenceGL(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassInputAttachmentReferenceGL(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if VULKAN_SUPPORTED
-void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if METAL_SUPPORTED
-void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassMSResolveReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
+
+void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor);
 
 } // namespace Testing
 
@@ -496,59 +493,11 @@ TEST_F(RenderPassTest, Draw)
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     constexpr float ClearColor[] = {0.2f, 0.375f, 0.5f, 0.75f};
-
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (pTestingSwapChain)
-    {
-        pContext->Flush();
-        pContext->InvalidateState();
-
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
-        switch (deviceType)
-        {
-#if D3D11_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D11:
-                RenderDrawCommandReferenceD3D11(pSwapChain, ClearColor);
-                break;
-#endif
-
-#if D3D12_SUPPORTED
-            case RENDER_DEVICE_TYPE_D3D12:
-                RenderDrawCommandReferenceD3D12(pSwapChain, ClearColor);
-                break;
-#endif
-
-#if GL_SUPPORTED || GLES_SUPPORTED
-            case RENDER_DEVICE_TYPE_GL:
-            case RENDER_DEVICE_TYPE_GLES:
-                RenderDrawCommandReferenceGL(pSwapChain, ClearColor);
-                break;
-
-#endif
-
-#if VULKAN_SUPPORTED
-            case RENDER_DEVICE_TYPE_VULKAN:
-                RenderDrawCommandReferenceVk(pSwapChain, ClearColor);
-                break;
-#endif
-
-#if METAL_SUPPORTED
-            case RENDER_DEVICE_TYPE_METAL:
-                RenderDrawCommandReferenceMtl(pSwapChain, ClearColor);
-                break;
-#endif
-
-            default:
-                LOG_ERROR_AND_THROW("Unsupported device type");
-        }
-
-        pTestingSwapChain->TakeSnapshot();
-    }
+    RenderDrawCommandReference(pSwapChain, ClearColor);
 
     const auto&              SCDesc = pSwapChain->GetDesc();
     RenderPassAttachmentDesc Attachments[1];
