@@ -541,6 +541,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
             };
 
         PipelineResourceSignatureDesc Desc;
+        Desc.Name         = "ImmutableSamplers2 - PRS1";
         Desc.Resources    = Resources;
         Desc.NumResources = _countof(Resources);
         Desc.BindingIndex = 0;
@@ -566,6 +567,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
             };
 
         PipelineResourceSignatureDesc Desc;
+        Desc.Name                       = "ImmutableSamplers2 - PRS2";
         Desc.Resources                  = Resources;
         Desc.NumResources               = _countof(Resources);
         Desc.ImmutableSamplers          = ImmutableSamplers;
@@ -579,6 +581,14 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
 
         EXPECT_EQ(pSignature2->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
         EXPECT_EQ(pSignature2->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Texture_sampler"), nullptr);
+    }
+
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature3;
+    {
+        PipelineResourceSignatureDesc Desc;
+        Desc.Name         = "ImmutableSamplers2 - PRS3";
+        Desc.BindingIndex = 3;
+        pDevice->CreatePipelineResourceSignature(Desc, &pSignature3);
     }
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
@@ -602,7 +612,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
 
-    IPipelineResourceSignature* Signatures[] = {pSignature1, pSignature2};
+    IPipelineResourceSignature* Signatures[] = {pSignature1, pSignature2, pSignature3};
 
     PSOCreateInfo.ppResourceSignatures    = Signatures;
     PSOCreateInfo.ResourceSignaturesCount = _countof(Signatures);
@@ -611,10 +621,11 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
-    ASSERT_EQ(pPSO->GetResourceSignatureCount(), 3u);
+    ASSERT_EQ(pPSO->GetResourceSignatureCount(), 4u);
     ASSERT_EQ(pPSO->GetResourceSignature(0), pSignature1);
     ASSERT_EQ(pPSO->GetResourceSignature(1), nullptr);
     ASSERT_EQ(pPSO->GetResourceSignature(2), pSignature2);
+    ASSERT_EQ(pPSO->GetResourceSignature(3), pSignature3);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB1;
     pSignature1->CreateShaderResourceBinding(&pSRB1, true);
@@ -624,6 +635,10 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     pSignature2->CreateShaderResourceBinding(&pSRB2, true);
     ASSERT_NE(pSRB2, nullptr);
 
+    RefCntAutoPtr<IShaderResourceBinding> pSRB3;
+    pSignature3->CreateShaderResourceBinding(&pSRB3, true);
+    ASSERT_NE(pSRB3, nullptr);
+
     pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
     pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVsNoSampler[0]);
 
@@ -632,6 +647,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
 
     pContext->CommitShaderResources(pSRB1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->CommitShaderResources(pSRB3, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
 

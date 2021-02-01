@@ -444,21 +444,27 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
 
     for (Uint32 i = 0; i < SignCount; ++i)
     {
-        auto* LayoutSign = Layout.GetSignature(i);
-        if (LayoutSign == nullptr)
+        auto* pLayoutSign = Layout.GetSignature(i);
+        if (pLayoutSign == nullptr)
             continue;
+
+        if (pLayoutSign->GetNumDescriptorSets() == 0)
+        {
+            // Skip signatures without any resources
+            continue;
+        }
 
         const auto* pSRB = BindInfo.SRBs[i];
         if (pSRB == nullptr)
         {
             LOG_ERROR_MESSAGE("Shader resource binding is not bound to index (", i, ").");
-            return;
+            continue;
         }
 
         auto* ResSign = pSRB->GetSignature();
         VERIFY_EXPR(ResSign != nullptr);
 
-        if (!LayoutSign->IsCompatibleWith(*ResSign))
+        if (!pLayoutSign->IsCompatibleWith(*ResSign))
         {
             LOG_ERROR_MESSAGE("Shader resource binding with signature '", ResSign->GetDesc().Name,
                               "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");
@@ -467,12 +473,12 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
         VERIFY((BindInfo.StaleSRBMask & BindInfo.ActiveSRBMask) == 0, "CommitDescriptorSets() must be called before validation.");
 
         const auto& ResInfo = BindInfo.Resources[i];
-        const auto  DSCount = LayoutSign->GetNumDescriptorSets();
+        const auto  DSCount = pLayoutSign->GetNumDescriptorSets();
         for (Uint32 s = 0; s < DSCount; ++s)
         {
             DEV_CHECK_ERR(ResInfo.vkSets[s] != VK_NULL_HANDLE,
                           "descriptor set with index (", s, ") is not bound for resource signature '",
-                          LayoutSign->GetDesc().Name, "' binding index (", i, ").");
+                          pLayoutSign->GetDesc().Name, "' binding index (", i, ").");
         }
     }
 
@@ -511,6 +517,11 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
     auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
+    if (ResourceCache.GetNumDescriptorSets() == 0)
+    {
+        // Skip SRBs that contain no resources
+        return;
+    }
 
 #ifdef DILIGENT_DEBUG
     ResourceCache.DbgVerifyDynamicBuffersCounter();
@@ -528,11 +539,11 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 #endif
 
     const auto  SRBIndex   = pResBindingVkImpl->GetBindingIndex();
+    const auto* pSignature = pResBindingVkImpl->GetSignature();
     auto&       BindInfo   = GetDescriptorSetBindInfo(pResBindingVkImpl->GetPipelineType());
     auto&       ResInfo    = BindInfo.Resources[SRBIndex];
-    const auto* pSignature = pResBindingVkImpl->GetSignature();
 
-    ResInfo.pResourceCache = &pResBindingVkImpl->GetResourceCache();
+    ResInfo.pResourceCache = &ResourceCache;
     BindInfo.SetStaleSRBBit(SRBIndex);
 
     if (ResourceCache.GetNumDynamicBuffers() > 0)
@@ -544,6 +555,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     if (pSignature->HasDescriptorSet(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE))
     {
         VERIFY_EXPR(DSIndex == pSignature->GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>());
+        VERIFY_EXPR(ResourceCache.GetDescriptorSet(DSIndex).GetVkDescriptorSet() != VK_NULL_HANDLE);
         ResInfo.vkSets[DSIndex] = ResourceCache.GetDescriptorSet(DSIndex).GetVkDescriptorSet();
         ++DSIndex;
     }
