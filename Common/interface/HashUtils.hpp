@@ -43,7 +43,7 @@ namespace Diligent
 template <typename T>
 void HashCombine(std::size_t& Seed, const T& Val)
 {
-    Seed ^= std::hash<T>()(Val) + 0x9e3779b9 + (Seed << 6) + (Seed >> 2);
+    Seed ^= std::hash<T>{}(Val) + 0x9e3779b9 + (Seed << 6) + (Seed >> 2);
 }
 
 template <typename FirstArgType, typename... RestArgsType>

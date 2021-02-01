@@ -737,8 +737,8 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
     {
         struct UniqueResource
         {
-            SPIRVShaderResourceAttribs const* Attribs   = nullptr;
-            Uint32                            DescIndex = ~0u;
+            const SPIRVShaderResourceAttribs* const Attribs;
+            const Uint32                            DescIndex;
         };
         using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, UniqueResource, HashMapStringKey::Hasher>;
 

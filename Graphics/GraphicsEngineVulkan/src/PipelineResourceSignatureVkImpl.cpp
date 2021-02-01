@@ -701,12 +701,13 @@ size_t PipelineResourceSignatureVkImpl::CalculateHash() const
         const auto& Res  = m_Desc.Resources[i];
         const auto& Attr = m_pResourceAttribs[i];
 
-        HashCombine(Hash, Res.ArraySize, Res.ShaderStages, Res.VarType, Attr.GetDescriptorType(), Attr.BindingIndex, Attr.DescrSet, Attr.IsImmutableSamplerAssigned());
+        HashCombine(Hash, Res.ArraySize, Uint32{Res.ShaderStages}, Uint32{Res.VarType}, static_cast<Uint32>(Attr.GetDescriptorType()),
+                    Attr.BindingIndex, Attr.DescrSet, Attr.IsImmutableSamplerAssigned());
     }
 
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        HashCombine(Hash, m_Desc.ImmutableSamplers[i].ShaderStages, m_Desc.ImmutableSamplers[i].Desc);
+        HashCombine(Hash, Uint32{m_Desc.ImmutableSamplers[i].ShaderStages}, m_Desc.ImmutableSamplers[i].Desc);
     }
 
     return Hash;
