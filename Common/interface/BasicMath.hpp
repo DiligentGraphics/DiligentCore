@@ -2206,7 +2206,7 @@ typename std::enable_if<std::is_integral<T>::value, T>::type ExtractLSB(T& bits)
 template <typename T>
 typename std::enable_if<std::is_enum<T>::value, T>::type ExtractLSB(T& bits)
 {
-    return static_cast<T>(ExtractLSB(reinterpret_cast<std::underlying_type<T>::type&>(bits)));
+    return static_cast<T>(ExtractLSB(reinterpret_cast<typename std::underlying_type<T>::type&>(bits)));
 }
 
 } // namespace Diligent
