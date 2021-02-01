@@ -31,31 +31,31 @@
 /// Declaration of Diligent::ShaderVariableManagerVk and Diligent::ShaderVariableVkImpl classes
 
 //
-//  * ShaderVariableManagerVk keeps list of variables of specific types
-//  * Every ShaderVariableVkImpl references VkResource from ShaderResourceLayoutVk
+//  * ShaderVariableManagerVk keeps the list of variables of specific types
+//  * Every ShaderVariableVkImpl references ResourceAttribs by index from PipelineResourceSignatureVkImpl
 //  * ShaderVariableManagerVk keeps reference to ShaderResourceCacheVk
-//  * ShaderVariableManagerVk is used by PipelineStateVkImpl to manage static resources and by
+//  * ShaderVariableManagerVk is used by PipelineResourceSignatureVkImpl to manage static resources and by
 //    ShaderResourceBindingVkImpl to manage mutable and dynamic resources
 //
-//          __________________________                   __________________________________________________________________________
-//         |                          |                 |                           |                            |                 |
-//    .----|  ShaderVariableManagerVk |---------------->|  ShaderVariableVkImpl[0]  |   ShaderVariableVkImpl[1]  |     ...         |
-//    |    |__________________________|                 |___________________________|____________________________|_________________|
-//    |                                                                     \                          |
-//    |                                                                     Ref                       Ref
-//    |                                                                       \                        |
-//    |     ___________________________                  ______________________V_______________________V____________________________
-//    |    |                           |   unique_ptr   |                   |                 |               |                     |
-//    |    | ShaderResourceLayoutVk    |--------------->|   VkResource[0]   |  VkResource[1]  |       ...     | VkResource[s+m+d-1] |
-//    |    |___________________________|                |___________________|_________________|_______________|_____________________|
-//    |                                                        |                                                            |
-//    |                                                        |                                                            |
-//    |                                                        | (DescriptorSet, CacheOffset)                              / (DescriptorSet, CacheOffset)
-//    |                                                         \                                                         /
-//    |     __________________________                   ________V_______________________________________________________V_______
-//    |    |                          |                 |                                                                        |
-//    '--->|   ShaderResourceCacheVk  |---------------->|                                   Resources                            |
-//         |__________________________|                 |________________________________________________________________________|
+//          __________________________                             __________________________________________________________________________
+//         |                          |                           |                           |                            |                 |
+//    .----|  ShaderVariableManagerVk |-------------------------->|  ShaderVariableVkImpl[0]  |   ShaderVariableVkImpl[1]  |     ...         |
+//    |    |__________________________|                           |___________________________|____________________________|_________________|
+//    |                |                                                              \                          |
+//    |           m_pSignature                                                     m_ResIndex               m_ResIndex
+//    |                |                                                                \                        |
+//    |     ___________V_____________________                      ______________________V_______________________V____________________________
+//    |    |                                 | m_pResourceAttribs |                  |                |               |                     |
+//    |    | PipelineResourceSignatureVkImpl |------------------->|    Resource[0]   |   Resource[1]  |       ...     |  Resource[s+m+d-1]  |
+//    |    |_________________________________|                    |__________________|________________|_______________|_____________________|
+//    |                                                                  |                                                        |
+//    |                                                                  |                                                        |
+//    |                                                                  | (DescriptorSet, CacheOffset)                          / (DescriptorSet, CacheOffset)
+//    |                                                                   \                                                     /
+//    |     __________________________                             ________V___________________________________________________V_______
+//    |    |                          |                           |                                                                    |
+//    '--->|   ShaderResourceCacheVk  |-------------------------->|                                   Resources                        |
+//         |__________________________|                           |____________________________________________________________________|
 //
 //
 
@@ -132,13 +132,13 @@ private:
 
     IObject& m_Owner;
 
-    // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
-    // static resource cache owned by the same PSO object), or by SRB object (in which case
-    // m_ResourceCache references the cache in the SRB). Thus the cache and the resource layout
+    // Variable mgr is owned by either Pipeline Resource Signature (in which case m_ResourceCache references
+    // static resource cache owned by the same PRS object), or by SRB object (in which case
+    // m_ResourceCache references the cache in the SRB). Thus the cache and the signature
     // (which the variables reference) are guaranteed to be alive while the manager is alive.
     ShaderResourceCacheVk& m_ResourceCache;
 
-    // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
+    // Memory is allocated through the allocator provided by the resource signature. If allocation granularity > 1, fixed block
     // memory allocator is used. This ensures that all resources from different shader resource bindings reside in
     // continuous memory. If allocation granularity == 1, raw allocator is used.
     ShaderVariableVkImpl* m_pVariables   = nullptr;
@@ -149,7 +149,7 @@ private:
 #endif
 };
 
-// sizeof(ShaderVariableVkImpl) == 16 (x64)
+// sizeof(ShaderVariableVkImpl) == 24 (x64)
 class ShaderVariableVkImpl final : public IShaderResourceVariable
 {
 public:

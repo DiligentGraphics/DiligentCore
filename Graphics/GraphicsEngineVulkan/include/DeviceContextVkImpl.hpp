@@ -524,7 +524,7 @@ private:
 
         __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
         {
-            return (StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) && !DynamicBuffersIntact);
+            return (StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
         }
 
         void SetStaleSRBBit(Uint32 Index) { StaleSRBMask |= static_cast<Bitfield>(1u << Index); }

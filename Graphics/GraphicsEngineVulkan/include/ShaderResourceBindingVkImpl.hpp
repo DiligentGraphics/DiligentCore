@@ -85,12 +85,12 @@ private:
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ShaderVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
-    ShaderResourceCacheVk    m_ShaderResourceCache;
-    ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
-
     bool m_bStaticResourcesInitialized = false;
 
     const Uint8 m_NumShaders = 0;
+
+    ShaderResourceCacheVk    m_ShaderResourceCache;
+    ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
 };
 
 } // namespace Diligent

@@ -183,7 +183,7 @@ PipelineLayoutVk::ResourceInfo PipelineLayoutVk::GetResourceInfo(const char* Nam
             const auto& ResDesc = pSignature->GetResourceDesc(r);
             const auto& Attr    = pSignature->GetResourceAttribs(r);
 
-            if ((ResDesc.ShaderStages & Stage) && strcmp(ResDesc.Name, Name) == 0)
+            if ((ResDesc.ShaderStages & Stage) != 0 && strcmp(ResDesc.Name, Name) == 0)
             {
                 Info.Signature     = pSignature;
                 Info.Type          = ResDesc.ResourceType;
@@ -211,7 +211,7 @@ PipelineLayoutVk::ResourceInfo PipelineLayoutVk::GetImmutableSamplerInfo(const c
             const auto& Desc = pSignature->GetImmutableSamplerDesc(s);
             const auto& Attr = pSignature->GetImmutableSamplerAttribs(s);
 
-            if (Attr.Ptr && (Desc.ShaderStages & Stage) && StreqSuff(Name, Desc.SamplerOrTextureName, pSignature->GetCombinedSamplerSuffix()))
+            if (Attr.Ptr && (Desc.ShaderStages & Stage) != 0 && StreqSuff(Name, Desc.SamplerOrTextureName, pSignature->GetCombinedSamplerSuffix()))
             {
                 Info.Signature     = pSignature;
                 Info.Type          = SHADER_RESOURCE_TYPE_SAMPLER;

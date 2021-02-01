@@ -356,6 +356,9 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     }
 
     // Unbind incompatible shader resources
+    // A consequence of layout compatibility is that when the implementation compiles a pipeline
+    // layout and maps pipeline resources to implementation resources, the mechanism for set N
+    // should only be a function of sets [0..N].
     for (; sign < SignCount; ++sign)
     {
         BindInfo.SRBs[sign] = nullptr;
@@ -373,6 +376,8 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
 DeviceContextVkImpl::DescriptorSetBindInfo& DeviceContextVkImpl::GetDescriptorSetBindInfo(PIPELINE_TYPE Type)
 {
+    VERIFY_EXPR(Type != PIPELINE_TYPE_INVALID);
+
     // clang-format off
     static_assert(PIPELINE_TYPE_GRAPHICS    == 0, "PIPELINE_TYPE_GRAPHICS == 0 is expected");
     static_assert(PIPELINE_TYPE_COMPUTE     == 1, "PIPELINE_TYPE_COMPUTE == 1 is expected");
@@ -392,6 +397,7 @@ DeviceContextVkImpl::DescriptorSetBindInfo& DeviceContextVkImpl::GetDescriptorSe
 
 void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
 {
+    // Commit all stale descriptor sets or these that have dynamic buffers, which are used by the PSO
     auto StaleSRBFlags = (Uint32{BindInfo.StaleSRBMask} | Uint32{BindInfo.DynamicBuffersMask}) & Uint32{BindInfo.ActiveSRBMask};
     while (StaleSRBFlags != 0)
     {
@@ -402,7 +408,8 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
         auto& ResInfo = BindInfo.Resources[sign];
         VERIFY_EXPR(ResInfo.pResourceCache != nullptr);
 
-        VERIFY(ResInfo.vkSets[0] != VK_NULL_HANDLE, "At least one descriptor set in an active SRB must not be NULL");
+        VERIFY(ResInfo.vkSets[0] != VK_NULL_HANDLE,
+               "At least one descriptor set in the stale SRB must not be NULL. Empty SRBs should not be marked as stale by CommitShaderResources()");
         const Uint32 SetCount = 1 + (ResInfo.vkSets[1] != VK_NULL_HANDLE ? 1 : 0);
 
         VERIFY_EXPR(SetCount == ResInfo.pResourceCache->GetNumDescriptorSets());
@@ -410,7 +417,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
         if (ResInfo.DynamicOffsetCount > 0)
         {
             VERIFY(m_DynamicBufferOffsets.size() >= ResInfo.DynamicOffsetCount,
-                   "m_DynamicBufferOffsets must've been resized by CommitShaderResources to have enough space");
+                   "m_DynamicBufferOffsets must've been resized by CommitShaderResources() to have enough space");
 
             auto NumOffsetsWritten = ResInfo.pResourceCache->GetDynamicBufferOffsets(m_ContextId, this, m_DynamicBufferOffsets);
             VERIFY_EXPR(NumOffsetsWritten == ResInfo.DynamicOffsetCount);
@@ -461,12 +468,12 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
             continue;
         }
 
-        auto* ResSign = pSRB->GetSignature();
-        VERIFY_EXPR(ResSign != nullptr);
+        auto* pSRBSign = pSRB->GetSignature();
+        VERIFY_EXPR(pSRBSign != nullptr);
 
-        if (!pLayoutSign->IsCompatibleWith(*ResSign))
+        if (!pLayoutSign->IsCompatibleWith(*pSRBSign))
         {
-            LOG_ERROR_MESSAGE("Shader resource binding with signature '", ResSign->GetDesc().Name,
+            LOG_ERROR_MESSAGE("Shader resource binding at index ", i, " with signature '", pSRBSign->GetDesc().Name,
                               "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");
         }
 
@@ -477,8 +484,8 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
         for (Uint32 s = 0; s < DSCount; ++s)
         {
             DEV_CHECK_ERR(ResInfo.vkSets[s] != VK_NULL_HANDLE,
-                          "descriptor set with index (", s, ") is not bound for resource signature '",
-                          pLayoutSign->GetDesc().Name, "' binding index (", i, ").");
+                          "descriptor set with index ", s, " is not bound for resource signature '",
+                          pLayoutSign->GetDesc().Name, "', binding index ", i, ".");
         }
     }
 
@@ -519,7 +526,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
     if (ResourceCache.GetNumDescriptorSets() == 0)
     {
-        // Skip SRBs that contain no resources
+        // Ignore SRBs that contain no resources
         return;
     }
 
@@ -733,8 +740,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #endif
 
     auto& DescrSetBindInfo = GetDescriptorSetBindInfo(PIPELINE_TYPE_GRAPHICS);
-
-    // First time we must always bind descriptor sets with dynamic offsets.
+    // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // cals we do not need to bind the sets again.
     if (DescrSetBindInfo.RequireUpdate(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
@@ -888,7 +894,6 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
         m_CommandBuffer.EndRenderPass();
 
     auto& DescrSetBindInfo = GetDescriptorSetBindInfo(PIPELINE_TYPE_COMPUTE);
-
     if (DescrSetBindInfo.RequireUpdate())
     {
         CommitDescriptorSets(DescrSetBindInfo);
