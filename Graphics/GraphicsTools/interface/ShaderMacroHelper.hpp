@@ -73,6 +73,15 @@ public:
         AddShaderMacro<const Char*>(Name, ss.str().c_str());
     }
 
+    ShaderMacroHelper() = default;
+
+    // NB: string pointers in m_Macros may become invalid after the
+    //     copy or move due to short string optimization in std::string
+    ShaderMacroHelper(const ShaderMacroHelper&) = delete;
+    ShaderMacroHelper(ShaderMacroHelper&&)      = delete;
+    ShaderMacroHelper& operator=(const ShaderMacroHelper&) = delete;
+    ShaderMacroHelper& operator=(ShaderMacroHelper&&) = delete;
+
     void Finalize()
     {
         if (!m_bIsFinalized)
