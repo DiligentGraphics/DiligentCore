@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <array>
 
 #include "TestingEnvironment.hpp"
 #include "ShaderMacroHelper.hpp"
@@ -39,10 +40,15 @@ using namespace Diligent::Testing;
 
 namespace Diligent
 {
-namespace Test
+
+namespace Testing
 {
+
 void PrintShaderResources(IShader* pShader);
-}
+void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+
+} // namespace Testing
+
 } // namespace Diligent
 
 namespace
@@ -53,10 +59,10 @@ class ShaderResourceLayoutTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv          = TestingEnvironment::GetInstance();
-        auto  pRenderTarget = pEnv->CreateTexture("ShaderResourceLayoutTest: test RTV", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 512, 512);
-        ASSERT_NE(pRenderTarget, nullptr);
-        pRTV = pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pSwapChain = pEnv->GetSwapChain();
+        RenderDrawCommandReference(pSwapChain);
+        pRTV = pSwapChain->GetCurrentBackBufferRTV();
     }
 
     static void TearDownTestSuite()
@@ -140,7 +146,7 @@ protected:
         if (pShader && deviceCaps.Features.ShaderResourceQueries)
         {
             VerifyShaderResources(pShader, ExpectedResources, NumExpectedResources);
-            Diligent::Test::PrintShaderResources(pShader);
+            Diligent::Testing::PrintShaderResources(pShader);
         }
 
         return pShader;
@@ -193,6 +199,7 @@ protected:
         GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
         GraphicsPipeline.DSVFormat         = TEX_FORMAT_UNKNOWN;
 
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
@@ -266,10 +273,10 @@ protected:
     void TestStructuredOrFormattedBuffer(bool IsFormatted);
     void TestRWStructuredOrFormattedBuffer(bool IsFormatted);
 
-    static RefCntAutoPtr<ITextureView> pRTV;
+    static ITextureView* pRTV;
 };
 
-RefCntAutoPtr<ITextureView> ShaderResourceLayoutTest::pRTV;
+ITextureView* ShaderResourceLayoutTest::pRTV;
 
 #define SET_STATIC_VAR(PSO, ShaderFlags, VarName, SetMethod, ...)                                \
     do                                                                                           \
@@ -403,24 +410,30 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     std::vector<RefCntAutoPtr<ITexture>> pTextures(MaxTextures);
     std::vector<IDeviceObject*>          pTexSRVs(MaxTextures);
 
+    constexpr Uint32 TexWidth  = 256;
+    constexpr Uint32 TexHeight = 256;
+
+    std::vector<Uint32>             TexData(TexWidth * TexHeight);
+    std::array<Uint32, MaxTextures> TexColors = {0xFF, 0xFF00, 0xFF0000, 0xFF000000};
     for (Uint32 i = 0; i < MaxTextures; ++i)
     {
-        pTextures[i] = pEnv->CreateTexture("Test texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 256, 256);
+        std::fill(TexData.begin(), TexData.end(), TexColors[i]);
+        pTextures[i] = pEnv->CreateTexture("Test texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, TexWidth, TexHeight, TexData.data());
         pTexSRVs[i]  = pTextures[i]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
     }
 
     SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, pTexSRVs[0]);
     SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SetArray, pTexSRVs.data(), 0, StaticTexArraySize);
 
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2D_Static", Set, pTexSRVs[0]);
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SetArray, pTexSRVs.data(), 0, StaticTexArraySize);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2D_Static", Set, pTexSRVs[1]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SetArray, pTexSRVs.data() + 2, 0, StaticTexArraySize);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRVs[1]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, pTexSRVs[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Mut", SetArray, pTexSRVs.data(), 0, MutableTexArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data(), 0, DynamicTexArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data() + 1, 0, DynamicTexArraySize);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Mut", Set, pTexSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Mut", Set, pTexSRVs[2]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut", SetArray, pTexSRVs.data(), 0, MutableTexArraySize);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data(), 0, DynamicTexArraySize);
@@ -435,16 +448,22 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    DrawAttribs DrawAttrs(6, DRAW_FLAG_VERIFY_ALL);
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, pTexSRVs[1]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data(), 1, DynamicTexArraySize - 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, pTexSRVs[2]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data(), 0, 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data() + 1, 1, DynamicTexArraySize - 1);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[1]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data(), 1, DynamicTexArraySize - 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[3]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data() + 1, 0, 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data() + 2, 1, DynamicTexArraySize - 1);
+
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->Draw(DrawAttrs);
+
+    pEnv->GetSwapChain()->Present();
 }
 
 TEST_F(ShaderResourceLayoutTest, Textures)

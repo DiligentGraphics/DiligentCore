@@ -99,7 +99,7 @@ public:
 
     static TestingEnvironment* GetInstance() { return m_pTheEnvironment; }
 
-    RefCntAutoPtr<ITexture> CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height);
+    RefCntAutoPtr<ITexture> CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, void* pInitData = nullptr);
 
     static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
 
