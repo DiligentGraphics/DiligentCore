@@ -26,6 +26,7 @@
  */
 
 #include <climits>
+#include <sstream>
 
 #include "BasicMath.hpp"
 #include "AdvancedMath.hpp"
@@ -1685,6 +1686,56 @@ TEST(Common_BasicMath, ExtractLSB)
     }
 }
 
+TEST(Common_BasicMath, VectorInserters)
+{
+    {
+        std::stringstream ss;
+        ss << float4{1, 20, 300, 4000};
+        EXPECT_STREQ(ss.str().c_str(), "float4(1, 20, 300, 4000)");
+    }
+    {
+        std::stringstream ss;
+        ss << float3{1, 201, 302};
+        EXPECT_STREQ(ss.str().c_str(), "float3(1, 201, 302)");
+    }
+    {
+        std::stringstream ss;
+        ss << float2{1, 23};
+        EXPECT_STREQ(ss.str().c_str(), "float2(1, 23)");
+    }
+
+    {
+        std::stringstream ss;
+        ss << int4{1, 20, 300, 4000};
+        EXPECT_STREQ(ss.str().c_str(), "int4(1, 20, 300, 4000)");
+    }
+    {
+        std::stringstream ss;
+        ss << int3{1, 201, 302};
+        EXPECT_STREQ(ss.str().c_str(), "int3(1, 201, 302)");
+    }
+    {
+        std::stringstream ss;
+        ss << int2{1, 23};
+        EXPECT_STREQ(ss.str().c_str(), "int2(1, 23)");
+    }
+
+    {
+        std::stringstream ss;
+        ss << uint4{1, 20, 300, 4000};
+        EXPECT_STREQ(ss.str().c_str(), "uint4(1, 20, 300, 4000)");
+    }
+    {
+        std::stringstream ss;
+        ss << uint3{1, 201, 302};
+        EXPECT_STREQ(ss.str().c_str(), "uint3(1, 201, 302)");
+    }
+    {
+        std::stringstream ss;
+        ss << uint2{1, 23};
+        EXPECT_STREQ(ss.str().c_str(), "uint2(1, 23)");
+    }
+}
 
 TEST(Common_AdvancedMath, IsPointInsideTriangleF)
 {

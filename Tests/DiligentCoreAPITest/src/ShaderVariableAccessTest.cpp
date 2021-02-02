@@ -76,7 +76,7 @@ void PrintShaderResources(IShader* pShader)
     LOG_INFO_MESSAGE(ss.str());
 }
 
-} // namespace Test
+} // namespace Testing
 
 } // namespace Diligent
 namespace
