@@ -33,28 +33,71 @@ layout(std140) readonly buffer g_BuffArr_Dyn
 }g_StorageBuffArr_Dyn[DYNAMIC_BUFF_ARRAY_SIZE]; // 2
 #endif
 
-vec4 UseResources()
+
+#ifdef VERTEX_SHADER
+#   define  Buff_Static_Ref vec4(1, 0, 0, 0)
+#   define  Buff_Mut_Ref    vec4(0, 1, 0, 0)
+#   define  Buff_Dyn_Ref    vec4(0, 0, 1, 0)
+
+#   define BuffArr_Mut_Ref0 vec4(1, 0, 0, 0)
+#   define BuffArr_Mut_Ref1 vec4(0, 1, 0, 0)
+#   define BuffArr_Mut_Ref2 vec4(0, 0, 1, 0)
+
+#   define BuffArr_Dyn_Ref0 vec4(0, 1, 0, 0)
+#   define BuffArr_Dyn_Ref1 vec4(0, 0, 1, 0)
+#endif
+
+#ifdef PIXEL_SHADER
+#   define  Buff_Static_Ref vec4(0, 0, 1, 0)
+#   define  Buff_Mut_Ref    vec4(0, 0, 0, 1)
+#   define  Buff_Dyn_Ref    vec4(0, 1, 0, 0)
+
+#   define BuffArr_Mut_Ref0 vec4(0, 1, 0, 0)
+#   define BuffArr_Mut_Ref1 vec4(0, 0, 1, 0)
+#   define BuffArr_Mut_Ref2 vec4(0, 0, 0, 1)
+
+#   define BuffArr_Dyn_Ref0 vec4(0, 0, 1, 0)
+#   define BuffArr_Dyn_Ref1 vec4(0, 0, 0, 1)
+#endif
+
+
+#define BuffArr_Static_Ref0 vec4(1, 0, 0, 0)
+#define BuffArr_Static_Ref1 vec4(0, 1, 0, 0)
+#define BuffArr_Static_Ref2 vec4(0, 0, 1, 0)
+#define BuffArr_Static_Ref3 vec4(0, 0, 0, 1)
+
+vec4 CheckValue(vec4 Val, vec4 Expected)
 {
-    vec4 f4Color = vec4(0.0, 0.0, 0.0, 0.0);
-    f4Color += g_StorageBuff_Static.data;
-    f4Color += g_StorageBuff_Mut   .data;
-    f4Color += g_StorageBuff_Dyn   .data;
+    return vec4(Val.x == Expected.x ? 1.0 : 0.0,
+                Val.y == Expected.y ? 1.0 : 0.0,
+                Val.z == Expected.z ? 1.0 : 0.0,
+                Val.w == Expected.w ? 1.0 : 0.0);
+}
+
+vec4 VerifyResources()
+{
+    vec4 AllCorrect = vec4(1.0, 1.0, 1.0, 1.0);
+
+    AllCorrect *= CheckValue(g_StorageBuff_Static.data, Buff_Static_Ref);
+    AllCorrect *= CheckValue(g_StorageBuff_Mut   .data, Buff_Mut_Ref);
+    AllCorrect *= CheckValue(g_StorageBuff_Dyn   .data, Buff_Dyn_Ref);
 
     // glslang is not smart enough to unroll the loops even when explicitly told to do so
 #ifdef FRAGMENT_SHADER
-    f4Color += g_StorageBuffArr_Static[0].data;
-    f4Color += g_StorageBuffArr_Static[1].data;
-    f4Color += g_StorageBuffArr_Static[2].data;
-    f4Color += g_StorageBuffArr_Static[3].data;
+    AllCorrect *= CheckValue(g_StorageBuffArr_Static[0].data, BuffArr_Static_Ref0);
+    AllCorrect *= CheckValue(g_StorageBuffArr_Static[1].data, BuffArr_Static_Ref1);
+    AllCorrect *= CheckValue(g_StorageBuffArr_Static[2].data, BuffArr_Static_Ref2);
+    AllCorrect *= CheckValue(g_StorageBuffArr_Static[3].data, BuffArr_Static_Ref3);
 
-    f4Color += g_StorageBuffArr_Mut[0].data;
-    f4Color += g_StorageBuffArr_Mut[1].data;
-    f4Color += g_StorageBuffArr_Mut[2].data;
+    AllCorrect *= CheckValue(g_StorageBuffArr_Mut[0].data, BuffArr_Mut_Ref0);
+    AllCorrect *= CheckValue(g_StorageBuffArr_Mut[1].data, BuffArr_Mut_Ref1);
+    AllCorrect *= CheckValue(g_StorageBuffArr_Mut[2].data, BuffArr_Mut_Ref2);
 
-    f4Color += g_StorageBuffArr_Dyn[0].data;
-    f4Color += g_StorageBuffArr_Dyn[1].data;
+    AllCorrect *= CheckValue(g_StorageBuffArr_Dyn[0].data, BuffArr_Dyn_Ref0);
+    AllCorrect *= CheckValue(g_StorageBuffArr_Dyn[1].data, BuffArr_Dyn_Ref1);
 #endif    
-	return f4Color;
+
+	return AllCorrect;
 }
 
 #ifdef VERTEX_SHADER
@@ -72,11 +115,31 @@ out gl_PerVertex
 #endif
 
 layout(location = 0)out vec4 out_Color;
+
 void main()
 {
-    out_Color = UseResources();
-    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
-}   
+    vec4 Pos[6];
+    Pos[0] = vec4(-1.0, -0.5, 0.0, 1.0);
+    Pos[1] = vec4(-0.5, +0.5, 0.0, 1.0);
+    Pos[2] = vec4( 0.0, -0.5, 0.0, 1.0);
+
+    Pos[3] = vec4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = vec4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = vec4(+1.0, -0.5, 0.0, 1.0);
+
+    vec4 Col[3];
+    Col[0] = vec4(1.0, 0.0, 0.0, 1.0);
+    Col[1] = vec4(0.0, 1.0, 0.0, 1.0);
+    Col[2] = vec4(0.0, 0.0, 1.0, 1.0);
+    
+#ifdef VULKAN
+    gl_Position = Pos[gl_VertexIndex];
+    out_Color = Col[gl_VertexIndex % 3] * VerifyResources();
+#else
+    gl_Position = Pos[gl_VertexID];
+    out_Color = Col[gl_VertexIndex % 3] * VerifyResources();
+#endif
+}
 #endif
 
 #ifdef FRAGMENT_SHADER
@@ -84,6 +147,6 @@ layout(location = 0)in vec4 in_Color;
 layout(location = 0)out vec4 out_Color;
 void main()
 {
-    out_Color = UseResources();
+    out_Color = in_Color * VerifyResources();
 }
 #endif

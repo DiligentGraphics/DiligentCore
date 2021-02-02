@@ -32,6 +32,7 @@
 #include "TestingEnvironment.hpp"
 #include "ShaderMacroHelper.hpp"
 #include "GraphicsAccessories.hpp"
+#include "BasicMath.hpp"
 
 #include "gtest/gtest.h"
 
@@ -207,23 +208,26 @@ protected:
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
 
-    static RefCntAutoPtr<IBufferView> CreateResourceBufferView(BUFFER_MODE BufferMode, BUFFER_VIEW_TYPE ViewType)
+    static RefCntAutoPtr<IBufferView> CreateResourceBufferView(BUFFER_MODE BufferMode, BUFFER_VIEW_TYPE ViewType, const float4& Value)
     {
         VERIFY_EXPR(ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewType == BUFFER_VIEW_UNORDERED_ACCESS);
 
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        BufferDesc BuffDesc;
+        std::vector<float4> InitData(16, Value);
+        BufferDesc          BuffDesc;
         BuffDesc.Name              = "Formatted buffer";
-        BuffDesc.uiSizeInBytes     = 256;
+        BuffDesc.uiSizeInBytes     = static_cast<Uint32>(InitData.size() * sizeof(InitData[0]));
         BuffDesc.BindFlags         = ViewType == BUFFER_VIEW_SHADER_RESOURCE ? BIND_SHADER_RESOURCE : BIND_UNORDERED_ACCESS;
         BuffDesc.Usage             = USAGE_DEFAULT;
         BuffDesc.ElementByteStride = 16;
         BuffDesc.Mode              = BufferMode;
         RefCntAutoPtr<IBuffer>     pBuffer;
         RefCntAutoPtr<IBufferView> pBufferView;
-        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
+
+        BufferData BuffData{InitData.data(), BuffDesc.uiSizeInBytes};
+        pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer);
         if (!pBuffer)
         {
             ADD_FAILURE() << "Unable to create buffer " << BuffDesc;
@@ -448,7 +452,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    DrawAttribs DrawAttrs(6, DRAW_FLAG_VERIFY_ALL);
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, pTexSRVs[2]);
@@ -579,9 +583,10 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     std::vector<RefCntAutoPtr<IBufferView>> pBufferViews(MaxBuffers);
     std::vector<IDeviceObject*>             pBuffSRVs(MaxBuffers);
 
+    std::array<float4, MaxBuffers> BufferVal = {float4{1, 0, 0, 0}, float4{0, 1, 0, 0}, float4{0, 0, 1, 0}, float4{0, 0, 0, 1}};
     for (Uint32 i = 0; i < MaxBuffers; ++i)
     {
-        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_SHADER_RESOURCE);
+        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_SHADER_RESOURCE, BufferVal[i]);
         ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
         pBuffSRVs[i] = pBufferViews[i];
     }
@@ -595,11 +600,11 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     {
         EXPECT_EQ(pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_BuffArr_Static"), nullptr);
     }
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Buff_Static", Set, pBuffSRVs[0]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Buff_Static", Set, pBuffSRVs[2]);
     SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_BuffArr_Static", SetArray, pBuffSRVs.data(), 0, StaticBuffArraySize);
 
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, pBuffSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, pBuffSRVs[1]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[0]);
     if (!UseArraysInPSOnly)
     {
@@ -612,9 +617,9 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_BuffArr_Dyn"), nullptr);
     }
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Mut", Set, pBuffSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Mut", Set, pBuffSRVs[3]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Mut", SetArray, pBuffSRVs.data(), 0, MutableBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Mut", SetArray, pBuffSRVs.data() + 1, 0, MutableBuffArraySize);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 0, DynamicBuffArraySize);
 
     pSRB->InitializeStaticResources(pPSO);
@@ -627,19 +632,24 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[1]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[2]);
     if (!UseArraysInPSOnly)
     {
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 1, DynamicBuffArraySize - 1);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data() + 1, 0, 1);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data() + 2, 1, 1);
     }
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[1]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 1, DynamicBuffArraySize - 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data() + 2, 0, DynamicBuffArraySize);
+
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->Draw(DrawAttrs);
+
+    pEnv->GetSwapChain()->Present();
 }
 
 TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
@@ -745,7 +755,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 
     for (Uint32 i = 0; i < TotalBuffers; ++i)
     {
-        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_UNORDERED_ACCESS);
+        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_UNORDERED_ACCESS, float4{});
         ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
         pBuffUAVs[i] = pBufferViews[i];
     }
