@@ -57,6 +57,110 @@ void ComputeShaderReference(ISwapChain* pSwapChain);
 namespace
 {
 
+class ReferenceBuffers
+{
+public:
+    ReferenceBuffers(Uint32           NumBuffers,
+                     USAGE            Usage,
+                     BIND_FLAGS       BindFlags,
+                     BUFFER_VIEW_TYPE ViewType   = BUFFER_VIEW_UNDEFINED,
+                     BUFFER_MODE      BufferMode = BUFFER_MODE_UNDEFINED) :
+        Buffers(NumBuffers),
+        Values(NumBuffers),
+        UsedValues(NumBuffers),
+        ppBuffObjects(NumBuffers),
+        Views(NumBuffers),
+        ppViewObjects(NumBuffers)
+    {
+        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pDevice = pEnv->GetDevice();
+
+        for (Uint32 i = 0; i < NumBuffers; ++i)
+        {
+            auto& Value = Values[i];
+            auto  v     = static_cast<float>(i * 10);
+            Value       = float4(v + 1, v + 2, v + 3, v + 4);
+
+            std::vector<float4> InitData(16, Value);
+
+            BufferDesc BuffDesc;
+
+            String Name   = "Reference buffer " + std::to_string(i);
+            BuffDesc.Name = Name.c_str();
+
+            BuffDesc.Usage             = Usage;
+            BuffDesc.BindFlags         = BindFlags;
+            BuffDesc.Mode              = BufferMode;
+            BuffDesc.uiSizeInBytes     = static_cast<Uint32>(InitData.size() * sizeof(InitData[0]));
+            BuffDesc.ElementByteStride = BufferMode != BUFFER_MODE_UNDEFINED ? 16 : 0;
+
+            auto&      pBuffer = Buffers[i];
+            BufferData BuffData{InitData.data(), BuffDesc.uiSizeInBytes};
+            pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer);
+            if (!pBuffer)
+            {
+                ADD_FAILURE() << "Unable to create buffer " << BuffDesc;
+                return;
+            }
+            ppBuffObjects[i] = pBuffer;
+
+            if (ViewType != BUFFER_VIEW_UNDEFINED)
+            {
+                auto& pView = Views[i];
+                if (BufferMode == BUFFER_MODE_FORMATTED)
+                {
+                    BufferViewDesc BuffViewDesc;
+                    BuffViewDesc.Name                 = "Formatted buffer SRV";
+                    BuffViewDesc.ViewType             = ViewType;
+                    BuffViewDesc.Format.ValueType     = VT_FLOAT32;
+                    BuffViewDesc.Format.NumComponents = 4;
+                    BuffViewDesc.Format.IsNormalized  = false;
+
+                    pBuffer->CreateView(BuffViewDesc, &pView);
+                }
+                else
+                {
+                    pView = pBuffer->GetDefaultView(ViewType);
+                }
+
+                if (!pView)
+                {
+                    ADD_FAILURE() << "Unable to create buffer view";
+                    return;
+                }
+
+                ppViewObjects[i] = pView;
+            }
+        }
+    }
+
+    IDeviceObject** GetBuffObjects(size_t i) { return &ppBuffObjects[i]; };
+    IDeviceObject** GetViewObjects(size_t i) { return &ppViewObjects[i]; };
+
+    const float4& GetValue(size_t i)
+    {
+        VERIFY(!UsedValues[i], "Buffer ", i, " has already been used. Every buffer is expected to be used once.");
+        UsedValues[i] = true;
+        VERIFY(Values[i] != float4{}, "Value must not be zero");
+        return Values[i];
+    }
+
+    void ResetUsedValues()
+    {
+        std::fill(UsedValues.begin(), UsedValues.end(), false);
+    }
+
+private:
+    std::vector<RefCntAutoPtr<IBuffer>>     Buffers;
+    std::vector<RefCntAutoPtr<IBufferView>> Views;
+
+    std::vector<IDeviceObject*> ppBuffObjects;
+    std::vector<IDeviceObject*> ppViewObjects;
+
+    std::vector<bool>   UsedValues;
+    std::vector<float4> Values;
+};
+
 class ShaderResourceLayoutTest : public ::testing::Test
 {
 protected:
@@ -205,72 +309,6 @@ protected:
         if (pPSO)
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
-
-    static RefCntAutoPtr<IBufferView> CreateResourceBufferView(BUFFER_MODE BufferMode, BUFFER_VIEW_TYPE ViewType, const float4& Value)
-    {
-        VERIFY_EXPR(ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewType == BUFFER_VIEW_UNORDERED_ACCESS);
-
-        auto* pEnv    = TestingEnvironment::GetInstance();
-        auto* pDevice = pEnv->GetDevice();
-
-        std::vector<float4> InitData(16, Value);
-        BufferDesc          BuffDesc;
-        BuffDesc.Name              = "Formatted buffer";
-        BuffDesc.uiSizeInBytes     = static_cast<Uint32>(InitData.size() * sizeof(InitData[0]));
-        BuffDesc.BindFlags         = ViewType == BUFFER_VIEW_SHADER_RESOURCE ? BIND_SHADER_RESOURCE : BIND_UNORDERED_ACCESS;
-        BuffDesc.Usage             = USAGE_DEFAULT;
-        BuffDesc.ElementByteStride = 16;
-        BuffDesc.Mode              = BufferMode;
-        RefCntAutoPtr<IBuffer>     pBuffer;
-        RefCntAutoPtr<IBufferView> pBufferView;
-
-        BufferData BuffData{InitData.data(), BuffDesc.uiSizeInBytes};
-        pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer);
-        if (!pBuffer)
-        {
-            ADD_FAILURE() << "Unable to create buffer " << BuffDesc;
-            return pBufferView;
-        }
-
-        if (BufferMode == BUFFER_MODE_FORMATTED)
-        {
-            BufferViewDesc BuffViewDesc;
-            BuffViewDesc.Name                 = "Formatted buffer SRV";
-            BuffViewDesc.ViewType             = ViewType;
-            BuffViewDesc.Format.ValueType     = VT_FLOAT32;
-            BuffViewDesc.Format.NumComponents = 4;
-            BuffViewDesc.Format.IsNormalized  = false;
-            pBuffer->CreateView(BuffViewDesc, &pBufferView);
-        }
-        else
-        {
-            pBufferView = pBuffer->GetDefaultView(ViewType);
-        }
-
-        return pBufferView;
-    }
-
-    static RefCntAutoPtr<IBuffer> CreateConstantBuffer(const float4& Value)
-    {
-        auto* pEnv    = TestingEnvironment::GetInstance();
-        auto* pDevice = pEnv->GetDevice();
-
-        std::vector<float4> InitData(16, Value);
-
-        BufferDesc BuffDesc;
-        BuffDesc.Name          = "Constant buffer";
-        BuffDesc.uiSizeInBytes = static_cast<Uint32>(InitData.size() * sizeof(InitData[0]));
-        BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
-        BuffDesc.Usage         = USAGE_DEFAULT;
-
-        BufferData BuffData{InitData.data(), BuffDesc.uiSizeInBytes};
-
-        RefCntAutoPtr<IBuffer> pBuffer;
-        pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer);
-
-        return pBuffer;
-    }
-
 
     static void CreateComputePSO(IShader*                               pCS,
                                  const PipelineResourceLayoutDesc&      ResourceLayout,
@@ -566,22 +604,18 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     float ClearColor[] = {0.625, 0.125, 0.25, 0.875};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
+    static constexpr int StaticBuffArraySize  = 4;
+    static constexpr int MutableBuffArraySize = 3;
+    static constexpr int DynamicBuffArraySize = 2;
+
     // Prepare buffers with reference values
-
-    constexpr size_t NumReferenceBuffers = 12;
-
-    std::array<RefCntAutoPtr<IBufferView>, NumReferenceBuffers> pBufferViews;
-    std::array<IDeviceObject*, NumReferenceBuffers>             pBuffSRVs;
-    std::array<float4, NumReferenceBuffers>                     RefColors;
-
-    for (Uint32 i = 0; i < NumReferenceBuffers; ++i)
-    {
-        const float v   = static_cast<float>(i * 10);
-        RefColors[i]    = float4{v + 1, v + 2, v + 3, v + 4};
-        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_SHADER_RESOURCE, RefColors[i]);
-        ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
-        pBuffSRVs[i] = pBufferViews[i];
-    }
+    ReferenceBuffers RefBuffers{
+        3 + StaticBuffArraySize + MutableBuffArraySize + DynamicBuffArraySize,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        BUFFER_VIEW_SHADER_RESOURCE,
+        IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED //
+    };
 
     // Buffer indices for vertex/shader bindings
     static constexpr size_t Buff_StaticIdx[] = {2, 11};
@@ -592,14 +626,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     static constexpr size_t BuffArr_MutIdx[]    = {3, 4};
     static constexpr size_t BuffArr_DynIdx[]    = {6, 7};
 
-
-    static constexpr int StaticBuffArraySize  = 4;
-    static constexpr int MutableBuffArraySize = 3;
-    static constexpr int DynamicBuffArraySize = 2;
-
     ShaderMacroHelper Macros;
-
-    std::array<bool, NumReferenceBuffers> UsedBuffers = {};
 
     auto PrepareMacros = [&](Uint32 s, SHADER_SOURCE_LANGUAGE Lang) {
         Macros.Clear();
@@ -611,26 +638,21 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", MutableBuffArraySize);
         Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", DynamicBuffArraySize);
 
-        UsedBuffers.fill(false);
-        auto GetRefColor = [&](size_t idx) {
-            VERIFY(!UsedBuffers[idx], "Buffer ", idx, " has already been used. Every buffer should only be used once.");
-            UsedBuffers[idx] = true;
-            return RefColors[idx];
-        };
+        RefBuffers.ResetUsedValues();
 
         // Add macros that define reference colors
-        Macros.AddShaderMacro("Buff_Static_Ref", GetRefColor(Buff_StaticIdx[s]));
-        Macros.AddShaderMacro("Buff_Mut_Ref", GetRefColor(Buff_MutIdx[s]));
-        Macros.AddShaderMacro("Buff_Dyn_Ref", GetRefColor(Buff_DynIdx[s]));
+        Macros.AddShaderMacro("Buff_Static_Ref", RefBuffers.GetValue(Buff_StaticIdx[s]));
+        Macros.AddShaderMacro("Buff_Mut_Ref", RefBuffers.GetValue(Buff_MutIdx[s]));
+        Macros.AddShaderMacro("Buff_Dyn_Ref", RefBuffers.GetValue(Buff_DynIdx[s]));
 
         for (Uint32 i = 0; i < StaticBuffArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_StaticIdx[s] + i));
+            Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_StaticIdx[s] + i));
 
         for (Uint32 i = 0; i < MutableBuffArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_MutIdx[s] + i));
+            Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_MutIdx[s] + i));
 
         for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_DynIdx[s] + i));
+            Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx[s] + i));
 
         return static_cast<const ShaderMacro*>(Macros);
     };
@@ -722,11 +744,11 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     auto BindResources = [&](SHADER_TYPE ShaderType) {
         const auto id = ShaderType == SHADER_TYPE_VERTEX ? 0 : 1;
 
-        SET_STATIC_VAR(pPSO, ShaderType, "g_Buff_Static", Set, pBuffSRVs[Buff_StaticIdx[id]]);
+        SET_STATIC_VAR(pPSO, ShaderType, "g_Buff_Static", Set, RefBuffers.GetViewObjects(Buff_StaticIdx[id])[0]);
 
         if (ShaderType == SHADER_TYPE_PIXEL || !UseArraysInPSOnly)
         {
-            SET_STATIC_VAR(pPSO, ShaderType, "g_BuffArr_Static", SetArray, &pBuffSRVs[BuffArr_StaticIdx[id]], 0, StaticBuffArraySize);
+            SET_STATIC_VAR(pPSO, ShaderType, "g_BuffArr_Static", SetArray, RefBuffers.GetViewObjects(BuffArr_StaticIdx[id]), 0, StaticBuffArraySize);
         }
         else
         {
@@ -734,13 +756,13 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         }
 
 
-        SET_SRB_VAR(pSRB, ShaderType, "g_Buff_Mut", Set, pBuffSRVs[Buff_MutIdx[id]]);
-        SET_SRB_VAR(pSRB, ShaderType, "g_Buff_Dyn", Set, pBuffSRVs[0]); // Will rebind for the second draw
+        SET_SRB_VAR(pSRB, ShaderType, "g_Buff_Mut", Set, RefBuffers.GetViewObjects(Buff_MutIdx[id])[0]);
+        SET_SRB_VAR(pSRB, ShaderType, "g_Buff_Dyn", Set, RefBuffers.GetViewObjects(0)[0]); // Will rebind for the second draw
 
         if (ShaderType == SHADER_TYPE_PIXEL || !UseArraysInPSOnly)
         {
-            SET_SRB_VAR(pSRB, ShaderType, "g_BuffArr_Mut", SetArray, &pBuffSRVs[BuffArr_MutIdx[id]], 0, MutableBuffArraySize);
-            SET_SRB_VAR(pSRB, ShaderType, "g_BuffArr_Dyn", SetArray, &pBuffSRVs[0], 0, DynamicBuffArraySize); // Will rebind for the second draw
+            SET_SRB_VAR(pSRB, ShaderType, "g_BuffArr_Mut", SetArray, RefBuffers.GetViewObjects(BuffArr_MutIdx[id]), 0, MutableBuffArraySize);
+            SET_SRB_VAR(pSRB, ShaderType, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(0), 0, DynamicBuffArraySize); // Will rebind for the second draw
         }
         else
         {
@@ -765,15 +787,15 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[Buff_DynIdx[0]]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, RefBuffers.GetViewObjects(Buff_DynIdx[0])[0]);
     if (!UseArraysInPSOnly)
     {
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, &pBuffSRVs[BuffArr_DynIdx[0] + 0], 0, 1);
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, &pBuffSRVs[BuffArr_DynIdx[0] + 1], 1, 1);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[0] + 0), 0, 1);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[0] + 1), 1, 1);
     }
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[Buff_DynIdx[1]]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, &pBuffSRVs[BuffArr_DynIdx[1]], 0, DynamicBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, RefBuffers.GetViewObjects(Buff_DynIdx[1])[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[1]), 0, DynamicBuffArraySize);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -812,23 +834,17 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 
     ComputeShaderReference(pSwapChain);
 
-    constexpr size_t NumReferenceBuffers = 12;
-
-    std::array<RefCntAutoPtr<IBufferView>, NumReferenceBuffers> pBufferViews;
-    std::array<IDeviceObject*, NumReferenceBuffers>             pBuffUAVs;
-    std::array<float4, NumReferenceBuffers>                     RefColors;
-
-    for (Uint32 i = 0; i < NumReferenceBuffers; ++i)
-    {
-        const float v   = static_cast<float>(i * 10);
-        RefColors[i]    = float4{v + 1, v + 2, v + 3, v + 4};
-        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_UNORDERED_ACCESS, RefColors[i]);
-        ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
-        pBuffUAVs[i] = pBufferViews[i];
-    }
-
     const auto& deviceCaps = pDevice->GetDeviceCaps();
     auto        deviceType = deviceCaps.DevType;
+
+    // Prepare buffers with reference values
+    ReferenceBuffers RefBuffers{
+        3 + 4 + 3 + 2,
+        USAGE_DEFAULT,
+        BIND_UNORDERED_ACCESS,
+        BUFFER_VIEW_UNORDERED_ACCESS,
+        IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED //
+    };
 
     const Uint32 StaticBuffArraySize  = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : 4;
     const Uint32 MutableBuffArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 2 : 3;
@@ -880,28 +896,19 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", static_cast<int>(MutableBuffArraySize));
     Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", static_cast<int>(DynamicBuffArraySize));
 
-    std::array<bool, NumReferenceBuffers> UsedBuffers;
-    UsedBuffers.fill(false);
-    auto GetRefColor = [&](size_t idx) {
-        VERIFY(!UsedBuffers[idx], "Buffer ", idx, " has already been used. Every buffer should only be used once.");
-        UsedBuffers[idx] = true;
-        return RefColors[idx];
-    };
-
     // Add macros that define reference colors
-    Macros.AddShaderMacro("Buff_Static_Ref", GetRefColor(Buff_StaticIdx));
-    Macros.AddShaderMacro("Buff_Mut_Ref", GetRefColor(Buff_MutIdx));
-    Macros.AddShaderMacro("Buff_Dyn_Ref", GetRefColor(Buff_DynIdx));
+    Macros.AddShaderMacro("Buff_Static_Ref", RefBuffers.GetValue(Buff_StaticIdx));
+    Macros.AddShaderMacro("Buff_Mut_Ref", RefBuffers.GetValue(Buff_MutIdx));
+    Macros.AddShaderMacro("Buff_Dyn_Ref", RefBuffers.GetValue(Buff_DynIdx));
 
     for (Uint32 i = 0; i < StaticBuffArraySize; ++i)
-        Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_StaticIdx + i));
+        Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_StaticIdx + i));
 
     for (Uint32 i = 0; i < MutableBuffArraySize; ++i)
-        Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_MutIdx + i));
+        Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_MutIdx + i));
 
     for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
-        Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_DynIdx + i));
-
+        Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx + i));
 
     auto pCS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.RWFormattedBuffers - CS" : "ShaderResourceLayoutTest.RWtructuredBuffers - CS",
                             ShaderFileName, "main",
@@ -937,13 +944,13 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     ASSERT_TRUE(pTestingSwapChain);
     SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_tex2DUAV", Set, pTestingSwapChain->GetCurrentBackBufferUAV());
 
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWBuff_Static", Set, pBuffUAVs[Buff_StaticIdx]);
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Static", SetArray, &pBuffUAVs[BuffArr_StaticIdx], 0, StaticBuffArraySize);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWBuff_Static", Set, RefBuffers.GetViewObjects(Buff_StaticIdx)[0]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Static", SetArray, RefBuffers.GetViewObjects(BuffArr_StaticIdx), 0, StaticBuffArraySize);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Mut", Set, pBuffUAVs[Buff_MutIdx]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, pBuffUAVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Mut", SetArray, &pBuffUAVs[BuffArr_MutIdx], 0, MutableBuffArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, &pBuffUAVs[0], 0, DynamicBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Mut", Set, RefBuffers.GetViewObjects(Buff_MutIdx)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, RefBuffers.GetViewObjects(0)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Mut", SetArray, RefBuffers.GetViewObjects(BuffArr_MutIdx), 0, MutableBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(0), 0, DynamicBuffArraySize);
 
     pSRB->InitializeStaticResources(pPSO);
 
@@ -956,8 +963,8 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     DispatchComputeAttribs DispatchAttribs((SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1);
     pContext->DispatchCompute(DispatchAttribs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, pBuffUAVs[Buff_DynIdx]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, &pBuffUAVs[BuffArr_DynIdx], 0, DynamicBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, RefBuffers.GetViewObjects(Buff_DynIdx)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx), 0, DynamicBuffArraySize);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->DispatchCompute(DispatchAttribs);
@@ -1087,20 +1094,12 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     float ClearColor[] = {0.875, 0.75, 0.625, 0.125};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
-    constexpr size_t NumReferenceBuffers = 12;
-
-    std::array<RefCntAutoPtr<IBuffer>, NumReferenceBuffers> pBuffers;
-    std::array<IDeviceObject*, NumReferenceBuffers>         pCBObjs;
-    std::array<float4, NumReferenceBuffers>                 RefColors;
-
-    for (Uint32 i = 0; i < NumReferenceBuffers; ++i)
-    {
-        const float v = static_cast<float>(i * 10);
-        RefColors[i]  = float4{v + 1, v + 2, v + 3, v + 4};
-        pBuffers[i]   = CreateConstantBuffer(RefColors[i]);
-        ASSERT_NE(pBuffers[i], nullptr) << "Unable to create constant buffer";
-        pCBObjs[i] = pBuffers[i];
-    }
+    // Prepare buffers with reference values
+    ReferenceBuffers RefBuffers{
+        3 + 2 + 4 + 3,
+        USAGE_DEFAULT,
+        BIND_UNIFORM_BUFFER //
+    };
 
     // Buffer indices for vertex/shader bindings
     static constexpr size_t Buff_StaticIdx[] = {2, 11};
@@ -1126,8 +1125,6 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 
     ShaderMacroHelper Macros;
 
-    std::array<bool, NumReferenceBuffers> UsedBuffers = {};
-
     auto PrepareMacros = [&](Uint32 s) {
         Macros.Clear();
 
@@ -1137,26 +1134,21 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
         Macros.AddShaderMacro("MUTABLE_CB_ARRAY_SIZE", static_cast<int>(MutableCBArraySize));
         Macros.AddShaderMacro("DYNAMIC_CB_ARRAY_SIZE", static_cast<int>(DynamicCBArraySize));
 
-        UsedBuffers.fill(false);
-        auto GetRefColor = [&](size_t idx) {
-            VERIFY(!UsedBuffers[idx], "Buffer ", idx, " has already been used. Every buffer should only be used once.");
-            UsedBuffers[idx] = true;
-            return RefColors[idx];
-        };
+        RefBuffers.ResetUsedValues();
 
         // Add macros that define reference colors
-        Macros.AddShaderMacro("Buff_Static_Ref", GetRefColor(Buff_StaticIdx[s]));
-        Macros.AddShaderMacro("Buff_Mut_Ref", GetRefColor(Buff_MutIdx[s]));
-        Macros.AddShaderMacro("Buff_Dyn_Ref", GetRefColor(Buff_DynIdx[s]));
+        Macros.AddShaderMacro("Buff_Static_Ref", RefBuffers.GetValue(Buff_StaticIdx[s]));
+        Macros.AddShaderMacro("Buff_Mut_Ref", RefBuffers.GetValue(Buff_MutIdx[s]));
+        Macros.AddShaderMacro("Buff_Dyn_Ref", RefBuffers.GetValue(Buff_DynIdx[s]));
 
         for (Uint32 i = 0; i < StaticCBArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_StaticIdx[s] + i));
+            Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_StaticIdx[s] + i));
 
         for (Uint32 i = 0; i < MutableCBArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_MutIdx[s] + i));
+            Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_MutIdx[s] + i));
 
         for (Uint32 i = 0; i < DynamicCBArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_DynIdx[s] + i));
+            Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx[s] + i));
 
         return static_cast<const ShaderMacro*>(Macros);
     };
@@ -1220,20 +1212,20 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     auto BindResources = [&](SHADER_TYPE ShaderType) {
         const auto id = ShaderType == SHADER_TYPE_VERTEX ? 0 : 1;
 
-        SET_STATIC_VAR(pPSO, ShaderType, "UniformBuff_Stat", Set, pCBObjs[Buff_StaticIdx[id]]);
+        SET_STATIC_VAR(pPSO, ShaderType, "UniformBuff_Stat", Set, RefBuffers.GetBuffObjects(Buff_StaticIdx[id])[0]);
 
         if (CBArraysSupported)
         {
-            SET_STATIC_VAR(pPSO, ShaderType, "UniformBuffArr_Stat", SetArray, &pCBObjs[BuffArr_StaticIdx[id]], 0, StaticCBArraySize);
+            SET_STATIC_VAR(pPSO, ShaderType, "UniformBuffArr_Stat", SetArray, RefBuffers.GetBuffObjects(BuffArr_StaticIdx[id]), 0, StaticCBArraySize);
         }
 
-        SET_SRB_VAR(pSRB, ShaderType, "UniformBuff_Mut", Set, pCBObjs[Buff_MutIdx[id]]);
-        SET_SRB_VAR(pSRB, ShaderType, "UniformBuff_Dyn", Set, pCBObjs[0]); // Will rebind for the second draw
+        SET_SRB_VAR(pSRB, ShaderType, "UniformBuff_Mut", Set, RefBuffers.GetBuffObjects(Buff_MutIdx[id])[0]);
+        SET_SRB_VAR(pSRB, ShaderType, "UniformBuff_Dyn", Set, RefBuffers.GetBuffObjects(0)[0]); // Will rebind for the second draw
 
         if (CBArraysSupported)
         {
-            SET_SRB_VAR(pSRB, ShaderType, "UniformBuffArr_Mut", SetArray, &pCBObjs[BuffArr_MutIdx[id]], 0, MutableCBArraySize);
-            SET_SRB_VAR(pSRB, ShaderType, "UniformBuffArr_Dyn", SetArray, &pCBObjs[0], 0, DynamicCBArraySize); // Will rebind for the second draw
+            SET_SRB_VAR(pSRB, ShaderType, "UniformBuffArr_Mut", SetArray, RefBuffers.GetBuffObjects(BuffArr_MutIdx[id]), 0, MutableCBArraySize);
+            SET_SRB_VAR(pSRB, ShaderType, "UniformBuffArr_Dyn", SetArray, RefBuffers.GetBuffObjects(0), 0, DynamicCBArraySize); // Will rebind for the second draw
         }
     };
     BindResources(SHADER_TYPE_VERTEX);
@@ -1253,12 +1245,12 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuff_Dyn", Set, pCBObjs[Buff_DynIdx[0]]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuff_Dyn", Set, pCBObjs[Buff_DynIdx[1]]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuff_Dyn", Set, RefBuffers.GetBuffObjects(Buff_DynIdx[0])[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuff_Dyn", Set, RefBuffers.GetBuffObjects(Buff_DynIdx[1])[0]);
     if (CBArraysSupported)
     {
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuffArr_Dyn", SetArray, &pCBObjs[BuffArr_DynIdx[0]], 0, DynamicCBArraySize);
-        SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuffArr_Dyn", SetArray, &pCBObjs[BuffArr_DynIdx[1]], 0, DynamicCBArraySize);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuffArr_Dyn", SetArray, RefBuffers.GetBuffObjects(BuffArr_DynIdx[0]), 0, DynamicCBArraySize);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuffArr_Dyn", SetArray, RefBuffers.GetBuffObjects(BuffArr_DynIdx[1]), 0, DynamicCBArraySize);
     }
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
