@@ -341,13 +341,13 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     static constexpr Uint32 DynamicTexArraySize = 3;
 
     // Texture indices for vertex/shader bindings
-    static constexpr size_t Tex2D_StaticIdx[] = {2, 7};
-    static constexpr size_t Tex2D_MutIdx[]    = {0, 8};
-    static constexpr size_t Tex2D_DynIdx[]    = {1, 6};
+    static constexpr size_t Tex2D_StaticIdx[] = {2, 10};
+    static constexpr size_t Tex2D_MutIdx[]    = {0, 11};
+    static constexpr size_t Tex2D_DynIdx[]    = {1, 9};
 
     static constexpr size_t Tex2DArr_StaticIdx[] = {7, 0};
     static constexpr size_t Tex2DArr_MutIdx[]    = {3, 5};
-    static constexpr size_t Tex2DArr_DynIdx[]    = {5, 2};
+    static constexpr size_t Tex2DArr_DynIdx[]    = {9, 2};
 
 
     // clang-format off
@@ -380,6 +380,8 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
 
     ShaderMacroHelper Macros;
 
+    std::array<bool, NumRefTextures> UsedTextures = {};
+
     auto PrepareMacros = [&](Uint32 s) {
         Macros.Clear();
 
@@ -387,19 +389,26 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
         Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
 
+        UsedTextures.fill(false);
+        auto GetRefColor = [&](size_t idx) {
+            VERIFY(!UsedTextures[idx], "Texture ", idx, " has already been used. Every texture should only be used once.");
+            UsedTextures[idx] = true;
+            return RGBA8Unorm_To_F4Color(RefColors[idx]);
+        };
+
         // Add macros that define reference colors
-        Macros.AddShaderMacro("Tex2D_Static_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_StaticIdx[s]]));
-        Macros.AddShaderMacro("Tex2D_Mut_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_MutIdx[s]]));
-        Macros.AddShaderMacro("Tex2D_Dyn_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_DynIdx[s]]));
+        Macros.AddShaderMacro("Tex2D_Static_Ref", GetRefColor(Tex2D_StaticIdx[s]));
+        Macros.AddShaderMacro("Tex2D_Mut_Ref", GetRefColor(Tex2D_MutIdx[s]));
+        Macros.AddShaderMacro("Tex2D_Dyn_Ref", GetRefColor(Tex2D_DynIdx[s]));
 
         for (Uint32 i = 0; i < StaticTexArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"Tex2DArr_Static_Ref"} + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_StaticIdx[s] + i]));
+            Macros.AddShaderMacro((std::string{"Tex2DArr_Static_Ref"} + std::to_string(i)).c_str(), GetRefColor(Tex2DArr_StaticIdx[s] + i));
 
         for (Uint32 i = 0; i < MutableTexArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"Tex2DArr_Mut_Ref"} + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_MutIdx[s] + i]));
+            Macros.AddShaderMacro((std::string{"Tex2DArr_Mut_Ref"} + std::to_string(i)).c_str(), GetRefColor(Tex2DArr_MutIdx[s] + i));
 
         for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_DynIdx[s] + i]));
+            Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), GetRefColor(Tex2DArr_DynIdx[s] + i));
 
         return static_cast<const ShaderMacro*>(Macros);
     };
@@ -549,13 +558,13 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     }
 
     // Buffer indices for vertex/shader bindings
-    static constexpr size_t Buff_StaticIdx[] = {2, 7};
-    static constexpr size_t Buff_MutIdx[]    = {0, 8};
-    static constexpr size_t Buff_DynIdx[]    = {1, 6};
+    static constexpr size_t Buff_StaticIdx[] = {2, 11};
+    static constexpr size_t Buff_MutIdx[]    = {0, 10};
+    static constexpr size_t Buff_DynIdx[]    = {1, 9};
 
     static constexpr size_t BuffArr_StaticIdx[] = {8, 0};
     static constexpr size_t BuffArr_MutIdx[]    = {3, 4};
-    static constexpr size_t BuffArr_DynIdx[]    = {6, 2};
+    static constexpr size_t BuffArr_DynIdx[]    = {6, 7};
 
 
     static constexpr int StaticBuffArraySize  = 4;
@@ -563,6 +572,8 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     static constexpr int DynamicBuffArraySize = 2;
 
     ShaderMacroHelper Macros;
+
+    std::array<bool, NumReferenceBuffers> UsedBuffers = {};
 
     auto PrepareMacros = [&](Uint32 s, SHADER_SOURCE_LANGUAGE Lang) {
         Macros.Clear();
@@ -574,19 +585,26 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", MutableBuffArraySize);
         Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", DynamicBuffArraySize);
 
+        UsedBuffers.fill(false);
+        auto GetRefColor = [&](size_t idx) {
+            VERIFY(!UsedBuffers[idx], "Buffer ", idx, " has already been used. Every buffer should only be used once.");
+            UsedBuffers[idx] = true;
+            return RefColors[idx];
+        };
+
         // Add macros that define reference colors
-        Macros.AddShaderMacro("Buff_Static_Ref", RefColors[Buff_StaticIdx[s]]);
-        Macros.AddShaderMacro("Buff_Mut_Ref", RefColors[Buff_MutIdx[s]]);
-        Macros.AddShaderMacro("Buff_Dyn_Ref", RefColors[Buff_DynIdx[s]]);
+        Macros.AddShaderMacro("Buff_Static_Ref", GetRefColor(Buff_StaticIdx[s]));
+        Macros.AddShaderMacro("Buff_Mut_Ref", GetRefColor(Buff_MutIdx[s]));
+        Macros.AddShaderMacro("Buff_Dyn_Ref", GetRefColor(Buff_DynIdx[s]));
 
         for (Uint32 i = 0; i < StaticBuffArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), RefColors[BuffArr_StaticIdx[s] + i]);
+            Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_StaticIdx[s] + i));
 
         for (Uint32 i = 0; i < MutableBuffArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), RefColors[BuffArr_MutIdx[s] + i]);
+            Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_MutIdx[s] + i));
 
         for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
-            Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefColors[BuffArr_DynIdx[s] + i]);
+            Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), GetRefColor(BuffArr_DynIdx[s] + i));
 
         return static_cast<const ShaderMacro*>(Macros);
     };
