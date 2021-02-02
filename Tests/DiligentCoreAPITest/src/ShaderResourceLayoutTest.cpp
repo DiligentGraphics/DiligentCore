@@ -309,13 +309,46 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    // Prepare reference textures filled with different colors
+
+    // Reference texture colors
+    static constexpr Uint32 RefColors[] = //
+        {
+            0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0xFF000000u,
+            0x0000FFFFu, 0x00FF00FFu, 0xFF0000FFu, 0x00FFFF00u,
+            0xFF00FF00u, 0xFFFF0000u, 0xFFFFFF00u, 0xFF00FFFFu //
+        };
+
+    static constexpr size_t NumRefTextures = _countof(RefColors);
+
+    std::array<RefCntAutoPtr<ITexture>, NumRefTextures> pTextures;
+    std::array<IDeviceObject*, NumRefTextures>          pTexSRVs;
+
+    constexpr Uint32 TexWidth  = 128;
+    constexpr Uint32 TexHeight = 128;
+
+    std::vector<Uint32> TexData(TexWidth * TexHeight);
+    for (Uint32 i = 0; i < NumRefTextures; ++i)
+    {
+        std::fill(TexData.begin(), TexData.end(), RefColors[i]);
+        pTextures[i] = pEnv->CreateTexture("Test texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, TexWidth, TexHeight, TexData.data());
+        pTexSRVs[i]  = pTextures[i]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+    }
+
+    // Texture array sizes in the shader
     static constexpr Uint32 StaticTexArraySize  = 2;
     static constexpr Uint32 MutableTexArraySize = 4;
     static constexpr Uint32 DynamicTexArraySize = 3;
-    ShaderMacroHelper       Macros;
-    Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
-    Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
-    Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
+
+    // Texture indices for vertex/shader bindings
+    static constexpr Uint32 Tex2D_StaticIdx[] = {2, 7};
+    static constexpr Uint32 Tex2D_MutIdx[]    = {0, 8};
+    static constexpr Uint32 Tex2D_DynIdx[]    = {1, 6};
+
+    static constexpr Uint32 Tex2DArr_StaticIdx[] = {7, 0};
+    static constexpr Uint32 Tex2DArr_MutIdx[]    = {3, 5};
+    static constexpr Uint32 Tex2DArr_DynIdx[]    = {5, 2};
+
 
     // clang-format off
     std::vector<ShaderResourceDesc> Resources = 
@@ -345,6 +378,27 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     }
     // clang-format on
 
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
+    Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
+    Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
+
+    // Add macros that define reference colors
+    auto AddReferenceColorMacros = [&](Uint32 s) {
+        Macros.UpdateMacro("Tex2D_Static_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_StaticIdx[s]]));
+        Macros.UpdateMacro("Tex2D_Mut_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_MutIdx[s]]));
+        Macros.UpdateMacro("Tex2D_Dyn_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_DynIdx[s]]));
+
+        for (Uint32 i = 0; i < StaticTexArraySize; ++i)
+            Macros.UpdateMacro((std::string("Tex2DArr_Static_Ref") + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_StaticIdx[s] + i]));
+
+        for (Uint32 i = 0; i < MutableTexArraySize; ++i)
+            Macros.UpdateMacro((std::string("Tex2DArr_Mut_Ref") + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_MutIdx[s] + i]));
+
+        for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
+            Macros.UpdateMacro((std::string("Tex2DArr_Dyn_Ref") + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_DynIdx[s] + i]));
+    };
+
     auto ModifyShaderCI = [TestImtblSamplers](ShaderCreateInfo& ShaderCI) {
         if (TestImtblSamplers)
         {
@@ -354,12 +408,16 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
     };
+
+    AddReferenceColorMacros(0);
     auto pVS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
                             TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "VSMain",
                             SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
+
+    AddReferenceColorMacros(1);
     auto pPS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
                             TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "PSMain",
@@ -409,38 +467,21 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     ASSERT_NE(pPSO, nullptr);
     ASSERT_NE(pSRB, nullptr);
 
-    const auto MaxTextures = std::max(std::max(StaticTexArraySize, MutableTexArraySize), DynamicTexArraySize);
+    auto BindResources = [&](SHADER_TYPE ShaderType) {
+        const auto id = ShaderType == SHADER_TYPE_VERTEX ? 0 : 1;
 
-    std::vector<RefCntAutoPtr<ITexture>> pTextures(MaxTextures);
-    std::vector<IDeviceObject*>          pTexSRVs(MaxTextures);
+        SET_STATIC_VAR(pPSO, ShaderType, "g_Tex2D_Static", Set, pTexSRVs[Tex2D_StaticIdx[id]]);
+        SET_STATIC_VAR(pPSO, ShaderType, "g_Tex2DArr_Static", SetArray, &pTexSRVs[Tex2DArr_StaticIdx[id]], 0, StaticTexArraySize);
 
-    constexpr Uint32 TexWidth  = 256;
-    constexpr Uint32 TexHeight = 256;
+        SET_SRB_VAR(pSRB, ShaderType, "g_Tex2D_Mut", Set, pTexSRVs[Tex2D_MutIdx[id]]);
+        SET_SRB_VAR(pSRB, ShaderType, "g_Tex2DArr_Mut", SetArray, &pTexSRVs[Tex2DArr_MutIdx[id]], 0, MutableTexArraySize);
 
-    std::vector<Uint32>             TexData(TexWidth * TexHeight);
-    std::array<Uint32, MaxTextures> TexColors = {0xFF, 0xFF00, 0xFF0000, 0xFF000000};
-    for (Uint32 i = 0; i < MaxTextures; ++i)
-    {
-        std::fill(TexData.begin(), TexData.end(), TexColors[i]);
-        pTextures[i] = pEnv->CreateTexture("Test texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, TexWidth, TexHeight, TexData.data());
-        pTexSRVs[i]  = pTextures[i]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
-    }
-
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, pTexSRVs[0]);
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SetArray, pTexSRVs.data(), 0, StaticTexArraySize);
-
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2D_Static", Set, pTexSRVs[1]);
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SetArray, pTexSRVs.data() + 2, 0, StaticTexArraySize);
-
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRVs[1]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, pTexSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Mut", SetArray, pTexSRVs.data(), 0, MutableTexArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data() + 1, 0, DynamicTexArraySize);
-
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Mut", Set, pTexSRVs[2]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut", SetArray, pTexSRVs.data(), 0, MutableTexArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data(), 0, DynamicTexArraySize);
+        // Bind 0 for dynamic resources - will rebind for the second draw
+        SET_SRB_VAR(pSRB, ShaderType, "g_Tex2D_Dyn", Set, pTexSRVs[0]);
+        SET_SRB_VAR(pSRB, ShaderType, "g_Tex2DArr_Dyn", SetArray, &pTexSRVs[0], 0, DynamicTexArraySize);
+    };
+    BindResources(SHADER_TYPE_VERTEX);
+    BindResources(SHADER_TYPE_PIXEL);
 
     pSRB->InitializeStaticResources(pPSO);
 
@@ -455,13 +496,13 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, pTexSRVs[2]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data(), 0, 1);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data() + 1, 1, DynamicTexArraySize - 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, pTexSRVs[Tex2D_DynIdx[0]]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, &pTexSRVs[Tex2DArr_DynIdx[0]], 0, 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, &pTexSRVs[Tex2DArr_DynIdx[0] + 1], 1, DynamicTexArraySize - 1);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[3]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data() + 1, 0, 1);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, pTexSRVs.data() + 2, 1, DynamicTexArraySize - 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[Tex2D_DynIdx[1]]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, &pTexSRVs[Tex2DArr_DynIdx[1]], 0, 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, &pTexSRVs[Tex2DArr_DynIdx[1] + 1], 1, DynamicTexArraySize - 1);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -492,6 +533,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", StaticBuffArraySize);
     Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", MutableBuffArraySize);
     Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", DynamicBuffArraySize);
+    Macros.AddShaderMacro("yes", float4{});
 
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();

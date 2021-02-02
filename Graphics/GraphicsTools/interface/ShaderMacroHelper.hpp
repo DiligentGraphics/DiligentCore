@@ -95,7 +95,7 @@ public:
     void Clear()
     {
         m_Macros.clear();
-        m_DefinitionsPool.clear();
+        m_StringPool.clear();
         m_bIsFinalized = false;
     }
 
@@ -132,7 +132,7 @@ public:
 
 private:
     std::vector<ShaderMacro> m_Macros;
-    std::set<std::string>    m_DefinitionsPool;
+    std::set<std::string>    m_StringPool;
     bool                     m_bIsFinalized = false;
 };
 
@@ -140,14 +140,15 @@ template <>
 inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, const Char* Definition)
 {
     Reopen();
-    auto* PooledDefinition = m_DefinitionsPool.insert(Definition).first->c_str();
-    m_Macros.emplace_back(Name, PooledDefinition);
+    const auto* PooledDefinition = m_StringPool.insert(Definition).first->c_str();
+    const auto* PooledName       = m_StringPool.insert(Name).first->c_str();
+    m_Macros.emplace_back(PooledName, PooledDefinition);
 }
 
 template <>
 inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, bool Definition)
 {
-    AddShaderMacro(Name, Definition ? "1" : "0");
+    AddShaderMacro<const Char*>(Name, Definition ? "1" : "0");
 }
 
 template <>

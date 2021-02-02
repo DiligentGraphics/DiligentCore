@@ -14,42 +14,6 @@ SamplerState g_Tex2DArr_Static_sampler;
 SamplerState g_Tex2DArr_Mut_sampler   [MUTABLE_TEX_ARRAY_SIZE];
 SamplerState g_Tex2DArr_Dyn_sampler   [DYNAMIC_TEX_ARRAY_SIZE];
 
-#ifdef VERTEX_SHADER
-
-#   define  Tex2D_Static_Ref float4(1, 0, 0, 0)
-#   define  Tex2D_Mut_Ref    float4(0, 1, 0, 0)
-#   define  Tex2D_Dyn_Ref    float4(0, 0, 1, 0)
-
-#   define  Tex2DArr_Static_Ref0 float4(1, 0, 0, 0)
-#   define  Tex2DArr_Static_Ref1 float4(0, 1, 0, 0)
-
-#   define  Tex2DArr_Dyn_Ref0 float4(1, 0, 0, 0)
-#   define  Tex2DArr_Dyn_Ref1 float4(0, 1, 0, 0)
-#   define  Tex2DArr_Dyn_Ref2 float4(0, 0, 1, 0)
-
-#endif
-
-#ifdef PIXEL_SHADER
-
-#   define  Tex2D_Static_Ref float4(0, 1, 0, 0)
-#   define  Tex2D_Mut_Ref    float4(0, 0, 1, 0)
-#   define  Tex2D_Dyn_Ref    float4(0, 0, 0, 1)
-
-#   define  Tex2DArr_Static_Ref0 float4(0, 0, 1, 0)
-#   define  Tex2DArr_Static_Ref1 float4(0, 0, 0, 1)
-
-#   define  Tex2DArr_Dyn_Ref0 float4(0, 1, 0, 0)
-#   define  Tex2DArr_Dyn_Ref1 float4(0, 0, 1, 0)
-#   define  Tex2DArr_Dyn_Ref2 float4(0, 0, 0, 1)
-
-#endif
-
-#define  Tex2DArr_Mut_Ref0 float4(1, 0, 0, 0)
-#define  Tex2DArr_Mut_Ref1 float4(0, 1, 0, 0)
-#define  Tex2DArr_Mut_Ref2 float4(0, 0, 1, 0)
-#define  Tex2DArr_Mut_Ref3 float4(0, 0, 0, 1)
-
-
 float4 CheckValue(float4 Val, float4 Expected)
 {
     return float4(Val.x == Expected.x ? 1.0 : 0.0,
