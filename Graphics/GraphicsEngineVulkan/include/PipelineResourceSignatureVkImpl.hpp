@@ -287,9 +287,6 @@ public:
     template <DESCRIPTOR_SET_ID SetId>
     Uint32 GetDescriptorSetIndex() const;
 
-    template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
-    template <> Uint32 GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>() const;
-
 private:
     // Resource cache group identifier
     enum CACHE_GROUP : size_t
@@ -361,5 +358,8 @@ private:
 
     SRBMemoryAllocator m_SRBMemAllocator;
 };
+
+template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
+template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC>() const;
 
 } // namespace Diligent
