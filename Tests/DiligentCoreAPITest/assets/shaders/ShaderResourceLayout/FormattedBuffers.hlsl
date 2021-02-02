@@ -6,38 +6,6 @@ Buffer g_BuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4
 Buffer g_BuffArr_Mut   [MUTABLE_BUFF_ARRAY_SIZE]; // 3
 Buffer g_BuffArr_Dyn   [DYNAMIC_BUFF_ARRAY_SIZE]; // 2
 
-#ifdef VERTEX_SHADER
-#   define  Buff_Static_Ref float4(1, 0, 0, 0)
-#   define  Buff_Mut_Ref    float4(0, 1, 0, 0)
-#   define  Buff_Dyn_Ref    float4(0, 0, 1, 0)
-
-#   define BuffArr_Mut_Ref0 float4(1, 0, 0, 0)
-#   define BuffArr_Mut_Ref1 float4(0, 1, 0, 0)
-#   define BuffArr_Mut_Ref2 float4(0, 0, 1, 0)
-
-#   define BuffArr_Dyn_Ref0 float4(0, 1, 0, 0)
-#   define BuffArr_Dyn_Ref1 float4(0, 0, 1, 0)
-#endif
-
-#ifdef PIXEL_SHADER
-#   define  Buff_Static_Ref float4(0, 0, 1, 0)
-#   define  Buff_Mut_Ref    float4(0, 0, 0, 1)
-#   define  Buff_Dyn_Ref    float4(0, 1, 0, 0)
-
-#   define BuffArr_Mut_Ref0 float4(0, 1, 0, 0)
-#   define BuffArr_Mut_Ref1 float4(0, 0, 1, 0)
-#   define BuffArr_Mut_Ref2 float4(0, 0, 0, 1)
-
-#   define BuffArr_Dyn_Ref0 float4(0, 0, 1, 0)
-#   define BuffArr_Dyn_Ref1 float4(0, 0, 0, 1)
-#endif
-
-
-#define BuffArr_Static_Ref0 float4(1, 0, 0, 0)
-#define BuffArr_Static_Ref1 float4(0, 1, 0, 0)
-#define BuffArr_Static_Ref2 float4(0, 0, 1, 0)
-#define BuffArr_Static_Ref3 float4(0, 0, 0, 1)
-
 float4 CheckValue(float4 Val, float4 Expected)
 {
     return float4(Val.x == Expected.x ? 1.0 : 0.0,

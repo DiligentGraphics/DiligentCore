@@ -341,13 +341,13 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     static constexpr Uint32 DynamicTexArraySize = 3;
 
     // Texture indices for vertex/shader bindings
-    static constexpr Uint32 Tex2D_StaticIdx[] = {2, 7};
-    static constexpr Uint32 Tex2D_MutIdx[]    = {0, 8};
-    static constexpr Uint32 Tex2D_DynIdx[]    = {1, 6};
+    static constexpr size_t Tex2D_StaticIdx[] = {2, 7};
+    static constexpr size_t Tex2D_MutIdx[]    = {0, 8};
+    static constexpr size_t Tex2D_DynIdx[]    = {1, 6};
 
-    static constexpr Uint32 Tex2DArr_StaticIdx[] = {7, 0};
-    static constexpr Uint32 Tex2DArr_MutIdx[]    = {3, 5};
-    static constexpr Uint32 Tex2DArr_DynIdx[]    = {5, 2};
+    static constexpr size_t Tex2DArr_StaticIdx[] = {7, 0};
+    static constexpr size_t Tex2DArr_MutIdx[]    = {3, 5};
+    static constexpr size_t Tex2DArr_DynIdx[]    = {5, 2};
 
 
     // clang-format off
@@ -379,24 +379,29 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     // clang-format on
 
     ShaderMacroHelper Macros;
-    Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
-    Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
-    Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
 
-    // Add macros that define reference colors
-    auto AddReferenceColorMacros = [&](Uint32 s) {
-        Macros.UpdateMacro("Tex2D_Static_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_StaticIdx[s]]));
-        Macros.UpdateMacro("Tex2D_Mut_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_MutIdx[s]]));
-        Macros.UpdateMacro("Tex2D_Dyn_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_DynIdx[s]]));
+    auto PrepareMacros = [&](Uint32 s) {
+        Macros.Clear();
+
+        Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
+        Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
+        Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
+
+        // Add macros that define reference colors
+        Macros.AddShaderMacro("Tex2D_Static_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_StaticIdx[s]]));
+        Macros.AddShaderMacro("Tex2D_Mut_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_MutIdx[s]]));
+        Macros.AddShaderMacro("Tex2D_Dyn_Ref", RGBA8Unorm_To_F4Color(RefColors[Tex2D_DynIdx[s]]));
 
         for (Uint32 i = 0; i < StaticTexArraySize; ++i)
-            Macros.UpdateMacro((std::string("Tex2DArr_Static_Ref") + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_StaticIdx[s] + i]));
+            Macros.AddShaderMacro((std::string{"Tex2DArr_Static_Ref"} + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_StaticIdx[s] + i]));
 
         for (Uint32 i = 0; i < MutableTexArraySize; ++i)
-            Macros.UpdateMacro((std::string("Tex2DArr_Mut_Ref") + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_MutIdx[s] + i]));
+            Macros.AddShaderMacro((std::string{"Tex2DArr_Mut_Ref"} + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_MutIdx[s] + i]));
 
         for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
-            Macros.UpdateMacro((std::string("Tex2DArr_Dyn_Ref") + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_DynIdx[s] + i]));
+            Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RGBA8Unorm_To_F4Color(RefColors[Tex2DArr_DynIdx[s] + i]));
+
+        return static_cast<const ShaderMacro*>(Macros);
     };
 
     auto ModifyShaderCI = [TestImtblSamplers](ShaderCreateInfo& ShaderCI) {
@@ -409,19 +414,17 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         }
     };
 
-    AddReferenceColorMacros(0);
     auto pVS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
                             TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "VSMain",
-                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(0),
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
 
-    AddReferenceColorMacros(1);
     auto pPS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
                             TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "PSMain",
-                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(1),
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
     ASSERT_NE(pVS, nullptr);
@@ -489,6 +492,8 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    float Zero[] = {0, 0, 0, 0};
+    pContext->ClearRenderTarget(pRTV, Zero, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -526,14 +531,65 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 {
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
+    // Prepare buffers with reference values
+
+    constexpr size_t NumReferenceBuffers = 12;
+
+    std::array<RefCntAutoPtr<IBufferView>, NumReferenceBuffers> pBufferViews;
+    std::array<IDeviceObject*, NumReferenceBuffers>             pBuffSRVs;
+    std::array<float4, NumReferenceBuffers>                     RefColors;
+
+    for (Uint32 i = 0; i < NumReferenceBuffers; ++i)
+    {
+        const float v   = static_cast<float>(i * 4);
+        RefColors[i]    = float4{v + 1, v + 2, v + 3, v + 4};
+        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_SHADER_RESOURCE, RefColors[i]);
+        ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
+        pBuffSRVs[i] = pBufferViews[i];
+    }
+
+    // Buffer indices for vertex/shader bindings
+    static constexpr size_t Buff_StaticIdx[] = {2, 7};
+    static constexpr size_t Buff_MutIdx[]    = {0, 8};
+    static constexpr size_t Buff_DynIdx[]    = {1, 6};
+
+    static constexpr size_t BuffArr_StaticIdx[] = {8, 0};
+    static constexpr size_t BuffArr_MutIdx[]    = {3, 4};
+    static constexpr size_t BuffArr_DynIdx[]    = {6, 2};
+
+
     static constexpr int StaticBuffArraySize  = 4;
     static constexpr int MutableBuffArraySize = 3;
     static constexpr int DynamicBuffArraySize = 2;
-    ShaderMacroHelper    Macros;
-    Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", StaticBuffArraySize);
-    Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", MutableBuffArraySize);
-    Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", DynamicBuffArraySize);
-    Macros.AddShaderMacro("yes", float4{});
+
+    ShaderMacroHelper Macros;
+
+    auto PrepareMacros = [&](Uint32 s, SHADER_SOURCE_LANGUAGE Lang) {
+        Macros.Clear();
+
+        if (Lang == SHADER_SOURCE_LANGUAGE_GLSL)
+            Macros.AddShaderMacro("float4", "vec4");
+
+        Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", StaticBuffArraySize);
+        Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", MutableBuffArraySize);
+        Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", DynamicBuffArraySize);
+
+        // Add macros that define reference colors
+        Macros.AddShaderMacro("Buff_Static_Ref", RefColors[Buff_StaticIdx[s]]);
+        Macros.AddShaderMacro("Buff_Mut_Ref", RefColors[Buff_MutIdx[s]]);
+        Macros.AddShaderMacro("Buff_Dyn_Ref", RefColors[Buff_DynIdx[s]]);
+
+        for (Uint32 i = 0; i < StaticBuffArraySize; ++i)
+            Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), RefColors[BuffArr_StaticIdx[s] + i]);
+
+        for (Uint32 i = 0; i < MutableBuffArraySize; ++i)
+            Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), RefColors[BuffArr_MutIdx[s] + i]);
+
+        for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
+            Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefColors[BuffArr_DynIdx[s] + i]);
+
+        return static_cast<const ShaderMacro*>(Macros);
+    };
 
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -580,17 +636,19 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     {
         GTEST_FAIL() << "Unexpected device type";
     }
+
     auto pVS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - VS" : "ShaderResourceLayoutTest.StructuredBuffers - VS",
                             ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main",
-                            SHADER_TYPE_VERTEX, SrcLang, Macros,
+                            SHADER_TYPE_VERTEX, SrcLang, PrepareMacros(0, SrcLang),
                             Resources.data(), static_cast<Uint32>(Resources.size()));
     if (UseArraysInPSOnly)
     {
         AddArrayResources();
     }
+
     auto pPS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - PS" : "ShaderResourceLayoutTest.StructuredBuffers - PS",
                             ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main",
-                            SHADER_TYPE_PIXEL, SrcLang, Macros,
+                            SHADER_TYPE_PIXEL, SrcLang, PrepareMacros(1, SrcLang),
                             Resources.data(), static_cast<Uint32>(Resources.size()));
     ASSERT_NE(pVS, nullptr);
     ASSERT_NE(pPS, nullptr);
@@ -620,49 +678,37 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     ASSERT_NE(pPSO, nullptr);
     ASSERT_NE(pSRB, nullptr);
 
-    const auto MaxBuffers = std::max(std::max(StaticBuffArraySize, MutableBuffArraySize), DynamicBuffArraySize);
+    auto BindResources = [&](SHADER_TYPE ShaderType) {
+        const auto id = ShaderType == SHADER_TYPE_VERTEX ? 0 : 1;
 
-    std::vector<RefCntAutoPtr<IBufferView>> pBufferViews(MaxBuffers);
-    std::vector<IDeviceObject*>             pBuffSRVs(MaxBuffers);
+        SET_STATIC_VAR(pPSO, ShaderType, "g_Buff_Static", Set, pBuffSRVs[Buff_StaticIdx[id]]);
 
-    std::array<float4, MaxBuffers> BufferVal = {float4{1, 0, 0, 0}, float4{0, 1, 0, 0}, float4{0, 0, 1, 0}, float4{0, 0, 0, 1}};
-    for (Uint32 i = 0; i < MaxBuffers; ++i)
-    {
-        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_SHADER_RESOURCE, BufferVal[i]);
-        ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
-        pBuffSRVs[i] = pBufferViews[i];
-    }
-
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Buff_Static", Set, pBuffSRVs[0]);
-    if (!UseArraysInPSOnly)
-    {
-        SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_BuffArr_Static", SetArray, pBuffSRVs.data(), 0, StaticBuffArraySize);
-    }
-    else
-    {
-        EXPECT_EQ(pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_BuffArr_Static"), nullptr);
-    }
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Buff_Static", Set, pBuffSRVs[2]);
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_BuffArr_Static", SetArray, pBuffSRVs.data(), 0, StaticBuffArraySize);
+        if (ShaderType == SHADER_TYPE_PIXEL || !UseArraysInPSOnly)
+        {
+            SET_STATIC_VAR(pPSO, ShaderType, "g_BuffArr_Static", SetArray, &pBuffSRVs[BuffArr_StaticIdx[id]], 0, StaticBuffArraySize);
+        }
+        else
+        {
+            EXPECT_EQ(pPSO->GetStaticVariableByName(ShaderType, "g_BuffArr_Static"), nullptr);
+        }
 
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, pBuffSRVs[1]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[0]);
-    if (!UseArraysInPSOnly)
-    {
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Mut", SetArray, pBuffSRVs.data(), 0, MutableBuffArraySize);
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 0, DynamicBuffArraySize);
-    }
-    else
-    {
-        EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_BuffArr_Mut"), nullptr);
-        EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_BuffArr_Dyn"), nullptr);
-    }
+        SET_SRB_VAR(pSRB, ShaderType, "g_Buff_Mut", Set, pBuffSRVs[Buff_MutIdx[id]]);
+        SET_SRB_VAR(pSRB, ShaderType, "g_Buff_Dyn", Set, pBuffSRVs[0]); // Will rebind for the second draw
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Mut", Set, pBuffSRVs[3]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Mut", SetArray, pBuffSRVs.data() + 1, 0, MutableBuffArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 0, DynamicBuffArraySize);
+        if (ShaderType == SHADER_TYPE_PIXEL || !UseArraysInPSOnly)
+        {
+            SET_SRB_VAR(pSRB, ShaderType, "g_BuffArr_Mut", SetArray, &pBuffSRVs[BuffArr_MutIdx[id]], 0, MutableBuffArraySize);
+            SET_SRB_VAR(pSRB, ShaderType, "g_BuffArr_Dyn", SetArray, &pBuffSRVs[0], 0, DynamicBuffArraySize); // Will rebind for the second draw
+        }
+        else
+        {
+            EXPECT_EQ(pSRB->GetVariableByName(ShaderType, "g_BuffArr_Mut"), nullptr);
+            EXPECT_EQ(pSRB->GetVariableByName(ShaderType, "g_BuffArr_Dyn"), nullptr);
+        }
+    };
+    BindResources(SHADER_TYPE_VERTEX);
+    BindResources(SHADER_TYPE_PIXEL);
 
     pSRB->InitializeStaticResources(pPSO);
 
@@ -670,6 +716,8 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    float Zero[] = {0, 0, 0, 0};
+    pContext->ClearRenderTarget(pRTV, Zero, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -677,15 +725,15 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[2]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[Buff_DynIdx[0]]);
     if (!UseArraysInPSOnly)
     {
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data() + 1, 0, 1);
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data() + 2, 1, 1);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, &pBuffSRVs[BuffArr_DynIdx[0] + 0], 0, 1);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, &pBuffSRVs[BuffArr_DynIdx[0] + 1], 1, 1);
     }
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[1]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data() + 2, 0, DynamicBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[Buff_DynIdx[1]]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, &pBuffSRVs[BuffArr_DynIdx[1]], 0, DynamicBuffArraySize);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1068,6 +1116,8 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    float Zero[] = {0, 0, 0, 0};
+    pContext->ClearRenderTarget(pRTV, Zero, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -1193,6 +1243,8 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    float Zero[] = {0, 0, 0, 0};
+    pContext->ClearRenderTarget(pRTV, Zero, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);

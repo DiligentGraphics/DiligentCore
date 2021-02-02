@@ -33,39 +33,6 @@ layout(std140) readonly buffer g_BuffArr_Dyn
 }g_StorageBuffArr_Dyn[DYNAMIC_BUFF_ARRAY_SIZE]; // 2
 #endif
 
-
-#ifdef VERTEX_SHADER
-#   define  Buff_Static_Ref vec4(1, 0, 0, 0)
-#   define  Buff_Mut_Ref    vec4(0, 1, 0, 0)
-#   define  Buff_Dyn_Ref    vec4(0, 0, 1, 0)
-
-#   define BuffArr_Mut_Ref0 vec4(1, 0, 0, 0)
-#   define BuffArr_Mut_Ref1 vec4(0, 1, 0, 0)
-#   define BuffArr_Mut_Ref2 vec4(0, 0, 1, 0)
-
-#   define BuffArr_Dyn_Ref0 vec4(0, 1, 0, 0)
-#   define BuffArr_Dyn_Ref1 vec4(0, 0, 1, 0)
-#endif
-
-#ifdef PIXEL_SHADER
-#   define  Buff_Static_Ref vec4(0, 0, 1, 0)
-#   define  Buff_Mut_Ref    vec4(0, 0, 0, 1)
-#   define  Buff_Dyn_Ref    vec4(0, 1, 0, 0)
-
-#   define BuffArr_Mut_Ref0 vec4(0, 1, 0, 0)
-#   define BuffArr_Mut_Ref1 vec4(0, 0, 1, 0)
-#   define BuffArr_Mut_Ref2 vec4(0, 0, 0, 1)
-
-#   define BuffArr_Dyn_Ref0 vec4(0, 0, 1, 0)
-#   define BuffArr_Dyn_Ref1 vec4(0, 0, 0, 1)
-#endif
-
-
-#define BuffArr_Static_Ref0 vec4(1, 0, 0, 0)
-#define BuffArr_Static_Ref1 vec4(0, 1, 0, 0)
-#define BuffArr_Static_Ref2 vec4(0, 0, 1, 0)
-#define BuffArr_Static_Ref3 vec4(0, 0, 0, 1)
-
 vec4 CheckValue(vec4 Val, vec4 Expected)
 {
     return vec4(Val.x == Expected.x ? 1.0 : 0.0,
