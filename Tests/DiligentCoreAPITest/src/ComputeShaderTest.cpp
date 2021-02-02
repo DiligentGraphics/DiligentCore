@@ -58,38 +58,10 @@ void ComputeShaderReferenceVk(ISwapChain* pSwapChain);
 void ComputeShaderReferenceMtl(ISwapChain* pSwapChain);
 #endif
 
-} // namespace Testing
-
-} // namespace Diligent
-
-using namespace Diligent;
-using namespace Diligent::Testing;
-
-namespace
-{
-
-TEST(ComputeShaderTest, FillTexture)
+void ComputeShaderReference(ISwapChain* pSwapChain)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.ComputeShaders)
-    {
-        GTEST_SKIP() << "Compute shaders are not supported by this device";
-    }
-
-    auto* pSwapChain = pEnv->GetSwapChain();
-    auto* pContext   = pEnv->GetDeviceContext();
-
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
-
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-    if (!pTestingSwapChain)
-    {
-        GTEST_SKIP() << "Compute shader test requires testing swap chain";
-    }
-
-    pContext->Flush();
-    pContext->InvalidateState();
 
     auto deviceType = pDevice->GetDeviceCaps().DevType;
     switch (deviceType)
@@ -130,8 +102,46 @@ TEST(ComputeShaderTest, FillTexture)
             LOG_ERROR_AND_THROW("Unsupported device type");
     }
 
-    pTestingSwapChain->TakeSnapshot();
+    if (RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain})
+    {
+        pTestingSwapChain->TakeSnapshot();
+    }
+}
 
+} // namespace Testing
+
+} // namespace Diligent
+
+using namespace Diligent;
+using namespace Diligent::Testing;
+
+namespace
+{
+
+TEST(ComputeShaderTest, FillTexture)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceCaps().Features.ComputeShaders)
+    {
+        GTEST_SKIP() << "Compute shaders are not supported by this device";
+    }
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    if (!pTestingSwapChain)
+    {
+        GTEST_SKIP() << "Compute shader test requires testing swap chain";
+    }
+
+    pContext->Flush();
+    pContext->InvalidateState();
+
+    ComputeShaderReference(pSwapChain);
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
