@@ -194,7 +194,7 @@ public:
 
             String Name      = String{"Reference texture "} + std::to_string(i);
             pTexture         = pEnv->CreateTexture("Test texture", TEX_FORMAT_RGBA8_UNORM, BindFlags, Width, Height, TexData.data());
-            ppViewObjects[i] = pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+            ppViewObjects[i] = pTexture->GetDefaultView(ViewType);
         }
     }
 
@@ -202,7 +202,7 @@ public:
 
     const float4& GetColor(size_t i)
     {
-        VERIFY(!UsedValues[i], "Buffer ", i, " has already been used. Every buffer is expected to be used once.");
+        VERIFY(!UsedValues[i], "Texture ", i, " has already been used. Every texture is expected to be used once.");
         UsedValues[i] = true;
         VERIFY(Values[i] != float4{}, "Value must not be zero");
         return Values[i];
@@ -1023,8 +1023,11 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
 {
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    ComputeShaderReference(pSwapChain);
 
     const auto& deviceCaps = pDevice->GetDeviceCaps();
     auto        deviceType = deviceCaps.DevType;
@@ -1033,14 +1036,45 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     const Uint32 MutableTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 2 : 4;
     const Uint32 DynamicTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : 3;
 
+    ReferenceTextures RefTextures{
+        3 + 2 + 4 + 3,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_UNORDERED_ACCESS,
+        TEXTURE_VIEW_UNORDERED_ACCESS //
+    };
+
+    static constexpr size_t Tex2D_StaticIdx = 0;
+    static constexpr size_t Tex2D_MutIdx    = 1;
+    static constexpr size_t Tex2D_DynIdx    = 2;
+
+    static constexpr size_t Tex2DArr_StaticIdx = 3;
+    static constexpr size_t Tex2DArr_MutIdx    = 5;
+    static constexpr size_t Tex2DArr_DynIdx    = 9;
+
     ShaderMacroHelper Macros;
     Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
     Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
     Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
 
+    // Add macros that define reference colors
+    Macros.AddShaderMacro("Tex2D_Static_Ref", RefTextures.GetColor(Tex2D_StaticIdx));
+    Macros.AddShaderMacro("Tex2D_Mut_Ref", RefTextures.GetColor(Tex2D_MutIdx));
+    Macros.AddShaderMacro("Tex2D_Dyn_Ref", RefTextures.GetColor(Tex2D_DynIdx));
+
+    for (Uint32 i = 0; i < StaticTexArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"Tex2DArr_Static_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_StaticIdx + i));
+
+    for (Uint32 i = 0; i < MutableTexArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"Tex2DArr_Mut_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_MutIdx + i));
+
+    for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_DynIdx + i));
+
     // clang-format off
     ShaderResourceDesc Resources[] = 
     {
+        {"g_tex2DUAV",          SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
         {"g_RWTex2D_Static",    SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
         {"g_RWTex2D_Mut",       SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
         {"g_RWTex2D_Dyn",       SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
@@ -1079,31 +1113,17 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     ASSERT_NE(pPSO, nullptr);
     ASSERT_NE(pSRB, nullptr);
 
-    const auto TotalTextures = StaticTexArraySize + MutableTexArraySize + DynamicTexArraySize + 3 + 2;
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    ASSERT_TRUE(pTestingSwapChain);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_tex2DUAV", Set, pTestingSwapChain->GetCurrentBackBufferUAV());
 
-    std::vector<RefCntAutoPtr<ITexture>> pTextures(TotalTextures);
-    std::vector<IDeviceObject*>          pUAVs(TotalTextures);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWTex2D_Static", Set, RefTextures.GetViewObjects(Tex2D_StaticIdx)[0]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Static", SetArray, RefTextures.GetViewObjects(Tex2DArr_StaticIdx), 0, StaticTexArraySize);
 
-    for (Uint32 i = 0; i < TotalTextures; ++i)
-    {
-        pTextures[i] = pEnv->CreateTexture("Test RW texture", TEX_FORMAT_RGBA32_FLOAT, BIND_UNORDERED_ACCESS, 256, 256);
-        ASSERT_NE(pTextures[i], nullptr);
-        pUAVs[i] = pTextures[i]->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
-        ASSERT_NE(pUAVs[i], nullptr);
-    }
-
-    Uint32 uav = 0;
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWTex2D_Static", Set, pUAVs[uav++]);
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Static", SetArray, &pUAVs[uav], 0, StaticTexArraySize);
-    uav += StaticTexArraySize;
-
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Mut", Set, pUAVs[uav++]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, pUAVs[uav++]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Mut", SetArray, &pUAVs[uav], 0, MutableTexArraySize);
-    uav += MutableTexArraySize;
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, &pUAVs[uav], 0, DynamicTexArraySize);
-    uav += DynamicTexArraySize;
-    VERIFY_EXPR(uav + 2 == pUAVs.size());
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Mut", Set, RefTextures.GetViewObjects(Tex2D_MutIdx)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, RefTextures.GetViewObjects(0)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Mut", SetArray, RefTextures.GetViewObjects(Tex2DArr_MutIdx), 0, MutableTexArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(0), 0, DynamicTexArraySize);
 
     pSRB->InitializeStaticResources(pPSO);
 
@@ -1112,12 +1132,17 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    DispatchComputeAttribs DispatchAttribs(1, 1, 1);
+    const auto&            SCDesc = pSwapChain->GetDesc();
+    DispatchComputeAttribs DispatchAttribs((SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1);
     pContext->DispatchCompute(DispatchAttribs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, pUAVs[uav++]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, &pUAVs[uav++], 0, 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, RefTextures.GetViewObjects(Tex2D_DynIdx)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx), 0, DynamicTexArraySize);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
     pContext->DispatchCompute(DispatchAttribs);
+
+    pSwapChain->Present();
 }
 
 TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
