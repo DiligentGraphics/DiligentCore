@@ -426,7 +426,7 @@ void TestingEnvironment::Reset()
     m_NumAllowedErrors = 0;
 }
 
-RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height)
+RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, void* pInitData)
 {
     TextureDesc TexDesc;
 
@@ -437,8 +437,12 @@ RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXT
     TexDesc.Width     = Width;
     TexDesc.Height    = Height;
 
+    const auto        FmtAttribs = GetTextureFormatAttribs(Fmt);
+    TextureSubResData Mip0Data{pInitData, FmtAttribs.ComponentSize * FmtAttribs.NumComponents * Width};
+    TextureData       TexData{&Mip0Data, 1};
+
     RefCntAutoPtr<ITexture> pTexture;
-    m_pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    m_pDevice->CreateTexture(TexDesc, pInitData ? &TexData : nullptr, &pTexture);
     VERIFY_EXPR(pTexture != nullptr);
 
     return pTexture;
