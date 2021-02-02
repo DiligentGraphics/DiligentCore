@@ -50,6 +50,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 #include "HashUtils.hpp"
 
@@ -2187,6 +2188,67 @@ inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
     y = (y | (y << 1u)) & 0x55555555u;
 
     return x | (y << 1u);
+}
+
+/// Returns the least-signficant bit and clears it in the input argument
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value, T>::type ExtractLSB(T& bits)
+{
+    if (bits == T{0})
+        return 0;
+
+    const T bit = bits & ~(bits - T{1});
+    bits &= ~bit;
+
+    return bit;
+}
+
+/// Returns the enum value representing the least-signficant bit and clears it in the input argument
+template <typename T>
+typename std::enable_if<std::is_enum<T>::value, T>::type ExtractLSB(T& bits)
+{
+    return static_cast<T>(ExtractLSB(reinterpret_cast<typename std::underlying_type<T>::type&>(bits)));
+}
+
+
+inline std::ostream& operator<<(std::ostream& os, const float4& vec)
+{
+    return os << "float4(" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ')';
+}
+inline std::ostream& operator<<(std::ostream& os, const float3& vec)
+{
+    return os << "float3(" << vec.x << ", " << vec.y << ", " << vec.z << ')';
+}
+inline std::ostream& operator<<(std::ostream& os, const float2& vec)
+{
+    return os << "float2(" << vec.x << ", " << vec.y << ')';
+}
+
+inline std::ostream& operator<<(std::ostream& os, const int4& vec)
+{
+    return os << "int4(" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ')';
+}
+inline std::ostream& operator<<(std::ostream& os, const int3& vec)
+{
+    return os << "int3(" << vec.x << ", " << vec.y << ", " << vec.z << ')';
+}
+inline std::ostream& operator<<(std::ostream& os, const int2& vec)
+{
+    return os << "int2(" << vec.x << ", " << vec.y << ')';
+}
+
+
+inline std::ostream& operator<<(std::ostream& os, const uint4& vec)
+{
+    return os << "uint4(" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ')';
+}
+inline std::ostream& operator<<(std::ostream& os, const uint3& vec)
+{
+    return os << "uint3(" << vec.x << ", " << vec.y << ", " << vec.z << ')';
+}
+inline std::ostream& operator<<(std::ostream& os, const uint2& vec)
+{
+    return os << "uint2(" << vec.x << ", " << vec.y << ')';
 }
 
 } // namespace Diligent
