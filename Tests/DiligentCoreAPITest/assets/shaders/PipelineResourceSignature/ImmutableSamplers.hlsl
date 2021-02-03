@@ -1,17 +1,8 @@
-Texture2D g_Tex2D_1;
-Texture2D g_Tex2D_2;
+Texture2D g_Tex2D_Static;
+Texture2D g_Tex2D_Mut;
+Texture2D g_Tex2D_Dyn;
 
 SamplerState g_Sampler;
-
-cbuffer ConstBuff_1
-{
-    float4 g_Data_1;
-}
-
-cbuffer ConstBuff_2
-{
-    float4 g_Data_2;
-}
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -26,10 +17,10 @@ float4 VerifyResources()
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
 
     float2 UV = float2(0.5, 0.5);
-    AllCorrect *= CheckValue(g_Tex2D_1.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_1_Ref);
-    AllCorrect *= CheckValue(g_Tex2D_2.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_2_Ref);
-    AllCorrect *= CheckValue(g_Data_1, CB_1_Ref);
-    AllCorrect *= CheckValue(g_Data_2, CB_2_Ref);
+    
+    AllCorrect *= CheckValue(g_Tex2D_Static.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_1_Ref);
+    AllCorrect *= CheckValue(g_Tex2D_Mut.   SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_2_Ref);
+    AllCorrect *= CheckValue(g_Tex2D_Dyn.   SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_3_Ref);
 
 	return AllCorrect;
 }
