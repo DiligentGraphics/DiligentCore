@@ -52,13 +52,6 @@ protected:
         auto* pDevice = pEnv->GetDevice();
 
         {
-            auto pRenderTarget = pEnv->CreateTexture("PipelineResourceSignatureTest: test RTV", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 512, 512);
-            ASSERT_NE(pRenderTarget, nullptr);
-            pRTV = pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
-            ASSERT_NE(pRTV, nullptr);
-        }
-
-        {
             SamplerDesc SamDesc;
             pEnv->GetDevice()->CreateSampler(SamDesc, &pSampler);
         }
@@ -196,7 +189,6 @@ protected:
 
 
     static RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
-    static RefCntAutoPtr<ITextureView>                    pRTV;
     static std::array<RefCntAutoPtr<ITextureView>, 4>     pTexSRVs;
     static std::array<RefCntAutoPtr<ITextureView>, 4>     pTexSRVsNoSampler;
     static RefCntAutoPtr<ISampler>                        pSampler;
@@ -204,7 +196,6 @@ protected:
 };
 
 RefCntAutoPtr<IShaderSourceInputStreamFactory> PipelineResourceSignatureTest::pShaderSourceFactory;
-RefCntAutoPtr<ITextureView>                    PipelineResourceSignatureTest::pRTV;
 std::array<RefCntAutoPtr<ITextureView>, 4>     PipelineResourceSignatureTest::pTexSRVs;
 std::array<RefCntAutoPtr<ITextureView>, 4>     PipelineResourceSignatureTest::pTexSRVsNoSampler;
 RefCntAutoPtr<ISampler>                        PipelineResourceSignatureTest::pSampler;
@@ -804,9 +795,10 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
 
 TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -944,11 +936,24 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
     pSignature3->CreateShaderResourceBinding(&pSRB3, true);
     ASSERT_NE(pSRB3, nullptr);
 
-    pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
-    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVsNoSampler[0]);
-    pSRB3->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pTexSRVsNoSampler[1]);
+    ReferenceTextures RefTextures{
+        2,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+    ReferenceBuffers RefBuffers{
+        1,
+        USAGE_DEFAULT,
+        BIND_UNIFORM_BUFFER //
+    };
 
-    ITextureView* ppRTVs[] = {pRTV};
+    pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(RefBuffers.GetBuffer(0));
+    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(RefTextures.GetView(0));
+    pSRB3->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(RefTextures.GetView(1));
+
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     // draw 1
@@ -971,13 +976,15 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
 
 TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
 {
-    auto* pEnv     = TestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceCaps().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
+
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1107,11 +1114,24 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     pSignatureMS->CreateShaderResourceBinding(&MeshSRB, true);
     ASSERT_NE(MeshSRB, nullptr);
 
-    PixelSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTexSRVsNoSampler[0]);
-    VertexSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(pConstBuff);
-    MeshSRB->GetVariableByName(SHADER_TYPE_MESH, "Constants")->Set(pConstBuff);
+    ReferenceTextures RefTextures{
+        1,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+    ReferenceBuffers RefBuffers{
+        2,
+        USAGE_DEFAULT,
+        BIND_UNIFORM_BUFFER //
+    };
 
-    ITextureView* ppRTVs[] = {pRTV};
+    PixelSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(RefTextures.GetView(0));
+    VertexSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(RefBuffers.GetBuffer(0));
+    MeshSRB->GetVariableByName(SHADER_TYPE_MESH, "Constants")->Set(RefBuffers.GetBuffer(1));
+
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     // draw triangles
@@ -1143,7 +1163,8 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
         GTEST_SKIP();
     }
 
-    auto* pContext = pEnv->GetDeviceContext();
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1219,7 +1240,7 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    ITextureView* ppRTVs[] = {pRTV};
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
@@ -1231,44 +1252,58 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 
 TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
 {
-    auto* const pEnv     = TestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    auto*       pContext = pEnv->GetDeviceContext();
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    auto*       pContext   = pEnv->GetDeviceContext();
+    auto*       pSwapChain = pEnv->GetSwapChain();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.UseCombinedTextureSamplers = true;
-    ShaderCI.FilePath                   = "shaders/ShaderResourceLayout/FormattedBuffers.hlsl";
+    float ClearColor[] = {0.875, 0.125, 0.75, 0.75};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
 
     static constexpr Uint32 StaticBuffArraySize  = 4;
     static constexpr Uint32 MutableBuffArraySize = 3;
     static constexpr Uint32 DynamicBuffArraySize = 2;
-    ShaderMacroHelper       Macros;
+
+    ReferenceBuffers RefBuffers{
+        3 + StaticBuffArraySize + MutableBuffArraySize + DynamicBuffArraySize,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        BUFFER_VIEW_SHADER_RESOURCE,
+        BUFFER_MODE_FORMATTED //
+    };
+
+    // Buffer indices for vertex/shader bindings
+    static constexpr size_t Buff_StaticIdx = 0;
+    static constexpr size_t Buff_MutIdx    = 1;
+    static constexpr size_t Buff_DynIdx    = 2;
+
+    static constexpr size_t BuffArr_StaticIdx = 3;
+    static constexpr size_t BuffArr_MutIdx    = BuffArr_StaticIdx + StaticBuffArraySize;
+    static constexpr size_t BuffArr_DynIdx    = BuffArr_MutIdx + MutableBuffArraySize;
+
+    ShaderMacroHelper Macros;
     Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", static_cast<int>(StaticBuffArraySize));
     Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", static_cast<int>(MutableBuffArraySize));
     Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", static_cast<int>(DynamicBuffArraySize));
-    ShaderCI.Macros = Macros;
 
-    RefCntAutoPtr<IShader> pVS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.EntryPoint      = "VSMain";
-        ShaderCI.Desc.Name       = "FormattedBuffers - VS";
-        pDevice->CreateShader(ShaderCI, &pVS);
-    }
-    ASSERT_NE(pVS, nullptr);
+    Macros.AddShaderMacro("Buff_Static_Ref", RefBuffers.GetValue(Buff_StaticIdx));
+    Macros.AddShaderMacro("Buff_Mut_Ref", RefBuffers.GetValue(Buff_MutIdx));
+    Macros.AddShaderMacro("Buff_Dyn_Ref", RefBuffers.GetValue(Buff_DynIdx));
 
-    RefCntAutoPtr<IShader> pPS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.EntryPoint      = "PSMain";
-        ShaderCI.Desc.Name       = "FormattedBuffers - PS";
-        pDevice->CreateShader(ShaderCI, &pPS);
-    }
-    ASSERT_NE(pPS, nullptr);
+    for (Uint32 i = 0; i < StaticBuffArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"BuffArr_Static_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_StaticIdx + i));
+
+    for (Uint32 i = 0; i < MutableBuffArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"BuffArr_Mut_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_MutIdx + i));
+
+    for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx + i));
+
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "shaders/ShaderResourceLayout/FormattedBuffers.hlsl", "VSMain", "PRS FormattedBuffers - VS", Macros);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "shaders/ShaderResourceLayout/FormattedBuffers.hlsl", "PSMain", "PRS FormattedBuffers - PS", Macros);
+    ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Formatted buffer test";
@@ -1318,28 +1353,30 @@ TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
         BuffViewDesc.Format.IsNormalized  = false;
         pBuffer[i]->CreateView(BuffViewDesc, &pBufferView[i]);
     }
-    std::array<IDeviceObject*, 4> ppSRVs = {pBufferView[0], pBufferView[1], pBufferView[2], pBufferView[3]};
 
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Buff_Static", Set, ppSRVs[0]);
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_BuffArr_Static", SetArray, ppSRVs.data(), 0, StaticBuffArraySize);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Buff_Static", Set, RefBuffers.GetView(Buff_StaticIdx));
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_BuffArr_Static", SetArray, RefBuffers.GetViewObjects(BuffArr_StaticIdx), 0, StaticBuffArraySize);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, ppSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Mut", SetArray, ppSRVs.data(), 0, MutableBuffArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, ppSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, ppSRVs.data(), 0, DynamicBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, RefBuffers.GetView(Buff_MutIdx));
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Mut", SetArray, RefBuffers.GetViewObjects(BuffArr_MutIdx), 0, MutableBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, RefBuffers.GetView(Buff_DynIdx));
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx), 0, DynamicBuffArraySize);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    ITextureView* ppRTVs[] = {pRTV};
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
 
-    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
+
+    pSwapChain->Present();
 }
 
 } // namespace Diligent
