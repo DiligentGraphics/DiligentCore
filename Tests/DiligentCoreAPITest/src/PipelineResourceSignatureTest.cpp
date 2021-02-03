@@ -31,6 +31,7 @@
 #include "TestingEnvironment.hpp"
 #include "ShaderMacroHelper.hpp"
 #include "GraphicsAccessories.hpp"
+#include "ResourceLayoutTestCommon.hpp"
 
 #include "gtest/gtest.h"
 
@@ -129,6 +130,7 @@ protected:
         GraphicsPipeline.DSVFormat         = TEX_FORMAT_UNKNOWN;
 
         GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
 
         RefCntAutoPtr<IPipelineState> pPSO;
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
@@ -232,16 +234,56 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    float ClearColor[] = {0.125, 0.25, 0.375, 0.5};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
     static constexpr Uint32 StaticTexArraySize  = 2;
     static constexpr Uint32 MutableTexArraySize = 4;
     static constexpr Uint32 DynamicTexArraySize = 3;
-    ShaderMacroHelper       Macros;
+
+    ReferenceTextures RefTextures{
+        3 + StaticTexArraySize + MutableTexArraySize + DynamicTexArraySize,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+
+    // Texture indices for vertex/shader bindings
+    static constexpr size_t Tex2D_StaticIdx = 2;
+    static constexpr size_t Tex2D_MutIdx    = 0;
+    static constexpr size_t Tex2D_DynIdx    = 1;
+
+    static constexpr size_t Tex2DArr_StaticIdx = 7;
+    static constexpr size_t Tex2DArr_MutIdx    = 3;
+    static constexpr size_t Tex2DArr_DynIdx    = 9;
+
+    ShaderMacroHelper Macros;
+
     Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
     Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
     Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
 
-    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "VariableTypes.hlsl", "VSMain", "PRS variable types test: VS", Macros);
-    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "VariableTypes.hlsl", "PSMain", "PRS variable types test: PS", Macros);
+    RefTextures.ClearUsedValues();
+
+    // Add macros that define reference colors
+    Macros.AddShaderMacro("Tex2D_Static_Ref", RefTextures.GetColor(Tex2D_StaticIdx));
+    Macros.AddShaderMacro("Tex2D_Mut_Ref", RefTextures.GetColor(Tex2D_MutIdx));
+    Macros.AddShaderMacro("Tex2D_Dyn_Ref", RefTextures.GetColor(Tex2D_DynIdx));
+
+    for (Uint32 i = 0; i < StaticTexArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"Tex2DArr_Static_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_StaticIdx + i));
+
+    for (Uint32 i = 0; i < MutableTexArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"Tex2DArr_Mut_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_MutIdx + i));
+
+    for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
+        Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_DynIdx + i));
+
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "shaders/ShaderResourceLayout/Textures.hlsl", "VSMain", "PRS variable types test: VS", Macros);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "shaders/ShaderResourceLayout/Textures.hlsl", "PSMain", "PRS variable types test: PS", Macros);
     ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
@@ -270,29 +312,30 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
     auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
     ASSERT_TRUE(pPSO);
 
-    std::array<IDeviceObject*, 4> ppSRVs = {pTexSRVs[0], pTexSRVs[1], pTexSRVs[2], pTexSRVs[3]};
-
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, ppSRVs[0]);
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SetArray, ppSRVs.data(), 0, StaticTexArraySize);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, RefTextures.GetViewObjects(Tex2D_StaticIdx)[0]);
+    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SetArray, RefTextures.GetViewObjects(Tex2DArr_StaticIdx), 0, StaticTexArraySize);
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Sampler", Set, pSampler);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, pTexSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut", SetArray, ppSRVs.data(), 0, MutableTexArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, pTexSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, ppSRVs.data(), 0, DynamicTexArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, RefTextures.GetViewObjects(Tex2D_MutIdx)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut", SetArray, RefTextures.GetViewObjects(Tex2DArr_MutIdx), 0, MutableTexArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, RefTextures.GetViewObjects(Tex2D_DynIdx)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx), 0, DynamicTexArraySize);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    ITextureView* ppRTVs[] = {pRTV};
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
 
-    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
+
+    pSwapChain->Present();
 }
 
 

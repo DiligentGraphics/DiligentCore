@@ -29,10 +29,12 @@
 #include <algorithm>
 #include <array>
 
-#include "TestingEnvironment.hpp"
 #include "ShaderMacroHelper.hpp"
 #include "GraphicsAccessories.hpp"
 #include "BasicMath.hpp"
+
+#include "TestingEnvironment.hpp"
+#include "ResourceLayoutTestCommon.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
@@ -40,187 +42,8 @@
 using namespace Diligent;
 using namespace Diligent::Testing;
 
-namespace Diligent
-{
-
-namespace Testing
-{
-
-void PrintShaderResources(IShader* pShader);
-void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
-void ComputeShaderReference(ISwapChain* pSwapChain);
-
-} // namespace Testing
-
-} // namespace Diligent
-
 namespace
 {
-
-class ReferenceBuffers
-{
-public:
-    ReferenceBuffers(Uint32           NumBuffers,
-                     USAGE            Usage,
-                     BIND_FLAGS       BindFlags,
-                     BUFFER_VIEW_TYPE ViewType   = BUFFER_VIEW_UNDEFINED,
-                     BUFFER_MODE      BufferMode = BUFFER_MODE_UNDEFINED) :
-        Buffers(NumBuffers),
-        Values(NumBuffers),
-        UsedValues(NumBuffers),
-        ppBuffObjects(NumBuffers),
-        Views(NumBuffers),
-        ppViewObjects(NumBuffers)
-    {
-        auto* pEnv    = TestingEnvironment::GetInstance();
-        auto* pDevice = pEnv->GetDevice();
-
-        for (Uint32 i = 0; i < NumBuffers; ++i)
-        {
-            auto& Value = Values[i];
-            auto  v     = static_cast<float>(i * 10);
-            Value       = float4(v + 1, v + 2, v + 3, v + 4);
-
-            std::vector<float4> InitData(16, Value);
-
-            BufferDesc BuffDesc;
-
-            String Name   = "Reference buffer " + std::to_string(i);
-            BuffDesc.Name = Name.c_str();
-
-            BuffDesc.Usage             = Usage;
-            BuffDesc.BindFlags         = BindFlags;
-            BuffDesc.Mode              = BufferMode;
-            BuffDesc.uiSizeInBytes     = static_cast<Uint32>(InitData.size() * sizeof(InitData[0]));
-            BuffDesc.ElementByteStride = BufferMode != BUFFER_MODE_UNDEFINED ? 16 : 0;
-
-            auto&      pBuffer = Buffers[i];
-            BufferData BuffData{InitData.data(), BuffDesc.uiSizeInBytes};
-            pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer);
-            if (!pBuffer)
-            {
-                ADD_FAILURE() << "Unable to create buffer " << BuffDesc;
-                return;
-            }
-            ppBuffObjects[i] = pBuffer;
-
-            if (ViewType != BUFFER_VIEW_UNDEFINED)
-            {
-                auto& pView = Views[i];
-                if (BufferMode == BUFFER_MODE_FORMATTED)
-                {
-                    BufferViewDesc BuffViewDesc;
-                    BuffViewDesc.Name                 = "Formatted buffer SRV";
-                    BuffViewDesc.ViewType             = ViewType;
-                    BuffViewDesc.Format.ValueType     = VT_FLOAT32;
-                    BuffViewDesc.Format.NumComponents = 4;
-                    BuffViewDesc.Format.IsNormalized  = false;
-
-                    pBuffer->CreateView(BuffViewDesc, &pView);
-                }
-                else
-                {
-                    pView = pBuffer->GetDefaultView(ViewType);
-                }
-
-                if (!pView)
-                {
-                    ADD_FAILURE() << "Unable to create buffer view";
-                    return;
-                }
-
-                ppViewObjects[i] = pView;
-            }
-        }
-    }
-
-    IDeviceObject** GetBuffObjects(size_t i) { return &ppBuffObjects[i]; };
-    IDeviceObject** GetViewObjects(size_t i) { return &ppViewObjects[i]; };
-
-    const float4& GetValue(size_t i)
-    {
-        VERIFY(!UsedValues[i], "Buffer ", i, " has already been used. Every buffer is expected to be used once.");
-        UsedValues[i] = true;
-        VERIFY(Values[i] != float4{}, "Value must not be zero");
-        return Values[i];
-    }
-
-    void ClearUsedValues()
-    {
-        std::fill(UsedValues.begin(), UsedValues.end(), false);
-    }
-
-private:
-    std::vector<RefCntAutoPtr<IBuffer>>     Buffers;
-    std::vector<RefCntAutoPtr<IBufferView>> Views;
-
-    std::vector<IDeviceObject*> ppBuffObjects;
-    std::vector<IDeviceObject*> ppViewObjects;
-
-    std::vector<bool>   UsedValues;
-    std::vector<float4> Values;
-};
-
-class ReferenceTextures
-{
-public:
-    ReferenceTextures(Uint32            NumTextures,
-                      Uint32            Width,
-                      Uint32            Height,
-                      USAGE             Usage,
-                      BIND_FLAGS        BindFlags,
-                      TEXTURE_VIEW_TYPE ViewType) :
-        Textures(NumTextures),
-        ppViewObjects(NumTextures),
-        UsedValues(NumTextures),
-        Values(NumTextures)
-    {
-        auto* pEnv = TestingEnvironment::GetInstance();
-
-        for (Uint32 i = 0; i < NumTextures; ++i)
-        {
-            auto& pTexture = Textures[i];
-            auto& Value    = Values[i];
-
-            int v = (i % 15) + 1;
-            Value = float4{
-                (v & 0x01) ? 1.f : 0.f,
-                (v & 0x02) ? 1.f : 0.f,
-                (v & 0x04) ? 1.f : 0.f,
-                (v & 0x08) ? 1.f : 0.f //
-            };
-
-            std::vector<Uint32> TexData(Width * Height, F4Color_To_RGBA8Unorm(Value));
-
-            String Name      = String{"Reference texture "} + std::to_string(i);
-            pTexture         = pEnv->CreateTexture("Test texture", TEX_FORMAT_RGBA8_UNORM, BindFlags, Width, Height, TexData.data());
-            ppViewObjects[i] = pTexture->GetDefaultView(ViewType);
-        }
-    }
-
-    IDeviceObject** GetViewObjects(size_t i) { return &ppViewObjects[i]; };
-
-    const float4& GetColor(size_t i)
-    {
-        VERIFY(!UsedValues[i], "Texture ", i, " has already been used. Every texture is expected to be used once.");
-        UsedValues[i] = true;
-        VERIFY(Values[i] != float4{}, "Value must not be zero");
-        return Values[i];
-    }
-
-    void ClearUsedValues()
-    {
-        std::fill(UsedValues.begin(), UsedValues.end(), false);
-    }
-
-private:
-    std::vector<RefCntAutoPtr<ITexture>> Textures;
-
-    std::vector<IDeviceObject*> ppViewObjects;
-
-    std::vector<bool>   UsedValues;
-    std::vector<float4> Values;
-};
 
 class ShaderResourceLayoutTest : public ::testing::Test
 {
