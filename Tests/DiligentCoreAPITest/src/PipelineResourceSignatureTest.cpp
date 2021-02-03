@@ -347,8 +347,31 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "MultiSignatures.hlsl", "VSMain", "PRS multi signatures test: VS");
-    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "MultiSignatures.hlsl", "PSMain", "PRS multi signatures test: PS");
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    float ClearColor[] = {0.875, 0.125, 0.5, 0.625};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ReferenceTextures RefTextures{
+        8,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("Tex2D_1_Ref", RefTextures.GetColor(0));
+    Macros.AddShaderMacro("Tex2D_2_Ref", RefTextures.GetColor(1));
+    Macros.AddShaderMacro("Tex2D_3_Ref", RefTextures.GetColor(2));
+    Macros.AddShaderMacro("Tex2D_4_Ref", RefTextures.GetColor(3));
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "MultiSignatures.hlsl", "VSMain", "PRS multi signatures test: VS", Macros);
+
+    Macros.UpdateMacro("Tex2D_1_Ref", RefTextures.GetColor(4));
+    Macros.UpdateMacro("Tex2D_2_Ref", RefTextures.GetColor(5));
+    Macros.UpdateMacro("Tex2D_3_Ref", RefTextures.GetColor(6));
+    Macros.UpdateMacro("Tex2D_4_Ref", RefTextures.GetColor(7));
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "MultiSignatures.hlsl", "PSMain", "PRS multi signatures test: PS", Macros);
     ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
@@ -386,34 +409,37 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS[0], pPRS[1], pPRS[2]});
     ASSERT_TRUE(pPSO);
 
-    SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRVs[0]);
-    SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_3", Set, pTexSRVs[1]);
+    SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
+    SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_3", Set, RefTextures.GetView(2));
     SET_STATIC_VAR(pPRS[2], SHADER_TYPE_PIXEL, "g_Sampler", Set, pSampler);
     for (Uint32 i = 0; i < _countof(pPRS); ++i)
     {
         pPRS[i]->CreateShaderResourceBinding(&pSRB[i], true);
     }
 
-    SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_2", Set, pTexSRVs[2]);
-    SET_SRB_VAR(pSRB[1], SHADER_TYPE_PIXEL, "g_Tex2D_1", Set, pTexSRVs[3]);
-    SET_SRB_VAR(pSRB[2], SHADER_TYPE_PIXEL, "g_Tex2D_4", Set, pTexSRVs[0]);
+    SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_2", Set, RefTextures.GetView(5));
+    SET_SRB_VAR(pSRB[1], SHADER_TYPE_PIXEL, "g_Tex2D_1", Set, RefTextures.GetView(4));
+    SET_SRB_VAR(pSRB[2], SHADER_TYPE_PIXEL, "g_Tex2D_4", Set, RefTextures.GetView(7));
 
-    SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_3", Set, pTexSRVs[1]);
-    SET_SRB_VAR(pSRB[1], SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, pTexSRVs[2]);
-    SET_SRB_VAR(pSRB[2], SHADER_TYPE_VERTEX, "g_Tex2D_4", Set, pTexSRVs[3]);
+    SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_3", Set, RefTextures.GetView(6));
+    SET_SRB_VAR(pSRB[1], SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
+    SET_SRB_VAR(pSRB[2], SHADER_TYPE_VERTEX, "g_Tex2D_4", Set, RefTextures.GetView(3));
 
     for (Uint32 i = 0; i < _countof(pSRB); ++i)
     {
         pContext->CommitShaderResources(pSRB[i], RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
-    ITextureView* ppRTVs[] = {pRTV};
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
 
-    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
+
+    pSwapChain->Present();
 }
 
 
