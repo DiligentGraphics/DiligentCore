@@ -451,8 +451,32 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "SingleVarType.hlsl", "VSMain", "PRS single var type test: VS");
-    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "SingleVarType.hlsl", "PSMain", "PRS single var type test: PS");
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    float ClearColor[] = {0.375, 0.875, 0.125, 0.0625};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ReferenceTextures RefTextures{
+        2,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+    ReferenceBuffers RefBuffers{
+        2,
+        USAGE_DEFAULT,
+        BIND_UNIFORM_BUFFER //
+    };
+
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("Tex2D_1_Ref", RefTextures.GetColor(0));
+    Macros.AddShaderMacro("Tex2D_2_Ref", RefTextures.GetColor(1));
+    Macros.AddShaderMacro("CB_1_Ref", RefBuffers.GetValue(0));
+    Macros.AddShaderMacro("CB_2_Ref", RefBuffers.GetValue(1));
+
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "SingleVarType.hlsl", "VSMain", "PRS single var type test: VS", Macros);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "SingleVarType.hlsl", "PSMain", "PRS single var type test: PS", Macros);
     ASSERT_TRUE(pVS && pPS);
 
     for (Uint32 var_type = 0; var_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++var_type)
@@ -490,10 +514,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRVs[0]);
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, pTexSRVs[0]);
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, pConstBuff);
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, pConstBuff);
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, RefBuffers.GetBuffer(0));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, RefBuffers.GetBuffer(1));
         }
 
         RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -508,21 +532,24 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, pTexSRVs[0]);
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, pTexSRVs[0]);
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, pConstBuff);
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, pConstBuff);
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, RefBuffers.GetBuffer(0));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, RefBuffers.GetBuffer(1));
         }
 
         pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-        ITextureView* ppRTVs[] = {pRTV};
+        ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
         pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         pContext->SetPipelineState(pPSO);
 
-        DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+        DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
         pContext->Draw(DrawAttrs);
+
+        pSwapChain->Present();
     }
 }
 

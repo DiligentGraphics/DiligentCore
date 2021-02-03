@@ -119,6 +119,9 @@ public:
         }
     }
 
+    IBuffer*     GetBuffer(size_t i) { return Buffers[i]; };
+    IBufferView* GetView(size_t i) { return Views[i]; };
+
     IDeviceObject** GetBuffObjects(size_t i) { return &ppBuffObjects[i]; };
     IDeviceObject** GetViewObjects(size_t i) { return &ppViewObjects[i]; };
 
