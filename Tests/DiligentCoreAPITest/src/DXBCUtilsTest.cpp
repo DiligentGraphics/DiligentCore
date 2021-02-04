@@ -25,15 +25,13 @@
  *  of the possibility of such damages.
  */
 
-#if D3D11_SUPPORTED || D3D12_SUPPORTED
+#include <atlcomcli.h>
+#include <d3dcompiler.h>
 
-#    include <atlcomcli.h>
-#    include <d3dcompiler.h>
+#include "DXBCUtils.hpp"
+#include "TestingEnvironment.hpp"
 
-#    include "DXBCUtils.hpp"
-#    include "TestingEnvironment.hpp"
-
-#    include "gtest/gtest.h"
+#include "gtest/gtest.h"
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -50,36 +48,35 @@ static void TestDXBCRemapping(const char* Source, const char* Entry, const char*
     if (FAILED(hr))
     {
         const char* Msg = CompilerOutput ? static_cast<char*>(CompilerOutput->GetBufferPointer()) : "";
-        LOG_INFO_MESSAGE("D3DCompile failed: ", Msg);
+        LOG_ERROR_MESSAGE("D3DCompile failed: ", Msg);
     }
-    ASSERT_TRUE(SUCCEEDED(hr));
+    ASSERT_HRESULT_SUCCEEDED(hr);
 
-    ASSERT_TRUE(DXBCUtils::RemapDXBCResources(ResMap, Blob));
+    ASSERT_TRUE(DXBCUtils::RemapDXBCResources(ResMap, Blob->GetBufferPointer(), Blob->GetBufferSize()));
 
     CComPtr<ID3D12ShaderReflection> ShaderReflection;
 
     hr = D3DReflect(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(ShaderReflection), reinterpret_cast<void**>(&ShaderReflection));
-    ASSERT_TRUE(SUCCEEDED(hr));
+    ASSERT_HRESULT_SUCCEEDED(hr);
 
     for (auto& ResPair : ResMap)
     {
         D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
 
         hr = ShaderReflection->GetResourceBindingDescByName(ResPair.first.GetStr(), &BindDesc);
-        ASSERT_TRUE(SUCCEEDED(hr));
+        ASSERT_HRESULT_SUCCEEDED(hr);
 
-        ASSERT_EQ(BindDesc.BindPoint, ResPair.second.BindPoint);
-        ASSERT_EQ(BindDesc.Space, ResPair.second.Space);
+        EXPECT_EQ(BindDesc.BindPoint, ResPair.second.BindPoint);
+        EXPECT_EQ(BindDesc.Space, ResPair.second.Space);
     }
 }
 
 using BindInfo = DXBCUtils::BindInfo;
 
 
-TEST(DXBCUtils, Test1)
+TEST(DXBCUtils, PatchSM50)
 {
-    const char Source[] = R"hlsl(
-#line 83
+    static constexpr char Source[] = R"hlsl(
 Texture2D g_Tex2D_1 : register(t4);
 Texture2D g_Tex2D_2 : register(t3);
 Texture2D g_Tex2D_3 : register(t0);
@@ -139,10 +136,9 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
     TestDXBCRemapping(Source, "PSMain", "ps_5_0", ResMap);
 }
 
-TEST(DXBCUtils, Test2)
+TEST(DXBCUtils, PatchSM51)
 {
-    const char Source[] = R"hlsl(
-#line 145
+    static constexpr char Source[] = R"hlsl(
 // space 0
 SamplerState g_Sampler_1 : register(s0, space0);
 SamplerState g_Sampler_2 : register(s1, space0);
@@ -218,5 +214,3 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
 }
 
 } // namespace
-
-#endif // D3D11_SUPPORTED || D3D12_SUPPORTED

@@ -712,6 +712,7 @@ This project has some third-party dependencies, each of which may have independe
 * [stb](https://github.com/nothings/stb): stb single-file public domain libraries for C/C++ ([MIT License or public domain](https://github.com/DiligentGraphics/DiligentCore/blob/master/ThirdParty/stb/stb_image_write.h#L1581)).
 * [googletest](https://github.com/google/googletest): Google Testing and Mocking Framework ([BSD 3-Clause "New" or "Revised" License](https://github.com/DiligentGraphics/googletest/blob/master/LICENSE)).
 * [DirectXShaderCompiler](https://github.com/microsoft/DirectXShaderCompiler): LLVM/Clang-based DirectX Shader Compiler ([LLVM Release License](https://github.com/DiligentGraphics/DiligentCore/blob/master/ThirdParty/DirectXShaderCompiler/LICENSE.TXT)).
+* [DXBCChecksum](ThirdParty/GPUOpenShaderUtils): DXBC Checksum computation algorithm by AMD Developer Tools Team ([MIT lincesne](ThirdParty/GPUOpenShaderUtils/License.txt)).
 
 <a name="contributing"></a>
 # Contributing

@@ -27,11 +27,9 @@
 
 #pragma once
 
-#include <d3dcommon.h>
 #include <unordered_map>
 
-#include "Constants.h"
-#include "Shader.h"
+#include "BasicTypes.h"
 #include "HashUtils.hpp"
 
 namespace Diligent
@@ -48,11 +46,16 @@ struct DXBCUtils
     /// A mapping from the resource name to the binding (shader register).
     using TResourceBindingMap = std::unordered_map<HashMapStringKey, BindInfo, HashMapStringKey::Hasher>;
 
+
+    /// Remaps resource bindings in the given DXBC byte code.
+
     /// \param [in]    ResourceMap - Resource binding map. For every resource in the
     ///                              byte code it must define the binding (shader register).
-    /// \param [inout] pBytecode   - Byte code that will be patched.
+    /// \param [inout] pBytecode   - Pointer to the byte code to be patched.
+    /// \param [in]    Size        - The byte code size, in bytes.
     static bool RemapDXBCResources(const TResourceBindingMap& ResourceMap,
-                                   ID3DBlob*                  pBytecode);
+                                   void*                      pBytecode,
+                                   size_t                     Size);
 };
 
 } // namespace Diligent

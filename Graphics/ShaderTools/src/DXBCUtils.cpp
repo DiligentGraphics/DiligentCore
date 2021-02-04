@@ -26,13 +26,16 @@
  */
 
 #include <d3d11shader.h>
+
 #include "DXBCUtils.hpp"
-#include "DXBCChecksum.h"
+#include "../../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.h"
 
 namespace Diligent
 {
+
 namespace
 {
+
 struct DXBCHeader
 {
     Uint32 Magic;       // 0..3 "DXBC"
@@ -41,7 +44,7 @@ struct DXBCHeader
     Uint32 TotalSize;   // 24..27
     Uint32 ChunkCount;  // 28..31
 };
-static_assert(sizeof(DXBCHeader) == 32, "");
+static_assert(sizeof(DXBCHeader) == 32, "The size of DXBC header must be 32 bytes");
 
 struct ChunkHeader
 {
@@ -61,9 +64,9 @@ struct ResourceDefChunkHeader : ChunkHeader
     Uint32 Flags;               // 28..31
     Uint32 CreatorStringOffset; // 32..35, from start of chunk data
 };
-static_assert(sizeof(ResourceDefChunkHeader) == 36, "");
+static_assert(sizeof(ResourceDefChunkHeader) == 36, "The size of resource definition chunk header must be 36 bytes");
 
-struct ResourceBindingInfo11
+struct ResourceBindingInfo50
 {
     Uint32                   NameOffset;       // 0..3, from start of chunk data
     D3D_SHADER_INPUT_TYPE    ShaderInputType;  // 4..7
@@ -74,9 +77,9 @@ struct ResourceBindingInfo11
     Uint32                   BindCount;        // 24..27
     D3D_SHADER_INPUT_FLAGS   ShaderInputFlags; // 28..31
 };
-static_assert(sizeof(ResourceBindingInfo11) == 32, "");
+static_assert(sizeof(ResourceBindingInfo50) == 32, "The size of SM50 resource binding info struct must be 32 bytes");
 
-struct ResourceBindingInfo12
+struct ResourceBindingInfo51
 {
     Uint32                   NameOffset;       // 0..3, from start of chunk data
     D3D_SHADER_INPUT_TYPE    ShaderInputType;  // 4..7
@@ -89,7 +92,7 @@ struct ResourceBindingInfo12
     Uint32                   Space;            // 32..35
     Uint32                   Reserved;         // 36..39
 };
-static_assert(sizeof(ResourceBindingInfo12) == 40, "");
+static_assert(sizeof(ResourceBindingInfo51) == 40, "The size of SM51 resource binding info struct must be 40 bytes");
 
 #define FOURCC(a, b, c, d) (Uint32{(d) << 24} | Uint32{(c) << 16} | Uint32{(b) << 8} | Uint32{a})
 
@@ -97,132 +100,146 @@ constexpr Uint32 DXBCFourCC = FOURCC('D', 'X', 'B', 'C');
 constexpr Uint32 RDEFFourCC = FOURCC('R', 'D', 'E', 'F');
 
 
+inline bool PatchSpace(ResourceBindingInfo51& Res, Uint32 Space)
+{
+    Res.Space = Space;
+    return true;
+}
+
+inline bool PatchSpace(ResourceBindingInfo50&, Uint32 Space)
+{
+    return Space == 0 || Space == ~0U;
+}
+
+template <typename ResourceBindingInfoType>
 bool RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, const void* EndPtr, ResourceDefChunkHeader* RDEFHeader)
 {
     VERIFY_EXPR(RDEFHeader->Magic == RDEFFourCC);
-    VERIFY_EXPR((RDEFHeader->MajorVersion == 5 && RDEFHeader->MinorVersion == 0) || RDEFHeader->MajorVersion < 5);
 
     auto* Ptr        = reinterpret_cast<char*>(RDEFHeader) + sizeof(ChunkHeader);
-    auto* ResBinding = reinterpret_cast<ResourceBindingInfo11*>(Ptr + RDEFHeader->ResBindingOffset);
-    VERIFY((ResBinding + RDEFHeader->ResBindingCount) <= EndPtr, "Resource bindings is outside of buffer range.");
+    auto* ResBinding = reinterpret_cast<ResourceBindingInfoType*>(Ptr + RDEFHeader->ResBindingOffset);
+    if (ResBinding + RDEFHeader->ResBindingCount > EndPtr)
+    {
+        LOG_ERROR_MESSAGE("Resource binding data is outside of the specified byte code range. The byte code may be corrupted.");
+        return false;
+    }
 
     for (Uint32 r = 0; r < RDEFHeader->ResBindingCount; ++r)
     {
         auto&       Res  = ResBinding[r];
         const char* Name = Ptr + Res.NameOffset;
-        VERIFY(Name < EndPtr, "Resource name pointer is outside of buffer range.");
+        if (Name + 1 > EndPtr)
+        {
+            LOG_ERROR_MESSAGE("Resource name pointer is outside of the specified byte code range. The byte code may be corrupted.");
+            return false;
+        }
 
         auto Iter = ResourceMap.find(HashMapStringKey{Name});
         if (Iter == ResourceMap.end())
         {
-            LOG_ERROR("Failed to find '", Name, "' in ResourceMap.");
-            return false;
-        }
-
-        if (Iter->second.Space != 0 && Iter->second.Space != ~0u)
-        {
-            LOG_ERROR("Can not change space for resource '", Name, "' because shader is not compiled for SM 5.1");
+            LOG_ERROR_MESSAGE("Failed to find '", Name, "' in the resource mapping.");
             return false;
         }
 
         Res.BindPoint = Iter->second.BindPoint;
-    }
-    return true;
-}
-
-bool RemapShaderResourcesSM51(const DXBCUtils::TResourceBindingMap& ResourceMap, const void* EndPtr, ResourceDefChunkHeader* RDEFHeader)
-{
-    VERIFY_EXPR(RDEFHeader->Magic == RDEFFourCC);
-    VERIFY_EXPR(RDEFHeader->MajorVersion == 5 && RDEFHeader->MinorVersion == 1);
-
-    auto* Ptr        = reinterpret_cast<char*>(RDEFHeader) + sizeof(ChunkHeader);
-    auto* ResBinding = reinterpret_cast<ResourceBindingInfo12*>(Ptr + RDEFHeader->ResBindingOffset);
-    VERIFY((ResBinding + RDEFHeader->ResBindingCount) <= EndPtr, "Resource bindings is outside of buffer range.");
-
-    for (Uint32 r = 0; r < RDEFHeader->ResBindingCount; ++r)
-    {
-        auto&       Res  = ResBinding[r];
-        const char* Name = Ptr + Res.NameOffset;
-        VERIFY(Name < EndPtr, "Resource name pointer is outside of buffer range.");
-
-        auto Iter = ResourceMap.find(HashMapStringKey{Name});
-        if (Iter == ResourceMap.end())
+        if (!PatchSpace(Res, Iter->second.Space))
         {
-            LOG_ERROR("Failed to find '", Name, "' in ResourceMap.");
+            LOG_ERROR_MESSAGE("Can not change space for resource '", Name, "' because the shader was not compiled for SM 5.1.");
             return false;
         }
-
-        Res.BindPoint = Iter->second.BindPoint;
-        Res.Space     = Iter->second.Space;
     }
     return true;
 }
+
 } // namespace
 
 
 bool DXBCUtils::RemapDXBCResources(const TResourceBindingMap& ResourceMap,
-                                   ID3DBlob*                  pBytecode)
+                                   void*                      pBytecode,
+                                   size_t                     Size)
 {
     if (pBytecode == nullptr)
     {
-        LOG_ERROR("pBytecode must not be null.");
+        LOG_ERROR_MESSAGE("pBytecode must not be null.");
         return false;
     }
 
-    char* const       Ptr    = static_cast<char*>(pBytecode->GetBufferPointer());
-    const auto        Size   = pBytecode->GetBufferSize();
+    auto* const       Ptr    = static_cast<char*>(pBytecode);
     const void* const EndPtr = Ptr + Size;
 
     if (Size < sizeof(DXBCHeader))
     {
-        LOG_ERROR("Size of bytecode is too small.");
+        LOG_ERROR_MESSAGE("The size of the byte code (", Size, ") is too small to contain the DXBC header. The byte code may be corrupted.");
         return false;
     }
 
     auto& Header = *reinterpret_cast<DXBCHeader*>(Ptr);
-    VERIFY_EXPR(Header.TotalSize == Size);
+    if (Header.TotalSize != Size)
+    {
+        LOG_ERROR_MESSAGE("The byte code size (", Header.TotalSize, ") specified in the header does not match the actual size (", Size,
+                          "). The byte code may be corrupted.");
+        return false;
+    }
 
-#ifdef DILIGENT_DEBUG
+#ifdef DILIGENT_DEVELOPMENT
     {
         DWORD Checksum[4] = {};
         CalculateDXBCChecksum(reinterpret_cast<BYTE*>(Ptr), static_cast<DWORD>(Size), Checksum);
 
-        VERIFY_EXPR(Checksum[0] == Header.Checksum[0]);
-        VERIFY_EXPR(Checksum[1] == Header.Checksum[1]);
-        VERIFY_EXPR(Checksum[2] == Header.Checksum[2]);
-        VERIFY_EXPR(Checksum[3] == Header.Checksum[3]);
+        DEV_CHECK_ERR(Checksum[0] == Header.Checksum[0] &&
+                          Checksum[1] == Header.Checksum[1] &&
+                          Checksum[2] == Header.Checksum[2] &&
+                          Checksum[3] == Header.Checksum[3],
+                      "Unexpected checksum. The byte code may be corrupted or the container format may have changed.");
     }
 #endif
 
     if (Header.Magic != DXBCFourCC)
     {
-        LOG_ERROR("Bytecode header must contain 'DXBC' magic number.");
+        LOG_ERROR_MESSAGE("Bytecode header does not contain the 'DXBC' magic number. The byte code may be corrupted.");
         return false;
     }
 
     const Uint32* Chunks = reinterpret_cast<Uint32*>(Ptr + sizeof(Header));
-    bool          Result = true;
 
+    bool RemappingOK = false;
     for (Uint32 i = 0; i < Header.ChunkCount; ++i)
     {
-        auto& Chunk = *reinterpret_cast<ChunkHeader*>(Ptr + Chunks[i]);
-        VERIFY((&Chunk + 1) <= EndPtr, "Pointer to chunk is outside of buffer range.");
-
-        if (Chunk.Magic == RDEFFourCC)
+        auto* pChunk = reinterpret_cast<ChunkHeader*>(Ptr + Chunks[i]);
+        if (pChunk + 1 > EndPtr)
         {
-            auto* RDEFHeader = reinterpret_cast<ResourceDefChunkHeader*>(&Chunk);
+            LOG_ERROR_MESSAGE("Not enough space for the chunk header. The byte code may be corrupted.");
+            return false;
+        }
+
+        if (pChunk->Magic == RDEFFourCC)
+        {
+            auto* RDEFHeader = reinterpret_cast<ResourceDefChunkHeader*>(pChunk);
 
             if (RDEFHeader->MajorVersion == 5 && RDEFHeader->MinorVersion == 1)
-                Result = RemapShaderResourcesSM51(ResourceMap, EndPtr, RDEFHeader);
+            {
+                RemappingOK = RemapShaderResources<ResourceBindingInfo51>(ResourceMap, EndPtr, RDEFHeader);
+            }
+            else if (RDEFHeader->MajorVersion == 5 && RDEFHeader->MinorVersion == 0 || RDEFHeader->MajorVersion < 5)
+            {
+                RemappingOK = RemapShaderResources<ResourceBindingInfo50>(ResourceMap, EndPtr, RDEFHeader);
+            }
             else
-                Result = RemapShaderResources(ResourceMap, EndPtr, RDEFHeader);
+            {
+                LOG_ERROR_MESSAGE("Unexpected shader model: ", RDEFHeader->MajorVersion, '.', RDEFHeader->MinorVersion);
+                RemappingOK = false;
+            }
+
+            if (!RemappingOK)
+                return false;
+
             break;
         }
     }
 
-    if (!Result)
+    if (!RemappingOK)
     {
-        LOG_ERROR("Failed to find chunk 'RDEF' with resource definition.");
+        LOG_ERROR_MESSAGE("Failed to find 'RDEF' chunk with the resource definition.");
         return false;
     }
 
@@ -230,7 +247,7 @@ bool DXBCUtils::RemapDXBCResources(const TResourceBindingMap& ResourceMap,
     DWORD Checksum[4] = {};
     CalculateDXBCChecksum(reinterpret_cast<BYTE*>(Ptr), static_cast<DWORD>(Size), Checksum);
 
-    static_assert(sizeof(Header.Checksum) == sizeof(Checksum), "");
+    static_assert(sizeof(Header.Checksum) == sizeof(Checksum), "Unexpected checksum size");
     memcpy(Header.Checksum, Checksum, sizeof(Header.Checksum));
 
     return true;

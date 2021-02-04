@@ -29,14 +29,14 @@ if(ENABLE_HLSL)
     list(APPEND INCLUDE include/HLSLUtils.hpp)
 endif()
 
-#if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
-    list(APPEND SOURCE
-        src/DXBCUtils.cpp
-        ../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.cpp)
-    list(APPEND INCLUDE
-        include/DXBCUtils.hpp
-        ../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.h)
-#endif()
+if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
+    set(DXBC_CHECKSUM_SOURCE
+        ../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.cpp
+        ../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.h
+    )
+    list(APPEND SOURCE src/DXBCUtils.cpp)
+    list(APPEND INCLUDE include/DXBCUtils.hpp)
+endif()
 
 if((PLATFORM_WIN32 AND NOT MINGW_BUILD) OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX)
     set(DXC_SUPPORTED TRUE)
@@ -92,7 +92,7 @@ if(ENABLE_SPIRV)
     endif()
 endif()
 
-add_library(Diligent-ShaderTools STATIC ${SOURCE} ${INCLUDE})
+add_library(Diligent-ShaderTools STATIC ${SOURCE} ${INCLUDE} ${DXBC_CHECKSUM_SOURCE})
 
 target_include_directories(Diligent-ShaderTools 
 PUBLIC
@@ -104,10 +104,6 @@ PRIVATE
 if (DXC_SUPPORTED)
     target_include_directories(Diligent-ShaderTools PUBLIC ../../ThirdParty/DirectXShaderCompiler)
 endif()
-
-#if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
-    target_include_directories(Diligent-ShaderTools PRIVATE ../../ThirdParty/GPUOpenShaderUtils)
-#endif()
 
 target_link_libraries(Diligent-ShaderTools 
 PRIVATE 
@@ -152,6 +148,9 @@ set_common_target_properties(Diligent-ShaderTools)
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
+if (DXBC_CHECKSUM_SOURCE)
+    source_group("ThirdParty\\DXBCChecksum" FILES ${DXBC_CHECKSUM_SOURCE})
+endif()
 
 set_target_properties(Diligent-ShaderTools PROPERTIES
     FOLDER DiligentCore/Graphics
