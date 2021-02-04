@@ -266,12 +266,15 @@ if(PLATFORM_WIN32)
 elseif(PLATFORM_MACOS)
     # Use Volk
 elseif(PLATFORM_IOS)
-    # For the apparent lack of a better way, link with both arm64 and x64 libraries.
-    # The linker will issue a warning, but this will work for both device and the simulator.
-    list(APPEND PRIVATE_DEPENDENCIES
-        "${MoltenVK_FRAMEWORK}/ios-arm64/libMoltenVK.a"
-        #"${MoltenVK_FRAMEWORK}/ios-arm64_x86_64-simulator/libMoltenVK.a"
-    )
+    if(CMAKE_OSX_SYSROOT STREQUAL "iphonesimulator" OR PLATFORM_IOS_SIMULATOR)
+        list(APPEND PRIVATE_DEPENDENCIES
+            "${MoltenVK_FRAMEWORK}/ios-arm64_x86_64-simulator/libMoltenVK.a"
+        )
+    else()
+        list(APPEND PRIVATE_DEPENDENCIES
+            "${MoltenVK_FRAMEWORK}/ios-arm64/libMoltenVK.a"
+        )
+    endif()
 
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(METAL_LIBRARY Metal)
