@@ -32,6 +32,7 @@
 #include "ShaderMacroHelper.hpp"
 #include "GraphicsAccessories.hpp"
 #include "ResourceLayoutTestCommon.hpp"
+#include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
 
@@ -136,13 +137,13 @@ protected:
                                                          const char*        EntryPoint,
                                                          const char*        Name,
                                                          bool               UseCombinedSamplers,
-                                                         const ShaderMacro* Macros = nullptr,
-                                                         bool               UseDXC = false)
+                                                         const ShaderMacro* Macros         = nullptr,
+                                                         SHADER_COMPILER    ShaderCompiler = SHADER_COMPILER_DEFAULT)
     {
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.ShaderCompiler             = UseDXC ? SHADER_COMPILER_DXC : SHADER_COMPILER_DEFAULT;
+        ShaderCI.ShaderCompiler             = ShaderCompiler;
         ShaderCI.Source                     = Source;
         ShaderCI.Macros                     = Macros;
         ShaderCI.Desc.Name                  = Name;
@@ -162,7 +163,7 @@ protected:
                                                             bool               UseCombinedSamplers,
                                                             const ShaderMacro* Macros = nullptr)
     {
-        return CreateShaderFromSource(ShaderType, Source, EntryPoint, Name, UseCombinedSamplers, Macros, true);
+        return CreateShaderFromSource(ShaderType, Source, EntryPoint, Name, UseCombinedSamplers, Macros, SHADER_COMPILER_DXC);
     }
 
     static RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
@@ -1394,41 +1395,31 @@ TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
 
 TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
 {
-    const std::string DescrIndexingTest_CS{R"(
-#version 460 core
-#extension GL_ARB_shading_language_420pack : enable
-#extension GL_EXT_nonuniform_qualifier : require
-
-layout (local_size_x = 8, local_size_y = 1, local_size_z = 1) in;
-
-uniform sampler2D  g_Textures[];
-
-layout(rgba8) writeonly uniform image2D  g_OutImage;
-
-void main ()
-{
-    const int  i     = int(gl_LocalInvocationIndex);
-    const vec2 coord = vec2(gl_GlobalInvocationID.xy) / vec2(gl_WorkGroupSize.xy * gl_NumWorkGroups.xy - 1);
-          vec4 color = texture(g_Textures[nonuniformEXT(i)], coord);
-
-    imageStore(g_OutImage, ivec2(gl_GlobalInvocationID.xy), color);
-}
-)"};
-
-    auto* pEnv     = TestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
-
-    // There is not feature for descriptor indexing, but ray tracing extensions requires descripter indexing extension so test the RayTracing feature.
-    if (!pDevice->GetDeviceCaps().IsVulkanDevice() && !pDevice->GetDeviceCaps().Features.RayTracing)
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceCaps().IsVulkanDevice())
     {
         GTEST_SKIP() << "Descriptor indexing is not supported by this device";
     }
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    ComputeShaderReference(pSwapChain);
+
+    constexpr Uint32  TexArraySize = 8;
+    ReferenceTextures RefTextures{
+        TexArraySize,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
-    const Uint32                              TexArraySize = 8;
+
     {
         const PipelineResourceDesc Resources[] =
             {
@@ -1459,15 +1450,24 @@ void main ()
     PSODesc.Name         = "PRS descriptor indexing test";
     PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
 
+    ShaderMacroHelper Macros;
+
+    Macros.AddShaderMacro("NUM_TEXTURES", TexArraySize);
+    Macros.AddShaderMacro("float4", "vec4");
+    for (Uint32 i = 0; i < TexArraySize; ++i)
+        Macros.AddShaderMacro((String{"Tex2D_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(i));
+
     RefCntAutoPtr<IShader> pCS;
     {
         ShaderCreateInfo ShaderCI;
+        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
         ShaderCI.UseCombinedTextureSamplers = true;
         ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
         ShaderCI.EntryPoint                 = "main";
         ShaderCI.Desc.Name                  = "DescrIndexingTest - CS";
-        ShaderCI.Source                     = DescrIndexingTest_CS.c_str();
+        ShaderCI.FilePath                   = "VulkanDescriptorIndexing.glsl";
+        ShaderCI.Macros                     = Macros;
         pDevice->CreateShader(ShaderCI, &pCS);
         ASSERT_NE(pCS, nullptr);
     }
@@ -1490,34 +1490,24 @@ void main ()
     pSignature->CreateShaderResourceBinding(&pSRB, true);
     ASSERT_NE(pSRB, nullptr);
 
-    RefCntAutoPtr<ITexture> pOutImage;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = 256;
-        TexDesc.Height    = 256;
-        TexDesc.Usage     = USAGE_DEFAULT;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_UNORDERED_ACCESS;
-
-        pDevice->CreateTexture(TexDesc, nullptr, &pOutImage);
-        ASSERT_NE(pOutImage, nullptr);
-    }
-
-    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_OutImage")->Set(pOutImage->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS));
-
+    RefCntAutoPtr<ISampler> pSampler;
+    pDevice->CreateSampler(SamplerDesc{}, &pSampler);
     for (Uint32 i = 0; i < TexArraySize; ++i)
-    {
-        IDeviceObject* pSRV = pTexSRVs[i % pTexSRVs.size()];
-        pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Textures")->SetArray(&pSRV, i, 1);
-    }
+        RefTextures.GetView(i)->SetSampler(pSampler);
 
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    ASSERT_TRUE(pTestingSwapChain);
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_OutImage")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Textures")->SetArray(RefTextures.GetViewObjects(0), 0, TexArraySize);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
 
-    DispatchComputeAttribs dispathAttribs{1, 1, 1};
-    pContext->DispatchCompute(dispathAttribs);
+    const auto&            SCDesc = pSwapChain->GetDesc();
+    DispatchComputeAttribs DispatchAttribs((SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1);
+    pContext->DispatchCompute(DispatchAttribs);
+
+    pSwapChain->Present();
 }
 
 } // namespace Diligent

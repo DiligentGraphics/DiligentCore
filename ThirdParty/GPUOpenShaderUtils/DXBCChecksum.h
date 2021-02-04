@@ -1,5 +1,3 @@
-// from https://github.com/GPUOpen-Archive/common-src-ShaderUtils
-
 //=====================================================================
 // Copyright 2008-2016 (c), Advanced Micro Devices, Inc. All rights reserved.
 //

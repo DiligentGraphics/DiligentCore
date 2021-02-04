@@ -181,7 +181,7 @@ public:
             std::vector<Uint32> TexData(Width * Height, F4Color_To_RGBA8Unorm(Value));
 
             String Name      = String{"Reference texture "} + std::to_string(i);
-            pTexture         = pEnv->CreateTexture("Test texture", TEX_FORMAT_RGBA8_UNORM, BindFlags, Width, Height, TexData.data());
+            pTexture         = pEnv->CreateTexture(Name.c_str(), TEX_FORMAT_RGBA8_UNORM, BindFlags, Width, Height, TexData.data());
             ppViewObjects[i] = pTexture->GetDefaultView(ViewType);
         }
     }
