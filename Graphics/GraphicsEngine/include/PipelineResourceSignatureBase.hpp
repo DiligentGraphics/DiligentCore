@@ -101,6 +101,8 @@ public:
         return std::pair<Uint32, Uint32>{m_ResourceOffsets[VarType], m_ResourceOffsets[VarType + 1]};
     }
 
+    SHADER_TYPE GetActiveShaderStages() const { return m_ShaderStages; }
+
     // Returns the number of shader stages that have resources.
     Uint32 GetNumActiveShaderStages() const { return m_NumShaderStages; }
 
@@ -274,15 +276,15 @@ protected:
 protected:
     size_t m_Hash = 0;
 
+    std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_ResourceOffsets = {};
+
     // Shader stages that have resources.
     SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;
-
-    std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_ResourceOffsets = {};
 
     PIPELINE_TYPE m_PipelineType = PIPELINE_TYPE_INVALID;
 
     // The number of shader stages that have resources.
-    Uint8 m_NumShaderStages = 0; // AZ TODO: remove ?
+    Uint8 m_NumShaderStages = 0;
 
 #ifdef DILIGENT_DEBUG
     bool m_IsDestructed = false;

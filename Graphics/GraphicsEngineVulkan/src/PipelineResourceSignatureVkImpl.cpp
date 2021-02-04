@@ -908,23 +908,6 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
     }
 }
 
-SHADER_TYPE PipelineResourceSignatureVkImpl::GetActiveShaderStageType(Uint32 StageIndex) const
-{
-    VERIFY_EXPR(StageIndex < m_NumShaderStages);
-
-    SHADER_TYPE Stages = m_ShaderStages;
-    for (Uint32 Index = 0; Stages != SHADER_TYPE_UNKNOWN; ++Index)
-    {
-        auto StageBit = ExtractLSB(Stages);
-
-        if (Index == StageIndex)
-            return StageBit;
-    }
-
-    UNEXPECTED("Index is out of range");
-    return SHADER_TYPE_UNKNOWN;
-}
-
 void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& DstResourceCache) const
 {
     if (!HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) || m_pStaticResCache == nullptr)

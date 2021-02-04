@@ -104,15 +104,6 @@ public:
         return (HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) ? 1 : 0) + (HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC) ? 1 : 0);
     }
 
-    // Returns shader stages that have resources.
-    SHADER_TYPE GetActiveShaderStages() const { return m_ShaderStages; }
-
-    // Returns the number of shader stages that have resources.
-    Uint32 GetNumActiveShaderStages() const { return m_NumShaderStages; }
-
-    // Returns the type of the active shader stage with the given index.
-    SHADER_TYPE GetActiveShaderStageType(Uint32 StageIndex) const;
-
     enum class CacheContentType
     {
         Signature = 0, // only static resources
@@ -331,9 +322,6 @@ private:
 
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
-    // Shader stages that have resources.
-    SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;
-
     // The total number of uniform buffers with dynamic offsets in both descriptor sets,
     // accounting for array size.
     Uint16 m_DynamicUniformBufferCount = 0;
@@ -345,9 +333,6 @@ private:
     // static variable manager index in m_StaticVarsMgrs array.
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
-
-    // The number of shader stages that have resources.
-    Uint8 m_NumShaderStages = 0;
 
     // Static resource cache for all static resources
     ShaderResourceCacheVk* m_pStaticResCache = nullptr;
