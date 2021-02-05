@@ -31,7 +31,6 @@ set(INCLUDE
     include/ShaderD3D12Impl.hpp
     include/ShaderResourceBindingD3D12Impl.hpp
     include/ShaderResourceCacheD3D12.hpp
-    include/ShaderResourceLayoutD3D12.hpp
     include/ShaderResourcesD3D12.hpp
     include/ShaderVariableD3D12.hpp
     include/SwapChainD3D12Impl.hpp
@@ -40,6 +39,7 @@ set(INCLUDE
     include/BottomLevelASD3D12Impl.hpp
     include/TopLevelASD3D12Impl.hpp
     include/ShaderBindingTableD3D12Impl.hpp
+    include/PipelineResourceSignatureD3D12Impl.hpp
 )
 
 set(INTERFACE 
@@ -89,7 +89,6 @@ set(SRC
     src/ShaderD3D12Impl.cpp
     src/ShaderResourceBindingD3D12Impl.cpp
     src/ShaderResourceCacheD3D12.cpp
-    src/ShaderResourceLayoutD3D12.cpp
     src/ShaderResourcesD3D12.cpp
     src/ShaderVariableD3D12.cpp
     src/SwapChainD3D12Impl.cpp
@@ -98,6 +97,7 @@ set(SRC
     src/BottomLevelASD3D12Impl.cpp
     src/TopLevelASD3D12Impl.cpp
     src/ShaderBindingTableD3D12Impl.cpp
+    src/PipelineResourceSignatureD3D12Impl.cpp
 )
 
 if(PLATFORM_WIN32)

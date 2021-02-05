@@ -49,6 +49,8 @@
 
 #include "HLSLUtils.hpp"
 
+#include "dxc/DxilContainer/DxilContainer.h"
+
 namespace Diligent
 {
 
@@ -886,7 +888,8 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
         // !158 = !{i32 0, %"class.RWTexture2D<vector<float, 4> >"* @"\01?g_ColorBuffer@@3V?$RWTexture2D@V?$vector@M$03@@@@A", !"g_ColorBuffer", i32 -1, i32 -1, i32 1, i32 2, i1 false, i1 false, i1 false, !159}
 
         const auto* Name      = ResPair.first.GetStr();
-        const auto& BindPoint = ResPair.second;
+        const auto  Space     = ResPair.second.Space;
+        const auto  BindPoint = ResPair.second.BindPoint;
         const auto  DxilName  = String{"!\""} + Name + "\"";
 
         size_t pos = DXIL.find(DxilName);
@@ -900,7 +903,7 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
         // !"g_ColorBuffer", i32 -1, i32 -1,
         //                 ^
 
-        auto ReplaceRecord = [&](const std::string& NewValue, const char* RecordName) //
+        auto ReplaceRecord = [&](const std::string& NewValue, const char* RecordName, Uint32& PrevValue) //
         {
 #define CHECK_PATCHING_ERROR(Cond, ...)                                                       \
     if (!(Cond))                                                                              \
@@ -940,6 +943,7 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
             //         ^
             //    RecordEndPos
 
+            PrevValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
             DXIL.replace(pos, RecordEndPos - pos, NewValue);
             // , i32 1
             //         ^
@@ -956,7 +960,7 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
 
         // !"g_ColorBuffer", i32 -1, i32 -1,
         //                 ^
-        if (!ReplaceRecord("0", "space"))
+        if (!ReplaceRecord(std::to_string(Space), "space", ResPair.second.SrcSpace))
         {
             RemappingOK = false;
             continue;
@@ -964,7 +968,7 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
         // !"g_ColorBuffer", i32 0, i32 -1,
         //                        ^
 
-        if (!ReplaceRecord(std::to_string(BindPoint), "binding"))
+        if (!ReplaceRecord(std::to_string(BindPoint), "binding", ResPair.second.SrcBindPoint))
         {
             RemappingOK = false;
             continue;
@@ -972,7 +976,205 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
         // !"g_ColorBuffer", i32 0, i32 1,
         //                               ^
     }
+
+    // Patch createHandle command
+    static const String CallHandlePattern = " = call %dx.types.Handle @dx.op.createHandle(";
+    static const String SamplerPart       = "_sampler";
+    static const String CBufferPart       = "_cbuffer";
+    static const String TexturePart       = "_texture_";
+    static const String UAVPart           = "_UAV_";
+
+    for (size_t startPos = 0; startPos < DXIL.size();)
+    {
+        // %dx.types.Handle @dx.op.createHandle(
+        //        i32,                  ; opcode
+        //        i8,                   ; resource class: SRV=0, UAV=1, CBV=2, Sampler=3
+        //        i32,                  ; resource range ID (constant)
+        //        i32,                  ; index into the range
+        //        i1)                   ; non-uniform resource index: false or true
+
+        // Example:
+        //
+        // %cbConstants_cbuffer = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+
+        size_t callHandlePos = DXIL.find(CallHandlePattern, startPos);
+        if (callHandlePos == String::npos)
+            break;
+
+        startPos = callHandlePos + CallHandlePattern.length();
+
+        // Parse resource name: %name_suffix
+
+        size_t resNameEnd   = callHandlePos;
+        size_t resNameStart = resNameEnd - 1;
+        bool   partFound    = false;
+        for (auto& pos = resNameStart; pos >= 0; --pos)
+        {
+            const char c = DXIL[pos];
+
+            if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+                continue;
+
+            if (c == '_')
+            {
+                String part = DXIL.substr(pos, resNameEnd - pos);
+                if (!partFound &&
+                    (part == SamplerPart || part == CBufferPart ||
+                     (part.length() > TexturePart.length() && strncmp(part.c_str(), TexturePart.c_str(), TexturePart.length()) == 0) ||
+                     (part.length() > UAVPart.length() && strncmp(part.c_str(), UAVPart.c_str(), UAVPart.length()) == 0)))
+                {
+                    resNameEnd = pos;
+                    partFound  = true;
+                }
+                continue;
+            }
+
+            VERIFY_EXPR(c == '%');
+            ++pos;
+            break;
+        }
+
+        String resName = DXIL.substr(resNameStart, resNameEnd - resNameStart);
+
+        auto Iter = ResourceMap.find(HashMapStringKey{resName.c_str()});
+        if (Iter == ResourceMap.end())
+        {
+            UNEXPECTED("Resource is not exists in ResourceMap");
+            continue;
+        }
+
+        size_t pos = startPos;
+
+        const auto NextArg = [&DXIL, &pos]() {
+            ++pos;
+            for (; pos < DXIL.size(); ++pos)
+            {
+                const char c = DXIL[pos];
+                if (c == ',')
+                    return true;
+                if (c == ')' || c == '\n')
+                    return false;
+            }
+            return false;
+        };
+
+        // skip opcode
+        // createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                    ^
+        if (!NextArg())
+        {
+            UNEXPECTED("Failed to parse createHandle()");
+            continue;
+        }
+        VERIFY_EXPR(DXIL[pos + 2] == 'i' && DXIL[pos + 3] == '8' && DXIL[pos + 4] == ' ');
+
+        // skip resource class
+        // createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                          ^
+        if (!NextArg())
+        {
+            UNEXPECTED("Failed to parse createHandle()");
+            continue;
+        }
+        VERIFY_EXPR(DXIL[pos + 2] == 'i' && DXIL[pos + 3] == '3' && DXIL[pos + 4] == '2' && DXIL[pos + 5] == ' ');
+
+        // skip resource range ID
+        // createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                                 ^
+        if (!NextArg())
+        {
+            UNEXPECTED("Failed to parse createHandle()");
+            continue;
+        }
+        VERIFY_EXPR(DXIL[pos + 2] == 'i' && DXIL[pos + 3] == '3' && DXIL[pos + 4] == '2' && DXIL[pos + 5] == ' ');
+
+        const size_t indexStartPos = pos + 6;
+        VERIFY_EXPR(DXIL[indexStartPos] >= '0' && DXIL[indexStartPos] <= '9');
+
+        // find index end
+        // createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                                        ^
+        if (!NextArg())
+        {
+            UNEXPECTED("Failed to parse createHandle()");
+            continue;
+        }
+        VERIFY_EXPR(DXIL[pos + 2] == 'i' && DXIL[pos + 3] == '1' && DXIL[pos + 4] == ' ');
+
+        const size_t indexEndPos = pos;
+
+        // replace index
+        const Uint32 SrcIndex = static_cast<Uint32>(std::stoi(DXIL.substr(indexStartPos, indexEndPos - indexStartPos)));
+        VERIFY_EXPR(SrcIndex >= Iter->second.SrcBindPoint);
+        VERIFY_EXPR(Iter->second.SrcBindPoint != ~0u);
+
+        const Uint32 IndexOffset = SrcIndex - Iter->second.SrcBindPoint;
+        VERIFY_EXPR((Iter->second.BindPoint + IndexOffset) >= Iter->second.BindPoint);
+
+        const String NewIndexStr = std::to_string(Iter->second.BindPoint + IndexOffset);
+        DXIL.replace(DXIL.begin() + indexStartPos, DXIL.begin() + indexEndPos, NewIndexStr);
+
+        startPos = indexStartPos + NewIndexStr.length();
+    }
     return RemappingOK;
+}
+
+bool IsDXILBytecode(const void* pBytecode, size_t Size)
+{
+    const auto* data_begin = reinterpret_cast<const uint8_t*>(pBytecode);
+    const auto* data_end   = data_begin + Size;
+    const auto* ptr        = data_begin;
+
+    if (ptr + sizeof(hlsl::DxilContainerHeader) > data_end)
+    {
+        // No space for the container header
+        return false;
+    }
+
+    // A DXIL container is composed of a header, a sequence of part lengths, and a sequence of parts.
+    // https://github.com/microsoft/DirectXShaderCompiler/blob/master/docs/DXIL.rst#dxil-container-format
+    const auto& ContainerHeader = *reinterpret_cast<const hlsl::DxilContainerHeader*>(ptr);
+    if (ContainerHeader.HeaderFourCC != hlsl::DFCC_Container)
+    {
+        // Incorrect FourCC
+        return false;
+    }
+
+    if (ContainerHeader.Version.Major != hlsl::DxilContainerVersionMajor)
+    {
+        LOG_WARNING_MESSAGE("Unable to parse DXIL container: the container major version is ", Uint32{ContainerHeader.Version.Major},
+                            " while ", Uint32{hlsl::DxilContainerVersionMajor}, " is expected");
+        return false;
+    }
+
+    // The header is followed by uint32_t PartOffset[PartCount];
+    // The offset is to a DxilPartHeader.
+    ptr += sizeof(hlsl::DxilContainerHeader);
+    if (ptr + sizeof(uint32_t) * ContainerHeader.PartCount > data_end)
+    {
+        // No space for offsets
+        return false;
+    }
+
+    const auto* PartOffsets = reinterpret_cast<const uint32_t*>(ptr);
+    for (uint32_t part = 0; part < ContainerHeader.PartCount; ++part)
+    {
+        const auto Offset = PartOffsets[part];
+        if (data_begin + Offset + sizeof(hlsl::DxilPartHeader) > data_end)
+        {
+            // No space for the part header
+            return false;
+        }
+
+        const auto& PartHeader = *reinterpret_cast<const hlsl::DxilPartHeader*>(data_begin + Offset);
+        if (PartHeader.PartFourCC == hlsl::DFCC_DXIL)
+        {
+            // We found DXIL part
+            return true;
+        }
+    }
+
+    return false;
 }
 
 } // namespace Diligent

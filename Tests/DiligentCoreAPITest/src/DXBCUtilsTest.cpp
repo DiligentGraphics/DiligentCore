@@ -52,7 +52,7 @@ static void TestDXBCRemapping(const char* Source, const char* Entry, const char*
     }
     ASSERT_HRESULT_SUCCEEDED(hr);
 
-    ASSERT_TRUE(DXBCUtils::RemapDXBCResources(ResMap, Blob->GetBufferPointer(), Blob->GetBufferSize()));
+    ASSERT_TRUE(DXBCUtils::RemapResourceBindings(ResMap, Blob->GetBufferPointer(), Blob->GetBufferSize()));
 
     CComPtr<ID3D12ShaderReflection> ShaderReflection;
 

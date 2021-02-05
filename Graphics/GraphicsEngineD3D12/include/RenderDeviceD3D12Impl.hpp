@@ -41,6 +41,7 @@
 #include "GenerateMips.hpp"
 #include "QueryManagerD3D12.hpp"
 #include "DXCompiler.hpp"
+#include "RootSignature.hpp"
 
 // The macros below are only defined in Win SDK 19041+ and are missing in 17763
 #ifndef D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS
@@ -137,6 +138,14 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
                                               IShaderBindingTable**         ppSBT) override final;
 
+    /// Implementation of IRenderDevice::CreatePipelineResourceSignature() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                                    IPipelineResourceSignature**         ppSignature) override final;
+
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                         IPipelineResourceSignature**         ppSignature,
+                                         bool                                 IsDeviceInternal);
+
     /// Implementation of IRenderDeviceD3D12::GetD3D12Device().
     virtual ID3D12Device* DILIGENT_CALL_TYPE GetD3D12Device() override final { return m_pd3d12Device; }
 
@@ -162,6 +171,10 @@ public:
                                                               const TopLevelASDesc& Desc,
                                                               RESOURCE_STATE        InitialState,
                                                               ITopLevelAS**         ppTLAS) override final;
+
+    void CreateRootSignature(const RefCntAutoPtr<class PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount, RootSignatureD3D12** ppRootSig);
+
+    RootSignatureCacheD3D12& GetRootSignatureCache() { return m_RootSignatureCache; }
 
     DescriptorHeapAllocation AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
     DescriptorHeapAllocation AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
@@ -262,6 +275,9 @@ private:
     Properties m_Properties;
 
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
+
+    FixedBlockMemoryAllocator m_RootSignatureAllocator;
+    RootSignatureCacheD3D12   m_RootSignatureCache;
 };
 
 } // namespace Diligent

@@ -1644,6 +1644,12 @@ struct DeviceFeatures
     /// Indicates if device supports reading 8-bit types from uniform buffers.
     DEVICE_FEATURE_STATE UniformBuffer8BitAccess          DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports runtime-sized arrays in shader.
+    /// DirectX 12 backend already supports this feature,
+    /// Vulkan backend has optional support,
+    /// other backends are does not support this feature.
+    DEVICE_FEATURE_STATE ShaderResourceRuntimeArray       DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 
 #if DILIGENT_CPP_INTERFACE
     DeviceFeatures() noexcept {}
@@ -1680,10 +1686,11 @@ struct DeviceFeatures
         ShaderInputOutput16               {State},
         ShaderInt8                        {State},
         ResourceBuffer8BitAccess          {State},
-        UniformBuffer8BitAccess           {State}
+        UniformBuffer8BitAccess           {State},
+        ShaderResourceRuntimeArray        {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 32, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 33, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif

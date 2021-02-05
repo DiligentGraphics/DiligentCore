@@ -34,24 +34,22 @@
 #include "RenderDeviceD3D12.h"
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderResourceCacheD3D12.hpp"
-#include "ShaderResourceLayoutD3D12.hpp"
 #include "ShaderVariableD3D12.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
 
-class PipelineStateD3D12Impl;
-
 /// Implementation of the Diligent::IShaderResourceBindingD3D12 interface
 // sizeof(ShaderResourceBindingD3D12Impl) == 152 (x64, msvc, Release)
-class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineStateD3D12Impl>
+class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineResourceSignatureD3D12Impl>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineStateD3D12Impl>;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineResourceSignatureD3D12Impl>;
 
-    ShaderResourceBindingD3D12Impl(IReferenceCounters*     pRefCounters,
-                                   PipelineStateD3D12Impl* pPSO,
-                                   bool                    IsPSOInternal);
+    ShaderResourceBindingD3D12Impl(IReferenceCounters*                 pRefCounters,
+                                   PipelineResourceSignatureD3D12Impl* pPRS,
+                                   bool                                IsDeviceInternal);
     ~ShaderResourceBindingD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingD3D12, TBase)
@@ -66,11 +64,9 @@ public:
 
     virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override final;
 
-    ShaderResourceCacheD3D12& GetResourceCache() { return m_ShaderResourceCache; }
+    virtual void DILIGENT_CALL_TYPE InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature) override final;
 
-#ifdef DILIGENT_DEVELOPMENT
-    void dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO) const;
-#endif
+    ShaderResourceCacheD3D12& GetResourceCache() { return m_ShaderResourceCache; }
 
     bool StaticResourcesInitialized() const
     {
@@ -85,7 +81,7 @@ private:
 
     // Resource layout index in m_ShaderResourceCache array for every shader stage,
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ShaderVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
     bool        m_bStaticResourcesInitialized = false;

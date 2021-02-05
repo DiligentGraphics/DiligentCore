@@ -126,8 +126,9 @@ private:
     void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
                             TShaderStages&                 ShaderStages);
 
-    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
-                             TShaderStages&                 ShaderStages);
+    void CreateDefaultSignature(const PipelineStateCreateInfo& CreateInfo,
+                                const TShaderStages&           ShaderStages,
+                                IPipelineResourceSignature**   ppSignature);
 
     void Destruct();
 

@@ -427,7 +427,8 @@ HLSLShaderResourceDesc D3DShaderResourceAttribs::GetHLSLResourceDesc() const
     ResourceDesc.Name           = Name;
     ResourceDesc.ArraySize      = BindCount;
     ResourceDesc.ShaderRegister = BindPoint;
-    switch (GetInputType())
+
+    switch (static_cast<Uint32>(GetInputType()))
     {
         case D3D_SIT_CBUFFER:
             ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
@@ -461,6 +462,10 @@ HLSLShaderResourceDesc D3DShaderResourceAttribs::GetHLSLResourceDesc() const
         case D3D_SIT_UAV_CONSUME_STRUCTURED:
         case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
             ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            break;
+
+        case D3D_SIT_RTACCELERATIONSTRUCTURE:
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
             break;
 
         default:

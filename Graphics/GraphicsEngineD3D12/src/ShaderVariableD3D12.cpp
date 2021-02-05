@@ -29,35 +29,51 @@
 
 #include "ShaderVariableD3D12.hpp"
 #include "ShaderResourceVariableBase.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
 
-size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const ShaderResourceLayoutD3D12&     Layout,
-                                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                                         Uint32                               NumAllowedTypes,
-                                                         Uint32&                              NumVariables)
+size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const PipelineResourceSignatureD3D12Impl& Signature,
+                                                         const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                                                         Uint32                                    NumAllowedTypes,
+                                                         SHADER_TYPE                               ShaderType,
+                                                         Uint32&                                   NumVariables)
 {
-    NumVariables           = 0;
-    Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+    NumVariables                       = 0;
+    const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+    const bool   UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
+
     for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
         if (IsAllowedType(VarType, AllowedTypeBits))
         {
-            NumVariables += Layout.GetCbvSrvUavCount(VarType);
-            if (Layout.IsUsingSeparateSamplers())
-                NumVariables += Layout.GetSamplerCount(VarType);
+            const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
+            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
+            {
+                const auto& Res = Signature.GetResourceDesc(r);
+                VERIFY_EXPR(Res.VarType == VarType);
+
+                if (!(Res.ShaderStages & ShaderType))
+                    continue;
+
+                if (!UsingSeparateSamplers && Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+                    continue;
+
+                ++NumVariables;
+            }
         }
     }
 
     return NumVariables * sizeof(ShaderVariableD3D12Impl);
 }
 
-// Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
-void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12&     SrcLayout,
-                                            IMemoryAllocator&                    Allocator,
-                                            const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                            Uint32                               NumAllowedTypes)
+// Creates shader variable for every resource from Signature whose type is one AllowedVarTypes
+void ShaderVariableManagerD3D12::Initialize(const PipelineResourceSignatureD3D12Impl& Signature,
+                                            IMemoryAllocator&                         Allocator,
+                                            const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                                            Uint32                                    NumAllowedTypes,
+                                            SHADER_TYPE                               ShaderType)
 {
 #ifdef DILIGENT_DEBUG
     m_pDbgAllocator = &Allocator;
@@ -65,7 +81,7 @@ void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12&    
 
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
-    auto MemSize = GetRequiredMemorySize(SrcLayout, AllowedVarTypes, NumAllowedTypes, m_NumVariables);
+    auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
 
     if (m_NumVariables == 0)
         return;
@@ -73,32 +89,33 @@ void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12&    
     auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variables", MemSize);
     m_pVariables  = reinterpret_cast<ShaderVariableD3D12Impl*>(pRawMem);
 
-    Uint32 VarInd = 0;
+    Uint32     VarInd                = 0;
+    const bool UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
+
     for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
-        if (!IsAllowedType(VarType, AllowedTypeBits))
-            continue;
-
-        Uint32 NumResources = SrcLayout.GetCbvSrvUavCount(VarType);
-        for (Uint32 r = 0; r < NumResources; ++r)
+        if (IsAllowedType(VarType, AllowedTypeBits))
         {
-            const auto& SrcRes = SrcLayout.GetSrvCbvUav(VarType, r);
-            ::new (m_pVariables + VarInd) ShaderVariableD3D12Impl{*this, SrcRes};
-            ++VarInd;
-        }
-
-        if (SrcLayout.IsUsingSeparateSamplers())
-        {
-            Uint32 NumSamplers = SrcLayout.GetSamplerCount(VarType);
-            for (Uint32 r = 0; r < NumSamplers; ++r)
+            const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
+            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
             {
-                const auto& SrcSampler = SrcLayout.GetSampler(VarType, r);
-                ::new (m_pVariables + VarInd) ShaderVariableD3D12Impl{*this, SrcSampler};
+                const auto& Res = Signature.GetResourceDesc(r);
+                VERIFY_EXPR(Res.VarType == VarType);
+
+                if (!(Res.ShaderStages & ShaderType))
+                    continue;
+
+                if (!UsingSeparateSamplers && Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+                    continue;
+
+                ::new (m_pVariables + VarInd) ShaderVariableD3D12Impl{*this, r};
                 ++VarInd;
             }
         }
     }
     VERIFY_EXPR(VarInd == m_NumVariables);
+
+    m_pSignature = &Signature;
 }
 
 ShaderVariableManagerD3D12::~ShaderVariableManagerD3D12()
@@ -124,8 +141,9 @@ ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(const Char* Nam
     ShaderVariableD3D12Impl* pVar = nullptr;
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
-        auto& Var = m_pVariables[v];
-        if (strcmp(Var.m_Resource.Attribs.Name, Name) == 0)
+        auto&       Var = m_pVariables[v];
+        const auto& Res = Var.GetDesc();
+        if (strcmp(Res.Name, Name) == 0)
         {
             pVar = &Var;
             break;
@@ -176,31 +194,67 @@ void ShaderVariableManagerD3D12::BindResources(IResourceMapping* pResourceMappin
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
         auto&       Var = m_pVariables[v];
-        const auto& Res = Var.m_Resource;
+        const auto& Res = Var.GetDesc();
 
-        if ((Flags & (1 << Res.GetVariableType())) == 0)
+        if ((Flags & (1u << Res.VarType)) == 0)
             continue;
 
-        for (Uint32 ArrInd = 0; ArrInd < Res.Attribs.BindCount; ++ArrInd)
+        for (Uint32 ArrInd = 0; ArrInd < Res.ArraySize; ++ArrInd)
         {
-            if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, m_ResourceCache))
+            if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Var.IsBound(ArrInd))
                 continue;
 
+            const auto*                  VarName = Res.Name;
             RefCntAutoPtr<IDeviceObject> pObj;
-            VERIFY_EXPR(pResourceMapping != nullptr);
-            pResourceMapping->GetResource(Res.Attribs.Name, &pObj, ArrInd);
+            pResourceMapping->GetResource(VarName, &pObj, ArrInd);
             if (pObj)
             {
-                //  Call non-virtual function
-                Res.BindResource(pObj, ArrInd, m_ResourceCache);
+                Var.BindResource(pObj, ArrInd);
             }
             else
             {
-                if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, m_ResourceCache))
-                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '", Res.Attribs.GetPrintName(ArrInd), "': resource is not found in the resource mapping");
+                if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Var.IsBound(ArrInd))
+                {
+                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '",
+                                      GetShaderResourcePrintName(Res, ArrInd),
+                                      "': resource is not found in the resource mapping. "
+                                      "Do not use BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag to suppress the message if this is not an issue.");
+                }
             }
         }
     }
+}
+
+
+
+void ShaderVariableD3D12Impl::Set(IDeviceObject* pObject)
+{
+    BindResource(pObject, 0);
+}
+
+void ShaderVariableD3D12Impl::SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)
+{
+    const auto& ResDesc = GetDesc();
+    VerifyAndCorrectSetArrayArguments(ResDesc.Name, ResDesc.ArraySize, FirstElement, NumElements);
+
+    for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
+        BindResource(ppObjects[Elem], FirstElement + Elem);
+}
+
+bool ShaderVariableD3D12Impl::IsBound(Uint32 ArrayIndex) const
+{
+    auto* pSignature    = m_ParentManager.m_pSignature;
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
+
+    return pSignature->IsBound(ArrayIndex, m_ResIndex, ResourceCache);
+}
+
+void ShaderVariableD3D12Impl::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+{
+    auto* pSignature    = m_ParentManager.m_pSignature;
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
+
+    pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, ResourceCache);
 }
 
 } // namespace Diligent

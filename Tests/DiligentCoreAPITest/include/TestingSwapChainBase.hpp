@@ -24,6 +24,7 @@
  *  all other commercial damages or losses), even if such Contributor has been advised 
  *  of the possibility of such damages.
  */
+#pragma once
 
 #include <vector>
 

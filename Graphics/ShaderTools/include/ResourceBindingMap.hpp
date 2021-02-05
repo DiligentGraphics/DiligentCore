@@ -27,29 +27,35 @@
 
 #pragma once
 
-#include <d3dcommon.h>
+#include <unordered_map>
 
 #include "Constants.h"
-#include "Shader.h"
-#include "ResourceBindingMap.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
 
-struct DXBCUtils
+struct ResourceBinding
 {
-    using BindInfo            = ResourceBinding::BindInfo;
-    using TResourceBindingMap = ResourceBinding::TMap;
+    struct BindInfo
+    {
+        // new bind point & space
+        Uint32 BindPoint = ~0u;
+        Uint32 Space     = ~0u;
 
+        // current (previous) bind point & space
+        mutable Uint32 SrcBindPoint = ~0u;
+        mutable Uint32 SrcSpace     = ~0u;
 
-    /// Remaps resource bindings in the given DXBC byte code.
+        BindInfo() {}
 
-    /// \param [in]    ResourceMap - Resource binding map. For every resource in the
-    ///                              byte code it must define the binding (shader register).
-    /// \param [inout] pBytecode   - Byte code that will be patched.
-    static bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
-                                      void*                      pBytecode,
-                                      size_t                     Size);
+        BindInfo(Uint32 _BindPoint, Uint32 _Space) :
+            BindPoint{_BindPoint}, Space{_Space}
+        {}
+    };
+
+    /// A mapping from the resource name to the binding (shader register).
+    using TMap = std::unordered_map<HashMapStringKey, BindInfo, HashMapStringKey::Hasher>;
 };
 
 } // namespace Diligent

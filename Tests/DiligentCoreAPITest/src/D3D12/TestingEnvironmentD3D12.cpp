@@ -151,6 +151,44 @@ HRESULT TestingEnvironmentD3D12::CompileDXILShader(const std::string& Source,
     return S_OK;
 }
 
+#if !D3D11_SUPPORTED
+HRESULT CompileD3DShader(const std::string&      Source,
+                         LPCSTR                  strFunctionName,
+                         const D3D_SHADER_MACRO* pDefines,
+                         LPCSTR                  profile,
+                         ID3DBlob**              ppBlobOut)
+{
+    DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+#    if defined(DILIGENT_DEBUG)
+    // Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
+    // Setting this flag improves the shader debugging experience, but still allows
+    // the shaders to be optimized and to run exactly the way they will run in
+    // the release configuration of this program.
+    dwShaderFlags |= D3DCOMPILE_DEBUG;
+#    else
+    // Warning: do not use this flag as it causes shader compiler to fail the compilation and
+    // report strange errors:
+    // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
+#    endif
+
+    CComPtr<ID3DBlob> pCompilerOutput;
+
+    auto hr = D3DCompile(Source.c_str(), Source.length(), NULL, pDefines, nullptr, strFunctionName, profile, dwShaderFlags, 0, ppBlobOut, &pCompilerOutput);
+
+    const char* CompilerMsg = pCompilerOutput ? reinterpret_cast<const char*>(pCompilerOutput->GetBufferPointer()) : nullptr;
+    if (FAILED(hr))
+    {
+        LOG_ERROR_AND_THROW("Failed to compile D3D shader :\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>"));
+    }
+    else if (CompilerMsg != nullptr)
+    {
+        LOG_INFO_MESSAGE("Shader compiler output:\n", CompilerMsg);
+    }
+
+    return hr;
+}
+#endif // !D3D11_SUPPORTED
+
 } // namespace Testing
 
 } // namespace Diligent

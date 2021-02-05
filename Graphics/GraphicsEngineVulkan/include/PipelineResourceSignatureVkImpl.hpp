@@ -125,7 +125,8 @@ public:
 
         static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
         static_assert((1u << _DescrSetBits) >= MAX_DESCRIPTOR_SETS, "Not enough bits to store descriptor set index");
-        static_assert((1u << _BindingIndexBits) >= MAX_DESCRIPTOR_SETS, "Not enough bits to store resource binding index");
+        static_assert((1u << _BindingIndexBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store resource binding index");
+        static_assert((1u << _SamplerIndBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sampler resource index");
 
     public:
         static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
@@ -175,6 +176,7 @@ public:
 
         DescriptorType GetDescriptorType() const { return static_cast<DescriptorType>(DescrType); }
         bool           IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
+        bool           IsCombinedWithSampler() const { return SamplerInd != InvalidSamplerInd; }
     };
 
     const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
@@ -234,6 +236,7 @@ public:
     /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
     {
+        VERIFY_EXPR(pPRS != nullptr);
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureVkImpl>(pPRS));
     }
 
@@ -255,6 +258,10 @@ public:
                       Uint32                 ArrayIndex,
                       Uint32                 ResIndex,
                       ShaderResourceCacheVk& ResourceCache) const;
+
+    bool IsBound(Uint32                 ArrayIndex,
+                 Uint32                 ResIndex,
+                 ShaderResourceCacheVk& ResourceCache) const;
 
     // Commits dynamic resources from ResourceCache to vkDynamicDescriptorSet
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
@@ -285,6 +292,7 @@ private:
         CACHE_GROUP_DYN_UB = 0, // Uniform buffer with dynamic offset
         CACHE_GROUP_DYN_SB,     // Storage buffer with dynamic offset
         CACHE_GROUP_OTHER,      // Other resource type
+        CACHE_GROUP_COUNT_PER_Type,
 
         CACHE_GROUP_DYN_UB_STAT_VAR = CACHE_GROUP_DYN_UB, // Uniform buffer with dynamic offset, static variable
         CACHE_GROUP_DYN_SB_STAT_VAR = CACHE_GROUP_DYN_SB, // Storage buffer with dynamic offset, static variable
@@ -296,7 +304,7 @@ private:
 
         CACHE_GROUP_COUNT
     };
-    static_assert(CACHE_GROUP_COUNT == 3 * MAX_DESCRIPTOR_SETS, "Inconsistent cache group count");
+    static_assert(CACHE_GROUP_COUNT == CACHE_GROUP_COUNT_PER_Type * MAX_DESCRIPTOR_SETS, "Inconsistent cache group count");
 
     using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] including ArraySize
     using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] not counting ArraySize

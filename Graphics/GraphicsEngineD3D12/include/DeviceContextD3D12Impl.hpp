@@ -386,6 +386,37 @@ private:
                                                  ID3D12Resource*&               pd3d12ArgsBuff,
                                                  Uint64&                        BuffDataStartByteOffset);
 
+    struct RootTableInfo
+    {
+        using Bitfield = Uint8;
+        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
+
+        //Bitfield             ActiveSRBMask      ;     // Indicates which SRBs are active in current PSO
+        bool                 bRootViewsCommitted; // Indicates if root views have been committed since the time SRB  has been committed.
+        bool                 bRootTablesCommited;
+        bool                 IsCompute : 1;
+        ID3D12RootSignature* pRootSig;
+
+        std::array<class ShaderResourceBindingD3D12Impl*, MAX_RESOURCE_SIGNATURES> SRBs;
+
+        RootTableInfo(bool _IsCompute)
+        {
+            memset(this, 0, sizeof(*this));
+            IsCompute = _IsCompute;
+        }
+
+        __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
+        {
+            return true; //(StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
+        }
+    };
+    __forceinline RootTableInfo& GetRootTableInfo(PIPELINE_TYPE PipelineType);
+
+    __forceinline void CommitRootTables(RootTableInfo& RootInfo);
+#ifdef DILIGENT_DEVELOPMENT
+    void DvpValidateCommittedShaderResources();
+#endif
+
     struct TextureUploadSpace
     {
         D3D12DynamicAllocation Allocation;
@@ -424,12 +455,12 @@ private:
         // Indicates if currently committed D3D11 index buffer is up to date
         bool bCommittedD3D12IBUpToDate = false;
 
-        // Indicates if root views have been committed since the time SRB
-        // has been committed.
-        bool bRootViewsCommitted = false;
-
-        class ShaderResourceCacheD3D12* pCommittedResourceCache = nullptr;
+        // AZ TODO
+        bool CommittedResourcesValidated = false;
     } m_State;
+
+    RootTableInfo m_GraphicsResources;
+    RootTableInfo m_ComputeResources;
 
     CComPtr<ID3D12CommandSignature> m_pDrawIndirectSignature;
     CComPtr<ID3D12CommandSignature> m_pDrawIndexedIndirectSignature;

@@ -256,32 +256,18 @@ void ShaderVariableVkImpl::SetArray(IDeviceObject* const* ppObjects,
 
 bool ShaderVariableVkImpl::IsBound(Uint32 ArrayIndex) const
 {
-    const auto&  ResourceCache = m_ParentManager.m_ResourceCache;
-    const auto&  ResDesc       = GetDesc();
-    const auto&  Attribs       = GetAttribs();
-    const Uint32 CacheOffset   = Attribs.CacheOffset(ResourceCache.GetContentType());
+    auto* pSignature    = m_ParentManager.m_pSignature;
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
-
-    if (Attribs.DescrSet < ResourceCache.GetNumDescriptorSets())
-    {
-        const auto& Set = ResourceCache.GetDescriptorSet(Attribs.DescrSet);
-        if (CacheOffset + ArrayIndex < Set.GetSize())
-        {
-            const auto& CachedRes = Set.GetResource(CacheOffset + ArrayIndex);
-            return CachedRes.pObject != nullptr;
-        }
-    }
-
-    return false;
+    return pSignature->IsBound(ArrayIndex, m_ResIndex, ResourceCache);
 }
 
 void ShaderVariableVkImpl::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
 {
-    auto* pSign         = m_ParentManager.m_pSignature;
+    auto* pSignature    = m_ParentManager.m_pSignature;
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
-    pSign->BindResource(pObj, ArrayIndex, m_ResIndex, ResourceCache);
+    pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, ResourceCache);
 }
 
 } // namespace Diligent

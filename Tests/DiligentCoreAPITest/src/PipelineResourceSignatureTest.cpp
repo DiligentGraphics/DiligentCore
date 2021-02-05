@@ -29,10 +29,10 @@
 #include <vector>
 
 #include "TestingEnvironment.hpp"
+#include "TestingSwapChainBase.hpp"
 #include "ShaderMacroHelper.hpp"
 #include "GraphicsAccessories.hpp"
 #include "ResourceLayoutTestCommon.hpp"
-#include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
 
@@ -1397,7 +1397,7 @@ TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().IsVulkanDevice())
+    if (!pDevice->GetDeviceCaps().Features.ShaderResourceRuntimeArray || !pDevice->GetDeviceCaps().IsVulkanDevice())
     {
         GTEST_SKIP() << "Descriptor indexing is not supported by this device";
     }

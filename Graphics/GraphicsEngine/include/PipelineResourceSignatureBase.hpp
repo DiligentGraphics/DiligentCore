@@ -101,8 +101,6 @@ public:
         return std::pair<Uint32, Uint32>{m_ResourceOffsets[VarType], m_ResourceOffsets[VarType + 1]};
     }
 
-    SHADER_TYPE GetActiveShaderStages() const { return m_ShaderStages; }
-
     // Returns the number of shader stages that have resources.
     Uint32 GetNumActiveShaderStages() const { return m_NumShaderStages; }
 

@@ -46,6 +46,7 @@
 #include "BottomLevelASD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
 #include "ShaderBindingTableD3D12Impl.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -141,7 +142,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             sizeof(FramebufferD3D12Impl),
             sizeof(BottomLevelASD3D12Impl),
             sizeof(TopLevelASD3D12Impl),
-            sizeof(ShaderBindingTableD3D12Impl)
+            sizeof(ShaderBindingTableD3D12Impl),
+            sizeof(PipelineResourceSignatureD3D12Impl)
         }
     },
     m_pd3d12Device  {pd3d12Device},
@@ -159,14 +161,16 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         {RawMemAllocator, *this, EngineCI.GPUDescriptorHeapSize[0], EngineCI.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
         {RawMemAllocator, *this, EngineCI.GPUDescriptorHeapSize[1], EngineCI.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
     },
-    m_ContextPool         (STD_ALLOCATOR_RAW_MEM(PooledCommandContext, GetRawAllocator(), "Allocator for vector<PooledCommandContext>")),
-    m_DynamicMemoryManager{GetRawAllocator(), *this, EngineCI.NumDynamicHeapPagesToReserve, EngineCI.DynamicHeapPageSize},
-    m_MipsGenerator       {pd3d12Device},
-    m_QueryMgr            {pd3d12Device, EngineCI.QueryPoolSizes},
-    m_pDxCompiler         {CreateDXCompiler(DXCompilerTarget::Direct3D12, EngineCI.pDxCompilerPath)}
+    m_ContextPool           (STD_ALLOCATOR_RAW_MEM(PooledCommandContext, GetRawAllocator(), "Allocator for vector<PooledCommandContext>")),
+    m_DynamicMemoryManager  {GetRawAllocator(), *this, EngineCI.NumDynamicHeapPagesToReserve, EngineCI.DynamicHeapPageSize},
+    m_MipsGenerator         {pd3d12Device},
+    m_QueryMgr              {pd3d12Device, EngineCI.QueryPoolSizes},
+    m_pDxCompiler           {CreateDXCompiler(DXCompilerTarget::Direct3D12, EngineCI.pDxCompilerPath)},
+    m_RootSignatureAllocator{GetRawAllocator(), sizeof(RootSignatureD3D12), 128},
+    m_RootSignatureCache    {*this}
 // clang-format on
 {
-    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 16, "Please add new objects to DeviceObjectSizes constructor");
 
     // set device properties
     {
@@ -310,12 +314,14 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             }
         }
 
-#define CHECK_REQUIRED_FEATURE(Feature, FeatureName)                          \
-    do                                                                        \
-    {                                                                         \
-        if (EngineCI.Features.Feature == DEVICE_FEATURE_STATE_ENABLED &&      \
-            m_DeviceCaps.Features.Feature != DEVICE_FEATURE_STATE_ENABLED)    \
-            LOG_ERROR_AND_THROW(FeatureName, "not supported by this device"); \
+        m_DeviceCaps.Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_ENABLED;
+
+#define CHECK_REQUIRED_FEATURE(Feature, FeatureName)                           \
+    do                                                                         \
+    {                                                                          \
+        if (EngineCI.Features.Feature == DEVICE_FEATURE_STATE_ENABLED &&       \
+            m_DeviceCaps.Features.Feature != DEVICE_FEATURE_STATE_ENABLED)     \
+            LOG_ERROR_AND_THROW(FeatureName, " not supported by this device"); \
     } while (false)
 
         // clang-format off
@@ -333,7 +339,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 #undef CHECK_REQUIRED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 33, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         auto& TexCaps = m_DeviceCaps.TexCaps;
@@ -815,6 +821,25 @@ void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
                        });
 }
 
+void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                            IPipelineResourceSignature**         ppSignature)
+{
+    CreatePipelineResourceSignature(Desc, ppSignature, false);
+}
+
+void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                            IPipelineResourceSignature**         ppSignature,
+                                                            bool                                 IsDeviceInternal)
+{
+    CreateDeviceObject("PipelineResourceSignature", Desc, ppSignature,
+                       [&]() //
+                       {
+                           PipelineResourceSignatureD3D12Impl* pPRSD3D12(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignatureD3D12Impl instance", PipelineResourceSignatureD3D12Impl)(this, Desc, IsDeviceInternal));
+                           pPRSD3D12->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
+                           OnCreateDeviceObject(pPRSD3D12);
+                       });
+}
+
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, "Invalid heap type");
@@ -825,6 +850,12 @@ DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateGPUDescriptors(D3D12_DES
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type <= D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Invalid heap type");
     return m_GPUDescriptorHeaps[Type].Allocate(Count);
+}
+
+void RenderDeviceD3D12Impl::CreateRootSignature(const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount, RootSignatureD3D12** ppRootSig)
+{
+    RootSignatureD3D12* pRootSigD3D12(NEW_RC_OBJ(m_RootSignatureAllocator, "RootSignatureD3D12 instance", RootSignatureD3D12)(this, ppSignatures, SignatureCount));
+    *ppRootSig = pRootSigD3D12;
 }
 
 } // namespace Diligent

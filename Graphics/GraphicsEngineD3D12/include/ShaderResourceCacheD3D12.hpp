@@ -84,44 +84,19 @@
 //
 
 #include "DescriptorHeap.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
 
-enum class CachedResourceType : Int32
-{
-    Unknown = -1,
-    CBV     = 0,
-    TexSRV,
-    BufSRV,
-    TexUAV,
-    BufUAV,
-    Sampler,
-    AccelStruct,
-    NumTypes
-};
-
 class ShaderResourceCacheD3D12
 {
 public:
-    // This enum is used for debug purposes only
-    enum DbgCacheContentType
-    {
-        StaticShaderResources,
-        SRBResources
-    };
+    using CacheContentType = PipelineResourceSignatureD3D12Impl::CacheContentType;
 
-    explicit ShaderResourceCacheD3D12(DbgCacheContentType dbgContentType) noexcept
-    // clang-format off
-#ifdef DILIGENT_DEBUG
-        : m_DbgContentType
-    {
-        dbgContentType
-    }
-#endif
-    // clang-format on
-    {
-    }
+    explicit ShaderResourceCacheD3D12(CacheContentType ContentType) noexcept :
+        m_ContentType{static_cast<Uint32>(ContentType)}
+    {}
 
     ~ShaderResourceCacheD3D12();
 
@@ -139,7 +114,7 @@ public:
     {
         Resource() noexcept {}
 
-        CachedResourceType Type = CachedResourceType::Unknown;
+        SHADER_RESOURCE_TYPE Type = SHADER_RESOURCE_TYPE_UNKNOWN;
         // CPU descriptor handle of a cached resource in CPU-only descriptor heap
         // Note that for dynamic resources, this is the only available CPU descriptor handle
         D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {0};
@@ -163,20 +138,18 @@ public:
         }
 
         inline const Resource& GetResource(Uint32                           OffsetFromTableStart,
-                                           const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType,
-                                           const SHADER_TYPE                dbgRefShaderType) const
+                                           const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType) const
         {
             VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type");
-            VERIFY(dbgRefShaderType == SHADER_TYPE_UNKNOWN || m_dbgShaderType == SHADER_TYPE_UNKNOWN || m_dbgShaderType == dbgRefShaderType, "Incosistent shader type");
+            //VERIFY(dbgRefShaderType == SHADER_TYPE_UNKNOWN || m_dbgShaderType == SHADER_TYPE_UNKNOWN || m_dbgShaderType == dbgRefShaderType, "Incosistent shader type");
 
             VERIFY(OffsetFromTableStart < m_NumResources, "Root table is not large enough to store descriptor at offset ", OffsetFromTableStart);
             return m_pResources[OffsetFromTableStart];
         }
         inline Resource& GetResource(Uint32                           OffsetFromTableStart,
-                                     const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType,
-                                     const SHADER_TYPE                dbgRefShaderType)
+                                     const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType)
         {
-            return const_cast<Resource&>(const_cast<const RootTable*>(this)->GetResource(OffsetFromTableStart, dbgDescriptorHeapType, dbgRefShaderType));
+            return const_cast<Resource&>(const_cast<const RootTable*>(this)->GetResource(OffsetFromTableStart, dbgDescriptorHeapType));
         }
 
         inline Uint32 GetSize() const { return m_NumResources; }
@@ -187,22 +160,25 @@ public:
 #ifdef DILIGENT_DEBUG
         void SetDebugAttribs(Uint32                           MaxOffset,
                              const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType,
-                             const SHADER_TYPE                dbgRefShaderType)
+                             bool                             isDynamic)
         {
             VERIFY_EXPR(m_NumResources == MaxOffset);
-            m_dbgHeapType   = dbgDescriptorHeapType;
-            m_dbgShaderType = dbgRefShaderType;
+            m_dbgHeapType = dbgDescriptorHeapType;
+            //m_dbgShaderType = dbgRefShaderType;
+            m_dbgIsDynamic = isDynamic;
         }
 
         D3D12_DESCRIPTOR_HEAP_TYPE DbgGetHeapType() const { return m_dbgHeapType; }
+        bool                       IsDynamic() const { return m_dbgIsDynamic; }
 #endif
 
         const Uint32 m_NumResources = 0;
 
     private:
 #ifdef DILIGENT_DEBUG
-        D3D12_DESCRIPTOR_HEAP_TYPE m_dbgHeapType   = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-        SHADER_TYPE                m_dbgShaderType = SHADER_TYPE_UNKNOWN;
+        D3D12_DESCRIPTOR_HEAP_TYPE m_dbgHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+        //SHADER_TYPE                m_dbgShaderType = SHADER_TYPE_UNKNOWN;
+        bool m_dbgIsDynamic = false;
 #endif
 
         Resource* const m_pResources = nullptr;
@@ -320,10 +296,10 @@ public:
     // Returns the number of dynamic constant buffers bound in the cache regardless of their variable types
     Uint32 GetNumDynamicCBsBound() const { return m_NumDynamicCBsBound; }
 
+    CacheContentType GetContentType() const { return static_cast<CacheContentType>(m_ContentType); }
+
 #ifdef DILIGENT_DEBUG
-    // Only for debug purposes: indicates what types of resources are stored in the cache
-    DbgCacheContentType DbgGetContentType() const { return m_DbgContentType; }
-    void                DbgVerifyBoundDynamicCBsCounter() const;
+    void DbgVerifyBoundDynamicCBsCounter() const;
 #endif
 
 private:
@@ -346,10 +322,8 @@ private:
     // The number of the dynamic buffers bound in the resource cache regardless of their variable type
     Uint32 m_NumDynamicCBsBound = 0;
 
-#ifdef DILIGENT_DEBUG
-    // Only for debug purposes: indicates what types of resources are stored in the cache
-    const DbgCacheContentType m_DbgContentType;
-#endif
+    // Indicates what types of resources are stored in the cache
+    const Uint32 m_ContentType : 1;
 };
 
 } // namespace Diligent

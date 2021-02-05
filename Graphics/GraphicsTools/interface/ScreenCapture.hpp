@@ -51,7 +51,7 @@ public:
         RefCntAutoPtr<ITexture> pTexture;
         Uint32                  Id = 0;
 
-        operator bool() const
+        explicit operator bool() const
         {
             return pTexture != nullptr;
         }

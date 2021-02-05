@@ -154,9 +154,9 @@ bool RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
 } // namespace
 
 
-bool DXBCUtils::RemapDXBCResources(const TResourceBindingMap& ResourceMap,
-                                   void*                      pBytecode,
-                                   size_t                     Size)
+bool DXBCUtils::RemapResourceBindings(const TResourceBindingMap& ResourceMap,
+                                      void*                      pBytecode,
+                                      size_t                     Size)
 {
     if (pBytecode == nullptr)
     {

@@ -278,6 +278,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         ENABLE_FEATURE(Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE, UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
         // clang-format on
 
+        const auto& DescrIndexingFeats = DeviceExtFeatures.DescriptorIndexing;
+        ENABLE_FEATURE(DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE, ShaderResourceRuntimeArray, "shader resource runtime array is");
+
         ENABLE_FEATURE(DeviceExtFeatures.AccelStruct.accelerationStructure != VK_FALSE && DeviceExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE, RayTracing, "Ray tracing is");
 #undef FeatureSupport
 
@@ -401,6 +404,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 DeviceExtensions.push_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
             }
 
+            if (EngineCI.Features.ShaderResourceRuntimeArray != DEVICE_FEATURE_STATE_DISABLED ||
+                EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME); // required for VK_EXT_descriptor_indexing
+                DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+
+                EnabledExtFeats.DescriptorIndexing = DescrIndexingFeats;
+
+                *NextExt = &EnabledExtFeats.DescriptorIndexing;
+                NextExt  = &EnabledExtFeats.DescriptorIndexing.pNext;
+            }
 
             // Ray tracing
             if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
@@ -414,8 +428,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                     VERIFY_EXPR(DeviceExtFeatures.Spirv14);
                 }
 
-                DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);             // required for VK_EXT_descriptor_indexing
-                DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);      // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);    // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME); // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);   // required for ray tracing
@@ -424,7 +436,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 EnabledExtFeats.AccelStruct         = DeviceExtFeatures.AccelStruct;
                 EnabledExtFeats.RayTracingPipeline  = DeviceExtFeatures.RayTracingPipeline;
                 EnabledExtFeats.BufferDeviceAddress = DeviceExtFeatures.BufferDeviceAddress;
-                EnabledExtFeats.DescriptorIndexing  = DeviceExtFeatures.DescriptorIndexing;
 
                 // disable unused features
                 EnabledExtFeats.AccelStruct.accelerationStructureCaptureReplay                    = false;
@@ -441,8 +452,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 NextExt  = &EnabledExtFeats.AccelStruct.pNext;
                 *NextExt = &EnabledExtFeats.RayTracingPipeline;
                 NextExt  = &EnabledExtFeats.RayTracingPipeline.pNext;
-                *NextExt = &EnabledExtFeats.DescriptorIndexing;
-                NextExt  = &EnabledExtFeats.DescriptorIndexing.pNext;
                 *NextExt = &EnabledExtFeats.BufferDeviceAddress;
                 NextExt  = &EnabledExtFeats.BufferDeviceAddress.pNext;
             }
@@ -452,7 +461,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 33, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();

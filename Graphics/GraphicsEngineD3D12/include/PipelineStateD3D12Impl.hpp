@@ -34,10 +34,7 @@
 #include "PipelineStateD3D12.h"
 #include "PipelineStateBase.hpp"
 #include "RootSignature.hpp"
-#include "ShaderResourceLayoutD3D12.hpp"
-#include "SRBMemoryAllocator.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "ShaderVariableD3D12.hpp"
 #include "ShaderD3D12Impl.hpp"
 
 namespace Diligent
@@ -58,23 +55,14 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateD3D12, TPipelineStateBase)
 
-    /// Implementation of IPipelineState::BindStaticResources() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final;
-
-    /// Implementation of IPipelineState::GetStaticVariableCount() in Direct3D12 backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
-
-    /// Implementation of IPipelineState::GetStaticVariableByName() in Direct3D12 backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
-
-    /// Implementation of IPipelineState::GetStaticVariableByIndex() in Direct3D12 backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
-
-    /// Implementation of IPipelineState::CreateShaderResourceBinding() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final;
-
     /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D12 backend.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
+
+    /// Implementation of IPipelineState::GetResourceSignatureCount() in Direct3D12 backend.
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return GetSignatureCount(); }
+
+    /// Implementation of IPipelineState::GetResourceSignature() in Direct3D12 backend.
+    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final { return GetSignature(Index); }
 
     /// Implementation of IPipelineStateD3D12::GetD3D12PipelineState().
     virtual ID3D12PipelineState* DILIGENT_CALL_TYPE GetD3D12PipelineState() const override final { return static_cast<ID3D12PipelineState*>(m_pd3d12PSO.p); }
@@ -83,45 +71,16 @@ public:
     virtual ID3D12StateObject* DILIGENT_CALL_TYPE GetD3D12StateObject() const override final { return static_cast<ID3D12StateObject*>(m_pd3d12PSO.p); }
 
     /// Implementation of IPipelineStateD3D12::GetD3D12RootSignature().
-    virtual ID3D12RootSignature* DILIGENT_CALL_TYPE GetD3D12RootSignature() const override final { return m_RootSig.GetD3D12RootSignature(); }
+    virtual ID3D12RootSignature* DILIGENT_CALL_TYPE GetD3D12RootSignature() const override final { return m_RootSig->GetD3D12RootSignature(); }
 
-    struct CommitAndTransitionResourcesAttribs
+    const RootSignatureD3D12* GetRootSignature() const { return m_RootSig; }
+
+    Uint32 GetSignatureCount() const { return m_SignatureCount; }
+
+    PipelineResourceSignatureD3D12Impl* GetSignature(Uint32 index) const
     {
-        Uint32                  CtxId                  = 0;
-        IShaderResourceBinding* pShaderResourceBinding = nullptr;
-        bool                    CommitResources        = false;
-        bool                    TransitionResources    = false;
-        bool                    ValidateStates         = false;
-    };
-    ShaderResourceCacheD3D12* CommitAndTransitionShaderResources(class DeviceContextD3D12Impl*        pDeviceCtx,
-                                                                 class CommandContext&                CmdCtx,
-                                                                 CommitAndTransitionResourcesAttribs& Attrib) const;
-
-    const RootSignature& GetRootSignature() const { return m_RootSig; }
-
-    const ShaderResourceLayoutD3D12& GetShaderResLayout(Uint32 ShaderInd) const
-    {
-        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
-        return m_pShaderResourceLayouts[ShaderInd];
-    }
-
-    const ShaderResourceLayoutD3D12& GetStaticShaderResLayout(Uint32 ShaderInd) const
-    {
-        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
-        return m_pShaderResourceLayouts[GetNumShaderStages() + ShaderInd];
-    }
-
-    ShaderResourceCacheD3D12& GetStaticShaderResCache(Uint32 ShaderInd) const
-    {
-        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
-        return m_pStaticResourceCaches[ShaderInd];
-    }
-
-    bool ContainsShaderResources() const;
-
-    SRBMemoryAllocator& GetSRBMemoryAllocator()
-    {
-        return m_SRBMemAllocator;
+        VERIFY_EXPR(index < m_SignatureCount);
+        return m_Signatures[index].RawPtr<PipelineResourceSignatureD3D12Impl>();
     }
 
 private:
@@ -133,37 +92,45 @@ private:
         void   Append(ShaderD3D12Impl* pShader);
         size_t Count() const;
 
-        SHADER_TYPE                   Type = SHADER_TYPE_UNKNOWN;
-        std::vector<ShaderD3D12Impl*> Shaders;
+        SHADER_TYPE                    Type = SHADER_TYPE_UNKNOWN;
+        std::vector<ShaderD3D12Impl*>  Shaders;
+        std::vector<CComPtr<ID3DBlob>> ByteCodes;
     };
     using TShaderStages = std::vector<ShaderStageInfo>;
 
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo,
-                             RootSignatureBuilder&    RootSigBuilder,
                              TShaderStages&           ShaderStages,
-                             LocalRootSignature*      pLocalRoot = nullptr);
+                             LocalRootSignatureD3D12* pLocalRootSig = nullptr);
 
-    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
-                             RootSignatureBuilder&          RootSigBuilder,
-                             TShaderStages&                 ShaderStages,
-                             LocalRootSignature*            pLocalRoot);
+    void InitRootSignature(const PipelineStateCreateInfo& CreateInfo,
+                           TShaderStages&                 ShaderStages,
+                           LocalRootSignatureD3D12*       pLocalRootSig);
+
+    void CreateDefaultResourceSignature(const PipelineStateCreateInfo& CreateInfo,
+                                        TShaderStages&                 ShaderStages,
+                                        LocalRootSignatureD3D12*       pLocalRootSig,
+                                        IPipelineResourceSignature**   ppImplicitSignature);
 
     void Destruct();
 
-    CComPtr<ID3D12DeviceChild> m_pd3d12PSO;
-    RootSignature              m_RootSig;
+private:
+    CComPtr<ID3D12DeviceChild>        m_pd3d12PSO;
+    RefCntAutoPtr<RootSignatureD3D12> m_RootSig;
 
-    SRBMemoryAllocator m_SRBMemAllocator;
+    using SignatureArrayType = RootSignatureD3D12::SignatureArrayType;
 
-    ShaderResourceLayoutD3D12*  m_pShaderResourceLayouts = nullptr; // [m_NumShaderStages * 2]
-    ShaderResourceCacheD3D12*   m_pStaticResourceCaches  = nullptr; // [m_NumShaderStages]
-    ShaderVariableManagerD3D12* m_pStaticVarManagers     = nullptr; // [m_NumShaderStages]
+    Uint8              m_SignatureCount = 0;
+    SignatureArrayType m_Signatures     = {};
 
-    // Resource layout index in m_pShaderResourceLayouts array for every shader stage,
-    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
-    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
+    void* m_pRawMem = nullptr; // AZ TODO: move to base class
+
+#ifdef DILIGENT_DEVELOPMENT
+    // Shader resources for all shaders in all shader stages
+    std::vector<std::shared_ptr<const ShaderResourcesD3D12>> m_ShaderResources;
+    // Resource info for every resource in m_ShaderResources, in the same order
+    //std::vector<PipelineLayoutVk::ResourceInfo> m_ResInfo;
+#endif
 };
 
 } // namespace Diligent

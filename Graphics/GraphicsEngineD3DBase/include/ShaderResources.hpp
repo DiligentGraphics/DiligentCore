@@ -221,15 +221,6 @@ public:
         return BindPoint != InvalidBindPoint;
     }
 
-    String GetPrintName(Uint32 ArrayInd) const
-    {
-        VERIFY_EXPR(ArrayInd < BindCount);
-        if (BindCount > 1)
-            return String(Name) + '[' + std::to_string(ArrayInd) + ']';
-        else
-            return Name;
-    }
-
     bool IsCompatibleWith(const D3DShaderResourceAttribs& Attribs) const
     {
         return BindPoint == Attribs.BindPoint &&

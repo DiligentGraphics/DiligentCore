@@ -157,6 +157,9 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
 
 size_t PipelineLayoutVk::GetHash() const
 {
+    if (m_SignatureCount == 0)
+        return 0;
+
     size_t hash = 0;
     HashCombine(hash, m_SignatureCount);
     for (Uint32 i = 0; i < m_SignatureCount; ++i)

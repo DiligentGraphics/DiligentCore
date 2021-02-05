@@ -28,6 +28,7 @@
 #include "pch.h"
 #include <array>
 #include <sstream>
+#include <d3dcompiler.h>
 
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
@@ -40,6 +41,7 @@
 #include "StringTools.hpp"
 #include "ShaderVariableD3D12.hpp"
 #include "DynamicLinearAllocator.hpp"
+#include "DXBCUtils.hpp"
 #include "DXCompiler.hpp"
 #include "dxc/dxcapi.h"
 
@@ -102,14 +104,9 @@ private:
     std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES> m_Map;
 };
 
-using TBindingMapPerStage = std::array<IDXCompiler::TResourceBindingMap, MAX_SHADERS_IN_PIPELINE>;
-
 void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateInfo,
                                 std::vector<D3D12_STATE_SUBOBJECT>&      Subobjects,
-                                std::vector<CComPtr<IDxcBlob>>&          ShaderBlobs,
-                                DynamicLinearAllocator&                  TempPool,
-                                IDXCompiler*                             compiler,
-                                const TBindingMapPerStage&               BindingMapPerStage) noexcept(false)
+                                DynamicLinearAllocator&                  TempPool) noexcept(false)
 {
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
@@ -124,15 +121,10 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
         auto it_inserted = UniqueShaders.emplace(pShader, nullptr);
         if (it_inserted.second)
         {
-            auto&  LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
-            auto&  ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
-            auto*  pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(pShader);
-            Uint32 ShaderIdx    = GetShaderTypePipelineIndex(pShaderD3D12->GetDesc().ShaderType, PIPELINE_TYPE_RAY_TRACING);
-            auto&  BindingMap   = BindingMapPerStage[ShaderIdx];
-
-            CComPtr<IDxcBlob> pBlob;
-            if (!compiler->RemapResourceBindings(BindingMap, reinterpret_cast<IDxcBlob*>(pShaderD3D12->GetShaderByteCode()), &pBlob))
-                LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShaderD3D12->GetDesc().Name, "'.");
+            auto& LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
+            auto& ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
+            auto* pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(pShader);
+            auto* pBlob        = pShaderD3D12->GetShaderByteCode();
 
             LibDesc.DXILLibrary.BytecodeLength  = pBlob->GetBufferSize();
             LibDesc.DXILLibrary.pShaderBytecode = pBlob->GetBufferPointer();
@@ -152,7 +144,6 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
             }
 
             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &LibDesc});
-            ShaderBlobs.push_back(pBlob);
 
             it_inserted.first->second = ExportDesc.Name;
             return ExportDesc.Name;
@@ -160,8 +151,6 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
         else
             return it_inserted.first->second;
     };
-
-    ShaderBlobs.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
@@ -276,70 +265,76 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
     }
 }
 
-TBindingMapPerStage ExtractResourceBindingMap(const RootSignatureBuilder&                      RootSig,
-                                              const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex,
-                                              const ShaderResourceLayoutD3D12*                 pResourceLayouts,
-                                              const ShaderResourceLayoutD3D12*                 pStaticLayouts) noexcept(false)
+void GetShaderResourceTypeAndFlags(const D3DShaderResourceAttribs& Attribs,
+                                   SHADER_RESOURCE_TYPE&           OutType,
+                                   PIPELINE_RESOURCE_FLAGS&        OutFlags)
 {
-    TBindingMapPerStage BindingMapPerStage;
+    OutFlags = PIPELINE_RESOURCE_FLAG_UNKNOWN;
 
-    const auto ExtractResources = [&](const ShaderResourceLayoutD3D12* pLayouts) //
+    switch (static_cast<Uint32>(Attribs.GetInputType()))
     {
-        for (Uint32 ShaderIdx = 0; ShaderIdx < ResourceLayoutIndex.size(); ++ShaderIdx)
-        {
-            const auto LayoutIdx = ResourceLayoutIndex[ShaderIdx];
-            if (LayoutIdx < 0)
-                continue;
-
-            auto&       BindingMap = BindingMapPerStage[ShaderIdx];
-            const auto& ResLayout  = pLayouts[LayoutIdx];
-
-            const auto TotalResCount = ResLayout.GetTotalResourceCount();
-            for (Uint32 i = 0; i < TotalResCount; ++i)
-            {
-                const auto& Attribs = ResLayout.GetResource(i).Attribs;
-                VERIFY_EXPR(Attribs.Name != nullptr && Attribs.Name[0] != '\0');
-
-                auto Iter = BindingMap.emplace(HashMapStringKey{Attribs.Name}, Attribs.BindPoint).first;
-                VERIFY(Iter->second == Attribs.BindPoint,
-                       "Resource '", Attribs.Name, "' was assigned incosistent bind points in different resource layouts. This is a bug.");
-            }
-        }
-    };
-    // Gather resource bind points
-    ExtractResources(pResourceLayouts);
-    ExtractResources(pStaticLayouts);
-
-    // Gather static sampler bind points
-    for (size_t i = 0; i < RootSig.GetImmutableSamplerCount(); ++i)
-    {
-        const auto&  ImtblSmplr = RootSig.GetImmutableSamplers()[i];
-        const Uint32 ShaderIdx  = GetShaderTypePipelineIndex(ImtblSmplr.ShaderType, PIPELINE_TYPE_RAY_TRACING);
-        const auto   LayoutIdx  = ResourceLayoutIndex[ShaderIdx];
-        if (LayoutIdx < 0)
-            continue;
-
-        if (ImtblSmplr.SamplerName.empty())
-        {
-            UNEXPECTED("Immutable sampler name is empty");
-            continue;
-        }
-
-        auto& BindingMap = BindingMapPerStage[ShaderIdx];
-        auto  Iter       = BindingMap.emplace(HashMapStringKey{ImtblSmplr.SamplerName.c_str()}, ImtblSmplr.ShaderRegister).first;
-        VERIFY(Iter->second == ImtblSmplr.ShaderRegister,
-               "Static sampler '", ImtblSmplr.SamplerName, "' was assigned incosistent bind points in different resource layouts. This is a bug.");
+        case D3D_SIT_CBUFFER:
+            OutType = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+            break;
+        case D3D_SIT_TBUFFER:
+            UNSUPPORTED("TBuffers are not supported");
+            OutType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+            break;
+        case D3D_SIT_TEXTURE:
+            OutType = (Attribs.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER ? SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV);
+            break;
+        case D3D_SIT_SAMPLER:
+            OutType = SHADER_RESOURCE_TYPE_SAMPLER;
+            break;
+        case D3D_SIT_UAV_RWTYPED:
+            OutType = (Attribs.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER ? SHADER_RESOURCE_TYPE_BUFFER_UAV : SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+            break;
+        case D3D_SIT_STRUCTURED:
+        case D3D_SIT_BYTEADDRESS:
+            OutType = SHADER_RESOURCE_TYPE_BUFFER_SRV;
+            break;
+        case D3D_SIT_UAV_RWSTRUCTURED:
+        case D3D_SIT_UAV_RWBYTEADDRESS:
+        case D3D_SIT_UAV_APPEND_STRUCTURED:
+        case D3D_SIT_UAV_CONSUME_STRUCTURED:
+        case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+            OutType = SHADER_RESOURCE_TYPE_BUFFER_UAV;
+            break;
+        case D3D_SIT_RTACCELERATIONSTRUCTURE:
+            OutType = SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
+            break;
+        default:
+            UNEXPECTED("Unknown HLSL resource type");
+            OutType = SHADER_RESOURCE_TYPE_UNKNOWN;
+            break;
     }
-
-    return BindingMapPerStage;
 }
 
+void VerifyResourceMerge(const D3DShaderResourceAttribs& ExistingRes,
+                         const D3DShaderResourceAttribs& NewResAttribs)
+{
+    DEV_CHECK_ERR(ExistingRes.GetInputType() == NewResAttribs.GetInputType(),
+                  "Shader variable '", NewResAttribs.Name,
+                  "' exists in multiple shaders from the same shader stage, but its input type is not consistent between "
+                  "shaders. All variables with the same name from the same shader stage must have the same input type.");
+
+    DEV_CHECK_ERR(ExistingRes.GetSRVDimension() == NewResAttribs.GetSRVDimension(),
+                  "Shader variable '", NewResAttribs.Name,
+                  "' exists in multiple shaders from the same shader stage, but its SRV dimension is not consistent between "
+                  "shaders. All variables with the same name from the same shader stage must have the same SRV dimension.");
+
+    DEV_CHECK_ERR(ExistingRes.BindCount == NewResAttribs.BindCount,
+                  "Shader variable '", NewResAttribs.Name,
+                  "' exists in multiple shaders from the same shader stage, but its array size is not consistent between "
+                  "shaders. All variables with the same name from the same shader stage must have the same array size.");
+}
 } // namespace
 
 
 PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(ShaderD3D12Impl* _pShader) :
     Type{_pShader->GetDesc().ShaderType},
-    Shaders{_pShader}
+    Shaders{_pShader},
+    ByteCodes{_pShader->GetShaderByteCode()}
 {
 }
 
@@ -363,71 +358,336 @@ void PipelineStateD3D12Impl::ShaderStageInfo::Append(ShaderD3D12Impl* pShader)
     }
 
     Shaders.push_back(pShader);
+    ByteCodes.push_back(pShader->GetShaderByteCode());
 }
 
 size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 {
+    VERIFY_EXPR(Shaders.size() == ByteCodes.size());
     return Shaders.size();
 }
 
 
+void PipelineStateD3D12Impl::CreateDefaultResourceSignature(const PipelineStateCreateInfo& CreateInfo,
+                                                            TShaderStages&                 ShaderStages,
+                                                            LocalRootSignatureD3D12*       pLocalRootSig,
+                                                            IPipelineResourceSignature**   ppImplicitSignature)
+{
+    struct UniqueResource
+    {
+        D3DShaderResourceAttribs const* Attribs   = nullptr;
+        Uint32                          DescIndex = ~0u;
+    };
+    using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, UniqueResource, HashMapStringKey::Hasher>;
+
+    std::vector<PipelineResourceDesc> Resources;
+    ResourceNameToIndex_t             UniqueNames;
+    const char*                       pCombinedSamplerSuffix = nullptr;
+    const auto&                       LayoutDesc             = CreateInfo.PSODesc.ResourceLayout;
+
+    for (auto& Stage : ShaderStages)
+    {
+        UniqueNames.clear();
+        for (auto* pShader : Stage.Shaders)
+        {
+            const auto DefaultVarType  = LayoutDesc.DefaultVariableType;
+            auto&      ShaderResources = *pShader->GetShaderResources();
+            const auto HandleResource  = [&](const D3DShaderResourceAttribs& Res, Uint32) //
+            {
+                if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Res))
+                    return;
+
+                auto IterAndAssigned = UniqueNames.emplace(HashMapStringKey{Res.Name}, UniqueResource{&Res, static_cast<Uint32>(Resources.size())});
+                if (IterAndAssigned.second)
+                {
+                    SHADER_RESOURCE_TYPE    Type;
+                    PIPELINE_RESOURCE_FLAGS Flags;
+                    GetShaderResourceTypeAndFlags(Res, Type, Flags);
+
+                    // Backward compatibility: only CBV with array size == 1 will be placed as root view.
+                    if ((Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER && Res.BindCount > 1) ||
+                        Type == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
+                        Type == SHADER_RESOURCE_TYPE_BUFFER_UAV)
+                    {
+                        Flags |= PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS;
+                    }
+
+                    if (Res.BindCount == 0)
+                    {
+                        LOG_ERROR_AND_THROW("Is shader '", pShader->GetDesc().Name, "' resource '", Res.Name, "' uses runtime sized array, ",
+                                            "you must explicitlly set resource signature to specify array size");
+                    }
+
+                    Resources.emplace_back(Stage.Type, Res.Name, Res.BindCount, Type, DefaultVarType, Flags);
+                }
+                else
+                {
+                    VerifyResourceMerge(*IterAndAssigned.first->second.Attribs, Res);
+                }
+            };
+
+            ShaderResources.ProcessResources(HandleResource, HandleResource, HandleResource, HandleResource, HandleResource, HandleResource, HandleResource);
+
+            // merge combined sampler suffixes
+            if (ShaderResources.IsUsingCombinedTextureSamplers() && ShaderResources.GetNumSamplers() > 0)
+            {
+                if (pCombinedSamplerSuffix != nullptr)
+                {
+                    if (strcmp(pCombinedSamplerSuffix, ShaderResources.GetCombinedSamplerSuffix()) != 0)
+                        LOG_ERROR_AND_THROW("CombinedSamplerSuffix is not compatible between shaders");
+                }
+                else
+                {
+                    pCombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
+                }
+            }
+
+            for (Uint32 i = 0; i < LayoutDesc.NumVariables; ++i)
+            {
+                const auto& Var = LayoutDesc.Variables[i];
+                if (Var.ShaderStages & Stage.Type)
+                {
+                    auto Iter = UniqueNames.find(HashMapStringKey{Var.Name});
+                    if (Iter != UniqueNames.end())
+                    {
+                        auto& Res   = Resources[Iter->second.DescIndex];
+                        Res.VarType = Var.Type;
+
+                        // apply new variable type to sampler too
+                        if (ShaderResources.IsUsingCombinedTextureSamplers() && Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+                        {
+                            String SampName = String{Var.Name} + ShaderResources.GetCombinedSamplerSuffix();
+                            auto   SampIter = UniqueNames.find(HashMapStringKey{SampName.c_str()});
+                            if (SampIter != UniqueNames.end())
+                                Resources[SampIter->second.DescIndex].VarType = Var.Type;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (Resources.size())
+    {
+        PipelineResourceSignatureDesc ResSignDesc;
+        ResSignDesc.Resources                  = Resources.data();
+        ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
+        ResSignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;
+        ResSignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
+        ResSignDesc.BindingIndex               = 0;
+        ResSignDesc.SRBAllocationGranularity   = CreateInfo.PSODesc.SRBAllocationGranularity;
+        ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
+        ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
+
+        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, ppImplicitSignature, true);
+
+        if (*ppImplicitSignature == nullptr)
+            LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
+    }
+}
+
+void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& CreateInfo,
+                                               TShaderStages&                 ShaderStages,
+                                               LocalRootSignatureD3D12*       pLocalRootSig)
+{
+    const Uint32                              SignatureCount = CreateInfo.ResourceSignaturesCount;
+    RefCntAutoPtr<IPipelineResourceSignature> pImplicitSignature;
+
+    if (SignatureCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
+    {
+        CreateDefaultResourceSignature(CreateInfo, ShaderStages, pLocalRootSig, &pImplicitSignature);
+
+        if (pImplicitSignature != nullptr)
+        {
+            VERIFY_EXPR(pImplicitSignature->GetDesc().BindingIndex == 0);
+            m_Signatures[0]  = ValidatedCast<PipelineResourceSignatureD3D12Impl>(pImplicitSignature.RawPtr());
+            m_SignatureCount = 1;
+        }
+    }
+    else
+    {
+        const auto PipelineType = CreateInfo.PSODesc.PipelineType;
+        for (Uint32 i = 0; i < SignatureCount; ++i)
+        {
+            auto* pSignature = ValidatedCast<PipelineResourceSignatureD3D12Impl>(CreateInfo.ppResourceSignatures[i]);
+            VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
+
+            const Uint8 Index = pSignature->GetDesc().BindingIndex;
+
+#ifdef DILIGENT_DEBUG
+            VERIFY(Index < m_Signatures.size(),
+                   "Pipeline resource signature specifies binding index ", Uint32{Index}, " that exceeds the limit (", m_Signatures.size() - 1,
+                   "). This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+
+            VERIFY(m_Signatures[Index] == nullptr,
+                   "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
+                   " conflicts with another resource signature '", m_Signatures[Index]->GetDesc().Name,
+                   "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
+
+            for (Uint32 s = 0, StageCount = pSignature->GetNumActiveShaderStages(); s < StageCount; ++s)
+            {
+                const auto ShaderType = pSignature->GetActiveShaderStageType(s);
+                VERIFY(IsConsistentShaderType(ShaderType, PipelineType),
+                       "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
+                       " has shader stage '", GetShaderTypeLiteralName(ShaderType), "' that is not compatible with pipeline type '",
+                       GetPipelineTypeString(PipelineType), "'.");
+            }
+#endif
+
+            m_SignatureCount    = std::max<Uint8>(m_SignatureCount, Index + 1);
+            m_Signatures[Index] = pSignature;
+        }
+    }
+
+    m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_Signatures.data(), m_SignatureCount);
+    if (!m_RootSig)
+        LOG_ERROR_AND_THROW("Failed to create root signature");
+
+    // Verify that pipeline layout is compatible with shader resources and
+    // remap resource bindings.
+    auto* compiler = GetDevice()->GetDxCompiler();
+
+    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    {
+        const auto& Shaders    = ShaderStages[s].Shaders;
+        auto&       ByteCodes  = ShaderStages[s].ByteCodes;
+        const auto  ShaderType = ShaderStages[s].Type;
+
+        ResourceBinding::TMap ResourceMap;
+        for (Uint32 Sig = 0, SigCount = GetSignatureCount(); Sig < SigCount; ++Sig)
+        {
+            auto* pSignature = GetSignature(Sig);
+            if (pSignature != nullptr)
+            {
+                const Uint32 FirstSpace = pSignature->GetBaseRegisterSpace();
+
+                for (Uint32 r = 0, ResCount = pSignature->GetTotalResourceCount(); r < ResCount; ++r)
+                {
+                    const auto& ResDesc = pSignature->GetResourceDesc(r);
+                    const auto& Attribs = pSignature->GetResourceAttribs(r);
+
+                    if (ResDesc.ShaderStages & ShaderType)
+                    {
+                        auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, ResourceBinding::BindInfo{Attribs.BindPoint, Attribs.Space + FirstSpace}).second;
+                        VERIFY(IsUnique, "resource name must be unique");
+                    }
+                }
+
+                for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
+                {
+                    const auto&               ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
+                    const auto&               SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
+                    ResourceBinding::BindInfo BindInfo{SampAttr.ShaderRegister, SampAttr.RegisterSpace + FirstSpace};
+
+                    if (ImtblSam.ShaderStages & ShaderType)
+                    {
+                        auto IsUnique = ResourceMap.emplace(HashMapStringKey{ImtblSam.SamplerOrTextureName}, BindInfo).second;
+                        if (!IsUnique && pSignature->IsUsingCombinedSamplers())
+                        {
+                            // add sampler with suffix
+                            String SampName{ImtblSam.SamplerOrTextureName};
+                            SampName += pSignature->GetCombinedSamplerSuffix();
+                            ResourceMap.emplace(HashMapStringKey{SampName}, BindInfo);
+                        }
+                    }
+                }
+            }
+        }
+
+        // AZ TODO: add local root signature to ResourceMap
+
+        for (size_t i = 0; i < Shaders.size(); ++i)
+        {
+            auto*             pShader   = Shaders[i];
+            auto&             pBytecode = ByteCodes[i];
+            CComPtr<ID3DBlob> pBlob;
+
+            if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
+            {
+                if (!compiler)
+                    LOG_ERROR_AND_THROW("DXC compiler is not exists, can not remap resource bindings");
+
+                if (!compiler->RemapResourceBindings(ResourceMap, reinterpret_cast<IDxcBlob*>(pBytecode.p), reinterpret_cast<IDxcBlob**>(&pBlob)))
+                    LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+            }
+            else
+            {
+                D3DCreateBlob(pBytecode->GetBufferSize(), &pBlob);
+                memcpy(pBlob->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+
+                if (!DXBCUtils::RemapResourceBindings(ResourceMap, pBlob->GetBufferPointer(), pBlob->GetBufferSize()))
+                    LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+            }
+            pBytecode = pBlob;
+
+            // AZ TODO
+#if 0 //def DILIGENT_DEVELOPMENT
+            const auto& pShaderResources = pShader->GetShaderResources();
+            m_ShaderResources.emplace_back(pShaderResources);
+            
+            // Check compatibility between shader resources and resource signature.
+            const auto HandleResource  = [&](const D3DShaderResourceAttribs& Res, Uint32) //
+            {
+                if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Res))
+                    return;
+
+                ResourceInfo Info = {};
+                if (!m_RootSig->GetResource(Res.Name, Info))
+                {
+                        // error
+                }
+
+                if (Res.BindCount == 0)
+                {
+                    if ((Info.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0)
+                    {
+                        // error
+                    }
+                }
+                else if (Info.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY)
+                {
+                    // warning
+                }
+            };
+            pShaderResources->ProcessResources(HandleResource, HandleResource, HandleResource, HandleResource, HandleResource, HandleResource, HandleResource);
+#endif
+        }
+    }
+}
+
 template <typename PSOCreateInfoType>
 void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo,
-                                                 RootSignatureBuilder&    RootSigBuilder,
                                                  TShaderStages&           ShaderStages,
-                                                 LocalRootSignature*      pLocalRoot)
+                                                 LocalRootSignatureD3D12* pLocalRootSig)
 {
-    m_ResourceLayoutIndex.fill(-1);
-
     ExtractShaders<ShaderD3D12Impl>(CreateInfo, ShaderStages);
 
     FixedLinearAllocator MemPool{GetRawAllocator()};
-
-    const auto NumShaderStages = GetNumShaderStages();
-    VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
-
-    MemPool.AddSpace<ShaderResourceCacheD3D12>(NumShaderStages);
-    MemPool.AddSpace<ShaderResourceLayoutD3D12>(NumShaderStages * 2);
-    MemPool.AddSpace<ShaderVariableManagerD3D12>(NumShaderStages);
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
 
     MemPool.Reserve();
 
-    m_pStaticResourceCaches = MemPool.ConstructArray<ShaderResourceCacheD3D12>(NumShaderStages, ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources);
-
-    // The memory is now owned by PipelineStateD3D12Impl and will be freed by Destruct().
-    auto* Ptr = MemPool.ReleaseOwnership();
-    VERIFY_EXPR(Ptr == m_pStaticResourceCaches);
-    (void)Ptr;
-
-    auto* const pd3d12Device = GetDevice()->GetD3D12Device();
-    m_pShaderResourceLayouts = MemPool.ConstructArray<ShaderResourceLayoutD3D12>(NumShaderStages * 2, std::ref(*this), pd3d12Device);
-
-    m_pStaticVarManagers = MemPool.Allocate<ShaderVariableManagerD3D12>(NumShaderStages);
-    for (Uint32 s = 0; s < NumShaderStages; ++s)
-        new (m_pStaticVarManagers + s) ShaderVariableManagerD3D12{*this, GetStaticShaderResCache(s)};
+    m_pRawMem = MemPool.ReleaseOwnership();
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitResourceLayouts(CreateInfo, RootSigBuilder, ShaderStages, pLocalRoot);
+    InitRootSignature(CreateInfo, ShaderStages, pLocalRootSig);
 }
 
 
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                    pRefCounters,
                                                RenderDeviceD3D12Impl*                 pDeviceD3D12,
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo},
-    m_SRBMemAllocator{GetRawAllocator()}
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
     try
     {
-        RootSignatureBuilder RootSigBuilder{m_RootSig, CreateInfo.PSODesc.ResourceLayout};
-        TShaderStages        ShaderStages;
-        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages);
+        TShaderStages ShaderStages;
+        InitInternalObjects(CreateInfo, ShaderStages);
 
         auto* pd3d12Device = pDeviceD3D12->GetD3D12Device();
         if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
@@ -438,13 +698,11 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 
             for (const auto& Stage : ShaderStages)
             {
-                VERIFY_EXPR(Stage.Shaders.size() == 1);
-                auto* pShaderD3D12 = Stage.Shaders[0];
-                auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
-                VERIFY_EXPR(ShaderType == Stage.Type);
+                VERIFY_EXPR(Stage.Count() == 1);
+                const auto& pByteCode = Stage.ByteCodes[0];
 
                 D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
-                switch (ShaderType)
+                switch (Stage.Type)
                 {
                     // clang-format off
                     case SHADER_TYPE_VERTEX:   pd3d12ShaderBytecode = &d3d12PSODesc.VS; break;
@@ -455,13 +713,12 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                     // clang-format on
                     default: UNEXPECTED("Unexpected shader type");
                 }
-                auto* pByteCode = pShaderD3D12->GetShaderByteCode();
 
                 pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
                 pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
             }
 
-            d3d12PSODesc.pRootSignature = m_RootSig.GetD3D12RootSignature();
+            d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
 
             memset(&d3d12PSODesc.StreamOutput, 0, sizeof(d3d12PSODesc.StreamOutput));
 
@@ -542,13 +799,11 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 
             for (const auto& Stage : ShaderStages)
             {
-                VERIFY_EXPR(Stage.Shaders.size() == 1);
-                auto* pShaderD3D12 = Stage.Shaders[0];
-                auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
-                VERIFY_EXPR(ShaderType == Stage.Type);
+                VERIFY_EXPR(Stage.Count() == 1);
+                const auto& pByteCode = Stage.ByteCodes[0];
 
                 D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
-                switch (ShaderType)
+                switch (Stage.Type)
                 {
                     // clang-format off
                     case SHADER_TYPE_AMPLIFICATION: pd3d12ShaderBytecode = &d3d12PSODesc.AS; break;
@@ -557,13 +812,12 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                     // clang-format on
                     default: UNEXPECTED("Unexpected shader type");
                 }
-                auto* pByteCode = pShaderD3D12->GetShaderByteCode();
 
                 pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
                 pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
             }
 
-            d3d12PSODesc.pRootSignature = m_RootSig.GetD3D12RootSignature();
+            d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
 
             BlendStateDesc_To_D3D12_BLEND_DESC(GraphicsPipeline.BlendDesc, *d3d12PSODesc.BlendState);
             d3d12PSODesc.SampleMask = GraphicsPipeline.SampleMask;
@@ -610,10 +864,6 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         if (*m_Desc.Name != 0)
         {
             m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
-            String RootSignatureDesc("Root signature for PSO '");
-            RootSignatureDesc.append(m_Desc.Name);
-            RootSignatureDesc.push_back('\'');
-            m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
         }
     }
     catch (...)
@@ -626,22 +876,20 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                   pRefCounters,
                                                RenderDeviceD3D12Impl*                pDeviceD3D12,
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo},
-    m_SRBMemAllocator{GetRawAllocator()}
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
     try
     {
-        RootSignatureBuilder RootSigBuilder{m_RootSig, CreateInfo.PSODesc.ResourceLayout};
-        TShaderStages        ShaderStages;
-        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages);
+        TShaderStages ShaderStages;
+        InitInternalObjects(CreateInfo, ShaderStages);
 
         auto* pd3d12Device = pDeviceD3D12->GetD3D12Device();
 
         D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
         VERIFY_EXPR(ShaderStages[0].Type == SHADER_TYPE_COMPUTE);
-        VERIFY_EXPR(ShaderStages[0].Shaders.size() == 1);
-        auto* pByteCode                 = ShaderStages[0].Shaders[0]->GetShaderByteCode();
+        VERIFY_EXPR(ShaderStages[0].Count() == 1);
+        const auto& pByteCode           = ShaderStages[0].ByteCodes[0];
         d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
         d3d12PSODesc.CS.BytecodeLength  = pByteCode->GetBufferSize();
 
@@ -656,7 +904,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
         d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-        d3d12PSODesc.pRootSignature = m_RootSig.GetD3D12RootSignature();
+        d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
 
         HRESULT hr = pd3d12Device->CreateComputePipelineState(&d3d12PSODesc, IID_PPV_ARGS(&m_pd3d12PSO));
         if (FAILED(hr))
@@ -665,10 +913,6 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         if (*m_Desc.Name != 0)
         {
             m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
-            String RootSignatureDesc("Root signature for PSO '");
-            RootSignatureDesc.append(m_Desc.Name);
-            RootSignatureDesc.push_back('\'');
-            m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
         }
     }
     catch (...)
@@ -681,32 +925,21 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                      pRefCounters,
                                                RenderDeviceD3D12Impl*                   pDeviceD3D12,
                                                const RayTracingPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo},
-    m_SRBMemAllocator{GetRawAllocator()}
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
     try
     {
-        LocalRootSignature   LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
-        TShaderStages        ShaderStages;
-        RootSignatureBuilder RootSigBuilder{m_RootSig, CreateInfo.PSODesc.ResourceLayout};
-        InitInternalObjects(CreateInfo, RootSigBuilder, ShaderStages, &LocalRootSig);
+        LocalRootSignatureD3D12 LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
+        TShaderStages           ShaderStages;
+        InitInternalObjects(CreateInfo, ShaderStages, &LocalRootSig);
 
         auto* pd3d12Device = pDeviceD3D12->GetD3D12Device5();
 
-        const auto* const pStaticResLayouts = m_pShaderResourceLayouts + GetNumShaderStages();
-        // Extract bindings (shader registers) assigned during the layout initialization,
-        // for every shader stage.
-        const auto BindingMapPerStage =
-            ExtractResourceBindingMap(RootSigBuilder, m_ResourceLayoutIndex, m_pShaderResourceLayouts, pStaticResLayouts);
-
         DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
         std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
-        std::vector<CComPtr<IDxcBlob>>     ShaderBlobs;
-        // Create ray-tracing pipeline and remap shader registers (including static samplers) using the bind points assigned during the
-        // resource layout initialization.
-        BuildRTPipelineDescription(CreateInfo, Subobjects, ShaderBlobs, TempPool, pDeviceD3D12->GetDxCompiler(), BindingMapPerStage);
+        BuildRTPipelineDescription(CreateInfo, Subobjects, TempPool);
 
-        D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot = {m_RootSig.GetD3D12RootSignature()};
+        D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot = {m_RootSig->GetD3D12RootSignature()};
         Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &GlobalRoot});
 
         D3D12_LOCAL_ROOT_SIGNATURE LocalRoot = {LocalRootSig.Create(pd3d12Device)};
@@ -729,10 +962,6 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         if (*m_Desc.Name != 0)
         {
             m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
-            String RootSignatureDesc("Root signature for PSO '");
-            RootSignatureDesc.append(m_Desc.Name);
-            RootSignatureDesc.push_back('\'');
-            m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
         }
     }
     catch (...)
@@ -751,30 +980,14 @@ void PipelineStateD3D12Impl::Destruct()
 {
     TPipelineStateBase::Destruct();
 
-    auto& ShaderResLayoutAllocator = GetRawAllocator();
-    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-    {
-        if (m_pStaticVarManagers != nullptr)
-        {
-            m_pStaticVarManagers[s].Destroy(GetRawAllocator());
-            m_pStaticVarManagers[s].~ShaderVariableManagerD3D12();
-        }
+    m_Signatures.fill({});
+    m_RootSig.Release();
 
-        if (m_pShaderResourceLayouts != nullptr)
-        {
-            m_pShaderResourceLayouts[s].~ShaderResourceLayoutD3D12();
-            m_pShaderResourceLayouts[GetNumShaderStages() + s].~ShaderResourceLayoutD3D12();
-        }
-
-        if (m_pStaticResourceCaches != nullptr)
-        {
-            m_pStaticResourceCaches[s].~ShaderResourceCacheD3D12();
-        }
-    }
-    // All internal objects are allocated in contiguous chunks of memory.
-    if (auto* pRawMem = m_pStaticResourceCaches)
+    auto& RawAllocator = GetRawAllocator();
+    if (m_pRawMem)
     {
-        ShaderResLayoutAllocator.Free(pRawMem);
+        RawAllocator.Free(m_pRawMem);
+        m_pRawMem = nullptr;
     }
 
     if (m_pd3d12PSO)
@@ -784,98 +997,6 @@ void PipelineStateD3D12Impl::Destruct()
     }
 }
 
-void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
-                                                 RootSignatureBuilder&          RootSigBuilder,
-                                                 TShaderStages&                 ShaderStages,
-                                                 LocalRootSignature*            pLocalRoot)
-{
-    auto* const pd3d12Device   = GetDevice()->GetD3D12Device();
-    const auto& ResourceLayout = m_Desc.ResourceLayout;
-
-#ifdef DILIGENT_DEVELOPMENT
-    {
-        std::vector<const ShaderResources*> Resources;
-        for (size_t s = 0; s < ShaderStages.size(); ++s)
-        {
-            for (auto* pShader : ShaderStages[s].Shaders)
-            {
-                Resources.push_back(pShader->GetShaderResources().get());
-            }
-        }
-        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, Resources.data(), static_cast<Uint32>(Resources.size()),
-                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
-                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS) == 0);
-    }
-#endif
-
-    for (size_t s = 0; s < ShaderStages.size(); ++s)
-    {
-        auto Shaders    = ShaderStages[s].Shaders;
-        auto ShaderType = ShaderStages[s].Type;
-        auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
-
-        m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
-
-        // Initialize all-resources layout
-        m_pShaderResourceLayouts[s].Initialize(
-            m_Desc.PipelineType,
-            ResourceLayout,
-            Shaders,
-            GetRawAllocator(),
-            RootSigBuilder,
-            pLocalRoot //
-        );
-
-        // Initialize static resource layout and the cache. We must do this after
-        // general layout is initialized, because we will use the bind points that
-        // may have been assigned (for ray tracing shaders).
-        const SHADER_RESOURCE_VARIABLE_TYPE StaticVarType[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-        m_pShaderResourceLayouts[GetNumShaderStages() + s].InitializeStaticReourceLayout(
-            m_pShaderResourceLayouts[s],
-            GetRawAllocator(),
-            m_pStaticResourceCaches[s] //
-        );
-
-        m_pStaticVarManagers[s].Initialize(
-            GetStaticShaderResLayout(static_cast<Uint32>(s)),
-            GetRawAllocator(),
-            nullptr,
-            0 //
-        );
-    }
-    RootSigBuilder.Finalize(pd3d12Device);
-
-    if (m_Desc.SRBAllocationGranularity > 1)
-    {
-        std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVarMgrDataSizes = {};
-        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-        {
-            std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes =
-                {
-                    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
-                    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC //
-                };
-            Uint32 NumVariablesUnused = 0;
-
-            ShaderVarMgrDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(m_pShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), NumVariablesUnused);
-        }
-
-        auto CacheMemorySize = RootSigBuilder.GetResourceCacheRequiredMemSize();
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
-    }
-
-    m_ShaderResourceLayoutHash = RootSigBuilder.GetHash();
-}
-
-void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
-{
-    auto& SRBAllocator     = m_pDevice->GetSRBAllocator();
-    auto* pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this, false);
-    if (InitStaticResources)
-        pResBindingD3D12->InitializeStaticResources(nullptr);
-    pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
-}
-
 bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
 {
     VERIFY_EXPR(pPSO != nullptr);
@@ -883,179 +1004,7 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
     if (pPSO == this)
         return true;
 
-    const PipelineStateD3D12Impl* pPSOD3D12 = ValidatedCast<const PipelineStateD3D12Impl>(pPSO);
-    if (m_ShaderResourceLayoutHash != pPSOD3D12->m_ShaderResourceLayoutHash)
-        return false;
-
-    auto IsSameRootSignature = m_RootSig.IsSameAs(pPSOD3D12->m_RootSig);
-
-#ifdef DILIGENT_DEBUG
-    {
-        bool IsCompatibleShaders = true;
-        if (GetNumShaderStages() != pPSOD3D12->GetNumShaderStages())
-            IsCompatibleShaders = false;
-
-        if (IsCompatibleShaders)
-        {
-            for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-            {
-                if (GetShaderStageType(s) != pPSOD3D12->GetShaderStageType(s))
-                {
-                    IsCompatibleShaders = false;
-                    break;
-                }
-
-                const auto& Res0 = GetShaderResLayout(s);
-                const auto& Res1 = pPSOD3D12->GetShaderResLayout(s);
-                if (!Res0.IsCompatibleWith(Res1))
-                {
-                    IsCompatibleShaders = false;
-                    break;
-                }
-            }
-        }
-
-        if (IsCompatibleShaders)
-            VERIFY(IsSameRootSignature, "Compatible shaders must have same root signatures");
-    }
-#endif
-
-    return IsSameRootSignature;
-}
-
-ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResources(class DeviceContextD3D12Impl*        pDeviceCtx,
-                                                                                     class CommandContext&                CmdCtx,
-                                                                                     CommitAndTransitionResourcesAttribs& Attrib) const
-{
-#ifdef DILIGENT_DEVELOPMENT
-    if (Attrib.pShaderResourceBinding == nullptr && ContainsShaderResources())
-    {
-        LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to ",
-                          (Attrib.CommitResources ? "commit" : "transition"), " resources, but none is provided.");
-    }
-#endif
-
-    auto* pResBindingD3D12Impl = ValidatedCast<ShaderResourceBindingD3D12Impl>(Attrib.pShaderResourceBinding);
-    if (pResBindingD3D12Impl == nullptr)
-    {
-        if (Attrib.CommitResources)
-        {
-            if (m_Desc.IsAnyGraphicsPipeline())
-                CmdCtx.AsGraphicsContext().SetGraphicsRootSignature(GetD3D12RootSignature());
-            else
-                CmdCtx.AsComputeContext().SetComputeRootSignature(GetD3D12RootSignature());
-        }
-        return nullptr;
-    }
-
-#ifdef DILIGENT_DEVELOPMENT
-    if (IsIncompatibleWith(pResBindingD3D12Impl->GetPipelineState()))
-    {
-        LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state '", m_Desc.Name, "'. Operation will be ignored.");
-        return nullptr;
-    }
-
-    if (Attrib.CommitResources)
-    {
-        if ((m_RootSig.GetTotalSrvCbvUavSlots(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0 ||
-             m_RootSig.GetTotalRootViews(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0) &&
-            !pResBindingD3D12Impl->StaticResourcesInitialized())
-        {
-            LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", m_Desc.Name, "'. Please call IShaderResourceBinding::InitializeStaticResources().");
-        }
-
-        pResBindingD3D12Impl->dvpVerifyResourceBindings(this);
-    }
-#endif
-
-    auto& ResourceCache = pResBindingD3D12Impl->GetResourceCache();
-    if (Attrib.CommitResources)
-    {
-        if (m_Desc.IsAnyGraphicsPipeline())
-            CmdCtx.AsGraphicsContext().SetGraphicsRootSignature(GetD3D12RootSignature());
-        else
-            CmdCtx.AsComputeContext().SetComputeRootSignature(GetD3D12RootSignature());
-
-        if (Attrib.TransitionResources)
-        {
-            (m_RootSig.*m_RootSig.TransitionAndCommitDescriptorHandles)(m_pDevice, ResourceCache, CmdCtx, !m_Desc.IsAnyGraphicsPipeline(), Attrib.ValidateStates);
-        }
-        else
-        {
-            (m_RootSig.*m_RootSig.CommitDescriptorHandles)(m_pDevice, ResourceCache, CmdCtx, !m_Desc.IsAnyGraphicsPipeline(), Attrib.ValidateStates);
-        }
-    }
-    else
-    {
-        VERIFY(Attrib.TransitionResources, "Resources should be transitioned or committed or both");
-        m_RootSig.TransitionResources(ResourceCache, CmdCtx);
-    }
-
-    // Process only non-dynamic buffers at this point. Dynamic buffers will be handled by the Draw/Dispatch command.
-    m_RootSig.CommitRootViews(ResourceCache,
-                              CmdCtx,
-                              !m_Desc.IsAnyGraphicsPipeline(),
-                              Attrib.CtxId,
-                              pDeviceCtx,
-                              Attrib.CommitResources, // CommitViews
-                              false,                  // ProcessDynamicBuffers
-                              true,                   // ProcessNonDynamicBuffers
-                              Attrib.TransitionResources,
-                              Attrib.ValidateStates);
-
-    return &ResourceCache;
-}
-
-
-bool PipelineStateD3D12Impl::ContainsShaderResources() const
-{
-    for (auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
-    {
-        if (m_RootSig.GetTotalSrvCbvUavSlots(VarType) != 0 ||
-            m_RootSig.GetTotalRootViews(VarType) != 0)
-            return true;
-    }
-    return false;
-}
-
-void PipelineStateD3D12Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
-{
-    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
-    {
-        const auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
-        if ((ShaderFlags & ShaderType) != 0)
-            m_pStaticVarManagers[s].BindResources(pResourceMapping, Flags);
-    }
-}
-
-Uint32 PipelineStateD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
-{
-    const auto LayoutInd = GetStaticVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
-    if (LayoutInd < 0)
-        return 0;
-
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderStages());
-    return m_pStaticVarManagers[LayoutInd].GetVariableCount();
-}
-
-IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
-{
-    const auto LayoutInd = GetStaticVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
-    if (LayoutInd < 0)
-        return nullptr;
-
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderStages());
-    return m_pStaticVarManagers[LayoutInd].GetVariable(Name);
-}
-
-IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
-{
-    const auto LayoutInd = GetStaticVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
-    if (LayoutInd < 0)
-        return nullptr;
-
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderStages());
-    return m_pStaticVarManagers[LayoutInd].GetVariable(Index);
+    return (m_RootSig == ValidatedCast<const PipelineStateD3D12Impl>(pPSO)->m_RootSig);
 }
 
 } // namespace Diligent

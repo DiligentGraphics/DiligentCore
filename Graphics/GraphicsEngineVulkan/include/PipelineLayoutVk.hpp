@@ -82,7 +82,7 @@ public:
         Uint32 DescrSetIndex = ~0U;
         Uint32 BindingIndex  = ~0U;
 
-        operator bool() const
+        explicit operator bool() const
         {
             return Signature != nullptr && Type != SHADER_RESOURCE_TYPE_UNKNOWN;
         }

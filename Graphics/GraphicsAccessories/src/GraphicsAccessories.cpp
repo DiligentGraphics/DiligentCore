@@ -1188,7 +1188,7 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 
         auto Flag = ExtractLSB(Flags);
 
-        static_assert(PIPELINE_RESOURCE_FLAG_LAST == 0x04, "Please update the switch below to handle the new pipeline resource flag.");
+        static_assert(PIPELINE_RESOURCE_FLAG_LAST == 0x08, "Please update the switch below to handle the new pipeline resource flag.");
         switch (Flag)
         {
             case PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS:
@@ -1201,6 +1201,10 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 
             case PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER:
                 Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER" : "FORMATTED_BUFFER");
+                break;
+
+            case PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY:
+                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY" : "RUNTIME_ARRAY");
                 break;
 
             default:

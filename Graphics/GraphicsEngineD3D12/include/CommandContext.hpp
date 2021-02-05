@@ -156,7 +156,7 @@ public:
         {
             return pSrvCbvUavHeap == rhs.pSrvCbvUavHeap && pSamplerHeap == rhs.pSamplerHeap;
         }
-        operator bool() const
+        explicit operator bool() const
         {
             return pSrvCbvUavHeap != nullptr || pSamplerHeap != nullptr;
         }
@@ -248,6 +248,7 @@ protected:
 class ComputeContext : public CommandContext
 {
 public:
+    // For compute and ray tracing.
     void SetComputeRootSignature(ID3D12RootSignature* pRootSig)
     {
         if (pRootSig != m_pCurComputeRootSignature)

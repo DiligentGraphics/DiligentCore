@@ -64,8 +64,9 @@
 #include <memory>
 
 #include "ShaderResourceVariableD3D.h"
-#include "ShaderResourceLayoutD3D12.hpp"
 #include "ShaderResourceVariableBase.hpp"
+#include "ShaderResourceCacheD3D12.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -82,10 +83,11 @@ public:
         m_ResourceCache{ResourceCache}
     {}
 
-    void Initialize(const ShaderResourceLayoutD3D12&     Layout,
-                    IMemoryAllocator&                    Allocator,
-                    const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                    Uint32                               NumAllowedTypes);
+    void Initialize(const PipelineResourceSignatureD3D12Impl& Signature,
+                    IMemoryAllocator&                         Allocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                    Uint32                                    NumAllowedTypes,
+                    SHADER_TYPE                               ShaderType);
     ~ShaderVariableManagerD3D12();
 
     void Destroy(IMemoryAllocator& Allocator);
@@ -95,48 +97,61 @@ public:
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12&     Layout,
-                                        const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                        Uint32                               NumAllowedTypes,
-                                        Uint32&                              NumVariables);
+    static size_t GetRequiredMemorySize(const PipelineResourceSignatureD3D12Impl& Signature,
+                                        const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                                        Uint32                                    NumAllowedTypes,
+                                        SHADER_TYPE                               ShaderType,
+                                        Uint32&                                   NumVariables);
 
     Uint32 GetVariableCount() const { return m_NumVariables; }
 
 private:
     friend ShaderVariableD3D12Impl;
+    using ResourceAttribs = PipelineResourceSignatureD3D12Impl::ResourceAttribs;
 
     Uint32 GetVariableIndex(const ShaderVariableD3D12Impl& Variable);
 
-    // clang-format off
+    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const
+    {
+        VERIFY_EXPR(m_pSignature);
+        return m_pSignature->GetResourceDesc(Index);
+    }
+    const ResourceAttribs& GetResourceAttribs(Uint32 Index) const
+    {
+        VERIFY_EXPR(m_pSignature);
+        return m_pSignature->GetResourceAttribs(Index);
+    }
 
-    IObject&                         m_Owner;
+private:
+    PipelineResourceSignatureD3D12Impl const* m_pSignature = nullptr;
+
+    IObject& m_Owner;
 
     // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
-    // static resource cache owned by the same PSO object), or by SRB object (in which case 
+    // static resource cache owned by the same PSO object), or by SRB object (in which case
     // m_ResourceCache references the cache in the SRB). Thus the cache and the resource layout
     // (which the variables reference) are guaranteed to be alive while the manager is alive.
-    ShaderResourceCacheD3D12&        m_ResourceCache;
+    ShaderResourceCacheD3D12& m_ResourceCache;
 
     // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
     // memory allocator is used. This ensures that all resources from different shader resource bindings reside in
     // continuous memory. If allocation granularity == 1, raw allocator is used.
-    ShaderVariableD3D12Impl*         m_pVariables     = nullptr;
-    Uint32                           m_NumVariables = 0;
+    ShaderVariableD3D12Impl* m_pVariables   = nullptr;
+    Uint32                   m_NumVariables = 0;
 
 #ifdef DILIGENT_DEBUG
-    IMemoryAllocator*                m_pDbgAllocator = nullptr;
+    IMemoryAllocator* m_pDbgAllocator = nullptr;
 #endif
-    // clang-format on
 };
 
 // sizeof(ShaderVariableD3D12Impl) == 24 (x64)
 class ShaderVariableD3D12Impl final : public IShaderResourceVariableD3D
 {
 public:
-    ShaderVariableD3D12Impl(ShaderVariableManagerD3D12&                     ParentManager,
-                            const ShaderResourceLayoutD3D12::D3D12Resource& Resource) :
+    ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
+                            Uint32                      ResIndex) :
         m_ParentManager{ParentManager},
-        m_Resource{Resource}
+        m_ResIndex{ResIndex}
     {}
 
     // clang-format off
@@ -176,29 +191,19 @@ public:
 
     virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
     {
-        return m_Resource.GetVariableType();
+        return GetDesc().VarType;
     }
 
-    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-    {
-        m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache);
-    }
+    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final;
 
-    virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
-    {
-        VerifyAndCorrectSetArrayArguments(m_Resource.Attribs.Name, m_Resource.Attribs.BindCount, FirstElement, NumElements);
-        for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
-            m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
-    }
+    virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final;
 
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
-        ResourceDesc = GetHLSLResourceDesc();
-    }
-
-    virtual HLSLShaderResourceDesc DILIGENT_CALL_TYPE GetHLSLResourceDesc() const override final
-    {
-        return m_Resource.Attribs.GetHLSLResourceDesc();
+        const auto& Desc       = GetDesc();
+        ResourceDesc.Name      = Desc.Name;
+        ResourceDesc.Type      = Desc.ResourceType;
+        ResourceDesc.ArraySize = Desc.ArraySize;
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
@@ -206,21 +211,26 @@ public:
         return m_ParentManager.GetVariableIndex(*this);
     }
 
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-    {
-        return m_Resource.IsBound(ArrayIndex, m_ParentManager.m_ResourceCache);
-    }
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final;
 
-    const ShaderResourceLayoutD3D12::D3D12Resource& GetResource() const
+    virtual HLSLShaderResourceDesc DILIGENT_CALL_TYPE GetHLSLResourceDesc() const override final
     {
-        return m_Resource;
+        // AZ TODO
+        return {};
     }
 
 private:
     friend ShaderVariableManagerD3D12;
+    using ResourceAttribs = PipelineResourceSignatureD3D12Impl::ResourceAttribs;
 
-    ShaderVariableManagerD3D12&                     m_ParentManager;
-    const ShaderResourceLayoutD3D12::D3D12Resource& m_Resource;
+    const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
+    const ResourceAttribs&      GetAttribs() const { return m_ParentManager.GetResourceAttribs(m_ResIndex); }
+
+    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const;
+
+private:
+    ShaderVariableManagerD3D12& m_ParentManager;
+    const Uint32                m_ResIndex;
 };
 
 } // namespace Diligent
