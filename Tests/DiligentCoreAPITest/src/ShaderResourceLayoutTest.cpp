@@ -443,6 +443,8 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
     float ClearColor[] = {0.25, 0.5, 0.75, 0.125};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
@@ -469,6 +471,9 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     static constexpr size_t Tex2DArr_MutIdx[]    = {3, 5};
     static constexpr size_t Tex2DArr_DynIdx[]    = {9, 2};
 
+    const Uint32 VSResArrId = 0;
+    const Uint32 PSResArrId = deviceCaps.Features.SeparablePrograms ? 1 : 0;
+    VERIFY_EXPR(deviceCaps.IsGLDevice() || PSResArrId != VSResArrId);
 
     // clang-format off
     std::vector<ShaderResourceDesc> Resources = 
@@ -480,7 +485,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         ShaderResourceDesc{"g_Tex2DArr_Mut",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, MutableTexArraySize},
         ShaderResourceDesc{"g_Tex2DArr_Dyn",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, DynamicTexArraySize}
     };
-    if (!pDevice->GetDeviceCaps().IsGLDevice())
+    if (!deviceCaps.IsGLDevice())
     {
         if (TestImtblSamplers)
         {
@@ -546,14 +551,14 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     auto pVS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
                             TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "VSMain",
-                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(0),
+                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(VSResArrId),
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
 
     auto pPS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
                             TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "PSMain",
-                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(1),
+                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(PSResArrId),
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
     ASSERT_NE(pVS, nullptr);
@@ -600,7 +605,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     ASSERT_NE(pSRB, nullptr);
 
     auto BindResources = [&](SHADER_TYPE ShaderType) {
-        const auto id = ShaderType == SHADER_TYPE_VERTEX ? 0 : 1;
+        const auto id = ShaderType == SHADER_TYPE_VERTEX ? VSResArrId : PSResArrId;
 
         SET_STATIC_VAR(pPSO, ShaderType, "g_Tex2D_Static", Set, RefTextures.GetViewObjects(Tex2D_StaticIdx[id])[0]);
         SET_STATIC_VAR(pPSO, ShaderType, "g_Tex2DArr_Static", SetArray, RefTextures.GetViewObjects(Tex2DArr_StaticIdx[id]), 0, StaticTexArraySize);
@@ -629,13 +634,13 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, RefTextures.GetViewObjects(Tex2D_DynIdx[0])[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx[0]), 0, 1);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx[0] + 1), 1, DynamicTexArraySize - 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Dyn", Set, RefTextures.GetViewObjects(Tex2D_DynIdx[VSResArrId])[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx[VSResArrId]), 0, 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx[VSResArrId] + 1), 1, DynamicTexArraySize - 1);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, RefTextures.GetViewObjects(Tex2D_DynIdx[1])[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx[1]), 0, 1);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx[1] + 1), 1, DynamicTexArraySize - 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, RefTextures.GetViewObjects(Tex2D_DynIdx[PSResArrId])[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx[PSResArrId]), 0, 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx[PSResArrId] + 1), 1, DynamicTexArraySize - 1);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -663,6 +668,8 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
     float ClearColor[] = {0.625, 0.125, 0.25, 0.875};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
@@ -687,6 +694,10 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     static constexpr size_t BuffArr_StaticIdx[] = {8, 0};
     static constexpr size_t BuffArr_MutIdx[]    = {3, 4};
     static constexpr size_t BuffArr_DynIdx[]    = {6, 7};
+
+    const Uint32 VSResArrId = 0;
+    const Uint32 PSResArrId = deviceCaps.Features.SeparablePrograms ? 1 : 0;
+    VERIFY_EXPR(deviceCaps.IsGLDevice() || PSResArrId != VSResArrId);
 
     ShaderMacroHelper Macros;
 
@@ -718,8 +729,6 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
         return static_cast<const ShaderMacro*>(Macros);
     };
-
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
 
     // Vulkan only allows 16 dynamic storage buffer bindings among all stages, so
     // use arrays only in fragment shader for structured buffer test.
@@ -772,7 +781,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     };
     auto pVS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - VS" : "ShaderResourceLayoutTest.StructuredBuffers - VS",
                             ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main",
-                            SHADER_TYPE_VERTEX, SrcLang, PrepareMacros(0, SrcLang),
+                            SHADER_TYPE_VERTEX, SrcLang, PrepareMacros(VSResArrId, SrcLang),
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
     if (UseArraysInPSOnly)
@@ -782,7 +791,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
     auto pPS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - PS" : "ShaderResourceLayoutTest.StructuredBuffers - PS",
                             ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main",
-                            SHADER_TYPE_PIXEL, SrcLang, PrepareMacros(1, SrcLang),
+                            SHADER_TYPE_PIXEL, SrcLang, PrepareMacros(PSResArrId, SrcLang),
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
     ASSERT_NE(pVS, nullptr);
@@ -814,7 +823,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     ASSERT_NE(pSRB, nullptr);
 
     auto BindResources = [&](SHADER_TYPE ShaderType) {
-        const auto id = ShaderType == SHADER_TYPE_VERTEX ? 0 : 1;
+        const auto id = ShaderType == SHADER_TYPE_VERTEX ? VSResArrId : PSResArrId;
 
         SET_STATIC_VAR(pPSO, ShaderType, "g_Buff_Static", Set, RefBuffers.GetViewObjects(Buff_StaticIdx[id])[0]);
 
@@ -859,15 +868,15 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, RefBuffers.GetViewObjects(Buff_DynIdx[0])[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, RefBuffers.GetViewObjects(Buff_DynIdx[VSResArrId])[0]);
     if (!UseArraysInPSOnly)
     {
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[0] + 0), 0, 1);
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[0] + 1), 1, 1);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[VSResArrId] + 0), 0, 1);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[VSResArrId] + 1), 1, 1);
     }
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, RefBuffers.GetViewObjects(Buff_DynIdx[1])[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[1]), 0, DynamicBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, RefBuffers.GetViewObjects(Buff_DynIdx[PSResArrId])[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx[PSResArrId]), 0, DynamicBuffArraySize);
 
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -1218,6 +1227,8 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
     float ClearColor[] = {0.875, 0.75, 0.625, 0.125};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
@@ -1237,8 +1248,9 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     static constexpr size_t BuffArr_MutIdx[]    = {3, 5};
     static constexpr size_t BuffArr_DynIdx[]    = {7, 2};
 
-
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const Uint32 VSResArrId = 0;
+    const Uint32 PSResArrId = deviceCaps.Features.SeparablePrograms ? 1 : 0;
+    VERIFY_EXPR(deviceCaps.IsGLDevice() || PSResArrId != VSResArrId);
 
     //  Vulkan allows 15 dynamic uniform buffer bindings among all stages
     const Uint32 StaticCBArraySize  = 2;
@@ -1302,12 +1314,12 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     auto pVS = CreateShader("ShaderResourceLayoutTest.ConstantBuffers - VS",
                             "ConstantBuffers.hlsl",
                             "VSMain",
-                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(0),
+                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(VSResArrId),
                             Resources.data(), static_cast<Uint32>(Resources.size()));
     auto pPS = CreateShader("ShaderResourceLayoutTest.ConstantBuffers - PS",
                             "ConstantBuffers.hlsl",
                             "PSMain",
-                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(1),
+                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, PrepareMacros(PSResArrId),
                             Resources.data(), static_cast<Uint32>(Resources.size()));
     ASSERT_NE(pVS, nullptr);
     ASSERT_NE(pPS, nullptr);
@@ -1340,7 +1352,7 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     ASSERT_NE(pSRB, nullptr);
 
     auto BindResources = [&](SHADER_TYPE ShaderType) {
-        const auto id = ShaderType == SHADER_TYPE_VERTEX ? 0 : 1;
+        const auto id = ShaderType == SHADER_TYPE_VERTEX ? VSResArrId : PSResArrId;
 
         SET_STATIC_VAR(pPSO, ShaderType, "UniformBuff_Stat", Set, RefBuffers.GetBuffObjects(Buff_StaticIdx[id])[0]);
 
@@ -1375,12 +1387,12 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(DrawAttrs);
 
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuff_Dyn", Set, RefBuffers.GetBuffObjects(Buff_DynIdx[0])[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuff_Dyn", Set, RefBuffers.GetBuffObjects(Buff_DynIdx[1])[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuff_Dyn", Set, RefBuffers.GetBuffObjects(Buff_DynIdx[VSResArrId])[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuff_Dyn", Set, RefBuffers.GetBuffObjects(Buff_DynIdx[PSResArrId])[0]);
     if (CBArraysSupported)
     {
-        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuffArr_Dyn", SetArray, RefBuffers.GetBuffObjects(BuffArr_DynIdx[0]), 0, DynamicCBArraySize);
-        SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuffArr_Dyn", SetArray, RefBuffers.GetBuffObjects(BuffArr_DynIdx[1]), 0, DynamicCBArraySize);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuffArr_Dyn", SetArray, RefBuffers.GetBuffObjects(BuffArr_DynIdx[VSResArrId]), 0, DynamicCBArraySize);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuffArr_Dyn", SetArray, RefBuffers.GetBuffObjects(BuffArr_DynIdx[PSResArrId]), 0, DynamicCBArraySize);
     }
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
