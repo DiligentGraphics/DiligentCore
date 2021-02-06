@@ -227,6 +227,12 @@ class ShaderResourceLayoutTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
+        auto* const pEnv       = TestingEnvironment::GetInstance();
+        auto* const pDevice    = pEnv->GetDevice();
+        const auto& deviceCaps = pDevice->GetDeviceCaps();
+
+        UseWARPResourceArrayIndexingBugWorkaround =
+            deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 && pEnv->GetAdapterType() == ADAPTER_TYPE_SOFTWARE;
     }
 
     static void TearDownTestSuite()
@@ -395,7 +401,19 @@ protected:
     void TestTexturesAndImtblSamplers(bool TestImtblSamplers);
     void TestStructuredOrFormattedBuffer(bool IsFormatted);
     void TestRWStructuredOrFormattedBuffer(bool IsFormatted);
+
+    // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
+    // Shader resource array indexing always references array element 0 when shaders are compiled
+    // with shader model 5.1:
+    //      AllCorrect *= CheckValue(g_Tex2DArr_Static[0].SampleLevel(g_Sampler, UV.xy, 0.0), Tex2DArr_Static_Ref0); // OK
+    //      AllCorrect *= CheckValue(g_Tex2DArr_Static[1].SampleLevel(g_Sampler, UV.xy, 0.0), Tex2DArr_Static_Ref1); // FAIL - g_Tex2DArr_Static[0] is sampled
+    // The shaders work OK when using shader model 5.0 with old compiler.
+    // TODO: this should be fixed in the next Windows release - verify.
+    static bool UseWARPResourceArrayIndexingBugWorkaround;
 };
+
+bool ShaderResourceLayoutTest::UseWARPResourceArrayIndexingBugWorkaround = false;
+
 
 #define SET_STATIC_VAR(PSO, ShaderFlags, VarName, SetMethod, ...)                                \
     do                                                                                           \
@@ -513,6 +531,13 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         {
             ShaderCI.UseCombinedTextureSamplers = true;
             // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+        }
+
+        if (UseWARPResourceArrayIndexingBugWorkaround)
+        {
+            // Due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
             ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
@@ -737,10 +762,19 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         GTEST_FAIL() << "Unexpected device type";
     }
 
+    auto ModifyShaderCI = [](ShaderCreateInfo& ShaderCI) {
+        if (UseWARPResourceArrayIndexingBugWorkaround)
+        {
+            // Due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+        }
+    };
     auto pVS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - VS" : "ShaderResourceLayoutTest.StructuredBuffers - VS",
                             ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main",
                             SHADER_TYPE_VERTEX, SrcLang, PrepareMacros(0, SrcLang),
-                            Resources.data(), static_cast<Uint32>(Resources.size()));
+                            Resources.data(), static_cast<Uint32>(Resources.size()),
+                            ModifyShaderCI);
     if (UseArraysInPSOnly)
     {
         AddArrayResources();
@@ -749,7 +783,8 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     auto pPS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - PS" : "ShaderResourceLayoutTest.StructuredBuffers - PS",
                             ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main",
                             SHADER_TYPE_PIXEL, SrcLang, PrepareMacros(1, SrcLang),
-                            Resources.data(), static_cast<Uint32>(Resources.size()));
+                            Resources.data(), static_cast<Uint32>(Resources.size()),
+                            ModifyShaderCI);
     ASSERT_NE(pVS, nullptr);
     ASSERT_NE(pPS, nullptr);
 
@@ -951,10 +986,19 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
         Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx + i));
 
+    auto ModifyShaderCI = [](ShaderCreateInfo& ShaderCI) {
+        if (UseWARPResourceArrayIndexingBugWorkaround)
+        {
+            // Due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+        }
+    };
+
     auto pCS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.RWFormattedBuffers - CS" : "ShaderResourceLayoutTest.RWtructuredBuffers - CS",
                             ShaderFileName, "main",
                             SHADER_TYPE_COMPUTE, SrcLang, Macros,
-                            Resources, _countof(Resources));
+                            Resources, _countof(Resources), ModifyShaderCI);
     ASSERT_NE(pCS, nullptr);
 
     // clang-format off
@@ -1093,10 +1137,19 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
         {"g_RWTex2DArr_Dyn",    SHADER_RESOURCE_TYPE_TEXTURE_UAV, DynamicTexArraySize}
     };
 
+    auto ModifyShaderCI = [](ShaderCreateInfo& ShaderCI) {
+        if (UseWARPResourceArrayIndexingBugWorkaround)
+        {
+            // Due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+        }
+    };
+
     auto pCS = CreateShader("ShaderResourceLayoutTest.RWTextures - CS",
                             "RWTextures.hlsl", "main",
                             SHADER_TYPE_COMPUTE, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
-                            Resources, _countof(Resources));
+                            Resources, _countof(Resources), ModifyShaderCI);
     ASSERT_NE(pCS, nullptr);
 
     // clang-format off
@@ -1242,6 +1295,9 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
         Resources.emplace_back("UniformBuffArr_Dyn",  SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, DynamicCBArraySize);
     }
     // clang-format on
+
+    // Even though shader array indexing is generally broken in D3D12 WARP,
+    // constant buffers seem to be working fine.
 
     auto pVS = CreateShader("ShaderResourceLayoutTest.ConstantBuffers - VS",
                             "ConstantBuffers.hlsl",

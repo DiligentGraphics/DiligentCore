@@ -106,6 +106,8 @@ public:
     void            SetDefaultCompiler(SHADER_COMPILER compiler);
     SHADER_COMPILER GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const;
 
+    ADAPTER_TYPE GetAdapterType() const { return m_AdapterType; }
+
 protected:
     NativeWindow CreateNativeWindow();
 
@@ -115,11 +117,13 @@ protected:
                                 const char*            File,
                                 int                    Line);
 
-    static Uint32 FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
-                               ADAPTER_TYPE                            AdapterType,
-                               Uint32                                  AdapterId);
+    Uint32 FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
+                        ADAPTER_TYPE                            AdapterType,
+                        Uint32                                  AdapterId);
 
     const RENDER_DEVICE_TYPE m_DeviceType;
+
+    ADAPTER_TYPE m_AdapterType = ADAPTER_TYPE_UNKNOWN;
 
     // Any platform-specific data (e.g. window handle) that should
     // be cleaned-up when the testing environment object is destroyed.

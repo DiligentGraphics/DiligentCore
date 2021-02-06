@@ -104,7 +104,8 @@ Uint32 TestingEnvironment::FindAdapater(const std::vector<GraphicsAdapterInfo>& 
         {
             if (Adapters[i].Type == AdapterType)
             {
-                AdapterId = i;
+                AdapterId     = i;
+                m_AdapterType = AdapterType;
                 break;
             }
         }
