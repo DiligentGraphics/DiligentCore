@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #if D3D11_SUPPORTED
 #    include "TextureUploaderD3D11.hpp"
 #endif

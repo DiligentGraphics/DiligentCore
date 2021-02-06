@@ -25,8 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-
 #include <unordered_map>
 #include <deque>
 #include <mutex>

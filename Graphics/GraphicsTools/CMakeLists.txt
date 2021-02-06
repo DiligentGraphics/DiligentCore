@@ -10,7 +10,6 @@ set(INTERFACE
     interface/DurationQueryHelper.hpp
     interface/GraphicsUtilities.h
     interface/MapHelper.hpp
-    interface/pch.h
     interface/ScopedQueryHelper.hpp
     interface/ScreenCapture.hpp
     interface/ShaderMacroHelper.hpp
@@ -27,7 +26,6 @@ set(SOURCE
     src/GraphicsUtilities.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
-    src/pch.cpp
     src/TextureUploader.cpp
 )
 
