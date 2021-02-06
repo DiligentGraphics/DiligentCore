@@ -25,11 +25,11 @@ cbuffer cbTest6
 int cbuffer_fake;
 int fakecbuffer;
 
-RWTexture2D<float/* format = r32f */>Tex2D_F1/*comment*/: /*comment*/register(u0)/*comment*/;
-RWTexture2D<float/* format = r32f */>Tex2D_F2[2]: register(u1),Tex2D_F3: register(u3),/*cmt*/Tex2D_F4,  Tex2D_F5
+RWTexture2D<float4/* format = rgba32f */>Tex2D_F1/*comment*/: /*comment*/register(u0)/*comment*/,Tex2D_F2[2]: register(u1);
+RWTexture2D<float/* format = r32f */>Tex2D_F3: register(u3),/*cmt*/Tex2D_F4,  Tex2D_F5
 /*comment*/:/*comment*/
 register(u4);
-RWTexture2D<int2/* format = rg16i */>Tex2D_I;
+RWTexture2D<int4/* format = rgba16i */>Tex2D_I;
 RWTexture2D<uint/* format = r32ui */>Tex2D_U;
 
 
@@ -86,10 +86,10 @@ void TestLoad()
 
     //Texture2D
     {
-        float f = Tex2D_F1.Load(Location.xy);
-        f += Tex2D_F1.Load(Tex2D_I.Load(Location.xy) + Tex2D_I.Load(Location.xy).yx);
-        f += Tex2D_F2[0].Load(Location.xy);
-        f += Tex2D_F2[1].Load(Location.xy);
+        float f = Tex2D_F1.Load(Location.xy).x;
+        f += Tex2D_F1.Load(Tex2D_I.Load(Location.xy).zw + Tex2D_I.Load(Location.xy).yx).y;
+        f += Tex2D_F2[0].Load(Location.xy).x;
+        f += Tex2D_F2[1].Load(Location.xy).y;
         f += Tex2D_F3.Load(Location.xy);
         f += Tex2D_F4.Load(Location.xy);
         f += Tex2D_F5.Load(Location.xy);
@@ -100,27 +100,34 @@ void TestLoad()
         int idx[2];
         idx[0] = 0;
         idx[1] = 0;
-        f += Tex2D_F2[idx[0]].Load(Location.xy);
-        f += Tex2D_F2[idx[1]].Load(Location.xy);
+        f += Tex2D_F2[idx[0]].Load(Location.xy).z;
+        f += Tex2D_F2[idx[1]].Load(Location.xy).w;
     }
 
     {
         float f = Tex2D_F1[Location.xy].x;
         f += Tex2D_F1[Tex2D_I[Location.xy].xy + Tex2D_I[Location.xy].yx].x;
-        f += Tex2D_F2[0][Location.xy].x;
-        f += Tex2D_F2[1][Location.xy].x;
-        f += Tex2D_F3[Location.xy].x;
-        f += Tex2D_F4[Location.xy].x;
-        f += Tex2D_F5[Location.xy].x;
-
-        int2 i2 = Tex2D_I[Location.xy].xy;
-        uint u  = Tex2D_U[Location.xy].x;
 
         int idx[2];
         idx[0] = 0;
-        idx[1] = 0;
+        idx[1] = 1;
+
+        f += Tex2D_F1[int2(idx[min(Location.x, 1)], idx[min(Location.y,1)])].y;
+
+        int2 i2 = Tex2D_I[Location.xy].xy;
+
         f += Tex2D_F2[idx[0]][int2(idx[min(Location.x,1)], idx[min(Location.y,1)])].x;
         f += Tex2D_F2[idx[1]][int2(idx[min(Location.y,1)], idx[min(Location.x,1)])].x;
+        f += Tex2D_F2[0][Location.xy].x;
+        f += Tex2D_F2[1][Location.xy].x;
+
+#ifndef VULKAN // Only 4-component RW textures can be read with [] in SPIRV
+        f += Tex2D_F3[Location.xy].x;
+        f += Tex2D_F4[int2(idx[idx[min(Location.x,1)]],idx[idx[min(Location.y,1)]])].x;
+        f += Tex2D_F5[Location.xy].x;
+       
+        uint u  = Tex2D_U[Location.xy].x;
+#endif
     }
 }
 
@@ -130,23 +137,22 @@ void TestStore(uint2 Location)
 {
     //Texture2D
     {
-        Tex2D_F1[Location.xy] = 10.0;
-        Tex2D_F1[Tex2D_I.Load(Location.xy).xy + Tex2D_I.Load(Location.xy).xy] = 20.0;
-        Tex2D_F2[0][Location.xy] = 1.0;
-        Tex2D_F2[1][Location.xy] = 2.0;
+        Tex2D_F1[Location.xy] = float4(10.0, 20.0, 30.0, 40.0);
+        Tex2D_F1[Tex2D_I.Load(Location.xy).xy + Tex2D_I.Load(Location.xy).xy] = float4(20.0, 30.0, 40.0, 50.0);
+        Tex2D_F2[0][Location.xy] = float4(1.0, 2.0, 3.0, 4.0);
+        Tex2D_F2[1][Location.xy] = float4(2.0, 3.0, 5.0, 7.0);
         Tex2D_F3[Location.xy] = 5.0;
         Tex2D_F4[Location.xy] = 7.0;
         Tex2D_F5[Location.xy] = 9.0;
-        Tex2D_I[Location.xy] = int2( 43, 23);
+        Tex2D_I[Location.xy] = int4( 43, 23, 10, 20);
         Tex2D_U[Location.xy] = 3u;
     }
     {
         int2 idx[2];
         idx[0] = int2(0,0);
         idx[1] = int2(1,1);
-        Tex2D_F1[ idx[ min(Location.x, 1) ] ] = 20.0;
-
-        Tex2D_F1[Tex2D_I[Location.xy].xy + Tex2D_I[Location.xy].xy] = 30.;
+        Tex2D_F1[ idx[ min(Location.x, 1) ] ] = float4(20.0, 30.0, 50.0, 60.0);
+        Tex2D_F1[Tex2D_I[Location.xy].xy + Tex2D_I[Location.xy].zw] = 30.0;
 
         Tex2D_F1[
                  idx[
@@ -159,7 +165,7 @@ void TestStore(uint2 Location)
                              int2(Tex2D_I[idx[Location.y]].x, idx[Location.x].y)
                             ].x
                     ]
-                ] = Tex2D_F2[idx[0].y][int2(Tex2D_I[idx[min(Location.x,1)]].x, Tex2D_I[idx[min(Location.y,1)]].y)].x;
+                ] = Tex2D_F2[idx[0].y][int2(Tex2D_I[idx[min(Location.x,1)]].x, Tex2D_I[idx[min(Location.y,1)]].y)].xzyw;
     }
 }
 

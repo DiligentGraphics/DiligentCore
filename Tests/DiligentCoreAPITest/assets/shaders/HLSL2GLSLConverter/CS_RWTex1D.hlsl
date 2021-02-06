@@ -82,20 +82,24 @@ void TestLoad()
         int2 i2  = Tex1D_I.Load(Location.x).xy;
         uint4 u4 = Tex1D_U.Load(Location.x);
 
+#ifndef VULKAN // Only 4-component RW textures can be read with [] in SPIRV
         f += Tex1D_F1[Location.x].x;
         i2  += Tex1D_I[Location.x].xy;
+#endif
         u4 += Tex1D_U[Location.x];
     }
 
     // Texture1DArray
     {
         float f  = Tex1D_F_A.Load(Location.xy);
-        uint4 u4 = Tex1D_U_A.Load(Location.xy);
         int2 i2  = Tex1D_I_A.Load(Location.xy);
+        uint4 u4 = Tex1D_U_A.Load(Location.xy);
 
+#ifndef VULKAN // Only 4-component RW textures can be read with [] in SPIRV
         f  += Tex1D_F_A[Location.xy].x;
-        u4 += Tex1D_U_A[Location.xy];
         i2 += Tex1D_I_A[Location.xy].xy;
+#endif
+        u4 += Tex1D_U_A[Location.xy];
     }
 }
 

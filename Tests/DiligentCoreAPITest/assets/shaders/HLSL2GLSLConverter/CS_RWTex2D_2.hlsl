@@ -67,9 +67,11 @@ void TestLoad()
         uint4 u4 = Tex2D_U_A.Load(Location.xyz);
         int2 i2  = Tex2D_I_A.Load(Location.xyz);
 
-        f  += Tex2D_F_A[Location.xyz].x;
         u4 += Tex2D_U_A[Location.xyz];
+#ifndef VULKAN // Only 4-component RW textures can be read with [] in SPIRV
+        f  += Tex2D_F_A[Location.xyz].x;
         i2 += Tex2D_I_A[Location.xyz].xy;
+#endif
     }
 
     //Texture3D
@@ -79,8 +81,10 @@ void TestLoad()
         int    i  = Tex3D_I.Load(Location.xyz);
 
         f4 += Tex3D_F[Location.xyz].xyzw;
+#ifndef VULKAN // Only 4-component RW textures can be read with [] in SPIRV
         u2 += Tex3D_U[Location.xyz].xy;
         i  += Tex3D_I[Location.xyz].x;
+#endif
     }
 }
 
