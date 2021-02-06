@@ -81,6 +81,10 @@ void TestLoad()
         float f  = Tex1D_F1.Load(Location.x);
         int2 i2  = Tex1D_I.Load(Location.x).xy;
         uint4 u4 = Tex1D_U.Load(Location.x);
+
+        f += Tex1D_F1[Location.x].x;
+        i2  += Tex1D_I[Location.x].xy;
+        u4 += Tex1D_U[Location.x];
     }
 
     // Texture1DArray
@@ -88,6 +92,10 @@ void TestLoad()
         float f  = Tex1D_F_A.Load(Location.xy);
         uint4 u4 = Tex1D_U_A.Load(Location.xy);
         int2 i2  = Tex1D_I_A.Load(Location.xy);
+
+        f  += Tex1D_F_A[Location.xy].x;
+        u4 += Tex1D_U_A[Location.xy];
+        i2 += Tex1D_I_A[Location.xy].xy;
     }
 }
 

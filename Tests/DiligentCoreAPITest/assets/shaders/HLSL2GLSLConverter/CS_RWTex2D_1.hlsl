@@ -26,11 +26,11 @@ int cbuffer_fake;
 int fakecbuffer;
 
 RWTexture2D<float/* format = r32f */>Tex2D_F1/*comment*/: /*comment*/register(u0)/*comment*/;
-RWTexture2D<float/* format = r32f */>Tex2D_F2[2]: register(u1),Tex2D_F3: register(u2),/*cmt*/Tex2D_F4,  Tex2D_F5
+RWTexture2D<float/* format = r32f */>Tex2D_F2[2]: register(u1),Tex2D_F3: register(u3),/*cmt*/Tex2D_F4,  Tex2D_F5
 /*comment*/:/*comment*/
-register(u3);
-RWTexture2D<int2/* format = rg32i */>Tex2D_I;
-RWTexture2D<uint4/* format = rgba16ui */>Tex2D_U;
+register(u4);
+RWTexture2D<int2/* format = rg16i */>Tex2D_I;
+RWTexture2D<uint/* format = r32ui */>Tex2D_U;
 
 
 int GlobalIntVar;Texture2D Tex2D_Test1:register(t0);Texture2D Tex2D_Test2;/*Comment* / *//* /** Comment2*/Texture2D Tex2D_Test3 /*Cmnt*/: /*comment*/register(t1)/*comment*/,/*comment*/
@@ -71,6 +71,11 @@ void TestGetDimensions()
         Tex2D_F2[0].GetDimensions( fWidth, fHeight);
         Tex2D_I.GetDimensions (fWidth, fHeight );
         Tex2D_U.GetDimensions ( fWidth, fHeight );
+
+        int idx[2];
+        idx[0] = 0;
+        idx[1] = 0;
+        Tex2D_F2[idx[0]].GetDimensions( uWidth, uHeight);
     }
 }
 
@@ -82,11 +87,41 @@ void TestLoad()
     //Texture2D
     {
         float f = Tex2D_F1.Load(Location.xy);
-              f = Tex2D_F1.Load(Tex2D_I.Load(Location.xy) + Tex2D_I.Load(Location.xy).yx);
-        int2 i2 = Tex2D_I.Load(Location.xy);
-        uint4 u4= Tex2D_U.Load(Location.xy).xyzw;
+        f += Tex2D_F1.Load(Tex2D_I.Load(Location.xy) + Tex2D_I.Load(Location.xy).yx);
+        f += Tex2D_F2[0].Load(Location.xy);
+        f += Tex2D_F2[1].Load(Location.xy);
+        f += Tex2D_F3.Load(Location.xy);
+        f += Tex2D_F4.Load(Location.xy);
+        f += Tex2D_F5.Load(Location.xy);
+
+        int2 i2 = Tex2D_I.Load(Location.xy).xy;
+        uint u  = Tex2D_U.Load(Location.xy);
+
+        int idx[2];
+        idx[0] = 0;
+        idx[1] = 0;
+        f += Tex2D_F2[idx[0]].Load(Location.xy);
+        f += Tex2D_F2[idx[1]].Load(Location.xy);
     }
 
+    {
+        float f = Tex2D_F1[Location.xy].x;
+        f += Tex2D_F1[Tex2D_I[Location.xy].xy + Tex2D_I[Location.xy].yx].x;
+        f += Tex2D_F2[0][Location.xy].x;
+        f += Tex2D_F2[1][Location.xy].x;
+        f += Tex2D_F3[Location.xy].x;
+        f += Tex2D_F4[Location.xy].x;
+        f += Tex2D_F5[Location.xy].x;
+
+        int2 i2 = Tex2D_I[Location.xy].xy;
+        uint u  = Tex2D_U[Location.xy].x;
+
+        int idx[2];
+        idx[0] = 0;
+        idx[1] = 0;
+        f += Tex2D_F2[idx[0]][int2(idx[min(Location.x,1)], idx[min(Location.y,1)])].x;
+        f += Tex2D_F2[idx[1]][int2(idx[min(Location.y,1)], idx[min(Location.x,1)])].x;
+    }
 }
 
 
@@ -97,8 +132,34 @@ void TestStore(uint2 Location)
     {
         Tex2D_F1[Location.xy] = 10.0;
         Tex2D_F1[Tex2D_I.Load(Location.xy).xy + Tex2D_I.Load(Location.xy).xy] = 20.0;
+        Tex2D_F2[0][Location.xy] = 1.0;
+        Tex2D_F2[1][Location.xy] = 2.0;
+        Tex2D_F3[Location.xy] = 5.0;
+        Tex2D_F4[Location.xy] = 7.0;
+        Tex2D_F5[Location.xy] = 9.0;
         Tex2D_I[Location.xy] = int2( 43, 23);
-        Tex2D_U[Location.xy] = uint4( 3,7,1,7);
+        Tex2D_U[Location.xy] = 3u;
+    }
+    {
+        int2 idx[2];
+        idx[0] = int2(0,0);
+        idx[1] = int2(1,1);
+        Tex2D_F1[ idx[ min(Location.x, 1) ] ] = 20.0;
+
+        Tex2D_F1[Tex2D_I[Location.xy].xy + Tex2D_I[Location.xy].xy] = 30.;
+
+        Tex2D_F1[
+                 idx[
+                     Tex2D_I[
+                             int2(Tex2D_I[idx[Location.x]].x, idx[Location.y].y) 
+                            ].x
+                    ] + 
+                 idx[
+                     Tex2D_I[ 
+                             int2(Tex2D_I[idx[Location.y]].x, idx[Location.x].y)
+                            ].x
+                    ]
+                ] = Tex2D_F2[idx[0].y][int2(Tex2D_I[idx[min(Location.x,1)]].x, Tex2D_I[idx[min(Location.y,1)]].y)].x;
     }
 }
 
@@ -163,42 +224,51 @@ void TestCS(CSInput In,
     InterlockedAdd(g_u4TestSharedVar.x, 1u);
     InterlockedAdd(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedAdd(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
+    InterlockedAdd(Tex2D_U[Gid.xy], 1u, uOldVal);
 
     InterlockedAnd(g_i4TestSharedVar.x, 1);
     InterlockedAnd(g_u4TestSharedVar.x, 1u);
     InterlockedAnd(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedAnd(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
+    InterlockedAnd(Tex2D_U[Gid.xy], 1u, uOldVal);
                 
     InterlockedOr(g_i4TestSharedVar.x, 1);
     InterlockedOr(g_u4TestSharedVar.x, 1u);
     InterlockedOr(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedOr(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
+    InterlockedOr(Tex2D_U[Gid.xy], 1u, uOldVal);
                 
     InterlockedXor(g_i4TestSharedVar.x, 1);
     InterlockedXor(g_u4TestSharedVar.x, 1u);
     InterlockedXor(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedXor(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
+    InterlockedXor(Tex2D_U[Gid.xy], 1u, uOldVal);
    
     InterlockedMax(g_i4TestSharedVar.x, 1);
     InterlockedMax(g_u4TestSharedVar.x, 1u);
     InterlockedMax(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedMax(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
+    InterlockedMax(Tex2D_U[Gid.xy], 1u, uOldVal);
 
     InterlockedMin(g_i4TestSharedVar.x, 1);
     InterlockedMin(g_u4TestSharedVar.x, 1u);
     InterlockedMin(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedMin(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
+    InterlockedMin(Tex2D_U[Gid.xy], 1u, uOldVal);
+
                 
     // There is actually no InterlockedExchange() with 2 arguments
     //InterlockedExchange(g_i4TestSharedVar.x, 1);
     //InterlockedExchange(g_u4TestSharedVar.x, 1u);
     InterlockedExchange(g_i4TestSharedArr[GTid.x].x, 1, iOldVal);
     InterlockedExchange(g_u4TestSharedArr[Gid.x].x, 1u, uOldVal);
+    InterlockedExchange(Tex2D_U[Gid.xy], 1u, uOldVal);
                 
     InterlockedCompareStore(g_i4TestSharedVar.x, 1, 10);
     InterlockedCompareStore(g_u4TestSharedVar.x, 1u, 10u);
     InterlockedCompareExchange(g_i4TestSharedArr[GTid.x].x, 1, 10, iOldVal);
     InterlockedCompareExchange(g_u4TestSharedArr[Gid.x].x, 1u, 10u, uOldVal);
+    InterlockedCompareExchange(Tex2D_U[Gid.xy], 1u, 10u, uOldVal);
                 
 	//uint2 ui2Dim;
 	//g_tex2DTestUAV.GetDimensions(ui2Dim.x, ui2Dim.y);

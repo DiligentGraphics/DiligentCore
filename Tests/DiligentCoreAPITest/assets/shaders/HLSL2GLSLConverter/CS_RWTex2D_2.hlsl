@@ -66,6 +66,10 @@ void TestLoad()
         float f  = Tex2D_F_A.Load(Location.xyz);
         uint4 u4 = Tex2D_U_A.Load(Location.xyz);
         int2 i2  = Tex2D_I_A.Load(Location.xyz);
+
+        f  += Tex2D_F_A[Location.xyz].x;
+        u4 += Tex2D_U_A[Location.xyz];
+        i2 += Tex2D_I_A[Location.xyz].xy;
     }
 
     //Texture3D
@@ -73,6 +77,10 @@ void TestLoad()
         float4 f4 = Tex3D_F.Load(Location.xyz).xyzw;
         uint2  u2 = Tex3D_U.Load(Location.xyz).xy;
         int    i  = Tex3D_I.Load(Location.xyz);
+
+        f4 += Tex3D_F[Location.xyz].xyzw;
+        u2 += Tex3D_U[Location.xyz].xy;
+        i  += Tex3D_I[Location.xyz].x;
     }
 }
 

@@ -1,30 +1,30 @@
-layout(std140, binding = 0) writeonly buffer g_RWBuff_Static
+layout(std140, binding = 0) buffer g_RWBuff_Static
 {
     vec4 data[4];
 }g_StorageBuff_Static;
 
-layout(std140, binding = 1) writeonly buffer g_RWBuff_Mut
+layout(std140, binding = 1) buffer g_RWBuff_Mut
 {
     vec4 data[4];
 }g_StorageBuff_Mut;
 
-layout(std140, binding = 2) writeonly buffer g_RWBuff_Dyn
+layout(std140, binding = 2) buffer g_RWBuff_Dyn
 {
     vec4 data[4];
 }g_StorageBuff_Dyn;
 
 
-layout(std140, binding = 3) writeonly buffer g_RWBuffArr_Static
+layout(std140, binding = 3) buffer g_RWBuffArr_Static
 {
     vec4 data[4];
 }g_StorageBuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4 or 1 in OpenGL
 
-layout(std140, binding = 7) writeonly buffer g_RWBuffArr_Mut
+layout(std140, binding = 7) buffer g_RWBuffArr_Mut
 {
     vec4 data[4];
 }g_StorageBuffArr_Mut[MUTABLE_BUFF_ARRAY_SIZE]; // 3 or 2 in OpenGL
 
-layout(std140, binding = 10) writeonly buffer g_RWBuffArr_Dyn
+layout(std140, binding = 10) buffer g_RWBuffArr_Dyn
 {
     vec4 data[4];
 }g_StorageBuffArr_Dyn[DYNAMIC_BUFF_ARRAY_SIZE]; // 2
@@ -69,13 +69,13 @@ vec4 VerifyResources()
 #endif
 
     AllCorrect *= CheckValue(g_StorageBuffArr_Mut[0].data[1], BuffArr_Mut_Ref0);
-    AllCorrect *= CheckValue(g_StorageBuffArr_Mut[1].data[2], BuffArr_Mut_Ref1);
 
     g_StorageBuffArr_Mut[0].data[0] = Data;
-    g_StorageBuffArr_Mut[1].data[0] = Data;
 #if (MUTABLE_BUFF_ARRAY_SIZE == 3)
+    AllCorrect *= CheckValue(g_StorageBuffArr_Mut[1].data[2], BuffArr_Mut_Ref1);
     AllCorrect *= CheckValue(g_StorageBuffArr_Mut[2].data[1], BuffArr_Mut_Ref2);
 
+    g_StorageBuffArr_Mut[1].data[0] = Data;
     g_StorageBuffArr_Mut[2].data[0] = Data;
 #endif
 

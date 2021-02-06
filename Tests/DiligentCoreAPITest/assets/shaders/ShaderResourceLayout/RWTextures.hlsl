@@ -1,10 +1,10 @@
-RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2D_Static;
-RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2D_Mut;
-RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2D_Dyn;
+RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Static;
+RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Mut;
+RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Dyn;
 
-RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
-RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4 or 2 in D3D11
-RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3 or 1 in D3D11
+RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
+RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4 or 2 in D3D11
+RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3 or 1 in D3D11
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -36,24 +36,25 @@ float4 VerifyResources()
     g_RWTex2DArr_Static[1][int2(0,0)] = f4Color;
 
     AllCorrect *= CheckValue(g_RWTex2DArr_Mut[0][int2(32, 21)], Tex2DArr_Mut_Ref0);
-    AllCorrect *= CheckValue(g_RWTex2DArr_Mut[1][int2(31, 24)], Tex2DArr_Mut_Ref1);
-
     g_RWTex2DArr_Mut[0][int2(0,0)] = f4Color;
-    g_RWTex2DArr_Mut[1][int2(0,0)] = f4Color;
+
 #if (MUTABLE_TEX_ARRAY_SIZE == 4)
+    AllCorrect *= CheckValue(g_RWTex2DArr_Mut[1][int2(31, 24)], Tex2DArr_Mut_Ref1);
     AllCorrect *= CheckValue(g_RWTex2DArr_Mut[2][int2(42, 56)], Tex2DArr_Mut_Ref2);
     AllCorrect *= CheckValue(g_RWTex2DArr_Mut[3][int2(45, 54)], Tex2DArr_Mut_Ref3);
 
+    g_RWTex2DArr_Mut[1][int2(0,0)] = f4Color;
     g_RWTex2DArr_Mut[2][int2(0,0)] = f4Color;
     g_RWTex2DArr_Mut[3][int2(0,0)] = f4Color;
 #endif
 
     AllCorrect *= CheckValue(g_RWTex2DArr_Dyn[0][int2(67, 54)], Tex2DArr_Dyn_Ref0);
+    g_RWTex2DArr_Dyn[0][int2(0,0)] = f4Color;
+
+#if (DYNAMIC_TEX_ARRAY_SIZE == 3)
     AllCorrect *= CheckValue(g_RWTex2DArr_Dyn[1][int2(73, 58)], Tex2DArr_Dyn_Ref1);
     AllCorrect *= CheckValue(g_RWTex2DArr_Dyn[2][int2(78, 92)], Tex2DArr_Dyn_Ref2);
 
-    g_RWTex2DArr_Dyn[0][int2(0,0)] = f4Color;
-#if (DYNAMIC_TEX_ARRAY_SIZE == 3)
     g_RWTex2DArr_Dyn[1][int2(0,0)] = f4Color;
     g_RWTex2DArr_Dyn[2][int2(0,0)] = f4Color;
 #endif

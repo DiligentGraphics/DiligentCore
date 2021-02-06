@@ -874,18 +874,22 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     const auto& deviceCaps = pDevice->GetDeviceCaps();
     auto        deviceType = deviceCaps.DevType;
 
+    constexpr Uint32 MaxStaticBuffArraySize  = 4;
+    constexpr Uint32 MaxMutableBuffArraySize = 3;
+    constexpr Uint32 MaxDynamicBuffArraySize = 2;
+
     // Prepare buffers with reference values
     ReferenceBuffers RefBuffers{
-        3 + 4 + 3 + 2,
+        3 + MaxStaticBuffArraySize + MaxMutableBuffArraySize + MaxDynamicBuffArraySize + 1, // Extra buffer for dynamic variables
         USAGE_DEFAULT,
         BIND_UNORDERED_ACCESS,
         BUFFER_VIEW_UNORDERED_ACCESS,
         IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED //
     };
 
-    const Uint32 StaticBuffArraySize  = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : 4;
-    const Uint32 MutableBuffArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 2 : 3;
-    const Uint32 DynamicBuffArraySize = 2;
+    const Uint32 StaticBuffArraySize  = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : MaxStaticBuffArraySize;
+    const Uint32 MutableBuffArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : MaxMutableBuffArraySize;
+    const Uint32 DynamicBuffArraySize = MaxDynamicBuffArraySize;
 
     static constexpr size_t Buff_StaticIdx = 0;
     static constexpr size_t Buff_MutIdx    = 1;
@@ -985,9 +989,11 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Static", SetArray, RefBuffers.GetViewObjects(BuffArr_StaticIdx), 0, StaticBuffArraySize);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Mut", Set, RefBuffers.GetViewObjects(Buff_MutIdx)[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, RefBuffers.GetViewObjects(0)[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Mut", SetArray, RefBuffers.GetViewObjects(BuffArr_MutIdx), 0, MutableBuffArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(0), 0, DynamicBuffArraySize);
+
+    // In Direct3D11 UAVs must not overlap!
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, RefBuffers.GetViewObjects(BuffArr_DynIdx)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx + 1), 0, DynamicBuffArraySize);
 
     pSRB->InitializeStaticResources(pPSO);
 
@@ -1032,12 +1038,16 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     const auto& deviceCaps = pDevice->GetDeviceCaps();
     auto        deviceType = deviceCaps.DevType;
 
-    const Uint32 StaticTexArraySize  = 2;
-    const Uint32 MutableTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 2 : 4;
-    const Uint32 DynamicTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : 3;
+    constexpr Uint32 MaxStaticTexArraySize  = 2;
+    constexpr Uint32 MaxMutableTexArraySize = 4;
+    constexpr Uint32 MaxDynamicTexArraySize = 3;
+
+    const Uint32 StaticTexArraySize  = MaxStaticTexArraySize;
+    const Uint32 MutableTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : MaxMutableTexArraySize;
+    const Uint32 DynamicTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : MaxDynamicTexArraySize;
 
     ReferenceTextures RefTextures{
-        3 + 2 + 4 + 3,
+        3 + MaxStaticTexArraySize + MaxMutableTexArraySize + MaxDynamicTexArraySize + 1, // Extra texture for dynamic variables
         128, 128,
         USAGE_DEFAULT,
         BIND_UNORDERED_ACCESS,
@@ -1121,9 +1131,11 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Static", SetArray, RefTextures.GetViewObjects(Tex2DArr_StaticIdx), 0, StaticTexArraySize);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Mut", Set, RefTextures.GetViewObjects(Tex2D_MutIdx)[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, RefTextures.GetViewObjects(0)[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Mut", SetArray, RefTextures.GetViewObjects(Tex2DArr_MutIdx), 0, MutableTexArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(0), 0, DynamicTexArraySize);
+
+    // In Direct3D11 UAVs must not overlap!
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, RefTextures.GetViewObjects(Tex2DArr_DynIdx)[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx + 1), 0, DynamicTexArraySize);
 
     pSRB->InitializeStaticResources(pPSO);
 

@@ -45,13 +45,13 @@ float4 VerifyResources()
 #endif
 
     AllCorrect *= CheckValue(g_RWBuffArr_Mut[0][1], BuffArr_Mut_Ref0);
-    AllCorrect *= CheckValue(g_RWBuffArr_Mut[1][2], BuffArr_Mut_Ref1);
-
     g_RWBuffArr_Mut[0][0] = f4Data;
-    g_RWBuffArr_Mut[1][0] = f4Data;
+
 #if (MUTABLE_BUFF_ARRAY_SIZE == 3)
+    AllCorrect *= CheckValue(g_RWBuffArr_Mut[1][2], BuffArr_Mut_Ref1);
     AllCorrect *= CheckValue(g_RWBuffArr_Mut[2][2], BuffArr_Mut_Ref2);
 
+    g_RWBuffArr_Mut[1][0] = f4Data;
     g_RWBuffArr_Mut[2][0] = f4Data;
 #endif
 
