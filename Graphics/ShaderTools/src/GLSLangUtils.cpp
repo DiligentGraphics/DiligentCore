@@ -68,7 +68,10 @@ void FinalizeGlslang()
     ::glslang::FinalizeProcess();
 }
 
-static EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
+namespace
+{
+
+EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
 {
     static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please handle the new shader type in the switch below");
     switch (ShaderType)
@@ -95,7 +98,7 @@ static EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
     }
 }
 
-static TBuiltInResource InitResources()
+TBuiltInResource InitResources()
 {
     TBuiltInResource Resources;
 
@@ -324,12 +327,12 @@ public:
     }
 };
 
-static void LogCompilerError(const char* DebugOutputMessage,
-                             const char* InfoLog,
-                             const char* InfoDebugLog,
-                             const char* ShaderSource,
-                             size_t      SourceCodeLen,
-                             IDataBlob** ppCompilerOutput)
+void LogCompilerError(const char* DebugOutputMessage,
+                      const char* InfoLog,
+                      const char* InfoDebugLog,
+                      const char* ShaderSource,
+                      size_t      SourceCodeLen,
+                      IDataBlob** ppCompilerOutput)
 {
     std::string ErrorLog(InfoLog);
     if (*InfoDebugLog != '\0')
@@ -349,12 +352,12 @@ static void LogCompilerError(const char* DebugOutputMessage,
     }
 }
 
-static std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Shader,
-                                                       EShMessages                   messages,
-                                                       ::glslang::TShader::Includer* pIncluder,
-                                                       const char*                   ShaderSource,
-                                                       size_t                        SourceCodeLen,
-                                                       IDataBlob**                   ppCompilerOutput)
+std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Shader,
+                                                EShMessages                   messages,
+                                                ::glslang::TShader::Includer* pIncluder,
+                                                const char*                   ShaderSource,
+                                                size_t                        SourceCodeLen,
+                                                IDataBlob**                   ppCompilerOutput)
 {
     Shader.setAutoMapBindings(true);
     TBuiltInResource Resources = InitResources();
@@ -445,6 +448,56 @@ private:
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
+} // namespace
+
+void SpvOptimizerMessageConsumer(
+    spv_message_level_t level,
+    const char* /* source */,
+    const spv_position_t& /* position */,
+    const char* message)
+{
+    const char*            LevelText   = "message";
+    DEBUG_MESSAGE_SEVERITY MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+    switch (level)
+    {
+        case SPV_MSG_FATAL:
+            // Unrecoverable error due to environment (e.g. out of memory)
+            LevelText   = "fatal error";
+            MsgSeverity = DEBUG_MESSAGE_SEVERITY_FATAL_ERROR;
+            break;
+
+        case SPV_MSG_INTERNAL_ERROR:
+            // Unrecoverable error due to SPIRV-Tools internals (e.g. unimplemented feature)
+            LevelText   = "internal error";
+            MsgSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
+            break;
+
+        case SPV_MSG_ERROR:
+            // Normal error due to user input.
+            LevelText   = "error";
+            MsgSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
+            break;
+
+        case SPV_MSG_WARNING:
+            LevelText   = "warning";
+            MsgSeverity = DEBUG_MESSAGE_SEVERITY_WARNING;
+            break;
+
+        case SPV_MSG_INFO:
+            LevelText   = "info";
+            MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+            break;
+
+        case SPV_MSG_DEBUG:
+            LevelText   = "debug";
+            MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+            break;
+    }
+
+    if (level == SPV_MSG_FATAL || level == SPV_MSG_INTERNAL_ERROR || level == SPV_MSG_ERROR || level == SPV_MSG_WARNING)
+        LOG_DEBUG_MESSAGE(MsgSeverity, "Spirv optimizer ", LevelText, ": ", message);
+}
+
 std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
                                       const char*             ExtraDefinitions,
                                       IDataBlob**             ppCompilerOutput)
@@ -498,7 +551,8 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     // SPIR-V bytecode generated from HLSL must be legalized to
     // turn it into a valid vulkan SPIR-V shader
-    spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
+    spvtools::Optimizer SpirvOptimizer{SPV_ENV_VULKAN_1_0};
+    SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
     SpirvOptimizer.RegisterLegalizationPasses();
     SpirvOptimizer.RegisterPerformancePasses();
     std::vector<uint32_t> LegalizedSPIRV;
@@ -574,6 +628,7 @@ std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderTyp
         return SPIRV;
 
     spvtools::Optimizer SpirvOptimizer(spvTarget);
+    SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
     SpirvOptimizer.RegisterPerformancePasses();
     std::vector<uint32_t> OptimizedSPIRV;
     if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &OptimizedSPIRV))
