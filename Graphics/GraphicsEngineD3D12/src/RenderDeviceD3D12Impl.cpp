@@ -26,7 +26,10 @@
  */
 
 #include "pch.h"
+
 #include <dxgi1_4.h>
+#include <vector>
+
 #include "RenderDeviceD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
@@ -406,22 +409,41 @@ void RenderDeviceD3D12Impl::FreeCommandContext(PooledCommandContext&& Ctx)
 void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, PooledCommandContext&& Ctx)
 {
     CComPtr<ID3D12CommandAllocator> pAllocator;
-    ID3D12GraphicsCommandList*      pCmdList   = Ctx->Close(pAllocator);
-    Uint64                          FenceValue = 0;
+    ID3D12CommandList* const        pCmdList = Ctx->Close(pAllocator);
+    VERIFY(pCmdList != nullptr, "Command list must not be null");
+    Uint64 FenceValue = 0;
     // Execute command list directly through the queue to avoid interference with command list numbers in the queue
     LockCmdQueueAndRun(CommandQueueIndex,
                        [&](ICommandQueueD3D12* pCmdQueue) //
                        {
-                           FenceValue = pCmdQueue->Submit(pCmdList);
+                           FenceValue = pCmdQueue->Submit(1, &pCmdList);
                        });
     m_CmdListManager.ReleaseAllocator(std::move(pAllocator), CommandQueueIndex, FenceValue);
     FreeCommandContext(std::move(Ctx));
 }
 
-Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, PooledCommandContext&& Ctx, bool DiscardStaleObjects, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences)
+Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContexts(Uint32                                                 QueueIndex,
+                                                             Uint32                                                 NumContexts,
+                                                             PooledCommandContext                                   pContexts[],
+                                                             bool                                                   DiscardStaleObjects,
+                                                             std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences)
 {
-    CComPtr<ID3D12CommandAllocator> pAllocator;
-    ID3D12GraphicsCommandList*      pCmdList = Ctx->Close(pAllocator);
+    VERIFY_EXPR(NumContexts > 0 && pContexts != 0);
+
+    // TODO: use small_vector
+    std::vector<ID3D12CommandList*>              d3d12CmdLists;
+    std::vector<CComPtr<ID3D12CommandAllocator>> CmdAllocators;
+    d3d12CmdLists.reserve(NumContexts);
+    CmdAllocators.reserve(NumContexts);
+
+    for (Uint32 i = 0; i < NumContexts; ++i)
+    {
+        auto& pCtx = pContexts[i];
+        VERIFY_EXPR(pCtx);
+        CComPtr<ID3D12CommandAllocator> pAllocator;
+        d3d12CmdLists.emplace_back(pCtx->Close(pAllocator));
+        CmdAllocators.emplace_back(std::move(pAllocator));
+    }
 
     Uint64 FenceValue = 0;
     {
@@ -443,14 +465,17 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, P
         //                  |     N+1, but resource it references    |                                   |
         //                  |     was added to the delete queue      |                                   |
         //                  |     with number N                      |                                   |
-        auto SubmittedCmdBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, pCmdList, true);
+        auto SubmittedCmdBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, true, NumContexts, d3d12CmdLists.data());
         FenceValue                = SubmittedCmdBuffInfo.FenceValue;
         if (pSignalFences != nullptr)
             SignalFences(QueueIndex, *pSignalFences);
     }
 
-    m_CmdListManager.ReleaseAllocator(std::move(pAllocator), QueueIndex, FenceValue);
-    FreeCommandContext(std::move(Ctx));
+    for (Uint32 i = 0; i < NumContexts; ++i)
+    {
+        m_CmdListManager.ReleaseAllocator(std::move(CmdAllocators[i]), QueueIndex, FenceValue);
+        FreeCommandContext(std::move(pContexts[i]));
+    }
 
     PurgeReleaseQueue(QueueIndex);
 
@@ -477,8 +502,7 @@ void RenderDeviceD3D12Impl::FlushStaleResources(Uint32 CmdQueueIndex)
 {
     // Submit empty command list to the queue. This will effectively signal the fence and
     // discard all resources
-    ID3D12GraphicsCommandList* pNullCmdList = nullptr;
-    TRenderDeviceBase::SubmitCommandBuffer(CmdQueueIndex, pNullCmdList, true);
+    TRenderDeviceBase::SubmitCommandBuffer(CmdQueueIndex, true, 0, nullptr);
 }
 
 void RenderDeviceD3D12Impl::ReleaseStaleResources(bool ForceRelease)

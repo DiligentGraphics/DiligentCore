@@ -1,5 +1,7 @@
 ## Current Progress
 
+* Replaced `IDeviceContext::ExecuteCommandList()` with `IDeviceContext::ExecuteCommandLists()` method that takes
+  an array of command lists instead of one (API Version 240082)
 * Added `IDeviceObject::SetUserData()` and `IDeviceObject::GetUserData()` methods (API Version 240081)
 
 ## v2.4.g

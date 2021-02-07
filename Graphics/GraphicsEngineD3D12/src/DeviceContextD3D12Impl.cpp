@@ -26,7 +26,10 @@
  */
 
 #include "pch.h"
+
 #include <sstream>
+#include <vector>
+
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceContextD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
@@ -778,7 +781,8 @@ void DeviceContextD3D12Impl::Flush(bool RequestNewCmdCtx)
         if (m_State.NumCommands != 0)
         {
             m_CurrCmdCtx->FlushResourceBarriers();
-            m_pDevice->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(m_CurrCmdCtx), true, &m_PendingFences);
+            m_pDevice->CloseAndExecuteCommandContexts(m_CommandQueueId, 1, &m_CurrCmdCtx, true, &m_PendingFences);
+            VERIFY(!m_CurrCmdCtx, "Context must be disposed by CloseAndExecuteCommandContexts");
             m_PendingFences.clear();
         }
         else
@@ -2041,25 +2045,45 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     InvalidateState();
 }
 
-void DeviceContextD3D12Impl::ExecuteCommandList(ICommandList* pCommandList)
+void DeviceContextD3D12Impl::ExecuteCommandLists(Uint32               NumCommandLists,
+                                                 ICommandList* const* ppCommandLists)
 {
     if (m_bIsDeferred)
     {
         LOG_ERROR_MESSAGE("Only immediate context can execute command list");
         return;
     }
+
+    if (NumCommandLists == 0)
+        return;
+    DEV_CHECK_ERR(ppCommandLists != nullptr, "ppCommandLists must not be null when NumCommandLists is not zero");
+
     // First execute commands in this context
     Flush(true);
 
     InvalidateState();
 
-    CommandListD3D12Impl* pCmdListD3D12 = ValidatedCast<CommandListD3D12Impl>(pCommandList);
     VERIFY_EXPR(m_PendingFences.empty());
-    RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
-    auto                                  CmdContext = pCmdListD3D12->Close(pDeferredCtx);
-    m_pDevice->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(CmdContext), true, nullptr);
-    // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
-    pDeferredCtx->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
+
+    // TODO: use small_vector
+    std::vector<RenderDeviceD3D12Impl::PooledCommandContext> Contexts;
+    Contexts.reserve(NumCommandLists);
+    for (Uint32 i = 0; i < NumCommandLists; ++i)
+    {
+        auto* const pCmdListD3D12 = ValidatedCast<CommandListD3D12Impl>(ppCommandLists[i]);
+
+        RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
+        Contexts.emplace_back(pCmdListD3D12->Close(pDeferredCtx));
+        // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
+        pDeferredCtx->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
+    }
+
+    m_pDevice->CloseAndExecuteCommandContexts(m_CommandQueueId, NumCommandLists, Contexts.data(), true, nullptr);
+
+#ifdef DILIGENT_DEBUG
+    for (Uint32 i = 0; i < NumCommandLists; ++i)
+        VERIFY(!Contexts[i], "All contexts must be disposed by CloseAndExecuteCommandContexts");
+#endif
 }
 
 void DeviceContextD3D12Impl::SignalFence(IFence* pFence, Uint64 Value)

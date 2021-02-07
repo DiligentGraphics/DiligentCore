@@ -51,7 +51,8 @@ CommandQueueD3D12Impl::~CommandQueueD3D12Impl()
     CloseHandle(m_WaitForGPUEventHandle);
 }
 
-Uint64 CommandQueueD3D12Impl::Submit(ID3D12GraphicsCommandList* commandList)
+Uint64 CommandQueueD3D12Impl::Submit(Uint32                    NumCommandLists,
+                                     ID3D12CommandList* const* ppCommandLists)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
 
@@ -59,10 +60,17 @@ Uint64 CommandQueueD3D12Impl::Submit(ID3D12GraphicsCommandList* commandList)
     // Increment the value before submitting the list
     Atomics::AtomicIncrement(m_NextFenceValue);
 
-    if (commandList != nullptr)
+    // Render device submits null command list to signal the fence and
+    // discard all resources.
+    if (NumCommandLists != 0 && ppCommandLists != nullptr)
     {
-        ID3D12CommandList* const ppCmdLists[] = {commandList};
-        m_pd3d12CmdQueue->ExecuteCommandLists(1, ppCmdLists);
+#ifdef DILIGENT_DEBUG
+        for (Uint32 i = 0; i < NumCommandLists; ++i)
+        {
+            VERIFY(ppCommandLists[i] != nullptr, "Command list must not be null");
+        }
+#endif
+        m_pd3d12CmdQueue->ExecuteCommandLists(NumCommandLists, ppCommandLists);
     }
 
     // Signal the fence. This must be done atomically with command list submission.

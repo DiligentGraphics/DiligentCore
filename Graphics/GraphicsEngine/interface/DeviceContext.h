@@ -1836,12 +1836,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                            ICommandList** ppCommandList) PURE;
 
 
-    /// Executes recorded commands in a command list.
+    /// Submits an array of recorded command lists for execution.
 
-    /// \param [in] pCommandList - Pointer to the command list to executre.
-    /// \remarks After command list is executed, it is no longer valid and should be released.
-    VIRTUAL void METHOD(ExecuteCommandList)(THIS_
-                                            ICommandList* pCommandList) PURE;
+    /// \param [in] NumCommandLists - The number of command lists to execute.
+    /// \param [in] ppCommandLists  - Pointer to the array of NumCommandLists command lists to execute.
+    /// \remarks After a command list is executed, it is no longer valid and must be released.
+    VIRTUAL void METHOD(ExecuteCommandLists)(THIS_
+                                             Uint32               NumCommandLists,
+                                             ICommandList* const* ppCommandLists) PURE;
 
 
     /// Tells the GPU to set a fence to a specified value after all previous work has completed.
@@ -2231,7 +2233,7 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_ClearDepthStencil(This, ...)         CALL_IFACE_METHOD(DeviceContext, ClearDepthStencil,         This, __VA_ARGS__)
 #    define IDeviceContext_ClearRenderTarget(This, ...)         CALL_IFACE_METHOD(DeviceContext, ClearRenderTarget,         This, __VA_ARGS__)
 #    define IDeviceContext_FinishCommandList(This, ...)         CALL_IFACE_METHOD(DeviceContext, FinishCommandList,         This, __VA_ARGS__)
-#    define IDeviceContext_ExecuteCommandList(This, ...)        CALL_IFACE_METHOD(DeviceContext, ExecuteCommandList,        This, __VA_ARGS__)
+#    define IDeviceContext_ExecuteCommandLists(This, ...)       CALL_IFACE_METHOD(DeviceContext, ExecuteCommandLists,       This, __VA_ARGS__)
 #    define IDeviceContext_SignalFence(This, ...)               CALL_IFACE_METHOD(DeviceContext, SignalFence,               This, __VA_ARGS__)
 #    define IDeviceContext_WaitForFence(This, ...)              CALL_IFACE_METHOD(DeviceContext, WaitForFence,              This, __VA_ARGS__)
 #    define IDeviceContext_WaitForIdle(This, ...)               CALL_IFACE_METHOD(DeviceContext, WaitForIdle,               This, __VA_ARGS__)

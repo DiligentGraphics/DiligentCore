@@ -26,7 +26,10 @@
  */
 
 #include "pch.h"
+
 #include <sstream>
+#include <vector>
+
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceContextVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
@@ -2098,7 +2101,8 @@ void DeviceContextVkImpl::FinishCommandList(class ICommandList** ppCommandList)
     InvalidateState();
 }
 
-void DeviceContextVkImpl::ExecuteCommandList(class ICommandList* pCommandList)
+void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLists,
+                                              ICommandList* const* ppCommandLists)
 {
     if (m_bIsDeferred)
     {
@@ -2106,31 +2110,50 @@ void DeviceContextVkImpl::ExecuteCommandList(class ICommandList* pCommandList)
         return;
     }
 
+    if (NumCommandLists == 0)
+        return;
+    DEV_CHECK_ERR(ppCommandLists != nullptr, "ppCommandLists must not be null when NumCommandLists is not zero");
+
     Flush();
 
     InvalidateState();
 
-    CommandListVkImpl* pCmdListVk = ValidatedCast<CommandListVkImpl>(pCommandList);
-    VkCommandBuffer    vkCmdBuff  = VK_NULL_HANDLE;
+    // TODO: replace with small_vector
+    std::vector<VkCommandBuffer>               vkCmdBuffs;
+    std::vector<RefCntAutoPtr<IDeviceContext>> DeferredCtxs;
+    vkCmdBuffs.reserve(NumCommandLists);
+    DeferredCtxs.reserve(NumCommandLists);
+    for (Uint32 i = 0; i < NumCommandLists; ++i)
+    {
+        auto* pCmdListVk = ValidatedCast<CommandListVkImpl>(ppCommandLists[i]);
+        DEV_CHECK_ERR(pCmdListVk != nullptr, "Command list must not be null");
+        VkCommandBuffer               vkCmdBuff = VK_NULL_HANDLE;
+        RefCntAutoPtr<IDeviceContext> pDeferredCtx;
+        pCmdListVk->Close(vkCmdBuff, pDeferredCtx);
+        VERIFY(vkCmdBuff != VK_NULL_HANDLE, "Trying to execute empty command buffer");
+        VERIFY_EXPR(pDeferredCtx);
+        vkCmdBuffs.emplace_back(vkCmdBuff);
+        DeferredCtxs.emplace_back(std::move(pDeferredCtx));
+    }
 
-    RefCntAutoPtr<IDeviceContext> pDeferredCtx;
-    pCmdListVk->Close(vkCmdBuff, pDeferredCtx);
-    VERIFY(vkCmdBuff != VK_NULL_HANDLE, "Trying to execute empty command buffer");
-    VERIFY_EXPR(pDeferredCtx);
     VkSubmitInfo SubmitInfo = {};
 
     SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.pNext              = nullptr;
-    SubmitInfo.commandBufferCount = 1;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuff;
+    SubmitInfo.commandBufferCount = NumCommandLists;
+    SubmitInfo.pCommandBuffers    = vkCmdBuffs.data();
     VERIFY_EXPR(m_PendingFences.empty());
-    auto pDeferredCtxVkImpl  = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
     auto SubmittedFenceValue = m_pDevice->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, nullptr);
-    // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
-    pDeferredCtxVkImpl->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
-    // It is OK to dispose command buffer from another thread. We are not going to
-    // record any commands and only need to add the buffer to the queue
-    pDeferredCtxVkImpl->DisposeVkCmdBuffer(m_CommandQueueId, vkCmdBuff, SubmittedFenceValue);
+
+    for (Uint32 i = 0; i < NumCommandLists; ++i)
+    {
+        auto pDeferredCtxVkImpl = DeferredCtxs[i].RawPtr<DeviceContextVkImpl>();
+        // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
+        pDeferredCtxVkImpl->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
+        // It is OK to dispose command buffer from another thread. We are not going to
+        // record any commands and only need to add the buffer to the queue
+        pDeferredCtxVkImpl->DisposeVkCmdBuffer(m_CommandQueueId, std::move(vkCmdBuffs[i]), SubmittedFenceValue);
+    }
 }
 
 void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)
