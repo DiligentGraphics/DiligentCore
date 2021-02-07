@@ -346,7 +346,9 @@ private:
     void CommitScissorRects(class GraphicsContext& GraphCtx, bool ScissorEnable);
     void TransitionSubpassAttachments(Uint32 NextSubpass);
     void CommitSubpassRenderTargets();
-    void Flush(bool RequestNewCmdCtx);
+    void Flush(bool                 RequestNewCmdCtx,
+               Uint32               NumCommandLists = 0,
+               ICommandList* const* ppCommandLists  = nullptr);
 
     __forceinline void RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl);
 
