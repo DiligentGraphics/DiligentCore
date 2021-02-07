@@ -398,6 +398,9 @@ private:
     void               CommitViewports();
     void               CommitScissorRects();
 
+    void Flush(Uint32               NumCommandLists,
+               ICommandList* const* ppCommandLists);
+
     __forceinline void TransitionOrVerifyBufferState(BufferVkImpl&                  Buffer,
                                                      RESOURCE_STATE_TRANSITION_MODE TransitionMode,
                                                      RESOURCE_STATE                 RequiredState,
