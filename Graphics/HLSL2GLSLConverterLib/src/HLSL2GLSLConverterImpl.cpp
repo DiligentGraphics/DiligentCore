@@ -1372,15 +1372,67 @@ void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
 }
 
 
-void HLSL2GLSLConverterImpl::ConversionStream::FindClosingBracket(TokenListType::iterator&       Token,
-                                                                  const TokenListType::iterator& ScopeEnd,
-                                                                  TokenType                      OpenBracketType,
-                                                                  TokenType                      ClosingBracketType)
+// Searches for the matching bracket.
+// For open brackets, searches in the forward direction.
+// For closing brackets, searches backwards.
+void HLSL2GLSLConverterImpl::ConversionStream::FindMatchingBracket(TokenListType::iterator&       Token,
+                                                                   const TokenListType::iterator& ScopeEnd,
+                                                                   TokenType                      OpenBracketType)
 {
-    VERIFY_EXPR(Token->Type == OpenBracketType);
-    ++Token; // Skip open bracket
+    VERIFY_EXPR(OpenBracketType == Token->Type);
+    auto ClosingBracketType = TokenType::Undefined;
+    int  Direction          = 0;
+    switch (OpenBracketType)
+    {
+        case TokenType::OpenBrace:
+            ClosingBracketType = TokenType::ClosingBrace;
+            Direction          = +1;
+            break;
+
+        case TokenType::OpenBracket:
+            ClosingBracketType = TokenType::ClosingBracket;
+            Direction          = +1;
+            break;
+
+        case TokenType::OpenStaple:
+            ClosingBracketType = TokenType::ClosingStaple;
+            Direction          = +1;
+            break;
+
+        case TokenType::OpenAngleBracket:
+            ClosingBracketType = TokenType::ClosingAngleBracket;
+            Direction          = +1;
+            break;
+
+        case TokenType::ClosingBrace:
+            ClosingBracketType = TokenType::OpenBrace;
+            Direction          = -1;
+            break;
+
+        case TokenType::ClosingBracket:
+            ClosingBracketType = TokenType::OpenBracket;
+            Direction          = -1;
+            break;
+
+        case TokenType::ClosingStaple:
+            ClosingBracketType = TokenType::OpenStaple;
+            Direction          = -1;
+            break;
+
+        case TokenType::ClosingAngleBracket:
+            ClosingBracketType = TokenType::OpenAngleBracket;
+            Direction          = -1;
+            break;
+
+        default:
+            UNEXPECTED("One of the bracket types is expected");
+            return;
+    }
+    VERIFY_EXPR(Direction != 0);
+
+    (Direction > 0 ? ++Token : --Token); // Skip open bracket
     int BracketCount = 1;
-    // Find matching closing bracket
+    // Find the matching bracket
     while (Token != ScopeEnd)
     {
         if (Token->Type == OpenBracketType)
@@ -1391,7 +1443,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::FindClosingBracket(TokenListType:
             if (BracketCount == 0)
                 break;
         }
-        ++Token;
+        (Direction > 0 ? ++Token : --Token);
     }
     VERIFY_PARSER_STATE(Token, BracketCount == 0, "No matching closing bracket found in the scope");
 }
@@ -1443,7 +1495,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessConstantBuffer(TokenListTy
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Missing open brace in the definition of cbuffer ", CBufferName);
 
     // Find closing brace
-    FindClosingBracket(Token, m_Tokens.end(), TokenType::OpenBrace, TokenType::ClosingBrace);
+    FindMatchingBracket(Token, m_Tokens.end(), TokenType::OpenBrace);
 
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "No matching closing brace found in the definition of cbuffer ", CBufferName);
     ++Token; // Skip closing brace
@@ -1581,7 +1633,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RegisterStruct(TokenListType::ite
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end() && Token->Type == TokenType::OpenBrace, "Open brace expected");
 
     // Find closing brace
-    FindClosingBracket(Token, m_Tokens.end(), TokenType::OpenBrace, TokenType::ClosingBrace);
+    FindMatchingBracket(Token, m_Tokens.end(), TokenType::OpenBrace);
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Missing closing brace for structure \"", StructName, "\"");
     // }
     // ^
@@ -1837,6 +1889,15 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenLi
 
         ++Token;
         CHECK_EOF();
+
+        if (Token->Type == TokenType::kw_unorm)
+        {
+            // RWTexture2D < unorm float4 > ... ;
+            //               ^
+            ++Token;
+            CHECK_EOF();
+        }
+
         // Texture2D < float > ... ;
         //             ^
         auto TexFmtToken = Token;
@@ -1992,6 +2053,27 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenLi
         //           ^
         const auto& TextureName = Token->Literal;
 
+        // Determine resource array dimensionality
+        Uint32 ArrayDim = 0;
+        {
+            auto TmpToken = Token;
+            ++TmpToken;
+            while (TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::OpenStaple)
+            {
+                // Texture2D TexName[...][...]
+                //                  ^
+                FindMatchingBracket(TmpToken, m_Tokens.end(), TokenType::OpenStaple);
+                // Texture2D TexName[...][...]
+                //                      ^
+
+                ++ArrayDim;
+
+                ++TmpToken;
+                // Texture2D TexName[...][...]
+                //                       ^
+            }
+        }
+
         auto CompleteGLSLSampler = GLSLSampler;
         if (!IsRWTexture)
         {
@@ -2030,7 +2112,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenLi
                 TexDeclToken->Literal.append("IMAGE_WRITEONLY "); // defined as 'writeonly' on GLES and as '' on desktop in GLSLDefinitions.h
         }
         TexDeclToken->Literal.append(CompleteGLSLSampler);
-        Objects.m.insert(std::make_pair(HashMapStringKey(TextureName), HLSLObjectInfo(CompleteGLSLSampler, NumComponents)));
+        Objects.m.insert(std::make_pair(HashMapStringKey(TextureName), HLSLObjectInfo{std::move(CompleteGLSLSampler), NumComponents, ArrayDim}));
 
         // In global scope, multiple variables can be declared in the same statement
         if (IsGlobalScope)
@@ -2173,7 +2255,19 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessObjectMethod(TokenListType
     // m_Tokens contains dummy node at the beginning, so we can
     // check for ScopeStart to break the loop
     while (IdentifierToken != ScopeStart && IdentifierToken->Type != TokenType::Identifier)
+    {
         --IdentifierToken;
+        if (IdentifierToken->Type == TokenType::ClosingAngleBracket ||
+            IdentifierToken->Type == TokenType::ClosingStaple ||
+            IdentifierToken->Type == TokenType::ClosingBracket)
+        {
+            // TestText[idx[0]].Sample( ...
+            //                ^
+            FindMatchingBracket(IdentifierToken, ScopeStart, IdentifierToken->Type);
+            // TestText[idx[0]].Sample( ...
+            //         ^
+        }
+    }
     if (IdentifierToken == ScopeStart)
         return false;
     // TestTextArr[2].Sample( ...
@@ -2392,108 +2486,212 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessObjectMethods(const TokenL
 // The function processes HLSL RW texture operator [] and replaces it with
 // corresponding imageStore GLSL function.
 // Example:
-// RWTex[Location] = f3Value -> imageStore( RWTex,Location, _ExpandVector(f3Value))
+// RWTex[Location] = f3Value -> imageStore( RWTex,_ToIvec(Location), _ExpandVector(f3Value))
 // _ExpandVector() function expands any input vector to 4-component vector
 bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureStore(TokenListType::iterator&       Token,
-                                                                     const TokenListType::iterator& ScopeEnd)
+                                                                     const TokenListType::iterator& ScopeEnd,
+                                                                     Uint32                         ArrayDim)
 {
-    // RWTex[Location.x] = float4(0.0, 0.0, 0.0, 1.0);
+    // RWTex[Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
     // ^
-    auto AssignmentToken = Token;
-    while (AssignmentToken != ScopeEnd &&
-           !(AssignmentToken->Type == TokenType::Assignment || AssignmentToken->Type == TokenType::Semicolon))
-        ++AssignmentToken;
 
-    // The function is called for ALL RW texture objects found, so this may not be
-    // the store operation, but something else (for instance:
-    // InterlockedExchange(Tex2D_I1[GTid.xy], 1, iOldVal) )
+    // Find the last pair of square brackets, skipping texture array indexing
+    auto OpenStapleToken    = Token;
+    auto ClosingStapleToken = ScopeEnd;
+    for (Uint32 ArrayIdx = 0; ArrayIdx < ArrayDim + 1; ++ArrayIdx)
+    {
+        ++OpenStapleToken;
+        if (OpenStapleToken == ScopeEnd || OpenStapleToken->Type != TokenType::OpenStaple)
+            return false;
+
+        ClosingStapleToken = OpenStapleToken;
+        FindMatchingBracket(ClosingStapleToken, ScopeEnd, TokenType::OpenStaple);
+        // RWTex[Location[idx].xy]
+        //                       ^
+        //              ClosingStapleToken
+        VERIFY_EXPR(ClosingStapleToken->Type == TokenType::ClosingStaple);
+
+        if (ArrayIdx < ArrayDim)
+        {
+            OpenStapleToken = ClosingStapleToken;
+            // RWTexArray[idx[0]][Location.xy]
+            //                  ^
+            //            OpenStapleToken
+        }
+    }
+    //      RWTex[Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
+    //           ^           ^
+    //  OpenStaplePos     ClosingStaplePos
+
+    auto AssignmentToken = ClosingStapleToken;
+    ++AssignmentToken;
+
     if (AssignmentToken == ScopeEnd || AssignmentToken->Type != TokenType::Assignment)
+    {
+        // The function is called for ALL RW texture objects found, so this may not be
+        // the store operation, but something else (for instance:
+        // InterlockedExchange(Tex2D_I1[GTid.xy], 1, iOldVal) )
         return false;
-    // RWTex[Location.x] = float4(0.0, 0.0, 0.0, 1.0);
-    //                   ^
-    //            AssignmentToken
-    auto ClosingStaplePos = AssignmentToken;
-    while (ClosingStaplePos != Token && ClosingStaplePos->Type != TokenType::ClosingStaple)
-        --ClosingStaplePos;
-    if (ClosingStaplePos == Token)
-        return false;
-    // RWTex[Location.x] = float4(0.0, 0.0, 0.0, 1.0);
-    //                 ^
-    //          ClosingStaplePos
+    }
 
-    auto OpenStaplePos = ClosingStaplePos;
-    while (OpenStaplePos != Token && OpenStaplePos->Type != TokenType::OpenStaple)
-        --OpenStaplePos;
-    if (OpenStaplePos == Token)
-        return false;
-    // RWTex[Location.x] = float4(0.0, 0.0, 0.0, 1.0);
-    //      ^
-    //  OpenStaplePos
+    // RWTex[Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
+    //                    ^
+    //              AssignmentToken
 
     auto SemicolonToken = AssignmentToken;
     while (SemicolonToken != ScopeEnd && SemicolonToken->Type != TokenType::Semicolon)
         ++SemicolonToken;
     if (SemicolonToken == ScopeEnd)
         return false;
-    // RWTex[Location.x] = float4(0.0, 0.0, 0.0, 1.0);
-    // ^                                             ^
+    // RWTex[Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
+    // ^                                              ^
     // Token                                    SemicolonToken
 
     m_Tokens.insert(Token, TokenInfo(TokenType::Identifier, "imageStore", Token->Delimiter.c_str()));
     m_Tokens.insert(Token, TokenInfo(TokenType::OpenBracket, "(", ""));
     Token->Delimiter = " ";
-    // imageStore( RWTex[Location.x] = float4(0.0, 0.0, 0.0, 1.0);
+    // imageStore( RWTex[Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
+    //             ^    ^
+    //          Token  OpenStapleToken
 
-    OpenStaplePos->Delimiter = "";
-    OpenStaplePos->Type      = TokenType::Comma;
-    OpenStaplePos->Literal   = ",";
-    // imageStore( RWTex,Location.x] = float4(0.0, 0.0, 0.0, 1.0);
-    //                             ^
-    //                         ClosingStaplePos
+    OpenStapleToken->Delimiter = "";
+    OpenStapleToken->Type      = TokenType::Comma;
+    OpenStapleToken->Literal   = ",";
+    // imageStore( RWTex,Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
+    //                  ^           ^
+    //      OpenStapleToken     ClosingStapleToken
 
-    auto LocationToken = OpenStaplePos;
+    auto LocationToken = OpenStapleToken;
     ++LocationToken;
     m_Tokens.insert(LocationToken, TokenInfo(TokenType::Identifier, "_ToIvec", " "));
     m_Tokens.insert(LocationToken, TokenInfo(TokenType::OpenBracket, "(", ""));
-    // imageStore( RWTex, _ToIvec(Location.x] = float4(0.0, 0.0, 0.0, 1.0);
-    //                                      ^
-    //                               ClosingStaplePos
+    // imageStore( RWTex, _ToIvec(Location.xy] = float4(0.0, 0.0, 0.0, 1.0);
+    //                            ^          ^
+    //                  LocationToken     ClosingStapleToken
 
-    m_Tokens.insert(ClosingStaplePos, TokenInfo(TokenType::ClosingBracket, ")", ""));
-    // imageStore( RWTex, _ToIvec(Location.x)] = float4(0.0, 0.0, 0.0, 1.0);
-    //                                       ^
-    //                                ClosingStaplePos
+    m_Tokens.insert(ClosingStapleToken, TokenInfo(TokenType::ClosingBracket, ")", ""));
+    // imageStore( RWTex, _ToIvec(Location.xy)] = float4(0.0, 0.0, 0.0, 1.0);
+    //                                        ^
+    //                                ClosingStapleToken
 
-    ClosingStaplePos->Delimiter = "";
-    ClosingStaplePos->Type      = TokenType::Comma;
-    ClosingStaplePos->Literal   = ",";
-    // imageStore( RWTex, _ToIvec(Location.x), = float4(0.0, 0.0, 0.0, 1.0);
-    //                                         ^
+    ClosingStapleToken->Delimiter = "";
+    ClosingStapleToken->Type      = TokenType::Comma;
+    ClosingStapleToken->Literal   = ",";
+    // imageStore( RWTex, _ToIvec(Location.xy), = float4(0.0, 0.0, 0.0, 1.0);
+    //                                          ^
     //                                   AssignmentToken
 
     AssignmentToken->Delimiter = "";
     AssignmentToken->Type      = TokenType::OpenBracket;
     AssignmentToken->Literal   = "(";
-    // imageStore( RWTex, _ToIvec(Location.x),( float4(0.0, 0.0, 0.0, 1.0);
-    //                                        ^
+    // imageStore( RWTex, _ToIvec(Location.xy),( float4(0.0, 0.0, 0.0, 1.0);
+    //                                         ^
+    //                                   AssignmentToken
 
     m_Tokens.insert(AssignmentToken, TokenInfo(TokenType::Identifier, "_ExpandVector", " "));
-    // imageStore( RWTex, _ToIvec(Location.x), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0);
-    //                                                      ^
+    // imageStore( RWTex, _ToIvec(Location.xy), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0);
+    //                                                       ^                           ^
+    //                                                AssignmentToken               SemicolonToken
 
     // Insert closing bracket for _ExpandVector
     m_Tokens.insert(SemicolonToken, TokenInfo(TokenType::ClosingBracket, ")", ""));
-    // imageStore( RWTex,  _ToIvec(Location.x), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0));
+    // imageStore( RWTex,  _ToIvec(Location.xy), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0));
+    //                                                                                     ^
+    //                                                                              SemicolonToken
 
     // Insert closing bracket for imageStore
     m_Tokens.insert(SemicolonToken, TokenInfo(TokenType::ClosingBracket, ")", ""));
-    // imageStore( RWTex,  _ToIvec(Location.x), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0)));
+    // imageStore( RWTex,  _ToIvec(Location.xy), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0)));
+    //                                                                                      ^
+    //                                                                               SemicolonToken
 
-    return false;
+    Token = LocationToken;
+    // imageStore( RWTex,  _ToIvec(Location.xy), _ExpandVector( float4(0.0, 0.0, 0.0, 1.0)));
+    //                             ^
+
+    // Note that 'Location' may require further processing as it itself may be e.g. image load operation
+
+    return true;
 }
 
-// Function finds all RW textures in current scope and calls ProcessRWTextureStore()
-// that detects if this is store operation and converts it to imageStore()
+// The function processes HLSL RW texture operator [] and replaces it with
+// corresponding imageLoad GLSL function.
+// Example:
+// RWTex[Location] -> imageLoad( RWTex,_ToIvec(Location))
+bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureLoad(TokenListType::iterator&       Token,
+                                                                    const TokenListType::iterator& ScopeEnd,
+                                                                    Uint32                         ArrayDim)
+{
+    // RWTex[Location.xy]
+    // ^
+
+    // Find the last pair of square brackets, skipping texture array indexing
+    auto OpenStapleToken    = Token;
+    auto ClosingStapleToken = ScopeEnd;
+    for (Uint32 ArrayIdx = 0; ArrayIdx < ArrayDim + 1; ++ArrayIdx)
+    {
+        ++OpenStapleToken;
+        if (OpenStapleToken == ScopeEnd || OpenStapleToken->Type != TokenType::OpenStaple)
+            return false;
+
+        ClosingStapleToken = OpenStapleToken;
+        FindMatchingBracket(ClosingStapleToken, ScopeEnd, TokenType::OpenStaple);
+        // RWTex[Location[idx].xy]
+        //                       ^
+        //              ClosingStapleToken
+        VERIFY_EXPR(ClosingStapleToken->Type == TokenType::ClosingStaple);
+
+        if (ArrayIdx < ArrayDim)
+        {
+            OpenStapleToken = ClosingStapleToken;
+            // RWTexArray[idx[0]][Location.xy]
+            //                  ^
+            //            OpenStapleToken
+        }
+    }
+    //      RWTex[Location.xy]
+    //           ^           ^
+    //  OpenStaplePos     ClosingStaplePos
+
+    m_Tokens.insert(Token, TokenInfo(TokenType::Identifier, "imageLoad", Token->Delimiter.c_str()));
+    m_Tokens.insert(Token, TokenInfo(TokenType::OpenBracket, "(", ""));
+    Token->Delimiter = " ";
+    // imageLoad( RWTex[Location.xy]
+    //            ^    ^
+    //        Token   OpenStaplePos
+
+    m_Tokens.insert(OpenStapleToken, TokenInfo(TokenType::Comma, ",", ""));
+    m_Tokens.insert(OpenStapleToken, TokenInfo(TokenType::Identifier, "_ToIvec", " "));
+    // imageLoad( RWTex, _ToIvec[Location.xy]
+    //                          ^
+    //                       OpenStapleToken
+
+    OpenStapleToken->Type    = TokenType::OpenBracket;
+    OpenStapleToken->Literal = "(";
+    // imageLoad( RWTex, _ToIvec(Location.xy]
+    //                          ^           ^
+    //                 OpenStapleToken    ClosingStapleToken
+
+    m_Tokens.insert(ClosingStapleToken, TokenInfo(TokenType::ClosingBracket, ")", ""));
+    // imageLoad( RWTex, _ToIvec(Location.xy)]
+    //                                       ^
+    //                                   ClosingStapleToken
+
+
+    ClosingStapleToken->Type    = TokenType::ClosingBracket;
+    ClosingStapleToken->Literal = ")";
+    // imageLoad( RWTex, _ToIvec(Location.xy))
+    //                          ^
+    //                      OpenStapleToken
+
+    Token = OpenStapleToken;
+
+    // Note that 'Location' may require furhter conversion
+
+    return true;
+}
+
+// Function finds and processes all RW texture loads and stores in the current scope
 void HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextures(const TokenListType::iterator& ScopeStart,
                                                                  const TokenListType::iterator& ScopeEnd)
 {
@@ -2518,13 +2716,28 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextures(const TokenList
                 continue;
             }
 
-            // Handle store. If this is not store operation,
-            // ProcessRWTextureStore() returns false.
-            auto TmpToken = Token;
-            if (ProcessRWTextureStore(TmpToken, ScopeEnd))
-                Token = TmpToken;
-            else
-                ++Token;
+            {
+                // Handle store first. If this is not a store operation,
+                // ProcessRWTextureStore() returns false.
+                auto TmpToken = Token;
+                if (ProcessRWTextureStore(TmpToken, ScopeEnd, pObjectInfo->ArrayDim))
+                {
+                    Token = TmpToken;
+                    continue;
+                }
+            }
+
+            {
+                // Handle load.
+                auto TmpToken = Token;
+                if (ProcessRWTextureLoad(TmpToken, ScopeEnd, pObjectInfo->ArrayDim))
+                {
+                    Token = TmpToken;
+                    continue;
+                }
+            }
+
+            ++Token;
         }
         else
             ++Token;
@@ -4870,9 +5083,14 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
 
                     ProcessObjectMethods(FunctionStart, Token);
 
-                    ProcessRWTextures(FunctionStart, Token);
-
+                    // Process atomic operations
+                    // InterlockedAdd(RWTex[GTid.xy], 1, iOldVal) -> InterlockedAddImage_3(RWTex,GTid.xy, 1, iOldVal)
                     ProcessAtomics(FunctionStart, Token);
+
+                    // Process loads and stores
+                    // RWTex[GTid.xy] = f3Value -> imageStore( RWTex,GTid.xy, _ExpandVector(f3Value))
+                    // RWTex[GTid.xy] -> imageLoad(RWTex,GTid.xy)
+                    ProcessRWTextures(FunctionStart, Token);
 
                     // Pop function arguments from the sampler and object
                     // stacks

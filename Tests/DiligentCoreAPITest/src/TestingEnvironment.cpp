@@ -104,7 +104,8 @@ Uint32 TestingEnvironment::FindAdapater(const std::vector<GraphicsAdapterInfo>& 
         {
             if (Adapters[i].Type == AdapterType)
             {
-                AdapterId = i;
+                AdapterId     = i;
+                m_AdapterType = AdapterType;
                 break;
             }
         }
@@ -194,6 +195,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
             CreateInfo.AdapterId = FindAdapater(Adapters, CI.AdapterType, CI.AdapterId);
 
+            NumDeferredCtx                 = CI.NumDeferredContexts;
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
             pFactoryD3D11->CreateDeviceAndContextsD3D11(CreateInfo, &m_pDevice, ppContexts.data());
@@ -254,9 +256,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             CreateInfo.CPUDescriptorHeapAllocationSize[3]      = 16; // D3D12_DESCRIPTOR_HEAP_TYPE_DSV
             CreateInfo.DynamicDescriptorAllocationChunkSize[0] = 8;  // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
             CreateInfo.DynamicDescriptorAllocationChunkSize[1] = 8;  // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
-            ppContexts.resize(1 + NumDeferredCtx);
 
+            NumDeferredCtx                 = CI.NumDeferredContexts;
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
+            ppContexts.resize(1 + NumDeferredCtx);
             pFactoryD3D12->CreateDeviceAndContextsD3D12(CreateInfo, &m_pDevice, ppContexts.data());
         }
         break;
@@ -285,11 +288,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             CreateInfo.CreateDebugContext        = true;
             CreateInfo.Features                  = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
             CreateInfo.ForceNonSeparablePrograms = CI.ForceNonSeparablePrograms;
-            if (NumDeferredCtx != 0)
-            {
-                LOG_ERROR_MESSAGE("Deferred contexts are not supported in OpenGL mode");
-                NumDeferredCtx = 0;
-            }
+            NumDeferredCtx                       = 0;
             ppContexts.resize(1 + NumDeferredCtx);
             RefCntAutoPtr<ISwapChain> pSwapChain; // We will use testing swap chain instead
             pFactoryOpenGL->CreateDeviceAndSwapChainGL(
@@ -321,6 +320,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             //CreateInfo.HostVisibleMemoryReserveSize = 48 << 20;
             CreateInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
+            NumDeferredCtx                 = CI.NumDeferredContexts;
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
             auto* pFactoryVk = GetEngineFactoryVk();
@@ -335,6 +335,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             EngineMtlCreateInfo MtlAttribs;
 
             MtlAttribs.DebugMessageCallback = MessageCallback;
+            NumDeferredCtx                  = CI.NumDeferredContexts;
             MtlAttribs.NumDeferredContexts  = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
             auto* pFactoryMtl = GetEngineFactoryMtl();
@@ -347,7 +348,9 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             LOG_ERROR_AND_THROW("Unknown device type");
             break;
     }
-    m_pDeviceContext.Attach(ppContexts[0]);
+    m_pDeviceContexts.resize(ppContexts.size());
+    for (size_t i = 0; i < ppContexts.size(); ++i)
+        m_pDeviceContexts[i].Attach(ppContexts[i]);
 
     const auto& AdapterInfo = m_pDevice->GetDeviceCaps().AdapterInfo;
     std::string AdapterInfoStr;
@@ -392,8 +395,9 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
 TestingEnvironment::~TestingEnvironment()
 {
-    m_pDeviceContext->Flush();
-    m_pDeviceContext->FinishFrame();
+    auto* pCtx = GetDeviceContext();
+    pCtx->Flush();
+    pCtx->FinishFrame();
 }
 
 // Override this to define how to set up the environment.
@@ -411,18 +415,20 @@ void TestingEnvironment::ReleaseResources()
     // It is necessary to call Flush() to force the driver to release resources.
     // Without flushing the command buffer, the memory may not be released until sometimes
     // later causing out-of-memory error.
-    m_pDeviceContext->Flush();
-    m_pDeviceContext->FinishFrame();
+    auto* pCtx = GetDeviceContext();
+    pCtx->Flush();
+    pCtx->FinishFrame();
     m_pDevice->ReleaseStaleResources();
 }
 
 void TestingEnvironment::Reset()
 {
-    m_pDeviceContext->Flush();
-    m_pDeviceContext->FinishFrame();
+    auto* pCtx = GetDeviceContext();
+    pCtx->Flush();
+    pCtx->FinishFrame();
     m_pDevice->IdleGPU();
     m_pDevice->ReleaseStaleResources();
-    m_pDeviceContext->InvalidateState();
+    pCtx->InvalidateState();
     m_NumAllowedErrors = 0;
 }
 

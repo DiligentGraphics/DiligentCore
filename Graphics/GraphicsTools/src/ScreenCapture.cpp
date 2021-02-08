@@ -25,7 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
 #include "ScreenCapture.hpp"
 
 namespace Diligent

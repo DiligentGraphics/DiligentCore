@@ -33,7 +33,7 @@ void TestCommandQueueD3D12CInterface(ICommandQueueD3D12* pQueue)
     Uint64 FenceVal = ICommandQueueD3D12_GetNextFenceValue(pQueue);
     (void)FenceVal;
 
-    FenceVal = ICommandQueueD3D12_Submit(pQueue, (ID3D12GraphicsCommandList*)NULL);
+    FenceVal = ICommandQueueD3D12_Submit(pQueue, 1, (ID3D12CommandList* const*)NULL);
 
     ID3D12CommandQueue* pd3d12Queue = ICommandQueueD3D12_GetD3D12CommandQueue(pQueue);
     (void)pd3d12Queue;

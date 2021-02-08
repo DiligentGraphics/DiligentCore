@@ -174,10 +174,11 @@ public:
 
     void CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, PooledCommandContext&& Ctx);
 
-    Uint64 CloseAndExecuteCommandContext(Uint32                                                 QueueIndex,
-                                         PooledCommandContext&&                                 Ctx,
-                                         bool                                                   DiscardStaleObjects,
-                                         std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences);
+    Uint64 CloseAndExecuteCommandContexts(Uint32                                                 QueueIndex,
+                                          Uint32                                                 NumContexts,
+                                          PooledCommandContext                                   pContexts[],
+                                          bool                                                   DiscardStaleObjects,
+                                          std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences);
 
     void SignalFences(Uint32 QueueIndex, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& SignalFences);
 

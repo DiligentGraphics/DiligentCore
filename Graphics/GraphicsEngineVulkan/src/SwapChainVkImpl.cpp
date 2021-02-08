@@ -331,19 +331,39 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     m_SwapChainDesc.Width  = swapchainExtent.width;
     m_SwapChainDesc.Height = swapchainExtent.height;
 
-    // Mailbox is the lowest latency non-tearing presentation mode.
-    VkPresentModeKHR swapchainPresentMode = m_VSyncEnabled ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
-
-    bool PresentModeSupported = std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end();
-    if (!PresentModeSupported)
+    // The FIFO present mode is guaranteed by the spec to always be supported.
+    VkPresentModeKHR PresentMode = VK_PRESENT_MODE_FIFO_KHR;
     {
-        VERIFY(swapchainPresentMode != VK_PRESENT_MODE_FIFO_KHR, "The FIFO present mode is guaranteed by the spec to be supported");
+        std::vector<VkPresentModeKHR> PreferredPresentModes;
+        if (m_VSyncEnabled)
+        {
+            // FIFO relaxed waits for the next VSync, but if the frame is late,
+            // it still shows it even if VSync has already passed, which may
+            // result in tearing.
+            PreferredPresentModes.push_back(VK_PRESENT_MODE_FIFO_RELAXED_KHR);
+            PreferredPresentModes.push_back(VK_PRESENT_MODE_FIFO_KHR);
+        }
+        else
+        {
+            // Mailbox is the lowest latency non-tearing presentation mode.
+            PreferredPresentModes.push_back(VK_PRESENT_MODE_MAILBOX_KHR);
+            PreferredPresentModes.push_back(VK_PRESENT_MODE_IMMEDIATE_KHR);
+            PreferredPresentModes.push_back(VK_PRESENT_MODE_FIFO_KHR);
+        }
+
+        for (auto PreferredMode : PreferredPresentModes)
+        {
+            if (std::find(presentModes.begin(), presentModes.end(), PreferredMode) != presentModes.end())
+            {
+                PresentMode = PreferredMode;
+                break;
+            }
+        }
 
         const char* PresentModeName = nullptr;
-
 #define PRESENT_MODE_CASE(Mode) \
     case Mode: PresentModeName = #Mode; break;
-        switch (swapchainPresentMode)
+        switch (PresentMode)
         {
             PRESENT_MODE_CASE(VK_PRESENT_MODE_IMMEDIATE_KHR)
             PRESENT_MODE_CASE(VK_PRESENT_MODE_MAILBOX_KHR)
@@ -354,11 +374,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
             default: PresentModeName = "<UNKNOWN>";
         }
 #undef PRESENT_MODE_CASE
-        LOG_WARNING_MESSAGE(PresentModeName, " is not supported. Defaulting to VK_PRESENT_MODE_FIFO_KHR");
-
-        swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-        // The FIFO present mode is guaranteed by the spec to be supported
-        VERIFY(std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end(), "FIFO present mode must be supported");
+        LOG_INFO_MESSAGE("Using ", PresentModeName, " swap chain present mode");
     }
 
     // Determine the number of VkImage's to use in the swap chain.
@@ -417,7 +433,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     swapchain_ci.preTransform       = vkPreTransform;
     swapchain_ci.compositeAlpha     = compositeAlpha;
     swapchain_ci.imageArrayLayers   = 1;
-    swapchain_ci.presentMode        = swapchainPresentMode;
+    swapchain_ci.presentMode        = PresentMode;
     swapchain_ci.oldSwapchain       = oldSwapchain;
     swapchain_ci.clipped            = VK_TRUE;
     swapchain_ci.imageColorSpace    = ColorSpace;

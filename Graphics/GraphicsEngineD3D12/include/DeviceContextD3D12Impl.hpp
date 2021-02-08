@@ -234,8 +234,9 @@ public:
     /// Implementation of IDeviceContext::FinishCommandList() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE FinishCommandList(class ICommandList** ppCommandList) override final;
 
-    /// Implementation of IDeviceContext::ExecuteCommandList() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE ExecuteCommandList(class ICommandList* pCommandList) override final;
+    /// Implementation of IDeviceContext::ExecuteCommandLists() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE ExecuteCommandLists(Uint32               NumCommandLists,
+                                                        ICommandList* const* ppCommandLists) override final;
 
     /// Implementation of IDeviceContext::SignalFence() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE SignalFence(IFence* pFence, Uint64 Value) override final;
@@ -345,7 +346,9 @@ private:
     void CommitScissorRects(class GraphicsContext& GraphCtx, bool ScissorEnable);
     void TransitionSubpassAttachments(Uint32 NextSubpass);
     void CommitSubpassRenderTargets();
-    void Flush(bool RequestNewCmdCtx);
+    void Flush(bool                 RequestNewCmdCtx,
+               Uint32               NumCommandLists = 0,
+               ICommandList* const* ppCommandLists  = nullptr);
 
     __forceinline void RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl);
 

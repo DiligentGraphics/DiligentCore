@@ -1521,7 +1521,18 @@ DILIGENT_TYPED_ENUM(DEVICE_FEATURE_STATE, Uint8)
 /// Describes the device features
 struct DeviceFeatures
 {
-    /// Indicates if device supports separable programs
+    /// Indicates if device supports separable shader programs.
+
+    /// \remarks    The only case when separable programs are not supported is when the engine is 
+    ///             initialized in GLES3.0 mode. In GLES3.1+ and in all other backends, the
+    ///             feature is always enabled.
+    ///             In OpenGL backend, it may forcibly be disabled using ForceNonSeparablePrograms 
+    ///             member of EngineGLCreateInfo struct (this is primarily used for testing).
+    ///             The are two main limitations when separable programs are disabled:
+    ///             - If the same shader variable is present in multiple shader stages,
+    ///               it will always be shared between all stages and different resources
+    ///               can't be bound to different stages.
+    ///             - Shader resource queries will be also disabled.
     DEVICE_FEATURE_STATE SeparablePrograms             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports resource queries from shader objects.

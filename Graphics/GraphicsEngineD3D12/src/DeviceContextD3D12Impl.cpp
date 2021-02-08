@@ -26,7 +26,10 @@
  */
 
 #include "pch.h"
+
 #include <sstream>
+#include <vector>
+
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceContextD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
@@ -770,25 +773,52 @@ void DeviceContextD3D12Impl::RequestCommandContext(RenderDeviceD3D12Impl* pDevic
     m_CurrCmdCtx->SetDynamicGPUDescriptorAllocators(m_DynamicGPUDescriptorAllocator);
 }
 
-void DeviceContextD3D12Impl::Flush(bool RequestNewCmdCtx)
+void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
+                                   Uint32               NumCommandLists,
+                                   ICommandList* const* ppCommandLists)
 {
-    if (m_CurrCmdCtx)
-    {
-        VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
-        if (m_State.NumCommands != 0)
-        {
-            m_CurrCmdCtx->FlushResourceBarriers();
-            m_pDevice->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(m_CurrCmdCtx), true, &m_PendingFences);
-            m_PendingFences.clear();
-        }
-        else
-            m_pDevice->DisposeCommandContext(std::move(m_CurrCmdCtx));
-    }
+    VERIFY(!m_bIsDeferred || NumCommandLists == 0 && ppCommandLists == nullptr, "Only immediate context can execute command lists");
 
     if (m_ActiveQueriesCounter > 0)
     {
         LOG_ERROR_MESSAGE("Flushing device context that has ", m_ActiveQueriesCounter,
                           " active queries. Direct3D12 requires that queries are begun and ended in the same command list");
+    }
+
+    // TODO: use small_vector
+    std::vector<RenderDeviceD3D12Impl::PooledCommandContext> Contexts;
+    Contexts.reserve(NumCommandLists + 1);
+
+    // First, execute current context
+    if (m_CurrCmdCtx)
+    {
+        VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
+        if (m_State.NumCommands != 0)
+            Contexts.emplace_back(std::move(m_CurrCmdCtx));
+        else
+            m_pDevice->DisposeCommandContext(std::move(m_CurrCmdCtx));
+    }
+
+    // Next, add extra command lists from deferred contexts
+    for (Uint32 i = 0; i < NumCommandLists; ++i)
+    {
+        auto* const pCmdListD3D12 = ValidatedCast<CommandListD3D12Impl>(ppCommandLists[i]);
+
+        RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
+        Contexts.emplace_back(pCmdListD3D12->Close(pDeferredCtx));
+        // Set the bit in the deferred context cmd queue mask corresponding to the cmd queue of this context
+        pDeferredCtx->m_SubmittedBuffersCmdQueueMask.fetch_or(Uint64{1} << m_CommandQueueId);
+    }
+
+    if (!Contexts.empty())
+    {
+        m_pDevice->CloseAndExecuteCommandContexts(m_CommandQueueId, static_cast<Uint32>(Contexts.size()), Contexts.data(), true, &m_PendingFences);
+        m_PendingFences.clear();
+
+#ifdef DILIGENT_DEBUG
+        for (Uint32 i = 0; i < NumCommandLists; ++i)
+            VERIFY(!Contexts[i], "All contexts must be disposed by CloseAndExecuteCommandContexts");
+#endif
     }
 
     // If there is no command list to submit, but there are pending fences, we need to signal them now
@@ -2032,7 +2062,7 @@ void DeviceContextD3D12Impl::GenerateMips(ITextureView* pTexView)
 
 void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
     CommandListD3D12Impl* pCmdListD3D12(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)(m_pDevice, this, std::move(m_CurrCmdCtx)));
     pCmdListD3D12->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
@@ -2041,36 +2071,33 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     InvalidateState();
 }
 
-void DeviceContextD3D12Impl::ExecuteCommandList(ICommandList* pCommandList)
+void DeviceContextD3D12Impl::ExecuteCommandLists(Uint32               NumCommandLists,
+                                                 ICommandList* const* ppCommandLists)
 {
     if (m_bIsDeferred)
     {
         LOG_ERROR_MESSAGE("Only immediate context can execute command list");
         return;
     }
-    // First execute commands in this context
-    Flush(true);
+
+    if (NumCommandLists == 0)
+        return;
+    DEV_CHECK_ERR(ppCommandLists != nullptr, "ppCommandLists must not be null when NumCommandLists is not zero");
+
+    Flush(true, NumCommandLists, ppCommandLists);
 
     InvalidateState();
-
-    CommandListD3D12Impl* pCmdListD3D12 = ValidatedCast<CommandListD3D12Impl>(pCommandList);
-    VERIFY_EXPR(m_PendingFences.empty());
-    RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
-    auto                                  CmdContext = pCmdListD3D12->Close(pDeferredCtx);
-    m_pDevice->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(CmdContext), true, nullptr);
-    // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
-    pDeferredCtx->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
 }
 
 void DeviceContextD3D12Impl::SignalFence(IFence* pFence, Uint64 Value)
 {
-    VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be signaled from immediate context");
     m_PendingFences.emplace_back(Value, pFence);
 }
 
 void DeviceContextD3D12Impl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
 {
-    VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be waited from immediate context");
     if (FlushContext)
         Flush();
     auto* pFenceD3D12 = ValidatedCast<FenceD3D12Impl>(pFence);
@@ -2079,7 +2106,7 @@ void DeviceContextD3D12Impl::WaitForFence(IFence* pFence, Uint64 Value, bool Flu
 
 void DeviceContextD3D12Impl::WaitForIdle()
 {
-    VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate contexts can be idled");
     Flush();
     m_pDevice->IdleCommandQueue(m_CommandQueueId, true);
 }

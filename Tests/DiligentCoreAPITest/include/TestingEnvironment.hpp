@@ -51,11 +51,11 @@ class TestingEnvironment : public ::testing::Environment
 public:
     struct CreateInfo
     {
-        RENDER_DEVICE_TYPE deviceType  = RENDER_DEVICE_TYPE_UNDEFINED;
-        ADAPTER_TYPE       AdapterType = ADAPTER_TYPE_UNKNOWN;
-        Uint32             AdapterId   = DEFAULT_ADAPTER_ID;
-
-        bool ForceNonSeparablePrograms = false;
+        RENDER_DEVICE_TYPE deviceType                = RENDER_DEVICE_TYPE_UNDEFINED;
+        ADAPTER_TYPE       AdapterType               = ADAPTER_TYPE_UNKNOWN;
+        Uint32             AdapterId                 = DEFAULT_ADAPTER_ID;
+        Uint32             NumDeferredContexts       = 4;
+        bool               ForceNonSeparablePrograms = false;
     };
     TestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc);
 
@@ -94,8 +94,9 @@ public:
     };
 
     IRenderDevice*  GetDevice() { return m_pDevice; }
-    IDeviceContext* GetDeviceContext() { return m_pDeviceContext; }
+    IDeviceContext* GetDeviceContext(size_t ctx = 0) { return m_pDeviceContexts[ctx]; }
     ISwapChain*     GetSwapChain() { return m_pSwapChain; }
+    size_t          GetNumDeferredContexts() const { return m_pDeviceContexts.size() - 1; }
 
     static TestingEnvironment* GetInstance() { return m_pTheEnvironment; }
 
@@ -106,6 +107,8 @@ public:
     void            SetDefaultCompiler(SHADER_COMPILER compiler);
     SHADER_COMPILER GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const;
 
+    ADAPTER_TYPE GetAdapterType() const { return m_AdapterType; }
+
 protected:
     NativeWindow CreateNativeWindow();
 
@@ -115,11 +118,13 @@ protected:
                                 const char*            File,
                                 int                    Line);
 
-    static Uint32 FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
-                               ADAPTER_TYPE                            AdapterType,
-                               Uint32                                  AdapterId);
+    Uint32 FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
+                        ADAPTER_TYPE                            AdapterType,
+                        Uint32                                  AdapterId);
 
     const RENDER_DEVICE_TYPE m_DeviceType;
+
+    ADAPTER_TYPE m_AdapterType = ADAPTER_TYPE_UNKNOWN;
 
     // Any platform-specific data (e.g. window handle) that should
     // be cleaned-up when the testing environment object is destroyed.
@@ -131,10 +136,10 @@ protected:
 
     static TestingEnvironment* m_pTheEnvironment;
 
-    RefCntAutoPtr<IRenderDevice>  m_pDevice;
-    RefCntAutoPtr<IDeviceContext> m_pDeviceContext;
-    RefCntAutoPtr<ISwapChain>     m_pSwapChain;
-    SHADER_COMPILER               m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+    RefCntAutoPtr<IRenderDevice>               m_pDevice;
+    std::vector<RefCntAutoPtr<IDeviceContext>> m_pDeviceContexts;
+    RefCntAutoPtr<ISwapChain>                  m_pSwapChain;
+    SHADER_COMPILER                            m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
 
     static std::atomic_int m_NumAllowedErrors;
 };

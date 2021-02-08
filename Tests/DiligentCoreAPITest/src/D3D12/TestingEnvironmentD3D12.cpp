@@ -60,7 +60,7 @@ TestingEnvironmentD3D12::TestingEnvironmentD3D12(const CreateInfo&    CI,
 
     if (m_pSwapChain == nullptr)
     {
-        CreateTestingSwapChainD3D12(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
+        CreateTestingSwapChainD3D12(m_pDevice, GetDeviceContext(), SCDesc, &m_pSwapChain);
     }
 }
 
@@ -94,7 +94,7 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
 
 void TestingEnvironmentD3D12::ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle)
 {
-    auto pContextD3D12 = m_pDeviceContext.Cast<IDeviceContextD3D12>(IID_DeviceContextD3D12);
+    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{GetDeviceContext(), IID_DeviceContextD3D12};
 
     auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
     auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();

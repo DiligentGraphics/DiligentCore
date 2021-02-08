@@ -1925,7 +1925,8 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
 #endif
 }
 
-void DeviceContextD3D11Impl::ExecuteCommandList(ICommandList* pCommandList)
+void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommandLists,
+                                                 ICommandList* const* ppCommandLists)
 {
     if (m_bIsDeferred)
     {
@@ -1933,16 +1934,23 @@ void DeviceContextD3D11Impl::ExecuteCommandList(ICommandList* pCommandList)
         return;
     }
 
-    CommandListD3D11Impl* pCmdListD3D11 = ValidatedCast<CommandListD3D11Impl>(pCommandList);
-    auto*                 pd3d11CmdList = pCmdListD3D11->GetD3D11CommandList();
-    m_pd3d11DeviceContext->ExecuteCommandList(pd3d11CmdList,
-                                              FALSE // A Boolean flag that determines whether the target context state is
-                                                    // saved prior to and restored after the execution of a command list.
-                                                    // * TRUE indicates that the runtime needs to save and restore the state.
-                                                    // * FALSE indicate that no state shall be saved or restored, which causes the
-                                                    //   target context to return to its default state after the command list executes as if
-                                                    //   ID3D11DeviceContext::ClearState() was called.
-    );
+    if (NumCommandLists == 0)
+        return;
+    DEV_CHECK_ERR(ppCommandLists != nullptr, "ppCommandLists must not be null when NumCommandLists is not zero");
+
+    for (Uint32 i = 0; i < NumCommandLists; ++i)
+    {
+        auto* pCmdListD3D11 = ValidatedCast<CommandListD3D11Impl>(ppCommandLists[i]);
+        auto* pd3d11CmdList = pCmdListD3D11->GetD3D11CommandList();
+        m_pd3d11DeviceContext->ExecuteCommandList(pd3d11CmdList,
+                                                  FALSE // A Boolean flag that determines whether the target context state is
+                                                        // saved prior to and restored after the execution of a command list.
+                                                        // * TRUE indicates that the runtime needs to save and restore the state.
+                                                        // * FALSE indicate that no state shall be saved or restored, which causes the
+                                                        //   target context to return to its default state after the command list executes as if
+                                                        //   ID3D11DeviceContext::ClearState() was called.
+        );
+    }
 
     // Device context is now in default state
     InvalidateState();

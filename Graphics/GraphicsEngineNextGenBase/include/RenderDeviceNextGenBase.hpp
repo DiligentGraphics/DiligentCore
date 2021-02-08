@@ -29,9 +29,9 @@
 
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 #include "EngineFactory.h"
-#include "Atomics.hpp"
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
 #include "MemoryAllocator.h"
@@ -118,7 +118,7 @@ public:
 
             auto& Queue = m_CommandQueues[QueueIndex];
             // Do not use std::move on wrapper!!!
-            Queue.ReleaseQueue.SafeReleaseResource(Wrapper, Queue.NextCmdBufferNumber);
+            Queue.ReleaseQueue.SafeReleaseResource(Wrapper, Queue.NextCmdBufferNumber.load());
             QueueMask &= ~(Uint64{1} << Uint64{QueueIndex});
             --NumReferences;
         }
@@ -163,11 +163,11 @@ public:
 
             if (ReleaseResources)
             {
-                // Increment command buffer number before idling the queue.
+                // Increment the command buffer number before idling the queue.
                 // This will make sure that any resource released while this function
                 // is running will be associated with the next command buffer submission.
-                CmdBufferNumber = static_cast<Uint64>(Queue.NextCmdBufferNumber);
-                Atomics::AtomicIncrement(Queue.NextCmdBufferNumber);
+                CmdBufferNumber = Queue.NextCmdBufferNumber.fetch_add(1);
+                // fetch_add returns the original value immediately preceding the addition.
             }
 
             FenceValue = Queue.CmdQueue->WaitForIdle();
@@ -191,8 +191,8 @@ public:
         Uint64 CmdBufferNumber = 0;
         Uint64 FenceValue      = 0;
     };
-    template <typename SubmitDataType>
-    SubmittedCommandBufferInfo SubmitCommandBuffer(Uint32 QueueIndex, SubmitDataType& SubmitData, bool DiscardStaleResources)
+    template <typename... SubmitDataType>
+    SubmittedCommandBufferInfo SubmitCommandBuffer(Uint32 QueueIndex, bool DiscardStaleResources, const SubmitDataType&... SubmitData)
     {
         SubmittedCommandBufferInfo CmdBuffInfo;
         VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
@@ -201,13 +201,13 @@ public:
         {
             std::lock_guard<std::mutex> Lock{Queue.Mtx};
 
-            // Increment command buffer number before submitting the cmd buffer.
+            // Increment the command buffer number before submitting the cmd buffer.
             // This will make sure that any resource released while this function
             // is running will be associated with the next command buffer.
-            CmdBuffInfo.CmdBufferNumber = static_cast<Uint64>(Queue.NextCmdBufferNumber);
-            Atomics::AtomicIncrement(Queue.NextCmdBufferNumber);
+            CmdBuffInfo.CmdBufferNumber = Queue.NextCmdBufferNumber.fetch_add(1);
+            // fetch_add returns the original value immediately preceding the addition.
 
-            CmdBuffInfo.FenceValue = Queue.CmdQueue->Submit(SubmitData);
+            CmdBuffInfo.FenceValue = Queue.CmdQueue->Submit(SubmitData...);
         }
 
         if (DiscardStaleResources)
@@ -304,7 +304,7 @@ protected:
             CmdQueue{std::move(_CmdQueue)},
             ReleaseQueue{Allocator}
         {
-            NextCmdBufferNumber = 0;
+            NextCmdBufferNumber.store(0);
         }
 
         // clang-format off
@@ -315,7 +315,7 @@ protected:
         // clang-format on
 
         std::mutex                                        Mtx;
-        Atomics::AtomicInt64                              NextCmdBufferNumber;
+        std::atomic_uint64_t                              NextCmdBufferNumber{0};
         RefCntAutoPtr<CommandQueueType>                   CmdQueue;
         ResourceReleaseQueue<DynamicStaleResourceWrapper> ReleaseQueue;
     };

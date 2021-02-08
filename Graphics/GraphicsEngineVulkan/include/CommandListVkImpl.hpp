@@ -60,12 +60,12 @@ public:
         VERIFY(m_vkCmdBuff == VK_NULL_HANDLE && !m_pDeferredCtx, "Destroying command list that was never executed");
     }
 
-    void Close(VkCommandBuffer&               CmdBuff,
-               RefCntAutoPtr<IDeviceContext>& pDeferredCtx)
+    VkCommandBuffer Close(RefCntAutoPtr<IDeviceContext>& pDeferredCtx)
     {
-        CmdBuff      = m_vkCmdBuff;
-        m_vkCmdBuff  = VK_NULL_HANDLE;
-        pDeferredCtx = std::move(m_pDeferredCtx);
+        auto vkCmdBuff = m_vkCmdBuff;
+        m_vkCmdBuff    = VK_NULL_HANDLE;
+        pDeferredCtx   = std::move(m_pDeferredCtx);
+        return vkCmdBuff;
     }
 
 private:

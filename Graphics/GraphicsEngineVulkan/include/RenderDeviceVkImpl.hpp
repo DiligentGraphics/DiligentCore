@@ -239,12 +239,18 @@ private:
 
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
-    // Submits command buffer for execution to the command queue
-    // Returns the submitted command buffer number and the fence value
+    // Submits command buffer(s) for execution to the command queue and
+    // returns the submitted command buffer(s) number and the fence value.
+    // If SubmitInfo contains multiple command buffers, they all are treated
+    // like one and sumbitted atomically.
     // Parameters:
     //      * SubmittedCmdBuffNumber - submitted command buffer number
     //      * SubmittedFenceValue    - fence value associated with the submitted command buffer
-    void SubmitCommandBuffer(Uint32 QueueIndex, const VkSubmitInfo& SubmitInfo, Uint64& SubmittedCmdBuffNumber, Uint64& SubmittedFenceValue, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pFences);
+    void SubmitCommandBuffer(Uint32                                                 QueueIndex,
+                             const VkSubmitInfo&                                    SubmitInfo,
+                             Uint64&                                                SubmittedCmdBuffNumber,
+                             Uint64&                                                SubmittedFenceValue,
+                             std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pFences);
 
     std::shared_ptr<VulkanUtilities::VulkanInstance>       m_VulkanInstance;
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;

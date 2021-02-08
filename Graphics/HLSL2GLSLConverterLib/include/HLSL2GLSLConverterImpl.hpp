@@ -168,14 +168,21 @@ private:
 
     struct HLSLObjectInfo
     {
-        String GLSLType;      // sampler2D, sampler2DShadow, image2D, etc.
-        Uint32 NumComponents; // 0,1,2,3 or 4
-                              // Texture2D<float4>  -> 4
-                              // Texture2D<uint>    -> 1
-                              // Texture2D          -> 0
-        HLSLObjectInfo(const String& Type, Uint32 NComp) :
+        const String GLSLType; // sampler2D, sampler2DShadow, image2D, etc.
+
+        const Uint32 NumComponents; // 0, 1, 2, 3 or 4
+                                    // Texture2D<float4>  -> 4
+                                    // Texture2D<uint>    -> 1
+                                    // Texture2D          -> 0
+
+        const Uint32 ArrayDim; // Array dimensionality
+                               // Texture2D g_Tex        -> 0
+                               // Texture2D g_Tex[8]     -> 1
+                               // Texture2D g_Tex[8][2]  -> 2
+        HLSLObjectInfo(const String& Type, Uint32 NComp, Uint32 ArrDim) :
             GLSLType{Type},
-            NumComponents{NComp}
+            NumComponents{NComp},
+            ArrayDim{ArrDim}
         {}
     };
     struct ObjectsTypeHashType
@@ -351,7 +358,8 @@ private:
                                  const TokenListType::iterator& ScopeEnd);
 
         Uint32 CountFunctionArguments(TokenListType::iterator& Token, const TokenListType::iterator& ScopeEnd);
-        bool   ProcessRWTextureStore(TokenListType::iterator& Token, const TokenListType::iterator& ScopeEnd);
+        bool   ProcessRWTextureStore(TokenListType::iterator& Token, const TokenListType::iterator& ScopeEnd, Uint32 ArrayDim);
+        bool   ProcessRWTextureLoad(TokenListType::iterator& Token, const TokenListType::iterator& ScopeEnd, Uint32 ArrayDim);
         void   RemoveFlowControlAttribute(TokenListType::iterator& Token);
         void   RemoveSemantics();
         void   RemoveSpecialShaderAttributes();
@@ -487,10 +495,9 @@ private:
                                            String&                           Globals,
                                            String&                           Prologue);
 
-        void FindClosingBracket(TokenListType::iterator&       Token,
-                                const TokenListType::iterator& ScopeEnd,
-                                TokenType                      OpenBracketType,
-                                TokenType                      ClosingBracketType);
+        void FindMatchingBracket(TokenListType::iterator&       Token,
+                                 const TokenListType::iterator& ScopeEnd,
+                                 TokenType                      OpenBracketType);
 
         void ProcessReturnStatements(TokenListType::iterator& Token,
                                      bool                     IsVoid,

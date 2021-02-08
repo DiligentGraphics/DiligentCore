@@ -52,7 +52,8 @@ public:
     virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue; }
 
     // Implementation of ICommandQueueD3D12::Submit().
-    virtual Uint64 DILIGENT_CALL_TYPE Submit(ID3D12GraphicsCommandList* commandList) override final;
+    virtual Uint64 DILIGENT_CALL_TYPE Submit(Uint32                    NumCommandLists,
+                                             ID3D12CommandList* const* ppCommandLists) override final;
 
     // Implementation of ICommandQueueD3D12::GetD3D12CommandQueue().
     virtual ID3D12CommandQueue* DILIGENT_CALL_TYPE GetD3D12CommandQueue() override final { return m_pd3d12CmdQueue; }
