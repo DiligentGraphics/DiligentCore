@@ -49,7 +49,7 @@ TestingEnvironmentGL::TestingEnvironmentGL(const CreateInfo&    CI,
 
     if (m_pSwapChain == nullptr)
     {
-        CreateTestingSwapChainGL(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
+        CreateTestingSwapChainGL(m_pDevice, GetDeviceContext(), SCDesc, &m_pSwapChain);
     }
 
     glGenVertexArrays(1, &m_DummyVAO);

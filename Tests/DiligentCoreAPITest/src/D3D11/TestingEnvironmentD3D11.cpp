@@ -49,7 +49,7 @@ TestingEnvironmentD3D11::TestingEnvironmentD3D11(const CreateInfo&    CI,
     TestingEnvironment{CI, SCDesc}
 {
     RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{m_pDevice, IID_RenderDeviceD3D11};
-    RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{m_pDeviceContext, IID_DeviceContextD3D11};
+    RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{GetDeviceContext(), IID_DeviceContextD3D11};
 
     m_pd3d11Device  = pRenderDeviceD3D11->GetD3D11Device();
     m_pd3d11Context = pContextD3D11->GetD3D11DeviceContext();
@@ -82,7 +82,7 @@ TestingEnvironmentD3D11::TestingEnvironmentD3D11(const CreateInfo&    CI,
 
     if (m_pSwapChain == nullptr)
     {
-        CreateTestingSwapChainD3D11(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
+        CreateTestingSwapChainD3D11(m_pDevice, GetDeviceContext(), SCDesc, &m_pSwapChain);
     }
 }
 
