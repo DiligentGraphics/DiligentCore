@@ -45,7 +45,7 @@ namespace Diligent
 namespace
 {
 
-D3D12_DESCRIPTOR_RANGE_TYPE GetDescriptorRangeType(SHADER_RESOURCE_TYPE ResType)
+constexpr D3D12_DESCRIPTOR_RANGE_TYPE GetDescriptorRangeType(SHADER_RESOURCE_TYPE ResType)
 {
     static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new resource type");
 
@@ -570,14 +570,14 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
 
         VERIFY(i == 0 || ResDesc.VarType >= m_Desc.Resources[i - 1].VarType, "Resources must be sorted by variable type");
 
-        const bool   IsRuntimeSizedArray     = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0;
-        const auto   DescriptorRangeType     = GetDescriptorRangeType(ResDesc.ResourceType);
-        const Uint32 Register                = IsRuntimeSizedArray ? 0 : NumResources[DescriptorRangeType];
-        const Uint32 Space                   = (IsRuntimeSizedArray ? m_NumSpaces++ : 0);
-        Uint32       SRBRootIndex            = ResourceAttribs::InvalidSRBRootIndex;
-        Uint32       SRBOffsetFromTableStart = ResourceAttribs::InvalidOffset;
-        Uint32       SigRootIndex            = ResourceAttribs::InvalidSigRootIndex;
-        Uint32       SigOffsetFromTableStart = ResourceAttribs::InvalidOffset;
+        const bool IsRuntimeSizedArray     = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0;
+        const auto DescriptorRangeType     = GetDescriptorRangeType(ResDesc.ResourceType);
+        Uint32     BindPoint               = IsRuntimeSizedArray ? 0 : NumResources[DescriptorRangeType];
+        Uint32     Space                   = (IsRuntimeSizedArray ? m_NumSpaces++ : 0);
+        Uint32     SRBRootIndex            = ResourceAttribs::InvalidSRBRootIndex;
+        Uint32     SRBOffsetFromTableStart = ResourceAttribs::InvalidOffset;
+        Uint32     SigRootIndex            = ResourceAttribs::InvalidSigRootIndex;
+        Uint32     SigOffsetFromTableStart = ResourceAttribs::InvalidOffset;
 
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
@@ -591,7 +591,6 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             StaticResCacheTblSizes[SigRootIndex] += ResDesc.ArraySize;
         }
 
-        //*
         const bool IsBuffer =
             ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER ||
             ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
@@ -599,9 +598,6 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
         const bool UseDynamicOffset  = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
         const bool IsFormattedBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
         const bool IsRootView        = IsBuffer && UseDynamicOffset && !IsFormattedBuffer;
-        /*/
-        const bool IsRootView = false;
-        //*/
 
         // runtime sized array must be in separate space
         if (!IsRuntimeSizedArray)
@@ -627,6 +623,9 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             }
             else
             {
+                BindPoint = ImmutableSampler.ShaderRegister;
+                Space     = ImmutableSampler.RegisterSpace;
+
                 // Use previous bind point and decrease resource counter
                 if (!IsRuntimeSizedArray)
                     NumResources[DescriptorRangeType] -= ResDesc.ArraySize;
@@ -658,7 +657,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
         if (ImmutableSampler.IsAssigned())
             continue;
 
-        const auto DescriptorRangeType = GetDescriptorRangeType(SHADER_RESOURCE_TYPE_SAMPLER);
+        constexpr auto DescriptorRangeType = GetDescriptorRangeType(SHADER_RESOURCE_TYPE_SAMPLER);
 
         ImmutableSampler.RegisterSpace  = FirstSpace;
         ImmutableSampler.ShaderRegister = NumResources[DescriptorRangeType];

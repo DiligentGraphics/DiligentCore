@@ -144,6 +144,10 @@ void RootSignatureD3D12::Finalize()
 
                 for (UINT ArrInd = 0; ArrInd < SampAttr.ArraySize; ++ArrInd)
                 {
+                    D3D12_SHADER_VISIBILITY ShaderVisibility = (ImtblSam.ShaderStages & (ImtblSam.ShaderStages - 1)) == 0 ?
+                        ShaderTypeToD3D12ShaderVisibility(ImtblSam.ShaderStages) :
+                        D3D12_SHADER_VISIBILITY_ALL;
+
                     D3D12StaticSamplers.emplace_back(
                         D3D12_STATIC_SAMPLER_DESC //
                         {
@@ -159,8 +163,8 @@ void RootSignatureD3D12::Finalize()
                             SamDesc.MaxLOD,
                             SampAttr.ShaderRegister + ArrInd,
                             SampAttr.RegisterSpace,
-                            ShaderTypeToD3D12ShaderVisibility(ImtblSam.ShaderStages) //
-                        }                                                            //
+                            ShaderVisibility //
+                        }                    //
                     );
                 }
             }
