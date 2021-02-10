@@ -28,6 +28,8 @@
 #include <d3d11shader.h>
 #include <array>
 #include <vector>
+#include <atlcomcli.h>
+#include <d3dcompiler.h>
 
 #include "DXBCUtils.hpp"
 #include "../../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.h"
