@@ -91,20 +91,21 @@ SamplerState g_Sampler_2 : register(s0);
 
 cbuffer Constants1 : register(b1)
 {
-    float4 g_Color1;
+    float4 g_ColorScale;
+    float4 g_ColorBias;
 };
 
 cbuffer Constants2 : register(b0)
 {
-    float4 g_Color2;
+    float4 g_ColorMask;
 };
 
 float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
 {
     uint2  Coord = uint2(f4Position.xy);
     float2 UV    = f4Position.xy;
-    g_OutColorBuffer_1[Coord] = g_Tex2D_1.SampleLevel(g_Sampler_1, UV.xy, 0.0) * g_Color1;
-    g_OutColorBuffer_2[Coord] = g_Tex2D_2.SampleLevel(g_Sampler_1, UV.xy, 0.0) * g_Color2;
+    g_OutColorBuffer_1[Coord] = g_Tex2D_1.SampleLevel(g_Sampler_1, UV.xy, 0.0) * g_ColorScale + g_ColorBias;
+    g_OutColorBuffer_2[Coord] = g_Tex2D_2.SampleLevel(g_Sampler_1, UV.xy, 0.0) * g_ColorMask;
 
     float4 f4Color = float4(0.0, 0.0, 0.0, 0.0);
     f4Color += g_InColorArray[Coord.x];
