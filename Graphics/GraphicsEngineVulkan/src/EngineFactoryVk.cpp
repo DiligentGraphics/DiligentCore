@@ -279,7 +279,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         // clang-format on
 
         const auto& DescrIndexingFeats = DeviceExtFeatures.DescriptorIndexing;
-        ENABLE_FEATURE(DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE, ShaderResourceRuntimeArray, "shader resource runtime array is");
+        ENABLE_FEATURE(DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE, ShaderResourceRuntimeArray, "Shader resource runtime array is");
 
         ENABLE_FEATURE(DeviceExtFeatures.AccelStruct.accelerationStructure != VK_FALSE && DeviceExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE, RayTracing, "Ray tracing is");
 #undef FeatureSupport

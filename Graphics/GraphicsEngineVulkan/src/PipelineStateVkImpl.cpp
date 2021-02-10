@@ -774,8 +774,8 @@ void PipelineStateVkImpl::CreateDefaultSignature(const PipelineStateCreateInfo& 
                     {
                         if (Res.ArraySize == 0)
                         {
-                            LOG_ERROR_AND_THROW("Is shader '", pShader->GetDesc().Name, "' resource '", Res.Name, "' uses runtime sized array, ",
-                                                "you must explicitlly set resource signature to specify array size");
+                            LOG_ERROR_AND_THROW("Resource '", Res.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
+                                                "You must use explicit resource signature to specify the array size.");
                         }
 
                         SHADER_RESOURCE_TYPE    Type;
@@ -935,15 +935,21 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 
                         if ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER))
                         {
-                            LOG_ERROR_AND_THROW("AZ TODO");
+                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
+                                                "' that is", ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
+                                                " labeled as formatted buffer, while the same resource specified by the pipeline resource signature '",
+                                                Info.Signature->GetDesc().Name, "' is", ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
+                                                " labeled as such.");
                         }
 
-                        // ArraySize == 0 means that used runtime sized array and ArraySize in resource signature may be any non-zero value.
-                        if (SPIRVAttribs.ArraySize > 0 && ResDesc.ArraySize != SPIRVAttribs.ArraySize)
+                        // SPIRVAttribs.ArraySize == 0 means that the resource is a runtime-sized array and ResDesc.ArraySize from the
+                        // resource signature may have any non-zero value.
+                        VERIFY(ResDesc.ArraySize > 0, "ResDesc.ArraySize can't be zero. This error should've be caught by ValidatePipelineResourceSignatureDesc().");
+                        if (ResDesc.ArraySize < SPIRVAttribs.ArraySize)
                         {
-                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", SPIRVAttribs.Name,
-                                                "' and array size (", SPIRVAttribs.ArraySize, ") that is not compatible with array size '",
-                                                ResDesc.ArraySize, "' in pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
+                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
+                                                "' whose array size (", SPIRVAttribs.ArraySize, ") is greater than the array size (",
+                                                ResDesc.ArraySize, ") specified by the pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
                         }
                     }
 

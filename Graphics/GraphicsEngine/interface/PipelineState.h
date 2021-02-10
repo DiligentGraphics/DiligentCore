@@ -593,9 +593,15 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///             The function only checks compatibility of shader resource layouts. It does not take
     ///             into account vertex shader input layout, number of outputs, etc.
     /// 
-    /// \remarks    On Vulkan backend PSO may be partially compatible, on other backends this behavior is emulated.
-    ///             For Vulkan changing PSO between totally or partially compatible may increase performance,
-    ///             for DirectX 12 only changing PSO between compatible may increase performance.
+    ///             *Technical details*
+    ///
+    ///             PSOs may be partially compatible when some, but not all pipeline resource signatures are compatible.
+    ///             In Vulkan backend, switching PSOs that are partially compatible may increase performance
+    ///             as shader resource bindings (that map to descriptor sets) from compatible signatures may be preserved. 
+    ///             In Direct3D12 backend, only switching between fully compatible PSOs preserves shader resource bindings, 
+    ///             while switching partially compatible PSOs still requires re-binding all resource bindigns from all signatures.
+    ///             In other backends the behavior is emualted. Usually, the bindigs from the first N compatible resource signatures
+    ///             may be preserved.
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineState* pPSO) CONST PURE;
 

@@ -1397,7 +1397,9 @@ TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.ShaderResourceRuntimeArray || !pDevice->GetDeviceCaps().IsVulkanDevice())
+
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    if (!deviceCaps.Features.ShaderResourceRuntimeArray || !deviceCaps.IsVulkanDevice())
     {
         GTEST_SKIP() << "Descriptor indexing is not supported by this device";
     }

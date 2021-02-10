@@ -108,7 +108,7 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     ///             PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER flag.
     PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 0x04,
 
-    /// DirectX 12 only - runtime sized array must be in separate space.
+    /// Indicates that resource is a run-time sized shader array (e.g. an array without a specific size).
     PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY      = 0x08,
     
     PIPELINE_RESOURCE_FLAG_LAST               = PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY

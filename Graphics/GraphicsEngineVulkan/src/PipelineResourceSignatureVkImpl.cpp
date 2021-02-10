@@ -249,12 +249,12 @@ inline PipelineResourceSignatureVkImpl::CACHE_GROUP PipelineResourceSignatureVkI
     if (WithDynamicOffset && !UseTexelBuffer)
     {
         if (Res.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
-            return static_cast<CACHE_GROUP>(SetId * CACHE_GROUP_COUNT_PER_Type + CACHE_GROUP_DYN_UB);
+            return static_cast<CACHE_GROUP>(SetId * CACHE_GROUP_COUNT_PER_VAR_TYPE + CACHE_GROUP_DYN_UB);
 
         if (Res.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV || Res.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV)
-            return static_cast<CACHE_GROUP>(SetId * CACHE_GROUP_COUNT_PER_Type + CACHE_GROUP_DYN_SB);
+            return static_cast<CACHE_GROUP>(SetId * CACHE_GROUP_COUNT_PER_VAR_TYPE + CACHE_GROUP_DYN_SB);
     }
-    return static_cast<CACHE_GROUP>(SetId * CACHE_GROUP_COUNT_PER_Type + CACHE_GROUP_OTHER);
+    return static_cast<CACHE_GROUP>(SetId * CACHE_GROUP_COUNT_PER_VAR_TYPE + CACHE_GROUP_OTHER);
 }
 
 inline PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID PipelineResourceSignatureVkImpl::VarTypeToDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType)
@@ -1697,9 +1697,9 @@ void PipelineResourceSignatureVkImpl::BindResource(IDeviceObject*         pObj,
     Helper.BindResource(pObj);
 }
 
-bool PipelineResourceSignatureVkImpl::IsBound(Uint32                 ArrayIndex,
-                                              Uint32                 ResIndex,
-                                              ShaderResourceCacheVk& ResourceCache) const
+bool PipelineResourceSignatureVkImpl::IsBound(Uint32                       ArrayIndex,
+                                              Uint32                       ResIndex,
+                                              const ShaderResourceCacheVk& ResourceCache) const
 {
     const auto&  ResDesc     = GetResourceDesc(ResIndex);
     const auto&  Attribs     = GetResourceAttribs(ResIndex);

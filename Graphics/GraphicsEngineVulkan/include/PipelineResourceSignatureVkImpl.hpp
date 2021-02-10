@@ -259,9 +259,9 @@ public:
                       Uint32                 ResIndex,
                       ShaderResourceCacheVk& ResourceCache) const;
 
-    bool IsBound(Uint32                 ArrayIndex,
-                 Uint32                 ResIndex,
-                 ShaderResourceCacheVk& ResourceCache) const;
+    bool IsBound(Uint32                       ArrayIndex,
+                 Uint32                       ResIndex,
+                 const ShaderResourceCacheVk& ResourceCache) const;
 
     // Commits dynamic resources from ResourceCache to vkDynamicDescriptorSet
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
@@ -289,10 +289,10 @@ private:
     // Resource cache group identifier
     enum CACHE_GROUP : size_t
     {
-        CACHE_GROUP_DYN_UB = 0, // Uniform buffer with dynamic offset
-        CACHE_GROUP_DYN_SB,     // Storage buffer with dynamic offset
-        CACHE_GROUP_OTHER,      // Other resource type
-        CACHE_GROUP_COUNT_PER_Type,
+        CACHE_GROUP_DYN_UB = 0,         // Uniform buffer with dynamic offset
+        CACHE_GROUP_DYN_SB,             // Storage buffer with dynamic offset
+        CACHE_GROUP_OTHER,              // Other resource type
+        CACHE_GROUP_COUNT_PER_VAR_TYPE, // Cache group count per shader variable type
 
         CACHE_GROUP_DYN_UB_STAT_VAR = CACHE_GROUP_DYN_UB, // Uniform buffer with dynamic offset, static variable
         CACHE_GROUP_DYN_SB_STAT_VAR = CACHE_GROUP_DYN_SB, // Storage buffer with dynamic offset, static variable
@@ -304,7 +304,7 @@ private:
 
         CACHE_GROUP_COUNT
     };
-    static_assert(CACHE_GROUP_COUNT == CACHE_GROUP_COUNT_PER_Type * MAX_DESCRIPTOR_SETS, "Inconsistent cache group count");
+    static_assert(CACHE_GROUP_COUNT == CACHE_GROUP_COUNT_PER_VAR_TYPE * MAX_DESCRIPTOR_SETS, "Inconsistent cache group count");
 
     using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] including ArraySize
     using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] not counting ArraySize
