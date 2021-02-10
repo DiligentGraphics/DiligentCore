@@ -675,7 +675,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, PipelineTypeFromShaderStages)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineResourceFlagsString)
 {
-    static_assert(PIPELINE_RESOURCE_FLAG_LAST == 0x04, "Please add a test for the new flag here");
+    static_assert(PIPELINE_RESOURCE_FLAG_LAST == 0x08, "Please add a test for the new flag here");
 
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_UNKNOWN, true).c_str(), "PIPELINE_RESOURCE_FLAG_UNKNOWN");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_UNKNOWN).c_str(), "UNKNOWN");
@@ -699,6 +699,9 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineResourceFlagsString)
                  "NO_DYNAMIC_BUFFERS|FORMATTED_BUFFER");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER).c_str(),
                  "NO_DYNAMIC_BUFFERS|COMBINED_SAMPLER|FORMATTED_BUFFER");
+
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY, true).c_str(), "PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY).c_str(), "RUNTIME_ARRAY");
 }
 
 } // namespace

@@ -505,7 +505,7 @@ struct OpcodeToken
     D3D10_SB_OPCODE_TYPE OpcodeType : 11;  // bits 0..10
     Uint32               Controls : 13;    // bits 11..23, Opcode-Specific Controls
     Uint32               OpcodeLength : 7; // bita 24..30
-    Uint32               Extended : 1;     // bit 31, 1 if opcode is “extended”, otherwise 0
+    Uint32               Extended : 1;     // bit 31, 1 if opcode is "extended", otherwise 0
 };
 static_assert(sizeof(OpcodeToken) == 4, "");
 
