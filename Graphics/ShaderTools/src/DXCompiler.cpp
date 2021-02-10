@@ -1187,6 +1187,21 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
                 ReplaceBindPoint(Iter, ArgStart, ArgEnd, NewIndexLen);
                 startPos += NewIndexLen - (ArgEnd - ArgStart);
             }
+
+#ifdef DILIGENT_DEVELOPMENT
+            Uint32 IndexVarUsageCount = 0;
+            for (pos = 0; pos < DXIL.size();)
+            {
+                pos = DXIL.find(SrcIndexStr, pos + 1);
+                if (pos == String::npos)
+                    break;
+
+                pos += SrcIndexStr.size();
+                if (DXIL[pos] == ' ' || DXIL[pos] == ',')
+                    ++IndexVarUsageCount;
+            }
+            DEV_CHECK_ERR(IndexVarUsageCount == 2, "Temp variable '", SrcIndexStr, "' with resource bind point used more than 2 times, patching for this variable may lead to UB");
+#endif
         }
         else
         {
