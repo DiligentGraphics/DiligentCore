@@ -1103,6 +1103,11 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
         const auto& Attr    = GetResourceAttribs(r);
         VERIFY_EXPR(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
+        if (Attr.IsImmutableSamplerAssigned())
+            continue;
+
+        const bool  IsSampler    = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+        const auto  HeapType     = IsSampler ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         const auto  DstRootIndex = Attr.RootIndex(DstCacheType);
         const auto& SrcRootTable = SrcResourceCache.GetRootTable(Attr.RootIndex(SrcCacheType));
         auto&       DstRootTable = DstResourceCache.GetRootTable(DstRootIndex);
@@ -1111,13 +1116,12 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
         {
             const auto SrcCacheOffset = Attr.OffsetFromTableStart(SrcCacheType) + ArrInd;
             const auto DstCacheOffset = Attr.OffsetFromTableStart(DstCacheType) + ArrInd;
-            const bool IsSampler      = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
 
-            const auto& SrcRes = SrcRootTable.GetResource(SrcCacheOffset, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            const auto& SrcRes = SrcRootTable.GetResource(SrcCacheOffset, HeapType);
             if (!SrcRes.pObject)
                 LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-            auto& DstRes = DstRootTable.GetResource(DstCacheOffset, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            auto& DstRes = DstRootTable.GetResource(DstCacheOffset, HeapType);
             if (DstRes.pObject != SrcRes.pObject)
             {
                 DEV_CHECK_ERR(DstRes.pObject == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
