@@ -286,6 +286,7 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_NE(pSRB, nullptr);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, RefTextures.GetViewObjects(Tex2D_MutIdx)[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut", SetArray, RefTextures.GetViewObjects(Tex2DArr_MutIdx), 0, MutableTexArraySize);
@@ -387,6 +388,7 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     for (Uint32 i = 0; i < _countof(pPRS); ++i)
     {
         pPRS[i]->CreateShaderResourceBinding(&pSRB[i], true);
+        ASSERT_NE(pSRB[i], nullptr);
     }
 
     SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_2", Set, RefTextures.GetView(5));
@@ -498,6 +500,7 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
         ASSERT_TRUE(pPSO);
 
         pPRS->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_NE(pSRB, nullptr);
 
         EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Sampler"), nullptr);
         EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
@@ -588,6 +591,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_NE(pSRB, nullptr);
 
     EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Sampler"), nullptr);
     EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
@@ -696,6 +700,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
         Desc.Name         = "ImmutableSamplers2 - PRS3";
         Desc.BindingIndex = 3;
         pDevice->CreatePipelineResourceSignature(Desc, &pSignature3);
+        ASSERT_NE(pSignature3, nullptr);
     }
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
@@ -703,7 +708,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     auto& PSODesc          = PSOCreateInfo.PSODesc;
     auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    PSODesc.Name = "PRS test";
+    PSODesc.Name = "ImmutableSamplers2 PSO";
 
     PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
     GraphicsPipeline.NumRenderTargets             = 1;
@@ -1240,6 +1245,7 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_NE(pSRB, nullptr);
 
     RefTextures.GetView(3)->SetSampler(pSampler);
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_tex2D_Mut", Set, RefTextures.GetView(3));
@@ -1373,6 +1379,7 @@ TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_NE(pSRB, nullptr);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, RefBuffers.GetView(Buff_MutIdx));
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Mut", SetArray, RefBuffers.GetViewObjects(BuffArr_MutIdx), 0, MutableBuffArraySize);

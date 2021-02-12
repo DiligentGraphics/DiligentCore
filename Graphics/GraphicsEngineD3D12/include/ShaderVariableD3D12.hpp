@@ -87,7 +87,7 @@ public:
                     IMemoryAllocator&                         Allocator,
                     const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
                     Uint32                                    NumAllowedTypes,
-                    SHADER_TYPE                               ShaderType);
+                    SHADER_TYPE                               ShaderStages);
     ~ShaderVariableManagerD3D12();
 
     void Destroy(IMemoryAllocator& Allocator);
@@ -100,7 +100,7 @@ public:
     static size_t GetRequiredMemorySize(const PipelineResourceSignatureD3D12Impl& Signature,
                                         const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
                                         Uint32                                    NumAllowedTypes,
-                                        SHADER_TYPE                               ShaderType,
+                                        SHADER_TYPE                               ShaderStages,
                                         Uint32&                                   NumVariables);
 
     Uint32 GetVariableCount() const { return m_NumVariables; }
@@ -121,6 +121,13 @@ private:
         VERIFY_EXPR(m_pSignature);
         return m_pSignature->GetResourceAttribs(Index);
     }
+
+    template <typename HandlerType>
+    static void ProcessSignatureResources(const PipelineResourceSignatureD3D12Impl& Signature,
+                                          const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                                          Uint32                                    NumAllowedTypes,
+                                          SHADER_TYPE                               ShaderStages,
+                                          HandlerType                               Handler);
 
 private:
     PipelineResourceSignatureD3D12Impl const* m_pSignature = nullptr;

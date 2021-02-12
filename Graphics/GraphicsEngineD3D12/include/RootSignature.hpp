@@ -107,11 +107,13 @@ public:
 
     ID3D12RootSignature* Create(ID3D12Device* pDevice);
 
-private:
-    static constexpr Uint32 InvalidBindPoint = ~0u;
+    bool        IsDefined() const { return m_ShaderRecordSize > 0 && m_pName != nullptr; }
+    const char* GetName() const { return m_pName; }
+    Uint32      GetRegisterSpace() const { return PipelineResourceSignatureD3D12Impl::MAX_SPACES_PER_SIGNATURE * MAX_RESOURCE_SIGNATURES; }
+    Uint32      GetShaderRegister() const { return 0; }
 
+private:
     const char*                  m_pName            = nullptr;
-    Uint32                       m_BindPoint        = InvalidBindPoint;
     const Uint32                 m_ShaderRecordSize = 0;
     CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
 };

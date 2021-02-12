@@ -59,15 +59,60 @@ static void TestDXBCRemapping(const char* Source, const char* Entry, const char*
     hr = D3DReflect(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(ShaderReflection), reinterpret_cast<void**>(&ShaderReflection));
     ASSERT_HRESULT_SUCCEEDED(hr);
 
-    for (auto& ResPair : ResMap)
+    D3D12_SHADER_DESC ShaderDesc = {};
+    ShaderReflection->GetDesc(&ShaderDesc);
+
+    for (Uint32 ResInd = 0; ResInd < ShaderDesc.BoundResources; ++ResInd)
     {
         D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
 
-        hr = ShaderReflection->GetResourceBindingDescByName(ResPair.first.GetStr(), &BindDesc);
+        hr = ShaderReflection->GetResourceBindingDesc(ResInd, &BindDesc);
         ASSERT_HRESULT_SUCCEEDED(hr);
 
-        EXPECT_EQ(BindDesc.BindPoint, ResPair.second.BindPoint);
-        EXPECT_EQ(BindDesc.Space, ResPair.second.Space);
+        String ResName{BindDesc.Name};
+
+        auto Iter = ResMap.find(HashMapStringKey{ResName.c_str()});
+        if (Iter != ResMap.end())
+        {
+            EXPECT_EQ(BindDesc.BindPoint, Iter->second.BindPoint);
+            EXPECT_EQ(BindDesc.Space, Iter->second.Space);
+            EXPECT_EQ(BindDesc.BindCount, Iter->second.ArraySize);
+            continue;
+        }
+
+        if (ResName.back() != ']')
+        {
+            ADD_FAILURE() << "Can't find shader resource '" << BindDesc.Name << "'";
+            continue;
+        }
+
+        Uint32 ArrayInd = 0;
+        {
+            size_t ArrEnd   = ResName.length() - 1;
+            size_t ArrStart = ArrEnd - 1;
+
+            for (; ArrStart > 1; --ArrStart)
+            {
+                if (ResName[ArrStart] == '[')
+                    break;
+                VERIFY_EXPR(ResName[ArrStart] >= '0' && ResName[ArrStart] <= '9');
+            }
+
+            ArrayInd = std::stoi(ResName.substr(ArrStart + 1, ArrEnd - ArrStart - 1));
+            ResName.resize(ArrStart);
+        }
+
+        Iter = ResMap.find(HashMapStringKey{ResName.c_str()});
+        if (Iter != ResMap.end())
+        {
+            EXPECT_LT(ArrayInd, Iter->second.ArraySize);
+            EXPECT_EQ(BindDesc.BindPoint, Iter->second.BindPoint + ArrayInd);
+            EXPECT_EQ(BindDesc.Space, Iter->second.Space);
+            EXPECT_EQ(BindDesc.BindCount, 1u);
+            continue;
+        }
+
+        ADD_FAILURE() << "Can't find shader resource '" << BindDesc.Name << "[" << ArrayInd << "]";
     }
 }
 
@@ -86,8 +131,8 @@ StructuredBuffer<float4>  g_InColorArray     : register(t2);
 RWTexture2D<float4>       g_OutColorBuffer_1 : register(u1);
 RWTexture2D<float4>       g_OutColorBuffer_2 : register(u2);
 
-SamplerState g_Sampler_1 : register(s1);
-SamplerState g_Sampler_2 : register(s0);
+SamplerState g_Sampler_1 : register(s4);
+SamplerState g_Sampler_2[4] : register(s0);
 
 cbuffer Constants1 : register(b1)
 {
@@ -109,8 +154,8 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
 
     float4 f4Color = float4(0.0, 0.0, 0.0, 0.0);
     f4Color += g_InColorArray[Coord.x];
-    f4Color += g_Tex2D_3.SampleLevel(g_Sampler_2, UV.xy, 0.0);
-    f4Color += g_Tex2D_4.SampleLevel(g_Sampler_2, UV.xy, 0.0);
+    f4Color += g_Tex2D_3.SampleLevel(g_Sampler_2[1], UV.xy, 0.0);
+    f4Color += g_Tex2D_4.SampleLevel(g_Sampler_2[3], UV.xy, 0.0);
     return f4Color;
 }
 )hlsl";
@@ -122,17 +167,17 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
     const Uint32 Space = 0;
 
     DXBCUtils::TResourceBindingMap ResMap;
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_1"}, BindInfo{Tex++, Space});
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_2"}, BindInfo{Tex++, Space});
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_3"}, BindInfo{Tex++, Space});
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_4"}, BindInfo{Tex++, Space});
-    ResMap.emplace(HashMapStringKey{"g_InColorArray"}, BindInfo{Tex++, Space});
-    ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_1"}, BindInfo{UAV++, Space});
-    ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_2"}, BindInfo{UAV++, Space});
-    ResMap.emplace(HashMapStringKey{"g_Sampler_1"}, BindInfo{Samp++, Space});
-    ResMap.emplace(HashMapStringKey{"g_Sampler_2"}, BindInfo{Samp++, Space});
-    ResMap.emplace(HashMapStringKey{"Constants1"}, BindInfo{Buff++, Space});
-    ResMap.emplace(HashMapStringKey{"Constants2"}, BindInfo{Buff++, Space});
+    ResMap.emplace(HashMapStringKey{"g_Tex2D_1"}, BindInfo{Tex++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"g_Tex2D_2"}, BindInfo{Tex++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"g_Tex2D_3"}, BindInfo{Tex++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"g_Tex2D_4"}, BindInfo{Tex++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"g_InColorArray"}, BindInfo{Tex++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_1"}, BindInfo{UAV++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_2"}, BindInfo{UAV++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"g_Sampler_1"}, BindInfo{Samp++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"g_Sampler_2"}, BindInfo{Samp++, Space, 4});
+    ResMap.emplace(HashMapStringKey{"Constants1"}, BindInfo{Buff++, Space, 1});
+    ResMap.emplace(HashMapStringKey{"Constants2"}, BindInfo{Buff++, Space, 1});
 
     TestDXBCRemapping(Source, "PSMain", "ps_5_0", ResMap);
 }
@@ -142,7 +187,7 @@ TEST(DXBCUtils, PatchSM51)
     static constexpr char Source[] = R"hlsl(
 // space 0
 SamplerState g_Sampler_1 : register(s0, space0);
-SamplerState g_Sampler_2 : register(s1, space0);
+SamplerState g_Sampler_2[4] : register(s5, space0);
 
 cbuffer Constants1 : register(b0, space0)
 {
@@ -175,8 +220,8 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
 
     float4 f4Color = float4(0.0, 0.0, 0.0, 0.0);
     f4Color += g_InColorArray[Coord.x];
-    f4Color += g_Tex2D_3.SampleLevel(g_Sampler_2, UV.xy, 0.0);
-    f4Color += g_Tex2D_4.SampleLevel(g_Sampler_2, UV.xy, 0.0);
+    f4Color += g_Tex2D_3.SampleLevel(g_Sampler_2[1], UV.xy, 0.0);
+    f4Color += g_Tex2D_4.SampleLevel(g_Sampler_2[2], UV.xy, 0.0);
     return f4Color;
 }
 )hlsl";
@@ -187,28 +232,28 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
         const Uint32 Space = 0;
         Uint32       Tex   = 0;
         Uint32       Buff  = 0;
-        ResMap.emplace(HashMapStringKey{"g_Tex2D_2"}, BindInfo{Tex++, Space});
-        ResMap.emplace(HashMapStringKey{"g_Tex2D_3"}, BindInfo{Tex++, Space});
-        ResMap.emplace(HashMapStringKey{"Constants1"}, BindInfo{Buff++, Space});
-        ResMap.emplace(HashMapStringKey{"Constants2"}, BindInfo{Buff++, Space});
+        ResMap.emplace(HashMapStringKey{"g_Tex2D_2"}, BindInfo{Tex++, Space, 1});
+        ResMap.emplace(HashMapStringKey{"g_Tex2D_3"}, BindInfo{Tex++, Space, 1});
+        ResMap.emplace(HashMapStringKey{"Constants1"}, BindInfo{Buff++, Space, 1});
+        ResMap.emplace(HashMapStringKey{"Constants2"}, BindInfo{Buff++, Space, 1});
     }
     // space 1
     {
         const Uint32 Space = 1;
         Uint32       Samp  = 0;
         Uint32       UAV   = 0;
-        ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_1"}, BindInfo{UAV++, Space});
-        ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_2"}, BindInfo{UAV++, Space});
-        ResMap.emplace(HashMapStringKey{"g_Sampler_1"}, BindInfo{Samp++, Space});
-        ResMap.emplace(HashMapStringKey{"g_Sampler_2"}, BindInfo{Samp++, Space});
+        ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_1"}, BindInfo{UAV++, Space, 1});
+        ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_2"}, BindInfo{UAV++, Space, 1});
+        ResMap.emplace(HashMapStringKey{"g_Sampler_1"}, BindInfo{Samp++, Space, 1});
+        ResMap.emplace(HashMapStringKey{"g_Sampler_2"}, BindInfo{Samp++, Space, 4});
     }
     // space 2
     {
         const Uint32 Space = 2;
         Uint32       Tex   = 0;
-        ResMap.emplace(HashMapStringKey{"g_Tex2D_1"}, BindInfo{Tex++, Space});
-        ResMap.emplace(HashMapStringKey{"g_Tex2D_4"}, BindInfo{Tex++, Space});
-        ResMap.emplace(HashMapStringKey{"g_InColorArray"}, BindInfo{Tex++, Space});
+        ResMap.emplace(HashMapStringKey{"g_Tex2D_1"}, BindInfo{Tex++, Space, 1});
+        ResMap.emplace(HashMapStringKey{"g_Tex2D_4"}, BindInfo{Tex++, Space, 1});
+        ResMap.emplace(HashMapStringKey{"g_InColorArray"}, BindInfo{Tex++, Space, 1});
     }
 
     TestDXBCRemapping(Source, "PSMain", "ps_5_1", ResMap);

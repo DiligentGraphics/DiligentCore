@@ -199,12 +199,12 @@ TEST(DXCompilerTest, RemapBindingsRG)
     ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
     IDXCompiler::TResourceBindingMap BindigMap;
-    BindigMap["g_TLAS"]        = {15, 0};
-    BindigMap["g_ColorBuffer"] = {7, 1};
-    BindigMap["g_Tex"]         = {101, 0};
-    BindigMap["g_TexSampler"]  = {0, 2};
-    BindigMap["cbConstants"]   = {9, 0};
-    BindigMap["g_AnotherRes"]  = {567, 5};
+    BindigMap["g_TLAS"]        = {15, 0, 1};
+    BindigMap["g_ColorBuffer"] = {7, 1, 1};
+    BindigMap["g_Tex"]         = {101, 0, 2};
+    BindigMap["g_TexSampler"]  = {0, 2, 1};
+    BindigMap["cbConstants"]   = {9, 0, 1};
+    BindigMap["g_AnotherRes"]  = {567, 5, 1};
     CComPtr<IDxcBlob> pRemappedDXIL;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
@@ -236,11 +236,11 @@ TEST(DXCompilerTest, RemapBindingsRG)
         EXPECT_EQ(BindDesc.Space, 0U);
     }
 
-    BindigMap["g_TLAS"]        = {0, 0};
-    BindigMap["g_ColorBuffer"] = {1, 0};
-    BindigMap["g_Tex"]         = {2, 0};
-    BindigMap["g_TexSampler"]  = {0, 1};
-    BindigMap["cbConstants"]   = {1, 1};
+    BindigMap["g_TLAS"]        = {0, 0, 1};
+    BindigMap["g_ColorBuffer"] = {1, 0, 1};
+    BindigMap["g_Tex"]         = {2, 0, 2};
+    BindigMap["g_TexSampler"]  = {0, 1, 1};
+    BindigMap["cbConstants"]   = {1, 1, 1};
     CComPtr<IDxcBlob> pRemappedDXIL2;
     pDXC->RemapResourceBindings(BindigMap, pRemappedDXIL, &pRemappedDXIL2);
     ASSERT_TRUE(pRemappedDXIL2);
@@ -316,12 +316,12 @@ float4 main() : SV_TARGET
     ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
     IDXCompiler::TResourceBindingMap BindigMap;
-    BindigMap["g_Tex1"]       = {101, 0};
-    BindigMap["g_Tex2"]       = {22, 0};
-    BindigMap["g_TexSampler"] = {0, 0};
-    BindigMap["cbConstants1"] = {9, 0};
-    BindigMap["cbConstants2"] = {3, 0};
-    BindigMap["g_AnotherRes"] = {567, 0};
+    BindigMap["g_Tex1"]       = {101, 0, 1};
+    BindigMap["g_Tex2"]       = {22, 0, 1};
+    BindigMap["g_TexSampler"] = {0, 0, 1};
+    BindigMap["cbConstants1"] = {9, 0, 1};
+    BindigMap["cbConstants2"] = {3, 0, 1};
+    BindigMap["g_AnotherRes"] = {567, 0, 1};
     CComPtr<IDxcBlob> pRemappedDXIL;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
@@ -354,12 +354,12 @@ float4 main() : SV_TARGET
     }
 
     BindigMap.clear();
-    BindigMap["g_Tex1"]       = {0, 2};
-    BindigMap["g_Tex2"]       = {55, 4};
-    BindigMap["g_TexSampler"] = {1, 2};
-    BindigMap["cbConstants1"] = {8, 3};
-    BindigMap["cbConstants2"] = {4, 6};
-    BindigMap["g_AnotherRes"] = {567, 0};
+    BindigMap["g_Tex1"]       = {0, 2, 1};
+    BindigMap["g_Tex2"]       = {55, 4, 1};
+    BindigMap["g_TexSampler"] = {1, 2, 1};
+    BindigMap["cbConstants1"] = {8, 3, 1};
+    BindigMap["cbConstants2"] = {4, 6, 1};
+    BindigMap["g_AnotherRes"] = {567, 0, 1};
     pRemappedDXIL             = nullptr;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
@@ -438,14 +438,14 @@ float4 main() : SV_TARGET
     ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
     IDXCompiler::TResourceBindingMap BindigMap;
-    BindigMap["g_Tex"]          = {101, 0};
-    BindigMap["g_Tex3D"]        = {22, 0};
-    BindigMap["g_TexSampler"]   = {0, 0};
-    BindigMap["g_Buffer"]       = {9, 0};
-    BindigMap["g_ColorBuffer1"] = {180, 0};
-    BindigMap["g_ColorBuffer2"] = {333, 0};
-    BindigMap["g_ColorBuffer3"] = {1, 0};
-    BindigMap["g_AnotherRes"]   = {567, 0};
+    BindigMap["g_Tex"]          = {101, 0, 4};
+    BindigMap["g_Tex3D"]        = {22, 0, 1};
+    BindigMap["g_TexSampler"]   = {0, 0, 1};
+    BindigMap["g_Buffer"]       = {9, 0, 1};
+    BindigMap["g_ColorBuffer1"] = {180, 0, 1};
+    BindigMap["g_ColorBuffer2"] = {333, 0, 1};
+    BindigMap["g_ColorBuffer3"] = {1, 0, 1};
+    BindigMap["g_AnotherRes"]   = {567, 0, 1};
     CComPtr<IDxcBlob> pRemappedDXIL;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
@@ -486,14 +486,14 @@ float4 main() : SV_TARGET
     }
 
     BindigMap.clear();
-    BindigMap["g_Tex"]          = {77, 1};
-    BindigMap["g_Tex3D"]        = {90, 1};
-    BindigMap["g_TexSampler"]   = {0, 1};
-    BindigMap["g_Buffer"]       = {15, 6};
-    BindigMap["g_ColorBuffer1"] = {33, 6};
-    BindigMap["g_ColorBuffer2"] = {10, 100};
-    BindigMap["g_ColorBuffer3"] = {11, 100};
-    BindigMap["g_AnotherRes"]   = {567, 0};
+    BindigMap["g_Tex"]          = {77, 1, 4};
+    BindigMap["g_Tex3D"]        = {90, 1, 1};
+    BindigMap["g_TexSampler"]   = {0, 1, 1};
+    BindigMap["g_Buffer"]       = {15, 6, 1};
+    BindigMap["g_ColorBuffer1"] = {33, 6, 1};
+    BindigMap["g_ColorBuffer2"] = {10, 100, 1};
+    BindigMap["g_ColorBuffer3"] = {11, 100, 1};
+    BindigMap["g_AnotherRes"]   = {567, 0, 1};
     pRemappedDXIL               = nullptr;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);

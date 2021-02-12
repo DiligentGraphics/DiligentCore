@@ -53,6 +53,8 @@ class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatur
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceD3D12Impl>;
 
+    static constexpr Uint32 MAX_SPACES_PER_SIGNATURE = 128;
+
     PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D12Impl*               pDevice,
                                        const PipelineResourceSignatureDesc& Desc,
@@ -91,7 +93,7 @@ public:
 /* 0  */const Uint32  Register             : _RegisterBits;        // Shader register
 /* 2  */const Uint32  SRBRootIndex         : _SRBRootIndexBits;    // Root view/table index in the SRB
 /* 4  */const Uint32  SamplerInd           : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
-/* 6  */const Uint32  Space                : _SpaceBits;           // Shader register space
+/* 6  */const Uint32  Space                : _SpaceBits;           // Shader register space (local space in range 0..MAX_SPACES_PER_SIGNATURE)
 /* 7.0*/const Uint32  SigRootIndex         : _SigRootIndexBits;    // Root table index for signature (static only)
 /* 7.3*/const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
 /* 7.4*/const Uint32  IsRootView           : _RootViewFlagBits;    // Is root view (for debugging)
@@ -150,15 +152,15 @@ public:
     struct ImmutableSamplerAttribs
     {
     private:
-        static constexpr Uint32 _ShaderRegisterBits    = 16;
-        static constexpr Uint32 _RegisterSpaceBits     = 16;
+        static constexpr Uint32 _ShaderRegisterBits    = 24;
+        static constexpr Uint32 _RegisterSpaceBits     = 8;
         static constexpr Uint32 _InvalidShaderRegister = (1u << _ShaderRegisterBits) - 1;
         static constexpr Uint32 _InvalidRegisterSpace  = (1u << _RegisterSpaceBits) - 1;
 
     public:
         Uint32 ArraySize = 1;
         Uint32 ShaderRegister : _ShaderRegisterBits;
-        Uint32 RegisterSpace : _RegisterSpaceBits;
+        Uint32 RegisterSpace : _RegisterSpaceBits; // (local space in range 0..MAX_SPACES_PER_SIGNATURE)
 
         ImmutableSamplerAttribs() :
             ShaderRegister{_InvalidShaderRegister},
@@ -196,6 +198,16 @@ public:
     Uint32 GetTotalRootCount() const
     {
         return m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
+    }
+
+    Uint32 GetNumRootTables() const
+    {
+        return m_RootParams.GetNumRootTables();
+    }
+
+    Uint32 GetNumRootViews() const
+    {
+        return m_RootParams.GetNumRootViews();
     }
 
     Uint32 GetBaseRegisterSpace() const
@@ -295,8 +307,7 @@ private:
     Uint32 FindAssignedSampler(const PipelineResourceDesc& SepImg) const;
 
 private:
-    static constexpr Uint8  InvalidRootTableIndex    = static_cast<Uint8>(-1);
-    static constexpr Uint32 MAX_SPACES_PER_SIGNATURE = 128;
+    static constexpr Uint8 InvalidRootTableIndex = static_cast<Uint8>(-1);
 
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 

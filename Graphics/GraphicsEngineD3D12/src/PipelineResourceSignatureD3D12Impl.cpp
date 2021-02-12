@@ -359,6 +359,8 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
                 Register = ImmutableSampler.ShaderRegister;
                 Space    = ImmutableSampler.RegisterSpace;
 
+                VERIFY_EXPR(ResDesc.ArraySize == ImmutableSampler.ArraySize);
+
                 // Use previous bind point and decrease resource counter
                 if (!IsRuntimeSizedArray)
                     NumResources[DescriptorRangeType] -= ResDesc.ArraySize;
@@ -392,7 +394,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
 
         const auto DescriptorRangeType = ResourceTypeToD3D12DescriptorRangeType(SHADER_RESOURCE_TYPE_SAMPLER);
 
-        ImmutableSampler.RegisterSpace  = FirstSpace;
+        ImmutableSampler.RegisterSpace  = 0;
         ImmutableSampler.ShaderRegister = NumResources[DescriptorRangeType];
         NumResources[DescriptorRangeType] += 1;
     }
@@ -1256,13 +1258,13 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
             else
                 CmdCtx.GetCommandList()->SetGraphicsRootDescriptorTable(FirstRootIndex + RootInd, RootTableGPUDescriptorHandle);
 
-            ProcessCachedTableResources(
-                RootInd, D3D12Param, ResourceCache, dbgHeapType,
-                [&](UINT                                OffsetFromTableStart,
-                    const D3D12_DESCRIPTOR_RANGE&       range,
-                    ShaderResourceCacheD3D12::Resource& Res) //
-                {
-                    if (IsDynamicTable)
+            if (IsDynamicTable)
+            {
+                ProcessCachedTableResources(
+                    RootInd, D3D12Param, ResourceCache, dbgHeapType,
+                    [&](UINT                                OffsetFromTableStart,
+                        const D3D12_DESCRIPTOR_RANGE&       range,
+                        ShaderResourceCacheD3D12::Resource& Res) //
                     {
                         if (IsResourceTable)
                         {
@@ -1298,15 +1300,13 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
 
                             ++DynamicSamplerTblOffset;
                         }
-                    }
-                } //
-            );
+                    }); //
+            }
         } //
     );
 
     VERIFY_EXPR(DynamicCbvSrvUavTblOffset == NumDynamicCbvSrvUavDescriptors);
     VERIFY_EXPR(DynamicSamplerTblOffset == NumDynamicSamplerDescriptors);
-
 
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
@@ -1686,8 +1686,9 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                 break;
 
             case SHADER_RESOURCE_TYPE_SAMPLER:
-                DEV_CHECK_ERR(Signature.IsUsingSeparateSamplers(), "Samplers should not be set directly when using combined texture samplers");
-                CacheSampler(pObj);
+                //DEV_CHECK_ERR(Signature.IsUsingSeparateSamplers(), "Samplers should not be set directly when using combined texture samplers");
+                if (Signature.IsUsingSeparateSamplers())
+                    CacheSampler(pObj);
                 break;
 
             case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:

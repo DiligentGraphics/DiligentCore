@@ -42,6 +42,7 @@ struct ResourceBinding
         // new bind point & space
         Uint32 BindPoint = ~0u;
         Uint32 Space     = ~0u;
+        Uint32 ArraySize = 0;
 
         // current (previous) bind point & space
         mutable Uint32 SrcBindPoint = ~0u;
@@ -49,8 +50,8 @@ struct ResourceBinding
 
         BindInfo() {}
 
-        BindInfo(Uint32 _BindPoint, Uint32 _Space) :
-            BindPoint{_BindPoint}, Space{_Space}
+        BindInfo(Uint32 _BindPoint, Uint32 _Space, Uint32 _ArraySize) :
+            BindPoint{_BindPoint}, Space{_Space}, ArraySize{_ArraySize}
         {}
     };
 

@@ -307,7 +307,7 @@ void DeviceContextD3D12Impl::CommitRootTables(RootTableInfo& RootInfo)
             auto* pSignature = RootSig.GetSignature(s);
             auto* pSRB       = RootInfo.SRBs[s];
 
-            if (pSignature == nullptr)
+            if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
                 continue;
 
             VERIFY_EXPR(pSRB != nullptr);
@@ -315,7 +315,7 @@ void DeviceContextD3D12Impl::CommitRootTables(RootTableInfo& RootInfo)
         }
     }
 
-    if (!RootInfo.bRootViewsCommitted)
+    //if (!RootInfo.bRootViewsCommitted)
     {
         RootInfo.bRootViewsCommitted = true;
 
@@ -324,7 +324,7 @@ void DeviceContextD3D12Impl::CommitRootTables(RootTableInfo& RootInfo)
             auto* pSignature = RootSig.GetSignature(s);
             auto* pSRB       = RootInfo.SRBs[s];
 
-            if (pSignature == nullptr)
+            if (pSignature == nullptr || pSignature->GetNumRootViews() == 0)
                 continue;
 
             VERIFY_EXPR(pSRB != nullptr);

@@ -34,13 +34,13 @@
 namespace Diligent
 {
 
-size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const PipelineResourceSignatureD3D12Impl& Signature,
-                                                         const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
-                                                         Uint32                                    NumAllowedTypes,
-                                                         SHADER_TYPE                               ShaderType,
-                                                         Uint32&                                   NumVariables)
+template <typename HandlerType>
+void ShaderVariableManagerD3D12::ProcessSignatureResources(const PipelineResourceSignatureD3D12Impl& Signature,
+                                                           const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                                                           Uint32                                    NumAllowedTypes,
+                                                           SHADER_TYPE                               ShaderStages,
+                                                           HandlerType                               Handler)
 {
-    NumVariables                       = 0;
     const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     const bool   UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
 
@@ -51,19 +51,35 @@ size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const PipelineResourceS
             const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
             for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
             {
-                const auto& Res = Signature.GetResourceDesc(r);
+                const auto& Res  = Signature.GetResourceDesc(r);
+                const auto& Attr = Signature.GetResourceAttribs(r);
                 VERIFY_EXPR(Res.VarType == VarType);
 
-                if (!(Res.ShaderStages & ShaderType))
+                if (!(Res.ShaderStages & ShaderStages))
                     continue;
 
-                if (!UsingSeparateSamplers && Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
+                    (!UsingSeparateSamplers || Attr.IsImmutableSamplerAssigned()))
                     continue;
 
-                ++NumVariables;
+                Handler(r);
             }
         }
     }
+}
+
+size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const PipelineResourceSignatureD3D12Impl& Signature,
+                                                         const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                                                         Uint32                                    NumAllowedTypes,
+                                                         SHADER_TYPE                               ShaderStages,
+                                                         Uint32&                                   NumVariables)
+{
+    NumVariables = 0;
+    ProcessSignatureResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderStages,
+                              [&NumVariables](Uint32) //
+                              {
+                                  ++NumVariables;
+                              });
 
     return NumVariables * sizeof(ShaderVariableD3D12Impl);
 }
@@ -89,30 +105,13 @@ void ShaderVariableManagerD3D12::Initialize(const PipelineResourceSignatureD3D12
     auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variables", MemSize);
     m_pVariables  = reinterpret_cast<ShaderVariableD3D12Impl*>(pRawMem);
 
-    Uint32     VarInd                = 0;
-    const bool UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
-
-    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
-    {
-        if (IsAllowedType(VarType, AllowedTypeBits))
-        {
-            const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
-            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
-            {
-                const auto& Res = Signature.GetResourceDesc(r);
-                VERIFY_EXPR(Res.VarType == VarType);
-
-                if (!(Res.ShaderStages & ShaderType))
-                    continue;
-
-                if (!UsingSeparateSamplers && Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
-                    continue;
-
-                ::new (m_pVariables + VarInd) ShaderVariableD3D12Impl{*this, r};
-                ++VarInd;
-            }
-        }
-    }
+    Uint32 VarInd = 0;
+    ProcessSignatureResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
+                              [this, &VarInd](Uint32 ResIndex) //
+                              {
+                                  ::new (m_pVariables + VarInd) ShaderVariableD3D12Impl{*this, ResIndex};
+                                  ++VarInd;
+                              });
     VERIFY_EXPR(VarInd == m_NumVariables);
 
     m_pSignature = &Signature;

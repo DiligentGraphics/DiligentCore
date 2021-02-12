@@ -990,8 +990,8 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
     static const String CallHandlePattern = " = call %dx.types.Handle @dx.op.createHandle(";
     static const String SamplerPart       = "_sampler";
     static const String CBufferPart       = "_cbuffer";
-    static const String TexturePart       = "_texture_";
-    static const String UAVPart           = "_UAV_";
+    static const String TexturePart       = "_texture";
+    static const String UAVPart           = "_UAV";
 
     const auto NextCreateHandleArg = [&DXIL](size_t& pos) {
         ++pos;
@@ -1060,9 +1060,9 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
 
         // Parse resource name: %name_suffix
 
-        size_t resNameEnd   = callHandlePos;
-        size_t resNameStart = resNameEnd - 1;
-        bool   partFound    = false;
+        size_t resNameEnd    = callHandlePos;
+        size_t resNameStart  = resNameEnd - 1;
+        bool   suffixRemoved = false;
         for (auto& pos = resNameStart; pos >= 0; --pos)
         {
             const char c = DXIL[pos];
@@ -1073,14 +1073,15 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
             if (c == '_')
             {
                 String part = DXIL.substr(pos, resNameEnd - pos);
-                if (!partFound &&
-                    (part == SamplerPart || part == CBufferPart ||
-                     (part.length() > TexturePart.length() && strncmp(part.c_str(), TexturePart.c_str(), TexturePart.length()) == 0) ||
-                     (part.length() > UAVPart.length() && strncmp(part.c_str(), UAVPart.c_str(), UAVPart.length()) == 0)))
+                if (!suffixRemoved &&
+                    ((part.length() >= SamplerPart.length() && strncmp(part.c_str(), SamplerPart.c_str(), SamplerPart.length()) == 0) ||
+                     (part.length() >= CBufferPart.length() && strncmp(part.c_str(), CBufferPart.c_str(), CBufferPart.length()) == 0) ||
+                     (part.length() >= TexturePart.length() && strncmp(part.c_str(), TexturePart.c_str(), TexturePart.length()) == 0) ||
+                     (part.length() >= UAVPart.length() && strncmp(part.c_str(), UAVPart.c_str(), UAVPart.length()) == 0)))
                 {
                     // remove suffix
-                    resNameEnd = pos;
-                    partFound  = true;
+                    resNameEnd    = pos;
+                    suffixRemoved = true;
                 }
                 continue;
             }

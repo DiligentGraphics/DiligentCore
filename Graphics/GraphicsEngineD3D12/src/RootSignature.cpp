@@ -112,11 +112,13 @@ void RootSignatureD3D12::Finalize()
 
     for (Uint32 sig = 0; sig < m_SignatureCount; ++sig)
     {
-        auto&      pSignature     = m_Signatures[sig];
-        const auto FirstRootIndex = m_FirstRootIndex[sig];
+        auto& pSignature = m_Signatures[sig];
 
         if (pSignature != nullptr)
         {
+            const auto   FirstRootIndex = m_FirstRootIndex[sig];
+            const Uint32 FirstSpace     = pSignature->GetBaseRegisterSpace();
+
             auto& RootParams = pSignature->m_RootParams;
             for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
             {
@@ -162,7 +164,7 @@ void RootSignatureD3D12::Finalize()
                             SamDesc.MinLOD,
                             SamDesc.MaxLOD,
                             SampAttr.ShaderRegister + ArrInd,
-                            SampAttr.RegisterSpace,
+                            SampAttr.RegisterSpace + FirstSpace,
                             ShaderVisibility //
                         }                    //
                     );
@@ -220,7 +222,7 @@ bool LocalRootSignatureD3D12::IsShaderRecord(const D3DShaderResourceAttribs& CB)
 
 ID3D12RootSignature* LocalRootSignatureD3D12::Create(ID3D12Device* pDevice)
 {
-    if (m_ShaderRecordSize == 0 || m_BindPoint == InvalidBindPoint)
+    if (m_ShaderRecordSize == 0)
         return nullptr;
 
     VERIFY(m_pd3d12RootSignature == nullptr, "This root signature is already created");
@@ -231,8 +233,8 @@ ID3D12RootSignature* LocalRootSignatureD3D12::Create(ID3D12Device* pDevice)
     d3d12Params.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     d3d12Params.ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
     d3d12Params.Constants.Num32BitValues = m_ShaderRecordSize / 4;
-    d3d12Params.Constants.RegisterSpace  = 0;
-    d3d12Params.Constants.ShaderRegister = m_BindPoint;
+    d3d12Params.Constants.RegisterSpace  = GetRegisterSpace();
+    d3d12Params.Constants.ShaderRegister = GetShaderRegister();
 
     d3d12RootSignatureDesc.Flags         = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
     d3d12RootSignatureDesc.NumParameters = 1;

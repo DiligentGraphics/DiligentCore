@@ -104,15 +104,28 @@ private:
     std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES> m_Map;
 };
 
+template <typename TShaderStages>
 void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateInfo,
                                 std::vector<D3D12_STATE_SUBOBJECT>&      Subobjects,
-                                DynamicLinearAllocator&                  TempPool) noexcept(false)
+                                DynamicLinearAllocator&                  TempPool,
+                                TShaderStages&                           ShaderStages) noexcept(false)
 {
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
     Uint32 UnnamedExportIndex = 0;
 
     std::unordered_map<IShader*, LPCWSTR> UniqueShaders;
+
+    std::array<typename TShaderStages::value_type*, MAX_SHADERS_IN_PIPELINE> StagesPtr     = {};
+    std::array<Uint32, MAX_SHADERS_IN_PIPELINE>                              ShaderIndices = {};
+
+    // prepare
+    for (auto& Stage : ShaderStages)
+    {
+        const auto Idx = GetShaderTypePipelineIndex(Stage.Type, PIPELINE_TYPE_RAY_TRACING);
+        VERIFY_EXPR(StagesPtr[Idx] == nullptr);
+        StagesPtr[Idx] = &Stage;
+    }
 
     const auto AddDxilLib = [&](IShader* pShader, const char* Name) -> LPCWSTR {
         if (pShader == nullptr)
@@ -121,10 +134,18 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
         auto it_inserted = UniqueShaders.emplace(pShader, nullptr);
         if (it_inserted.second)
         {
-            auto& LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
-            auto& ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
-            auto* pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(pShader);
-            auto* pBlob        = pShaderD3D12->GetShaderByteCode();
+            const auto  StageIdx    = GetShaderTypePipelineIndex(pShader->GetDesc().ShaderType, PIPELINE_TYPE_RAY_TRACING);
+            const auto& Stage       = *StagesPtr[StageIdx];
+            auto&       ShaderIndex = ShaderIndices[StageIdx];
+
+            // shaders must be in same order as in ExtractShaders()
+            VERIFY_EXPR(Stage.Shaders[ShaderIndex] == pShader);
+
+            auto&       LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
+            auto&       ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
+            const auto* pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(pShader);
+            const auto& pBlob        = Stage.ByteCodes[ShaderIndex];
+            ++ShaderIndex;
 
             LibDesc.DXILLibrary.BytecodeLength  = pBlob->GetBufferSize();
             LibDesc.DXILLibrary.pShaderBytecode = pBlob->GetBufferPointer();
@@ -549,9 +570,10 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        const auto& Shaders    = ShaderStages[s].Shaders;
-        auto&       ByteCodes  = ShaderStages[s].ByteCodes;
-        const auto  ShaderType = ShaderStages[s].Type;
+        const auto& Shaders           = ShaderStages[s].Shaders;
+        auto&       ByteCodes         = ShaderStages[s].ByteCodes;
+        const auto  ShaderType        = ShaderStages[s].Type;
+        bool        HasImtblSampArray = false;
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 Sig = 0, SigCount = GetSignatureCount(); Sig < SigCount; ++Sig)
@@ -568,7 +590,7 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 
                     if (ResDesc.ShaderStages & ShaderType)
                     {
-                        auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, ResourceBinding::BindInfo{Attribs.Register, Attribs.Space + FirstSpace}).second;
+                        auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, ResourceBinding::BindInfo{Attribs.Register, Attribs.Space + FirstSpace, ResDesc.ArraySize}).second;
                         VERIFY(IsUnique, "resource name must be unique");
                     }
                 }
@@ -577,10 +599,12 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                 {
                     const auto&               ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
                     const auto&               SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
-                    ResourceBinding::BindInfo BindInfo{SampAttr.ShaderRegister, SampAttr.RegisterSpace + FirstSpace};
+                    ResourceBinding::BindInfo BindInfo{SampAttr.ShaderRegister, SampAttr.RegisterSpace + FirstSpace, SampAttr.ArraySize};
 
                     if (ImtblSam.ShaderStages & ShaderType)
                     {
+                        HasImtblSampArray = HasImtblSampArray || (SampAttr.ArraySize > 1);
+
                         auto IsUnique = ResourceMap.emplace(HashMapStringKey{ImtblSam.SamplerOrTextureName}, BindInfo).second;
                         if (!IsUnique && pSignature->IsUsingCombinedSamplers())
                         {
@@ -594,13 +618,29 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
             }
         }
 
-        // AZ TODO: add local root signature to ResourceMap
+        if (pLocalRootSig != nullptr && pLocalRootSig->IsDefined())
+        {
+            bool IsUnique = ResourceMap.emplace(HashMapStringKey{pLocalRootSig->GetName()}, ResourceBinding::BindInfo{pLocalRootSig->GetShaderRegister(), pLocalRootSig->GetRegisterSpace(), 1}).second;
+            if (!IsUnique)
+                LOG_ERROR_AND_THROW("Shader record constant buffer is already exist in resource signature");
+        }
 
         for (size_t i = 0; i < Shaders.size(); ++i)
         {
             auto*             pShader   = Shaders[i];
             auto&             pBytecode = ByteCodes[i];
             CComPtr<ID3DBlob> pBlob;
+
+            if (HasImtblSampArray)
+            {
+                Uint32 VerMajor, VerMinor;
+                pShader->GetShaderResources()->GetShaderModel(VerMajor, VerMinor);
+
+                if ((VerMajor == 5 && VerMinor >= 1) || VerMajor >= 6)
+                {
+                    LOG_ERROR_AND_THROW("One of resource signatures uses immutable sampler array that is not allowed in shader model 5.1 and above.");
+                }
+            }
 
             if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
             {
@@ -935,7 +975,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 
         DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
         std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
-        BuildRTPipelineDescription(CreateInfo, Subobjects, TempPool);
+        BuildRTPipelineDescription(CreateInfo, Subobjects, TempPool, ShaderStages);
 
         D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot = {m_RootSig->GetD3D12RootSignature()};
         Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &GlobalRoot});
