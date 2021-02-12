@@ -568,7 +568,7 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 
                     if (ResDesc.ShaderStages & ShaderType)
                     {
-                        auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, ResourceBinding::BindInfo{Attribs.BindPoint, Attribs.Space + FirstSpace}).second;
+                        auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, ResourceBinding::BindInfo{Attribs.Register, Attribs.Space + FirstSpace}).second;
                         VERIFY(IsUnique, "resource name must be unique");
                     }
                 }

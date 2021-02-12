@@ -30,5 +30,12 @@
 #include "BasicTypes.h"
 namespace Diligent
 {
+
 const Char* GetD3D12DescriptorHeapTypeLiteralName(D3D12_DESCRIPTOR_HEAP_TYPE Type);
-}
+
+bool operator==(const D3D12_ROOT_DESCRIPTOR_TABLE& Tbl0, const D3D12_ROOT_DESCRIPTOR_TABLE& Tbl1);
+bool operator==(const D3D12_ROOT_CONSTANTS& Const0, const D3D12_ROOT_CONSTANTS& Const1);
+bool operator==(const D3D12_ROOT_DESCRIPTOR& Descr0, const D3D12_ROOT_DESCRIPTOR& Descr1);
+bool operator==(const D3D12_ROOT_PARAMETER& Param0, const D3D12_ROOT_PARAMETER& Param1);
+
+} // namespace Diligent

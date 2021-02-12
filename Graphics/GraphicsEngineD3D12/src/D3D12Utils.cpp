@@ -28,8 +28,11 @@
 #include "pch.h"
 #include "D3D12Utils.h"
 
+#include <cstring>
+
 namespace Diligent
 {
+
 const Char* GetD3D12DescriptorHeapTypeLiteralName(D3D12_DESCRIPTOR_HEAP_TYPE Type)
 {
     static bool        bIsInitialized = false;
@@ -48,4 +51,56 @@ const Char* GetD3D12DescriptorHeapTypeLiteralName(D3D12_DESCRIPTOR_HEAP_TYPE Typ
     VERIFY_EXPR(Type >= 0 && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES);
     return HeapTypeNames[Type];
 }
+
+
+bool operator==(const D3D12_ROOT_DESCRIPTOR_TABLE& Tbl0, const D3D12_ROOT_DESCRIPTOR_TABLE& Tbl1)
+{
+    if (Tbl0.NumDescriptorRanges != Tbl1.NumDescriptorRanges)
+        return false;
+
+    return memcmp(Tbl0.pDescriptorRanges, Tbl1.pDescriptorRanges, Tbl0.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE)) == 0;
+}
+
+bool operator==(const D3D12_ROOT_CONSTANTS& Const0, const D3D12_ROOT_CONSTANTS& Const1)
+{
+    // clang-format off
+    return Const0.ShaderRegister == Const1.ShaderRegister &&
+           Const0.RegisterSpace  == Const1.RegisterSpace &&
+           Const0.Num32BitValues == Const1.Num32BitValues;
+    // clang-format on
+}
+
+bool operator==(const D3D12_ROOT_DESCRIPTOR& Descr0, const D3D12_ROOT_DESCRIPTOR& Descr1)
+{
+    // clang-format off
+    return Descr0.ShaderRegister == Descr1.ShaderRegister &&
+           Descr0.RegisterSpace  == Descr1.RegisterSpace;
+    // clang-format on
+}
+
+bool operator==(const D3D12_ROOT_PARAMETER& Param0, const D3D12_ROOT_PARAMETER& Param1)
+{
+    if (Param0.ParameterType != Param1.ParameterType ||
+        Param0.ShaderVisibility != Param1.ShaderVisibility)
+        return false;
+
+    switch (Param0.ParameterType)
+    {
+        case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+            return Param0.DescriptorTable == Param1.DescriptorTable;
+
+        case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
+            return Param0.Constants == Param1.Constants;
+
+        case D3D12_ROOT_PARAMETER_TYPE_CBV:
+        case D3D12_ROOT_PARAMETER_TYPE_SRV:
+        case D3D12_ROOT_PARAMETER_TYPE_UAV:
+            return Param0.Descriptor == Param1.Descriptor;
+
+        default:
+            UNEXPECTED("Unexpected root parameter type");
+            return false;
+    }
+}
+
 } // namespace Diligent

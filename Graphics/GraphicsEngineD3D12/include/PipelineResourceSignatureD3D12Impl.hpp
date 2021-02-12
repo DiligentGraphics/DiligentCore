@@ -34,6 +34,7 @@
 
 #include "PipelineResourceSignatureBase.hpp"
 #include "SRBMemoryAllocator.hpp"
+#include "RootParamsManager.hpp"
 
 namespace Diligent
 {
@@ -68,38 +69,37 @@ public:
     struct ResourceAttribs
     {
     private:
-        static constexpr Uint32 _BindPointBits       = 16;
+        static constexpr Uint32 _RegisterBits        = 16;
         static constexpr Uint32 _SpaceBits           = 8;
         static constexpr Uint32 _SRBRootIndexBits    = 16;
         static constexpr Uint32 _SigRootIndexBits    = 3;
         static constexpr Uint32 _SamplerIndBits      = 16;
         static constexpr Uint32 _SamplerAssignedBits = 1;
-        static constexpr Uint32 _SigOffsetBits       = 16;
         static constexpr Uint32 _RootViewBits        = 1;
 
-        static_assert((1u << _BindPointBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store bind point");
+        static_assert((1u << _RegisterBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sahder register");
         static_assert((1u << _SamplerIndBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sampler resource index");
 
     public:
         static constexpr Uint32 InvalidSamplerInd   = (1u << _SamplerIndBits) - 1;
         static constexpr Uint32 InvalidSRBRootIndex = (1u << _SRBRootIndexBits) - 1;
         static constexpr Uint32 InvalidSigRootIndex = (1u << _SigRootIndexBits) - 1;
-        static constexpr Uint32 InvalidBindPoint    = (1u << _BindPointBits) - 1;
+        static constexpr Uint32 InvalidRegister     = (1u << _RegisterBits) - 1;
         static constexpr Uint32 InvalidOffset       = ~0u;
 
         // clang-format off
-        const Uint32  BindPoint               : _BindPointBits;       // shader register
-        const Uint32  SRBRootIndex            : _SRBRootIndexBits;    // Root view/table index for SRB
+        const Uint32  Register                : _RegisterBits;        // Shader register
+        const Uint32  SRBRootIndex            : _SRBRootIndexBits;    // Root view/table index in the SRB
         const Uint32  SamplerInd              : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
         const Uint32  SigRootIndex            : _SigRootIndexBits;    // Root table index for signature (static only)
-        const Uint32  Space                   : _SpaceBits;           // shader register space
+        const Uint32  Space                   : _SpaceBits;           // Shader register space
         const Uint32  ImtblSamplerAssigned    : _SamplerAssignedBits; // Immutable sampler flag
         const Uint32  RootView                : _RootViewBits;        // Is root view (for debugging)
         const Uint32  SigOffsetFromTableStart;                        // Offset in the root table for signature (static only)
         const Uint32  SRBOffsetFromTableStart;                        // Offset in the root table for SRB
         // clang-format on
 
-        ResourceAttribs(Uint32 _BindPoint,
+        ResourceAttribs(Uint32 _Register,
                         Uint32 _Space,
                         Uint32 _SamplerInd,
                         Uint32 _SRBRootIndex,
@@ -109,7 +109,7 @@ public:
                         bool   _ImtblSamplerAssigned,
                         bool   _IsRootView) noexcept :
             // clang-format off
-            BindPoint              {_BindPoint                     },
+            Register               {_Register                     },
             SRBRootIndex           {_SRBRootIndex                  },
             SamplerInd             {_SamplerInd                    },
             SigRootIndex           {_SigRootIndex                  },
@@ -120,7 +120,7 @@ public:
             SRBOffsetFromTableStart{_SRBOffsetFromTableStart       }
         // clang-format on
         {
-            VERIFY(BindPoint == _BindPoint, "Bind point (", _BindPoint, ") exceeds maximum representable value");
+            VERIFY(Register == _Register, "Bind point (", _Register, ") exceeds maximum representable value");
             VERIFY(SRBRootIndex == _SRBRootIndex, "SRB Root index (", _SRBRootIndex, ") exceeds maximum representable value");
             VERIFY(SigRootIndex == _SigRootIndex, "Signature Root index (", SigRootIndex, ") exceeds maximum representable value");
             VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
@@ -268,171 +268,20 @@ public:
                          Uint32                    FirstRootIndex);
 
 private:
-    enum ROOT_TYPE : Uint8
-    {
-        ROOT_TYPE_STATIC  = 0,
-        ROOT_TYPE_DYNAMIC = 1,
-        ROOT_TYPE_COUNT
-    };
-    static ROOT_TYPE GetRootType(SHADER_RESOURCE_VARIABLE_TYPE VarType);
-
-
-    class RootParameter
-    {
-    public:
-        RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType,
-                      Uint32                    RootIndex,
-                      UINT                      Register,
-                      UINT                      RegisterSpace,
-                      D3D12_SHADER_VISIBILITY   Visibility,
-                      ROOT_TYPE                 RootType) noexcept;
-
-        RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType,
-                      Uint32                    RootIndex,
-                      UINT                      Register,
-                      UINT                      RegisterSpace,
-                      UINT                      NumDwords,
-                      D3D12_SHADER_VISIBILITY   Visibility,
-                      ROOT_TYPE                 RootType) noexcept;
-
-        RootParameter(D3D12_ROOT_PARAMETER_TYPE ParameterType,
-                      Uint32                    RootIndex,
-                      UINT                      NumRanges,
-                      D3D12_DESCRIPTOR_RANGE*   pRanges,
-                      D3D12_SHADER_VISIBILITY   Visibility,
-                      ROOT_TYPE                 RootType) noexcept;
-
-        RootParameter(const RootParameter& RP) noexcept;
-
-        RootParameter(const RootParameter&    RP,
-                      UINT                    NumRanges,
-                      D3D12_DESCRIPTOR_RANGE* pRanges) noexcept;
-
-        RootParameter& operator=(const RootParameter&) = delete;
-        RootParameter& operator=(RootParameter&&) = delete;
-
-        void SetDescriptorRange(UINT                        RangeIndex,
-                                D3D12_DESCRIPTOR_RANGE_TYPE Type,
-                                UINT                        Register,
-                                UINT                        RegisterSpace,
-                                UINT                        Count,
-                                UINT                        OffsetFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-
-        ROOT_TYPE GetRootType() const { return m_RootType; }
-
-        Uint32 GetDescriptorTableSize() const;
-
-        D3D12_SHADER_VISIBILITY   GetShaderVisibility() const { return m_RootParam.ShaderVisibility; }
-        D3D12_ROOT_PARAMETER_TYPE GetParameterType() const { return m_RootParam.ParameterType; }
-
-        Uint32 GetLocalRootIndex() const { return m_RootIndex; }
-
-        operator const D3D12_ROOT_PARAMETER&() const { return m_RootParam; }
-
-        bool operator==(const RootParameter& rhs) const;
-        bool operator!=(const RootParameter& rhs) const { return !(*this == rhs); }
-
-        size_t GetHash() const;
-
-    private:
-        ROOT_TYPE            m_RootType            = static_cast<ROOT_TYPE>(-1);
-        D3D12_ROOT_PARAMETER m_RootParam           = {};
-        Uint32               m_DescriptorTableSize = 0;
-        Uint32               m_RootIndex           = static_cast<Uint32>(-1);
-    };
-
-
-    class RootParamsManager
-    {
-    public:
-        RootParamsManager(IMemoryAllocator& MemAllocator);
-
-        // clang-format off
-        RootParamsManager           (const RootParamsManager&) = delete;
-        RootParamsManager& operator=(const RootParamsManager&) = delete;
-        RootParamsManager           (RootParamsManager&&)      = delete;
-        RootParamsManager& operator=(RootParamsManager&&)      = delete;
-        // clang-format on
-
-        Uint32 GetNumRootTables() const { return m_NumRootTables; }
-        Uint32 GetNumRootViews() const { return m_NumRootViews; }
-
-        const RootParameter& GetRootTable(Uint32 TableInd) const
-        {
-            VERIFY_EXPR(TableInd < m_NumRootTables);
-            return m_pRootTables[TableInd];
-        }
-
-        RootParameter& GetRootTable(Uint32 TableInd)
-        {
-            VERIFY_EXPR(TableInd < m_NumRootTables);
-            return m_pRootTables[TableInd];
-        }
-
-        const RootParameter& GetRootView(Uint32 ViewInd) const
-        {
-            VERIFY_EXPR(ViewInd < m_NumRootViews);
-            return m_pRootViews[ViewInd];
-        }
-
-        RootParameter& GetRootView(Uint32 ViewInd)
-        {
-            VERIFY_EXPR(ViewInd < m_NumRootViews);
-            return m_pRootViews[ViewInd];
-        }
-
-        void AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType,
-                         Uint32                    RootIndex,
-                         UINT                      Register,
-                         UINT                      RegisterSpace,
-                         D3D12_SHADER_VISIBILITY   Visibility,
-                         ROOT_TYPE                 RootType);
-
-        void AddRootTable(Uint32                  RootIndex,
-                          D3D12_SHADER_VISIBILITY Visibility,
-                          ROOT_TYPE               RootType,
-                          Uint32                  NumRangesInNewTable = 1);
-
-        void AddDescriptorRanges(Uint32 RootTableInd, Uint32 NumExtraRanges = 1);
-
-        template <class TOperation>
-        void ProcessRootTables(TOperation) const;
-
-        bool operator==(const RootParamsManager& RootParams) const;
-
-    private:
-        size_t GetRequiredMemorySize(Uint32 NumExtraRootTables,
-                                     Uint32 NumExtraRootViews,
-                                     Uint32 NumExtraDescriptorRanges) const;
-
-        D3D12_DESCRIPTOR_RANGE* Extend(Uint32 NumExtraRootTables,
-                                       Uint32 NumExtraRootViews,
-                                       Uint32 NumExtraDescriptorRanges,
-                                       Uint32 RootTableToAddRanges = static_cast<Uint32>(-1));
-
-        IMemoryAllocator&                                         m_MemAllocator;
-        std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
-        Uint32                                                    m_NumRootTables         = 0;
-        Uint32                                                    m_NumRootViews          = 0;
-        Uint32                                                    m_TotalDescriptorRanges = 0;
-        RootParameter*                                            m_pRootTables           = nullptr;
-        RootParameter*                                            m_pRootViews            = nullptr;
-    };
-
-    using CacheOffsetsType = std::array<Uint32, 2>;
+    static ROOT_PARAMETER_GROUP GetRootParameterGroup(SHADER_RESOURCE_VARIABLE_TYPE VarType);
 
     void CreateLayout();
 
     // Allocates root signature slot for the given resource.
-    // For graphics and compute pipelines, BindPoint is the same as the original bind point.
-    // For ray-tracing pipeline, BindPoint will be overriden. Bind points are then
+    // For graphics and compute pipelines, Register is the same as the original bind point.
+    // For ray-tracing pipeline, Register will be overriden. Bind points are then
     // remapped by PSO constructor.
     void AllocateResourceSlot(SHADER_TYPE                   ShaderStages,
                               SHADER_RESOURCE_VARIABLE_TYPE VariableType,
                               D3D12_DESCRIPTOR_RANGE_TYPE   RangeType,
                               Uint32                        ArraySize,
                               bool                          IsRootView,
-                              Uint32                        BindPoint,
+                              Uint32                        Register,
                               Uint32                        Space,
                               Uint32&                       RootIndex,
                               Uint32&                       OffsetFromTableStart);
@@ -458,13 +307,13 @@ private:
     // in m_RootParams (NOT the Root Index!), for every variable type
     // (static, mutable, dynamic) and every shader type,
     // or -1, if the table is not yet assigned to the combination
-    std::array<Uint8, ROOT_TYPE_COUNT* MAX_SHADERS_IN_PIPELINE> m_SrvCbvUavRootTablesMap = {};
+    std::array<Uint8, ROOT_PARAMETER_GROUP_COUNT* MAX_SHADERS_IN_PIPELINE> m_SrvCbvUavRootTablesMap = {};
     // This array contains the same data for Sampler root table
-    std::array<Uint8, ROOT_TYPE_COUNT* MAX_SHADERS_IN_PIPELINE> m_SamplerRootTablesMap = {};
+    std::array<Uint8, ROOT_PARAMETER_GROUP_COUNT* MAX_SHADERS_IN_PIPELINE> m_SamplerRootTablesMap = {};
 
-    std::array<Uint32, ROOT_TYPE_COUNT> m_TotalSrvCbvUavSlots = {};
-    std::array<Uint32, ROOT_TYPE_COUNT> m_TotalSamplerSlots   = {};
-    std::array<Uint32, ROOT_TYPE_COUNT> m_TotalRootViews      = {};
+    std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSrvCbvUavSlots = {};
+    std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSamplerSlots   = {};
+    std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalRootViews      = {};
 
     Uint32 m_NumSpaces = 0;
 
