@@ -123,8 +123,6 @@ private:
     Uint8              m_SignatureCount = 0;
     SignatureArrayType m_Signatures     = {};
 
-    void* m_pRawMem = nullptr; // AZ TODO: move to base class
-
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages
     std::vector<std::shared_ptr<const ShaderResourcesD3D12>> m_ShaderResources;

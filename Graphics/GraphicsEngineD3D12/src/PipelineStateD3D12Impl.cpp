@@ -668,8 +668,6 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
 
     MemPool.Reserve();
 
-    m_pRawMem = MemPool.ReleaseOwnership();
-
     InitializePipelineDesc(CreateInfo, MemPool);
 
     // It is important to construct all objects before initializing them because if an exception is thrown,
@@ -982,13 +980,6 @@ void PipelineStateD3D12Impl::Destruct()
 
     m_Signatures.fill({});
     m_RootSig.Release();
-
-    auto& RawAllocator = GetRawAllocator();
-    if (m_pRawMem)
-    {
-        RawAllocator.Free(m_pRawMem);
-        m_pRawMem = nullptr;
-    }
 
     if (m_pd3d12PSO)
     {

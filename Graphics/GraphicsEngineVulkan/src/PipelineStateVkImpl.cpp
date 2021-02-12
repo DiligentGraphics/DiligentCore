@@ -988,8 +988,6 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);
 
-    m_pRawMem = MemPool.ReleaseOwnership();
-
     return ShaderStages;
 }
 
@@ -1003,7 +1001,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
+        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr());
     }
     catch (...)
     {
@@ -1072,13 +1070,6 @@ void PipelineStateVkImpl::Destruct()
 
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
     m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
-
-    auto& RawAllocator = GetRawAllocator();
-    if (m_pRawMem)
-    {
-        RawAllocator.Free(m_pRawMem);
-        m_pRawMem = nullptr;
-    }
 }
 
 bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const

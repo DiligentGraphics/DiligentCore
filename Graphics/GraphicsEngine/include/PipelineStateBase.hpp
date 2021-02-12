@@ -190,15 +190,19 @@ public:
     {
         VERIFY(!m_IsDestructed, "This object has already been destructed");
 
-        if (this->m_Desc.IsAnyGraphicsPipeline() && m_pGraphicsPipelineDesc != nullptr)
+        if (this->m_Desc.IsAnyGraphicsPipeline() && m_pGraphicsPipelineData != nullptr)
         {
-            m_pGraphicsPipelineDesc->~GraphicsPipelineDesc();
-            m_pGraphicsPipelineDesc = nullptr;
+            m_pGraphicsPipelineData->~GraphicsPipelineData();
         }
         else if (this->m_Desc.IsRayTracingPipeline() && m_pRayTracingPipelineData != nullptr)
         {
             m_pRayTracingPipelineData->~RayTracingPipelineData();
-            m_pRayTracingPipelineData = nullptr;
+        }
+
+        if (m_pRawMem)
+        {
+            GetRawAllocator().Free(m_pRawMem);
+            m_pRawMem = nullptr;
         }
 #if DILIGENT_DEBUG
         m_IsDestructed = true;
@@ -209,22 +213,33 @@ public:
 
     Uint32 GetBufferStride(Uint32 BufferSlot) const
     {
-        return BufferSlot < m_BufferSlotsUsed ? m_pStrides[BufferSlot] : 0;
+        VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
+        return BufferSlot < m_pGraphicsPipelineData->BufferSlotsUsed ? m_pGraphicsPipelineData->pStrides[BufferSlot] : 0;
     }
 
     Uint32 GetNumBufferSlotsUsed() const
     {
-        return m_BufferSlotsUsed;
+        VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
+        return m_pGraphicsPipelineData->BufferSlotsUsed;
     }
 
-    //SHADER_TYPE GetShaderStageType(Uint32 Stage) const { return m_ShaderStageTypes[Stage]; }
-    //Uint32      GetNumShaderStages() const { return m_NumShaderStages; }
+    RefCntAutoPtr<IRenderPass> const& GetRenderPassPtr() const
+    {
+        VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
+        return m_pGraphicsPipelineData->pRenderPass;
+    }
+
+    RefCntAutoPtr<IRenderPass>& GetRenderPassPtr()
+    {
+        VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
+        return m_pGraphicsPipelineData->pRenderPass;
+    }
 
     virtual const GraphicsPipelineDesc& DILIGENT_CALL_TYPE GetGraphicsPipelineDesc() const override final
     {
         VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
-        VERIFY_EXPR(m_pGraphicsPipelineDesc != nullptr);
-        return *m_pGraphicsPipelineDesc;
+        VERIFY_EXPR(m_pGraphicsPipelineData != nullptr);
+        return m_pGraphicsPipelineData->Desc;
     }
 
     virtual const RayTracingPipelineDesc& DILIGENT_CALL_TYPE GetRayTracingPipelineDesc() const override final
@@ -330,19 +345,20 @@ protected:
     void ReserveSpaceForPipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
                                      FixedLinearAllocator&                  MemPool) noexcept
     {
-        MemPool.AddSpace<GraphicsPipelineDesc>();
+        MemPool.AddSpace<GraphicsPipelineData>();
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
 
-        const auto& InputLayout = CreateInfo.GraphicsPipeline.InputLayout;
+        const auto& InputLayout     = CreateInfo.GraphicsPipeline.InputLayout;
+        Uint32      BufferSlotsUsed = 0;
         MemPool.AddSpace<LayoutElement>(InputLayout.NumElements);
         for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
         {
             auto& LayoutElem = InputLayout.LayoutElements[i];
             MemPool.AddSpaceForString(LayoutElem.HLSLSemantic);
-            m_BufferSlotsUsed = std::max(m_BufferSlotsUsed, static_cast<Uint8>(LayoutElem.BufferSlot + 1));
+            BufferSlotsUsed = std::max(BufferSlotsUsed, LayoutElem.BufferSlot + 1);
         }
 
-        MemPool.AddSpace<Uint32>(m_BufferSlotsUsed);
+        MemPool.AddSpace<Uint32>(BufferSlotsUsed);
 
         static_assert(std::is_trivially_destructible<decltype(*InputLayout.LayoutElements)>::value, "Add destructor for this object to Destruct()");
     }
@@ -356,6 +372,14 @@ protected:
     void ReserveSpaceForPipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
                                      FixedLinearAllocator&                    MemPool) const noexcept
     {
+        size_t RTDataSize = sizeof(RayTracingPipelineData);
+        // Reserve space for shader handles
+        const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
+        RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
+        // Extra bytes were reserved to avoid compiler errors on zero-sized arrays
+        RTDataSize -= sizeof(RayTracingPipelineData::ShaderHandles);
+        MemPool.AddSpace(RTDataSize, alignof(RayTracingPipelineData));
+
         for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
         {
             MemPool.AddSpaceForString(CreateInfo.pGeneralShaders[i].Name);
@@ -370,14 +394,6 @@ protected:
         }
 
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
-
-        size_t RTDataSize = sizeof(RayTracingPipelineData);
-        // Reserve space for shader handles
-        const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
-        RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
-        // Extra bytes were reserved to avoid compiler errors on zero-sized arrays
-        RTDataSize -= sizeof(RayTracingPipelineData::ShaderHandles);
-        MemPool.AddSpace(RTDataSize, alignof(RayTracingPipelineData));
     }
 
 
@@ -385,24 +401,21 @@ protected:
     void ExtractShaders(const GraphicsPipelineStateCreateInfo& CreateInfo,
                         TShaderStages&                         ShaderStages)
     {
-        VERIFY(m_NumShaderStages == 0, "The number of shader stages is not zero! ExtractShaders must only be called once.");
         VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
 
         ShaderStages.clear();
         auto AddShaderStage = [&](IShader* pShader) {
             if (pShader != nullptr)
             {
-                const auto ShaderType = pShader->GetDesc().ShaderType;
                 ShaderStages.emplace_back(ValidatedCast<ShaderImplType>(pShader));
-                VERIFY(m_ShaderStageTypes[m_NumShaderStages] == SHADER_TYPE_UNKNOWN, "This shader stage has already been initialized.");
 #ifdef DILIGENT_DEBUG
-                for (Uint32 i = 0; i < m_NumShaderStages; ++i)
+                const auto ShaderType = pShader->GetDesc().ShaderType;
+                for (Uint32 i = 0; i + 1 < ShaderStages.size(); ++i)
                 {
-                    VERIFY(m_ShaderStageTypes[i] != ShaderType,
+                    VERIFY(ShaderStages[i].Type != ShaderType,
                            "Shader stage ", GetShaderTypeLiteralName(ShaderType), " has already been initialized in PSO '", this->m_Desc.Name, "'.");
                 }
 #endif
-                m_ShaderStageTypes[m_NumShaderStages++] = ShaderType;
             }
         };
 
@@ -432,14 +445,13 @@ protected:
                 UNEXPECTED("unknown pipeline type");
         }
 
-        VERIFY_EXPR(!ShaderStages.empty() && ShaderStages.size() == m_NumShaderStages);
+        VERIFY_EXPR(!ShaderStages.empty());
     }
 
     template <typename ShaderImplType, typename TShaderStages>
     void ExtractShaders(const ComputePipelineStateCreateInfo& CreateInfo,
                         TShaderStages&                        ShaderStages)
     {
-        VERIFY(m_NumShaderStages == 0, "The number of shader stages is not zero! ExtractShaders must only be called once.");
         VERIFY_EXPR(this->m_Desc.IsComputePipeline());
 
         ShaderStages.clear();
@@ -449,16 +461,14 @@ protected:
         VERIFY_EXPR(CreateInfo.pCS->GetDesc().ShaderType == SHADER_TYPE_COMPUTE);
 
         ShaderStages.emplace_back(ValidatedCast<ShaderImplType>(CreateInfo.pCS));
-        m_ShaderStageTypes[m_NumShaderStages++] = SHADER_TYPE_COMPUTE;
 
-        VERIFY_EXPR(!ShaderStages.empty() && ShaderStages.size() == m_NumShaderStages);
+        VERIFY_EXPR(!ShaderStages.empty());
     }
 
     template <typename ShaderImplType, typename TShaderStages>
     void ExtractShaders(const RayTracingPipelineStateCreateInfo& CreateInfo,
                         TShaderStages&                           ShaderStages)
     {
-        VERIFY(m_NumShaderStages == 0, "The number of shader stages is not zero! ExtractShaders must only be called once.");
         VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
 
         std::unordered_set<IShader*> UniqueShaders;
@@ -507,29 +517,34 @@ protected:
                 continue;
             }
 
-            VERIFY(m_ShaderStageTypes[m_NumShaderStages] == SHADER_TYPE_UNKNOWN, "This shader stage has already been initialized.");
-            m_ShaderStageTypes[m_NumShaderStages++] = iter->Type;
             ++iter;
         }
 
-        VERIFY_EXPR(!ShaderStages.empty() && ShaderStages.size() == m_NumShaderStages);
+        VERIFY_EXPR(!ShaderStages.empty());
     }
 
 
     void InitializePipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
                                 FixedLinearAllocator&                  MemPool)
     {
-        this->m_pGraphicsPipelineDesc = MemPool.Copy(CreateInfo.GraphicsPipeline);
+        this->m_pGraphicsPipelineData = MemPool.Construct<GraphicsPipelineData>();
+        void* Ptr                     = MemPool.ReleaseOwnership();
+        VERIFY_EXPR(Ptr == m_pRawMem);
 
-        auto& GraphicsPipeline = *this->m_pGraphicsPipelineDesc;
+        auto& GraphicsPipeline = this->m_pGraphicsPipelineData->Desc;
+        auto& pRenderPass      = this->m_pGraphicsPipelineData->pRenderPass;
+        auto& BufferSlotsUsed  = this->m_pGraphicsPipelineData->BufferSlotsUsed;
+        auto& pStrides         = this->m_pGraphicsPipelineData->pStrides;
+
+        GraphicsPipeline = CreateInfo.GraphicsPipeline;
         CorrectGraphicsPipelineDesc(GraphicsPipeline);
 
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
 
-        m_pRenderPass = GraphicsPipeline.pRenderPass;
-        if (m_pRenderPass)
+        pRenderPass = GraphicsPipeline.pRenderPass;
+        if (pRenderPass)
         {
-            const auto& RPDesc = m_pRenderPass->GetDesc();
+            const auto& RPDesc = pRenderPass->GetDesc();
             VERIFY_EXPR(GraphicsPipeline.SubpassIndex < RPDesc.SubpassCount);
             const auto& Subpass = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex];
 
@@ -585,7 +600,7 @@ protected:
                 UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds the maximum allowed value (", Strides.size() - 1, ")");
                 continue;
             }
-            VERIFY_EXPR(BuffSlot < m_BufferSlotsUsed);
+            BufferSlotsUsed = std::max(BufferSlotsUsed, static_cast<Uint8>(BuffSlot + 1));
 
             auto& CurrAutoStride = TightStrides[BuffSlot];
             // If offset is not explicitly specified, use current auto stride value
@@ -635,30 +650,27 @@ protected:
                 LayoutElem.Stride = Strides[BuffSlot];
         }
 
-        m_pStrides = MemPool.ConstructArray<Uint32>(m_BufferSlotsUsed);
+        pStrides = MemPool.ConstructArray<Uint32>(BufferSlotsUsed);
 
         // Set strides for all unused slots to 0
-        for (Uint32 i = 0; i < m_BufferSlotsUsed; ++i)
+        for (Uint32 i = 0; i < BufferSlotsUsed; ++i)
         {
-            auto Stride   = Strides[i];
-            m_pStrides[i] = Stride != LAYOUT_ELEMENT_AUTO_STRIDE ? Stride : 0;
+            auto Stride = Strides[i];
+            pStrides[i] = Stride != LAYOUT_ELEMENT_AUTO_STRIDE ? Stride : 0;
         }
     }
 
     void InitializePipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
                                 FixedLinearAllocator&                 MemPool)
     {
+        m_pRawMem = MemPool.ReleaseOwnership();
+
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
     }
 
     void InitializePipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
                                 FixedLinearAllocator&                    MemPool) noexcept
     {
-        TNameToGroupIndexMap NameToGroupIndex;
-        CopyRTShaderGroupNames(NameToGroupIndex, CreateInfo, MemPool);
-
-        CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
-
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // Allocate space for shader handles
         const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
@@ -672,7 +684,14 @@ protected:
         this->m_pRayTracingPipelineData->ShaderHandleSize = ShaderHandleSize;
         this->m_pRayTracingPipelineData->Desc             = CreateInfo.RayTracingPipeline;
         this->m_pRayTracingPipelineData->ShaderDataSize   = ShaderDataSize;
-        this->m_pRayTracingPipelineData->NameToGroupIndex = std::move(NameToGroupIndex);
+
+        void* Ptr = MemPool.ReleaseOwnership();
+        VERIFY_EXPR(Ptr == m_pRawMem);
+
+        TNameToGroupIndexMap& NameToGroupIndex = this->m_pRayTracingPipelineData->NameToGroupIndex;
+        CopyRTShaderGroupNames(NameToGroupIndex, CreateInfo, MemPool);
+
+        CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
     }
 
 private:
@@ -744,17 +763,15 @@ private:
     }
 
 protected:
-    //size_t m_ShaderResourceLayoutHash = 0;
+    struct GraphicsPipelineData
+    {
+        GraphicsPipelineDesc Desc;
 
-    Uint32* m_pStrides        = nullptr;
-    Uint8   m_BufferSlotsUsed = 0;
+        RefCntAutoPtr<IRenderPass> pRenderPass; ///< Strong reference to the render pass object
 
-    Uint8 m_NumShaderStages = 0; ///< Number of shader stages in this PSO
-
-    /// Array of shader types for every shader stage used by this PSO
-    std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_ShaderStageTypes = {}; // AZ TODO: remove ?
-
-    RefCntAutoPtr<IRenderPass> m_pRenderPass; ///< Strong reference to the render pass object
+        Uint32* pStrides        = nullptr;
+        Uint8   BufferSlotsUsed = 0;
+    };
 
     struct RayTracingPipelineData
     {
@@ -778,8 +795,9 @@ protected:
 
     union
     {
-        GraphicsPipelineDesc*   m_pGraphicsPipelineDesc = nullptr;
+        GraphicsPipelineData*   m_pGraphicsPipelineData;
         RayTracingPipelineData* m_pRayTracingPipelineData;
+        void*                   m_pRawMem = nullptr;
     };
 
 #ifdef DILIGENT_DEBUG

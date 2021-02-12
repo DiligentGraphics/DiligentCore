@@ -70,7 +70,7 @@ public:
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
     /// Implementation of IPipelineStateVk::GetRenderPass().
-    virtual IRenderPassVk* DILIGENT_CALL_TYPE GetRenderPass() const override final { return m_pRenderPass.RawPtr<IRenderPassVk>(); }
+    virtual IRenderPassVk* DILIGENT_CALL_TYPE GetRenderPass() const override final { return GetRenderPassPtr().RawPtr<IRenderPassVk>(); }
 
     /// Implementation of IPipelineStateVk::GetVkPipeline().
     virtual VkPipeline DILIGENT_CALL_TYPE GetVkPipeline() const override final { return m_Pipeline; }
@@ -131,8 +131,6 @@ private:
                                 IPipelineResourceSignature**   ppSignature);
 
     void Destruct();
-
-    void* m_pRawMem = nullptr; // AZ TODO: move to base class
 
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayoutVk                 m_PipelineLayout;
