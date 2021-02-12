@@ -749,4 +749,45 @@ DXGI_FORMAT TypeToRayTracingVertexFormat(VALUE_TYPE ValueType, Uint32 ComponentC
     }
 }
 
+D3D12_DESCRIPTOR_RANGE_TYPE ResourceTypeToD3D12DescriptorRangeType(SHADER_RESOURCE_TYPE ResType)
+{
+    static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new resource type");
+
+    switch (ResType)
+    {
+        // clang-format off
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER: return D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:     return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:      return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:     return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:      return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+        case SHADER_RESOURCE_TYPE_SAMPLER:         return D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+        case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:    return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        // clang-format on
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
+        default:
+            UNEXPECTED("Unknown resource type");
+            return static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(-1);
+    }
+}
+
+D3D12_DESCRIPTOR_HEAP_TYPE D3D12DescriptorRangeTypeToD3D12HeapType(D3D12_DESCRIPTOR_RANGE_TYPE RangeType)
+{
+    VERIFY_EXPR(RangeType >= D3D12_DESCRIPTOR_RANGE_TYPE_SRV && RangeType <= D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
+    switch (RangeType)
+    {
+        case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+        case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+        case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+            return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+
+        case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+            return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+
+        default:
+            UNEXPECTED("Unexpected descriptor range type");
+            return static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(-1);
+    }
+}
+
 } // namespace Diligent

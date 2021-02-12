@@ -70,12 +70,12 @@ public:
     {
     private:
         static constexpr Uint32 _RegisterBits        = 16;
-        static constexpr Uint32 _SpaceBits           = 8;
         static constexpr Uint32 _SRBRootIndexBits    = 16;
-        static constexpr Uint32 _SigRootIndexBits    = 3;
         static constexpr Uint32 _SamplerIndBits      = 16;
+        static constexpr Uint32 _SpaceBits           = 8;
+        static constexpr Uint32 _SigRootIndexBits    = 3;
         static constexpr Uint32 _SamplerAssignedBits = 1;
-        static constexpr Uint32 _RootViewBits        = 1;
+        static constexpr Uint32 _RootViewFlagBits    = 1;
 
         static_assert((1u << _RegisterBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sahder register");
         static_assert((1u << _SamplerIndBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sampler resource index");
@@ -88,15 +88,16 @@ public:
         static constexpr Uint32 InvalidOffset       = ~0u;
 
         // clang-format off
-        const Uint32  Register                : _RegisterBits;        // Shader register
-        const Uint32  SRBRootIndex            : _SRBRootIndexBits;    // Root view/table index in the SRB
-        const Uint32  SamplerInd              : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
-        const Uint32  SigRootIndex            : _SigRootIndexBits;    // Root table index for signature (static only)
-        const Uint32  Space                   : _SpaceBits;           // Shader register space
-        const Uint32  ImtblSamplerAssigned    : _SamplerAssignedBits; // Immutable sampler flag
-        const Uint32  RootView                : _RootViewBits;        // Is root view (for debugging)
-        const Uint32  SigOffsetFromTableStart;                        // Offset in the root table for signature (static only)
-        const Uint32  SRBOffsetFromTableStart;                        // Offset in the root table for SRB
+/* 0  */const Uint32  Register             : _RegisterBits;        // Shader register
+/* 2  */const Uint32  SRBRootIndex         : _SRBRootIndexBits;    // Root view/table index in the SRB
+/* 4  */const Uint32  SamplerInd           : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
+/* 6  */const Uint32  Space                : _SpaceBits;           // Shader register space
+/* 7.0*/const Uint32  SigRootIndex         : _SigRootIndexBits;    // Root table index for signature (static only)
+/* 7.3*/const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
+/* 7.4*/const Uint32  IsRootView           : _RootViewFlagBits;    // Is root view (for debugging)
+/* 8  */const Uint32  SigOffsetFromTableStart;                     // Offset in the root table for signature (static only)
+/* 12 */const Uint32  SRBOffsetFromTableStart;                     // Offset in the root table for SRB
+/* 16 */
         // clang-format on
 
         ResourceAttribs(Uint32 _Register,
@@ -115,12 +116,12 @@ public:
             SigRootIndex           {_SigRootIndex                  },
             Space                  {_Space                         },
             ImtblSamplerAssigned   {_ImtblSamplerAssigned ? 1u : 0u},
-            RootView               {_IsRootView ? 1u : 0u          },
+            IsRootView             {_IsRootView ? 1u : 0u          },
             SigOffsetFromTableStart{_SigOffsetFromTableStart       },
             SRBOffsetFromTableStart{_SRBOffsetFromTableStart       }
         // clang-format on
         {
-            VERIFY(Register == _Register, "Bind point (", _Register, ") exceeds maximum representable value");
+            VERIFY(Register == _Register, "Shader register (", _Register, ") exceeds maximum representable value");
             VERIFY(SRBRootIndex == _SRBRootIndex, "SRB Root index (", _SRBRootIndex, ") exceeds maximum representable value");
             VERIFY(SigRootIndex == _SigRootIndex, "Signature Root index (", SigRootIndex, ") exceeds maximum representable value");
             VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
@@ -129,7 +130,6 @@ public:
 
         bool IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
         bool IsCombinedWithSampler() const { return SamplerInd != InvalidSamplerInd; }
-        bool IsRootView() const { return RootView != 0; }
 
         Uint32 RootIndex(CacheContentType Type) const { return Type == CacheContentType::SRB ? SRBRootIndex : SigRootIndex; }
         Uint32 OffsetFromTableStart(CacheContentType Type) const { return Type == CacheContentType::SRB ? SRBOffsetFromTableStart : SigOffsetFromTableStart; }
@@ -304,12 +304,13 @@ private:
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
     // The array below contains array index of a CBV/SRV/UAV root table
-    // in m_RootParams (NOT the Root Index!), for every variable type
-    // (static, mutable, dynamic) and every shader type,
-    // or -1, if the table is not yet assigned to the combination
-    std::array<Uint8, ROOT_PARAMETER_GROUP_COUNT* MAX_SHADERS_IN_PIPELINE> m_SrvCbvUavRootTablesMap = {};
+    // in m_RootParams (NOT the Root Index!), for every root parameter
+    // group (static/mutable, dynamic) and every shader visbility,
+    // or -1, if the table is not yet assigned to the combination.
+    // 0th element refers to root parameter with VISBILITY_ALL.
+    std::array<Uint8, ROOT_PARAMETER_GROUP_COUNT*(MAX_SHADERS_IN_PIPELINE + 1)> m_SrvCbvUavRootTablesMap = {};
     // This array contains the same data for Sampler root table
-    std::array<Uint8, ROOT_PARAMETER_GROUP_COUNT* MAX_SHADERS_IN_PIPELINE> m_SamplerRootTablesMap = {};
+    std::array<Uint8, ROOT_PARAMETER_GROUP_COUNT*(MAX_SHADERS_IN_PIPELINE + 1)> m_SamplerRootTablesMap = {};
 
     std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSrvCbvUavSlots = {};
     std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSamplerSlots   = {};
@@ -326,6 +327,5 @@ private:
 
     SRBMemoryAllocator m_SRBMemAllocator;
 };
-
 
 } // namespace Diligent
