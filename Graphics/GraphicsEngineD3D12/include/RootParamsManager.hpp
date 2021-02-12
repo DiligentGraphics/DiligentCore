@@ -49,7 +49,8 @@ class RootParameter
 public:
     RootParameter(ROOT_PARAMETER_GROUP        Group,
                   Uint32                      RootIndex,
-                  const D3D12_ROOT_PARAMETER& d3d12RootParam) noexcept;
+                  const D3D12_ROOT_PARAMETER& d3d12RootParam,
+                  Uint32                      DescriptorTableSize = 0) noexcept;
 
     // clang-format off
     RootParameter           (const RootParameter&)  = delete;
@@ -58,12 +59,14 @@ public:
     RootParameter& operator=(RootParameter&&)       = delete;
     // clang-format on
 
-    // Initializes a descriptor range at the specified index.
+    // Initializes descriptor range at the specified index.
     // The parameter type must be D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE.
     void InitDescriptorRange(UINT                          RangeIndex,
                              const D3D12_DESCRIPTOR_RANGE& Range);
 
     ROOT_PARAMETER_GROUP GetGroup() const { return m_Group; }
+
+    static constexpr D3D12_DESCRIPTOR_RANGE_TYPE InvalidDescriptorRangeType = static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(0xFFFFFFFF);
 
     Uint32 GetDescriptorTableSize() const
     {
@@ -123,7 +126,7 @@ public:
         return m_pRootViews[ViewInd];
     }
 
-    // Adds a new root view and returns the pointer to it.
+    // Adds a new root view parameter and returns the pointer to it.
     RootParameter* AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType,
                                Uint32                    RootIndex,
                                UINT                      Register,
@@ -131,7 +134,7 @@ public:
                                D3D12_SHADER_VISIBILITY   Visibility,
                                ROOT_PARAMETER_GROUP      RootType);
 
-    // Adds a new root table and returns the pointer to it.
+    // Adds a new root table parameter and returns the pointer to it.
     RootParameter* AddRootTable(Uint32                  RootIndex,
                                 D3D12_SHADER_VISIBILITY Visibility,
                                 ROOT_PARAMETER_GROUP    RootType,

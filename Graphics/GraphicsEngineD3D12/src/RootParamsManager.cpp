@@ -35,12 +35,20 @@ namespace Diligent
 
 RootParameter::RootParameter(ROOT_PARAMETER_GROUP        Group,
                              Uint32                      RootIndex,
-                             const D3D12_ROOT_PARAMETER& d3d12RootParam) noexcept :
+                             const D3D12_ROOT_PARAMETER& d3d12RootParam,
+                             Uint32                      DescriptorTableSize) noexcept :
     m_d3d12RootParam{d3d12RootParam},
     m_RootIndex{static_cast<decltype(m_RootIndex)>(RootIndex)},
-    m_Group{Group}
+    m_Group{Group},
+    m_DescriptorTableSize{DescriptorTableSize}
 {
     VERIFY(m_RootIndex == RootIndex, "Root index (", RootIndex, ") exceeds representable range");
+    VERIFY(DescriptorTableSize == 0 || m_d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+           "Non-zer descriptor table size is only allowed for DESCRIPTOR_TABLE parameters");
+#ifdef DILIGENT_DEBUG
+    if (m_d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
+        DbgValidateAsTable();
+#endif
 }
 
 void RootParameter::InitDescriptorRange(UINT                          RangeIndex,
@@ -53,10 +61,14 @@ void RootParameter::InitDescriptorRange(UINT                          RangeIndex
     VERIFY(RangeIndex < d3d12Tbl.NumDescriptorRanges, "Invalid descriptor range index");
 
     auto& DstRange = const_cast<D3D12_DESCRIPTOR_RANGE&>(d3d12Tbl.pDescriptorRanges[RangeIndex]);
-    VERIFY(DstRange.RangeType == static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(0xFFFFFFFF), "Descriptor range has already been initialized.");
+    VERIFY(DstRange.RangeType == InvalidDescriptorRangeType, "Descriptor range has already been initialized.");
     DstRange = Range;
 
     m_DescriptorTableSize = std::max(m_DescriptorTableSize, Range.OffsetInDescriptorsFromTableStart + Range.NumDescriptors);
+
+#ifdef DILIGENT_DEBUG
+    DbgValidateAsTable();
+#endif
 }
 
 bool RootParameter::operator==(const RootParameter& rhs) const
@@ -123,7 +135,21 @@ void RootParameter::DbgValidateAsTable() const
         for (Uint32 r = 0; r < d3d12SrcTbl.NumDescriptorRanges; ++r)
         {
             const auto& Range = d3d12SrcTbl.pDescriptorRanges[r];
-            dbgTableSize      = std::max(dbgTableSize, Range.OffsetInDescriptorsFromTableStart + Range.NumDescriptors);
+            if (r > 0)
+            {
+                const auto& PrevRange = d3d12SrcTbl.pDescriptorRanges[r - 1];
+                if (PrevRange.RangeType != InvalidDescriptorRangeType)
+                {
+                    VERIFY(Range.RangeType == InvalidDescriptorRangeType || PrevRange.OffsetInDescriptorsFromTableStart + PrevRange.NumDescriptors == Range.OffsetInDescriptorsFromTableStart,
+                           "Descriptors should be tightly packed in the table");
+                }
+                else
+                {
+                    VERIFY(Range.RangeType == InvalidDescriptorRangeType, "All uninitialized ranges must be contiguous");
+                }
+            }
+            if (Range.RangeType != InvalidDescriptorRangeType)
+                dbgTableSize = std::max(dbgTableSize, Range.OffsetInDescriptorsFromTableStart + Range.NumDescriptors);
         }
     }
     VERIFY(dbgTableSize == GetDescriptorTableSize(), "Incorrect descriptor table size");
@@ -177,29 +203,31 @@ void RootParamsManager::Extend(Uint32               NumExtraRootTables,
 #endif
 
     // Note: this order is more efficient than views->tables->ranges
-    auto* pNewRootTables      = reinterpret_cast<RootParameter*>(pNewMemory.get());
-    auto* pNewRootViews       = pNewRootTables + (m_NumRootTables + NumExtraRootTables);
-    auto* pDescriptorRangePtr = reinterpret_cast<D3D12_DESCRIPTOR_RANGE*>(pNewRootViews + m_NumRootViews + NumExtraRootViews);
+    auto* const pNewRootTables    = reinterpret_cast<RootParameter*>(pNewMemory.get());
+    auto* const pNewRootViews     = pNewRootTables + m_NumRootTables + NumExtraRootTables;
+    auto* const pDescriptorRanges = reinterpret_cast<D3D12_DESCRIPTOR_RANGE*>(pNewRootViews + m_NumRootViews + NumExtraRootViews);
 
     // Copy root tables to new memory
+    auto* pCurrDescrRangePtr = pDescriptorRanges;
     for (Uint32 rt = 0; rt < m_NumRootTables + NumExtraRootTables; ++rt)
     {
         const auto& SrcTbl = rt < m_NumRootTables ? GetRootTable(rt) : ExtraRootTables[rt - m_NumRootTables];
 #ifdef DILIGENT_DEBUG
         SrcTbl.DbgValidateAsTable();
 #endif
-        auto& d3d12SrcTbl = static_cast<const D3D12_ROOT_PARAMETER&>(SrcTbl).DescriptorTable;
-        auto  NumRanges   = d3d12SrcTbl.NumDescriptorRanges;
+        const auto& d3d12SrcTbl = static_cast<const D3D12_ROOT_PARAMETER&>(SrcTbl).DescriptorTable;
+
+        auto NumRanges = d3d12SrcTbl.NumDescriptorRanges;
         if (rt == RootTableToAddRanges)
         {
-            VERIFY(d3d12SrcTbl.pDescriptorRanges == nullptr, "Adding extra descriptors to a new table. This is likely not intended.");
+            VERIFY(d3d12SrcTbl.pDescriptorRanges != nullptr, "Adding extra descriptors to a new table. This is likely not intended.");
             NumRanges += NumExtraDescriptorRanges;
         }
 
         // Copy existing ranges, if any (pDescriptorRanges == null for extra descriptor tables)
         if (d3d12SrcTbl.pDescriptorRanges != nullptr)
         {
-            memcpy(pDescriptorRangePtr, d3d12SrcTbl.pDescriptorRanges, d3d12SrcTbl.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE));
+            memcpy(pCurrDescrRangePtr, d3d12SrcTbl.pDescriptorRanges, d3d12SrcTbl.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE));
         }
 
         new (pNewRootTables + rt) RootParameter{
@@ -207,13 +235,15 @@ void RootParamsManager::Extend(Uint32               NumExtraRootTables,
             D3D12_ROOT_PARAMETER //
             {
                 D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-                D3D12_ROOT_DESCRIPTOR_TABLE{NumRanges, pDescriptorRangePtr},
+                D3D12_ROOT_DESCRIPTOR_TABLE{NumRanges, pCurrDescrRangePtr},
                 SrcTbl.GetShaderVisibility() //
-            }                                //
+            },
+            SrcTbl.GetDescriptorTableSize() //
         };
 
-        pDescriptorRangePtr += NumRanges;
+        pCurrDescrRangePtr += NumRanges;
     }
+    VERIFY_EXPR(pCurrDescrRangePtr == pDescriptorRanges + NewRangesCount);
 
     // Copy root views to new memory
     for (Uint32 rv = 0; rv < m_NumRootViews + NumExtraRootViews; ++rv)
@@ -289,7 +319,7 @@ RootParameter* RootParamsManager::ExtendRootTable(Uint32 RootTableInd, Uint32 Nu
 {
     VERIFY_EXPR(RootTableInd < m_NumRootTables);
     Extend(0, nullptr, 0, nullptr, NumExtraRanges, RootTableInd);
-    return &m_pRootTables[RootTableInd - 1];
+    return &m_pRootTables[RootTableInd];
 }
 
 bool RootParamsManager::operator==(const RootParamsManager& RootParams) const

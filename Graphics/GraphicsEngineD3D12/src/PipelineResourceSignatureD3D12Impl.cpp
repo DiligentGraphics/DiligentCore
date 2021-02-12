@@ -45,7 +45,7 @@ namespace Diligent
 namespace
 {
 
-constexpr D3D12_DESCRIPTOR_RANGE_TYPE GetDescriptorRangeType(SHADER_RESOURCE_TYPE ResType)
+D3D12_DESCRIPTOR_RANGE_TYPE GetDescriptorRangeType(SHADER_RESOURCE_TYPE ResType)
 {
     static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new resource type");
 
@@ -63,7 +63,7 @@ constexpr D3D12_DESCRIPTOR_RANGE_TYPE GetDescriptorRangeType(SHADER_RESOURCE_TYP
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
         default:
             UNEXPECTED("Unknown resource type");
-            return static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(~0u);
+            return RootParameter::InvalidDescriptorRangeType;
     }
 }
 
@@ -572,7 +572,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
 
         const bool IsRuntimeSizedArray     = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0;
         const auto DescriptorRangeType     = GetDescriptorRangeType(ResDesc.ResourceType);
-        Uint32     BindPoint               = IsRuntimeSizedArray ? 0 : NumResources[DescriptorRangeType];
+        Uint32     Register                = IsRuntimeSizedArray ? 0 : NumResources[DescriptorRangeType];
         Uint32     Space                   = (IsRuntimeSizedArray ? m_NumSpaces++ : 0);
         Uint32     SRBRootIndex            = ResourceAttribs::InvalidSRBRootIndex;
         Uint32     SRBOffsetFromTableStart = ResourceAttribs::InvalidOffset;
@@ -623,8 +623,8 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             }
             else
             {
-                BindPoint = ImmutableSampler.ShaderRegister;
-                Space     = ImmutableSampler.RegisterSpace;
+                Register = ImmutableSampler.ShaderRegister;
+                Space    = ImmutableSampler.RegisterSpace;
 
                 // Use previous bind point and decrease resource counter
                 if (!IsRuntimeSizedArray)
@@ -657,7 +657,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
         if (ImmutableSampler.IsAssigned())
             continue;
 
-        constexpr auto DescriptorRangeType = GetDescriptorRangeType(SHADER_RESOURCE_TYPE_SAMPLER);
+        const auto DescriptorRangeType = GetDescriptorRangeType(SHADER_RESOURCE_TYPE_SAMPLER);
 
         ImmutableSampler.RegisterSpace  = FirstSpace;
         ImmutableSampler.ShaderRegister = NumResources[DescriptorRangeType];
