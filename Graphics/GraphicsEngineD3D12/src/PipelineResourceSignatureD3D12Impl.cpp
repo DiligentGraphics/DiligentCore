@@ -45,81 +45,6 @@ namespace Diligent
 namespace
 {
 
-void GetRootTableIndex(SHADER_TYPE              ShaderType,
-                       D3D12_SHADER_VISIBILITY& ShaderVisibility,
-                       Uint32&                  RootTableIndex)
-{
-    VERIFY_EXPR(ShaderType != SHADER_TYPE_UNKNOWN);
-
-    // Use VISIBILITY_ALL if more than one shader stage is used.
-    if (!IsPowerOfTwo(ShaderType))
-    {
-        RootTableIndex   = 0;
-        ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-        return;
-    }
-
-    // https://developer.nvidia.com/dx12-dos-and-donts#roots
-    // * Start with the entries for the pixel stage
-    // * Carry on with decreasing execution frequency of the shader stages
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
-    switch (ShaderType)
-    {
-        case SHADER_TYPE_PIXEL:
-            RootTableIndex   = 1;
-            ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-            break;
-
-        case SHADER_TYPE_VERTEX:
-            RootTableIndex   = 2;
-            ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-            break;
-
-        case SHADER_TYPE_GEOMETRY:
-            RootTableIndex   = 3;
-            ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY;
-            break;
-
-        case SHADER_TYPE_HULL:
-            RootTableIndex   = 4;
-            ShaderVisibility = D3D12_SHADER_VISIBILITY_HULL;
-            break;
-
-        case SHADER_TYPE_DOMAIN:
-            RootTableIndex   = 5;
-            ShaderVisibility = D3D12_SHADER_VISIBILITY_DOMAIN;
-            break;
-
-#ifdef D3D12_H_HAS_MESH_SHADER
-        case SHADER_TYPE_AMPLIFICATION:
-            RootTableIndex   = 2;
-            ShaderVisibility = D3D12_SHADER_VISIBILITY_AMPLIFICATION;
-            break;
-
-        case SHADER_TYPE_MESH:
-            RootTableIndex   = 3;
-            ShaderVisibility = D3D12_SHADER_VISIBILITY_MESH;
-            break;
-#endif
-
-        case SHADER_TYPE_COMPUTE:
-        case SHADER_TYPE_RAY_GEN:
-        case SHADER_TYPE_RAY_MISS:
-        case SHADER_TYPE_RAY_CLOSEST_HIT:
-        case SHADER_TYPE_RAY_ANY_HIT:
-        case SHADER_TYPE_RAY_INTERSECTION:
-        case SHADER_TYPE_CALLABLE:
-            RootTableIndex   = 0;
-            ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-            break;
-
-        default:
-            UNEXPECTED("Unknown shader type");
-            break;
-    }
-}
-
-
 Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
                            const PipelineResourceSignatureDesc& Desc,
                            const char*                          SamplerSuffix)
@@ -182,8 +107,10 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
 {
     try
     {
-        m_SrvCbvUavRootTablesMap.fill(InvalidRootTableIndex);
-        m_SamplerRootTablesMap.fill(InvalidRootTableIndex);
+        for (auto& Map : m_SrvCbvUavRootTablesMap)
+            Map.fill(InvalidRootTableIndex);
+        for (auto& Map : m_SamplerRootTablesMap)
+            Map.fill(InvalidRootTableIndex);
 
         FixedLinearAllocator MemPool{GetRawAllocator()};
 
@@ -453,11 +380,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateResourceSlot(SHADER_TYPE       
                                                               Uint32&                       OffsetFromTableStart // Output parameter
 )
 {
-    D3D12_SHADER_VISIBILITY ShaderVisibility;
-    Uint32                  RootTableIndex;
-    GetRootTableIndex(ShaderStages, ShaderVisibility, RootTableIndex);
-
-    const auto RootType = GetRootParameterGroup(VariableType);
+    const auto ShaderVisibility = ShaderStagesToD3D12ShaderVisibility(ShaderStages);
+    const auto ParameterGroup   = GetRootParameterGroup(VariableType);
 
     // Get the next available root index past all allocated tables and root views
     RootIndex = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
@@ -468,14 +392,13 @@ void PipelineResourceSignatureD3D12Impl::AllocateResourceSlot(SHADER_TYPE       
         OffsetFromTableStart = 0;
 
         // Add new root view to existing root parameters
-        m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, Register, Space, ShaderVisibility, RootType); // AZ TODO: add SRV & UAV
+        m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, Register, Space, ShaderVisibility, ParameterGroup); // AZ TODO: add SRV & UAV
     }
     else
     {
-        const bool IsSampler   = (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
-        const auto TableIndKey = RootTableIndex * ROOT_PARAMETER_GROUP_COUNT + Uint32{RootType};
+        const bool IsSampler = (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
         // Get the table array index (this is not the root index!)
-        auto& RootTableArrayInd = (IsSampler ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[TableIndKey];
+        auto& RootTableArrayInd = (IsSampler ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[ParameterGroup][ShaderVisibility];
 
         RootParameter* pRootTable = nullptr;
         if (RootTableArrayInd == InvalidRootTableIndex)
@@ -484,7 +407,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateResourceSlot(SHADER_TYPE       
             VERIFY_EXPR(m_RootParams.GetNumRootTables() < 255);
             RootTableArrayInd = static_cast<Uint8>(m_RootParams.GetNumRootTables());
             // Add root table with one single-descriptor range
-            pRootTable = m_RootParams.AddRootTable(RootIndex, ShaderVisibility, RootType, 1);
+            pRootTable = m_RootParams.AddRootTable(RootIndex, ShaderVisibility, ParameterGroup, 1);
         }
         else
         {
@@ -492,7 +415,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateResourceSlot(SHADER_TYPE       
             pRootTable = m_RootParams.ExtendRootTable(RootTableArrayInd, 1);
         }
 
-        (IsSampler ? m_TotalSamplerSlots : m_TotalSrvCbvUavSlots)[RootType] += ArraySize;
+        (IsSampler ? m_TotalSamplerSlots : m_TotalSrvCbvUavSlots)[ParameterGroup] += ArraySize;
 
         // Reference to either existing or just added table
         RootIndex = pRootTable->GetLocalRootIndex();

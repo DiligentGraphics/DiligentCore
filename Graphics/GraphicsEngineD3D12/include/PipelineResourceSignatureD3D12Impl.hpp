@@ -318,10 +318,10 @@ private:
     // in m_RootParams (NOT the Root Index!), for every root parameter
     // group (static/mutable, dynamic) and every shader visbility,
     // or -1, if the table is not yet assigned to the combination.
-    // 0th element refers to root parameter with VISBILITY_ALL.
-    std::array<Uint8, ROOT_PARAMETER_GROUP_COUNT*(MAX_SHADERS_IN_PIPELINE + 1)> m_SrvCbvUavRootTablesMap = {};
+    // max(D3D12_SHADER_VISIBILITY) == D3D12_SHADER_VISIBILITY_MESH == 7
+    std::array<std::array<Uint8, 8>, ROOT_PARAMETER_GROUP_COUNT> m_SrvCbvUavRootTablesMap = {};
     // This array contains the same data for Sampler root table
-    std::array<Uint8, ROOT_PARAMETER_GROUP_COUNT*(MAX_SHADERS_IN_PIPELINE + 1)> m_SamplerRootTablesMap = {};
+    std::array<std::array<Uint8, 8>, ROOT_PARAMETER_GROUP_COUNT> m_SamplerRootTablesMap = {};
 
     std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSrvCbvUavSlots = {};
     std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSamplerSlots   = {};
