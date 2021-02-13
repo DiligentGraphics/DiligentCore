@@ -250,9 +250,9 @@ inline ROOT_PARAMETER_GROUP VariableTypeToRootParameterGroup(SHADER_RESOURCE_VAR
 
 void RootParamsBuilder::AllocateResourceSlot(SHADER_TYPE                   ShaderStages,
                                              SHADER_RESOURCE_VARIABLE_TYPE VariableType,
+                                             D3D12_ROOT_PARAMETER_TYPE     RootParameterType,
                                              D3D12_DESCRIPTOR_RANGE_TYPE   RangeType,
                                              Uint32                        ArraySize,
-                                             bool                          IsRootView,
                                              Uint32                        Register,
                                              Uint32                        Space,
                                              Uint32&                       RootIndex,           // Output parameter
@@ -265,15 +265,19 @@ void RootParamsBuilder::AllocateResourceSlot(SHADER_TYPE                   Shade
     // Get the next available root index past all allocated tables and root views
     RootIndex = static_cast<Uint32>(m_RootTables.size() + m_RootViews.size());
 
-    if (IsRootView)
+    if (RootParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
+        RootParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
+        RootParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV)
     {
+        VERIFY(ArraySize == 1, "Only single descriptors can be added as root views");
+
         // Allocate single CBV directly in the root signature
         OffsetFromTableStart = 0;
 
         // Add new root view to existing root parameters
-        AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, Register, Space, ShaderVisibility, ParameterGroup); // AZ TODO: add SRV & UAV
+        AddRootView(RootParameterType, RootIndex, Register, Space, ShaderVisibility, ParameterGroup);
     }
-    else
+    else if (RootParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
     {
         const bool IsSampler = (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
         // Get the table array index (this is not the root index!)
@@ -324,8 +328,11 @@ void RootParamsBuilder::AllocateResourceSlot(SHADER_TYPE                   Shade
         DbgValidateD3D12RootTable(d3d12RootParam.DescriptorTable);
 #endif
     }
+    else
+    {
+        UNSUPPORTED("Unsupported root parameter type");
+    }
 }
-
 
 void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParamsManager& ParamsMgr)
 {

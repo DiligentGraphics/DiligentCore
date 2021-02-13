@@ -175,9 +175,9 @@ public:
     // Allocates root parameter slot for the given resource.
     void AllocateResourceSlot(SHADER_TYPE                   ShaderStages,
                               SHADER_RESOURCE_VARIABLE_TYPE VariableType,
+                              D3D12_ROOT_PARAMETER_TYPE     RootParameterType,
                               D3D12_DESCRIPTOR_RANGE_TYPE   RangeType,
                               Uint32                        ArraySize,
-                              bool                          IsRootView,
                               Uint32                        Register,
                               Uint32                        Space,
                               Uint32&                       RootIndex,

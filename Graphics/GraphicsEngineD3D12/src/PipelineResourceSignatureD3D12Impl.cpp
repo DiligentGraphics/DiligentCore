@@ -285,7 +285,10 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
         }
         else
         {
-            ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType, DescriptorRangeType, ResDesc.ArraySize, IsRootView, Register, FirstSpace + Space, SRBRootIndex, SRBOffsetFromTableStart);
+            ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType,
+                                               IsRootView ? D3D12_ROOT_PARAMETER_TYPE_CBV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+                                               DescriptorRangeType, ResDesc.ArraySize, Register, FirstSpace + Space, SRBRootIndex,
+                                               SRBOffsetFromTableStart);
         }
 
         new (m_pResourceAttribs + i) ResourceAttribs //
