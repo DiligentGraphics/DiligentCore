@@ -154,8 +154,6 @@ PipelineStateGLImpl::~PipelineStateGLImpl()
 
 void PipelineStateGLImpl::Destruct()
 {
-    TPipelineStateBase::Destruct();
-
     auto& RawAllocator = GetRawAllocator();
     m_StaticResourceCache.Destroy(RawAllocator);
     GetDevice()->OnDestroyPSO(this);
@@ -184,6 +182,8 @@ void PipelineStateGLImpl::Destruct()
     {
         RawAllocator.Free(pRawMem);
     }
+
+    TPipelineStateBase::Destruct();
 }
 
 IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_PipelineStateGL, TPipelineStateBase)

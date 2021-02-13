@@ -203,8 +203,6 @@ PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
 
 void PipelineStateD3D11Impl::Destruct()
 {
-    TPipelineStateBase::Destruct();
-
     if (m_pStaticResourceLayouts != nullptr)
     {
         for (Uint32 l = 0; l < GetNumShaderStages(); ++l)
@@ -225,6 +223,8 @@ void PipelineStateD3D11Impl::Destruct()
     // All subobjects are allocated in contiguous chunks of memory.
     if (auto* pRawMem = m_pStaticResourceCaches)
         GetRawAllocator().Free(pRawMem);
+
+    TPipelineStateBase::Destruct();
 }
 
 IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D11Impl, IID_PipelineStateD3D11, TPipelineStateBase)

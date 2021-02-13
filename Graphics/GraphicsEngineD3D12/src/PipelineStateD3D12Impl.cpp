@@ -1016,8 +1016,6 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
 
 void PipelineStateD3D12Impl::Destruct()
 {
-    TPipelineStateBase::Destruct();
-
     m_Signatures.fill({});
     m_RootSig.Release();
 
@@ -1026,6 +1024,8 @@ void PipelineStateD3D12Impl::Destruct()
         // D3D12 object can only be destroyed when it is no longer used by the GPU
         m_pDevice->SafeReleaseDeviceObject(std::move(m_pd3d12PSO), m_Desc.CommandQueueMask);
     }
+
+    TPipelineStateBase::Destruct();
 }
 
 bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const

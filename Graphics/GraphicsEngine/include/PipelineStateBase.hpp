@@ -199,10 +199,10 @@ public:
             m_pRayTracingPipelineData->~RayTracingPipelineData();
         }
 
-        if (m_pRawMem)
+        if (m_pPipelineDataRawMem)
         {
-            GetRawAllocator().Free(m_pRawMem);
-            m_pRawMem = nullptr;
+            GetRawAllocator().Free(m_pPipelineDataRawMem);
+            m_pPipelineDataRawMem = nullptr;
         }
 #if DILIGENT_DEBUG
         m_IsDestructed = true;
@@ -529,7 +529,7 @@ protected:
     {
         this->m_pGraphicsPipelineData = MemPool.Construct<GraphicsPipelineData>();
         void* Ptr                     = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_pRawMem);
+        VERIFY_EXPR(Ptr == m_pPipelineDataRawMem);
 
         auto& GraphicsPipeline = this->m_pGraphicsPipelineData->Desc;
         auto& pRenderPass      = this->m_pGraphicsPipelineData->pRenderPass;
@@ -663,7 +663,7 @@ protected:
     void InitializePipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
                                 FixedLinearAllocator&                 MemPool)
     {
-        m_pRawMem = MemPool.ReleaseOwnership();
+        m_pPipelineDataRawMem = MemPool.ReleaseOwnership();
 
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
     }
@@ -686,7 +686,7 @@ protected:
         this->m_pRayTracingPipelineData->ShaderDataSize   = ShaderDataSize;
 
         void* Ptr = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_pRawMem);
+        VERIFY_EXPR(Ptr == m_pPipelineDataRawMem);
 
         TNameToGroupIndexMap& NameToGroupIndex = this->m_pRayTracingPipelineData->NameToGroupIndex;
         CopyRTShaderGroupNames(NameToGroupIndex, CreateInfo, MemPool);
@@ -797,7 +797,7 @@ protected:
     {
         GraphicsPipelineData*   m_pGraphicsPipelineData;
         RayTracingPipelineData* m_pRayTracingPipelineData;
-        void*                   m_pRawMem = nullptr;
+        void*                   m_pPipelineDataRawMem = nullptr;
     };
 
 #ifdef DILIGENT_DEBUG

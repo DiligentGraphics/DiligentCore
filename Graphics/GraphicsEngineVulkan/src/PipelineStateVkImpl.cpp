@@ -1066,10 +1066,10 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
 
 void PipelineStateVkImpl::Destruct()
 {
-    TPipelineStateBase::Destruct();
-
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
     m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
+
+    TPipelineStateBase::Destruct();
 }
 
 bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
