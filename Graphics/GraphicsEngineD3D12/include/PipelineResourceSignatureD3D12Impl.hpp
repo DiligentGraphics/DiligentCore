@@ -280,23 +280,7 @@ public:
                          Uint32                    FirstRootIndex);
 
 private:
-    static ROOT_PARAMETER_GROUP GetRootParameterGroup(SHADER_RESOURCE_VARIABLE_TYPE VarType);
-
     void CreateLayout();
-
-    // Allocates root signature slot for the given resource.
-    // For graphics and compute pipelines, Register is the same as the original bind point.
-    // For ray-tracing pipeline, Register will be overriden. Bind points are then
-    // remapped by PSO constructor.
-    void AllocateResourceSlot(SHADER_TYPE                   ShaderStages,
-                              SHADER_RESOURCE_VARIABLE_TYPE VariableType,
-                              D3D12_DESCRIPTOR_RANGE_TYPE   RangeType,
-                              Uint32                        ArraySize,
-                              bool                          IsRootView,
-                              Uint32                        Register,
-                              Uint32                        Space,
-                              Uint32&                       RootIndex,
-                              Uint32&                       OffsetFromTableStart);
 
     size_t CalculateHash() const;
 
@@ -307,25 +291,10 @@ private:
     Uint32 FindAssignedSampler(const PipelineResourceDesc& SepImg) const;
 
 private:
-    static constexpr Uint8 InvalidRootTableIndex = static_cast<Uint8>(-1);
-
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
-
-    // The array below contains array index of a CBV/SRV/UAV root table
-    // in m_RootParams (NOT the Root Index!), for every root parameter
-    // group (static/mutable, dynamic) and every shader visbility,
-    // or -1, if the table is not yet assigned to the combination.
-    // max(D3D12_SHADER_VISIBILITY) == D3D12_SHADER_VISIBILITY_MESH == 7
-    std::array<std::array<Uint8, 8>, ROOT_PARAMETER_GROUP_COUNT> m_SrvCbvUavRootTablesMap = {};
-    // This array contains the same data for Sampler root table
-    std::array<std::array<Uint8, 8>, ROOT_PARAMETER_GROUP_COUNT> m_SamplerRootTablesMap = {};
-
-    std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSrvCbvUavSlots = {};
-    std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSamplerSlots   = {};
-    std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalRootViews      = {};
 
     Uint32 m_NumSpaces = 0;
 

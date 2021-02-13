@@ -92,26 +92,15 @@ inline bool ResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineR
 } // namespace
 
 
-inline ROOT_PARAMETER_GROUP PipelineResourceSignatureD3D12Impl::GetRootParameterGroup(SHADER_RESOURCE_VARIABLE_TYPE VarType)
-{
-    return VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? ROOT_PARAMETER_GROUP_DYNAMIC : ROOT_PARAMETER_GROUP_STATIC_MUTABLE;
-}
-
 PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
                                                                        RenderDeviceD3D12Impl*               pDevice,
                                                                        const PipelineResourceSignatureDesc& Desc,
                                                                        bool                                 bIsDeviceInternal) :
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
-    m_RootParams{GetRawAllocator()},
     m_SRBMemAllocator{GetRawAllocator()}
 {
     try
     {
-        for (auto& Map : m_SrvCbvUavRootTablesMap)
-            Map.fill(InvalidRootTableIndex);
-        for (auto& Map : m_SamplerRootTablesMap)
-            Map.fill(InvalidRootTableIndex);
-
         FixedLinearAllocator MemPool{GetRawAllocator()};
 
         // Reserve at least 1 element because m_pResourceAttribs must hold a pointer to memory
@@ -224,6 +213,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
     std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> NumResources           = {};
     std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> StaticResCacheTblSizes = {};
 
+    RootParamsBuilder ParamsBuilder;
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const auto& ResDesc = m_Desc.Resources[i];
@@ -295,7 +285,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
         }
         else
         {
-            AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType, DescriptorRangeType, ResDesc.ArraySize, IsRootView, Register, FirstSpace + Space, SRBRootIndex, SRBOffsetFromTableStart);
+            ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType, DescriptorRangeType, ResDesc.ArraySize, IsRootView, Register, FirstSpace + Space, SRBRootIndex, SRBOffsetFromTableStart);
         }
 
         new (m_pResourceAttribs + i) ResourceAttribs //
@@ -311,6 +301,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
                 IsRootView //
             };
     }
+    ParamsBuilder.InitializeMgr(GetRawAllocator(), m_RootParams);
 
     // Add immutable samplers that do not exist in m_Desc.Resources
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
@@ -368,78 +359,6 @@ Uint32 PipelineResourceSignatureD3D12Impl::FindAssignedSampler(const PipelineRes
     return SamplerInd;
 }
 
-// http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
-void PipelineResourceSignatureD3D12Impl::AllocateResourceSlot(SHADER_TYPE                   ShaderStages,
-                                                              SHADER_RESOURCE_VARIABLE_TYPE VariableType,
-                                                              D3D12_DESCRIPTOR_RANGE_TYPE   RangeType,
-                                                              Uint32                        ArraySize,
-                                                              bool                          IsRootView,
-                                                              Uint32                        Register,
-                                                              Uint32                        Space,
-                                                              Uint32&                       RootIndex,           // Output parameter
-                                                              Uint32&                       OffsetFromTableStart // Output parameter
-)
-{
-    const auto ShaderVisibility = ShaderStagesToD3D12ShaderVisibility(ShaderStages);
-    const auto ParameterGroup   = GetRootParameterGroup(VariableType);
-
-    // Get the next available root index past all allocated tables and root views
-    RootIndex = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
-
-    if (IsRootView)
-    {
-        // Allocate single CBV directly in the root signature
-        OffsetFromTableStart = 0;
-
-        // Add new root view to existing root parameters
-        m_RootParams.AddRootView(D3D12_ROOT_PARAMETER_TYPE_CBV, RootIndex, Register, Space, ShaderVisibility, ParameterGroup); // AZ TODO: add SRV & UAV
-    }
-    else
-    {
-        const bool IsSampler = (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
-        // Get the table array index (this is not the root index!)
-        auto& RootTableArrayInd = (IsSampler ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[ParameterGroup][ShaderVisibility];
-
-        RootParameter* pRootTable = nullptr;
-        if (RootTableArrayInd == InvalidRootTableIndex)
-        {
-            // Root table has not been assigned to this combination yet
-            VERIFY_EXPR(m_RootParams.GetNumRootTables() < 255);
-            RootTableArrayInd = static_cast<Uint8>(m_RootParams.GetNumRootTables());
-            // Add root table with one single-descriptor range
-            pRootTable = m_RootParams.AddRootTable(RootIndex, ShaderVisibility, ParameterGroup, 1);
-        }
-        else
-        {
-            // Add a new single-descriptor range to the existing table at index RootTableArrayInd
-            pRootTable = m_RootParams.ExtendRootTable(RootTableArrayInd, 1);
-        }
-
-        (IsSampler ? m_TotalSamplerSlots : m_TotalSrvCbvUavSlots)[ParameterGroup] += ArraySize;
-
-        // Reference to either existing or just added table
-        RootIndex = pRootTable->GetLocalRootIndex();
-
-        const auto& d3d12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(*pRootTable);
-
-        VERIFY(d3d12RootParam.ShaderVisibility == ShaderVisibility, "Shader visibility is not correct");
-
-        // Descriptors are tightly packed, so the next descriptor offset is the
-        // current size of the table
-        OffsetFromTableStart = pRootTable->GetDescriptorTableSize();
-
-        // New just added range is the last range in the descriptor table
-        Uint32 NewDescriptorRangeIndex = d3d12RootParam.DescriptorTable.NumDescriptorRanges - 1;
-
-        D3D12_DESCRIPTOR_RANGE Range{};
-        Range.RangeType                         = RangeType;            // Range type (CBV, SRV, UAV or SAMPLER)
-        Range.NumDescriptors                    = ArraySize;            // Number of registers used (1 for non-array resources)
-        Range.BaseShaderRegister                = Register;             // Shader register
-        Range.RegisterSpace                     = Space;                // Shader register space
-        Range.OffsetInDescriptorsFromTableStart = OffsetFromTableStart; // Offset in descriptors from the table start
-        pRootTable->InitDescriptorRange(NewDescriptorRangeIndex, Range);
-    }
-}
 
 PipelineResourceSignatureD3D12Impl::~PipelineResourceSignatureD3D12Impl()
 {
@@ -624,14 +543,14 @@ std::vector<Uint32, STDAllocatorRawMem<Uint32>> PipelineResourceSignatureD3D12Im
     std::vector<Uint32, STDAllocatorRawMem<Uint32>> CacheTableSizes(m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews(), 0, STD_ALLOCATOR_RAW_MEM(Uint32, GetRawAllocator(), "Allocator for vector<Uint32>"));
     for (Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
     {
-        auto& RootParam                                = m_RootParams.GetRootTable(rt);
-        CacheTableSizes[RootParam.GetLocalRootIndex()] = RootParam.GetDescriptorTableSize();
+        const auto& RootParam                = m_RootParams.GetRootTable(rt);
+        CacheTableSizes[RootParam.RootIndex] = RootParam.GetDescriptorTableSize();
     }
 
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
-        auto& RootParam                                = m_RootParams.GetRootView(rv);
-        CacheTableSizes[RootParam.GetLocalRootIndex()] = 1;
+        const auto& RootParam                = m_RootParams.GetRootView(rv);
+        CacheTableSizes[RootParam.RootIndex] = 1;
     }
 
     return CacheTableSizes;
@@ -647,8 +566,8 @@ void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCach
     ResourceCache.Initialize(CacheMemAllocator, static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
 
     // Allocate space in GPU-visible descriptor heap for static and mutable variables only
-    Uint32 TotalSrvCbvUavDescriptors = m_TotalSrvCbvUavSlots[ROOT_PARAMETER_GROUP_STATIC_MUTABLE];
-    Uint32 TotalSamplerDescriptors   = m_TotalSamplerSlots[ROOT_PARAMETER_GROUP_STATIC_MUTABLE];
+    Uint32 TotalSrvCbvUavDescriptors = m_RootParams.GetTotalSrvCbvUavSlots(ROOT_PARAMETER_GROUP_STATIC_MUTABLE);
+    Uint32 TotalSamplerDescriptors   = m_RootParams.GetTotalSamplerSlots(ROOT_PARAMETER_GROUP_STATIC_MUTABLE);
 
     DescriptorHeapAllocation CbcSrvUavHeapSpace, SamplerHeapSpace;
     if (TotalSrvCbvUavDescriptors)
@@ -680,17 +599,17 @@ void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCach
     Uint32 SamplerTblStartOffset   = 0;
     for (Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
     {
-        auto&       RootParam      = m_RootParams.GetRootTable(rt);
-        const auto& D3D12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(RootParam);
-        auto&       RootTableCache = ResourceCache.GetRootTable(RootParam.GetLocalRootIndex());
-        const bool  IsDynamic      = RootParam.GetGroup() == ROOT_PARAMETER_GROUP_DYNAMIC;
+        const auto& RootParam      = m_RootParams.GetRootTable(rt);
+        const auto& d3d12RootParam = RootParam.d3d12RootParam;
+        auto&       RootTableCache = ResourceCache.GetRootTable(RootParam.RootIndex);
+        const bool  IsDynamic      = RootParam.Group == ROOT_PARAMETER_GROUP_DYNAMIC;
 
-        VERIFY_EXPR(D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
+        VERIFY_EXPR(d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 
         auto TableSize = RootParam.GetDescriptorTableSize();
         VERIFY(TableSize > 0, "Unexpected empty descriptor table");
 
-        auto HeapType = D3D12DescriptorRangeTypeToD3D12HeapType(D3D12RootParam.DescriptorTable.pDescriptorRanges[0].RangeType);
+        auto HeapType = D3D12DescriptorRangeTypeToD3D12HeapType(d3d12RootParam.DescriptorTable.pDescriptorRanges[0].RangeType);
 
 #ifdef DILIGENT_DEBUG
         RootTableCache.SetDebugAttribs(TableSize, HeapType, IsDynamic);
@@ -721,15 +640,15 @@ void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCach
 #ifdef DILIGENT_DEBUG
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
-        auto&       RootParam      = m_RootParams.GetRootView(rv);
-        const auto& D3D12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(RootParam);
-        auto&       RootTableCache = ResourceCache.GetRootTable(RootParam.GetLocalRootIndex());
-        const bool  IsDynamic      = RootParam.GetGroup() == ROOT_PARAMETER_GROUP_DYNAMIC;
+        const auto& RootParam      = m_RootParams.GetRootView(rv);
+        const auto& d3d12RootParam = RootParam.d3d12RootParam;
+        auto&       RootTableCache = ResourceCache.GetRootTable(RootParam.RootIndex);
+        const bool  IsDynamic      = RootParam.Group == ROOT_PARAMETER_GROUP_DYNAMIC;
 
         // Root views are not assigned valid table start offset
         VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset);
 
-        VERIFY_EXPR(D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
+        VERIFY_EXPR(d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
         RootTableCache.SetDebugAttribs(1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, IsDynamic);
     }
 #endif
@@ -1106,8 +1025,8 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
 {
     auto* pd3d12Device = GetDevice()->GetD3D12Device();
 
-    Uint32 NumDynamicCbvSrvUavDescriptors = m_TotalSrvCbvUavSlots[ROOT_PARAMETER_GROUP_DYNAMIC];
-    Uint32 NumDynamicSamplerDescriptors   = m_TotalSamplerSlots[ROOT_PARAMETER_GROUP_DYNAMIC];
+    Uint32 NumDynamicCbvSrvUavDescriptors = m_RootParams.GetTotalSrvCbvUavSlots(ROOT_PARAMETER_GROUP_DYNAMIC);
+    Uint32 NumDynamicSamplerDescriptors   = m_RootParams.GetTotalSamplerSlots(ROOT_PARAMETER_GROUP_DYNAMIC);
     //VERIFY_EXPR(NumDynamicCbvSrvUavDescriptors > 0 || NumDynamicSamplerDescriptors > 0);
 
     DescriptorHeapAllocation DynamicCbvSrvUavDescriptors, DynamicSamplerDescriptors;
@@ -1160,7 +1079,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
         {
             D3D12_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle;
 
-            bool IsDynamicTable = RootTable.GetGroup() == ROOT_PARAMETER_GROUP_DYNAMIC;
+            bool IsDynamicTable = RootTable.Group == ROOT_PARAMETER_GROUP_DYNAMIC;
             if (IsDynamicTable)
             {
                 if (IsResourceTable)
@@ -1234,7 +1153,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
         auto& RootView = m_RootParams.GetRootView(rv);
-        auto  RootInd  = RootView.GetLocalRootIndex();
+        auto  RootInd  = RootView.RootIndex;
 
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         if (auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>())
@@ -1262,7 +1181,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
         auto& RootView = m_RootParams.GetRootView(rv);
-        auto  RootInd  = RootView.GetLocalRootIndex();
+        auto  RootInd  = RootView.RootIndex;
 
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         if (auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>())

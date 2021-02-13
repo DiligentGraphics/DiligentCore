@@ -122,18 +122,18 @@ void RootSignatureD3D12::Finalize()
             auto& RootParams = pSignature->m_RootParams;
             for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
             {
-                const auto&                 RootTable = RootParams.GetRootTable(rt);
-                const D3D12_ROOT_PARAMETER& SrcParam  = RootTable;
-                const Uint32                RootIndex = FirstRootIndex + RootTable.GetLocalRootIndex();
+                const auto&  RootTable = RootParams.GetRootTable(rt);
+                const auto&  SrcParam  = RootTable.d3d12RootParam;
+                const Uint32 RootIndex = FirstRootIndex + RootTable.RootIndex;
                 VERIFY(SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected");
                 D3D12Parameters[RootIndex] = SrcParam;
             }
 
             for (Uint32 rv = 0; rv < RootParams.GetNumRootViews(); ++rv)
             {
-                const auto&                 RootView  = RootParams.GetRootView(rv);
-                const D3D12_ROOT_PARAMETER& SrcParam  = RootView;
-                const Uint32                RootIndex = FirstRootIndex + RootView.GetLocalRootIndex();
+                const auto&  RootView  = RootParams.GetRootView(rv);
+                const auto&  SrcParam  = RootView.d3d12RootParam;
+                const Uint32 RootIndex = FirstRootIndex + RootView.RootIndex;
                 VERIFY(SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root CBV is expected");
                 D3D12Parameters[RootIndex] = SrcParam;
             }

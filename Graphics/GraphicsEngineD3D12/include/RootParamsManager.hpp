@@ -31,6 +31,8 @@
 /// Declaration of Diligent::RootParamsManager class and related data structures
 
 #include <memory>
+#include <vector>
+#include <array>
 
 #include "BasicTypes.h"
 
@@ -44,65 +46,53 @@ enum ROOT_PARAMETER_GROUP : Uint8
     ROOT_PARAMETER_GROUP_COUNT
 };
 
-class RootParameter
+struct RootParameter
 {
-public:
+    const D3D12_ROOT_PARAMETER d3d12RootParam;
+    const Uint32               RootIndex;
+    const ROOT_PARAMETER_GROUP Group;
+
+
     RootParameter(ROOT_PARAMETER_GROUP        Group,
                   Uint32                      RootIndex,
-                  const D3D12_ROOT_PARAMETER& d3d12RootParam,
-                  Uint32                      DescriptorTableSize = 0) noexcept;
+                  const D3D12_ROOT_PARAMETER& d3d12RootParam) noexcept;
 
     // clang-format off
     RootParameter           (const RootParameter&)  = delete;
     RootParameter& operator=(const RootParameter&)  = delete;
-    RootParameter           (RootParameter&&)       = delete;
+    RootParameter           (RootParameter&&)       = default;
     RootParameter& operator=(RootParameter&&)       = delete;
     // clang-format on
 
-    // Initializes descriptor range at the specified index.
-    // The parameter type must be D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE.
-    void InitDescriptorRange(UINT                          RangeIndex,
-                             const D3D12_DESCRIPTOR_RANGE& Range);
-
-    ROOT_PARAMETER_GROUP GetGroup() const { return m_Group; }
-
-    static constexpr D3D12_DESCRIPTOR_RANGE_TYPE InvalidDescriptorRangeType = static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(0xFFFFFFFF);
-
     Uint32 GetDescriptorTableSize() const
     {
-        VERIFY(m_d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Incorrect parameter type: descriptor table is expected");
-        return m_DescriptorTableSize;
+        VERIFY(d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+               "Incorrect parameter type: descriptor table is expected");
+
+        // All descriptors in the table are tightly packed, so the table size is given
+        // by the end of the last range
+        const auto& d3d12Tbl = d3d12RootParam.DescriptorTable;
+        VERIFY(d3d12Tbl.NumDescriptorRanges > 0, "Descriptor table must contain at least one range");
+        const auto& d3d12LastRange = d3d12Tbl.pDescriptorRanges[d3d12Tbl.NumDescriptorRanges - 1];
+        VERIFY(d3d12LastRange.NumDescriptors > 0, "The range must not be empty");
+        return d3d12LastRange.OffsetInDescriptorsFromTableStart + d3d12LastRange.NumDescriptors;
     }
 
-    D3D12_SHADER_VISIBILITY   GetShaderVisibility() const { return m_d3d12RootParam.ShaderVisibility; }
-    D3D12_ROOT_PARAMETER_TYPE GetParameterType() const { return m_d3d12RootParam.ParameterType; }
-
-    Uint32 GetLocalRootIndex() const { return m_RootIndex; }
-
-    operator const D3D12_ROOT_PARAMETER&() const { return m_d3d12RootParam; }
+    D3D12_SHADER_VISIBILITY   GetShaderVisibility() const { return d3d12RootParam.ShaderVisibility; }
+    D3D12_ROOT_PARAMETER_TYPE GetParameterType() const { return d3d12RootParam.ParameterType; }
 
     bool operator==(const RootParameter& rhs) const;
     bool operator!=(const RootParameter& rhs) const { return !(*this == rhs); }
 
     size_t GetHash() const;
-
-#ifdef DILIGENT_DEBUG
-    void DbgValidateAsTable() const;
-    void DbgValidateAsView() const;
-#endif
-
-private:
-    const D3D12_ROOT_PARAMETER m_d3d12RootParam;
-    const Uint16               m_RootIndex;
-    const ROOT_PARAMETER_GROUP m_Group;
-    Uint32                     m_DescriptorTableSize = 0;
 };
 
 
 class RootParamsManager
 {
 public:
-    RootParamsManager(IMemoryAllocator& MemAllocator);
+    RootParamsManager() noexcept {}
+    ~RootParamsManager();
 
     // clang-format off
     RootParamsManager           (const RootParamsManager&) = delete;
@@ -126,23 +116,14 @@ public:
         return m_pRootViews[ViewInd];
     }
 
-    // Adds a new root view parameter and returns the pointer to it.
-    RootParameter* AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType,
-                               Uint32                    RootIndex,
-                               UINT                      Register,
-                               UINT                      RegisterSpace,
-                               D3D12_SHADER_VISIBILITY   Visibility,
-                               ROOT_PARAMETER_GROUP      RootType);
-
-    // Adds a new root table parameter and returns the pointer to it.
-    RootParameter* AddRootTable(Uint32                  RootIndex,
-                                D3D12_SHADER_VISIBILITY Visibility,
-                                ROOT_PARAMETER_GROUP    RootType,
-                                Uint32                  NumRangesInNewTable = 1);
-
-    // Adds NumExtraRanges descriptor ranges to the root table at index RootTableInd
-    // and returns the pointer to the table.
-    RootParameter* ExtendRootTable(Uint32 RootTableInd, Uint32 NumExtraRanges = 1);
+    Uint32 GetTotalSrvCbvUavSlots(ROOT_PARAMETER_GROUP Group) const
+    {
+        return m_TotalSrvCbvUavSlots[Group];
+    }
+    Uint32 GetTotalSamplerSlots(ROOT_PARAMETER_GROUP Group) const
+    {
+        return m_TotalSamplerSlots[Group];
+    }
 
     template <class TOperation>
     void ProcessRootTables(TOperation) const;
@@ -150,23 +131,18 @@ public:
     bool operator==(const RootParamsManager& RootParams) const;
 
 private:
-    // Extends current parameters set by adding NumExtraRootTables root tables,
-    // NumExtraRootViews root views, and adding NumExtraDescriptorRanges
-    // descriptor ranges to the root table at index RootTableToAddRanges.
-    void Extend(Uint32               NumExtraRootTables,
-                const RootParameter* ExtraRootTables,
-                Uint32               NumExtraRootViews,
-                const RootParameter* ExtraRootViews,
-                Uint32               NumExtraDescriptorRanges = 0,
-                Uint32               RootTableToAddRanges     = ~0u);
+    friend class RootParamsBuilder;
 
-    IMemoryAllocator&                                         m_MemAllocator;
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
 
-    Uint32         m_NumRootTables = 0;
-    Uint32         m_NumRootViews  = 0;
-    RootParameter* m_pRootTables   = nullptr;
-    RootParameter* m_pRootViews    = nullptr;
+    Uint32 m_NumRootTables = 0;
+    Uint32 m_NumRootViews  = 0;
+
+    const RootParameter* m_pRootTables = nullptr;
+    const RootParameter* m_pRootViews  = nullptr;
+
+    std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSrvCbvUavSlots = {};
+    std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT> m_TotalSamplerSlots   = {};
 };
 
 template <class TOperation>
@@ -174,21 +150,86 @@ __forceinline void RootParamsManager::ProcessRootTables(TOperation Operation) co
 {
     for (Uint32 rt = 0; rt < m_NumRootTables; ++rt)
     {
-        auto&                       RootTable  = GetRootTable(rt);
-        auto                        RootInd    = RootTable.GetLocalRootIndex();
-        const D3D12_ROOT_PARAMETER& D3D12Param = RootTable;
+        const auto& RootTable  = GetRootTable(rt);
+        const auto  RootInd    = RootTable.RootIndex;
+        const auto& d3d12Param = RootTable.d3d12RootParam;
 
-        VERIFY_EXPR(D3D12Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
+        VERIFY_EXPR(d3d12Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 
-        auto& d3d12Table = D3D12Param.DescriptorTable;
-        VERIFY(d3d12Table.NumDescriptorRanges > 0 && RootTable.GetDescriptorTableSize() > 0, "Unexepected empty descriptor table");
+        const auto& d3d12Table = d3d12Param.DescriptorTable;
+        VERIFY(RootTable.GetDescriptorTableSize() > 0, "Unexepected empty descriptor table");
         bool                       IsResourceTable = d3d12Table.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
         D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType     = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
 #ifdef DILIGENT_DEBUG
         dbgHeapType = IsResourceTable ? D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV : D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 #endif
-        Operation(RootInd, RootTable, D3D12Param, IsResourceTable, dbgHeapType);
+        Operation(RootInd, RootTable, d3d12Param, IsResourceTable, dbgHeapType);
     }
 }
+
+class RootParamsBuilder
+{
+public:
+    RootParamsBuilder();
+
+    // Allocates root parameter slot for the given resource.
+    void AllocateResourceSlot(SHADER_TYPE                   ShaderStages,
+                              SHADER_RESOURCE_VARIABLE_TYPE VariableType,
+                              D3D12_DESCRIPTOR_RANGE_TYPE   RangeType,
+                              Uint32                        ArraySize,
+                              bool                          IsRootView,
+                              Uint32                        Register,
+                              Uint32                        Space,
+                              Uint32&                       RootIndex,
+                              Uint32&                       OffsetFromTableStart);
+
+    void InitializeMgr(IMemoryAllocator& MemAllocator, RootParamsManager& ParamsMgr);
+
+private:
+    // Adds a new root view parameter and returns the reference to it.
+    RootParameter& AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType,
+                               Uint32                    RootIndex,
+                               UINT                      Register,
+                               UINT                      RegisterSpace,
+                               D3D12_SHADER_VISIBILITY   Visibility,
+                               ROOT_PARAMETER_GROUP      RootType);
+
+    struct RootTableData;
+    // Adds a new root table parameter and returns the reference to it.
+    RootTableData& AddRootTable(Uint32                  RootIndex,
+                                D3D12_SHADER_VISIBILITY Visibility,
+                                ROOT_PARAMETER_GROUP    RootType,
+                                Uint32                  NumRangesInNewTable = 1);
+
+
+private:
+    struct RootTableData
+    {
+        RootTableData(Uint32                  _RootIndex,
+                      D3D12_SHADER_VISIBILITY _Visibility,
+                      ROOT_PARAMETER_GROUP    _Group,
+                      Uint32                  _NumRanges);
+        void Extend(Uint32 NumExtraRanges);
+
+        const Uint32               RootIndex;
+        const ROOT_PARAMETER_GROUP Group;
+        D3D12_ROOT_PARAMETER       d3d12RootParam{};
+
+        std::vector<D3D12_DESCRIPTOR_RANGE> Ranges;
+    };
+    std::vector<RootTableData> m_RootTables;
+    std::vector<RootParameter> m_RootViews;
+
+    static constexpr int InvalidRootTableIndex = -1;
+
+    // The array below contains the index of a CBV/SRV/UAV root table in m_RootTables
+    // (NOT the Root Index!), for every root parameter group (static/mutable, dynamic)
+    // and every shader visbility, or -1, if the table is not yet assigned to the combination.
+    // Note: max(D3D12_SHADER_VISIBILITY) == D3D12_SHADER_VISIBILITY_MESH == 7
+    std::array<std::array<int, 8>, ROOT_PARAMETER_GROUP_COUNT> m_SrvCbvUavRootTablesMap = {};
+
+    // This array contains the same data for Sampler root table
+    std::array<std::array<int, 8>, ROOT_PARAMETER_GROUP_COUNT> m_SamplerRootTablesMap = {};
+};
 
 } // namespace Diligent
