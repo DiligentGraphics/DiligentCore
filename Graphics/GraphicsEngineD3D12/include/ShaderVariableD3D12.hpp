@@ -73,7 +73,7 @@ namespace Diligent
 
 class ShaderVariableD3D12Impl;
 
-// sizeof(ShaderVariableManagerD3D12) == 32 (x64, msvc, Release)
+// sizeof(ShaderVariableManagerD3D12) == 40 (x64, msvc, Release)
 class ShaderVariableManagerD3D12
 {
 public:

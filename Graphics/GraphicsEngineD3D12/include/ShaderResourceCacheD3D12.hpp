@@ -141,8 +141,6 @@ public:
                                            const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType) const
         {
             VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type");
-            //VERIFY(dbgRefShaderType == SHADER_TYPE_UNKNOWN || m_dbgShaderType == SHADER_TYPE_UNKNOWN || m_dbgShaderType == dbgRefShaderType, "Incosistent shader type");
-
             VERIFY(OffsetFromTableStart < m_NumResources, "Root table is not large enough to store descriptor at offset ", OffsetFromTableStart);
             return m_pResources[OffsetFromTableStart];
         }
@@ -163,8 +161,7 @@ public:
                              bool                             isDynamic)
         {
             VERIFY_EXPR(m_NumResources == MaxOffset);
-            m_dbgHeapType = dbgDescriptorHeapType;
-            //m_dbgShaderType = dbgRefShaderType;
+            m_dbgHeapType  = dbgDescriptorHeapType;
             m_dbgIsDynamic = isDynamic;
         }
 
@@ -176,9 +173,8 @@ public:
 
     private:
 #ifdef DILIGENT_DEBUG
-        D3D12_DESCRIPTOR_HEAP_TYPE m_dbgHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-        //SHADER_TYPE                m_dbgShaderType = SHADER_TYPE_UNKNOWN;
-        bool m_dbgIsDynamic = false;
+        D3D12_DESCRIPTOR_HEAP_TYPE m_dbgHeapType  = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+        bool                       m_dbgIsDynamic = false;
 #endif
 
         Resource* const m_pResources = nullptr;

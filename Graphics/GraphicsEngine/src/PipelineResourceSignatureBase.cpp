@@ -63,6 +63,9 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         if (Res.Name == nullptr)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Name must not be null");
 
+        if (Res.Name[0] == '\0')
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Name must not be empty");
+
         if (Res.ShaderStages == SHADER_TYPE_UNKNOWN)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN");
 
@@ -201,6 +204,9 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         const auto& SamDesc = Desc.ImmutableSamplers[i];
         if (SamDesc.SamplerOrTextureName == nullptr)
             LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be null");
+
+        if (SamDesc.SamplerOrTextureName[0] == '\0')
+            LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be empty");
 
         auto& UsedStages = ImtblSamShaderStages[SamDesc.SamplerOrTextureName];
         if ((UsedStages & SamDesc.ShaderStages) != 0)

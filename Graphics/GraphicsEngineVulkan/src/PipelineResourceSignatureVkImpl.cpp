@@ -710,8 +710,6 @@ PipelineResourceSignatureVkImpl::~PipelineResourceSignatureVkImpl()
 
 void PipelineResourceSignatureVkImpl::Destruct()
 {
-    TPipelineResourceSignatureBase::Destruct();
-
     for (auto& Layout : m_VkDescrSetLayouts)
     {
         if (Layout)
@@ -755,6 +753,8 @@ void PipelineResourceSignatureVkImpl::Destruct()
         RawAllocator.Free(pRawMem);
         m_pResourceAttribs = nullptr;
     }
+
+    TPipelineResourceSignatureBase::Destruct();
 }
 
 bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSignatureVkImpl& Other) const

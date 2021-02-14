@@ -50,7 +50,7 @@ inline bool ResourcesCompatible(const PipelineResourceSignatureD3D12Impl::Resour
 {
     // Ignore sampler index, signature root index & offset.
     // clang-format off
-    return lhs.Register               == rhs.Register               &&
+    return lhs.Register                == rhs.Register                &&
            lhs.Space                   == rhs.Space                   &&
            lhs.SRBRootIndex            == rhs.SRBRootIndex            &&
            lhs.SRBOffsetFromTableStart == rhs.SRBOffsetFromTableStart &&
@@ -109,6 +109,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
                 // CBVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_CBV (2)
                 // Samplers at root index D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER (3)
                 const Uint32 RootIndex = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
+                VERIFY_EXPR(ResDesc.ArraySize > 0);
                 StaticResCacheTblSizes[RootIndex] += ResDesc.ArraySize;
             }
         }
@@ -351,8 +352,6 @@ PipelineResourceSignatureD3D12Impl::~PipelineResourceSignatureD3D12Impl()
 
 void PipelineResourceSignatureD3D12Impl::Destruct()
 {
-    TPipelineResourceSignatureBase::Destruct();
-
     if (m_pResourceAttribs == nullptr)
         return; // memory is not allocated
 
@@ -390,6 +389,8 @@ void PipelineResourceSignatureD3D12Impl::Destruct()
         RawAllocator.Free(pRawMem);
         m_pResourceAttribs = nullptr;
     }
+
+    TPipelineResourceSignatureBase::Destruct();
 }
 
 bool PipelineResourceSignatureD3D12Impl::IsCompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const

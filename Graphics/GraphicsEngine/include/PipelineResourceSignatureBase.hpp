@@ -132,9 +132,10 @@ protected:
         {
             const auto& Res = Desc.Resources[i];
 
-            VERIFY(Res.Name != nullptr, "Name can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
-            VERIFY(Res.ShaderStages != SHADER_TYPE_UNKNOWN, "ShaderStages can't be SHADER_TYPE_UNKNOWN. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
-            VERIFY(Res.ArraySize != 0, "ArraySize can't be 0. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+            VERIFY(Res.Name != nullptr, "Name can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+            VERIFY(Res.Name[0] != '\0', "Name can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+            VERIFY(Res.ShaderStages != SHADER_TYPE_UNKNOWN, "ShaderStages can't be SHADER_TYPE_UNKNOWN. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+            VERIFY(Res.ArraySize != 0, "ArraySize can't be 0. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
 
             Allocator.AddSpaceForString(Res.Name);
         }
@@ -142,7 +143,9 @@ protected:
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
             VERIFY(Desc.ImmutableSamplers[i].SamplerOrTextureName != nullptr,
-                   "SamplerOrTextureName can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+                   "SamplerOrTextureName can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+            VERIFY(Desc.ImmutableSamplers[i].SamplerOrTextureName[0] != '\0',
+                   "SamplerOrTextureName can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
 
             Allocator.AddSpaceForString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
         }
@@ -160,7 +163,8 @@ protected:
         {
             auto& Dst = pResources[i];
             Dst       = Desc.Resources[i];
-            Dst.Name  = Allocator.CopyString(Desc.Resources[i].Name);
+            VERIFY_EXPR(Desc.Resources[i].Name != nullptr && Desc.Resources[i].Name[0] != '\0');
+            Dst.Name = Allocator.CopyString(Desc.Resources[i].Name);
 
             ++m_ResourceOffsets[Dst.VarType + 1];
         }
@@ -186,8 +190,9 @@ protected:
 
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
-            auto& Dst                = pSamplers[i];
-            Dst                      = Desc.ImmutableSamplers[i];
+            auto& Dst = pSamplers[i];
+            Dst       = Desc.ImmutableSamplers[i];
+            VERIFY_EXPR(Desc.ImmutableSamplers[i].SamplerOrTextureName != nullptr && Desc.ImmutableSamplers[i].SamplerOrTextureName[0] != '\0');
             Dst.SamplerOrTextureName = Allocator.CopyString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
         }
 
@@ -274,6 +279,7 @@ protected:
 protected:
     size_t m_Hash = 0;
 
+    // Resource offsets (e.g. index of the first resource), for each variable type.
     std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_ResourceOffsets = {};
 
     // Shader stages that have resources.
