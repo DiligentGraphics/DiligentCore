@@ -45,25 +45,6 @@ namespace Diligent
 namespace
 {
 
-Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
-                           const PipelineResourceSignatureDesc& Desc,
-                           const char*                          SamplerSuffix)
-{
-    for (Uint32 s = 0; s < Desc.NumImmutableSamplers; ++s)
-    {
-        const auto& ImtblSam = Desc.ImmutableSamplers[s];
-        if (((ImtblSam.ShaderStages & Res.ShaderStages) != 0) && StreqSuff(Res.Name, ImtblSam.SamplerOrTextureName, SamplerSuffix))
-        {
-            DEV_CHECK_ERR((ImtblSam.ShaderStages & Res.ShaderStages) == Res.ShaderStages,
-                          "Immutable sampler '", ImtblSam.SamplerOrTextureName,
-                          "' is specified for only some of the shader stages that resource '", Res.Name, "' is defined for.");
-            return s;
-        }
-    }
-
-    return -1;
-}
-
 inline bool ResourcesCompatible(const PipelineResourceSignatureD3D12Impl::ResourceAttribs& lhs,
                                 const PipelineResourceSignatureD3D12Impl::ResourceAttribs& rhs)
 {
@@ -254,7 +235,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             NumResources[DescriptorRangeType] += ResDesc.ArraySize;
 
         const Int32 SrcImmutableSamplerInd = ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER ?
-            FindImmutableSampler(ResDesc, m_Desc, GetCombinedSamplerSuffix()) :
+            FindImmutableSampler(m_Desc.ImmutableSamplers, m_Desc.NumImmutableSamplers, ResDesc.ShaderStages, ResDesc.Name, GetCombinedSamplerSuffix()) :
             -1;
 
         const auto AssignedSamplerInd = (SrcImmutableSamplerInd == -1 && ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV) ?

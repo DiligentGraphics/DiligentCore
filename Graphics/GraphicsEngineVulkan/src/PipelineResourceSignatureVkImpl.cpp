@@ -221,19 +221,7 @@ Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
         return -1;
     }
 
-    for (Uint32 s = 0; s < Desc.NumImmutableSamplers; ++s)
-    {
-        const auto& ImtblSam = Desc.ImmutableSamplers[s];
-        if (((ImtblSam.ShaderStages & Res.ShaderStages) != 0) && StreqSuff(Res.Name, ImtblSam.SamplerOrTextureName, SamplerSuffix))
-        {
-            DEV_CHECK_ERR((ImtblSam.ShaderStages & Res.ShaderStages) == Res.ShaderStages,
-                          "Immutable sampler '", ImtblSam.SamplerOrTextureName,
-                          "' is specified for only some of the shader stages that resource '", Res.Name, "' is defined for.");
-            return s;
-        }
-    }
-
-    return -1;
+    return Diligent::FindImmutableSampler(Desc.ImmutableSamplers, Desc.NumImmutableSamplers, Res.ShaderStages, Res.Name, SamplerSuffix);
 }
 
 } // namespace
