@@ -172,7 +172,7 @@ public:
                                                               RESOURCE_STATE        InitialState,
                                                               ITopLevelAS**         ppTLAS) override final;
 
-    void CreateRootSignature(const RefCntAutoPtr<class PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount, RootSignatureD3D12** ppRootSig);
+    void CreateRootSignature(const RefCntAutoPtr<class PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount, size_t Hash, RootSignatureD3D12** ppRootSig);
 
     RootSignatureCacheD3D12& GetRootSignatureCache() { return m_RootSignatureCache; }
 

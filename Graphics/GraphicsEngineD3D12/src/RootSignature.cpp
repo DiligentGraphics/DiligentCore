@@ -41,10 +41,12 @@ namespace Diligent
 RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                                      pRefCounters,
                                        RenderDeviceD3D12Impl*                                   pDeviceD3D12Impl,
                                        const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures,
-                                       Uint32                                                   SignatureCount) :
+                                       Uint32                                                   SignatureCount,
+                                       size_t                                                   Hash) :
     ObjectBase<IObject>{pRefCounters},
     m_SignatureCount{static_cast<Uint8>(SignatureCount)},
-    m_pDeviceD3D12Impl{pDeviceD3D12Impl}
+    m_Hash{Hash},
+    m_Cache{pDeviceD3D12Impl->GetRootSignatureCache()}
 {
     VERIFY(m_SignatureCount == SignatureCount, "Signature count (", SignatureCount, ") exceeds maximum representable value");
 
@@ -58,25 +60,15 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
         }
     }
 
-    if (m_SignatureCount > 0)
-    {
-        HashCombine(m_Hash, m_SignatureCount);
-        for (Uint32 i = 0; i < m_SignatureCount; ++i)
-        {
-            if (m_Signatures[i] != nullptr)
-                HashCombine(m_Hash, m_Signatures[i]->GetHash());
-            else
-                HashCombine(m_Hash, 0);
-        }
-    }
+    Finalize(pDeviceD3D12Impl);
 }
 
 RootSignatureD3D12::~RootSignatureD3D12()
 {
-    m_pDeviceD3D12Impl->GetRootSignatureCache().OnDestroyRootSig(this);
+    m_Cache.OnDestroyRootSig(this);
 }
 
-void RootSignatureD3D12::Finalize()
+void RootSignatureD3D12::Finalize(RenderDeviceD3D12Impl* pDeviceD3D12Impl)
 {
     VERIFY(m_pd3d12RootSignature == nullptr, "This root signature is already initialized");
 
@@ -222,12 +214,11 @@ void RootSignatureD3D12::Finalize()
     }
     CHECK_D3D_RESULT_THROW(hr, "Failed to serialize root signature");
 
-    auto* pd3d12Device = m_pDeviceD3D12Impl->GetD3D12Device();
+    auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
     hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
 }
-
 
 
 LocalRootSignatureD3D12::LocalRootSignatureD3D12(const char* pCBName, Uint32 ShaderRecordSize) :
@@ -281,11 +272,12 @@ bool LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint32 RegisterSpace
 }
 
 
-
-bool RootSignatureCacheD3D12::RootSignatureCompare::operator()(const RootSignatureD3D12* lhs, const RootSignatureD3D12* rhs) const noexcept
+namespace
+{
+bool RootSignatureCompare(const RootSignatureD3D12* lhs, const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount) noexcept
 {
     const Uint32 LSigCount = lhs->GetSignatureCount();
-    const Uint32 RSigCount = rhs->GetSignatureCount();
+    const Uint32 RSigCount = SignatureCount;
 
     if (LSigCount != RSigCount)
         return false;
@@ -293,7 +285,7 @@ bool RootSignatureCacheD3D12::RootSignatureCompare::operator()(const RootSignatu
     for (Uint32 i = 0; i < LSigCount; ++i)
     {
         auto* pLSig = lhs->GetSignature(i);
-        auto* pRSig = rhs->GetSignature(i);
+        auto* pRSig = ppSignatures[i].RawPtr();
 
         if (pLSig == pRSig)
             continue;
@@ -306,6 +298,7 @@ bool RootSignatureCacheD3D12::RootSignatureCompare::operator()(const RootSignatu
     }
     return true;
 }
+} // namespace
 
 RootSignatureCacheD3D12::RootSignatureCacheD3D12(RenderDeviceD3D12Impl& DeviceD3D12Impl) :
     m_DeviceD3D12Impl{DeviceD3D12Impl}
@@ -319,38 +312,54 @@ RootSignatureCacheD3D12::~RootSignatureCacheD3D12()
 
 RefCntAutoPtr<RootSignatureD3D12> RootSignatureCacheD3D12::GetRootSig(const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount)
 {
-    RefCntAutoPtr<RootSignatureD3D12> pNewRootSig;
-    m_DeviceD3D12Impl.CreateRootSignature(ppSignatures, SignatureCount, &pNewRootSig);
-
-    if (pNewRootSig == nullptr)
-        return {};
-
-    RefCntAutoPtr<RootSignatureD3D12> Result;
-    bool                              Inserted = false;
+    size_t Hash = 0;
+    if (SignatureCount)
     {
-        std::lock_guard<std::mutex> Lock{m_RootSigCacheGuard};
-
-        auto IterAndFlag = m_RootSigCache.insert(pNewRootSig.RawPtr());
-        Inserted         = IterAndFlag.second;
-
-        if (Inserted)
+        HashCombine(Hash, SignatureCount);
+        for (Uint32 i = 0; i < SignatureCount; ++i)
         {
-            pNewRootSig->Finalize();
-            Result = std::move(pNewRootSig);
+            if (ppSignatures[i] != nullptr)
+            {
+                VERIFY(ppSignatures[i]->GetDesc().BindingIndex == i, "Signature placed to another binding index");
+                HashCombine(Hash, ppSignatures[i]->GetHash());
+            }
+            else
+                HashCombine(Hash, 0);
         }
-        else
-            Result = *IterAndFlag.first;
     }
-    return Result;
+
+    std::lock_guard<std::mutex> Lock{m_RootSigCacheGuard};
+
+    auto Range = m_RootSigCache.equal_range(Hash);
+    for (auto Iter = Range.first; Iter != Range.second; ++Iter)
+    {
+        if (auto Ptr = Iter->second.Lock())
+        {
+            if (RootSignatureCompare(Ptr, ppSignatures, SignatureCount))
+                return Ptr;
+        }
+    }
+
+    RefCntAutoPtr<RootSignatureD3D12> pNewRootSig;
+    m_DeviceD3D12Impl.CreateRootSignature(ppSignatures, SignatureCount, Hash, &pNewRootSig);
+
+    m_RootSigCache.emplace(Hash, pNewRootSig);
+    return pNewRootSig;
 }
 
 void RootSignatureCacheD3D12::OnDestroyRootSig(RootSignatureD3D12* pRootSig)
 {
     std::lock_guard<std::mutex> Lock{m_RootSigCacheGuard};
 
-    auto Iter = m_RootSigCache.find(pRootSig);
-    if (Iter != m_RootSigCache.end() && *Iter == pRootSig)
-        m_RootSigCache.erase(Iter);
+    auto Range = m_RootSigCache.equal_range(pRootSig->GetHash());
+
+    for (auto Iter = Range.first; Iter != Range.second;)
+    {
+        if (!Iter->second.IsValid())
+            Iter = m_RootSigCache.erase(Iter);
+        else
+            ++Iter;
+    }
 }
 
 } // namespace Diligent
