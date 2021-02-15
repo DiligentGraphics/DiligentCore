@@ -407,7 +407,9 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
     {
         const auto& SrcView        = m_RootViews[rv];
         const auto& d3d12RootParam = SrcView.d3d12RootParam;
-        VERIFY(d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV || d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV || d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV,
+        VERIFY((d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
+                d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
+                d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV),
                "Unexpected parameter type: SBV, SRV or UAV is expected");
         new (pRootViews + rv) RootParameter{SrcView.Group, SrcView.RootIndex, d3d12RootParam};
     }

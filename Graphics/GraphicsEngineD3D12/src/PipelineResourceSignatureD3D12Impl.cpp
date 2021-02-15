@@ -260,27 +260,14 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[AssignedSamplerInd];
         }
 
-        const auto DescriptorRangeType = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
-        Uint32     Register            = 0;
-        Uint32     Space               = 0;
-        if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0)
-        {
-            // All run-time sized arrays are allocated in separate spaces.
-            Space    = NextRTSizedArraySpace++;
-            Register = 0;
-        }
-        else
-        {
-            // Normal resources go into space 0.
-            Space    = 0;
-            Register = NumResources[DescriptorRangeType];
-            NumResources[DescriptorRangeType] += ResDesc.ArraySize;
-        }
-
-        Uint32 SRBRootIndex            = ResourceAttribs::InvalidSRBRootIndex;
-        Uint32 SRBOffsetFromTableStart = ResourceAttribs::InvalidOffset;
-        Uint32 SigRootIndex            = ResourceAttribs::InvalidSigRootIndex;
-        Uint32 SigOffsetFromTableStart = ResourceAttribs::InvalidOffset;
+        const auto DescriptorRangeType     = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
+        const bool IsRTSizedArray          = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0;
+        Uint32     Register                = 0;
+        Uint32     Space                   = 0;
+        Uint32     SRBRootIndex            = ResourceAttribs::InvalidSRBRootIndex;
+        Uint32     SRBOffsetFromTableStart = ResourceAttribs::InvalidOffset;
+        Uint32     SigRootIndex            = ResourceAttribs::InvalidSigRootIndex;
+        Uint32     SigOffsetFromTableStart = ResourceAttribs::InvalidOffset;
 
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
@@ -298,6 +285,20 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
         // Do not allocate resource slot for immutable samplers that are also defined as resource
         if (!(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && SrcImmutableSamplerInd >= 0))
         {
+            if (IsRTSizedArray)
+            {
+                // All run-time sized arrays are allocated in separate spaces.
+                Space    = NextRTSizedArraySpace++;
+                Register = 0;
+            }
+            else
+            {
+                // Normal resources go into space 0.
+                Space    = 0;
+                Register = NumResources[DescriptorRangeType];
+                NumResources[DescriptorRangeType] += ResDesc.ArraySize;
+            }
+
             const auto UseDynamicOffset  = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
             const auto IsFormattedBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
 
@@ -322,8 +323,8 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             }
 
             ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType, d3d12RootParamType,
-                                               DescriptorRangeType, ResDesc.ArraySize, Register, Space, SRBRootIndex,
-                                               SRBOffsetFromTableStart);
+                                               DescriptorRangeType, ResDesc.ArraySize, Register, Space,
+                                               SRBRootIndex, SRBOffsetFromTableStart);
         }
         else
         {
@@ -708,14 +709,14 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
 
     for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
     {
-        const auto& ResDesc = GetResourceDesc(r);
-        const auto& Attr    = GetResourceAttribs(r);
+        const auto& ResDesc   = GetResourceDesc(r);
+        const auto& Attr      = GetResourceAttribs(r);
+        const bool  IsSampler = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
         VERIFY_EXPR(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
-        if (Attr.IsImmutableSamplerAssigned())
+        if (IsSampler && Attr.IsImmutableSamplerAssigned())
             continue;
 
-        const bool  IsSampler    = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
         const auto  HeapType     = IsSampler ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         const auto  DstRootIndex = Attr.RootIndex(DstCacheType);
         const auto& SrcRootTable = SrcResourceCache.GetRootTable(Attr.RootIndex(SrcCacheType));
@@ -769,7 +770,7 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
                     VERIFY_EXPR(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0 || DstRes.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
 
                     // Root views are not assigned space in the GPU-visible descriptor heap allocation
-                    if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0 && SrcRes.CPUDescriptorHandle.ptr != 0)
+                    if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
                     {
                         VERIFY_EXPR(SrcRes.CPUDescriptorHandle.ptr != 0);
                         d3d12Device->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, SrcRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -1300,10 +1301,6 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
             VERIFY_EXPR(DstRes.CPUDescriptorHandle.ptr != 0);
 
             GetD3D12Device()->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        }
-        else
-        {
-            VERIFY(dbgParamType == D3D12_ROOT_PARAMETER_TYPE_CBV || dbgIsDynamic, "Descriptor in root table can be used only in dynamic tables.");
         }
 
         auto& BoundDynamicCBsCounter = ResourceCache.GetBoundDynamicCBsCounter();

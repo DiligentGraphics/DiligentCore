@@ -114,6 +114,18 @@ private:
 
     void Destruct();
 
+    struct ResourceInfo
+    {
+        PipelineResourceSignatureD3D12Impl* Signature = nullptr;
+        PipelineResourceDesc const*         ResDesc   = nullptr;
+
+        explicit operator bool() const
+        {
+            return Signature != nullptr && ResDesc != nullptr;
+        }
+    };
+    ResourceInfo GetResourceInfo(const char* Name, SHADER_TYPE Stage) const;
+
 private:
     CComPtr<ID3D12DeviceChild>        m_pd3d12PSO;
     RefCntAutoPtr<RootSignatureD3D12> m_RootSig;

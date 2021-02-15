@@ -118,17 +118,23 @@ public:
 
     bool IsShaderRecord(const D3DShaderResourceAttribs& CB);
 
-    ID3D12RootSignature* Create(ID3D12Device* pDevice, Uint32 RegisterSpace);
+    bool Create(ID3D12Device* pDevice, Uint32 RegisterSpace);
 
-    bool        IsDefined() const { return m_ShaderRecordSize > 0 && m_pName != nullptr; }
-    const char* GetName() const { return m_pName; }
-    Uint32      GetShaderRegister() const { return 0; }
-    Uint32      GetRegisterSpace() const { return m_RegisterSpace; }
+    ID3D12RootSignature* GetD3D12RootSignature() const { return m_pd3d12RootSignature; }
+    bool                 IsDefined() const { return m_ShaderRecordSize > 0 && m_pName != nullptr; }
+    const char*          GetName() const { return m_pName; }
+    Uint32               GetShaderRegister() const { return 0; }
+
+    Uint32 GetRegisterSpace() const
+    {
+        VERIFY_EXPR(m_RegisterSpace != ~0U);
+        return m_RegisterSpace;
+    }
 
 private:
     const char*                  m_pName            = nullptr;
     const Uint32                 m_ShaderRecordSize = 0;
-    Uint32                       m_RegisterSpace    = 0;
+    Uint32                       m_RegisterSpace    = ~0u;
     CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
 };
 

@@ -248,14 +248,14 @@ bool LocalRootSignatureD3D12::IsShaderRecord(const D3DShaderResourceAttribs& CB)
     return false;
 }
 
-ID3D12RootSignature* LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint32 RegisterSpace)
+bool LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint32 RegisterSpace)
 {
     if (m_ShaderRecordSize == 0)
-        return nullptr;
+        return false;
+
+    VERIFY(m_RegisterSpace == ~0u || m_pd3d12RootSignature == nullptr, "This root signature is already created");
 
     m_RegisterSpace = RegisterSpace;
-
-    VERIFY(m_pd3d12RootSignature == nullptr, "This root signature is already created");
 
     D3D12_ROOT_SIGNATURE_DESC d3d12RootSignatureDesc = {};
     D3D12_ROOT_PARAMETER      d3d12Params            = {};
@@ -277,7 +277,7 @@ ID3D12RootSignature* LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint
     hr = pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_pd3d12RootSignature));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D12 local root signature");
 
-    return m_pd3d12RootSignature;
+    return true;
 }
 
 
