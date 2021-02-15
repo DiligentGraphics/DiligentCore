@@ -258,8 +258,6 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
         {
             VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
             SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[AssignedSamplerInd];
-            if (SrcImmutableSamplerInd >= 0)
-                AssignedSamplerInd = ResourceAttribs::InvalidSamplerInd;
         }
 
         const auto DescriptorRangeType = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
@@ -1563,8 +1561,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
 
             case SHADER_RESOURCE_TYPE_SAMPLER:
                 //DEV_CHECK_ERR(Signature.IsUsingSeparateSamplers(), "Samplers should not be set directly when using combined texture samplers");
-                if (Signature.IsUsingSeparateSamplers())
-                    CacheSampler(pObj);
+                CacheSampler(pObj);
                 break;
 
             case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
