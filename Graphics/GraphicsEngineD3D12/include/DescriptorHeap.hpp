@@ -275,7 +275,8 @@ public:
         rhs.m_MaxAllocatedSize           = 0;
 #ifdef DILIGENT_DEVELOPMENT
         m_AllocationsCounter.store(rhs.m_AllocationsCounter.load());
-        rhs.m_AllocationsCounter = 0;
+        rhs.m_AllocationsCounter      = 0;
+        m_pd3d12InvalidDescriptorHeap = std::move(rhs.m_pd3d12InvalidDescriptorHeap);
 #endif
     }
 
@@ -339,6 +340,12 @@ private:
 
 #ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_AllocationsCounter = 0;
+    // This descriptor heap is only used to copy invalid descriptors to
+    // a new allocated region. Using these descriptors will result in device
+    // removal. Note that using null descriptors is perfectly valid in D3D12
+    // and does not produce any errors.
+    static constexpr Uint32       InvalidDescriptorsCount = 128;
+    CComPtr<ID3D12DescriptorHeap> m_pd3d12InvalidDescriptorHeap;
 #endif
 
     // Note: when adding new members, do not forget to update move ctor
@@ -495,7 +502,7 @@ protected:
     RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
 
     const D3D12_DESCRIPTOR_HEAP_DESC m_HeapDesc;
-    CComPtr<ID3D12DescriptorHeap>    m_pd3d12DescriptorHeap;
+    CComPtr<ID3D12DescriptorHeap>    m_pd3d12DescriptorHeap; // Must be defined after m_HeapDesc
 
     const UINT m_DescriptorSize;
 

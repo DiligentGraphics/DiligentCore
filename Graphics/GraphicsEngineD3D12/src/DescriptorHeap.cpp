@@ -39,26 +39,108 @@ DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocato
                                                                  IDescriptorAllocator&             ParentAllocator,
                                                                  size_t                            ThisManagerId,
                                                                  const D3D12_DESCRIPTOR_HEAP_DESC& HeapDesc) :
-    // clang-format off
-    m_ParentAllocator            {ParentAllocator},
-    m_DeviceD3D12Impl            {DeviceD3D12Impl},
-    m_ThisManagerId              {ThisManagerId  },
-    m_HeapDesc                   {HeapDesc       },
-    m_DescriptorSize             {DeviceD3D12Impl.GetD3D12Device()->GetDescriptorHandleIncrementSize(m_HeapDesc.Type)},
-    m_NumDescriptorsInAllocation {HeapDesc.NumDescriptors},
-    m_FreeBlockManager           {HeapDesc.NumDescriptors, Allocator}
-// clang-format on
+    DescriptorHeapAllocationManager //
+    {
+        Allocator,
+        DeviceD3D12Impl,
+        ParentAllocator,
+        ThisManagerId,
+        [&HeapDesc, &DeviceD3D12Impl]() -> CComPtr<ID3D12DescriptorHeap> //
+        {
+            auto* pDevice = DeviceD3D12Impl.GetD3D12Device();
+
+            CComPtr<ID3D12DescriptorHeap> pd3d12DescriptorHeap;
+            pDevice->CreateDescriptorHeap(&HeapDesc, __uuidof(pd3d12DescriptorHeap), reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&pd3d12DescriptorHeap)));
+            return pd3d12DescriptorHeap;
+        }(),
+        0,                      // First descriptor
+        HeapDesc.NumDescriptors // Num descriptors
+    }
 {
-    auto pDevice = DeviceD3D12Impl.GetD3D12Device();
-
-    m_FirstCPUHandle.ptr = 0;
-    m_FirstGPUHandle.ptr = 0;
-
-    pDevice->CreateDescriptorHeap(&m_HeapDesc, __uuidof(m_pd3d12DescriptorHeap), reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&m_pd3d12DescriptorHeap)));
-    m_FirstCPUHandle = m_pd3d12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-    if (m_HeapDesc.Flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
-        m_FirstGPUHandle = m_pd3d12DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 }
+
+#ifdef DILIGENT_DEVELOPMENT
+namespace
+{
+
+CComPtr<ID3D12Resource> CreateDummyTexture(ID3D12Device* pd3d12Device, DXGI_FORMAT dxgiFmt, D3D12_RESOURCE_FLAGS d3d12ResourceFlags)
+{
+    D3D12_RESOURCE_DESC d3d12TexDesc{};
+    d3d12TexDesc.Dimension        = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    d3d12TexDesc.Alignment        = 0;
+    d3d12TexDesc.Width            = 128;
+    d3d12TexDesc.Height           = 128;
+    d3d12TexDesc.DepthOrArraySize = 1;
+    d3d12TexDesc.MipLevels        = 1;
+    d3d12TexDesc.Format           = dxgiFmt;
+    d3d12TexDesc.SampleDesc       = DXGI_SAMPLE_DESC{1, 0};
+    d3d12TexDesc.Layout           = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    d3d12TexDesc.Flags            = d3d12ResourceFlags;
+
+    D3D12_HEAP_PROPERTIES d3d12HeapProps{};
+    d3d12HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    d3d12HeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    d3d12HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    d3d12HeapProps.CreationNodeMask     = 1;
+    d3d12HeapProps.VisibleNodeMask      = 1;
+
+    CComPtr<ID3D12Resource> pd3d12Texture;
+
+    auto hr = pd3d12Device->CreateCommittedResource(&d3d12HeapProps, D3D12_HEAP_FLAG_NONE,
+                                                    &d3d12TexDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                                    __uuidof(pd3d12Texture),
+                                                    reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&pd3d12Texture)));
+    VERIFY_EXPR(SUCCEEDED(hr));
+    (void)hr;
+
+    return pd3d12Texture;
+}
+
+CComPtr<ID3D12DescriptorHeap> CreateInvalidDescriptorHeap(ID3D12Device* pd3d12Device, const D3D12_DESCRIPTOR_HEAP_DESC& InvalidHeapDesc)
+{
+    CComPtr<ID3D12DescriptorHeap> pd3d12InvalidDescriptorHeap;
+
+    pd3d12Device->CreateDescriptorHeap(&InvalidHeapDesc, __uuidof(pd3d12InvalidDescriptorHeap), reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&pd3d12InvalidDescriptorHeap)));
+    DEV_CHECK_ERR(pd3d12InvalidDescriptorHeap, "Failed to create Null descriptor heap");
+    const auto DescriptorSize = pd3d12Device->GetDescriptorHandleIncrementSize(InvalidHeapDesc.Type);
+    // Initialize descriptors with invalid handle - create a view and then delete the resource.
+    auto CPUHandle = pd3d12InvalidDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    if (InvalidHeapDesc.Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+    {
+        auto pDummyTex = CreateDummyTexture(pd3d12Device, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_NONE);
+
+        for (Uint32 i = 0; i < InvalidHeapDesc.NumDescriptors; ++i, CPUHandle.ptr += DescriptorSize)
+            pd3d12Device->CreateShaderResourceView(pDummyTex, nullptr, CPUHandle);
+    }
+    else if (InvalidHeapDesc.Type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+    {
+        auto pDummyTex = CreateDummyTexture(pd3d12Device, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+        for (Uint32 i = 0; i < InvalidHeapDesc.NumDescriptors; ++i, CPUHandle.ptr += DescriptorSize)
+            pd3d12Device->CreateRenderTargetView(pDummyTex, nullptr, CPUHandle);
+    }
+    else if (InvalidHeapDesc.Type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+    {
+        auto pDummyTex = CreateDummyTexture(pd3d12Device, DXGI_FORMAT_D32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+
+        for (Uint32 i = 0; i < InvalidHeapDesc.NumDescriptors; ++i, CPUHandle.ptr += DescriptorSize)
+            pd3d12Device->CreateDepthStencilView(pDummyTex, nullptr, CPUHandle);
+    }
+    else if (InvalidHeapDesc.Type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+    {
+        // Nothing can be done - sampler is not an object and initialized right in the heap.
+        // It is impossible to create invalid sampler.
+    }
+    else
+    {
+        UNEXPECTED("Unexpected heap type");
+    }
+
+    return pd3d12InvalidDescriptorHeap;
+}
+
+} // namespace
+#endif // DILIGENT_DEVELOPMENT
 
 // Uses subrange of descriptors in the existing D3D12 descriptor heap
 // that starts at offset FirstDescriptor and uses NumDescriptors descriptors
@@ -88,6 +170,15 @@ DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocato
         m_FirstGPUHandle = pd3d12DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
         m_FirstGPUHandle.ptr += m_DescriptorSize * FirstDescriptor;
     }
+
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        auto InvalidHeapDesc           = m_HeapDesc;
+        InvalidHeapDesc.NumDescriptors = InvalidDescriptorsCount;
+        InvalidHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        m_pd3d12InvalidDescriptorHeap  = CreateInvalidDescriptorHeap(DeviceD3D12Impl.GetD3D12Device(), InvalidHeapDesc);
+    }
+#endif
 }
 
 
@@ -124,6 +215,17 @@ DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Coun
 
 #ifdef DILIGENT_DEVELOPMENT
     ++m_AllocationsCounter;
+    // Copy invalid descriptors. If the descriptors are accessed, this will cause device removal.
+    {
+        auto*      pd3d12Device      = m_DeviceD3D12Impl.GetD3D12Device();
+        const auto InvalidCPUHandles = m_pd3d12InvalidDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+        auto       DstCPUHandle      = CPUHandle;
+        for (Uint32 FisrtDescr = 0; FisrtDescr < Count; FisrtDescr += InvalidDescriptorsCount, DstCPUHandle.ptr += InvalidDescriptorsCount)
+        {
+            auto NumDescrsToCopy = std::min(Count - FisrtDescr, InvalidDescriptorsCount);
+            pd3d12Device->CopyDescriptorsSimple(NumDescrsToCopy, DstCPUHandle, InvalidCPUHandles, m_HeapDesc.Type);
+        }
+    }
 #endif
 
     VERIFY(m_ThisManagerId < std::numeric_limits<Uint16>::max(), "ManagerID exceeds 16-bit range");
