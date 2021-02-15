@@ -543,6 +543,8 @@ D3D12_RENDER_PASS_ENDING_ACCESS_TYPE AttachmentStoreOpToD3D12EndingAccessType(AT
 
 D3D12_SHADER_VISIBILITY ShaderTypeToD3D12ShaderVisibility(SHADER_TYPE ShaderType)
 {
+    VERIFY(IsPowerOfTwo(ShaderType), "Only single shader stage should be provided");
+
     static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
@@ -793,40 +795,9 @@ D3D12_DESCRIPTOR_HEAP_TYPE D3D12DescriptorRangeTypeToD3D12HeapType(D3D12_DESCRIP
 
 D3D12_SHADER_VISIBILITY ShaderStagesToD3D12ShaderVisibility(SHADER_TYPE Stages)
 {
-    if (!IsPowerOfTwo(Stages))
-    {
-        return D3D12_SHADER_VISIBILITY_ALL;
-    }
-
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
-    switch (Stages)
-    {
-        // clang-format off
-        case SHADER_TYPE_PIXEL:     return D3D12_SHADER_VISIBILITY_PIXEL;
-        case SHADER_TYPE_VERTEX:    return D3D12_SHADER_VISIBILITY_VERTEX;
-        case SHADER_TYPE_GEOMETRY:  return D3D12_SHADER_VISIBILITY_GEOMETRY;
-        case SHADER_TYPE_HULL:      return D3D12_SHADER_VISIBILITY_HULL;
-        case SHADER_TYPE_DOMAIN:    return D3D12_SHADER_VISIBILITY_DOMAIN;
-
-#ifdef D3D12_H_HAS_MESH_SHADER
-        case SHADER_TYPE_AMPLIFICATION: return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
-        case SHADER_TYPE_MESH:          return D3D12_SHADER_VISIBILITY_MESH;
-#endif
-            // clang-format on
-
-        case SHADER_TYPE_COMPUTE:
-        case SHADER_TYPE_RAY_GEN:
-        case SHADER_TYPE_RAY_MISS:
-        case SHADER_TYPE_RAY_CLOSEST_HIT:
-        case SHADER_TYPE_RAY_ANY_HIT:
-        case SHADER_TYPE_RAY_INTERSECTION:
-        case SHADER_TYPE_CALLABLE:
-            return D3D12_SHADER_VISIBILITY_ALL;
-
-        default:
-            UNEXPECTED("Unknown shader type");
-            return D3D12_SHADER_VISIBILITY_ALL;
-    }
+    return IsPowerOfTwo(Stages) ?
+        ShaderTypeToD3D12ShaderVisibility(Stages) :
+        D3D12_SHADER_VISIBILITY_ALL;
 }
 
 } // namespace Diligent

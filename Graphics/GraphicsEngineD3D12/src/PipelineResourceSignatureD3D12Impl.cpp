@@ -190,26 +190,99 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
 
 void PipelineResourceSignatureD3D12Impl::CreateLayout()
 {
-    const Uint32 FirstSpace = GetBaseRegisterSpace();
-
-    std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> NumResources           = {};
-    std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> StaticResCacheTblSizes = {};
-
-    RootParamsBuilder ParamsBuilder;
+    // Index of the assigned sampler, for every texture SRV in m_Desc.Resources, or InvalidSamplerInd.
+    std::vector<Uint32> TextureSrvToAssignedSamplerInd(m_Desc.NumResources, ResourceAttribs::InvalidSamplerInd);
+    // Index of the immutable sampler for every sampler in m_Desc.Resources, or -1.
+    std::vector<int> ResourceToImmutableSamplerInd(m_Desc.NumResources, -1);
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const auto& ResDesc = m_Desc.Resources[i];
 
+        if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+        {
+            // We only need to search for immutable samplers for SHADER_RESOURCE_TYPE_SAMPLER.
+            // For SHADER_RESOURCE_TYPE_TEXTURE_SRV, we will look for the assigned sampler and check if it is immutable.
+
+            // Note that FindImmutableSampler() below will work properly both when combined texture samplers are used and when not:
+            //  - When combined texture samplers are used, sampler suffix will not be null,
+            //    and we will be looking for the 'Texture_sampler' name.
+            //  - When combined texture samplers are not used, sampler suffix will be null,
+            //    and we will be looking for the sampler name itself.
+            const auto SrcImmutableSamplerInd = FindImmutableSampler(m_Desc.ImmutableSamplers, m_Desc.NumImmutableSamplers, ResDesc.ShaderStages,
+                                                                     ResDesc.Name, GetCombinedSamplerSuffix());
+            if (SrcImmutableSamplerInd >= 0)
+            {
+                ResourceToImmutableSamplerInd[i] = SrcImmutableSamplerInd;
+                // Set the immutable sampler array size to match the resource array size
+                auto& DstImtblSampAttribs = m_ImmutableSamplers[SrcImmutableSamplerInd];
+                // One immutable sampler may be used by different arrays in different shader stages - use the maximum array size
+                DstImtblSampAttribs.ArraySize = std::max(DstImtblSampAttribs.ArraySize, ResDesc.ArraySize);
+            }
+        }
+
+        if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+        {
+            TextureSrvToAssignedSamplerInd[i] = FindAssignedSampler(ResDesc);
+        }
+    }
+
+    // The total number of resources (counting array size), for every descriptor range type
+    std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> NumResources = {};
+    // Static resource cache table sizes
+    std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> StaticResCacheTblSizes = {};
+
+    // Allocate registers for immutable samplers first
+    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+    {
+        auto& ImmutableSampler = m_ImmutableSamplers[i];
+
+        constexpr auto DescriptorRangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+
+        ImmutableSampler.RegisterSpace  = 0;
+        ImmutableSampler.ShaderRegister = NumResources[DescriptorRangeType];
+        NumResources[DescriptorRangeType] += ImmutableSampler.ArraySize;
+    }
+
+
+    RootParamsBuilder ParamsBuilder;
+
+    Uint32 NextRTSizedArraySpace = 1;
+    for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
+    {
+        const auto& ResDesc = m_Desc.Resources[i];
         VERIFY(i == 0 || ResDesc.VarType >= m_Desc.Resources[i - 1].VarType, "Resources must be sorted by variable type");
 
-        const bool IsRuntimeSizedArray     = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0;
-        const auto DescriptorRangeType     = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
-        Uint32     Register                = IsRuntimeSizedArray ? 0 : NumResources[DescriptorRangeType];
-        Uint32     Space                   = (IsRuntimeSizedArray ? m_NumSpaces++ : 0);
-        Uint32     SRBRootIndex            = ResourceAttribs::InvalidSRBRootIndex;
-        Uint32     SRBOffsetFromTableStart = ResourceAttribs::InvalidOffset;
-        Uint32     SigRootIndex            = ResourceAttribs::InvalidSigRootIndex;
-        Uint32     SigOffsetFromTableStart = ResourceAttribs::InvalidOffset;
+        auto AssignedSamplerInd     = TextureSrvToAssignedSamplerInd[i];
+        auto SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[i];
+        if (AssignedSamplerInd != ResourceAttribs::InvalidSamplerInd)
+        {
+            VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
+            SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[AssignedSamplerInd];
+            if (SrcImmutableSamplerInd >= 0)
+                AssignedSamplerInd = ResourceAttribs::InvalidSamplerInd;
+        }
+
+        const auto DescriptorRangeType = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
+        Uint32     Register            = 0;
+        Uint32     Space               = 0;
+        if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0)
+        {
+            // All run-time sized arrays are allocated in separate spaces.
+            Space    = NextRTSizedArraySpace++;
+            Register = 0;
+        }
+        else
+        {
+            // Normal resources go into space 0.
+            Space    = 0;
+            Register = NumResources[DescriptorRangeType];
+            NumResources[DescriptorRangeType] += ResDesc.ArraySize;
+        }
+
+        Uint32 SRBRootIndex            = ResourceAttribs::InvalidSRBRootIndex;
+        Uint32 SRBOffsetFromTableStart = ResourceAttribs::InvalidOffset;
+        Uint32 SigRootIndex            = ResourceAttribs::InvalidSigRootIndex;
+        Uint32 SigOffsetFromTableStart = ResourceAttribs::InvalidOffset;
 
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
@@ -218,59 +291,49 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             // UAVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_UAV (1)
             // CBVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_CBV (2)
             // Samplers at root index D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER (3)
-            SigRootIndex            = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
+            SigRootIndex            = DescriptorRangeType;
             SigOffsetFromTableStart = StaticResCacheTblSizes[SigRootIndex];
             StaticResCacheTblSizes[SigRootIndex] += ResDesc.ArraySize;
         }
 
-        const bool IsBuffer =
-            ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER ||
-            ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
-            ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV;
-        const bool UseDynamicOffset  = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
-        const bool IsFormattedBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
-        const bool IsRootView        = IsBuffer && UseDynamicOffset && !IsFormattedBuffer;
-
-        // runtime sized array must be in separate space
-        if (!IsRuntimeSizedArray)
-            NumResources[DescriptorRangeType] += ResDesc.ArraySize;
-
-        const Int32 SrcImmutableSamplerInd = ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER ?
-            FindImmutableSampler(m_Desc.ImmutableSamplers, m_Desc.NumImmutableSamplers, ResDesc.ShaderStages, ResDesc.Name, GetCombinedSamplerSuffix()) :
-            -1;
-
-        const auto AssignedSamplerInd = (SrcImmutableSamplerInd == -1 && ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV) ?
-            FindAssignedSampler(ResDesc) :
-            ResourceAttribs::InvalidSamplerInd;
-
-        if (SrcImmutableSamplerInd >= 0)
+        auto d3d12RootParamType = static_cast<D3D12_ROOT_PARAMETER_TYPE>(D3D12_ROOT_PARAMETER_TYPE_UAV + 1);
+        // Do not allocate resource slot for immutable samplers that are also defined as resource
+        if (!(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && SrcImmutableSamplerInd >= 0))
         {
-            auto& ImmutableSampler = m_ImmutableSamplers[SrcImmutableSamplerInd];
+            const auto UseDynamicOffset  = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
+            const auto IsFormattedBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
 
-            if (!ImmutableSampler.IsAssigned())
+            d3d12RootParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            switch (ResDesc.ResourceType)
             {
-                ImmutableSampler.ShaderRegister = Register;
-                ImmutableSampler.RegisterSpace  = Space;
-                ImmutableSampler.ArraySize      = ResDesc.ArraySize;
-            }
-            else
-            {
-                Register = ImmutableSampler.ShaderRegister;
-                Space    = ImmutableSampler.RegisterSpace;
+                case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
+                    VERIFY(!IsFormattedBuffer, "Constant buffers can't be labeled as formatted. This error should've been cuaght by ValidatePipelineResourceSignatureDesc().");
+                    d3d12RootParamType = UseDynamicOffset ? D3D12_ROOT_PARAMETER_TYPE_CBV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+                    break;
 
-                VERIFY_EXPR(ResDesc.ArraySize == ImmutableSampler.ArraySize);
+                case SHADER_RESOURCE_TYPE_BUFFER_SRV:
+                    d3d12RootParamType = UseDynamicOffset && !IsFormattedBuffer ? D3D12_ROOT_PARAMETER_TYPE_SRV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+                    break;
 
-                // Use previous bind point and decrease resource counter
-                if (!IsRuntimeSizedArray)
-                    NumResources[DescriptorRangeType] -= ResDesc.ArraySize;
+                case SHADER_RESOURCE_TYPE_BUFFER_UAV:
+                    d3d12RootParamType = UseDynamicOffset && !IsFormattedBuffer ? D3D12_ROOT_PARAMETER_TYPE_UAV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+                    break;
+
+                default:
+                    d3d12RootParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
             }
+
+            ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType, d3d12RootParamType,
+                                               DescriptorRangeType, ResDesc.ArraySize, Register, Space, SRBRootIndex,
+                                               SRBOffsetFromTableStart);
         }
         else
         {
-            ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType,
-                                               IsRootView ? D3D12_ROOT_PARAMETER_TYPE_CBV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-                                               DescriptorRangeType, ResDesc.ArraySize, Register, FirstSpace + Space, SRBRootIndex,
-                                               SRBOffsetFromTableStart);
+            const auto& ImtblSamAttribs = GetImmutableSamplerAttribs(SrcImmutableSamplerInd);
+            VERIFY_EXPR(ImtblSamAttribs.IsValid());
+            // Initialize space and register, which are required for register remapping
+            Space    = ImtblSamAttribs.RegisterSpace;
+            Register = ImtblSamAttribs.ShaderRegister;
         }
 
         new (m_pResourceAttribs + i) ResourceAttribs //
@@ -283,24 +346,10 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
                 SigRootIndex,
                 SigOffsetFromTableStart,
                 SrcImmutableSamplerInd >= 0,
-                IsRootView //
+                d3d12RootParamType //
             };
     }
     ParamsBuilder.InitializeMgr(GetRawAllocator(), m_RootParams);
-
-    // Add immutable samplers that do not exist in m_Desc.Resources
-    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
-    {
-        auto& ImmutableSampler = m_ImmutableSamplers[i];
-        if (ImmutableSampler.IsAssigned())
-            continue;
-
-        const auto DescriptorRangeType = ResourceTypeToD3D12DescriptorRangeType(SHADER_RESOURCE_TYPE_SAMPLER);
-
-        ImmutableSampler.RegisterSpace  = 0;
-        ImmutableSampler.ShaderRegister = NumResources[DescriptorRangeType];
-        NumResources[DescriptorRangeType] += 1;
-    }
 
     if (m_Desc.SRBAllocationGranularity > 1)
     {
@@ -1199,8 +1248,8 @@ struct BindResourceHelper
     ShaderResourceCacheD3D12&                                  ResourceCache;
 
 #ifdef DILIGENT_DEBUG
-    bool dbgIsDynamic  = false;
-    bool dbgIsRootView = false;
+    bool                      dbgIsDynamic = false;
+    D3D12_ROOT_PARAMETER_TYPE dbgParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 #endif
 
     void BindResource(IDeviceObject* pObj) const;
@@ -1256,7 +1305,7 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
         }
         else
         {
-            VERIFY(dbgIsRootView || dbgIsDynamic, "Descriptor in root table can be used only in dynamic tables.");
+            VERIFY(dbgParamType == D3D12_ROOT_PARAMETER_TYPE_CBV || dbgIsDynamic, "Descriptor in root table can be used only in dynamic tables.");
         }
 
         auto& BoundDynamicCBsCounter = ResourceCache.GetBoundDynamicCBsCounter();
@@ -1587,8 +1636,8 @@ void PipelineResourceSignatureD3D12Impl::BindResource(IDeviceObject*            
         ResourceCache};
 
 #ifdef DILIGENT_DEBUG
-    Helper.dbgIsDynamic  = RootTable.IsDynamic();
-    Helper.dbgIsRootView = Attribs.IsRootView != 0;
+    Helper.dbgIsDynamic = RootTable.IsDynamic();
+    Helper.dbgParamType = Attribs.GetD3D12RootParamType();
 #endif
 
     Helper.BindResource(pObj);

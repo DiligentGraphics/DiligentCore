@@ -79,11 +79,24 @@ public:
         return m_FirstRootIndex[BindingIndex];
     }
 
+    Uint32 GetFirstRegisterSpace(Uint32 BindingIndex) const
+    {
+        VERIFY_EXPR(BindingIndex <= m_SignatureCount);
+        return m_FirstRegisterSpace[BindingIndex];
+    }
+
+    Uint32 GetTotalSpaces() const
+    {
+        return m_TotalSpacesUsed;
+    }
+
     using SignatureArrayType = std::array<RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>, MAX_RESOURCE_SIGNATURES>;
 
 private:
-    using FirstRootIndexArrayType            = std::array<Uint32, MAX_RESOURCE_SIGNATURES>; // AZ TODO: use 8 or 16 bit int
-    FirstRootIndexArrayType m_FirstRootIndex = {};
+    std::array<Uint16, MAX_RESOURCE_SIGNATURES> m_FirstRootIndex     = {};
+    std::array<Uint16, MAX_RESOURCE_SIGNATURES> m_FirstRegisterSpace = {};
+
+    Uint32 m_TotalSpacesUsed = 0;
 
     size_t                       m_Hash = 0;
     CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
@@ -105,16 +118,17 @@ public:
 
     bool IsShaderRecord(const D3DShaderResourceAttribs& CB);
 
-    ID3D12RootSignature* Create(ID3D12Device* pDevice);
+    ID3D12RootSignature* Create(ID3D12Device* pDevice, Uint32 RegisterSpace);
 
     bool        IsDefined() const { return m_ShaderRecordSize > 0 && m_pName != nullptr; }
     const char* GetName() const { return m_pName; }
-    Uint32      GetRegisterSpace() const { return PipelineResourceSignatureD3D12Impl::MAX_SPACES_PER_SIGNATURE * MAX_RESOURCE_SIGNATURES; }
     Uint32      GetShaderRegister() const { return 0; }
+    Uint32      GetRegisterSpace() const { return m_RegisterSpace; }
 
 private:
     const char*                  m_pName            = nullptr;
     const Uint32                 m_ShaderRecordSize = 0;
+    Uint32                       m_RegisterSpace    = 0;
     CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
 };
 

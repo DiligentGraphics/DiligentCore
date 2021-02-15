@@ -53,8 +53,6 @@ class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatur
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceD3D12Impl>;
 
-    static constexpr Uint32 MAX_SPACES_PER_SIGNATURE = 128;
-
     PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D12Impl*               pDevice,
                                        const PipelineResourceSignatureDesc& Desc,
@@ -77,10 +75,11 @@ public:
         static constexpr Uint32 _SpaceBits           = 8;
         static constexpr Uint32 _SigRootIndexBits    = 3;
         static constexpr Uint32 _SamplerAssignedBits = 1;
-        static constexpr Uint32 _RootViewFlagBits    = 1;
+        static constexpr Uint32 _RootParamTypeBits   = 3;
 
         static_assert((1u << _RegisterBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sahder register");
         static_assert((1u << _SamplerIndBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sampler resource index");
+        static_assert((1u << _RootParamTypeBits) > D3D12_ROOT_PARAMETER_TYPE_UAV + 1, "Not enough bits to store D3D12_ROOT_PARAMETER_TYPE");
 
     public:
         static constexpr Uint32 InvalidSamplerInd   = (1u << _SamplerIndBits) - 1;
@@ -93,41 +92,42 @@ public:
 /* 0  */const Uint32  Register             : _RegisterBits;        // Shader register
 /* 2  */const Uint32  SRBRootIndex         : _SRBRootIndexBits;    // Root view/table index in the SRB
 /* 4  */const Uint32  SamplerInd           : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
-/* 6  */const Uint32  Space                : _SpaceBits;           // Shader register space (local space in range 0..MAX_SPACES_PER_SIGNATURE)
+/* 6  */const Uint32  Space                : _SpaceBits;           // Shader register space
 /* 7.0*/const Uint32  SigRootIndex         : _SigRootIndexBits;    // Root table index for signature (static only)
 /* 7.3*/const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
-/* 7.4*/const Uint32  IsRootView           : _RootViewFlagBits;    // Is root view (for debugging)
+/* 7.4*/const Uint32  RootParamType        : _RootParamTypeBits;   // Root parameter type (for debugging)
 /* 8  */const Uint32  SigOffsetFromTableStart;                     // Offset in the root table for signature (static only)
 /* 12 */const Uint32  SRBOffsetFromTableStart;                     // Offset in the root table for SRB
 /* 16 */
         // clang-format on
 
-        ResourceAttribs(Uint32 _Register,
-                        Uint32 _Space,
-                        Uint32 _SamplerInd,
-                        Uint32 _SRBRootIndex,
-                        Uint32 _SRBOffsetFromTableStart,
-                        Uint32 _SigRootIndex,
-                        Uint32 _SigOffsetFromTableStart,
-                        bool   _ImtblSamplerAssigned,
-                        bool   _IsRootView) noexcept :
+        ResourceAttribs(Uint32                    _Register,
+                        Uint32                    _Space,
+                        Uint32                    _SamplerInd,
+                        Uint32                    _SRBRootIndex,
+                        Uint32                    _SRBOffsetFromTableStart,
+                        Uint32                    _SigRootIndex,
+                        Uint32                    _SigOffsetFromTableStart,
+                        bool                      _ImtblSamplerAssigned,
+                        D3D12_ROOT_PARAMETER_TYPE _RootParamType) noexcept :
             // clang-format off
-            Register               {_Register                     },
-            SRBRootIndex           {_SRBRootIndex                  },
-            SamplerInd             {_SamplerInd                    },
-            SigRootIndex           {_SigRootIndex                  },
-            Space                  {_Space                         },
-            ImtblSamplerAssigned   {_ImtblSamplerAssigned ? 1u : 0u},
-            IsRootView             {_IsRootView ? 1u : 0u          },
-            SigOffsetFromTableStart{_SigOffsetFromTableStart       },
-            SRBOffsetFromTableStart{_SRBOffsetFromTableStart       }
+            Register               {_Register                          },
+            SRBRootIndex           {_SRBRootIndex                      },
+            SamplerInd             {_SamplerInd                        },
+            SigRootIndex           {_SigRootIndex                      },
+            Space                  {_Space                             },
+            ImtblSamplerAssigned   {_ImtblSamplerAssigned ? 1u : 0u    },
+            RootParamType          {static_cast<Uint32>(_RootParamType)},
+            SigOffsetFromTableStart{_SigOffsetFromTableStart           },
+            SRBOffsetFromTableStart{_SRBOffsetFromTableStart           }
         // clang-format on
         {
             VERIFY(Register == _Register, "Shader register (", _Register, ") exceeds maximum representable value");
             VERIFY(SRBRootIndex == _SRBRootIndex, "SRB Root index (", _SRBRootIndex, ") exceeds maximum representable value");
-            VERIFY(SigRootIndex == _SigRootIndex, "Signature Root index (", SigRootIndex, ") exceeds maximum representable value");
+            VERIFY(SigRootIndex == _SigRootIndex, "Signature Root index (", _SigRootIndex, ") exceeds maximum representable value");
             VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
-            VERIFY(Space == _Space, "Space (", Space, ") exceeds maximum representable value");
+            VERIFY(Space == _Space, "Space (", _Space, ") exceeds maximum representable value");
+            VERIFY(GetD3D12RootParamType() == _RootParamType, "Not enough bits to represent root parameter type");
         }
 
         bool IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
@@ -135,6 +135,8 @@ public:
 
         Uint32 RootIndex(CacheContentType Type) const { return Type == CacheContentType::SRB ? SRBRootIndex : SigRootIndex; }
         Uint32 OffsetFromTableStart(CacheContentType Type) const { return Type == CacheContentType::SRB ? SRBOffsetFromTableStart : SigOffsetFromTableStart; }
+
+        D3D12_ROOT_PARAMETER_TYPE GetD3D12RootParamType() const { return static_cast<D3D12_ROOT_PARAMETER_TYPE>(RootParamType); }
     };
 
     const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
@@ -160,7 +162,7 @@ public:
     public:
         Uint32 ArraySize = 1;
         Uint32 ShaderRegister : _ShaderRegisterBits;
-        Uint32 RegisterSpace : _RegisterSpaceBits; // (local space in range 0..MAX_SPACES_PER_SIGNATURE)
+        Uint32 RegisterSpace : _RegisterSpaceBits;
 
         ImmutableSamplerAttribs() :
             ShaderRegister{_InvalidShaderRegister},
@@ -180,7 +182,11 @@ public:
             VERIFY(RegisterSpace == _RegisterSpace, "Shader register space (", _RegisterSpace, ") exceeds maximum representable value");
         }
 
-        bool IsAssigned() const { return ShaderRegister != _InvalidShaderRegister; }
+        bool IsValid() const
+        {
+            return ShaderRegister != _InvalidShaderRegister &&
+                RegisterSpace != _InvalidRegisterSpace;
+        }
     };
 
     const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const
@@ -208,11 +214,6 @@ public:
     Uint32 GetNumRootViews() const
     {
         return m_RootParams.GetNumRootViews();
-    }
-
-    Uint32 GetBaseRegisterSpace() const
-    {
-        return m_Desc.BindingIndex * MAX_SPACES_PER_SIGNATURE;
     }
 
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
@@ -295,8 +296,6 @@ private:
 
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
-
-    Uint32 m_NumSpaces = 0;
 
     ShaderResourceCacheD3D12*   m_pStaticResCache = nullptr;
     ShaderVariableManagerD3D12* m_StaticVarsMgrs  = nullptr; // [m_NumShaderStages]

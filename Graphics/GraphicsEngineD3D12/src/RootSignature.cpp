@@ -84,104 +84,132 @@ void RootSignatureD3D12::Finalize()
     rootSignatureDesc.Flags                     = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
     Uint32 TotalParams              = 0;
-    Uint32 TotalD3D12StaticSamplers = 0;
-
+    Uint32 Totald3d12StaticSamplers = 0;
+    Uint32 TotalDescriptorRanges    = 0;
     for (Uint32 s = 0; s < m_SignatureCount; ++s)
     {
         auto& pSignature = m_Signatures[s];
-        if (pSignature != nullptr)
+        if (pSignature == nullptr)
+            continue;
+
+        auto& RootParams = pSignature->m_RootParams;
+
+        m_FirstRootIndex[s] = static_cast<Uint16>(TotalParams);
+        TotalParams += RootParams.GetNumRootTables() + RootParams.GetNumRootViews();
+
+        for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
         {
-            auto& RootParams = pSignature->m_RootParams;
+            const auto& RootTable = RootParams.GetRootTable(rt);
+            TotalDescriptorRanges += RootTable.d3d12RootParam.DescriptorTable.NumDescriptorRanges;
+        }
 
-            m_FirstRootIndex[s] = TotalParams;
-            TotalParams += RootParams.GetNumRootTables() + RootParams.GetNumRootViews();
+        for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
+        {
+            const auto& ImtblSam = pSignature->GetImmutableSamplerAttribs(samp);
+            VERIFY_EXPR(ImtblSam.IsValid());
 
-            for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
-            {
-                const auto& ImtblSam = pSignature->GetImmutableSamplerAttribs(samp);
-                VERIFY_EXPR(ImtblSam.IsAssigned());
-
-                TotalD3D12StaticSamplers += ImtblSam.ArraySize;
-            }
+            Totald3d12StaticSamplers += ImtblSam.ArraySize;
         }
     }
 
-    std::vector<D3D12_ROOT_PARAMETER, STDAllocatorRawMem<D3D12_ROOT_PARAMETER>>           D3D12Parameters(TotalParams, D3D12_ROOT_PARAMETER{}, STD_ALLOCATOR_RAW_MEM(D3D12_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<D3D12_ROOT_PARAMETER>"));
-    std::vector<D3D12_STATIC_SAMPLER_DESC, STDAllocatorRawMem<D3D12_STATIC_SAMPLER_DESC>> D3D12StaticSamplers(STD_ALLOCATOR_RAW_MEM(D3D12_STATIC_SAMPLER_DESC, GetRawAllocator(), "Allocator for vector<D3D12_STATIC_SAMPLER_DESC>"));
-    D3D12StaticSamplers.reserve(TotalD3D12StaticSamplers);
+    std::vector<D3D12_ROOT_PARAMETER, STDAllocatorRawMem<D3D12_ROOT_PARAMETER>>           d3d12Parameters(TotalParams, D3D12_ROOT_PARAMETER{}, STD_ALLOCATOR_RAW_MEM(D3D12_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<D3D12_ROOT_PARAMETER>"));
+    std::vector<D3D12_DESCRIPTOR_RANGE, STDAllocatorRawMem<D3D12_DESCRIPTOR_RANGE>>       d3d12DescrRanges(TotalDescriptorRanges, D3D12_DESCRIPTOR_RANGE{}, STD_ALLOCATOR_RAW_MEM(D3D12_DESCRIPTOR_RANGE, GetRawAllocator(), "Allocator for vector<D3D12_DESCRIPTOR_RANGE>"));
+    std::vector<D3D12_STATIC_SAMPLER_DESC, STDAllocatorRawMem<D3D12_STATIC_SAMPLER_DESC>> d3d12StaticSamplers(STD_ALLOCATOR_RAW_MEM(D3D12_STATIC_SAMPLER_DESC, GetRawAllocator(), "Allocator for vector<D3D12_STATIC_SAMPLER_DESC>"));
+    d3d12StaticSamplers.reserve(Totald3d12StaticSamplers);
 
+    auto descr_range_it = d3d12DescrRanges.begin();
+
+    Uint32 BaseRegisterSpace = 0;
     for (Uint32 sig = 0; sig < m_SignatureCount; ++sig)
     {
-        auto& pSignature = m_Signatures[sig];
+        m_FirstRegisterSpace[sig] = static_cast<Uint16>(BaseRegisterSpace);
 
-        if (pSignature != nullptr)
+        const auto& pSignature = m_Signatures[sig];
+        if (pSignature == nullptr)
+            continue;
+
+        const auto& RootParams     = pSignature->m_RootParams;
+        const auto  FirstRootIndex = m_FirstRootIndex[sig];
+
+        Uint32 MaxSpaceUsed = 0;
+        for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
         {
-            const auto   FirstRootIndex = m_FirstRootIndex[sig];
-            const Uint32 FirstSpace     = pSignature->GetBaseRegisterSpace();
+            const auto&  RootTable     = RootParams.GetRootTable(rt);
+            const auto&  d3d12SrcParam = RootTable.d3d12RootParam;
+            const auto&  d3d12SrcTbl   = d3d12SrcParam.DescriptorTable;
+            const Uint32 RootIndex     = FirstRootIndex + RootTable.RootIndex;
+            VERIFY(d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && d3d12SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected");
+            auto& d3d12DstParam = d3d12Parameters[RootIndex];
+            auto& d3d12DstTbl   = d3d12DstParam.DescriptorTable;
 
-            auto& RootParams = pSignature->m_RootParams;
-            for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
+            d3d12DstParam = d3d12SrcParam;
+            memcpy(&*descr_range_it, d3d12SrcTbl.pDescriptorRanges, d3d12SrcTbl.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE));
+            d3d12DstTbl.pDescriptorRanges = &*descr_range_it;
+            for (Uint32 r = 0; r < d3d12SrcTbl.NumDescriptorRanges; ++r, ++descr_range_it)
             {
-                const auto&  RootTable = RootParams.GetRootTable(rt);
-                const auto&  SrcParam  = RootTable.d3d12RootParam;
-                const Uint32 RootIndex = FirstRootIndex + RootTable.RootIndex;
-                VERIFY(SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected");
-                D3D12Parameters[RootIndex] = SrcParam;
-            }
-
-            for (Uint32 rv = 0; rv < RootParams.GetNumRootViews(); ++rv)
-            {
-                const auto&  RootView  = RootParams.GetRootView(rv);
-                const auto&  SrcParam  = RootView.d3d12RootParam;
-                const Uint32 RootIndex = FirstRootIndex + RootView.RootIndex;
-                VERIFY(SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root CBV is expected");
-                D3D12Parameters[RootIndex] = SrcParam;
-            }
-
-            for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
-            {
-                const auto& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
-                const auto& ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
-                const auto& SamDesc  = ImtblSam.Desc;
-
-                for (UINT ArrInd = 0; ArrInd < SampAttr.ArraySize; ++ArrInd)
-                {
-                    D3D12_SHADER_VISIBILITY ShaderVisibility = (ImtblSam.ShaderStages & (ImtblSam.ShaderStages - 1)) == 0 ?
-                        ShaderTypeToD3D12ShaderVisibility(ImtblSam.ShaderStages) :
-                        D3D12_SHADER_VISIBILITY_ALL;
-
-                    D3D12StaticSamplers.emplace_back(
-                        D3D12_STATIC_SAMPLER_DESC //
-                        {
-                            FilterTypeToD3D12Filter(SamDesc.MinFilter, SamDesc.MagFilter, SamDesc.MipFilter),
-                            TexAddressModeToD3D12AddressMode(SamDesc.AddressU),
-                            TexAddressModeToD3D12AddressMode(SamDesc.AddressV),
-                            TexAddressModeToD3D12AddressMode(SamDesc.AddressW),
-                            SamDesc.MipLODBias,
-                            SamDesc.MaxAnisotropy,
-                            ComparisonFuncToD3D12ComparisonFunc(SamDesc.ComparisonFunc),
-                            BorderColorToD3D12StaticBorderColor(SamDesc.BorderColor),
-                            SamDesc.MinLOD,
-                            SamDesc.MaxLOD,
-                            SampAttr.ShaderRegister + ArrInd,
-                            SampAttr.RegisterSpace + FirstSpace,
-                            ShaderVisibility //
-                        }                    //
-                    );
-                }
+                MaxSpaceUsed = std::max(MaxSpaceUsed, descr_range_it->RegisterSpace);
+                descr_range_it->RegisterSpace += BaseRegisterSpace;
             }
         }
+
+        for (Uint32 rv = 0; rv < RootParams.GetNumRootViews(); ++rv)
+        {
+            const auto&  RootView      = RootParams.GetRootView(rv);
+            const auto&  d3d12SrcParam = RootView.d3d12RootParam;
+            const Uint32 RootIndex     = FirstRootIndex + RootView.RootIndex;
+            VERIFY(d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root CBV is expected");
+            MaxSpaceUsed = std::max(MaxSpaceUsed, d3d12SrcParam.Descriptor.RegisterSpace);
+
+            d3d12Parameters[RootIndex] = d3d12SrcParam;
+            d3d12Parameters[RootIndex].Descriptor.RegisterSpace += BaseRegisterSpace;
+        }
+
+        for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
+        {
+            const auto& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
+            const auto& ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
+            const auto& SamDesc  = ImtblSam.Desc;
+
+            for (UINT ArrInd = 0; ArrInd < SampAttr.ArraySize; ++ArrInd)
+            {
+                auto ShaderVisibility = ShaderStagesToD3D12ShaderVisibility(ImtblSam.ShaderStages);
+
+                d3d12StaticSamplers.emplace_back(
+                    D3D12_STATIC_SAMPLER_DESC //
+                    {
+                        FilterTypeToD3D12Filter(SamDesc.MinFilter, SamDesc.MagFilter, SamDesc.MipFilter),
+                        TexAddressModeToD3D12AddressMode(SamDesc.AddressU),
+                        TexAddressModeToD3D12AddressMode(SamDesc.AddressV),
+                        TexAddressModeToD3D12AddressMode(SamDesc.AddressW),
+                        SamDesc.MipLODBias,
+                        SamDesc.MaxAnisotropy,
+                        ComparisonFuncToD3D12ComparisonFunc(SamDesc.ComparisonFunc),
+                        BorderColorToD3D12StaticBorderColor(SamDesc.BorderColor),
+                        SamDesc.MinLOD,
+                        SamDesc.MaxLOD,
+                        SampAttr.ShaderRegister + ArrInd,
+                        SampAttr.RegisterSpace + BaseRegisterSpace,
+                        ShaderVisibility //
+                    }                    //
+                );
+            }
+        }
+
+        BaseRegisterSpace += MaxSpaceUsed + 1;
     }
+    m_TotalSpacesUsed = BaseRegisterSpace;
 
-    rootSignatureDesc.NumParameters = static_cast<UINT>(D3D12Parameters.size());
-    rootSignatureDesc.pParameters   = D3D12Parameters.size() ? D3D12Parameters.data() : nullptr;
+    VERIFY_EXPR(descr_range_it == d3d12DescrRanges.end());
 
-    rootSignatureDesc.NumStaticSamplers = TotalD3D12StaticSamplers;
+    rootSignatureDesc.NumParameters = static_cast<UINT>(d3d12Parameters.size());
+    rootSignatureDesc.pParameters   = d3d12Parameters.size() ? d3d12Parameters.data() : nullptr;
+
+    rootSignatureDesc.NumStaticSamplers = Totald3d12StaticSamplers;
     rootSignatureDesc.pStaticSamplers   = nullptr;
-    if (!D3D12StaticSamplers.empty())
+    if (!d3d12StaticSamplers.empty())
     {
-        rootSignatureDesc.pStaticSamplers = D3D12StaticSamplers.data();
-        VERIFY_EXPR(D3D12StaticSamplers.size() == TotalD3D12StaticSamplers);
+        rootSignatureDesc.pStaticSamplers = d3d12StaticSamplers.data();
+        VERIFY_EXPR(d3d12StaticSamplers.size() == Totald3d12StaticSamplers);
     }
 
     CComPtr<ID3DBlob> signature;
@@ -220,10 +248,12 @@ bool LocalRootSignatureD3D12::IsShaderRecord(const D3DShaderResourceAttribs& CB)
     return false;
 }
 
-ID3D12RootSignature* LocalRootSignatureD3D12::Create(ID3D12Device* pDevice)
+ID3D12RootSignature* LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint32 RegisterSpace)
 {
     if (m_ShaderRecordSize == 0)
         return nullptr;
+
+    m_RegisterSpace = RegisterSpace;
 
     VERIFY(m_pd3d12RootSignature == nullptr, "This root signature is already created");
 
@@ -233,7 +263,7 @@ ID3D12RootSignature* LocalRootSignatureD3D12::Create(ID3D12Device* pDevice)
     d3d12Params.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     d3d12Params.ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
     d3d12Params.Constants.Num32BitValues = m_ShaderRecordSize / 4;
-    d3d12Params.Constants.RegisterSpace  = GetRegisterSpace();
+    d3d12Params.Constants.RegisterSpace  = m_RegisterSpace;
     d3d12Params.Constants.ShaderRegister = GetShaderRegister();
 
     d3d12RootSignatureDesc.Flags         = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;

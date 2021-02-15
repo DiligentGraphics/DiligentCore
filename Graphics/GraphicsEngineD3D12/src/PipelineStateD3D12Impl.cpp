@@ -527,6 +527,7 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
     }
     else
     {
+        // TODO: move to base class
         const auto PipelineType = CreateInfo.PSODesc.PipelineType;
         for (Uint32 i = 0; i < SignatureCount; ++i)
         {
@@ -581,7 +582,7 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
             auto* pSignature = GetSignature(Sig);
             if (pSignature != nullptr)
             {
-                const Uint32 FirstSpace = pSignature->GetBaseRegisterSpace();
+                const Uint32 FirstSpace = m_RootSig->GetFirstRegisterSpace(Sig);
 
                 for (Uint32 r = 0, ResCount = pSignature->GetTotalResourceCount(); r < ResCount; ++r)
                 {
@@ -605,14 +606,21 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                     {
                         HasImtblSampArray = HasImtblSampArray || (SampAttr.ArraySize > 1);
 
-                        auto IsUnique = ResourceMap.emplace(HashMapStringKey{ImtblSam.SamplerOrTextureName}, BindInfo).second;
-                        if (!IsUnique && pSignature->IsUsingCombinedSamplers())
-                        {
-                            // add sampler with suffix
-                            String SampName{ImtblSam.SamplerOrTextureName};
+                        String SampName{ImtblSam.SamplerOrTextureName};
+                        if (pSignature->IsUsingCombinedSamplers())
                             SampName += pSignature->GetCombinedSamplerSuffix();
-                            ResourceMap.emplace(HashMapStringKey{SampName}, BindInfo);
+
+                        auto it_inserted = ResourceMap.emplace(HashMapStringKey{SampName}, BindInfo);
+#ifdef DILIGENT_DEBUG
+                        if (!it_inserted.second)
+                        {
+                            const auto& ExistingBindInfo = it_inserted.first->second;
+                            VERIFY(ExistingBindInfo.BindPoint == BindInfo.BindPoint,
+                                   "Bind point defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
+                            VERIFY(ExistingBindInfo.Space == BindInfo.Space,
+                                   "Register space defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
                         }
+#endif
                     }
                 }
             }
@@ -980,7 +988,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot = {m_RootSig->GetD3D12RootSignature()};
         Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &GlobalRoot});
 
-        D3D12_LOCAL_ROOT_SIGNATURE LocalRoot = {LocalRootSig.Create(pd3d12Device)};
+        D3D12_LOCAL_ROOT_SIGNATURE LocalRoot = {LocalRootSig.Create(pd3d12Device, m_RootSig->GetTotalSpaces())};
         if (LocalRoot.pLocalRootSignature)
             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &LocalRoot});
 
