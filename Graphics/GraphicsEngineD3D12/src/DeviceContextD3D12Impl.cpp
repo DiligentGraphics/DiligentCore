@@ -75,8 +75,6 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : EngineCI.NumCommandsToFlushCmdList,
         bIsDeferred
     },
-    m_GraphicsResources{false},
-    m_ComputeResources {true },
     m_DynamicHeap
     {
         pDeviceD3D12Impl->GetDynamicMemoryManager(),
@@ -236,6 +234,14 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         RootInfo.pRootSig            = pd3d12RootSig;
         RootInfo.bRootTablesCommited = false;
         RootInfo.bRootViewsCommitted = false;
+        RootInfo.ActiveSRBMask       = 0;
+
+        for (Uint32 i = 0, SignCount = pPipelineStateD3D12->GetSignatureCount(); i < SignCount; ++i)
+        {
+            auto* pSignature = pPipelineStateD3D12->GetSignature(i);
+            if (pSignature != nullptr)
+                RootInfo.ActiveSRBMask |= 1u << i;
+        }
     }
 
     switch (PSODesc.PipelineType)
@@ -293,6 +299,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     }
 }
 
+template <bool IsCompute>
 void DeviceContextD3D12Impl::CommitRootTables(RootTableInfo& RootInfo)
 {
     const auto& RootSig = *m_pPipelineState->GetRootSignature();
@@ -301,7 +308,6 @@ void DeviceContextD3D12Impl::CommitRootTables(RootTableInfo& RootInfo)
     if (!RootInfo.bRootTablesCommited)
     {
         RootInfo.bRootTablesCommited = true;
-
         for (Uint32 s = 0; s < RootSig.GetSignatureCount(); ++s)
         {
             auto* pSignature = RootSig.GetSignature(s);
@@ -311,25 +317,21 @@ void DeviceContextD3D12Impl::CommitRootTables(RootTableInfo& RootInfo)
                 continue;
 
             VERIFY_EXPR(pSRB != nullptr);
-            pSignature->CommitRootTables(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), RootInfo.IsCompute, RootSig.GetFirstRootIndex(s));
+            pSignature->CommitRootTables(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), IsCompute, RootSig.GetFirstRootIndex(s));
         }
     }
 
-    //if (!RootInfo.bRootViewsCommitted)
+    RootInfo.bRootViewsCommitted = true;
+    for (Uint32 s = 0; s < RootSig.GetSignatureCount(); ++s)
     {
-        RootInfo.bRootViewsCommitted = true;
+        auto* pSignature = RootSig.GetSignature(s);
+        auto* pSRB       = RootInfo.SRBs[s];
 
-        for (Uint32 s = 0; s < RootSig.GetSignatureCount(); ++s)
-        {
-            auto* pSignature = RootSig.GetSignature(s);
-            auto* pSRB       = RootInfo.SRBs[s];
+        if (pSignature == nullptr || pSignature->GetNumRootViews() == 0)
+            continue;
 
-            if (pSignature == nullptr || pSignature->GetNumRootViews() == 0)
-                continue;
-
-            VERIFY_EXPR(pSRB != nullptr);
-            pSignature->CommitRootViews(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), RootInfo.IsCompute, RootSig.GetFirstRootIndex(s));
-        }
+        VERIFY_EXPR(pSRB != nullptr);
+        pSignature->CommitRootViews<IsCompute>(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), RootSig.GetFirstRootIndex(s));
     }
 }
 
@@ -359,12 +361,6 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
     auto& CmdCtx               = GetCmdContext();
     auto* pSignature           = pResBindingD3D12Impl->GetSignature();
 
-    //if (pSignature->GetTotalRootCount() == 0)
-    //{
-    // Ignore SRBs that contain no resources
-    //    return;
-    //}
-
 #ifdef DILIGENT_DEBUG
     //ResourceCache.DbgVerifyDynamicBuffersCounter();
 #endif
@@ -380,9 +376,15 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
     }
 #endif
 
-    auto& RootInfo = GetRootTableInfo(pSignature->GetPipelineType());
+    const auto SRBIndex = pResBindingD3D12Impl->GetBindingIndex();
+    auto&      RootInfo = GetRootTableInfo(pSignature->GetPipelineType());
 
-    RootInfo.SRBs[pSignature->GetDesc().BindingIndex] = pResBindingD3D12Impl;
+    RootInfo.SRBs[SRBIndex] = pResBindingD3D12Impl;
+
+    if (ResourceCache.GetNumDynamicCBsBound() > 0)
+        RootInfo.SetDynamicBufferBit(SRBIndex);
+    else
+        RootInfo.ClearDynamicBufferBit(SRBIndex);
 
     RootInfo.bRootTablesCommited = false;
     RootInfo.bRootViewsCommitted = false;
@@ -581,7 +583,7 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
     auto& RootInfo = GetRootTableInfo(PIPELINE_TYPE_GRAPHICS);
     if (RootInfo.RequireUpdate(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
     {
-        CommitRootTables(RootInfo);
+        CommitRootTables<false>(RootInfo);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -714,7 +716,7 @@ void DeviceContextD3D12Impl::PrepareForDispatchCompute(ComputeContext& ComputeCt
     auto& RootInfo = GetRootTableInfo(PIPELINE_TYPE_COMPUTE);
     if (RootInfo.RequireUpdate())
     {
-        CommitRootTables(RootInfo);
+        CommitRootTables<true>(RootInfo);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -727,7 +729,7 @@ void DeviceContextD3D12Impl::PrepareForDispatchRays(GraphicsContext& GraphCtx)
     auto& RootInfo = GetRootTableInfo(PIPELINE_TYPE_RAY_TRACING);
     if (RootInfo.RequireUpdate())
     {
-        CommitRootTables(RootInfo);
+        CommitRootTables<true>(RootInfo);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -894,10 +896,9 @@ void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
     if (RequestNewCmdCtx)
         RequestCommandContext(m_pDevice);
 
-    m_State = State{};
-
-    m_GraphicsResources = RootTableInfo{false};
-    m_ComputeResources  = RootTableInfo{true};
+    m_State             = State{};
+    m_GraphicsResources = RootTableInfo{};
+    m_ComputeResources  = RootTableInfo{};
 
     // Setting pipeline state to null makes sure that render targets and other
     // states will be restored in the command list next time a PSO is bound.

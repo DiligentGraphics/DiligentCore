@@ -391,27 +391,30 @@ private:
         using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
 
-        //Bitfield             ActiveSRBMask      ;     // Indicates which SRBs are active in current PSO
-        bool                 bRootViewsCommitted; // Indicates if root views have been committed since the time SRB  has been committed.
+        Bitfield             ActiveSRBMask      = 0; // Indicates which SRBs are active in current PSO
+        Bitfield             DynamicBuffersMask = 0; // Indicates which SRBs have dynamic buffers
+        bool                 bRootViewsCommitted;    // Indicates if root views have been committed since the time SRB  has been committed.
         bool                 bRootTablesCommited;
-        bool                 IsCompute : 1;
         ID3D12RootSignature* pRootSig;
 
         std::array<class ShaderResourceBindingD3D12Impl*, MAX_RESOURCE_SIGNATURES> SRBs;
 
-        RootTableInfo(bool _IsCompute)
+        RootTableInfo()
         {
             memset(this, 0, sizeof(*this));
-            IsCompute = _IsCompute;
         }
 
         __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
         {
-            return true; //(StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
+            return !bRootViewsCommitted || !bRootTablesCommited || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
         }
+
+        void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<Bitfield>(1u << Index); }
+        void ClearDynamicBufferBit(Uint32 Index) { DynamicBuffersMask &= static_cast<Bitfield>(~(1u << Index)); }
     };
     __forceinline RootTableInfo& GetRootTableInfo(PIPELINE_TYPE PipelineType);
 
+    template <bool IsCompute>
     __forceinline void CommitRootTables(RootTableInfo& RootInfo);
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();

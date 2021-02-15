@@ -1060,7 +1060,6 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
 
     Uint32 NumDynamicCbvSrvUavDescriptors = m_RootParams.GetTotalSrvCbvUavSlots(ROOT_PARAMETER_GROUP_DYNAMIC);
     Uint32 NumDynamicSamplerDescriptors   = m_RootParams.GetTotalSamplerSlots(ROOT_PARAMETER_GROUP_DYNAMIC);
-    //VERIFY_EXPR(NumDynamicCbvSrvUavDescriptors > 0 || NumDynamicSamplerDescriptors > 0);
 
     DescriptorHeapAllocation DynamicCbvSrvUavDescriptors, DynamicSamplerDescriptors;
     if (NumDynamicCbvSrvUavDescriptors > 0)
@@ -1193,34 +1192,6 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
         {
             bool IsDynamic = pBuffToTransition->GetDesc().Usage == USAGE_DYNAMIC;
             if (!IsDynamic)
-            {
-                D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(DeviceCtxId, pDeviceCtx);
-                if (IsCompute)
-                    CmdCtx.GetCommandList()->SetComputeRootConstantBufferView(FirstRootIndex + RootInd, CBVAddress);
-                else
-                    CmdCtx.GetCommandList()->SetGraphicsRootConstantBufferView(FirstRootIndex + RootInd, CBVAddress);
-            }
-        }
-    }
-}
-
-void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
-                                                         CommandContext&           CmdCtx,
-                                                         DeviceContextD3D12Impl*   pDeviceCtx,
-                                                         Uint32                    DeviceCtxId,
-                                                         bool                      IsCompute,
-                                                         Uint32                    FirstRootIndex)
-{
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        auto& RootView = m_RootParams.GetRootView(rv);
-        auto  RootInd  = RootView.RootIndex;
-
-        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        if (auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>())
-        {
-            bool IsDynamic = pBuffToTransition->GetDesc().Usage == USAGE_DYNAMIC;
-            if (IsDynamic)
             {
                 D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(DeviceCtxId, pDeviceCtx);
                 if (IsCompute)
