@@ -380,17 +380,6 @@ public:
 
     size_t GetHash() const;
 
-    SHADER_RESOURCE_VARIABLE_TYPE FindVariableType(const D3DShaderResourceAttribs&   ResourceAttribs,
-                                                   const PipelineResourceLayoutDesc& ResourceLayout) const;
-
-    Int32 FindImmutableSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
-                               const PipelineResourceLayoutDesc& ResourceLayoutDesc,
-                               bool                              LogImmutableSamplerArrayError) const;
-
-    D3DShaderResourceCounters CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
-                                             const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                             Uint32                               NumAllowedTypes,
-                                             bool                                 CountImmutableSamplers) const noexcept;
 #ifdef DILIGENT_DEVELOPMENT
     static void DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout,
                                         const ShaderResources* const      pShaderResources[],
