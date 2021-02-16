@@ -300,7 +300,7 @@ protected:
 
             for (Uint32 i = IdxRange.first; i < IdxRange.second; ++i)
             {
-                const auto& Res = m_Desc.Resources[i];
+                const auto& Res = this->m_Desc.Resources[i];
                 VERIFY_EXPR(Tex.VarType == Res.VarType);
 
                 if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
