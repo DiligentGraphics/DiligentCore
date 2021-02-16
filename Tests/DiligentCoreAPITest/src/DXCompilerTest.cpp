@@ -107,7 +107,8 @@ const wchar_t* DXCArgs[] = {
 // no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
 // L"-Qembed_debug", // Requires DXC1.5+
 #else
-    L"-O3" // Optimization level 3
+    L"-Zi", // Debug info
+    L"-O3"  // Optimization level 3
 #endif
 };
 
@@ -403,20 +404,34 @@ RWTexture2D<float4> g_ColorBuffer1;
 RWTexture2D<float4> g_ColorBuffer2;
 RWTexture2D<float4> g_ColorBuffer3;
 
-StructuredBuffer<float4> g_Buffer[5];
+StructuredBuffer<float4> g_Buffer1[5];
+RWByteAddressBuffer      g_Buffer2[] : register(u0, space1);
 
-float4 main() : SV_TARGET
+cbuffer Constants
 {
-    float2 uv = float2(0.0, 1.0);
+    uint2 Range1;
+    uint2 Range2;
+};
+
+float4 main(in float4 f4Position : SV_Position) : SV_TARGET
+{
+    float2 UV  = f4Position.xy;
     int2   pos = int2(1,2);
 
-    g_ColorBuffer1[pos] = g_Buffer[3][1];
+    g_ColorBuffer1[pos] = g_Buffer1[3][1];
     g_ColorBuffer2[pos] = g_ColorBuffer3[pos];
 
-    return g_Tex[0].Sample(g_TexSampler, uv) *
-           g_Tex[2].Sample(g_TexSampler, uv) +
-           g_Tex3D.Sample(g_TexSampler, uv.xxy) +
-           g_Buffer[1][9] * g_Buffer[4][100];
+    uint4 col = uint4(0, 1, 2, 3);
+    for (uint j = Range2.x; j < Range2.y; ++j)
+    {
+        g_Buffer2[j].Store4((j+1)*4, col);
+        col += g_Buffer2[j].Load4(j*4);
+    }
+
+    return g_Tex[0].Sample(g_TexSampler, UV) *
+           g_Tex[2].Sample(g_TexSampler, UV) +
+           g_Tex3D.Sample(g_TexSampler, UV.xxy) +
+           g_Buffer1[1][9] * g_Buffer1[4][100];
 }
 )hlsl";
 
@@ -441,10 +456,12 @@ float4 main() : SV_TARGET
     BindigMap["g_Tex"]          = {101, 0, 4};
     BindigMap["g_Tex3D"]        = {22, 0, 1};
     BindigMap["g_TexSampler"]   = {0, 0, 1};
-    BindigMap["g_Buffer"]       = {9, 0, 1};
+    BindigMap["g_Buffer1"]      = {9, 0, 5};
+    BindigMap["g_Buffer2"]      = {0, 1, 10};
     BindigMap["g_ColorBuffer1"] = {180, 0, 1};
     BindigMap["g_ColorBuffer2"] = {333, 0, 1};
     BindigMap["g_ColorBuffer3"] = {1, 0, 1};
+    BindigMap["Constants"]      = {8, 0, 1};
     BindigMap["g_AnotherRes"]   = {567, 0, 1};
     CComPtr<IDxcBlob> pRemappedDXIL;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
@@ -468,9 +485,13 @@ float4 main() : SV_TARGET
         EXPECT_EQ(BindDesc.BindPoint, 0U);
         EXPECT_EQ(BindDesc.Space, 0U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer", &BindDesc));
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer1", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 9U);
         EXPECT_EQ(BindDesc.Space, 0U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer2", &BindDesc));
+        EXPECT_EQ(BindDesc.BindPoint, 0U);
+        EXPECT_EQ(BindDesc.Space, 1U);
 
         EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer1", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 180U);
@@ -483,16 +504,22 @@ float4 main() : SV_TARGET
         EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer3", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 1U);
         EXPECT_EQ(BindDesc.Space, 0U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Constants", &BindDesc));
+        EXPECT_EQ(BindDesc.BindPoint, 8U);
+        EXPECT_EQ(BindDesc.Space, 0U);
     }
 
     BindigMap.clear();
     BindigMap["g_Tex"]          = {77, 1, 4};
     BindigMap["g_Tex3D"]        = {90, 1, 1};
     BindigMap["g_TexSampler"]   = {0, 1, 1};
-    BindigMap["g_Buffer"]       = {15, 6, 1};
+    BindigMap["g_Buffer1"]      = {15, 6, 5};
+    BindigMap["g_Buffer2"]      = {2, 7, 100};
     BindigMap["g_ColorBuffer1"] = {33, 6, 1};
     BindigMap["g_ColorBuffer2"] = {10, 100, 1};
     BindigMap["g_ColorBuffer3"] = {11, 100, 1};
+    BindigMap["Constants"]      = {9, 3, 1};
     BindigMap["g_AnotherRes"]   = {567, 0, 1};
     pRemappedDXIL               = nullptr;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
@@ -516,9 +543,13 @@ float4 main() : SV_TARGET
         EXPECT_EQ(BindDesc.BindPoint, 0U);
         EXPECT_EQ(BindDesc.Space, 1U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer", &BindDesc));
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer1", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 15U);
         EXPECT_EQ(BindDesc.Space, 6U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer2", &BindDesc));
+        EXPECT_EQ(BindDesc.BindPoint, 2U);
+        EXPECT_EQ(BindDesc.Space, 7U);
 
         EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer1", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 33U);
@@ -531,6 +562,10 @@ float4 main() : SV_TARGET
         EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer3", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 11U);
         EXPECT_EQ(BindDesc.Space, 100U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Constants", &BindDesc));
+        EXPECT_EQ(BindDesc.BindPoint, 9U);
+        EXPECT_EQ(BindDesc.Space, 3U);
     }
 }
 } // namespace

@@ -86,8 +86,10 @@ public:
                          IDataBlob**             ppCompilerOutput) noexcept(false) = 0;
 
 
+
     using BindInfo            = ResourceBinding::BindInfo;
     using TResourceBindingMap = ResourceBinding::TMap;
+    using ShaderResType       = ResourceBinding::ResType;
 
     /// Remaps resource bindings (shader registers) in the source byte code using the
     /// resource binding map.

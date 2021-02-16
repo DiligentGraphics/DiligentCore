@@ -259,4 +259,43 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
     TestDXBCRemapping(Source, "PSMain", "ps_5_1", ResMap);
 }
 
+TEST(DXBCUtils, PatchSM51_DynamicIndices)
+{
+    static constexpr char Source[] = R"hlsl(
+SamplerState g_Sampler             : register(s0, space0);
+Texture2D    g_Tex2D_StatArray[8]  : register(t0, space0);
+Texture2D    g_Tex2D_DynArray[100] : register(t0, space1);
+
+cbuffer Constants : register(b0, space0)
+{
+    uint2 Range1;
+    uint2 Range2;
+};
+
+float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
+{
+    uint2  Coord   = uint2(f4Position.xy);
+    float2 UV      = f4Position.xy;
+    float4 f4Color = float4(0.0, 0.0, 0.0, 0.0);
+
+    for (uint i = Range1.x; i < Range1.y; ++i)
+    {
+        f4Color += g_Tex2D_StatArray[i].SampleLevel(g_Sampler, UV, 0.0);
+    }
+    for (uint j = Range2.x; j < Range2.y; ++j)
+    {
+        f4Color += g_Tex2D_DynArray[i].SampleLevel(g_Sampler, UV, 0.0);
+    }
+    return f4Color;
+}
+)hlsl";
+
+    DXBCUtils::TResourceBindingMap ResMap;
+    ResMap.emplace(HashMapStringKey{"g_Sampler"}, BindInfo{11, 3, 1});
+    ResMap.emplace(HashMapStringKey{"g_Tex2D_StatArray"}, BindInfo{22, 3, 8});
+    ResMap.emplace(HashMapStringKey{"g_Tex2D_DynArray"}, BindInfo{0, 2, 100});
+    ResMap.emplace(HashMapStringKey{"Constants"}, BindInfo{44, 1, 1});
+
+    TestDXBCRemapping(Source, "PSMain", "ps_5_1", ResMap);
+}
 } // namespace

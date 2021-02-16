@@ -813,6 +813,57 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
         return false;
     }
 
+    CComPtr<ID3D12ShaderReflection> pShaderReflection;
+    try
+    {
+        GetD3D12ShaderReflection(pSrcBytecode, &pShaderReflection);
+    }
+    catch (...)
+    {
+        LOG_ERROR("Failed to get shader reflection");
+        return false;
+    }
+
+    for (auto& NameAndBinding : ResourceMap)
+    {
+        D3D12_SHADER_INPUT_BIND_DESC ResDesc = {};
+        if (pShaderReflection->GetResourceBindingDescByName(NameAndBinding.first.GetStr(), &ResDesc) == S_OK)
+        {
+            NameAndBinding.second.SrcBindPoint = ResDesc.BindPoint;
+            NameAndBinding.second.SrcSpace     = ResDesc.Space;
+            VERIFY_EXPR(ResDesc.BindCount == 0 || NameAndBinding.second.ArraySize >= ResDesc.BindCount);
+
+            switch (ResDesc.Type)
+            {
+                case D3D_SIT_CBUFFER:
+                    NameAndBinding.second.Type = ShaderResType::CBV;
+                    break;
+                case D3D_SIT_SAMPLER:
+                    NameAndBinding.second.Type = ShaderResType::Sampler;
+                    break;
+                case D3D_SIT_TBUFFER:
+                case D3D_SIT_TEXTURE:
+                case D3D_SIT_STRUCTURED:
+                case D3D_SIT_BYTEADDRESS:
+                case D3D_SIT_RTACCELERATIONSTRUCTURE:
+                    NameAndBinding.second.Type = ShaderResType::SRV;
+                    break;
+                case D3D_SIT_UAV_RWTYPED:
+                case D3D_SIT_UAV_RWSTRUCTURED:
+                case D3D_SIT_UAV_RWBYTEADDRESS:
+                case D3D_SIT_UAV_APPEND_STRUCTURED:
+                case D3D_SIT_UAV_CONSUME_STRUCTURED:
+                case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
+                case D3D_SIT_UAV_FEEDBACKTEXTURE:
+                    NameAndBinding.second.Type = ShaderResType::UAV;
+                    break;
+                default:
+                    LOG_ERROR("Unknown shader resource type");
+                    return false;
+            }
+        }
+    }
+
     String dxilAsm;
     dxilAsm.assign(static_cast<const char*>(disasm->GetBufferPointer()), disasm->GetBufferSize());
 
@@ -885,6 +936,80 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, String& D
 
 void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, String& DXIL)
 {
+#define CHECK_PATCHING_ERROR(Cond, ...)                                                         \
+    if (!(Cond))                                                                                \
+    {                                                                                           \
+        LOG_ERROR_AND_THROW("Unable to patch DXIL for resource '", Name, "': ", ##__VA_ARGS__); \
+    }
+
+    static const String i32              = "i32 ";
+    static const String NumberSymbols    = "+-0123456789";
+    static const String ResourceRecStart = "= !{";
+
+    const auto ReplaceRecord = [&DXIL](size_t& pos, const String& NewValue, const char* Name, const char* RecordName, const Uint32 ExpectedPrevValue) //
+    {
+        // , i32 -1
+        // ^
+        CHECK_PATCHING_ERROR(DXIL[pos] == ',' && DXIL[pos + 1] == ' ', RecordName, " record is not found")
+
+        pos += 2;
+        // , i32 -1
+        //   ^
+
+        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "unexpected ", RecordName, " record type")
+        pos += i32.length();
+        // , i32 -1
+        //       ^
+
+        auto RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
+        CHECK_PATCHING_ERROR(pos != String::npos, "unable to find the end of the ", RecordName, " record data")
+        // , i32 -1
+        //         ^
+        //    RecordEndPos
+
+        Uint32 PrevValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
+        CHECK_PATCHING_ERROR(PrevValue == ExpectedPrevValue, "previous value does not match with expected");
+
+        DXIL.replace(pos, RecordEndPos - pos, NewValue);
+        // , i32 1
+        //         ^
+        //    RecordEndPos
+
+        pos += NewValue.length();
+        // , i32 1
+        //        ^
+    };
+
+    const auto ReadRecord = [&DXIL](size_t& pos, Uint32& CurValue) //
+    {
+        // , i32 -1
+        // ^
+        if (DXIL[pos] != ',' || DXIL[pos + 1] != ' ')
+            return false;
+
+        pos += 2;
+        // , i32 -1
+        //   ^
+
+        if (std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) != 0)
+            return false;
+        pos += i32.length();
+        // , i32 -1
+        //       ^
+
+        auto RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
+        if (pos == String::npos)
+            return false;
+        // , i32 -1
+        //         ^
+        //    RecordEndPos
+
+        CurValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
+        pos      = RecordEndPos;
+        return true;
+    };
+
+    // This resource patching method is valid for ray tracing shaders and non-optimized shaders with metadata.
     for (auto& ResPair : ResourceMap)
     {
         // Patch metadata resource record
@@ -914,132 +1039,248 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 
         // !"g_ColorBuffer", i32 -1, i32 -1,
         // ^
+        const size_t EndOfResTypeRecord = pos;
 
-        pos += DxilName.length();
-        // !"g_ColorBuffer", i32 -1, i32 -1,
-        //                 ^
+        // Parse resource class.
+        pos = DXIL.rfind(ResourceRecStart, EndOfResTypeRecord);
+        CHECK_PATCHING_ERROR(pos != String::npos, "");
+        pos += ResourceRecStart.length();
 
-        auto ReplaceRecord = [&](const std::string& NewValue, const char* RecordName, Uint32& PrevValue) //
-        {
-#define CHECK_PATCHING_ERROR(Cond, ...)                                                         \
-    if (!(Cond))                                                                                \
-    {                                                                                           \
-        LOG_ERROR_AND_THROW("Unable to patch DXIL for resource '", Name, "': ", ##__VA_ARGS__); \
-    }
-            // , i32 -1
-            // ^
-            pos = DXIL.find_first_of(',', pos);
-            CHECK_PATCHING_ERROR(pos != String::npos, RecordName, " record is not found")
+        // !5 = !{i32 0,
+        //        ^
+        CHECK_PATCHING_ERROR(std::strncmp(DXIL.c_str() + pos, i32.c_str(), i32.length()) == 0, "");
 
-            ++pos;
-            // , i32 -1
-            //  ^
+        // !5 = !{i32 0,
+        //            ^
+        pos += i32.length();
 
-            while (pos < DXIL.length() && DXIL[pos] == ' ')
-                ++pos;
-            CHECK_PATCHING_ERROR(pos < DXIL.length(), RecordName, " record type is missing")
-            // , i32 -1
-            //   ^
+        const size_t RecordIdStartPos = pos;
 
-            static const String i32 = "i32";
-            CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "unexpected ", RecordName, " record type")
-            pos += i32.length();
-            // , i32 -1
-            //      ^
+        pos = DXIL.find_first_not_of(NumberSymbols, pos);
+        CHECK_PATCHING_ERROR(pos != String::npos, "");
 
-            pos = DXIL.find_first_of("+-0123456789", pos);
-            CHECK_PATCHING_ERROR(pos != String::npos, RecordName, " record data is missing")
-            // , i32 -1
-            //       ^
+        const Uint32 RecordId = static_cast<Uint32>(std::atoi(DXIL.c_str() + RecordIdStartPos));
 
-            auto RecordEndPos = DXIL.find_first_not_of("0123456789", pos + 1);
-            CHECK_PATCHING_ERROR(pos != String::npos, "unable to find the end of the ", RecordName, " record data")
-            // , i32 -1
-            //         ^
-            //    RecordEndPos
-
-            PrevValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
-            DXIL.replace(pos, RecordEndPos - pos, NewValue);
-            // , i32 1
-            //         ^
-            //    RecordEndPos
-
-            pos += NewValue.length();
-            // , i32 1
-            //        ^
-
-#undef CHECK_PATCHING_ERROR
-        };
+        VERIFY_EXPR(ResPair.second.UID == ~0u || ResPair.second.UID == RecordId);
+        ResPair.second.UID = RecordId;
 
         // !"g_ColorBuffer", i32 -1, i32 -1,
         //                 ^
-        ReplaceRecord(std::to_string(Space), "space", ResPair.second.SrcSpace);
+        pos = EndOfResTypeRecord + DxilName.length();
+        ReplaceRecord(pos, std::to_string(Space), Name, "space", ResPair.second.SrcSpace);
 
         // !"g_ColorBuffer", i32 0, i32 -1,
         //                        ^
-        ReplaceRecord(std::to_string(BindPoint), "binding", ResPair.second.SrcBindPoint);
+        ReplaceRecord(pos, std::to_string(BindPoint), Name, "binding", ResPair.second.SrcBindPoint);
 
         // !"g_ColorBuffer", i32 0, i32 1,
         //                               ^
     }
+#undef CHECK_PATCHING_ERROR
+
+#define CHECK_PATCHING_ERROR(Cond, ...)                               \
+    if (!(Cond))                                                      \
+    {                                                                 \
+        LOG_ERROR_AND_THROW("Unable to patch DXIL: ", ##__VA_ARGS__); \
+    }
+
+    // This resource patching method is valid for optimized shaders without metadata.
+    static const String EmptyResDecl = ", !\"\",";
+    static const String SamplerPart  = "%struct.SamplerState* undef";
+    static const String TexturePart  = "%\"class.Texture";
+
+    for (size_t pos = 0; pos < DXIL.size();)
+    {
+        // Example:
+        //
+        // !5 = !{i32 0, %"class.Texture2D<vector<float, 4> >"* undef, !"", i32 -1, i32 -1, i32 1, i32 2, i32 0, !6}
+
+        pos = DXIL.find(EmptyResDecl, pos);
+        if (pos == String::npos)
+            break;
+
+        // undef, !"", i32 -1,
+        //      ^
+        const size_t EndOfResTypeRecord = pos;
+
+        // undef, !"", i32 -1,
+        //           ^
+        const size_t BindingRecordStart = pos + EmptyResDecl.size() - 1;
+
+        // Parse resource class.
+        pos = DXIL.rfind(ResourceRecStart, EndOfResTypeRecord);
+        CHECK_PATCHING_ERROR(pos != String::npos, "failed to find resource record start block");
+        pos += ResourceRecStart.length();
+
+        // !5 = !{i32 0,
+        //        ^
+        if (std::strncmp(DXIL.c_str() + pos, i32.c_str(), i32.length()) != 0)
+        {
+            // This is not a resource declaration record, continue searching.
+            pos = BindingRecordStart;
+            continue;
+        }
+        // !5 = !{i32 0,
+        //            ^
+        pos += i32.length();
+
+        const size_t RecordIdStartPos = pos;
+
+        pos = DXIL.find_first_not_of(NumberSymbols, pos);
+        CHECK_PATCHING_ERROR(pos != String::npos, "failed to parse Record ID record data");
+        // !{i32 0, %"class.Texture2D<...
+        //        ^
+        const Uint32 RecordId = static_cast<Uint32>(std::atoi(DXIL.c_str() + RecordIdStartPos));
+
+        CHECK_PATCHING_ERROR(DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "failed to find end of the Record ID record data");
+        pos += 2;
+        // !{i32 0, %"class.Texture2D<...
+        //          ^
+
+        ShaderResType ResType = ShaderResType::Count;
+        if (std::strncmp(&DXIL[pos], TexturePart.c_str(), TexturePart.length()) == 0)
+            ResType = ShaderResType::SRV;
+        else if (std::strncmp(&DXIL[pos], SamplerPart.c_str(), SamplerPart.length()) == 0)
+            ResType = ShaderResType::Sampler;
+        else
+        {
+            // Try to find constant buffer.
+            for (auto& NameAndBinding : ResourceMap)
+            {
+                if (NameAndBinding.second.Type != ShaderResType::CBV)
+                    continue;
+
+                const String CBName = String{"%"} + NameAndBinding.first.GetStr() + "* undef";
+                if (std::strncmp(&DXIL[pos], CBName.c_str(), CBName.length()) == 0)
+                {
+                    ResType = ShaderResType::CBV;
+                    break;
+                }
+            }
+        }
+
+        if (ResType == ShaderResType::Count)
+        {
+            // This is not a resource declaration record, continue searching.
+            pos = BindingRecordStart;
+            continue;
+        }
+
+        // Read binding & space.
+        pos              = BindingRecordStart;
+        Uint32 BindPoint = ~0u;
+        Uint32 Space     = ~0u;
+
+        // !"", i32 -1, i32 -1,
+        //    ^
+        if (!ReadRecord(pos, Space))
+        {
+            // This is not a resource declaration record, continue searching.
+            continue;
+        }
+        // !"", i32 -1, i32 -1,
+        //            ^
+        if (!ReadRecord(pos, BindPoint))
+        {
+            // This is not a resource declaration record, continue searching.
+            continue;
+        }
+        // Search in resource map.
+        TResourceBindingMap::value_type const* ResPair = nullptr;
+        for (auto& NameAndBinding : ResourceMap)
+        {
+            if (NameAndBinding.second.SrcBindPoint == BindPoint &&
+                NameAndBinding.second.SrcSpace == Space &&
+                NameAndBinding.second.Type == ResType)
+            {
+                ResPair = &NameAndBinding;
+                break;
+            }
+        }
+        CHECK_PATCHING_ERROR(ResPair != nullptr, "failed to find resource in ResourceMap");
+
+        VERIFY_EXPR(ResPair->second.UID == ~0u || ResPair->second.UID == RecordId);
+        ResPair->second.UID = RecordId;
+
+        // Remap bindings.
+        pos = BindingRecordStart;
+
+        // !"", i32 -1, i32 -1,
+        //    ^
+        ReplaceRecord(pos, std::to_string(ResPair->second.Space), ResPair->first.GetStr(), "space", ResPair->second.SrcSpace);
+
+        // !"", i32 0, i32 -1,
+        //           ^
+        ReplaceRecord(pos, std::to_string(ResPair->second.BindPoint), ResPair->first.GetStr(), "binding", ResPair->second.SrcBindPoint);
+
+        // !"", i32 0, i32 1,
+        //                  ^
+    }
+#undef CHECK_PATCHING_ERROR
 }
 
 void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap, String& DXIL)
 {
     // Patch createHandle command
-    static const String CallHandlePattern = " = call %dx.types.Handle @dx.op.createHandle(";
-    static const String SamplerPart       = "_sampler";
-    static const String CBufferPart       = "_cbuffer";
-    static const String TexturePart       = "_texture";
-    static const String UAVPart           = "_UAV";
+    static const String        CallHandlePattern = " = call %dx.types.Handle @dx.op.createHandle(";
+    static const String        i32               = "i32 ";
+    static const String        i8                = "i8 ";
+    static const ShaderResType ResClassToType[]  = {ShaderResType::SRV, ShaderResType::UAV, ShaderResType::CBV, ShaderResType::Sampler};
 
-    const auto NextCreateHandleArg = [&DXIL](size_t& pos) {
-        ++pos;
+    const auto NextArg = [&DXIL](size_t& pos) //
+    {
         for (; pos < DXIL.size(); ++pos)
         {
             const char c = DXIL[pos];
             if (c == ',')
-                return; // OK
+                return true; // OK
             if (c == ')' || c == '\n')
-                break; // end of createHandle()
+                return false; // end of createHandle()
         }
         // end of bytecode
-        LOG_ERROR_AND_THROW("DXIL parsing error: failed to parse createHandle() instruction");
+        return false;
     };
 
-    const auto NextOpArg = [&DXIL](size_t& pos) {
-        for (; pos < DXIL.size(); ++pos)
-        {
-            const char c = DXIL[pos];
-            if (c == ',')
-                return; // OK
-            if (c == '\n')
-                return; // end of line
-            VERIFY_EXPR((c >= '0' && c <= '9') || c == '%');
-        }
-        // end of bytecode
-        LOG_ERROR_AND_THROW("DXIL parsing error: failed to parse instruction");
-    };
-
-    const auto ReplaceBindPoint = [&DXIL](TResourceBindingMap::const_iterator Iter, size_t IndexStartPos, size_t IndexEndPos, size_t& NewIndexStrLength) {
+    const auto ReplaceBindPoint = [&ResourceMap, &DXIL](Uint32 ResClass, Uint32 RangeId, size_t IndexStartPos, size_t IndexEndPos) //
+    {
         const String SrcIndexStr = DXIL.substr(IndexStartPos, IndexEndPos - IndexStartPos);
         VERIFY_EXPR(SrcIndexStr.front() >= '0' && SrcIndexStr.front() <= '9');
 
         const Uint32 SrcIndex = static_cast<Uint32>(std::stoi(SrcIndexStr));
-        VERIFY_EXPR(SrcIndex >= Iter->second.SrcBindPoint);
-        VERIFY_EXPR(Iter->second.SrcBindPoint != ~0u);
+        const auto   ResType  = ResClassToType[ResClass];
 
-        const Uint32 IndexOffset = SrcIndex - Iter->second.SrcBindPoint;
-        VERIFY_EXPR((Iter->second.BindPoint + IndexOffset) >= Iter->second.BindPoint);
+        TResourceBindingMap::value_type const* ResPair = nullptr;
+        for (auto& NameAndBinding : ResourceMap)
+        {
+            if (NameAndBinding.second.UID == RangeId &&
+                NameAndBinding.second.Type == ResType &&
+                SrcIndex >= NameAndBinding.second.SrcBindPoint &&
+                SrcIndex < NameAndBinding.second.SrcBindPoint + NameAndBinding.second.ArraySize)
+            {
+                ResPair = &NameAndBinding;
+                break;
+            }
+        }
+        if (ResPair == nullptr)
+            LOG_ERROR_AND_THROW("Failed to find resource in ResourceMap");
 
-        const String NewIndexStr = std::to_string(Iter->second.BindPoint + IndexOffset);
+        VERIFY_EXPR(SrcIndex >= ResPair->second.SrcBindPoint);
+        VERIFY_EXPR(ResPair->second.SrcBindPoint != ~0u);
+
+        const Uint32 IndexOffset = SrcIndex - ResPair->second.SrcBindPoint;
+        VERIFY_EXPR((ResPair->second.BindPoint + IndexOffset) >= ResPair->second.BindPoint);
+
+        const String NewIndexStr = std::to_string(ResPair->second.BindPoint + IndexOffset);
         DXIL.replace(DXIL.begin() + IndexStartPos, DXIL.begin() + IndexEndPos, NewIndexStr);
-
-        NewIndexStrLength = NewIndexStr.length();
     };
 
+#define CHECK_PATCHING_ERROR(Cond, ...)                                              \
+    if (!(Cond))                                                                     \
+    {                                                                                \
+        LOG_ERROR_AND_THROW("Unable to patch DXIL createHandle(): ", ##__VA_ARGS__); \
+    }
 
-    for (size_t startPos = 0; startPos < DXIL.size();)
+    for (size_t pos = 0; pos < DXIL.size();)
     {
         // %dx.types.Handle @dx.op.createHandle(
         //        i32,                  ; opcode
@@ -1050,97 +1291,95 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
 
         // Example:
         //
-        // %cbConstants_cbuffer = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        // = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
 
-        size_t callHandlePos = DXIL.find(CallHandlePattern, startPos);
+        size_t callHandlePos = DXIL.find(CallHandlePattern, pos);
         if (callHandlePos == String::npos)
             break;
 
-        startPos = callHandlePos + CallHandlePattern.length();
+        pos = callHandlePos + CallHandlePattern.length();
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                     ^
 
-        // Parse resource name: %name_suffix
+        // Skip opcode.
 
-        size_t resNameEnd    = callHandlePos;
-        size_t resNameStart  = resNameEnd - 1;
-        bool   suffixRemoved = false;
-        for (auto& pos = resNameStart; pos >= 0; --pos)
-        {
-            const char c = DXIL[pos];
+        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "Opcode record is not found");
+        pos += i32.length();
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                         ^
 
-            if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
-                continue;
+        CHECK_PATCHING_ERROR(NextArg(pos), "failed to find end of the Opcode record data");
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                           ^
 
-            if (c == '_')
-            {
-                String part = DXIL.substr(pos, resNameEnd - pos);
-                if (!suffixRemoved &&
-                    ((part.length() >= SamplerPart.length() && strncmp(part.c_str(), SamplerPart.c_str(), SamplerPart.length()) == 0) ||
-                     (part.length() >= CBufferPart.length() && strncmp(part.c_str(), CBufferPart.c_str(), CBufferPart.length()) == 0) ||
-                     (part.length() >= TexturePart.length() && strncmp(part.c_str(), TexturePart.c_str(), TexturePart.length()) == 0) ||
-                     (part.length() >= UAVPart.length() && strncmp(part.c_str(), UAVPart.c_str(), UAVPart.length()) == 0)))
-                {
-                    // remove suffix
-                    resNameEnd    = pos;
-                    suffixRemoved = true;
-                }
-                continue;
-            }
+        // Read resource class.
 
-            VERIFY_EXPR(c == '%');
-            ++pos;
-            break;
-        }
+        CHECK_PATCHING_ERROR(DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "Resource Class record is not found");
+        pos += 2;
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                             ^
 
-        String resName = DXIL.substr(resNameStart, resNameEnd - resNameStart);
+        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i8.c_str(), i8.length()) == 0, "Resource Class record data is not found");
+        pos += i8.length();
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                                ^
 
-        auto Iter = ResourceMap.find(HashMapStringKey{resName.c_str()});
-        if (Iter == ResourceMap.end())
-            LOG_ERROR_AND_THROW("Resource '", resName, "' is not exists in ResourceMap");
+        const size_t ResClassStartPos = pos;
 
-        size_t pos = startPos;
-
-        // skip opcode
-        // createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
-        //                    ^
-        NextCreateHandleArg(pos);
-        VERIFY_EXPR(DXIL[pos + 2] == 'i' && DXIL[pos + 3] == '8' && DXIL[pos + 4] == ' ');
-
-        // skip resource class
-        // createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
-        //                          ^
-        NextCreateHandleArg(pos);
-        VERIFY_EXPR(DXIL[pos + 2] == 'i' && DXIL[pos + 3] == '3' && DXIL[pos + 4] == '2' && DXIL[pos + 5] == ' ');
-
-        // skip resource range ID
-        // createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        CHECK_PATCHING_ERROR(NextArg(pos), "failed to find end of the Resource class record data");
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                 ^
-        NextCreateHandleArg(pos);
-        VERIFY_EXPR(DXIL[pos + 2] == 'i' && DXIL[pos + 3] == '3' && DXIL[pos + 4] == '2' && DXIL[pos + 5] == ' ');
+        const Uint32 ResClass = static_cast<Uint32>(std::atoi(DXIL.c_str() + ResClassStartPos));
 
-        const size_t indexStartPos = pos + 6;
-        VERIFY_EXPR(DXIL[indexStartPos] == '%' || (DXIL[indexStartPos] >= '0' && DXIL[indexStartPos] <= '9'));
+        // Read resource range ID.
 
-        // find index end
-        // createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        CHECK_PATCHING_ERROR(DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "Range ID record is not found");
+        pos += 2;
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                                   ^
+
+        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "Range ID record data is not found");
+        pos += i32.length();
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                                       ^
+
+        const size_t RangeIdStartPos = pos;
+
+        CHECK_PATCHING_ERROR(NextArg(pos), "failed to find end of the Range ID record data");
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                        ^
-        NextCreateHandleArg(pos);
-        VERIFY_EXPR(DXIL[pos + 2] == 'i' && DXIL[pos + 3] == '1' && DXIL[pos + 4] == ' ');
+        const Uint32 RangeId = static_cast<Uint32>(std::atoi(DXIL.c_str() + RangeIdStartPos));
 
-        const size_t indexEndPos = pos;
+        // Read index in range.
 
-        // replace index
-        const String SrcIndexStr = DXIL.substr(indexStartPos, indexEndPos - indexStartPos);
-        if (SrcIndexStr.empty())
-            LOG_ERROR_AND_THROW("DXIL parsing error: Bind point index must not be empty");
+        CHECK_PATCHING_ERROR(DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "Index record is not found");
+        pos += 2;
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                                          ^
+
+        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "Index record data is not found");
+        pos += i32.length();
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                                              ^
+
+        const size_t IndexStartPos = pos;
+
+        CHECK_PATCHING_ERROR(NextArg(pos), "failed to find end of the Index record data");
+        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
+        //                                               ^
+
+        // Replace index.
+        const size_t IndexEndPos = pos;
+        const String SrcIndexStr = DXIL.substr(IndexStartPos, pos - IndexStartPos);
+        CHECK_PATCHING_ERROR(!SrcIndexStr.empty(), "Bind point index must not be empty");
 
         if (SrcIndexStr.front() == '%')
         {
             // dynamic bind point
             const String IndexDecl = SrcIndexStr + " = add i32 ";
 
-            size_t IndexDeclPos = DXIL.rfind(IndexDecl, indexEndPos);
-            if (IndexDeclPos == String::npos)
-                LOG_ERROR_AND_THROW("DXIL parsing error: failed to find dynamic index declaration");
+            size_t IndexDeclPos = DXIL.rfind(IndexDecl, IndexEndPos);
+            CHECK_PATCHING_ERROR(IndexDeclPos != String::npos, "failed to find dynamic index declaration");
 
             // Example:
             //   %22 = add i32 %17, 7
@@ -1151,26 +1390,24 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
             if (DXIL[pos] == '%')
             {
                 // first arg is variable, move to second arg
-                NextOpArg(pos);
-                //   %22 = add i32 %17, 7
-                //                     ^
+                CHECK_PATCHING_ERROR(NextArg(pos), "");
+                //   %22 = add i32 %17, 7  or  %24 = add i32 %j.0, 1
+                //                    ^                          ^
+                VERIFY_EXPR(DXIL[pos] == ',' || DXIL[pos + 1] == ' ');
                 pos += 2; // skip ', '
 
                 // second arg must be a constant
-                if (!(DXIL[pos] >= '0' && DXIL[pos] <= '9'))
-                    LOG_ERROR_AND_THROW("DXIL parsing error: second argument expected to be a integer constant");
+                CHECK_PATCHING_ERROR(DXIL[pos] >= '0' && DXIL[pos] <= '9', "second argument expected to be a integer constant");
 
                 const size_t ArgStart = pos;
-                NextOpArg(pos);
+                CHECK_PATCHING_ERROR(NextArg(pos), "");
                 VERIFY_EXPR(DXIL[pos] == ',' || DXIL[pos] == '\n');
 
                 //   %22 = add i32 %17, 7
                 //                       ^
 
                 const size_t ArgEnd = pos;
-                size_t       NewIndexLen;
-                ReplaceBindPoint(Iter, ArgStart, ArgEnd, NewIndexLen);
-                startPos += NewIndexLen - (ArgEnd - ArgStart);
+                ReplaceBindPoint(ResClass, RangeId, ArgStart, ArgEnd);
             }
             else
             {
@@ -1179,14 +1416,12 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
 
                 const size_t ArgStart = pos;
 
-                NextOpArg(pos);
+                CHECK_PATCHING_ERROR(NextArg(pos), "");
                 //   %22 = add i32 7, %17
                 //                  ^
 
                 const size_t ArgEnd = pos;
-                size_t       NewIndexLen;
-                ReplaceBindPoint(Iter, ArgStart, ArgEnd, NewIndexLen);
-                startPos += NewIndexLen - (ArgEnd - ArgStart);
+                ReplaceBindPoint(ResClass, RangeId, ArgStart, ArgEnd);
             }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -1207,10 +1442,11 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
         else
         {
             // constant bind point
-            ReplaceBindPoint(Iter, indexStartPos, indexEndPos, startPos);
-            startPos += indexStartPos;
+            ReplaceBindPoint(ResClass, RangeId, IndexStartPos, IndexEndPos);
         }
+        pos = IndexEndPos;
     }
+#undef CHECK_PATCHING_ERROR
 }
 
 bool IsDXILBytecode(const void* pBytecode, size_t Size)

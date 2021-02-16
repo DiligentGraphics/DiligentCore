@@ -539,16 +539,8 @@ enum D3D10_SB_CUSTOMDATA_CLASS
     D3D11_SB_CUSTOMDATA_SHADER_CLIP_PLANE_CONSTANT_MAPPINGS_FOR_DX9,
 };
 
-enum SHADER_RES_TYPE : Uint32
-{
-    SHADER_RES_TYPE_CBUFFER = 0, // D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER, D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER
-    SHADER_RES_TYPE_TEXTURE = 1, // D3D10_SB_OPERAND_TYPE_RESOURCE, D3D10_SB_OPCODE_DCL_RESOURCE, D3D11_SB_OPCODE_DCL_RESOURCE_RAW, D3D11_SB_OPCODE_DCL_RESOURCE_STRUCTURED
-    SHADER_RES_TYPE_SAMPLER = 2, // D3D10_SB_OPERAND_TYPE_SAMPLER, D3D10_SB_OPCODE_DCL_SAMPLER
-    SHADER_RES_TYPE_UAV     = 3, // D3D11_SB_OPERAND_TYPE_UNORDERED_ACCESS_VIEW, D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_TYPED, D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_RAW, D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_STRUCTURED
-    SHADER_RES_TYPE_COUNT,
-};
-
-using ResourceBindingPerType = std::array<std::vector<DXBCUtils::BindInfo const*>, SHADER_RES_TYPE_COUNT + 1>;
+using ShaderResType          = ResourceBinding::ResType;
+using ResourceBindingPerType = std::array<std::vector<DXBCUtils::BindInfo const*>, ShaderResType::Count + 1>;
 
 
 #define FOURCC(a, b, c, d) (Uint32{(d) << 24} | Uint32{(c) << 16} | Uint32{(b) << 8} | Uint32{a})
@@ -559,21 +551,21 @@ constexpr Uint32 SHDRFourCC = FOURCC('S', 'H', 'D', 'R'); // Shader (SM4)
 constexpr Uint32 SHEXFourCC = FOURCC('S', 'H', 'E', 'X'); // Shader (SM5)
 
 
-SHADER_RES_TYPE ToResType(D3D_SHADER_INPUT_TYPE InputType)
+ShaderResType ToResType(D3D_SHADER_INPUT_TYPE InputType)
 {
     switch (InputType)
     {
         case D3D_SIT_CBUFFER:
-            return SHADER_RES_TYPE_CBUFFER;
+            return ShaderResType::CBV;
 
         case D3D_SIT_SAMPLER:
-            return SHADER_RES_TYPE_SAMPLER;
+            return ShaderResType::Sampler;
 
         case D3D_SIT_TBUFFER:
         case D3D_SIT_TEXTURE:
         case D3D_SIT_STRUCTURED:
         case D3D_SIT_BYTEADDRESS:
-            return SHADER_RES_TYPE_TEXTURE;
+            return ShaderResType::SRV;
 
         case D3D_SIT_UAV_RWSTRUCTURED:
         case D3D_SIT_UAV_RWTYPED:
@@ -581,11 +573,11 @@ SHADER_RES_TYPE ToResType(D3D_SHADER_INPUT_TYPE InputType)
         case D3D_SIT_UAV_APPEND_STRUCTURED:
         case D3D_SIT_UAV_CONSUME_STRUCTURED:
         case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-            return SHADER_RES_TYPE_UAV;
+            return ShaderResType::UAV;
 
         default:
             UNEXPECTED("Unsupported shader input type");
-            return SHADER_RES_TYPE_COUNT;
+            return ShaderResType::Count;
     }
 }
 
@@ -904,7 +896,10 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
         VERIFY_EXPR(ArrayInd < Iter->second.ArraySize);
         VERIFY_EXPR(Iter->second.SrcBindPoint == ~0u ||
                     Iter->second.SrcBindPoint == Res.BindPoint - ArrayInd);
+        VERIFY_EXPR(Iter->second.Type == ShaderResType::Count ||
+                    Iter->second.Type == ResType);
 
+        Iter->second.Type         = ResType;
         Iter->second.SrcBindPoint = Res.BindPoint - ArrayInd;
         Res.BindPoint             = Iter->second.BindPoint + ArrayInd;
 
@@ -934,7 +929,7 @@ private:
     void RemapResourceOperand(const OperandToken& Operand, Uint32* Token, const void* Finish);
     void RemapResourceOperandSM50(const OperandToken& Operand, Uint32* Token, const void* Finish);
     void RemapResourceOperandSM51(const OperandToken& Operand, Uint32* Token, const void* Finish);
-    void RemapResourceOperandSM51_2(const OperandToken& Operand, Uint32* Token, const DXBCUtils::BindInfo& Info);
+    void RemapResourceOperandSM51_2(const OperandToken& Operand, Uint32* Token, ShaderResType Type);
 
     void RemapResourceBinding(const OpcodeToken& Opcode, Uint32* Token, const void* Finish);
     void RemapResourceBindingSM51(const OpcodeToken& Opcode, Uint32* Token, const void* Finish);
@@ -963,13 +958,15 @@ void ShaderBytecodeRemapper::RemapResourceBinding(const OpcodeToken& Opcode, Uin
 
 void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operand, Uint32* Token, const void* Finish)
 {
-    const auto FindResourceBindings = [](const std::vector<DXBCUtils::BindInfo const*>& Bindings, Uint32& Token) //
+    const auto FindResourceBindings = [this](ShaderResType Type, Uint32& Token) //
     {
+        auto& Bindings = BindingsPerType[Type];
         for (auto& Info : Bindings)
         {
             if (Token >= Info->SrcBindPoint && Token < Info->SrcBindPoint + Info->ArraySize)
             {
                 Token = Info->BindPoint + (Token - Info->SrcBindPoint);
+                VERIFY_EXPR(Info->Type == Type);
                 return true;
             }
         }
@@ -988,7 +985,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operan
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            if (!FindResourceBindings(BindingsPerType[SHADER_RES_TYPE_CBUFFER], Token[0]))
+            if (!FindResourceBindings(ShaderResType::CBV, Token[0]))
                 LOG_ERROR_AND_THROW("Failed to find cbuffer with bind point (", Token[0], ").");
             break;
         }
@@ -1001,7 +998,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operan
             VERIFY_EXPR(Operand.IndexDim == D3D10_SB_OPERAND_INDEX_1D);
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            if (!FindResourceBindings(BindingsPerType[SHADER_RES_TYPE_SAMPLER], Token[0]))
+            if (!FindResourceBindings(ShaderResType::Sampler, Token[0]))
                 LOG_ERROR_AND_THROW("Failed to find sampler with bind point (", Token[0], ").");
             break;
         }
@@ -1014,7 +1011,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operan
             VERIFY_EXPR(Operand.IndexDim == D3D10_SB_OPERAND_INDEX_1D);
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            if (!FindResourceBindings(BindingsPerType[SHADER_RES_TYPE_TEXTURE], Token[0]))
+            if (!FindResourceBindings(ShaderResType::SRV, Token[0]))
                 LOG_ERROR_AND_THROW("Failed to find texture with bind point (", Token[0], ").");
             break;
         }
@@ -1028,15 +1025,20 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operan
             VERIFY_EXPR(Operand.IndexDim == D3D10_SB_OPERAND_INDEX_1D);
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            if (!FindResourceBindings(BindingsPerType[SHADER_RES_TYPE_UAV], Token[0]))
+            if (!FindResourceBindings(ShaderResType::UAV, Token[0]))
                 LOG_ERROR_AND_THROW("Failed to find UAV with bind point (", Token[0], ").");
             break;
         }
     }
 }
 
-void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(const OperandToken& Operand, Uint32* Token, const DXBCUtils::BindInfo& Info)
+void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(const OperandToken& Operand, Uint32* Token, ShaderResType Type)
 {
+    const auto& Bindings = BindingsPerType[Type];
+    if (Token[0] >= Bindings.size())
+        LOG_ERROR_AND_THROW("Invalid resource index (", Token[0], "), the number of resources is (", Bindings.size(), ").");
+
+    auto& Info = *Bindings[Token[0]];
     switch (Operand.OperandIndex2D)
     {
         case D3D10_SB_OPERAND_INDEX_IMMEDIATE32:
@@ -1078,11 +1080,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51(const OperandToken& Operan
             VERIFY_EXPR(Operand.IndexDim == D3D10_SB_OPERAND_INDEX_3D);
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_CBUFFER];
-            if (Token[0] >= Bindings.size())
-                LOG_ERROR_AND_THROW("Invalid cbuffer index (", Token[0], "), the number of constant buffers is (", Bindings.size(), ").");
-
-            RemapResourceOperandSM51_2(Operand, Token, *Bindings[Token[0]]);
+            RemapResourceOperandSM51_2(Operand, Token, ShaderResType::CBV);
             break;
         }
 
@@ -1095,11 +1093,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51(const OperandToken& Operan
             VERIFY_EXPR(Operand.IndexDim >= D3D10_SB_OPERAND_INDEX_2D);
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_SAMPLER];
-            if (Token[0] >= Bindings.size())
-                LOG_ERROR_AND_THROW("Invalid sampler index (", Token[0], "), the number of samplers is (", Bindings.size(), ").");
-
-            RemapResourceOperandSM51_2(Operand, Token, *Bindings[Token[0]]);
+            RemapResourceOperandSM51_2(Operand, Token, ShaderResType::Sampler);
             break;
         }
 
@@ -1112,11 +1106,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51(const OperandToken& Operan
             VERIFY_EXPR(Operand.IndexDim >= D3D10_SB_OPERAND_INDEX_2D);
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_TEXTURE];
-            if (Token[0] >= Bindings.size())
-                LOG_ERROR_AND_THROW("Invalid texture index (", Token[0], "), the number of textures is (", Bindings.size(), ").");
-
-            RemapResourceOperandSM51_2(Operand, Token, *Bindings[Token[0]]);
+            RemapResourceOperandSM51_2(Operand, Token, ShaderResType::SRV);
             break;
         }
 
@@ -1129,11 +1119,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51(const OperandToken& Operan
             VERIFY_EXPR(Operand.IndexDim >= D3D10_SB_OPERAND_INDEX_2D);
             VERIFY_EXPR(Operand.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_UAV];
-            if (Token[0] >= Bindings.size())
-                LOG_ERROR_AND_THROW("Invalid UAV index (", Token[0], "), the number of UAVs is (", Bindings.size(), ").");
-
-            RemapResourceOperandSM51_2(Operand, Token, *Bindings[Token[0]]);
+            RemapResourceOperandSM51_2(Operand, Token, ShaderResType::UAV);
             break;
         }
 
@@ -1165,12 +1151,13 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Operand.OperandIndex2D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VERIFY_EXPR(Operand.OperandIndex3D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_CBUFFER];
+            const auto& Bindings = BindingsPerType[ShaderResType::CBV];
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid cbuffer index (", Token[1], "), the number of constant buffers is (", Bindings.size(), ").");
 
             const auto& Info = Bindings[Token[1]];
             VERIFY_EXPR(Info->BindPoint == Token[2]);
+            VERIFY_EXPR(Info->Type == ShaderResType::CBV);
 
             if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid cbuffer bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
@@ -1198,12 +1185,13 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Operand.OperandIndex2D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VERIFY_EXPR(Operand.OperandIndex3D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_SAMPLER];
+            const auto& Bindings = BindingsPerType[ShaderResType::Sampler];
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid sampler index (", Token[1], "), the number of samplers is (", Bindings.size(), ").");
 
             const auto& Info = Bindings[Token[1]];
             VERIFY_EXPR(Info->BindPoint == Token[2]);
+            VERIFY_EXPR(Info->Type == ShaderResType::Sampler);
 
             if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid sampler bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
@@ -1234,12 +1222,13 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Operand.OperandIndex2D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VERIFY_EXPR(Operand.OperandIndex3D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_TEXTURE];
+            const auto& Bindings = BindingsPerType[ShaderResType::SRV];
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid texture index (", Token[1], "), the number of textures is (", Bindings.size(), ").");
 
             const auto& Info = Bindings[Token[1]];
             VERIFY_EXPR(Info->BindPoint == Token[2]);
+            VERIFY_EXPR(Info->Type == ShaderResType::SRV);
 
             if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid texture bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
@@ -1266,12 +1255,13 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Operand.OperandIndex2D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VERIFY_EXPR(Operand.OperandIndex3D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_TEXTURE];
+            const auto& Bindings = BindingsPerType[ShaderResType::SRV];
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid texture index (", Token[1], "), the number of textures is (", Bindings.size(), ").");
 
             const auto& Info = Bindings[Token[1]];
             VERIFY_EXPR(Info->BindPoint == Token[2]);
+            VERIFY_EXPR(Info->Type == ShaderResType::SRV);
 
             if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid texture bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
@@ -1302,12 +1292,13 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Operand.OperandIndex2D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VERIFY_EXPR(Operand.OperandIndex3D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_UAV];
+            const auto& Bindings = BindingsPerType[ShaderResType::UAV];
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid UAV index (", Token[1], "), the number of UAVs is (", Bindings.size(), ").");
 
             const auto& Info = Bindings[Token[1]];
             VERIFY_EXPR(Info->BindPoint == Token[2]);
+            VERIFY_EXPR(Info->Type == ShaderResType::UAV);
 
             if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid UAV bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
@@ -1334,12 +1325,13 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Operand.OperandIndex2D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VERIFY_EXPR(Operand.OperandIndex3D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            const auto& Bindings = BindingsPerType[SHADER_RES_TYPE_UAV];
+            const auto& Bindings = BindingsPerType[ShaderResType::UAV];
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid UAV index (", Token[1], "), the number of UAVs is (", Bindings.size(), ").");
 
             const auto& Info = Bindings[Token[1]];
             VERIFY_EXPR(Info->BindPoint == Token[2]);
+            VERIFY_EXPR(Info->Type == ShaderResType::UAV);
 
             if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid UAV bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");

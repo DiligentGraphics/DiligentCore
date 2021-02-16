@@ -37,6 +37,15 @@ namespace Diligent
 
 struct ResourceBinding
 {
+    enum ResType : Uint32
+    {
+        CBV     = 0,
+        SRV     = 1,
+        Sampler = 2,
+        UAV     = 3,
+        Count,
+    };
+
     struct BindInfo
     {
         // new bind point & space
@@ -45,8 +54,10 @@ struct ResourceBinding
         Uint32 ArraySize = 0;
 
         // current (previous) bind point & space
-        mutable Uint32 SrcBindPoint = ~0u;
-        mutable Uint32 SrcSpace     = ~0u;
+        mutable Uint32  SrcBindPoint = ~0u;
+        mutable Uint32  SrcSpace     = ~0u;
+        mutable ResType Type         = ResType::Count;
+        mutable Uint32  UID          = ~0u; // Unique resource record ID
 
         BindInfo() {}
 
