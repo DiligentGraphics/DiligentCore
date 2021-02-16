@@ -40,11 +40,22 @@
 #include "RenderDeviceBase.hpp"
 #include "FixedLinearAllocator.hpp"
 #include "BasicMath.hpp"
+#include "StringTools.hpp"
 
 namespace Diligent
 {
 
+/// Validates pipeline resource signature description and throws an exception in case of an error.
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false);
+
+/// Finds an immutable sampler for the resource name 'ResourceName' that is defined in shader stages 'ShaderStages'.
+/// If 'SamplerSuffix' is not null, it will be appended to the 'ResourceName'.
+/// Returns an index of the sampler in ImtblSamplers array, or -1 if there is no suitable sampler.
+Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
+                           Uint32                      NumImtblSamplers,
+                           SHADER_TYPE                 ShaderStages,
+                           const char*                 ResourceName,
+                           const char*                 SamplerSuffix);
 
 /// Template class implementing base functionality of the pipeline resource signature object.
 
@@ -274,6 +285,35 @@ protected:
         }
 
         return VarMngrInd;
+    }
+
+    // Finds a sampler that is assigned to texture Tex, when combined texture samplers are used.
+    // Returns an index of the sampler in m_Desc.Resources array, or InvalidSamplerValue if there is
+    // no such sampler, or if combined samplers are not used.
+    Uint32 FindAssignedSampler(const PipelineResourceDesc& Tex, Uint32 InvalidSamplerValue) const
+    {
+        VERIFY_EXPR(Tex.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
+        Uint32 SamplerInd = InvalidSamplerValue;
+        if (IsUsingCombinedSamplers())
+        {
+            const auto IdxRange = GetResourceIndexRange(Tex.VarType);
+
+            for (Uint32 i = IdxRange.first; i < IdxRange.second; ++i)
+            {
+                const auto& Res = m_Desc.Resources[i];
+                VERIFY_EXPR(Tex.VarType == Res.VarType);
+
+                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
+                    (Tex.ShaderStages & Res.ShaderStages) != 0 &&
+                    StreqSuff(Res.Name, Tex.Name, GetCombinedSamplerSuffix()))
+                {
+                    VERIFY_EXPR((Res.ShaderStages & Tex.ShaderStages) == Tex.ShaderStages);
+                    SamplerInd = i;
+                    break;
+                }
+            }
+        }
+        return SamplerInd;
     }
 
 protected:

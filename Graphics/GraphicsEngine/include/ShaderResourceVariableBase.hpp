@@ -120,30 +120,6 @@ inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVar
     return AllowedTypeBits;
 }
 
-inline Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
-                                  Uint32                      NumImtblSamplers,
-                                  SHADER_TYPE                 ShaderStages,
-                                  const char*                 ResourceName,
-                                  const char*                 SamplerSuffix)
-{
-    for (Uint32 s = 0; s < NumImtblSamplers; ++s)
-    {
-        const auto& Sam = ImtblSamplers[s];
-        if (((Sam.ShaderStages & ShaderStages) != 0) && StreqSuff(ResourceName, Sam.SamplerOrTextureName, SamplerSuffix))
-        {
-            DEV_CHECK_ERR((Sam.ShaderStages & ShaderStages) == ShaderStages,
-                          "Resource '", ResourceName, "' is defined for the following shader stages: ", GetShaderStagesString(ShaderStages),
-                          ", but immutable sampler '", Sam.SamplerOrTextureName, "' specifes only some of these stages: ", GetShaderStagesString(Sam.ShaderStages),
-                          ". A resource that is present in multiple shader stages can't use different immutable samples in different stages. "
-                          "Either use separate resources for different stages, or define the immutable sample for all stages that the resource uses.");
-            return s;
-        }
-    }
-
-    return -1;
-}
-
-
 template <typename BufferImplType>
 bool VerifyConstantBufferBinding(const char*                   ResName,
                                  Uint32                        ArraySize,

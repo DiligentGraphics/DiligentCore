@@ -289,8 +289,6 @@ private:
 
     std::vector<Uint32, STDAllocatorRawMem<Uint32>> GetCacheTableSizes() const;
 
-    Uint32 FindAssignedSampler(const PipelineResourceDesc& SepImg) const;
-
 private:
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 

@@ -468,7 +468,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
         // The sampler may not be yet initialized, but this is OK as all resources are initialized
         // in the same order as in m_Desc.Resources
         const auto AssignedSamplerInd = DescrType == DescriptorType::SeparateImage ?
-            FindAssignedSampler(ResDesc) :
+            FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd) :
             ResourceAttribs::InvalidSamplerInd;
 
         VkSampler* pVkImmutableSamplers = nullptr;
@@ -478,7 +478,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
             // Only search for immutable sampler for combined image samplers and separate samplers.
             // Note that for DescriptorType::SeparateImage with immutable sampler, we will initialize
             // a separate immutable sampler below. It will not be assigned to the image variable.
-            Int32 SrcImmutableSamplerInd = FindImmutableSampler(ResDesc, DescrType, m_Desc, GetCombinedSamplerSuffix());
+            const auto SrcImmutableSamplerInd = FindImmutableSampler(ResDesc, DescrType, m_Desc, GetCombinedSamplerSuffix());
             if (SrcImmutableSamplerInd >= 0)
             {
                 auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
@@ -652,31 +652,6 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
     }
 
     VERIFY_EXPR(NumSets == GetNumDescriptorSets());
-}
-
-Uint32 PipelineResourceSignatureVkImpl::FindAssignedSampler(const PipelineResourceDesc& SepImg) const
-{
-    Uint32 SamplerInd = ResourceAttribs::InvalidSamplerInd;
-    if (IsUsingCombinedSamplers())
-    {
-        const auto IdxRange = GetResourceIndexRange(SepImg.VarType);
-
-        for (Uint32 i = IdxRange.first; i < IdxRange.second; ++i)
-        {
-            const auto& Res = m_Desc.Resources[i];
-            VERIFY_EXPR(SepImg.VarType == Res.VarType);
-
-            if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-                (SepImg.ShaderStages & Res.ShaderStages) &&
-                StreqSuff(Res.Name, SepImg.Name, GetCombinedSamplerSuffix()))
-            {
-                VERIFY_EXPR((Res.ShaderStages & SepImg.ShaderStages) == SepImg.ShaderStages);
-                SamplerInd = i;
-                break;
-            }
-        }
-    }
-    return SamplerInd;
 }
 
 size_t PipelineResourceSignatureVkImpl::CalculateHash() const

@@ -193,7 +193,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
     // Index of the assigned sampler, for every texture SRV in m_Desc.Resources, or InvalidSamplerInd.
     std::vector<Uint32> TextureSrvToAssignedSamplerInd(m_Desc.NumResources, ResourceAttribs::InvalidSamplerInd);
     // Index of the immutable sampler for every sampler in m_Desc.Resources, or -1.
-    std::vector<int> ResourceToImmutableSamplerInd(m_Desc.NumResources, -1);
+    std::vector<Int32> ResourceToImmutableSamplerInd(m_Desc.NumResources, -1);
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const auto& ResDesc = m_Desc.Resources[i];
@@ -222,7 +222,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
 
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
         {
-            TextureSrvToAssignedSamplerInd[i] = FindAssignedSampler(ResDesc);
+            TextureSrvToAssignedSamplerInd[i] = FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd);
         }
     }
 
@@ -366,32 +366,6 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
         m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
     }
 }
-
-Uint32 PipelineResourceSignatureD3D12Impl::FindAssignedSampler(const PipelineResourceDesc& SepImg) const
-{
-    Uint32 SamplerInd = ResourceAttribs::InvalidSamplerInd;
-    if (IsUsingCombinedSamplers())
-    {
-        const auto IdxRange = GetResourceIndexRange(SepImg.VarType);
-
-        for (Uint32 i = IdxRange.first; i < IdxRange.second; ++i)
-        {
-            const auto& Res = m_Desc.Resources[i];
-            VERIFY_EXPR(SepImg.VarType == Res.VarType);
-
-            if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-                (SepImg.ShaderStages & Res.ShaderStages) &&
-                StreqSuff(Res.Name, SepImg.Name, GetCombinedSamplerSuffix()))
-            {
-                VERIFY_EXPR((Res.ShaderStages & SepImg.ShaderStages) == SepImg.ShaderStages);
-                SamplerInd = i;
-                break;
-            }
-        }
-    }
-    return SamplerInd;
-}
-
 
 PipelineResourceSignatureD3D12Impl::~PipelineResourceSignatureD3D12Impl()
 {

@@ -316,9 +316,6 @@ private:
 
     size_t CalculateHash() const;
 
-    // Finds a separate sampler assigned to the image SepImg and returns its index in m_Desc.Resources.
-    Uint32 FindAssignedSampler(const PipelineResourceDesc& SepImg) const;
-
     static inline CACHE_GROUP       GetResourceCacheGroup(const PipelineResourceDesc& Res);
     static inline DESCRIPTOR_SET_ID VarTypeToDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
 

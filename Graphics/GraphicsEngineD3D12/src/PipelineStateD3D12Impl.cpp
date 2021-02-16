@@ -692,7 +692,9 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 
             if (m_RootSig->GetTotalSpaces() > 1 && !IsSM51orAbove)
             {
-                LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' compiled with shader model 5.0 or below that is not compatible with register spaces that is used in DirectX 12.");
+                LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name,
+                                    "' is compiled using SM5.0 or below that only supports single register space. "
+                                    "Compile the shader using SM5.1+ or change the resource layout to use only one space.");
             }
 
             if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
