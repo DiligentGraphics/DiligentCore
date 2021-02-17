@@ -691,9 +691,6 @@ void PipelineResourceSignatureVkImpl::Destruct()
             m_pDevice->SafeReleaseDeviceObject(std::move(Layout), ~0ull);
     }
 
-    if (m_pResourceAttribs == nullptr)
-        return; // memory is not allocated
-
     auto& RawAllocator = GetRawAllocator();
 
     if (m_StaticVarsMgrs != nullptr)

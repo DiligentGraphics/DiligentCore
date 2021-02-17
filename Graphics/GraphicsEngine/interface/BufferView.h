@@ -163,7 +163,7 @@ DILIGENT_BEGIN_INTERFACE(IBufferView, IDeviceObject)
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    VIRTUAL struct IBuffer* METHOD(GetBuffer)(THIS) PURE;
+    VIRTUAL struct IBuffer* METHOD(GetBuffer)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

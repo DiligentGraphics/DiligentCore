@@ -153,12 +153,10 @@ protected:
 
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
-            VERIFY(Desc.ImmutableSamplers[i].SamplerOrTextureName != nullptr,
-                   "SamplerOrTextureName can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-            VERIFY(Desc.ImmutableSamplers[i].SamplerOrTextureName[0] != '\0',
-                   "SamplerOrTextureName can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-
-            Allocator.AddSpaceForString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
+            const auto* SamOrTexName = Desc.ImmutableSamplers[i].SamplerOrTextureName;
+            VERIFY(SamOrTexName != nullptr, "SamplerOrTextureName can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+            VERIFY(SamOrTexName[0] != '\0', "SamplerOrTextureName can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+            Allocator.AddSpaceForString(SamOrTexName);
         }
 
         if (Desc.UseCombinedTextureSamplers)
@@ -172,12 +170,14 @@ protected:
 
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
-            auto& Dst = pResources[i];
-            Dst       = Desc.Resources[i];
-            VERIFY_EXPR(Desc.Resources[i].Name != nullptr && Desc.Resources[i].Name[0] != '\0');
-            Dst.Name = Allocator.CopyString(Desc.Resources[i].Name);
+            const auto& SrcRes = Desc.Resources[i];
+            auto&       DstRes = pResources[i];
 
-            ++m_ResourceOffsets[Dst.VarType + 1];
+            DstRes = SrcRes;
+            VERIFY_EXPR(SrcRes.Name != nullptr && SrcRes.Name[0] != '\0');
+            DstRes.Name = Allocator.CopyString(SrcRes.Name);
+
+            ++m_ResourceOffsets[DstRes.VarType + 1];
         }
 
         // Sort resources by variable type (all static -> all mutable -> all dynamic)
@@ -201,10 +201,12 @@ protected:
 
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
-            auto& Dst = pSamplers[i];
-            Dst       = Desc.ImmutableSamplers[i];
-            VERIFY_EXPR(Desc.ImmutableSamplers[i].SamplerOrTextureName != nullptr && Desc.ImmutableSamplers[i].SamplerOrTextureName[0] != '\0');
-            Dst.SamplerOrTextureName = Allocator.CopyString(Desc.ImmutableSamplers[i].SamplerOrTextureName);
+            const auto& SrcSam = Desc.ImmutableSamplers[i];
+            auto&       DstSam = pSamplers[i];
+
+            DstSam = SrcSam;
+            VERIFY_EXPR(SrcSam.SamplerOrTextureName != nullptr && SrcSam.SamplerOrTextureName[0] != '\0');
+            DstSam.SamplerOrTextureName = Allocator.CopyString(SrcSam.SamplerOrTextureName);
         }
 
         this->m_Desc.Resources         = pResources;

@@ -381,7 +381,7 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
 
     RootInfo.SRBs[SRBIndex] = pResBindingD3D12Impl;
 
-    if (ResourceCache.GetNumDynamicCBsBound() > 0)
+    if (ResourceCache.GetDynamicRootBuffersCounter() > 0)
         RootInfo.SetDynamicBufferBit(SRBIndex);
     else
         RootInfo.ClearDynamicBufferBit(SRBIndex);

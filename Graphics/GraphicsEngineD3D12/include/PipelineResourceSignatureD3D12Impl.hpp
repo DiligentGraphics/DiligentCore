@@ -95,7 +95,7 @@ public:
 /* 6  */const Uint32  Space                : _SpaceBits;           // Shader register space
 /* 7.0*/const Uint32  SigRootIndex         : _SigRootIndexBits;    // Root table index for signature (static only)
 /* 7.3*/const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
-/* 7.4*/const Uint32  RootParamType        : _RootParamTypeBits;   // Root parameter type (for debugging)
+/* 7.4*/const Uint32  RootParamType        : _RootParamTypeBits;   // Root parameter type
 /* 8  */const Uint32  SigOffsetFromTableStart;                     // Offset in the root table for signature (static only)
 /* 12 */const Uint32  SRBOffsetFromTableStart;                     // Offset in the root table for SRB
 /* 16 */

@@ -287,10 +287,26 @@ public:
         return GPUDescriptorHandle;
     }
 
-    Uint32& GetBoundDynamicCBsCounter() { return m_NumDynamicCBsBound; }
+    template <D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
+    D3D12_CPU_DESCRIPTOR_HANDLE CopyDescriptors(ID3D12Device*               pd3d12Device,
+                                                D3D12_CPU_DESCRIPTOR_HANDLE SrcDescrHandle,
+                                                Uint32                      NumDescriptors,
+                                                Uint32                      RootParamInd,
+                                                Uint32                      OffsetFromTableStart)
+    {
+        auto DstDescrHandle = GetShaderVisibleTableCPUDescriptorHandle<HeapType>(RootParamInd, OffsetFromTableStart);
+        if (DstDescrHandle.ptr != 0)
+        {
+            VERIFY_EXPR(SrcDescrHandle.ptr != 0);
+            pd3d12Device->CopyDescriptorsSimple(NumDescriptors, DstDescrHandle, SrcDescrHandle, HeapType);
+        }
+        return DstDescrHandle;
+    }
 
-    // Returns the number of dynamic constant buffers bound in the cache regardless of their variable types
-    Uint32 GetNumDynamicCBsBound() const { return m_NumDynamicCBsBound; }
+    Uint32& GetDynamicRootBuffersCounter() { return m_NumDynamicRootBuffers; }
+
+    // Returns the number of dynamic buffers bound as root views in the cache regardless of their variable types
+    Uint32 GetNumDynamicRootBuffers() const { return m_NumDynamicRootBuffers; }
 
     CacheContentType GetContentType() const { return static_cast<CacheContentType>(m_ContentType); }
 
@@ -316,7 +332,7 @@ private:
     void*             m_pMemory    = nullptr;
     Uint32            m_NumTables  = 0;
     // The number of the dynamic buffers bound in the resource cache regardless of their variable type
-    Uint32 m_NumDynamicCBsBound = 0;
+    Uint32 m_NumDynamicRootBuffers = 0;
 
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;
