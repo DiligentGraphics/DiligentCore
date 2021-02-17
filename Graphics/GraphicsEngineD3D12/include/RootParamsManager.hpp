@@ -150,20 +150,18 @@ __forceinline void RootParamsManager::ProcessRootTables(TOperation Operation) co
 {
     for (Uint32 rt = 0; rt < m_NumRootTables; ++rt)
     {
-        const auto& RootTable  = GetRootTable(rt);
-        const auto  RootInd    = RootTable.RootIndex;
-        const auto& d3d12Param = RootTable.d3d12RootParam;
+        const auto& RootTable = GetRootTable(rt);
+        VERIFY(RootTable.GetDescriptorTableSize() > 0, "Unexepected empty descriptor table");
 
+        const auto& d3d12Param = RootTable.d3d12RootParam;
         VERIFY_EXPR(d3d12Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 
-        const auto& d3d12Table = d3d12Param.DescriptorTable;
-        VERIFY(RootTable.GetDescriptorTableSize() > 0, "Unexepected empty descriptor table");
-        bool                       IsResourceTable = d3d12Table.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType     = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-#ifdef DILIGENT_DEBUG
-        dbgHeapType = IsResourceTable ? D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV : D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-#endif
-        Operation(RootInd, RootTable, d3d12Param, IsResourceTable, dbgHeapType);
+        const auto& d3d12Table      = d3d12Param.DescriptorTable;
+        const auto  IsResourceTable = d3d12Table.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+        const auto  d3d12HeapType   = IsResourceTable ?
+            D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV :
+            D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+        Operation(RootTable.RootIndex, RootTable, d3d12Param, IsResourceTable, d3d12HeapType);
     }
 }
 

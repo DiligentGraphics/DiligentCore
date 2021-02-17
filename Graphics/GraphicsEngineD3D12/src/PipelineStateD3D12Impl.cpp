@@ -437,14 +437,6 @@ void PipelineStateD3D12Impl::CreateDefaultResourceSignature(const PipelineStateC
                     PIPELINE_RESOURCE_FLAGS Flags;
                     GetShaderResourceTypeAndFlags(Res, Type, Flags);
 
-                    // Backward compatibility: only CBV with array size == 1 will be placed as root view.
-                    if ((Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER && Res.BindCount > 1) ||
-                        Type == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
-                        Type == SHADER_RESOURCE_TYPE_BUFFER_UAV)
-                    {
-                        Flags |= PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS;
-                    }
-
                     if (Res.BindCount == 0)
                     {
                         LOG_ERROR_AND_THROW("Is shader '", pShader->GetDesc().Name, "' resource '", Res.Name, "' uses runtime sized array, ",

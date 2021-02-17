@@ -93,11 +93,11 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     if (AlignmentMask != 1)
         m_Desc.uiSizeInBytes = (m_Desc.uiSizeInBytes + AlignmentMask) & (~AlignmentMask);
 
-    if (m_Desc.Usage == USAGE_DYNAMIC && (m_Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS)) == 0)
+    if (m_Desc.Usage == USAGE_DYNAMIC && (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) == 0)
     {
         // Dynamic constant/vertex/index buffers are suballocated in the upload heap when Map() is called.
-        // Dynamic buffers with SRV or UAV flags need to be allocated in GPU-only memory
-        // Dynamic upload heap buffer is always in D3D12_RESOURCE_STATE_GENERIC_READ state
+        // Dynamic buffers with UAV flags need to be allocated in GPU-only memory.
+        // Dynamic upload heap buffer is always in D3D12_RESOURCE_STATE_GENERIC_READ state.
 
         SetState(RESOURCE_STATE_GENERIC_READ);
         VERIFY_EXPR(m_DynamicData.size() == 1 + pRenderDeviceD3D12->GetNumDeferredContexts());

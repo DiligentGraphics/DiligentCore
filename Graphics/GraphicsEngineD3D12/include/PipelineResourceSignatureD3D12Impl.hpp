@@ -273,12 +273,13 @@ public:
                           bool                      IsCompute,
                           Uint32                    FirstRootIndex);
 
-    template <bool IsCompute>
     void CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
                          CommandContext&           Ctx,
                          DeviceContextD3D12Impl*   pDeviceCtx,
                          Uint32                    DeviceCtxId,
-                         Uint32                    FirstRootIndex);
+                         Uint32                    FirstRootIndex,
+                         bool                      IsCompute,
+                         bool                      CommitDynamicBuffers);
 
 private:
     void CreateLayout();
@@ -304,33 +305,5 @@ private:
 
     SRBMemoryAllocator m_SRBMemAllocator;
 };
-
-template <bool IsCompute>
-__forceinline void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
-                                                                       CommandContext&           CmdCtx,
-                                                                       DeviceContextD3D12Impl*   pDeviceCtx,
-                                                                       Uint32                    DeviceCtxId,
-                                                                       Uint32                    FirstRootIndex)
-{
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        auto& RootView = m_RootParams.GetRootView(rv);
-        auto  RootInd  = RootView.RootIndex;
-
-        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        if (auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>())
-        {
-            bool IsDynamic = pBuffToTransition->GetDesc().Usage == USAGE_DYNAMIC;
-            if (IsDynamic)
-            {
-                D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(DeviceCtxId, pDeviceCtx);
-                if (IsCompute)
-                    CmdCtx.GetCommandList()->SetComputeRootConstantBufferView(FirstRootIndex + RootInd, CBVAddress);
-                else
-                    CmdCtx.GetCommandList()->SetGraphicsRootConstantBufferView(FirstRootIndex + RootInd, CBVAddress);
-            }
-        }
-    }
-}
 
 } // namespace Diligent

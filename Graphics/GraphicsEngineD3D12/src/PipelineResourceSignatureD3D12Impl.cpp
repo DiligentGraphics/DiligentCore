@@ -301,21 +301,23 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
 
             const auto UseDynamicOffset  = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
             const auto IsFormattedBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
+            const auto IsArray           = ResDesc.ArraySize != 1;
 
             d3d12RootParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
             switch (ResDesc.ResourceType)
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
                     VERIFY(!IsFormattedBuffer, "Constant buffers can't be labeled as formatted. This error should've been cuaght by ValidatePipelineResourceSignatureDesc().");
-                    d3d12RootParamType = UseDynamicOffset ? D3D12_ROOT_PARAMETER_TYPE_CBV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+                    d3d12RootParamType = UseDynamicOffset && !IsArray ? D3D12_ROOT_PARAMETER_TYPE_CBV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
                     break;
 
                 case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-                    d3d12RootParamType = UseDynamicOffset && !IsFormattedBuffer ? D3D12_ROOT_PARAMETER_TYPE_SRV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+                    d3d12RootParamType = UseDynamicOffset && !IsFormattedBuffer && !IsArray ? D3D12_ROOT_PARAMETER_TYPE_SRV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
                     break;
 
                 case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-                    d3d12RootParamType = UseDynamicOffset && !IsFormattedBuffer ? D3D12_ROOT_PARAMETER_TYPE_UAV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+                    // Always allocate buffer UAVs in descriptor tables
+                    d3d12RootParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
                     break;
 
                 default:
@@ -681,22 +683,32 @@ inline void UpdateDynamicBuffersCounter(const BufferD3D12Impl*    pOldBuff,
     }
 }
 
-#if 0
 inline void UpdateDynamicBuffersCounter(const BufferViewD3D12Impl* pOldBuffView,
                                         const BufferViewD3D12Impl* pNewBuffView,
-                                        Uint32&                    BuffCounter)
+                                        Uint32&                    BuffCounter,
+                                        D3D12_ROOT_PARAMETER_TYPE  d3d12RootParamType)
 {
     if (pOldBuffView != nullptr && pOldBuffView->GetBuffer<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC)
     {
+        VERIFY_EXPR(d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_SRV || d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_UAV);
         VERIFY_EXPR(BuffCounter > 0);
         --BuffCounter;
     }
     if (pNewBuffView != nullptr && pNewBuffView->GetBuffer<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC)
     {
+        DEV_CHECK_ERR(d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_SRV || d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_UAV,
+                      "Dynamic buffers must be used as root views");
         ++BuffCounter;
     }
 }
-#endif
+
+inline void UpdateDynamicBuffersCounter(const TextureViewD3D12Impl*,
+                                        const TextureViewD3D12Impl*,
+                                        Uint32&,
+                                        D3D12_ROOT_PARAMETER_TYPE)
+{
+}
+
 
 void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderResourceCacheD3D12& DstResourceCache) const
 {
@@ -751,12 +763,10 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
                 }
                 else if (SrcRes.Type == SHADER_RESOURCE_TYPE_BUFFER_SRV || SrcRes.Type == SHADER_RESOURCE_TYPE_BUFFER_UAV)
                 {
-                    // In current implementation buffers that have views always have backing resource and are bound to descriptor tables
-#if 0
                     UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const BufferViewD3D12Impl>(),
                                                 SrcRes.pObject.RawPtr<const BufferViewD3D12Impl>(),
-                                                DstBoundDynamicCBsCounter);
-#endif
+                                                DstBoundDynamicCBsCounter,
+                                                Attr.GetD3D12RootParamType());
                 }
 
                 DstRes.pObject             = SrcRes.pObject;
@@ -790,22 +800,21 @@ namespace
 
 template <class TOperation>
 __forceinline void ProcessCachedTableResources(Uint32                      RootInd,
-                                               const D3D12_ROOT_PARAMETER& D3D12Param,
+                                               const D3D12_ROOT_PARAMETER& d3d12Param,
                                                ShaderResourceCacheD3D12&   ResourceCache,
                                                D3D12_DESCRIPTOR_HEAP_TYPE  dbgHeapType,
                                                TOperation                  Operation)
 {
-    for (UINT r = 0; r < D3D12Param.DescriptorTable.NumDescriptorRanges; ++r)
+    auto& TableResources = ResourceCache.GetRootTable(RootInd);
+    for (UINT r = 0; r < d3d12Param.DescriptorTable.NumDescriptorRanges; ++r)
     {
-        const auto& range = D3D12Param.DescriptorTable.pDescriptorRanges[r];
+        const auto& range = d3d12Param.DescriptorTable.pDescriptorRanges[r];
+        VERIFY(dbgHeapType == D3D12DescriptorRangeTypeToD3D12HeapType(range.RangeType), "Mistmatch between descriptor heap type and descriptor range type");
         for (UINT d = 0; d < range.NumDescriptors; ++d)
         {
-            VERIFY(dbgHeapType == D3D12DescriptorRangeTypeToD3D12HeapType(range.RangeType), "Mistmatch between descriptor heap type and descriptor range type");
-
-            auto  OffsetFromTableStart = range.OffsetInDescriptorsFromTableStart + d;
-            auto& Res                  = ResourceCache.GetRootTable(RootInd).GetResource(OffsetFromTableStart, dbgHeapType);
-
-            Operation(OffsetFromTableStart, range, Res);
+            const auto Offset = range.OffsetInDescriptorsFromTableStart + d;
+            auto&      Res    = TableResources.GetResource(Offset, dbgHeapType);
+            Operation(Offset, range, Res);
         }
     }
 }
@@ -1046,12 +1055,66 @@ void PipelineResourceSignatureD3D12Impl::TransitionResources(ShaderResourceCache
     );
 }
 
+
+void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
+                                                         CommandContext&           CmdCtx,
+                                                         DeviceContextD3D12Impl*   pDeviceCtx,
+                                                         Uint32                    DeviceCtxId,
+                                                         Uint32                    BaseRootIndex,
+                                                         bool                      IsCompute,
+                                                         bool                      CommitDynamicBuffers)
+{
+    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
+    {
+        auto& RootView = m_RootParams.GetRootView(rv);
+        auto  RootInd  = RootView.RootIndex;
+
+        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        if (Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
+        {
+            if (auto* pBuff = Res.pObject.RawPtr<BufferD3D12Impl>())
+            {
+                bool IsDynamic = pBuff->GetDesc().Usage == USAGE_DYNAMIC;
+                if (IsDynamic == CommitDynamicBuffers)
+                {
+                    auto CBVAddress = pBuff->GetGPUAddress(DeviceCtxId, pDeviceCtx);
+                    if (IsCompute)
+                        CmdCtx.GetCommandList()->SetComputeRootConstantBufferView(BaseRootIndex + RootInd, CBVAddress);
+                    else
+                        CmdCtx.GetCommandList()->SetGraphicsRootConstantBufferView(BaseRootIndex + RootInd, CBVAddress);
+                }
+            }
+        }
+        else if (Res.Type == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
+                 Res.Type == SHADER_RESOURCE_TYPE_BUFFER_UAV)
+        {
+            if (auto* pBuffView = Res.pObject.RawPtr<BufferViewD3D12Impl>())
+            {
+                auto* pBuffer   = pBuffView->GetBuffer<BufferD3D12Impl>();
+                bool  IsDynamic = pBuffer->GetDesc().Usage == USAGE_DYNAMIC;
+                if (IsDynamic == CommitDynamicBuffers)
+                {
+                    auto SRVAddress = pBuffer->GetGPUAddress(DeviceCtxId, pDeviceCtx);
+                    if (IsCompute)
+                        CmdCtx.GetCommandList()->SetComputeRootShaderResourceView(BaseRootIndex + RootInd, SRVAddress);
+                    else
+                        CmdCtx.GetCommandList()->SetGraphicsRootShaderResourceView(BaseRootIndex + RootInd, SRVAddress);
+                }
+            }
+        }
+        else
+        {
+            UNEXPECTED("Unexpected root view resource type");
+        }
+    }
+}
+
 void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D12& ResourceCache,
                                                           CommandContext&           CmdCtx,
                                                           DeviceContextD3D12Impl*   pDeviceCtx,
                                                           Uint32                    DeviceCtxId,
                                                           bool                      IsCompute,
-                                                          Uint32                    FirstRootIndex)
+                                                          Uint32                    BaseRootIndex)
 {
     auto* pd3d12Device = GetDevice()->GetD3D12Device();
 
@@ -1102,7 +1165,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
     m_RootParams.ProcessRootTables(
         [&](Uint32                      RootInd,
             const RootParameter&        RootTable,
-            const D3D12_ROOT_PARAMETER& D3D12Param,
+            const D3D12_ROOT_PARAMETER& d3d12Param,
             bool                        IsResourceTable,
             D3D12_DESCRIPTOR_HEAP_TYPE  dbgHeapType) //
         {
@@ -1111,10 +1174,9 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
             bool IsDynamicTable = RootTable.Group == ROOT_PARAMETER_GROUP_DYNAMIC;
             if (IsDynamicTable)
             {
-                if (IsResourceTable)
-                    RootTableGPUDescriptorHandle = DynamicCbvSrvUavDescriptors.GetGpuHandle(DynamicCbvSrvUavTblOffset);
-                else
-                    RootTableGPUDescriptorHandle = DynamicSamplerDescriptors.GetGpuHandle(DynamicSamplerTblOffset);
+                RootTableGPUDescriptorHandle = IsResourceTable ?
+                    DynamicCbvSrvUavDescriptors.GetGpuHandle(DynamicCbvSrvUavTblOffset) :
+                    DynamicSamplerDescriptors.GetGpuHandle(DynamicSamplerTblOffset);
             }
             else
             {
@@ -1125,14 +1187,14 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
             }
 
             if (IsCompute)
-                CmdCtx.GetCommandList()->SetComputeRootDescriptorTable(FirstRootIndex + RootInd, RootTableGPUDescriptorHandle);
+                CmdCtx.GetCommandList()->SetComputeRootDescriptorTable(BaseRootIndex + RootInd, RootTableGPUDescriptorHandle);
             else
-                CmdCtx.GetCommandList()->SetGraphicsRootDescriptorTable(FirstRootIndex + RootInd, RootTableGPUDescriptorHandle);
+                CmdCtx.GetCommandList()->SetGraphicsRootDescriptorTable(BaseRootIndex + RootInd, RootTableGPUDescriptorHandle);
 
             if (IsDynamicTable)
             {
                 ProcessCachedTableResources(
-                    RootInd, D3D12Param, ResourceCache, dbgHeapType,
+                    RootInd, d3d12Param, ResourceCache, dbgHeapType,
                     [&](UINT                                OffsetFromTableStart,
                         const D3D12_DESCRIPTOR_RANGE&       range,
                         ShaderResourceCacheD3D12::Resource& Res) //
@@ -1179,25 +1241,10 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
     VERIFY_EXPR(DynamicCbvSrvUavTblOffset == NumDynamicCbvSrvUavDescriptors);
     VERIFY_EXPR(DynamicSamplerTblOffset == NumDynamicSamplerDescriptors);
 
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        auto& RootView = m_RootParams.GetRootView(rv);
-        auto  RootInd  = RootView.RootIndex;
-
-        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        if (auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>())
-        {
-            bool IsDynamic = pBuffToTransition->GetDesc().Usage == USAGE_DYNAMIC;
-            if (!IsDynamic)
-            {
-                D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(DeviceCtxId, pDeviceCtx);
-                if (IsCompute)
-                    CmdCtx.GetCommandList()->SetComputeRootConstantBufferView(FirstRootIndex + RootInd, CBVAddress);
-                else
-                    CmdCtx.GetCommandList()->SetGraphicsRootConstantBufferView(FirstRootIndex + RootInd, CBVAddress);
-            }
-        }
-    }
+    // Commit non-dynamic root buffer views
+    constexpr auto CommitDynamicBuffers = false;
+    CommitRootViews(ResourceCache, CmdCtx, pDeviceCtx,
+                    DeviceCtxId, BaseRootIndex, IsCompute, CommitDynamicBuffers);
 }
 
 
@@ -1354,7 +1401,7 @@ struct ResourceViewTraits
 {};
 
 template <>
-struct ResourceViewTraits<ITextureViewD3D12>
+struct ResourceViewTraits<TextureViewD3D12Impl>
 {
     static const INTERFACE_ID& IID;
 
@@ -1363,10 +1410,10 @@ struct ResourceViewTraits<ITextureViewD3D12>
     //    return true;
     //}
 };
-const INTERFACE_ID& ResourceViewTraits<ITextureViewD3D12>::IID = IID_TextureViewD3D12;
+const INTERFACE_ID& ResourceViewTraits<TextureViewD3D12Impl>::IID = IID_TextureViewD3D12;
 
 template <>
-struct ResourceViewTraits<IBufferViewD3D12>
+struct ResourceViewTraits<BufferViewD3D12Impl>
 {
     static const INTERFACE_ID& IID;
 
@@ -1375,7 +1422,7 @@ struct ResourceViewTraits<IBufferViewD3D12>
     //    return VerifyBufferViewModeD3D(pViewD3D12, Attribs);
     //}
 };
-const INTERFACE_ID& ResourceViewTraits<IBufferViewD3D12>::IID = IID_BufferViewD3D12;
+const INTERFACE_ID& ResourceViewTraits<BufferViewD3D12Impl>::IID = IID_BufferViewD3D12;
 
 
 template <typename TResourceViewType,    ///< ResType of the view (ITextureViewD3D12 or IBufferViewD3D12)
@@ -1418,6 +1465,8 @@ void BindResourceHelper::CacheResourceView(IDeviceObject*       pView,
             GetD3D12Device()->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
 
+        UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const TResourceViewType>(), pViewD3D12, ResourceCache.GetDynamicRootBuffersCounter(), Attribs.GetD3D12RootParamType());
+
         BindSamplerProc(pViewD3D12);
 
         DstRes.pObject = std::move(pViewD3D12);
@@ -1433,20 +1482,24 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
 
     if (ResourceCache.GetContentType() == CacheContentType::Signature)
     {
-        VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Static shader resources of a shader should not be assigned shader visible descriptor space");
+        VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Static shader resources should never be assigned shader visible descriptor space.");
     }
     else if (ResourceCache.GetContentType() == CacheContentType::SRB)
     {
-        if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER && ResDesc.ArraySize == 1)
+        if (Attribs.GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
         {
-            VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Non-array constant buffers are bound as root views and should not be assigned shader visible descriptor space");
+            if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0, "Shader resources allocated in non-dynamic descriptor tables must be assigned shader-visible descriptor space");
+            else
+                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Shader resources allocated in dynamic descriptor tables should never be assigned shader-visible descriptor space");
         }
         else
         {
-            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Dynamic resources of a shader resource binding should be assigned shader visible descriptor space at every draw call");
-            else
-                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0, "Non-dynamics resources of a shader resource binding must be assigned shader visible descriptor space");
+            VERIFY((ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER ||
+                    ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
+                    ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV),
+                   "Only constant buffers and dynamic buffers views can be allocated as root views");
+            VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Resourcesa allocated as root views should never be assigned shader-visible descriptor space");
         }
     }
     else
@@ -1465,9 +1518,9 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                 break;
 
             case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
-                CacheResourceView<ITextureViewD3D12>(
+                CacheResourceView<TextureViewD3D12Impl>(
                     pObj, TEXTURE_VIEW_SHADER_RESOURCE,
-                    [&](ITextureViewD3D12* pTexView) //
+                    [&](TextureViewD3D12Impl* pTexView) //
                     {
                         if (Attribs.IsCombinedWithSampler())
                         {
@@ -1507,15 +1560,15 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                 break;
 
             case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
-                CacheResourceView<ITextureViewD3D12>(pObj, TEXTURE_VIEW_UNORDERED_ACCESS, [](ITextureViewD3D12*) {});
+                CacheResourceView<TextureViewD3D12Impl>(pObj, TEXTURE_VIEW_UNORDERED_ACCESS, [](TextureViewD3D12Impl*) {});
                 break;
 
             case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-                CacheResourceView<IBufferViewD3D12>(pObj, BUFFER_VIEW_SHADER_RESOURCE, [](IBufferViewD3D12*) {});
+                CacheResourceView<BufferViewD3D12Impl>(pObj, BUFFER_VIEW_SHADER_RESOURCE, [](BufferViewD3D12Impl*) {});
                 break;
 
             case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-                CacheResourceView<IBufferViewD3D12>(pObj, BUFFER_VIEW_UNORDERED_ACCESS, [](IBufferViewD3D12*) {});
+                CacheResourceView<BufferViewD3D12Impl>(pObj, BUFFER_VIEW_UNORDERED_ACCESS, [](BufferViewD3D12Impl*) {});
                 break;
 
             case SHADER_RESOURCE_TYPE_SAMPLER:

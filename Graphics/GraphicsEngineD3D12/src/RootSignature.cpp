@@ -149,7 +149,10 @@ void RootSignatureD3D12::Finalize(RenderDeviceD3D12Impl* pDeviceD3D12Impl)
             const auto&  RootView      = RootParams.GetRootView(rv);
             const auto&  d3d12SrcParam = RootView.d3d12RootParam;
             const Uint32 RootIndex     = FirstRootIndex + RootView.RootIndex;
-            VERIFY(d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Root CBV is expected");
+            VERIFY((d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
+                    d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
+                    d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV),
+                   "Root CBV, SRV or UAV is expected");
             MaxSpaceUsed = std::max(MaxSpaceUsed, d3d12SrcParam.Descriptor.RegisterSpace);
 
             d3d12Parameters[RootIndex] = d3d12SrcParam;
