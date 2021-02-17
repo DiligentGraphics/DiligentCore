@@ -32,6 +32,7 @@
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
 #include "MapHelper.hpp"
+#include "FastRand.hpp"
 
 #include "gtest/gtest.h"
 
@@ -298,8 +299,6 @@ protected:
 
         TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-        RenderDrawCommandReference(pSwapChain);
-
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
         auto& PSODesc          = PSOCreateInfo.PSODesc;
@@ -428,10 +427,13 @@ protected:
         auto* pContext   = pEnv->GetDeviceContext();
         auto* pSwapChain = pEnv->GetSwapChain();
 
+        // Use random clear color for each test
+        const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+        RenderDrawCommandReference(pSwapChain, ClearColor);
+
         ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
         pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-        const float ClearColor[] = {0.f, 0.f, 0.f, 0.0f};
         pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         pContext->SetPipelineState(pPSO);
@@ -526,12 +528,14 @@ protected:
     static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDraw_2xStride_PSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawInstancedPSO;
+    static FastRandFloat                 sm_Rnd;
 };
 
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawProceduralPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDraw_2xStride_PSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawInstancedPSO;
+FastRandFloat                 DrawCommandTest::sm_Rnd{0, 0.f, 1.f};
 
 TEST_F(DrawCommandTest, DrawProcedural)
 {
