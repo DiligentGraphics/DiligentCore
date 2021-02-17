@@ -60,18 +60,6 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
         }
     }
 
-    Finalize(pDeviceD3D12Impl);
-}
-
-RootSignatureD3D12::~RootSignatureD3D12()
-{
-    m_Cache.OnDestroyRootSig(this);
-}
-
-void RootSignatureD3D12::Finalize(RenderDeviceD3D12Impl* pDeviceD3D12Impl)
-{
-    VERIFY(m_pd3d12RootSignature == nullptr, "This root signature is already initialized");
-
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
     rootSignatureDesc.Flags                     = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
@@ -223,6 +211,10 @@ void RootSignatureD3D12::Finalize(RenderDeviceD3D12Impl* pDeviceD3D12Impl)
     CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
 }
 
+RootSignatureD3D12::~RootSignatureD3D12()
+{
+    m_Cache.OnDestroyRootSig(this);
+}
 
 LocalRootSignatureD3D12::LocalRootSignatureD3D12(const char* pCBName, Uint32 ShaderRecordSize) :
     m_pName{pCBName},

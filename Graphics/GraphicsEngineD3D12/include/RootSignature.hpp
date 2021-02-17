@@ -93,20 +93,20 @@ public:
     using SignatureArrayType = std::array<RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>, MAX_RESOURCE_SIGNATURES>;
 
 private:
-    void Finalize(RenderDeviceD3D12Impl* pDeviceD3D12Impl);
-
     std::array<Uint16, MAX_RESOURCE_SIGNATURES> m_FirstRootIndex     = {};
     std::array<Uint16, MAX_RESOURCE_SIGNATURES> m_FirstRegisterSpace = {};
 
+    // The total number of register spaces used by this root signature
     Uint32 m_TotalSpacesUsed = 0;
+
+    // The number of resource signatures used by this root signature
+    // (Maximum is MAX_RESOURCE_SIGNATURES)
+    const Uint8 m_SignatureCount;
 
     const size_t                 m_Hash;
     CComPtr<ID3D12RootSignature> m_pd3d12RootSignature;
 
-    // The number of resource signatures used by this root signature
-    // (Maximum is MAX_RESOURCE_SIGNATURES)
-    Uint8              m_SignatureCount = 0;
-    SignatureArrayType m_Signatures     = {};
+    SignatureArrayType m_Signatures = {};
 
     RootSignatureCacheD3D12& m_Cache;
 };
