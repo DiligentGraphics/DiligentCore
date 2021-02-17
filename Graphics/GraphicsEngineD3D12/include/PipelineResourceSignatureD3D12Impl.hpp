@@ -35,6 +35,7 @@
 #include "PipelineResourceSignatureBase.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "RootParamsManager.hpp"
+#include "ShaderResourceCacheD3D12.hpp"
 
 namespace Diligent
 {
@@ -42,7 +43,6 @@ namespace Diligent
 class CommandContext;
 class RenderDeviceD3D12Impl;
 class DeviceContextD3D12Impl;
-class ShaderResourceCacheD3D12;
 class ShaderVariableManagerD3D12;
 
 /// Implementation of the Diligent::PipelineResourceSignatureD3D12Impl class
@@ -59,11 +59,7 @@ public:
                                        bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureD3D12Impl();
 
-    enum class CacheContentType
-    {
-        Signature = 0, // only static resources
-        SRB       = 1  // in SRB
-    };
+    using CacheContentType = ShaderResourceCacheD3D12::CacheContentType;
 
     // sizeof(ResourceAttribs) == 16, x64
     struct ResourceAttribs

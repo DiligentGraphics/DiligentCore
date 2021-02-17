@@ -1645,7 +1645,7 @@ void PipelineResourceSignatureD3D12Impl::BindResource(IDeviceObject*            
         ResourceCache};
 
 #ifdef DILIGENT_DEBUG
-    Helper.dbgIsDynamic = RootTable.IsDynamic();
+    Helper.dbgIsDynamic = RootTable.DbgIsDynamic();
     Helper.dbgParamType = Attribs.GetD3D12RootParamType();
 #endif
 
