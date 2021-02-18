@@ -97,16 +97,17 @@ protected:
         return pPSO;
     }
 
-    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE        ShaderType,
-                                                       const char*        File,
-                                                       const char*        EntryPoint,
-                                                       const char*        Name,
-                                                       bool               UseCombinedSamplers,
-                                                       const ShaderMacro* Macros = nullptr)
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE            ShaderType,
+                                                       const char*            File,
+                                                       const char*            EntryPoint,
+                                                       const char*            Name,
+                                                       bool                   UseCombinedSamplers,
+                                                       const ShaderMacro*     Macros         = nullptr,
+                                                       SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
     {
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.SourceLanguage             = SourceLanguage;
         ShaderCI.FilePath                   = File;
         ShaderCI.Macros                     = Macros;
         ShaderCI.Desc.Name                  = Name;
@@ -123,13 +124,14 @@ protected:
         return pShader;
     }
 
-    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE        ShaderType,
-                                                       const char*        File,
-                                                       const char*        EntryPoint,
-                                                       const char*        Name,
-                                                       const ShaderMacro* Macros = nullptr)
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE            ShaderType,
+                                                       const char*            File,
+                                                       const char*            EntryPoint,
+                                                       const char*            Name,
+                                                       const ShaderMacro*     Macros         = nullptr,
+                                                       SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
     {
-        return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, false, Macros);
+        return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, false, Macros, SourceLanguage);
     }
 
     static RefCntAutoPtr<IShader> CreateShaderFromSource(SHADER_TYPE        ShaderType,
@@ -165,6 +167,8 @@ protected:
     {
         return CreateShaderFromSource(ShaderType, Source, EntryPoint, Name, UseCombinedSamplers, Macros, SHADER_COMPILER_DXC);
     }
+
+    static void TestFormattedOrStructuredBuffer(BUFFER_MODE BufferMode);
 
     static RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
 };
@@ -1272,12 +1276,15 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 }
 
 
-TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
+void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE BufferMode)
 {
+    VERIFY_EXPR(BufferMode == BUFFER_MODE_FORMATTED || BufferMode == BUFFER_MODE_STRUCTURED);
+
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
-    auto*       pContext   = pEnv->GetDeviceContext();
-    auto*       pSwapChain = pEnv->GetSwapChain();
+    auto* const pContext   = pEnv->GetDeviceContext();
+    auto* const pSwapChain = pEnv->GetSwapChain();
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1293,7 +1300,7 @@ TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
         USAGE_DEFAULT,
         BIND_SHADER_RESOURCE,
         BUFFER_VIEW_SHADER_RESOURCE,
-        BUFFER_MODE_FORMATTED //
+        BufferMode //
     };
 
     // Buffer indices for vertex/shader bindings
@@ -1306,6 +1313,20 @@ TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
     static constexpr size_t BuffArr_DynIdx    = BuffArr_MutIdx + MutableBuffArraySize;
 
     ShaderMacroHelper Macros;
+
+    const char*            ShaderPath  = BufferMode == BUFFER_MODE_FORMATTED ? "shaders/ShaderResourceLayout/FormattedBuffers.hlsl" : "shaders/ShaderResourceLayout/StructuredBuffers.hlsl";
+    const char*            VSEntry     = "VSMain";
+    const char*            PSEntry     = "PSMain";
+    SHADER_SOURCE_LANGUAGE SrcLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    if (!deviceCaps.IsD3DDevice() && BufferMode == BUFFER_MODE_STRUCTURED)
+    {
+        ShaderPath  = "shaders/ShaderResourceLayout/StructuredBuffers.glsl";
+        VSEntry     = "main";
+        PSEntry     = "main";
+        SrcLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+        Macros.AddShaderMacro("float4", "vec4");
+    }
+
     Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", static_cast<int>(StaticBuffArraySize));
     Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", static_cast<int>(MutableBuffArraySize));
     Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", static_cast<int>(DynamicBuffArraySize));
@@ -1323,23 +1344,24 @@ TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
     for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
         Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx + i));
 
-    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "shaders/ShaderResourceLayout/FormattedBuffers.hlsl", "VSMain", "PRS FormattedBuffers - VS", Macros);
-    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "shaders/ShaderResourceLayout/FormattedBuffers.hlsl", "PSMain", "PRS FormattedBuffers - PS", Macros);
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, ShaderPath, VSEntry, "PRS FormattedBuffers - VS", Macros, SrcLanguage);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, ShaderPath, PSEntry, "PRS FormattedBuffers - PS", Macros, SrcLanguage);
     ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Formatted buffer test";
 
-    constexpr auto SHADER_TYPE_VS_PS = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
+    constexpr auto SHADER_TYPE_VS_PS   = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
+    const auto     FormattedBufferFlag = BufferMode == BUFFER_MODE_FORMATTED ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_UNKNOWN;
     // clang-format off
     PipelineResourceDesc Resources[]
     {
-        {SHADER_TYPE_VS_PS, "g_Buff_Static",   1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
-        {SHADER_TYPE_VS_PS, "g_Buff_Mut",      1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
-        {SHADER_TYPE_VS_PS, "g_Buff_Dyn",      1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
-        {SHADER_TYPE_VS_PS, "g_BuffArr_Static",StaticBuffArraySize,  SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER},
-        {SHADER_TYPE_VS_PS, "g_BuffArr_Mut",   MutableBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER},
-        {SHADER_TYPE_VS_PS, "g_BuffArr_Dyn",   DynamicBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER}
+        {SHADER_TYPE_VS_PS, "g_Buff_Static",   1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  FormattedBufferFlag | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+        {SHADER_TYPE_VS_PS, "g_Buff_Mut",      1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, FormattedBufferFlag | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+        {SHADER_TYPE_VS_PS, "g_Buff_Dyn",      1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, FormattedBufferFlag | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS},
+        {SHADER_TYPE_VS_PS, "g_BuffArr_Static",StaticBuffArraySize,  SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,  FormattedBufferFlag},
+        {SHADER_TYPE_VS_PS, "g_BuffArr_Mut",   MutableBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, FormattedBufferFlag},
+        {SHADER_TYPE_VS_PS, "g_BuffArr_Dyn",   DynamicBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, FormattedBufferFlag}
     };
     // clang-format on
     PRSDesc.Resources    = Resources;
@@ -1351,30 +1373,6 @@ TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
 
     auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS});
     ASSERT_TRUE(pPSO);
-
-    std::array<RefCntAutoPtr<IBuffer>, 4>     pBuffer;
-    std::array<RefCntAutoPtr<IBufferView>, 4> pBufferView;
-
-    for (size_t i = 0; i < pBuffer.size(); ++i)
-    {
-        BufferDesc BuffDesc;
-        BuffDesc.Name              = "Formatted buffer";
-        BuffDesc.uiSizeInBytes     = 256;
-        BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
-        BuffDesc.Usage             = USAGE_DEFAULT;
-        BuffDesc.ElementByteStride = 16;
-        BuffDesc.Mode              = BUFFER_MODE_FORMATTED;
-        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer[i]);
-        ASSERT_NE(pBuffer[i], nullptr);
-
-        BufferViewDesc BuffViewDesc;
-        BuffViewDesc.Name                 = "Formatted buffer SRV";
-        BuffViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
-        BuffViewDesc.Format.ValueType     = VT_FLOAT32;
-        BuffViewDesc.Format.NumComponents = 4;
-        BuffViewDesc.Format.IsNormalized  = false;
-        pBuffer[i]->CreateView(BuffViewDesc, &pBufferView[i]);
-    }
 
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Buff_Static", Set, RefBuffers.GetView(Buff_StaticIdx));
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_BuffArr_Static", SetArray, RefBuffers.GetViewObjects(BuffArr_StaticIdx), 0, StaticBuffArraySize);
@@ -1400,6 +1398,16 @@ TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
     pContext->Draw(DrawAttrs);
 
     pSwapChain->Present();
+}
+
+TEST_F(PipelineResourceSignatureTest, FormattedBuffers)
+{
+    TestFormattedOrStructuredBuffer(BUFFER_MODE_FORMATTED);
+}
+
+TEST_F(PipelineResourceSignatureTest, StructuredBuffers)
+{
+    TestFormattedOrStructuredBuffer(BUFFER_MODE_STRUCTURED);
 }
 
 TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
