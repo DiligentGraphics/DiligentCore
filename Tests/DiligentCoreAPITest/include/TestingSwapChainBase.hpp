@@ -27,6 +27,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -43,13 +44,14 @@ namespace Diligent
 namespace Testing
 {
 
-void CompareTestImages(const Uint8*   pReferencePixels,
-                       Uint32         RefPixelsStride,
-                       const Uint8*   pPixels,
-                       Uint32         PixelsStride,
-                       Uint32         Width,
-                       Uint32         Height,
-                       TEXTURE_FORMAT Format);
+void CompareTestImages(const Uint8*                          pReferencePixels,
+                       Uint32                                RefPixelsStride,
+                       const Uint8*                          pPixels,
+                       Uint32                                PixelsStride,
+                       Uint32                                Width,
+                       Uint32                                Height,
+                       TEXTURE_FORMAT                        Format,
+                       std::unordered_map<std::string, int>& FailureCounters);
 
 // {41BF4655-9B33-4E6C-9300-0CB45FBFE104}
 static constexpr INTERFACE_ID IID_TestingSwapChain =
@@ -182,7 +184,7 @@ public:
 
         m_pContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_READ, MapFlag, nullptr, MapData);
         CompareTestImages(m_ReferenceData.data(), m_ReferenceDataPitch, reinterpret_cast<const Uint8*>(MapData.pData), MapData.Stride,
-                          m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat);
+                          m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat, m_FailureCounters);
 
         m_pContext->UnmapTextureSubresource(m_pStagingTexture, 0, 0);
     }
@@ -237,6 +239,8 @@ protected:
     RefCntAutoPtr<ITextureView>   m_pUAV;
     RefCntAutoPtr<ITextureView>   m_pDSV;
     RefCntAutoPtr<ITexture>       m_pStagingTexture;
+
+    std::unordered_map<std::string, int> m_FailureCounters;
 
     std::vector<Uint8> m_ReferenceData;
     Uint32             m_ReferenceDataPitch = 0;

@@ -525,6 +525,8 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
         pContext->Draw(DrawAttrs);
 
         pSwapChain->Present();
+        std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                  << GetShaderVariableTypeLiteralName(VarType) << " vars" << std::endl;
     }
 }
 

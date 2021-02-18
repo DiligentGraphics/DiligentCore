@@ -41,13 +41,14 @@ namespace Diligent
 namespace Testing
 {
 
-void CompareTestImages(const Uint8*   pReferencePixels,
-                       Uint32         RefPixelsStride,
-                       const Uint8*   pPixels,
-                       Uint32         PixelsStride,
-                       Uint32         Width,
-                       Uint32         Height,
-                       TEXTURE_FORMAT Format)
+void CompareTestImages(const Uint8*                          pReferencePixels,
+                       Uint32                                RefPixelsStride,
+                       const Uint8*                          pPixels,
+                       Uint32                                PixelsStride,
+                       Uint32                                Width,
+                       Uint32                                Height,
+                       TEXTURE_FORMAT                        Format,
+                       std::unordered_map<std::string, int>& FailureCounters)
 {
     VERIFY_EXPR(pReferencePixels != nullptr);
     VERIFY_EXPR(pPixels != nullptr);
@@ -108,15 +109,20 @@ void CompareTestImages(const Uint8*   pReferencePixels,
             return dst;
         };
 
-        std::string FileName = ValidateName(TestInfo->test_suite_name());
+        std::string FileName{ValidateName(TestInfo->test_suite_name())};
+        auto&       FailureCounter = FailureCounters[FileName];
         FileName += '.';
         FileName += ValidateName(TestInfo->name());
-        FileName += "_FAIL_.png";
+        FileName += "_FAIL";
+        if (FailureCounter > 0)
+            FileName += std::to_string(FailureCounter);
+        FileName += "_.png";
         if (stbi_write_png(FileName.c_str(), Width * 2, Height * 2, 3, ReportImage.data(), (Width * 2) * 3) == 0)
         {
             LOG_ERROR_MESSAGE("Failed to write ", FileName);
         }
         ADD_FAILURE() << "Image rendered by the test is not identical to the reference image";
+        ++FailureCounter;
     }
 }
 
