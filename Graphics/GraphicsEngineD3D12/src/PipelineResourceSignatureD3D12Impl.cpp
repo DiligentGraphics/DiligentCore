@@ -841,7 +841,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
             // Not using QueryInterface() for the sake of efficiency
             auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>();
             if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
-                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
+                Ctx.TransitionResource(*pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
         }
         break;
 
@@ -851,7 +851,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
             auto* pBuffViewD3D12    = Res.pObject.RawPtr<BufferViewD3D12Impl>();
             auto* pBuffToTransition = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
             if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
-                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_SHADER_RESOURCE);
+                Ctx.TransitionResource(*pBuffToTransition, RESOURCE_STATE_SHADER_RESOURCE);
         }
         break;
 
@@ -864,7 +864,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
             {
                 // We must always call TransitionResource() even when the state is already
                 // RESOURCE_STATE_UNORDERED_ACCESS as in this case UAV barrier must be executed
-                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_UNORDERED_ACCESS);
+                Ctx.TransitionResource(*pBuffToTransition, RESOURCE_STATE_UNORDERED_ACCESS);
             }
         }
         break;
@@ -875,7 +875,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
             auto* pTexViewD3D12    = Res.pObject.RawPtr<TextureViewD3D12Impl>();
             auto* pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
             if (pTexToTransition->IsInKnownState() && !pTexToTransition->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
-                Ctx.TransitionResource(pTexToTransition, RESOURCE_STATE_SHADER_RESOURCE);
+                Ctx.TransitionResource(*pTexToTransition, RESOURCE_STATE_SHADER_RESOURCE);
         }
         break;
 
@@ -888,7 +888,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
             {
                 // We must always call TransitionResource() even when the state is already
                 // RESOURCE_STATE_UNORDERED_ACCESS as in this case UAV barrier must be executed
-                Ctx.TransitionResource(pTexToTransition, RESOURCE_STATE_UNORDERED_ACCESS);
+                Ctx.TransitionResource(*pTexToTransition, RESOURCE_STATE_UNORDERED_ACCESS);
             }
         }
         break;
@@ -900,9 +900,9 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
-            auto* pTLASD3D12 = Res.pObject.RawPtr<TopLevelASD3D12Impl>();
-            if (pTLASD3D12->IsInKnownState())
-                Ctx.TransitionResource(pTLASD3D12, RESOURCE_STATE_RAY_TRACING);
+            auto* pTlasD3D12 = Res.pObject.RawPtr<TopLevelASD3D12Impl>();
+            if (pTlasD3D12->IsInKnownState())
+                Ctx.TransitionResource(*pTlasD3D12, RESOURCE_STATE_RAY_TRACING);
         }
         break;
 

@@ -40,14 +40,9 @@ namespace Diligent
 {
 
 CommandContext::CommandContext(CommandListManager& CmdListManager) :
-    // clang-format off
-    m_pCurGraphicsRootSignature {nullptr},
-    m_pCurPipelineState         {nullptr},
-    m_pCurComputeRootSignature  {nullptr},
-    m_PendingResourceBarriers   (STD_ALLOCATOR_RAW_MEM(D3D12_RESOURCE_BARRIER, GetRawAllocator(), "Allocator for vector<D3D12_RESOURCE_BARRIER>"))
-// clang-format on
+    m_PendingResourceBarriers(STD_ALLOCATOR_RAW_MEM(D3D12_RESOURCE_BARRIER, GetRawAllocator(), "Allocator for vector<D3D12_RESOURCE_BARRIER>"))
 {
-    m_PendingResourceBarriers.reserve(MaxPendingBarriers);
+    m_PendingResourceBarriers.reserve(32);
     CmdListManager.CreateNewCommandList(&m_pCommandList, &m_pCurrentAllocator, m_MaxInterfaceVer);
 }
 
@@ -99,54 +94,34 @@ ID3D12GraphicsCommandList* CommandContext::Close(CComPtr<ID3D12CommandAllocator>
     return m_pCommandList;
 }
 
-void CommandContext::TransitionResource(ITextureD3D12* pTexture, RESOURCE_STATE NewState)
+void CommandContext::TransitionResource(TextureD3D12Impl& TexD3D12, RESOURCE_STATE NewState)
 {
-    VERIFY_EXPR(pTexture != nullptr);
-    auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>(pTexture);
-    VERIFY(pTexD3D12->IsInKnownState(), "Texture state can't be unknown");
-    StateTransitionDesc TextureBarrier(pTexture, RESOURCE_STATE_UNKNOWN, NewState, true);
-    TransitionResource(TextureBarrier);
+    VERIFY(TexD3D12.IsInKnownState(), "Texture state can't be unknown");
+    TransitionResource(TexD3D12, StateTransitionDesc{&TexD3D12, RESOURCE_STATE_UNKNOWN, NewState, true});
 }
 
-void CommandContext::TransitionResource(IBufferD3D12* pBuffer, RESOURCE_STATE NewState)
+void CommandContext::TransitionResource(BufferD3D12Impl& BuffD3D12, RESOURCE_STATE NewState)
 {
-    VERIFY_EXPR(pBuffer != nullptr);
-    auto* pBuffD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
-    VERIFY(pBuffD3D12->IsInKnownState(), "Buffer state can't be unknown");
-    StateTransitionDesc BufferBarrier(pBuffer, RESOURCE_STATE_UNKNOWN, NewState, true);
-    TransitionResource(BufferBarrier);
+    VERIFY(BuffD3D12.IsInKnownState(), "Buffer state can't be unknown");
+    TransitionResource(BuffD3D12, StateTransitionDesc{&BuffD3D12, RESOURCE_STATE_UNKNOWN, NewState, true});
 }
 
-void CommandContext::TransitionResource(IBottomLevelASD3D12* pBLAS, RESOURCE_STATE NewState)
+void CommandContext::TransitionResource(BottomLevelASD3D12Impl& BlasD3D12, RESOURCE_STATE NewState)
 {
-    VERIFY_EXPR(pBLAS != nullptr);
-    auto* pBLASfD3D12 = ValidatedCast<BottomLevelASD3D12Impl>(pBLAS);
-    VERIFY(pBLASfD3D12->IsInKnownState(), "BLAS state can't be unknown");
-    StateTransitionDesc ASBarrier(pBLAS, RESOURCE_STATE_UNKNOWN, NewState, true);
-    TransitionResource(ASBarrier);
+    VERIFY(BlasD3D12.IsInKnownState(), "BLAS state can't be unknown");
+    TransitionResource(BlasD3D12, StateTransitionDesc{&BlasD3D12, RESOURCE_STATE_UNKNOWN, NewState, true});
 }
 
-void CommandContext::TransitionResource(ITopLevelASD3D12* pTLAS, RESOURCE_STATE NewState)
+void CommandContext::TransitionResource(TopLevelASD3D12Impl& TlasD3D12, RESOURCE_STATE NewState)
 {
-    VERIFY_EXPR(pTLAS != nullptr);
-    auto* pTLASfD3D12 = ValidatedCast<TopLevelASD3D12Impl>(pTLAS);
-    VERIFY(pTLASfD3D12->IsInKnownState(), "TLAS state can't be unknown");
-    StateTransitionDesc ASBarrier(pTLAS, RESOURCE_STATE_UNKNOWN, NewState, true);
-    TransitionResource(ASBarrier);
+    VERIFY(TlasD3D12.IsInKnownState(), "TLAS state can't be unknown");
+    TransitionResource(TlasD3D12, StateTransitionDesc{&TlasD3D12, RESOURCE_STATE_UNKNOWN, NewState, true});
 }
 
-void CommandContext::InsertUAVBarrier(ID3D12Resource* pd3d12Resource)
+namespace
 {
-    m_PendingResourceBarriers.emplace_back();
-    D3D12_RESOURCE_BARRIER& BarrierDesc = m_PendingResourceBarriers.back();
-    // UAV barrier indicates that all UAV accesses (reads or writes) to a particular resource
-    // must complete before any future UAV accesses (read or write) can begin.
-    BarrierDesc.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    BarrierDesc.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    BarrierDesc.UAV.pResource = pd3d12Resource;
-}
 
-static D3D12_RESOURCE_BARRIER_FLAGS TransitionTypeToD3D12ResourceBarrierFlag(STATE_TRANSITION_TYPE TransitionType)
+D3D12_RESOURCE_BARRIER_FLAGS TransitionTypeToD3D12ResourceBarrierFlag(STATE_TRANSITION_TYPE TransitionType)
 {
     switch (TransitionType)
     {
@@ -165,188 +140,221 @@ static D3D12_RESOURCE_BARRIER_FLAGS TransitionTypeToD3D12ResourceBarrierFlag(STA
     }
 }
 
-void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
+class StateTransitionHelper
 {
-    DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
-    RESOURCE_STATE                        OldState       = RESOURCE_STATE_UNKNOWN;
-    ID3D12Resource*                       pd3d12Resource = nullptr;
-    RefCntAutoPtr<TextureD3D12Impl>       pTextureD3D12Impl{Barrier.pResource, IID_TextureD3D12};
-    RefCntAutoPtr<BufferD3D12Impl>        pBufferD3D12Impl{pTextureD3D12Impl ? nullptr : Barrier.pResource, IID_BufferD3D12};
-    RefCntAutoPtr<BottomLevelASD3D12Impl> pBLASD3D12Impl{pBufferD3D12Impl ? nullptr : Barrier.pResource, IID_BottomLevelASD3D12};
-    RefCntAutoPtr<TopLevelASD3D12Impl>    pTLASD3D12Impl{pBLASD3D12Impl ? nullptr : Barrier.pResource, IID_TopLevelASD3D12};
-
-    if (pTextureD3D12Impl)
+public:
+    StateTransitionHelper(const StateTransitionDesc&                                                       Barrier,
+                          std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER>>& d3d12PendingBarriers) :
+        m_Barrier{Barrier},
+        m_d3d12PendingBarriers{d3d12PendingBarriers}
     {
-        pd3d12Resource = pTextureD3D12Impl->GetD3D12Resource();
-        OldState       = pTextureD3D12Impl->GetState();
+        DEV_CHECK_ERR(m_Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
     }
-    else if (pBufferD3D12Impl)
+
+    template <typename ResourceType>
+    void GetD3D12ResourceAndState(ResourceType& Resource);
+
+    template <> void GetD3D12ResourceAndState<BufferD3D12Impl>(BufferD3D12Impl& Buffer);
+
+    void AddD3D12ResourceBarriers(TextureD3D12Impl& Tex, D3D12_RESOURCE_BARRIER& d3d12Barrier);
+    void AddD3D12ResourceBarriers(BufferD3D12Impl& Buff, D3D12_RESOURCE_BARRIER& d3d12Barrier);
+    void AddD3D12ResourceBarriers(TopLevelASD3D12Impl& TLAS, D3D12_RESOURCE_BARRIER& d3d12Barrier);
+    void AddD3D12ResourceBarriers(BottomLevelASD3D12Impl& BLAS, D3D12_RESOURCE_BARRIER& d3d12Barrier);
+
+    template <typename ResourceType>
+    void operator()(ResourceType& Resource);
+
+private:
+    const StateTransitionDesc& m_Barrier;
+
+    std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER>>& m_d3d12PendingBarriers;
+
+    RESOURCE_STATE  m_OldState       = RESOURCE_STATE_UNKNOWN;
+    ID3D12Resource* m_pd3d12Resource = nullptr;
+
+    bool m_RequireUAVBarrier = false;
+};
+
+template <typename ResourceType>
+void StateTransitionHelper::GetD3D12ResourceAndState(ResourceType& Resource)
+{
+    VERIFY_EXPR(m_Barrier.pResource == &Resource);
+    m_OldState       = Resource.GetState();
+    m_pd3d12Resource = Resource.GetD3D12Resource();
+}
+
+template <>
+void StateTransitionHelper::GetD3D12ResourceAndState<BufferD3D12Impl>(BufferD3D12Impl& Buffer)
+{
+    VERIFY_EXPR(m_Barrier.pResource == &Buffer);
+#ifdef DILIGENT_DEVELOPMENT
+    // Dynamic buffers that have no backing d3d12 resource are suballocated in the upload heap
+    // when Map() is called and must always be in D3D12_RESOURCE_STATE_GENERIC_READ state.
+    if (Buffer.GetDesc().Usage == USAGE_DYNAMIC && Buffer.GetD3D12Resource() == nullptr)
     {
-        pd3d12Resource = pBufferD3D12Impl->GetD3D12Resource();
-        OldState       = pBufferD3D12Impl->GetState();
+        DEV_CHECK_ERR(Buffer.GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that have no backing d3d12 resource are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
+        VERIFY((m_Barrier.NewState & RESOURCE_STATE_GENERIC_READ) == m_Barrier.NewState, "Dynamic buffers can only transition to one of RESOURCE_STATE_GENERIC_READ states");
+    }
+#endif
+
+    m_OldState       = Buffer.GetState();
+    m_pd3d12Resource = Buffer.GetD3D12Resource();
+}
+
+
+
+void StateTransitionHelper::AddD3D12ResourceBarriers(TextureD3D12Impl& Tex, D3D12_RESOURCE_BARRIER& d3d12Barrier)
+{
+    // Note that RESOURCE_STATE_UNDEFINED != RESOURCE_STATE_PRESENT, but
+    // D3D12_RESOURCE_STATE_COMMON == D3D12_RESOURCE_STATE_PRESENT
+    if (d3d12Barrier.Transition.StateBefore != d3d12Barrier.Transition.StateAfter)
+    {
+        const auto& TexDesc = Tex.GetDesc();
+        VERIFY(m_Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level is out of range");
+        VERIFY(m_Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || m_Barrier.FirstMipLevel + m_Barrier.MipLevelsCount <= TexDesc.MipLevels,
+               "Invalid mip level range");
+        VERIFY(m_Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice is out of range");
+        VERIFY(m_Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || m_Barrier.FirstArraySlice + m_Barrier.ArraySliceCount <= TexDesc.ArraySize,
+               "Invalid array slice range");
+
+        if (m_Barrier.FirstMipLevel == 0 && (m_Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || m_Barrier.MipLevelsCount == TexDesc.MipLevels) &&
+            m_Barrier.FirstArraySlice == 0 && (m_Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || m_Barrier.ArraySliceCount == TexDesc.ArraySize))
+        {
+            d3d12Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            m_d3d12PendingBarriers.emplace_back(d3d12Barrier);
+        }
+        else
+        {
+            Uint32 EndMip   = m_Barrier.MipLevelsCount == REMAINING_MIP_LEVELS ? TexDesc.MipLevels : m_Barrier.FirstMipLevel + m_Barrier.MipLevelsCount;
+            Uint32 EndSlice = m_Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES ? TexDesc.ArraySize : m_Barrier.FirstArraySlice + m_Barrier.ArraySliceCount;
+            for (Uint32 mip = m_Barrier.FirstMipLevel; mip < EndMip; ++mip)
+            {
+                for (Uint32 slice = m_Barrier.FirstArraySlice; slice < EndSlice; ++slice)
+                {
+                    d3d12Barrier.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
+                    m_d3d12PendingBarriers.emplace_back(d3d12Barrier);
+                }
+            }
+        }
+    }
+}
+
+void StateTransitionHelper::AddD3D12ResourceBarriers(BufferD3D12Impl& Buff, D3D12_RESOURCE_BARRIER& d3d12Barrier)
+{
+    if (d3d12Barrier.Transition.StateBefore != d3d12Barrier.Transition.StateAfter)
+    {
+        m_d3d12PendingBarriers.emplace_back(d3d12Barrier);
+    }
+}
+
+void StateTransitionHelper::AddD3D12ResourceBarriers(TopLevelASD3D12Impl& TLAS, D3D12_RESOURCE_BARRIER& /*d3d12Barrier*/)
+{
+    // Acceleration structure is always in D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+    // and requires UAV barrier instead of state transition.
+    m_RequireUAVBarrier |= (m_OldState == RESOURCE_STATE_BUILD_AS_WRITE);
 
 #ifdef DILIGENT_DEVELOPMENT
-        // Dynamic buffers wtih no SRV/UAV bind flags are suballocated in
-        // the upload heap when Map() is called and must always be in
-        // D3D12_RESOURCE_STATE_GENERIC_READ state
-        if (pBufferD3D12Impl->GetDesc().Usage == USAGE_DYNAMIC && (pBufferD3D12Impl->GetDesc().BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS)) == 0)
-        {
-            DEV_CHECK_ERR(pBufferD3D12Impl->GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers that cannot be bound as SRV or UAV are expected to always be in D3D12_RESOURCE_STATE_GENERIC_READ state");
-            VERIFY((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) == Barrier.NewState, "Dynamic buffers can only transition to one of RESOURCE_STATE_GENERIC_READ states");
-        }
+    if (m_Barrier.NewState & RESOURCE_STATE_RAY_TRACING)
+    {
+        TLAS.ValidateContent();
+    }
 #endif
-    }
-    else if (pBLASD3D12Impl)
-    {
-        pd3d12Resource = pBLASD3D12Impl->GetD3D12Resource();
-        OldState       = pBLASD3D12Impl->GetState();
-    }
-    else if (pTLASD3D12Impl)
-    {
-        pd3d12Resource = pTLASD3D12Impl->GetD3D12Resource();
-        OldState       = pTLASD3D12Impl->GetState();
-    }
-    else
-    {
-        UNEXPECTED("unsupported resource type");
-    }
+}
 
-    if (OldState == RESOURCE_STATE_UNKNOWN)
+void StateTransitionHelper::AddD3D12ResourceBarriers(BottomLevelASD3D12Impl& BLAS, D3D12_RESOURCE_BARRIER& /*d3d12Barrier*/)
+{
+    // Acceleration structure is always in D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+    // and requires UAV barrier instead of state transition.
+    m_RequireUAVBarrier |= (m_OldState == RESOURCE_STATE_BUILD_AS_WRITE);
+}
+
+template <typename ResourceType>
+void StateTransitionHelper::operator()(ResourceType& Resource)
+{
+    GetD3D12ResourceAndState(Resource);
+
+    if (m_OldState == RESOURCE_STATE_UNKNOWN)
     {
-        DEV_CHECK_ERR(Barrier.OldState != RESOURCE_STATE_UNKNOWN, "When resource state is unknown (which means it is managed by the app), OldState member must not be RESOURCE_STATE_UNKNOWN");
-        OldState = Barrier.OldState;
+        DEV_CHECK_ERR(m_Barrier.OldState != RESOURCE_STATE_UNKNOWN, "When resource state is unknown (which means it is managed by the app), OldState member must not be RESOURCE_STATE_UNKNOWN");
+        m_OldState = m_Barrier.OldState;
     }
     else
     {
-        DEV_CHECK_ERR(Barrier.OldState == RESOURCE_STATE_UNKNOWN || Barrier.OldState == OldState,
-                      "Resource state is known (", GetResourceStateString(OldState), ") and does not match the OldState (",
-                      GetResourceStateString(Barrier.OldState), ") specified in the resource barrier. Set OldState member to "
-                                                                "RESOURCE_STATE_UNKNOWN to make the engine use current resource state");
+        DEV_CHECK_ERR(m_Barrier.OldState == RESOURCE_STATE_UNKNOWN || m_Barrier.OldState == m_OldState,
+                      "Resource state is known (", GetResourceStateString(m_OldState), ") and does not match the OldState (",
+                      GetResourceStateString(m_Barrier.OldState),
+                      ") specified in the resource barrier. Set OldState member to RESOURCE_STATE_UNKNOWN "
+                      "to make the engine use current resource state");
     }
 
     // RESOURCE_STATE_UNORDERED_ACCESS and RESOURCE_STATE_BUILD_AS_WRITE are converted to D3D12_RESOURCE_STATE_UNORDERED_ACCESS.
     // UAV barrier must be inserted between D3D12_RESOURCE_STATE_UNORDERED_ACCESS resource usages.
-    bool RequireUAVBarrier =
-        (OldState == RESOURCE_STATE_UNORDERED_ACCESS || OldState == RESOURCE_STATE_BUILD_AS_WRITE) &&
-        (Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE);
+    m_RequireUAVBarrier =
+        (m_OldState == RESOURCE_STATE_UNORDERED_ACCESS || m_OldState == RESOURCE_STATE_BUILD_AS_WRITE) &&
+        (m_Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS || m_Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE);
 
     // Check if required state is already set
-    if ((OldState & Barrier.NewState) != Barrier.NewState)
+    if ((m_OldState & m_Barrier.NewState) != m_Barrier.NewState)
     {
-        auto NewState = Barrier.NewState;
+        auto NewState = m_Barrier.NewState;
         // If both old state and new state are read-only states, combine the two
-        if ((OldState & RESOURCE_STATE_GENERIC_READ) == OldState &&
+        if ((m_OldState & RESOURCE_STATE_GENERIC_READ) == m_OldState &&
             (NewState & RESOURCE_STATE_GENERIC_READ) == NewState)
-            NewState = static_cast<RESOURCE_STATE>(OldState | NewState);
+            NewState |= m_OldState;
 
-        D3D12_RESOURCE_BARRIER BarrierDesc;
-        BarrierDesc.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        BarrierDesc.Flags                  = TransitionTypeToD3D12ResourceBarrierFlag(Barrier.TransitionType);
-        BarrierDesc.Transition.pResource   = pd3d12Resource;
-        BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(OldState);
-        BarrierDesc.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState);
+        D3D12_RESOURCE_BARRIER d3d12Barrier;
+        d3d12Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        d3d12Barrier.Flags                  = TransitionTypeToD3D12ResourceBarrierFlag(m_Barrier.TransitionType);
+        d3d12Barrier.Transition.pResource   = m_pd3d12Resource;
+        d3d12Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        d3d12Barrier.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(m_OldState);
+        d3d12Barrier.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState);
 
-        // Note that RESOURCE_STATE_UNDEFINED != RESOURCE_STATE_PRESENT, but
-        // D3D12_RESOURCE_STATE_COMMON == D3D12_RESOURCE_STATE_PRESENT
-        if (BarrierDesc.Transition.StateBefore != BarrierDesc.Transition.StateAfter)
+        AddD3D12ResourceBarriers(Resource, d3d12Barrier);
+
+        if (m_Barrier.UpdateResourceState)
         {
-            if (pTextureD3D12Impl)
-            {
-                const auto& TexDesc = pTextureD3D12Impl->GetDesc();
-                VERIFY(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level is out of range");
-                VERIFY(Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || Barrier.FirstMipLevel + Barrier.MipLevelsCount <= TexDesc.MipLevels,
-                       "Invalid mip level range");
-                VERIFY(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice is out of range");
-                VERIFY(Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
-                       "Invalid array slice range");
-
-                if (Barrier.FirstMipLevel == 0 && (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || Barrier.MipLevelsCount == TexDesc.MipLevels) &&
-                    Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.ArraySliceCount == TexDesc.ArraySize))
-                {
-                    BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-                    m_PendingResourceBarriers.emplace_back(BarrierDesc);
-                }
-                else
-                {
-                    Uint32 EndMip   = Barrier.MipLevelsCount == REMAINING_MIP_LEVELS ? TexDesc.MipLevels : Barrier.FirstMipLevel + Barrier.MipLevelsCount;
-                    Uint32 EndSlice = Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES ? TexDesc.ArraySize : Barrier.FirstArraySlice + Barrier.ArraySliceCount;
-                    for (Uint32 mip = Barrier.FirstMipLevel; mip < EndMip; ++mip)
-                    {
-                        for (Uint32 slice = Barrier.FirstArraySlice; slice < EndSlice; ++slice)
-                        {
-                            BarrierDesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-                            m_PendingResourceBarriers.emplace_back(BarrierDesc);
-                        }
-                    }
-                }
-            }
-            else if (pBufferD3D12Impl)
-            {
-                m_PendingResourceBarriers.emplace_back(BarrierDesc);
-            }
-        }
-
-        if (pTextureD3D12Impl)
-        {
-            VERIFY(!Barrier.UpdateResourceState || (Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END),
-                   "Texture state can't be updated in begin-split barrier");
-            if (Barrier.UpdateResourceState)
-            {
-                pTextureD3D12Impl->SetState(NewState);
-            }
-        }
-        else if (pBufferD3D12Impl)
-        {
-            VERIFY(!Barrier.UpdateResourceState || (Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END),
-                   "Buffer state can't be updated in begin-split barrier");
-            if (Barrier.UpdateResourceState)
-            {
-                pBufferD3D12Impl->SetState(NewState);
-            }
-
-            if (pBufferD3D12Impl->GetDesc().Usage == USAGE_DYNAMIC && (pBufferD3D12Impl->GetDesc().BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS)) == 0)
-                VERIFY(pBufferD3D12Impl->GetState() == RESOURCE_STATE_GENERIC_READ,
-                       "Dynamic buffers without SRV/UAV bind flag are expected to never "
-                       "transition from RESOURCE_STATE_GENERIC_READ state");
-        }
-        else if (pBLASD3D12Impl)
-        {
-            if (Barrier.UpdateResourceState)
-            {
-                pBLASD3D12Impl->SetState(NewState);
-            }
-
-            // acceleration structure is always in D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE but requires UAV barrier instead of state transition.
-            RequireUAVBarrier |= (OldState == RESOURCE_STATE_BUILD_AS_WRITE);
-        }
-        else if (pTLASD3D12Impl)
-        {
-            if (Barrier.UpdateResourceState)
-            {
-                pTLASD3D12Impl->SetState(NewState);
-            }
-
-            // acceleration structure is always in D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE but requires UAV barrier instead of state transition.
-            RequireUAVBarrier |= (OldState == RESOURCE_STATE_BUILD_AS_WRITE);
-
-#ifdef DILIGENT_DEVELOPMENT
-            if (Barrier.NewState & RESOURCE_STATE_RAY_TRACING)
-            {
-                pTLASD3D12Impl->ValidateContent();
-            }
-#endif
+            VERIFY(m_Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || m_Barrier.TransitionType == STATE_TRANSITION_TYPE_END,
+                   "Resource state can't be updated in begin-split barrier");
+            Resource.SetState(NewState);
         }
     }
 
-    if (RequireUAVBarrier)
+    if (m_RequireUAVBarrier)
     {
-        DEV_CHECK_ERR(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "UAV barriers must not be split");
-        InsertUAVBarrier(pd3d12Resource);
-    }
+        // UAV barrier indicates that all UAV accesses (reads or writes) to a particular resource
+        // must complete before any future UAV accesses (reads or writes) can begin.
 
-    if (m_PendingResourceBarriers.size() >= MaxPendingBarriers)
-        FlushResourceBarriers();
+        DEV_CHECK_ERR(m_Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "UAV barriers must not be split");
+        m_d3d12PendingBarriers.emplace_back(D3D12_RESOURCE_BARRIER{D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_RESOURCE_BARRIER_FLAG_NONE});
+        m_d3d12PendingBarriers.back().UAV.pResource = m_pd3d12Resource;
+    }
+}
+
+} // namespace
+
+void CommandContext::TransitionResource(TextureD3D12Impl& Texture, const StateTransitionDesc& Barrier)
+{
+    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers};
+    Helper(Texture);
+}
+
+void CommandContext::TransitionResource(BufferD3D12Impl& Buffer, const StateTransitionDesc& Barrier)
+{
+    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers};
+    Helper(Buffer);
+}
+
+void CommandContext::TransitionResource(BottomLevelASD3D12Impl& BLAS, const StateTransitionDesc& Barrier)
+{
+    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers};
+    Helper(BLAS);
+}
+
+void CommandContext::TransitionResource(TopLevelASD3D12Impl& TLAS, const StateTransitionDesc& Barrier)
+{
+    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers};
+    Helper(TLAS);
 }
 
 void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, bool FlushImmediate)

@@ -1874,7 +1874,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer*                       pS
         if (BufferTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
         {
             if (pBufferD3D12->IsInKnownState() && pBufferD3D12->GetState() != RESOURCE_STATE_GENERIC_READ)
-                GetCmdContext().TransitionResource(pBufferD3D12, RESOURCE_STATE_GENERIC_READ);
+                GetCmdContext().TransitionResource(*pBufferD3D12, RESOURCE_STATE_GENERIC_READ);
         }
 #ifdef DILIGENT_DEVELOPMENT
         else if (BufferTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
@@ -2227,7 +2227,17 @@ void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, State
 #ifdef DILIGENT_DEVELOPMENT
         DvpVerifyStateTransitionDesc(pResourceBarriers[i]);
 #endif
-        CmdCtx.TransitionResource(pResourceBarriers[i]);
+        const auto& Barrier = pResourceBarriers[i];
+        if (RefCntAutoPtr<TextureD3D12Impl> pTextureD3D12Impl{Barrier.pResource, IID_TextureD3D12})
+            CmdCtx.TransitionResource(*pTextureD3D12Impl, Barrier);
+        else if (RefCntAutoPtr<BufferD3D12Impl> pBufferD3D12Impl{Barrier.pResource, IID_BufferD3D12})
+            CmdCtx.TransitionResource(*pBufferD3D12Impl, Barrier);
+        else if (RefCntAutoPtr<BottomLevelASD3D12Impl> pBLASD3D12Impl{Barrier.pResource, IID_BottomLevelASD3D12})
+            CmdCtx.TransitionResource(*pBLASD3D12Impl, Barrier);
+        else if (RefCntAutoPtr<TopLevelASD3D12Impl> pTLASD3D12Impl{Barrier.pResource, IID_TopLevelASD3D12})
+            CmdCtx.TransitionResource(*pTLASD3D12Impl, Barrier);
+        else
+            UNEXPECTED("Unknown resource type");
     }
 }
 
@@ -2240,7 +2250,7 @@ void DeviceContextD3D12Impl::TransitionOrVerifyBufferState(CommandContext&      
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         if (Buffer.IsInKnownState())
-            CmdCtx.TransitionResource(&Buffer, RequiredState);
+            CmdCtx.TransitionResource(Buffer, RequiredState);
     }
 #ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
@@ -2259,7 +2269,7 @@ void DeviceContextD3D12Impl::TransitionOrVerifyTextureState(CommandContext&     
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         if (Texture.IsInKnownState())
-            CmdCtx.TransitionResource(&Texture, RequiredState);
+            CmdCtx.TransitionResource(Texture, RequiredState);
     }
 #ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
@@ -2278,7 +2288,7 @@ void DeviceContextD3D12Impl::TransitionOrVerifyBLASState(CommandContext&        
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         if (BLAS.IsInKnownState())
-            CmdCtx.TransitionResource(&BLAS, RequiredState);
+            CmdCtx.TransitionResource(BLAS, RequiredState);
     }
 #ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
@@ -2297,7 +2307,7 @@ void DeviceContextD3D12Impl::TransitionOrVerifyTLASState(CommandContext&        
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         if (TLAS.IsInKnownState())
-            CmdCtx.TransitionResource(&TLAS, RequiredState);
+            CmdCtx.TransitionResource(TLAS, RequiredState);
     }
 #ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
@@ -2309,18 +2319,18 @@ void DeviceContextD3D12Impl::TransitionOrVerifyTLASState(CommandContext&        
 
 void DeviceContextD3D12Impl::TransitionTextureState(ITexture* pTexture, D3D12_RESOURCE_STATES State)
 {
-    VERIFY_EXPR(pTexture != nullptr);
+    DEV_CHECK_ERR(pTexture != nullptr, "pTexture must not be null");
     DEV_CHECK_ERR(pTexture->GetState() != RESOURCE_STATE_UNKNOWN, "Texture state is unknown");
     auto& CmdCtx = GetCmdContext();
-    CmdCtx.TransitionResource(ValidatedCast<ITextureD3D12>(pTexture), D3D12ResourceStatesToResourceStateFlags(State));
+    CmdCtx.TransitionResource(*ValidatedCast<TextureD3D12Impl>(pTexture), D3D12ResourceStatesToResourceStateFlags(State));
 }
 
 void DeviceContextD3D12Impl::TransitionBufferState(IBuffer* pBuffer, D3D12_RESOURCE_STATES State)
 {
-    VERIFY_EXPR(pBuffer != nullptr);
+    DEV_CHECK_ERR(pBuffer != nullptr, "pBuffer must not be null");
     DEV_CHECK_ERR(pBuffer->GetState() != RESOURCE_STATE_UNKNOWN, "Buffer state is unknown");
     auto& CmdCtx = GetCmdContext();
-    CmdCtx.TransitionResource(ValidatedCast<IBufferD3D12>(pBuffer), D3D12ResourceStatesToResourceStateFlags(State));
+    CmdCtx.TransitionResource(*ValidatedCast<BufferD3D12Impl>(pBuffer), D3D12ResourceStatesToResourceStateFlags(State));
 }
 
 ID3D12GraphicsCommandList* DeviceContextD3D12Impl::GetD3D12CommandList()

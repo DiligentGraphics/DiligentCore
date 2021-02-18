@@ -137,7 +137,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
     {
         // If texture state is undefined, transition it to shader resource state.
         // We need all subresources to be in a defined state at the end of the procedure.
-        Ctx.TransitionResource(pTexD3D12, RESOURCE_STATE_SHADER_RESOURCE);
+        Ctx.TransitionResource(*pTexD3D12, RESOURCE_STATE_SHADER_RESOURCE);
     }
 
     const auto OriginalState = pTexD3D12->GetState();
@@ -231,7 +231,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
             SrcMipBarrier.MipLevelsCount  = 1;
             SrcMipBarrier.FirstArraySlice = ViewDesc.FirstArraySlice;
             SrcMipBarrier.ArraySliceCount = ViewDesc.NumArraySlices;
-            Ctx.TransitionResource(SrcMipBarrier);
+            Ctx.TransitionResource(*pTexD3D12, SrcMipBarrier);
         }
 
         // Transition dst mip levels to UAV state
@@ -242,7 +242,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
             DstMipsBarrier.MipLevelsCount  = NumMips;
             DstMipsBarrier.FirstArraySlice = ViewDesc.FirstArraySlice;
             DstMipsBarrier.ArraySliceCount = ViewDesc.NumArraySlices;
-            Ctx.TransitionResource(DstMipsBarrier);
+            Ctx.TransitionResource(*pTexD3D12, DstMipsBarrier);
         }
 
         ComputeCtx.Dispatch((DstWidth + 7) / 8, (DstHeight + 7) / 8, ViewDesc.NumArraySlices);
@@ -253,7 +253,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
         {
             SrcMipBarrier.OldState = SrcMipBarrier.NewState;
             SrcMipBarrier.NewState = FinalState;
-            Ctx.TransitionResource(SrcMipBarrier);
+            Ctx.TransitionResource(*pTexD3D12, SrcMipBarrier);
         }
 
         if (DstMipsBarrier.NewState != FinalState)
@@ -264,7 +264,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
             if (TopMip + NumMips < BottomMip)
                 --DstMipsBarrier.MipLevelsCount;
             if (DstMipsBarrier.MipLevelsCount > 0)
-                Ctx.TransitionResource(DstMipsBarrier);
+                Ctx.TransitionResource(*pTexD3D12, DstMipsBarrier);
         }
 
         TopMip += NumMips;

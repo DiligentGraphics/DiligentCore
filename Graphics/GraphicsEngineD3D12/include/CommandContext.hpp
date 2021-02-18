@@ -31,16 +31,15 @@
 #include <vector>
 
 #include "D3D12ResourceBase.hpp"
-#include "TextureViewD3D12.h"
-#include "TextureD3D12.h"
-#include "BufferD3D12.h"
-#include "BottomLevelASD3D12.h"
-#include "TopLevelASD3D12.h"
 #include "DescriptorHeap.hpp"
 
 namespace Diligent
 {
 
+class TextureD3D12Impl;
+class BufferD3D12Impl;
+class BottomLevelASD3D12Impl;
+class TopLevelASD3D12Impl;
 
 struct DWParam
 {
@@ -114,11 +113,16 @@ public:
         m_pCommandList->CopyResource(pDstRes, pSrcRes);
     }
 
-    void TransitionResource(ITextureD3D12* pTexture, RESOURCE_STATE NewState);
-    void TransitionResource(IBufferD3D12* pBuffer, RESOURCE_STATE NewState);
-    void TransitionResource(IBottomLevelASD3D12* pBLAS, RESOURCE_STATE NewState);
-    void TransitionResource(ITopLevelASD3D12* pTLAS, RESOURCE_STATE NewState);
-    void TransitionResource(const StateTransitionDesc& Barrier);
+    void TransitionResource(TextureD3D12Impl& Texture, RESOURCE_STATE NewState);
+    void TransitionResource(BufferD3D12Impl& Buffer, RESOURCE_STATE NewState);
+    void TransitionResource(BottomLevelASD3D12Impl& BLAS, RESOURCE_STATE NewState);
+    void TransitionResource(TopLevelASD3D12Impl& TLAS, RESOURCE_STATE NewState);
+
+    void TransitionResource(TextureD3D12Impl& Texture, const StateTransitionDesc& Barrier);
+    void TransitionResource(BufferD3D12Impl& Buffer, const StateTransitionDesc& Barrier);
+    void TransitionResource(BottomLevelASD3D12Impl& BLAS, const StateTransitionDesc& Barrier);
+    void TransitionResource(TopLevelASD3D12Impl& TLAS, const StateTransitionDesc& Barrier);
+
     //void BeginResourceTransition(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
 
     void ResolveSubresource(ID3D12Resource* pDstResource,
@@ -184,8 +188,6 @@ public:
         m_PendingResourceBarriers.emplace_back(Barrier);
     }
 
-    void InsertUAVBarrier(ID3D12Resource* pd3d12Resource);
-
     void SetPipelineState(ID3D12PipelineState* pPSO)
     {
         if (pPSO != m_pCurPipelineState)
@@ -229,8 +231,6 @@ protected:
     void*                m_pCurPipelineState         = nullptr;
     ID3D12RootSignature* m_pCurGraphicsRootSignature = nullptr;
     ID3D12RootSignature* m_pCurComputeRootSignature  = nullptr;
-
-    static constexpr int MaxPendingBarriers = 16;
 
     std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER>> m_PendingResourceBarriers;
 

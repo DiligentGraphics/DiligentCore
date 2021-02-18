@@ -141,7 +141,7 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     // backbuffer 0 from all GPU writeable bind points.
     pImmediateCtxD3D12->UnbindTextureFromFramebuffer(pBackBuffer, false);
 
-    CmdCtx.TransitionResource(pBackBuffer, RESOURCE_STATE_PRESENT);
+    CmdCtx.TransitionResource(*pBackBuffer, RESOURCE_STATE_PRESENT);
 
     pImmediateCtxD3D12->Flush();
 
