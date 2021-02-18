@@ -217,7 +217,6 @@ void main(in  uint    VertId : SV_VertexID,
 
 const std::string DrawTest_VSStructuredBuffers{
 R"(
-
 struct BufferData
 {
     float4 data;
@@ -240,9 +239,105 @@ void main(in  uint    VertId : SV_VertexID,
 }
 )"
 };
+
+const std::string DrawTest_VSStructuredBufferArray{
+R"(
+struct BufferData
+{
+    float4 data;
+};
+
+StructuredBuffer<BufferData> g_Buffers[2];
+
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
+};
+
+void main(in  uint    VertId : SV_VertexID,
+          out PSInput PSIn) 
+{
+    PSIn.Pos   = g_Buffers[0][VertId].data;
+    PSIn.Color = g_Buffers[1][VertId].data.rgb;
+}
+)"
+};
+
+
+const std::string DrawTest_VSFormattedBuffers{
+R"(
+Buffer<float4> g_Positions;
+Buffer<float4> g_Colors;
+
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
+};
+
+void main(in  uint    VertId : SV_VertexID,
+          out PSInput PSIn) 
+{
+    PSIn.Pos   = g_Positions.Load(VertId);
+    PSIn.Color = g_Colors.Load(VertId).rgb;
+}
+)"
+};
+
+
+const std::string DrawTest_VSFormattedBufferArray{
+R"(
+Buffer<float4> g_Buffers[2];
+
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
+};
+
+void main(in  uint    VertId : SV_VertexID,
+          out PSInput PSIn) 
+{
+    PSIn.Pos   = g_Buffers[0].Load(VertId);
+    PSIn.Color = g_Buffers[1].Load(VertId).rgb;
+}
+)"
+};
 // clang-format on
 
 } // namespace HLSL
+
+
+
+namespace GLSL
+{
+// clang-format off
+const std::string DrawTest_VSStructuredBufferArray{
+R"(
+layout(std140) readonly buffer g_Buffers
+{
+    vec4 data[3];
+}g_StorageBuffers[2];
+
+#ifndef GL_ES
+out gl_PerVertex
+{
+	vec4 gl_Position;
+};
+#endif
+
+layout(location = 0)out vec4 out_Color;
+
+void main()
+{
+    gl_Position = g_StorageBuffers[0].data[gl_VertexID];
+    out_Color = g_StorageBuffers[1].data[gl_VertexID];
+}
+)"
+};
+// clang-format on
+} // namespace GLSL
 
 struct Vertex
 {
@@ -517,12 +612,16 @@ protected:
                                          SHADER_RESOURCE_VARIABLE_TYPE DynamicCB1Type,
                                          SHADER_RESOURCE_VARIABLE_TYPE ImmutableCBType);
 
-    static void TestStructuredBufferUpdates(IShader*                      pVS,
-                                            IShader*                      pPS,
-                                            IBuffer*                      pPositionsBuffer,
-                                            IBuffer*                      pColorsBuffer,
-                                            SHADER_RESOURCE_VARIABLE_TYPE PosBuffType,
-                                            SHADER_RESOURCE_VARIABLE_TYPE ColBuffType);
+    static void DrawWithStructuredOrFormattedBuffers(bool                          UseArray,
+                                                     IShader*                      pVS,
+                                                     IShader*                      pPS,
+                                                     IBufferView*                  pPositionsBuffView,
+                                                     IBufferView*                  pColorsBuffView,
+                                                     SHADER_RESOURCE_VARIABLE_TYPE PosBuffType,
+                                                     SHADER_RESOURCE_VARIABLE_TYPE ColBuffType);
+
+    static void TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
+                                                 bool        UseArray);
 
     static RefCntAutoPtr<IPipelineState> sm_pDrawProceduralPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
@@ -1799,17 +1898,21 @@ TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
         }
     }
 
-    for (Uint32 CB0Type = 0; CB0Type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++CB0Type)
+    for (Uint32 cb0_type = 0; cb0_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++cb0_type)
     {
-        for (Uint32 CB1Type = 0; CB1Type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++CB1Type)
+        for (Uint32 cb1_type = 0; cb1_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++cb1_type)
         {
-            for (Uint32 CB2Type = 0; CB2Type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++CB2Type)
+            for (Uint32 cb2_type = 0; cb2_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++cb2_type)
             {
+                const auto CB0Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb0_type);
+                const auto CB1Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb1_type);
+                const auto CB2Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb2_type);
 
-                TestDynamicBufferUpdates(pVS, pPS, pDynamicCB0, pDynamicCB1, pImmutableCB,
-                                         static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(CB0Type),
-                                         static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(CB1Type),
-                                         static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(CB2Type));
+                TestDynamicBufferUpdates(pVS, pPS, pDynamicCB0, pDynamicCB1, pImmutableCB, CB0Type, CB1Type, CB2Type);
+                std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                          << " CB0 " << GetShaderVariableTypeLiteralName(CB0Type) << ','
+                          << " CB1 " << GetShaderVariableTypeLiteralName(CB1Type) << ','
+                          << " CB2 " << GetShaderVariableTypeLiteralName(CB2Type) << std::endl;
             }
         }
     }
@@ -1916,13 +2019,18 @@ TEST_F(DrawCommandTest, DynamicIndexBufferUpdate)
     Present();
 }
 
-void DrawCommandTest::TestStructuredBufferUpdates(IShader*                      pVS,
-                                                  IShader*                      pPS,
-                                                  IBuffer*                      pPositionsBuffer,
-                                                  IBuffer*                      pColorsBuffer,
-                                                  SHADER_RESOURCE_VARIABLE_TYPE PosBuffType,
-                                                  SHADER_RESOURCE_VARIABLE_TYPE ColBuffType)
+
+void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                          UseArray,
+                                                           IShader*                      pVS,
+                                                           IShader*                      pPS,
+                                                           IBufferView*                  pPositionsBuffView,
+                                                           IBufferView*                  pColorsBuffView,
+                                                           SHADER_RESOURCE_VARIABLE_TYPE PosBuffType,
+                                                           SHADER_RESOURCE_VARIABLE_TYPE ColBuffType)
 {
+    if (UseArray)
+        VERIFY(ColBuffType == 0, "Color buffer type is ingored when arrays are used");
+
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pDevice    = pEnv->GetDevice();
@@ -1942,13 +2050,18 @@ void DrawCommandTest::TestStructuredBufferUpdates(IShader*                      
     GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-    ShaderResourceVariableDesc Variables[] =
-        {
-            {SHADER_TYPE_VERTEX, "g_Positions", PosBuffType},
-            {SHADER_TYPE_VERTEX, "g_Colors", ColBuffType} //
-        };
-    PSODesc.ResourceLayout.NumVariables = _countof(Variables);
-    PSODesc.ResourceLayout.Variables    = Variables;
+    std::vector<ShaderResourceVariableDesc> Variables;
+    if (UseArray)
+    {
+        Variables.emplace_back(SHADER_TYPE_VERTEX, "g_Buffers", PosBuffType);
+    }
+    else
+    {
+        Variables.emplace_back(SHADER_TYPE_VERTEX, "g_Positions", PosBuffType);
+        Variables.emplace_back(SHADER_TYPE_VERTEX, "g_Colors", ColBuffType);
+    };
+    PSODesc.ResourceLayout.NumVariables = static_cast<Uint32>(Variables.size());
+    PSODesc.ResourceLayout.Variables    = Variables.data();
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
@@ -1957,19 +2070,36 @@ void DrawCommandTest::TestStructuredBufferUpdates(IShader*                      
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_TRUE(pPSO != nullptr);
 
-    if (PosBuffType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-        pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Positions")->Set(pPositionsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
-    if (ColBuffType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-        pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Colors")->Set(pColorsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
+    IDeviceObject* const ppBuffViews[] = {pPositionsBuffView, pColorsBuffView};
+    if (UseArray)
+    {
+        if (PosBuffType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Buffers")->SetArray(ppBuffViews, 0, _countof(ppBuffViews));
+    }
+    else
+    {
+        if (PosBuffType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Positions")->Set(pPositionsBuffView);
+        if (ColBuffType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Colors")->Set(pColorsBuffView);
+    }
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPSO->CreateShaderResourceBinding(&pSRB, true);
     ASSERT_TRUE(pSRB != nullptr);
 
-    if (PosBuffType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-        pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Positions")->Set(pPositionsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
-    if (ColBuffType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-        pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Colors")->Set(pColorsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
+    if (UseArray)
+    {
+        if (PosBuffType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffers")->SetArray(ppBuffViews, 0, _countof(ppBuffViews));
+    }
+    else
+    {
+        if (PosBuffType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Positions")->Set(pPositionsBuffView);
+        if (ColBuffType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Colors")->Set(pColorsBuffView);
+    }
 
     SetRenderTargets(pPSO);
 
@@ -1982,8 +2112,9 @@ void DrawCommandTest::TestStructuredBufferUpdates(IShader*                      
             float4{0.f, 0.f, 1.f, 0.f},
         };
 
-    auto UpdateBuffer = [pContext](IBuffer* pBuffer, const void* pData, size_t DataSize) //
+    auto UpdateBuffer = [pContext](IBufferView* pBuffView, const void* pData, size_t DataSize) //
     {
+        auto* pBuffer = pBuffView->GetBuffer();
         if (pBuffer->GetDesc().Usage == USAGE_DYNAMIC)
         {
             MapHelper<float4> pBuffData{pContext, pBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
@@ -1995,15 +2126,15 @@ void DrawCommandTest::TestStructuredBufferUpdates(IShader*                      
         }
     };
 
-    UpdateBuffer(pPositionsBuffer, Pos, sizeof(float4) * 3);
-    UpdateBuffer(pColorsBuffer, Color4, sizeof(float4) * 3);
+    UpdateBuffer(pPositionsBuffView, Pos, sizeof(float4) * 3);
+    UpdateBuffer(pColorsBuffView, Color4, sizeof(float4) * 3);
     pContext->TransitionShaderResources(pPSO, pSRB);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
 
-    UpdateBuffer(pPositionsBuffer, Pos + 3, sizeof(float4) * 3);
-    UpdateBuffer(pColorsBuffer, Color4, sizeof(float4) * 3);
+    UpdateBuffer(pPositionsBuffView, Pos + 3, sizeof(float4) * 3);
+    UpdateBuffer(pColorsBuffView, Color4, sizeof(float4) * 3);
     pContext->TransitionShaderResources(pPSO, pSRB);
 
     pContext->Draw(drawAttrs);
@@ -2011,12 +2142,14 @@ void DrawCommandTest::TestStructuredBufferUpdates(IShader*                      
     Present();
 }
 
-
-// Test draw commands that use structured buffers
-TEST_F(DrawCommandTest, StructuredBuffers)
+void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
+                                                       bool        UseArray)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    VERIFY_EXPR(BuffMode == BUFFER_MODE_STRUCTURED || BuffMode == BUFFER_MODE_FORMATTED);
+
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -2028,13 +2161,36 @@ TEST_F(DrawCommandTest, StructuredBuffers)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Draw command test structured buffers - VS";
-        ShaderCI.Source          = HLSL::DrawTest_VSStructuredBuffers.c_str();
+        if (BuffMode == BUFFER_MODE_STRUCTURED)
+        {
+            if (deviceCaps.IsD3DDevice())
+            {
+                ShaderCI.Source = UseArray ? HLSL::DrawTest_VSStructuredBufferArray.c_str() : HLSL::DrawTest_VSStructuredBuffers.c_str();
+            }
+            else
+            {
+                if (UseArray)
+                {
+                    ShaderCI.Source         = GLSL::DrawTest_VSStructuredBufferArray.c_str();
+                    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+                }
+                else
+                {
+                    ShaderCI.Source = HLSL::DrawTest_VSStructuredBuffers.c_str();
+                }
+            }
+        }
+        else
+        {
+            ShaderCI.Source = UseArray ? HLSL::DrawTest_VSFormattedBufferArray.c_str() : HLSL::DrawTest_VSFormattedBuffers.c_str();
+        }
         pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_NE(pVS, nullptr);
     }
 
     RefCntAutoPtr<IShader> pPS;
     {
+        ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Draw command test structured buffers - PS";
@@ -2050,7 +2206,7 @@ TEST_F(DrawCommandTest, StructuredBuffers)
         BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
         BuffDesc.Usage             = UseDynamicBuffers ? USAGE_DYNAMIC : USAGE_DEFAULT;
         BuffDesc.CPUAccessFlags    = UseDynamicBuffers ? CPU_ACCESS_WRITE : CPU_ACCESS_NONE;
-        BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+        BuffDesc.Mode              = BuffMode;
         BuffDesc.ElementByteStride = 16;
         BuffDesc.uiSizeInBytes     = sizeof(float) * 16;
 
@@ -2063,16 +2219,61 @@ TEST_F(DrawCommandTest, StructuredBuffers)
         pDevice->CreateBuffer(BuffDesc, nullptr, &pColorsBuffer);
         ASSERT_NE(pColorsBuffer, nullptr);
 
-        for (Uint32 PosBuffType = 0; PosBuffType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++PosBuffType)
+        RefCntAutoPtr<IBufferView> pPosBuffView, pColorBufferView;
+        if (BuffMode == BUFFER_MODE_STRUCTURED)
         {
-            for (Uint32 ColBuffType = 0; ColBuffType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++ColBuffType)
+            pPosBuffView     = pPositionsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE);
+            pColorBufferView = pColorsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE);
+        }
+        else
+        {
+            BufferViewDesc BuffSRVDesc;
+            BuffSRVDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
+            BuffSRVDesc.Format.NumComponents = 4;
+            BuffSRVDesc.Format.ValueType     = VT_FLOAT32;
+            pPositionsBuffer->CreateView(BuffSRVDesc, &pPosBuffView);
+            pColorsBuffer->CreateView(BuffSRVDesc, &pColorBufferView);
+        }
+
+        for (Uint32 pos_buff_type = 0; pos_buff_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_buff_type)
+        {
+            for (Uint32 col_buff_type = 0; col_buff_type < (UseArray ? 1u : SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES); ++col_buff_type)
             {
-                TestStructuredBufferUpdates(pVS, pPS, pPositionsBuffer, pColorsBuffer,
-                                            static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(PosBuffType),
-                                            static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(ColBuffType));
+                const auto PosBuffType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_buff_type);
+                const auto ColBuffType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_buff_type);
+                DrawWithStructuredOrFormattedBuffers(UseArray, pVS, pPS, pPosBuffView, pColorBufferView, PosBuffType, ColBuffType);
+                std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                          << (UseDynamicBuffers ? "Dynamic" : "Default")
+                          << " buff, " << GetShaderVariableTypeLiteralName(PosBuffType) << " Pos, "
+                          << GetShaderVariableTypeLiteralName(ColBuffType) << " Color"
+                          << std::endl;
             }
         }
     }
+}
+
+// Test draw commands that use structured buffers
+TEST_F(DrawCommandTest, StructuredBuffers)
+{
+    TestStructuredOrFormattedBuffers(BUFFER_MODE_STRUCTURED, false /*UseArray*/);
+}
+
+// Test draw commands that use array of structured buffers
+TEST_F(DrawCommandTest, StructuredBufferArray)
+{
+    TestStructuredOrFormattedBuffers(BUFFER_MODE_STRUCTURED, true /*UseArray*/);
+}
+
+// Test draw commands that use formatted buffers
+TEST_F(DrawCommandTest, FormattedBuffers)
+{
+    TestStructuredOrFormattedBuffers(BUFFER_MODE_FORMATTED, false /*UseArray*/);
+}
+
+// Test draw commands that use formatted buffer array
+TEST_F(DrawCommandTest, FormattedBufferArray)
+{
+    TestStructuredOrFormattedBuffers(BUFFER_MODE_FORMATTED, true /*UseArray*/);
 }
 
 } // namespace

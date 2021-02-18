@@ -665,47 +665,39 @@ void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCach
     ResourceCache.SetDescriptorHeapSpace(std::move(CbcSrvUavHeapSpace), std::move(SamplerHeapSpace));
 }
 
-inline void UpdateDynamicBuffersCounter(const BufferD3D12Impl*    pOldBuff,
-                                        const BufferD3D12Impl*    pNewBuff,
-                                        Uint32&                   BuffCounter,
-                                        D3D12_ROOT_PARAMETER_TYPE d3d12RootParamType)
+inline void UpdateDynamicBuffersCounter(const BufferD3D12Impl* pOldBuff,
+                                        const BufferD3D12Impl* pNewBuff,
+                                        Uint32&                BuffCounter)
 {
     if (pOldBuff != nullptr && pOldBuff->GetDesc().Usage == USAGE_DYNAMIC)
     {
-        VERIFY_EXPR(d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_CBV);
         VERIFY(BuffCounter > 0, "There is a dynamic root buffer in the resource cache, but dynamic buffers counter is zero");
         --BuffCounter;
     }
     if (pNewBuff != nullptr && pNewBuff->GetDesc().Usage == USAGE_DYNAMIC)
     {
-        DEV_CHECK_ERR(d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_CBV, "Dynamic constant buffers must be used as root views");
         ++BuffCounter;
     }
 }
 
 inline void UpdateDynamicBuffersCounter(const BufferViewD3D12Impl* pOldBuffView,
                                         const BufferViewD3D12Impl* pNewBuffView,
-                                        Uint32&                    BuffCounter,
-                                        D3D12_ROOT_PARAMETER_TYPE  d3d12RootParamType)
+                                        Uint32&                    BuffCounter)
 {
     if (pOldBuffView != nullptr && pOldBuffView->GetBuffer<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC)
     {
-        VERIFY_EXPR(d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_SRV || d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_UAV);
         VERIFY_EXPR(BuffCounter > 0);
         --BuffCounter;
     }
     if (pNewBuffView != nullptr && pNewBuffView->GetBuffer<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC)
     {
-        DEV_CHECK_ERR(d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_SRV || d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_UAV,
-                      "Dynamic buffers must be used as root views");
         ++BuffCounter;
     }
 }
 
 inline void UpdateDynamicBuffersCounter(const TextureViewD3D12Impl*,
                                         const TextureViewD3D12Impl*,
-                                        Uint32&,
-                                        D3D12_ROOT_PARAMETER_TYPE)
+                                        Uint32&)
 {
 }
 
@@ -758,15 +750,13 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
                 {
                     UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const BufferD3D12Impl>(),
                                                 SrcRes.pObject.RawPtr<const BufferD3D12Impl>(),
-                                                DstBoundDynamicCBsCounter,
-                                                Attr.GetD3D12RootParamType());
+                                                DstBoundDynamicCBsCounter);
                 }
                 else if (SrcRes.Type == SHADER_RESOURCE_TYPE_BUFFER_SRV || SrcRes.Type == SHADER_RESOURCE_TYPE_BUFFER_UAV)
                 {
                     UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const BufferViewD3D12Impl>(),
                                                 SrcRes.pObject.RawPtr<const BufferViewD3D12Impl>(),
-                                                DstBoundDynamicCBsCounter,
-                                                Attr.GetD3D12RootParamType());
+                                                DstBoundDynamicCBsCounter);
                 }
 
                 DstRes.pObject             = SrcRes.pObject;
@@ -1318,7 +1308,7 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
             GetD3D12Device()->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
 
-        UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const BufferD3D12Impl>(), pBuffD3D12, ResourceCache.GetDynamicRootBuffersCounter(), Attribs.GetD3D12RootParamType());
+        UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const BufferD3D12Impl>(), pBuffD3D12, ResourceCache.GetDynamicRootBuffersCounter());
 
         DstRes.pObject = std::move(pBuffD3D12);
     }
@@ -1465,7 +1455,7 @@ void BindResourceHelper::CacheResourceView(IDeviceObject*       pView,
             GetD3D12Device()->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
 
-        UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const TResourceViewType>(), pViewD3D12, ResourceCache.GetDynamicRootBuffersCounter(), Attribs.GetD3D12RootParamType());
+        UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const TResourceViewType>(), pViewD3D12, ResourceCache.GetDynamicRootBuffersCounter());
 
         BindSamplerProc(pViewD3D12);
 

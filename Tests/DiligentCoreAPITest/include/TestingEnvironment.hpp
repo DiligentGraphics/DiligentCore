@@ -109,6 +109,8 @@ public:
 
     ADAPTER_TYPE GetAdapterType() const { return m_AdapterType; }
 
+    static const char* GetCurrentTestStatusString();
+
 protected:
     NativeWindow CreateNativeWindow();
 

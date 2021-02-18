@@ -546,6 +546,18 @@ SHADER_COMPILER TestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE la
         return m_ShaderCompiler;
 }
 
+const char* TestingEnvironment::GetCurrentTestStatusString()
+{
+    static constexpr char TestFailedString[] = "\033[0;91m"
+                                               "[  FAILED  ]"
+                                               "\033[0;0m";
+    static constexpr char TestPassedString[] = "\033[0;92m"
+                                               "[  PASSED  ]"
+                                               "\033[0;0m";
+    return testing::Test::HasFailure() ? TestFailedString : TestPassedString;
+}
+
+
 } // namespace Testing
 
 } // namespace Diligent
