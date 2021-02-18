@@ -557,6 +557,12 @@ const char* TestingEnvironment::GetCurrentTestStatusString()
     return testing::Test::HasFailure() ? TestFailedString : TestPassedString;
 }
 
+const char* TestingEnvironment::GetTestSkippedString()
+{
+    return "\033[0;32m"
+           "[  SKIPPED ]"
+           "\033[0;0m";
+}
 
 } // namespace Testing
 

@@ -2201,6 +2201,12 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
 
     for (Uint32 UseDynamicBuffers = 0; UseDynamicBuffers < 2; ++UseDynamicBuffers)
     {
+        if (BuffMode == BUFFER_MODE_STRUCTURED && UseArray && UseDynamicBuffers && deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12)
+        {
+            std::cout << TestingEnvironment::GetTestSkippedString() << " Dynamic structured buffers can't be bound to array variables in D3D12" << std::endl;
+            continue;
+        }
+
         BufferDesc BuffDesc;
         BuffDesc.Name              = "Structured buffer draw test - positions";
         BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;

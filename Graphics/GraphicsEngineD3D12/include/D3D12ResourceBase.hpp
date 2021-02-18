@@ -40,7 +40,7 @@ public:
     D3D12ResourceBase()
     {}
 
-    ID3D12Resource* GetD3D12Resource() { return m_pd3d12Resource; }
+    ID3D12Resource* GetD3D12Resource() const { return m_pd3d12Resource; }
 
 protected:
     CComPtr<ID3D12Resource> m_pd3d12Resource; ///< D3D12 resource object
