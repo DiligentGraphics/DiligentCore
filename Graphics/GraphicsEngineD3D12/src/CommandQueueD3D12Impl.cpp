@@ -56,9 +56,8 @@ Uint64 CommandQueueD3D12Impl::Submit(Uint32                    NumCommandLists,
 {
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
 
-    auto FenceValue = m_NextFenceValue;
     // Increment the value before submitting the list
-    Atomics::AtomicIncrement(m_NextFenceValue);
+    auto FenceValue = m_NextFenceValue.fetch_add(1);
 
     // Render device submits null command list to signal the fence and
     // discard all resources.
@@ -83,8 +82,7 @@ Uint64 CommandQueueD3D12Impl::WaitForIdle()
 {
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
 
-    Uint64 LastSignaledFenceValue = m_NextFenceValue;
-    Atomics::AtomicIncrement(m_NextFenceValue);
+    Uint64 LastSignaledFenceValue = m_NextFenceValue.fetch_add(1);
 
     m_pd3d12CmdQueue->Signal(m_d3d12Fence, LastSignaledFenceValue);
 
@@ -102,9 +100,13 @@ Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
     auto CompletedFenceValue = m_d3d12Fence->GetCompletedValue();
     VERIFY(CompletedFenceValue != UINT64_MAX, "If the device has been removed, the return value will be UINT64_MAX");
 
-    if (CompletedFenceValue > m_LastCompletedFenceValue)
-        m_LastCompletedFenceValue = CompletedFenceValue;
-    return m_LastCompletedFenceValue;
+    auto CurrValue = m_LastCompletedFenceValue.load();
+    while (!m_LastCompletedFenceValue.compare_exchange_strong(CurrValue, std::max(CurrValue, CompletedFenceValue)))
+    {
+        // If exchange fails, CurrValue will hold the actual value of m_LastCompletedFenceValue
+    }
+
+    return m_LastCompletedFenceValue.load();
 }
 
 void CommandQueueD3D12Impl::SignalFence(ID3D12Fence* pFence, Uint64 Value)

@@ -32,6 +32,8 @@
 
 #include <mutex>
 #include <deque>
+#include <atomic>
+
 #include "VulkanUtilities/VulkanHeaders.h"
 #include "CommandQueueVk.h"
 #include "ObjectBase.hpp"
@@ -55,7 +57,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueVk, TBase)
 
     /// Implementation of ICommandQueueVk::GetNextFenceValue().
-    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue; }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue.load(); }
 
     /// Implementation of ICommandQueueVk::Submit().
     virtual Uint64 DILIGENT_CALL_TYPE SubmitCmdBuffer(VkCommandBuffer cmdBuffer) override final;
@@ -95,7 +97,7 @@ private:
     RefCntAutoPtr<FenceVkImpl> m_pFence;
 
     // A value that will be signaled by the command queue next
-    Atomics::AtomicInt64 m_NextFenceValue;
+    std::atomic_uint64_t m_NextFenceValue{1};
 
     std::mutex m_QueueMutex;
 };

@@ -33,6 +33,7 @@
 #include "CommandQueueD3D12.h"
 #include "ObjectBase.hpp"
 #include <mutex>
+#include <atomic>
 
 namespace Diligent
 {
@@ -49,7 +50,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueD3D12, TBase)
 
     // Implementation of ICommandQueueD3D12::GetNextFenceValue().
-    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue; }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue.load(); }
 
     // Implementation of ICommandQueueD3D12::Submit().
     virtual Uint64 DILIGENT_CALL_TYPE Submit(Uint32                    NumCommandLists,
@@ -69,10 +70,10 @@ public:
 
 private:
     // A value that will be signaled by the command queue next
-    Atomics::AtomicInt64 m_NextFenceValue;
+    std::atomic_uint64_t m_NextFenceValue{1};
 
     // Last fence value completed by the GPU
-    volatile Uint64 m_LastCompletedFenceValue = 0;
+    std::atomic_uint64_t m_LastCompletedFenceValue{0};
 
     std::mutex                  m_QueueMtx;
     CComPtr<ID3D12CommandQueue> m_pd3d12CmdQueue;

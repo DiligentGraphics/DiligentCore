@@ -56,9 +56,8 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMutex};
 
-    Atomics::Int64 FenceValue = m_NextFenceValue;
     // Increment the value before submitting the buffer to be overly safe
-    Atomics::AtomicIncrement(m_NextFenceValue);
+    auto FenceValue = m_NextFenceValue.fetch_add(1);
 
     auto vkFence = m_pFence->GetVkFence();
 
@@ -102,10 +101,10 @@ Uint64 CommandQueueVkImpl::WaitForIdle()
 {
     std::lock_guard<std::mutex> Lock{m_QueueMutex};
 
-    // Update last completed fence value to unlock all waiting events
-    Uint64 LastCompletedFenceValue = m_NextFenceValue;
+    // Update last completed fence value to unlock all waiting events.
+    auto LastCompletedFenceValue = m_NextFenceValue.fetch_add(1);
     // Increment fence before idling the queue
-    Atomics::AtomicIncrement(m_NextFenceValue);
+
     vkQueueWaitIdle(m_VkQueue);
     // For some reason after idling the queue not all fences are signaled
     m_pFence->Wait(UINT64_MAX);
