@@ -97,41 +97,41 @@ protected:
         return pPSO;
     }
 
-    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE            ShaderType,
-                                                       const char*            File,
-                                                       const char*            EntryPoint,
-                                                       const char*            Name,
-                                                       bool                   UseCombinedSamplers,
-                                                       const ShaderMacro*     Macros         = nullptr,
-                                                       SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
+    template <typename ModifyCIHandlerType>
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE         ShaderType,
+                                                       const char*         File,
+                                                       const char*         EntryPoint,
+                                                       const char*         Name,
+                                                       const ShaderMacro*  Macros,
+                                                       ModifyCIHandlerType ModifyCIHandler)
     {
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.SourceLanguage             = SourceLanguage;
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.FilePath                   = File;
         ShaderCI.Macros                     = Macros;
         ShaderCI.Desc.Name                  = Name;
         ShaderCI.EntryPoint                 = EntryPoint;
         ShaderCI.Desc.ShaderType            = ShaderType;
-        ShaderCI.UseCombinedTextureSamplers = UseCombinedSamplers;
+        ShaderCI.UseCombinedTextureSamplers = false;
 
         auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
         if (pDevice->GetDeviceCaps().IsGLDevice())
             ShaderCI.UseCombinedTextureSamplers = true;
 
+        ModifyCIHandler(ShaderCI);
         RefCntAutoPtr<IShader> pShader;
         pDevice->CreateShader(ShaderCI, &pShader);
         return pShader;
     }
 
-    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE            ShaderType,
-                                                       const char*            File,
-                                                       const char*            EntryPoint,
-                                                       const char*            Name,
-                                                       const ShaderMacro*     Macros         = nullptr,
-                                                       SHADER_SOURCE_LANGUAGE SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE        ShaderType,
+                                                       const char*        File,
+                                                       const char*        EntryPoint,
+                                                       const char*        Name,
+                                                       const ShaderMacro* Macros = nullptr)
     {
-        return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, false, Macros, SourceLanguage);
+        return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, Macros, [&](ShaderCreateInfo& ShaderCI) {});
     }
 
     static RefCntAutoPtr<IShader> CreateShaderFromSource(SHADER_TYPE        ShaderType,
@@ -251,8 +251,19 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
     for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
         Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_DynIdx + i));
 
-    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "shaders/ShaderResourceLayout/Textures.hlsl", "VSMain", "PRS variable types test: VS", Macros);
-    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "shaders/ShaderResourceLayout/Textures.hlsl", "PSMain", "PRS variable types test: PS", Macros);
+    auto ModifyShaderCI = [pEnv](ShaderCreateInfo& ShaderCI) {
+        if (pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+        {
+            // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
+            // Shader resource array indexing always references array element 0 when shaders are compiled
+            // with shader model 5.1.
+            // Use SM5.0 with old compiler as a workaround.
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+        }
+    };
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "shaders/ShaderResourceLayout/Textures.hlsl", "VSMain", "PRS variable types test: VS", Macros, ModifyShaderCI);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "shaders/ShaderResourceLayout/Textures.hlsl", "PSMain", "PRS variable types test: PS", Macros, ModifyShaderCI);
     ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
@@ -727,8 +738,11 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     Macros.AddShaderMacro("Tex2D_Ref", RefTextures.GetColor(0));
     Macros.AddShaderMacro("Buff_Ref", RefBuffers.GetValue(0));
 
-    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "ImmutableSamplers2.hlsl", "VSMain", "PRS static samplers test: VS", true, Macros);
-    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "ImmutableSamplers2.hlsl", "PSMain", "PRS static samplers test: PS", true, Macros);
+    auto SetUseCombinedSamplers = [](ShaderCreateInfo& ShaderCI) {
+        ShaderCI.UseCombinedTextureSamplers = true;
+    };
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "ImmutableSamplers2.hlsl", "VSMain", "PRS static samplers test: VS", Macros, SetUseCombinedSamplers);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "ImmutableSamplers2.hlsl", "PSMain", "PRS static samplers test: PS", Macros, SetUseCombinedSamplers);
     ASSERT_TRUE(pVS && pPS);
 
     PSOCreateInfo.pVS = pVS;
@@ -1344,8 +1358,22 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
     for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
         Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx + i));
 
-    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, ShaderPath, VSEntry, "PRS FormattedBuffers - VS", Macros, SrcLanguage);
-    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, ShaderPath, PSEntry, "PRS FormattedBuffers - PS", Macros, SrcLanguage);
+    auto ModifyShaderCI = [&](ShaderCreateInfo& ShaderCI) {
+        ShaderCI.SourceLanguage = SrcLanguage;
+
+        if (pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+        {
+            // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
+            // Shader resource array indexing always references array element 0 when shaders are compiled
+            // with shader model 5.1.
+            // Use SM5.0 with old compiler as a workaround.
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+        }
+    };
+
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, ShaderPath, VSEntry, "PRS FormattedBuffers - VS", Macros, ModifyShaderCI);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, ShaderPath, PSEntry, "PRS FormattedBuffers - PS", Macros, ModifyShaderCI);
     ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;

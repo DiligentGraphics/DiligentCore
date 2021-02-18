@@ -2155,6 +2155,15 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
     ShaderCI.UseCombinedTextureSamplers = true;
+    if (UseArray && pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+    {
+        // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
+        // Shader resource array indexing always references array element 0 when shaders are compiled
+        // with shader model 5.1.
+        // Use SM5.0 with old compiler as a workaround.
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+        ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+    }
 
     RefCntAutoPtr<IShader> pVS;
     {

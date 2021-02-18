@@ -112,6 +112,11 @@ public:
     static const char* GetCurrentTestStatusString();
     static const char* GetTestSkippedString();
 
+    bool NeedWARPResourceArrayIndexingBugWorkaround() const
+    {
+        return m_NeedWARPResourceArrayIndexingBugWorkaround;
+    }
+
 protected:
     NativeWindow CreateNativeWindow();
 
@@ -145,6 +150,11 @@ protected:
     SHADER_COMPILER                            m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
 
     static std::atomic_int m_NumAllowedErrors;
+
+    // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
+    // Shader resource array indexing always references array element 0 when shaders are compiled.
+    // A workaround is to use SM5.0 and default shader compiler.
+    bool m_NeedWARPResourceArrayIndexingBugWorkaround = false;
 };
 
 } // namespace Testing

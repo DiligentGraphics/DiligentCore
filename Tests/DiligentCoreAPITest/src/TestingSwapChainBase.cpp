@@ -110,9 +110,9 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
         };
 
         std::string FileName{ValidateName(TestInfo->test_suite_name())};
-        auto&       FailureCounter = FailureCounters[FileName];
         FileName += '.';
         FileName += ValidateName(TestInfo->name());
+        auto& FailureCounter = FailureCounters[FileName];
         FileName += "_FAIL";
         if (FailureCounter > 0)
             FileName += std::to_string(FailureCounter);

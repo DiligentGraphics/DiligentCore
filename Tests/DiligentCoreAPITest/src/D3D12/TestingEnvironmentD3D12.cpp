@@ -62,6 +62,15 @@ TestingEnvironmentD3D12::TestingEnvironmentD3D12(const CreateInfo&    CI,
     {
         CreateTestingSwapChainD3D12(m_pDevice, GetDeviceContext(), SCDesc, &m_pSwapChain);
     }
+
+    // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
+    // Shader resource array indexing always references array element 0 when shaders are compiled
+    // with shader model 5.1:
+    //      AllCorrect *= CheckValue(g_Tex2DArr_Static[0].SampleLevel(g_Sampler, UV.xy, 0.0), Tex2DArr_Static_Ref0); // OK
+    //      AllCorrect *= CheckValue(g_Tex2DArr_Static[1].SampleLevel(g_Sampler, UV.xy, 0.0), Tex2DArr_Static_Ref1); // FAIL - g_Tex2DArr_Static[0] is sampled
+    // The shaders work OK when using shader model 5.0 with old compiler.
+    // TODO: this should be fixed in the next Windows release - verify.
+    m_NeedWARPResourceArrayIndexingBugWorkaround = GetAdapterType() == ADAPTER_TYPE_SOFTWARE;
 }
 
 TestingEnvironmentD3D12::~TestingEnvironmentD3D12()
