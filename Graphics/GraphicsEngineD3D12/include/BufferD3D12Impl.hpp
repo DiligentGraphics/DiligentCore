@@ -49,18 +49,18 @@ class BufferD3D12Impl final : public BufferBase<IBufferD3D12, RenderDeviceD3D12I
 public:
     using TBufferBase = BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>;
 
-    BufferD3D12Impl(IReferenceCounters*          pRefCounters,
-                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
-                    class RenderDeviceD3D12Impl* pDeviceD3D12,
-                    const BufferDesc&            BuffDesc,
-                    const BufferData*            pBuffData = nullptr);
+    BufferD3D12Impl(IReferenceCounters*        pRefCounters,
+                    FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                    RenderDeviceD3D12Impl*     pDeviceD3D12,
+                    const BufferDesc&          BuffDesc,
+                    const BufferData*          pBuffData = nullptr);
 
-    BufferD3D12Impl(IReferenceCounters*          pRefCounters,
-                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
-                    class RenderDeviceD3D12Impl* pDeviceD3D12,
-                    const BufferDesc&            BuffDesc,
-                    RESOURCE_STATE               InitialState,
-                    ID3D12Resource*              pd3d12Buffer);
+    BufferD3D12Impl(IReferenceCounters*        pRefCounters,
+                    FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                    RenderDeviceD3D12Impl*     pDeviceD3D12,
+                    const BufferDesc&          BuffDesc,
+                    RESOURCE_STATE             InitialState,
+                    ID3D12Resource*            pd3d12Buffer);
     ~BufferD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferD3D12, TBufferBase)

@@ -94,7 +94,9 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         m_Desc.uiSizeInBytes = (m_Desc.uiSizeInBytes + AlignmentMask) & (~AlignmentMask);
 
 
-    if (m_Desc.Usage == USAGE_DYNAMIC && (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) == 0 && BuffDesc.Mode != BUFFER_MODE_FORMATTED)
+    if ((m_Desc.Usage == USAGE_DYNAMIC) &&
+        (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) == 0 &&
+        (BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_STRUCTURED))
     {
         // Dynamic constant/vertex/index buffers are suballocated in the upload heap when Map() is called.
         // Dynamic buffers with UAV flags as well as formatted buffers need to be allocated in GPU-only memory.

@@ -39,8 +39,6 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Buffer view implementation in Direct3D12 backend.
 class BufferViewD3D12Impl final : public BufferViewBase<IBufferViewD3D12, RenderDeviceD3D12Impl>
 {
