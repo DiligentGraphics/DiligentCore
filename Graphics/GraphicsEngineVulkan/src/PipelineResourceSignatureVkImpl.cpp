@@ -275,8 +275,6 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
     m_SRBMemAllocator{GetRawAllocator()}
 {
-    m_StaticVarIndex.fill(-1);
-
     try
     {
         FixedLinearAllocator MemPool{GetRawAllocator()};
@@ -293,43 +291,24 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
         CacheOffsetsType CacheGroupSizes = {}; // Required cache size for each cache group
         BindingCountType BindingCount    = {}; // Binding count in each cache group
 
-        SHADER_TYPE StaticResStages = SHADER_TYPE_UNKNOWN; // Shader stages that have static resources
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
             const auto& ResDesc    = Desc.Resources[i];
             const auto  CacheGroup = GetResourceCacheGroup(ResDesc);
 
-            m_ShaderStages |= ResDesc.ShaderStages;
-
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-            {
-                StaticResStages |= ResDesc.ShaderStages;
                 StaticResourceCount += ResDesc.ArraySize;
-            }
 
             BindingCount[CacheGroup] += 1;
             // Note that we may reserve space for separate immutable samplers, which will never be used, but this is OK.
             CacheGroupSizes[CacheGroup] += ResDesc.ArraySize;
         }
 
-        m_NumShaderStages = static_cast<Uint8>(PlatformMisc::CountOneBits(static_cast<Uint32>(m_ShaderStages)));
-        if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
-        {
-            m_PipelineType = PipelineTypeFromShaderStages(m_ShaderStages);
-            DEV_CHECK_ERR(m_PipelineType != PIPELINE_TYPE_INVALID, "Failed to deduce pipeline type from shader stages");
-        }
-
-        int StaticVarStageCount = 0; // The number of shader stages that have static variables
-        for (; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageCount)
-        {
-            const auto StageBit             = ExtractLSB(StaticResStages);
-            const auto ShaderTypeInd        = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
-            m_StaticVarIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageCount);
-        }
-        if (StaticVarStageCount > 0)
+        const auto NumStaticResStages = GetNumStaticResStages();
+        if (NumStaticResStages > 0)
         {
             MemPool.AddSpace<ShaderResourceCacheVk>(1);
-            MemPool.AddSpace<ShaderVariableManagerVk>(StaticVarStageCount);
+            MemPool.AddSpace<ShaderVariableManagerVk>(NumStaticResStages);
         }
 
         MemPool.Reserve();
@@ -344,28 +323,26 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
         CopyDescription(MemPool, Desc);
 
-        if (StaticVarStageCount > 0)
+        if (NumStaticResStages > 0)
         {
             m_pStaticResCache = MemPool.Construct<ShaderResourceCacheVk>(CacheContentType::Signature);
-            m_StaticVarsMgrs  = MemPool.Allocate<ShaderVariableManagerVk>(StaticVarStageCount);
+            m_StaticVarsMgrs  = MemPool.ConstructArray<ShaderVariableManagerVk>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
 
             m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount);
         }
 
         CreateSetLayouts(CacheGroupSizes, BindingCount);
 
-        if (StaticVarStageCount > 0)
+        if (NumStaticResStages > 0)
         {
-            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-
-            for (Uint32 i = 0; i < m_StaticVarIndex.size(); ++i)
+            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
+            for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
             {
-                Int8 Idx = m_StaticVarIndex[i];
+                Int8 Idx = m_StaticResStageIndex[i];
                 if (Idx >= 0)
                 {
-                    VERIFY_EXPR(Idx < StaticVarStageCount);
+                    VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
                     const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    new (m_StaticVarsMgrs + Idx) ShaderVariableManagerVk{*this, *m_pStaticResCache};
                     m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
                 }
             }
@@ -610,7 +587,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
         for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
         {
-            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
 
             Uint32 UnusedNumVars       = 0;
             ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
@@ -683,16 +660,14 @@ void PipelineResourceSignatureVkImpl::Destruct()
 
     if (m_StaticVarsMgrs != nullptr)
     {
-        for (size_t i = 0; i < m_StaticVarIndex.size(); ++i)
+        for (auto Idx : m_StaticResStageIndex)
         {
-            auto Idx = m_StaticVarIndex[i];
             if (Idx >= 0)
             {
                 m_StaticVarsMgrs[Idx].DestroyVariables(RawAllocator);
                 m_StaticVarsMgrs[Idx].~ShaderVariableManagerVk();
             }
         }
-        m_StaticVarIndex.fill(-1);
         m_StaticVarsMgrs = nullptr;
     }
 
@@ -772,7 +747,7 @@ void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourc
 
 Uint32 PipelineResourceSignatureVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
-    const auto VarMngrInd = GetStaticVariableCountHelper(ShaderType, m_StaticVarIndex);
+    const auto VarMngrInd = GetStaticVariableCountHelper(ShaderType);
     if (VarMngrInd < 0)
         return 0;
 
@@ -782,7 +757,7 @@ Uint32 PipelineResourceSignatureVkImpl::GetStaticVariableCount(SHADER_TYPE Shade
 
 IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
-    const auto VarMngrInd = GetStaticVariableByNameHelper(ShaderType, Name, m_StaticVarIndex);
+    const auto VarMngrInd = GetStaticVariableByNameHelper(ShaderType, Name);
     if (VarMngrInd < 0)
         return nullptr;
 
@@ -792,7 +767,7 @@ IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByNam
 
 IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    const auto VarMngrInd = GetStaticVariableByIndexHelper(ShaderType, Index, m_StaticVarIndex);
+    const auto VarMngrInd = GetStaticVariableByIndexHelper(ShaderType, Index);
     if (VarMngrInd < 0)
         return nullptr;
 
@@ -805,16 +780,15 @@ void PipelineResourceSignatureVkImpl::BindStaticResources(Uint32            Shad
                                                           Uint32            Flags)
 {
     const auto PipelineType = GetPipelineType();
-    for (Uint32 ShaderInd = 0; ShaderInd < m_StaticVarIndex.size(); ++ShaderInd)
+    for (auto StaticResStageIdx : m_StaticResStageIndex)
     {
-        const auto VarMngrInd = m_StaticVarIndex[ShaderInd];
-        if (VarMngrInd >= 0)
+        if (StaticResStageIdx >= 0)
         {
             // ShaderInd is the shader type pipeline index here
-            const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
+            const auto ShaderType = GetShaderTypeFromPipelineIndex(StaticResStageIdx, PipelineType);
             if (ShaderFlags & ShaderType)
             {
-                m_StaticVarsMgrs[VarMngrInd].BindResources(pResMapping, Flags);
+                m_StaticVarsMgrs[StaticResStageIdx].BindResources(pResMapping, Flags);
             }
         }
     }

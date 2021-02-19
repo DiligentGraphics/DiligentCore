@@ -79,35 +79,11 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
 
         ReserveSpaceForDescription(MemPool, Desc);
 
-        SHADER_TYPE StaticResStages = SHADER_TYPE_UNKNOWN; // Shader stages that have static resources
-        for (Uint32 i = 0; i < Desc.NumResources; ++i)
-        {
-            const auto& ResDesc = Desc.Resources[i];
-
-            m_ShaderStages |= ResDesc.ShaderStages;
-
-            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                StaticResStages |= ResDesc.ShaderStages;
-        }
-
-        m_NumShaderStages = static_cast<Uint8>(PlatformMisc::CountOneBits(static_cast<Uint32>(m_ShaderStages)));
-        if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
-        {
-            m_PipelineType = PipelineTypeFromShaderStages(m_ShaderStages);
-            DEV_CHECK_ERR(m_PipelineType != PIPELINE_TYPE_INVALID, "Failed to deduce pipeline type from shader stages");
-        }
-
-        int StaticVarStageCount = 0; // The number of shader stages that have static variables
-        for (; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageCount)
-        {
-            const auto StageBit             = ExtractLSB(StaticResStages);
-            const auto ShaderTypeInd        = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
-            m_StaticVarIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageCount);
-        }
-        if (StaticVarStageCount > 0)
+        const auto NumStaticResStages = GetNumStaticResStages();
+        if (NumStaticResStages > 0)
         {
             MemPool.AddSpace<ShaderResourceCacheD3D12>(1);
-            MemPool.AddSpace<ShaderVariableManagerD3D12>(StaticVarStageCount);
+            MemPool.AddSpace<ShaderVariableManagerD3D12>(NumStaticResStages);
         }
 
         MemPool.Reserve();
@@ -127,12 +103,12 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
         StaticResCacheTblSizesArrayType StaticResCacheTblSizes = {};
         AllocateRootParameters(StaticResCacheTblSizes);
 
-        if (StaticVarStageCount > 0)
+        if (NumStaticResStages > 0)
         {
             m_pStaticResCache = MemPool.Construct<ShaderResourceCacheD3D12>(CacheContentType::Signature);
             // Constructor of ShaderVariableManagerD3D12 is noexcept, so we can safely construct all manager objects.
             // Moreover, all objects must be constructed if an exception is thrown for Destruct() method to work properly.
-            m_StaticVarsMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(StaticVarStageCount, std::ref(*this), std::ref(*m_pStaticResCache));
+            m_StaticVarsMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
 
             m_pStaticResCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
 #ifdef DILIGENT_DEBUG
@@ -143,12 +119,12 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
 #endif
 
             constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-            for (Uint32 i = 0; i < m_StaticVarIndex.size(); ++i)
+            for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
             {
-                Int8 Idx = m_StaticVarIndex[i];
+                Int8 Idx = m_StaticResStageIndex[i];
                 if (Idx >= 0)
                 {
-                    VERIFY_EXPR(Idx < StaticVarStageCount);
+                    VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
                     const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
                     m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
                 }
@@ -362,16 +338,14 @@ void PipelineResourceSignatureD3D12Impl::Destruct()
 
     if (m_StaticVarsMgrs != nullptr)
     {
-        for (size_t i = 0; i < m_StaticVarIndex.size(); ++i)
+        for (auto Idx : m_StaticResStageIndex)
         {
-            auto Idx = m_StaticVarIndex[i];
             if (Idx >= 0)
             {
                 m_StaticVarsMgrs[Idx].Destroy(RawAllocator);
                 m_StaticVarsMgrs[Idx].~ShaderVariableManagerD3D12();
             }
         }
-        m_StaticVarIndex.fill(-1);
         m_StaticVarsMgrs = nullptr;
     }
 
@@ -454,7 +428,7 @@ void PipelineResourceSignatureD3D12Impl::CreateShaderResourceBinding(IShaderReso
 
 Uint32 PipelineResourceSignatureD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
-    const auto VarMngrInd = GetStaticVariableCountHelper(ShaderType, m_StaticVarIndex);
+    const auto VarMngrInd = GetStaticVariableCountHelper(ShaderType);
     if (VarMngrInd < 0)
         return 0;
 
@@ -464,7 +438,7 @@ Uint32 PipelineResourceSignatureD3D12Impl::GetStaticVariableCount(SHADER_TYPE Sh
 
 IShaderResourceVariable* PipelineResourceSignatureD3D12Impl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
-    const auto VarMngrInd = GetStaticVariableByNameHelper(ShaderType, Name, m_StaticVarIndex);
+    const auto VarMngrInd = GetStaticVariableByNameHelper(ShaderType, Name);
     if (VarMngrInd < 0)
         return nullptr;
 
@@ -474,7 +448,7 @@ IShaderResourceVariable* PipelineResourceSignatureD3D12Impl::GetStaticVariableBy
 
 IShaderResourceVariable* PipelineResourceSignatureD3D12Impl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    const auto VarMngrInd = GetStaticVariableByIndexHelper(ShaderType, Index, m_StaticVarIndex);
+    const auto VarMngrInd = GetStaticVariableByIndexHelper(ShaderType, Index);
     if (VarMngrInd < 0)
         return nullptr;
 
@@ -487,9 +461,9 @@ void PipelineResourceSignatureD3D12Impl::BindStaticResources(Uint32            S
                                                              Uint32            Flags)
 {
     const auto PipelineType = GetPipelineType();
-    for (Uint32 ShaderInd = 0; ShaderInd < m_StaticVarIndex.size(); ++ShaderInd)
+    for (Uint32 ShaderInd = 0; ShaderInd < m_StaticResStageIndex.size(); ++ShaderInd)
     {
-        const auto VarMngrInd = m_StaticVarIndex[ShaderInd];
+        const auto VarMngrInd = m_StaticResStageIndex[ShaderInd];
         if (VarMngrInd >= 0)
         {
             // ShaderInd is the shader type pipeline index here

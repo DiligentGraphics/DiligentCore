@@ -41,6 +41,7 @@
 #include "FixedLinearAllocator.hpp"
 #include "BasicMath.hpp"
 #include "StringTools.hpp"
+#include "PlatformMisc.hpp"
 
 namespace Diligent
 {
@@ -99,6 +100,34 @@ public:
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
         ValidatePipelineResourceSignatureDesc(Desc);
+
+        // Determine shader stages that have any resources as well as
+        // shader stages that have static resources.
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        {
+            const auto& ResDesc = Desc.Resources[i];
+
+            m_ShaderStages |= ResDesc.ShaderStages;
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                m_StaticResShaderStages |= ResDesc.ShaderStages;
+        }
+
+        if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
+        {
+            m_PipelineType = PipelineTypeFromShaderStages(m_ShaderStages);
+            DEV_CHECK_ERR(m_PipelineType != PIPELINE_TYPE_INVALID, "Failed to deduce pipeline type from shader stages");
+        }
+
+        {
+            Uint32 StaticVarStageIdx = 0;
+            for (auto StaticResStages = m_StaticResShaderStages; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageIdx)
+            {
+                const auto StageBit                  = ExtractLSB(StaticResStages);
+                const auto ShaderTypeInd             = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
+                m_StaticResStageIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageIdx);
+            }
+            VERIFY_EXPR(StaticVarStageIdx == GetNumStaticResStages());
+        }
     }
 
     ~PipelineResourceSignatureBase()
@@ -126,12 +155,21 @@ public:
     }
 
     // Returns the number of shader stages that have resources.
-    Uint32 GetNumActiveShaderStages() const { return m_NumShaderStages; }
+    Uint32 GetNumActiveShaderStages() const
+    {
+        return PlatformMisc::CountOneBits(Uint32{m_ShaderStages});
+    }
+
+    // Returns the number of shader stages that have static resources.
+    Uint32 GetNumStaticResStages() const
+    {
+        return PlatformMisc::CountOneBits(Uint32{m_StaticResShaderStages});
+    }
 
     // Returns the type of the active shader stage with the given index.
     SHADER_TYPE GetActiveShaderStageType(Uint32 StageIndex) const
     {
-        VERIFY_EXPR(StageIndex < m_NumShaderStages);
+        VERIFY_EXPR(StageIndex < GetNumActiveShaderStages());
 
         SHADER_TYPE Stages = m_ShaderStages;
         for (Uint32 Index = 0; Stages != SHADER_TYPE_UNKNOWN; ++Index)
@@ -237,12 +275,14 @@ protected:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
+        m_StaticResStageIndex.fill(-1);
+
 #if DILIGENT_DEBUG
         m_IsDestructed = true;
 #endif
     }
 
-    Int8 GetStaticVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& StaticVarIndex) const
+    Int8 GetStaticVariableCountHelper(SHADER_TYPE ShaderType) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
@@ -252,17 +292,18 @@ protected:
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = StaticVarIndex[ShaderTypeInd];
+        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
+        VERIFY_EXPR(VarMngrInd < 0 || static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
         return VarMngrInd;
     }
 
-    Int8 GetStaticVariableByNameHelper(SHADER_TYPE ShaderType, const Char* Name, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& StaticVarIndex) const
+    Int8 GetStaticVariableByNameHelper(SHADER_TYPE ShaderType, const Char* Name) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
@@ -272,17 +313,18 @@ protected:
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = StaticVarIndex[ShaderTypeInd];
+        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
+        VERIFY_EXPR(VarMngrInd < 0 || static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
         return VarMngrInd;
     }
 
-    Int8 GetStaticVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& StaticVarIndex) const
+    Int8 GetStaticVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
@@ -292,13 +334,14 @@ protected:
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = StaticVarIndex[ShaderTypeInd];
+        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
         }
 
+        VERIFY_EXPR(VarMngrInd < 0 || static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
         return VarMngrInd;
     }
 
@@ -340,10 +383,15 @@ protected:
     // Shader stages that have resources.
     SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;
 
+    // Shader stages that have static resources.
+    SHADER_TYPE m_StaticResShaderStages = SHADER_TYPE_UNKNOWN;
+
     PIPELINE_TYPE m_PipelineType = PIPELINE_TYPE_INVALID;
 
-    // The number of shader stages that have resources.
-    Uint8 m_NumShaderStages = 0;
+    // Index of the shader stage that has static resources, for every shader
+    // type in the pipeline (given by GetShaderTypePipelineIndex(ShaderType, m_PipelineType)).
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticResStageIndex = {-1, -1, -1, -1, -1, -1};
+    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
 #ifdef DILIGENT_DEBUG
     bool m_IsDestructed = false;

@@ -291,17 +291,10 @@ private:
     std::vector<Uint32, STDAllocatorRawMem<Uint32>> GetCacheTableSizes() const;
 
 private:
-    ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
-
-    // Index of the static variable manager in m_StaticVarsMgrs array, for
-    // every shader type in the pipeline (given by GetShaderTypePipelineIndex()).
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
-    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
-
-    ShaderResourceCacheD3D12*   m_pStaticResCache = nullptr;
-    ShaderVariableManagerD3D12* m_StaticVarsMgrs  = nullptr; // [m_NumShaderStages]
-
-    ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
+    ResourceAttribs*            m_pResourceAttribs  = nullptr; // [m_Desc.NumResources]
+    ShaderResourceCacheD3D12*   m_pStaticResCache   = nullptr;
+    ShaderVariableManagerD3D12* m_StaticVarsMgrs    = nullptr; // [m_NumShaderStages]
+    ImmutableSamplerAttribs*    m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 
     RootParamsManager m_RootParams;
 

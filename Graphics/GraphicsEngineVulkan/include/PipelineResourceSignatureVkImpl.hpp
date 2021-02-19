@@ -334,11 +334,6 @@ private:
     // accounting for array size.
     Uint16 m_DynamicStorageBufferCount = 0;
 
-    // Mapping from shader type index given by GetShaderTypePipelineIndex() to
-    // static variable manager index in m_StaticVarsMgrs array.
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
-    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
-
     // Static resource cache for all static resources
     ShaderResourceCacheVk* m_pStaticResCache = nullptr;
     // Static variables manager for every shader stage
