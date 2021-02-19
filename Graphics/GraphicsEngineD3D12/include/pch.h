@@ -25,11 +25,6 @@
  *  of the possibility of such damages.
  */
 
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
-
 #pragma once
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -51,12 +46,13 @@
 #include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.hpp"
 #include "D3DErrors.hpp"
-#include "RenderDeviceBase.hpp"
 #include "ValidatedCast.hpp"
+#include "STDAllocator.hpp"
+
 #include <atlcomcli.h>
 
 #if USE_D3D12_LOADER
 // On Win32 we manually load d3d12.dll and get entry points,
-// but UWP does not support that, so we link with d3d12.lib
+// but UWP does not support this, so we link with d3d12.lib
 #    include "D3D12Loader.hpp"
 #endif

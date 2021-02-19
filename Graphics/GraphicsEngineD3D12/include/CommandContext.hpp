@@ -30,6 +30,7 @@
 
 #include <vector>
 
+#include "DeviceContext.h"
 #include "D3D12ResourceBase.hpp"
 #include "DescriptorHeap.hpp"
 

@@ -38,8 +38,6 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Fence implementation in Direct3D12 backend.
 class FenceD3D12Impl final : public FenceBase<IFenceD3D12, RenderDeviceD3D12Impl>
 {

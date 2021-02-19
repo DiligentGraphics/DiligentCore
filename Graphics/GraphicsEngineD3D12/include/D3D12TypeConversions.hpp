@@ -32,6 +32,16 @@
 
 #include "GraphicsTypes.h"
 #include "RenderPass.h"
+#include "DepthStencilState.h"
+#include "RasterizerState.h"
+#include "BlendState.h"
+#include "InputLayout.h"
+#include "Texture.h"
+#include "TextureView.h"
+#include "Buffer.h"
+#include "BufferView.h"
+#include "Shader.h"
+#include "DeviceContext.h"
 
 namespace Diligent
 {

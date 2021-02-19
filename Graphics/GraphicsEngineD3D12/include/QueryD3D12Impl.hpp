@@ -31,14 +31,13 @@
 /// Declaration of Diligent::QueryD3D12Impl class
 
 #include <array>
+
 #include "QueryD3D12.h"
 #include "QueryBase.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#queries
 

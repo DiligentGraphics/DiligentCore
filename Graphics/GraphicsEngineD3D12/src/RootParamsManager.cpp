@@ -30,6 +30,8 @@
 #include "RootParamsManager.hpp"
 #include "D3D12Utils.h"
 #include "D3D12TypeConversions.hpp"
+#include "HashUtils.hpp"
+#include "EngineMemory.h"
 
 namespace Diligent
 {

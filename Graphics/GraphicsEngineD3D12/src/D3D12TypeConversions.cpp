@@ -37,6 +37,7 @@
 #include "D3DViewDescConversionImpl.hpp"
 #include "PlatformMisc.hpp"
 #include "Align.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {

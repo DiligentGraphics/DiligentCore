@@ -39,8 +39,6 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Texture view object implementation in Direct3D12 backend.
 class TextureViewD3D12Impl final : public TextureViewBase<ITextureViewD3D12, RenderDeviceD3D12Impl>
 {

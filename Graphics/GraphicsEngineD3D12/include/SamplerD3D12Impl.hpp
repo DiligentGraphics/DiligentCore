@@ -39,8 +39,6 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Sampler object implementation in Direct3D12 backend.
 class SamplerD3D12Impl final : public SamplerBase<ISamplerD3D12, RenderDeviceD3D12Impl>
 {

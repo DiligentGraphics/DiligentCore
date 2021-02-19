@@ -34,7 +34,8 @@
 #include <vector>
 #include <array>
 
-#include "BasicTypes.h"
+#include "Shader.h"
+#include "ShaderResourceVariable.h"
 
 namespace Diligent
 {

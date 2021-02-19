@@ -83,6 +83,7 @@
 //
 
 #include "DescriptorHeap.hpp"
+#include "Shader.h"
 
 namespace Diligent
 {
