@@ -414,7 +414,7 @@ void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources()
         if (pSignature == nullptr)
             continue;
 
-        if (pSignature->GetTotalRootCount() == 0)
+        if (pSignature->GetTotalRootParamsCount() == 0)
         {
             // Skip signatures without any resources
             continue;

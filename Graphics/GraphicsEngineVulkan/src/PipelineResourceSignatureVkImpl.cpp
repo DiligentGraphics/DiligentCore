@@ -55,18 +55,6 @@ inline bool ResourcesCompatible(const PipelineResourceSignatureVkImpl::ResourceA
     // clang-format on
 }
 
-inline bool ResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
-{
-    // Ignore resource names.
-    // clang-format off
-    return lhs.ShaderStages == rhs.ShaderStages &&
-           lhs.ArraySize    == rhs.ArraySize    &&
-           lhs.ResourceType == rhs.ResourceType &&
-           lhs.VarType      == rhs.VarType      &&
-           lhs.Flags        == rhs.Flags;
-    // clang-format on
-}
-
 inline VkDescriptorType GetVkDescriptorType(DescriptorType Type)
 {
     static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
@@ -749,7 +737,7 @@ bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSig
     for (Uint32 r = 0; r < LResCount; ++r)
     {
         if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)) ||
-            !ResourcesCompatible(GetResourceDesc(r), Other.GetResourceDesc(r)))
+            !PipelineResourcesCompatible(GetResourceDesc(r), Other.GetResourceDesc(r)))
             return false;
     }
 

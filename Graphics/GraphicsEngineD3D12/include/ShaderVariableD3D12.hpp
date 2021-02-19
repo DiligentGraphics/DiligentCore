@@ -83,6 +83,13 @@ public:
         m_ResourceCache{ResourceCache}
     {}
 
+    // clang-format off
+    ShaderVariableManagerD3D12            (const ShaderVariableManagerD3D12&)  = delete;
+    ShaderVariableManagerD3D12            (      ShaderVariableManagerD3D12&&) = delete;
+    ShaderVariableManagerD3D12& operator= (const ShaderVariableManagerD3D12&)  = delete;
+    ShaderVariableManagerD3D12& operator= (      ShaderVariableManagerD3D12&&) = delete;
+    // clang-format on
+
     void Initialize(const PipelineResourceSignatureD3D12Impl& Signature,
                     IMemoryAllocator&                         Allocator,
                     const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,

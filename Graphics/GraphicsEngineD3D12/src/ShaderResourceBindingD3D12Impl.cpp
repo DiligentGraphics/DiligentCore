@@ -54,6 +54,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         FixedLinearAllocator MemPool{GetRawAllocator()};
         MemPool.AddSpace<ShaderVariableManagerD3D12>(m_NumShaders);
         MemPool.Reserve();
+        // Constructor of ShaderVariableManagerD3D12 is noexcept, so we can safely construct all managers.
         m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(m_NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
 
         // The memory is now owned by ShaderResourceBindingD3D12Impl and will be freed by Destruct().
@@ -75,8 +76,8 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
 
             auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
 
-            // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
-            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+            // It is important that initialization is separated from construction because it provides exception safety.
+            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
             m_pShaderVarMgrs[s].Initialize(
                 *pPRS,
                 VarDataAllocator,

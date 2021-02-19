@@ -73,7 +73,7 @@ public:
         static constexpr Uint32 _SamplerAssignedBits = 1;
         static constexpr Uint32 _RootParamTypeBits   = 3;
 
-        static_assert((1u << _RegisterBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sahder register");
+        static_assert((1u << _RegisterBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store shader register");
         static_assert((1u << _SamplerIndBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sampler resource index");
         static_assert((1u << _RootParamTypeBits) > D3D12_ROOT_PARAMETER_TYPE_UAV + 1, "Not enough bits to store D3D12_ROOT_PARAMETER_TYPE");
 
@@ -87,11 +87,11 @@ public:
         // clang-format off
 /* 0  */const Uint32  Register             : _RegisterBits;        // Shader register
 /* 2  */const Uint32  SRBRootIndex         : _SRBRootIndexBits;    // Root view/table index in the SRB
-/* 4  */const Uint32  SamplerInd           : _SamplerIndBits;      // Index in m_Desc.Resources and m_pResourceAttribs
+/* 4  */const Uint32  SamplerInd           : _SamplerIndBits;      // Assigned sampler index in m_Desc.Resources and m_pResourceAttribs
 /* 6  */const Uint32  Space                : _SpaceBits;           // Shader register space
-/* 7.0*/const Uint32  SigRootIndex         : _SigRootIndexBits;    // Root table index for signature (static only)
+/* 7.0*/const Uint32  SigRootIndex         : _SigRootIndexBits;    // Root table index for signature (static resources only)
 /* 7.3*/const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
-/* 7.4*/const Uint32  RootParamType        : _RootParamTypeBits;   // Root parameter type
+/* 7.4*/const Uint32  RootParamType        : _RootParamTypeBits;   // Root parameter type (D3D12_ROOT_PARAMETER_TYPE)
 /* 8  */const Uint32  SigOffsetFromTableStart;                     // Offset in the root table for signature (static only)
 /* 12 */const Uint32  SRBOffsetFromTableStart;                     // Offset in the root table for SRB
 /* 16 */
@@ -197,7 +197,7 @@ public:
         return m_Desc.ImmutableSamplers[SampIndex];
     }
 
-    Uint32 GetTotalRootCount() const
+    Uint32 GetTotalRootParamsCount() const
     {
         return m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
     }
@@ -260,25 +260,29 @@ public:
                  Uint32                    ResIndex,
                  ShaderResourceCacheD3D12& ResourceCache) const;
 
-    void TransitionResources(ShaderResourceCacheD3D12& ResourceCache, CommandContext& Ctx, bool PerformResourceTransitions, bool ValidateStates) const;
+    void TransitionResources(ShaderResourceCacheD3D12& ResourceCache,
+                             CommandContext&           Ctx,
+                             bool                      PerformResourceTransitions,
+                             bool                      ValidateStates) const;
 
     void CommitRootTables(ShaderResourceCacheD3D12& ResourceCache,
                           CommandContext&           Ctx,
                           DeviceContextD3D12Impl*   pDeviceCtx,
                           Uint32                    DeviceCtxId,
                           bool                      IsCompute,
-                          Uint32                    FirstRootIndex);
+                          Uint32                    BaseRootIndex) const;
 
     void CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
                          CommandContext&           Ctx,
                          DeviceContextD3D12Impl*   pDeviceCtx,
                          Uint32                    DeviceCtxId,
-                         Uint32                    FirstRootIndex,
+                         Uint32                    BaseRootIndex,
                          bool                      IsCompute,
-                         bool                      CommitDynamicBuffers);
+                         bool                      CommitDynamicBuffers) const;
 
 private:
-    void CreateLayout();
+    using StaticResCacheTblSizesArrayType = std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1>;
+    void AllocateRootParameters(StaticResCacheTblSizesArrayType& StaticResCacheTblSizes);
 
     size_t CalculateHash() const;
 
@@ -289,6 +293,8 @@ private:
 private:
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
+    // Index of the static variable manager in m_StaticVarsMgrs array, for
+    // every shader type in the pipeline (given by GetShaderTypePipelineIndex()).
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 

@@ -57,6 +57,19 @@ Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
                            const char*                 ResourceName,
                            const char*                 SamplerSuffix);
 
+/// Returns true if two pipeline resources are compatible
+inline bool PipelineResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
+{
+    // Ignore resource names.
+    // clang-format off
+    return lhs.ShaderStages == rhs.ShaderStages &&
+           lhs.ArraySize    == rhs.ArraySize    &&
+           lhs.ResourceType == rhs.ResourceType &&
+           lhs.VarType      == rhs.VarType      &&
+           lhs.Flags        == rhs.Flags;
+    // clang-format on
+}
+
 /// Template class implementing base functionality of the pipeline resource signature object.
 
 /// \tparam BaseInterface        - Base interface that this class will inheret
@@ -165,8 +178,8 @@ protected:
 
     void CopyDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) noexcept(false)
     {
-        PipelineResourceDesc* pResources = Allocator.Allocate<PipelineResourceDesc>(Desc.NumResources);
-        ImmutableSamplerDesc* pSamplers  = Allocator.Allocate<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
+        PipelineResourceDesc* pResources = Allocator.ConstructArray<PipelineResourceDesc>(Desc.NumResources);
+        ImmutableSamplerDesc* pSamplers  = Allocator.ConstructArray<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
 
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {

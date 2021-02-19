@@ -271,7 +271,7 @@ void RootParamsBuilder::AllocateResourceSlot(SHADER_TYPE                   Shade
         RootParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
         RootParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV)
     {
-        VERIFY(ArraySize == 1, "Only single descriptors can be added as root views");
+        VERIFY(ArraySize == 1, "Only single descriptors can be added as root view");
 
         // Allocate single CBV directly in the root signature
         OffsetFromTableStart = 0;

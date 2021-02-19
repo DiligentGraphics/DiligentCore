@@ -54,19 +54,8 @@ inline bool ResourcesCompatible(const PipelineResourceSignatureD3D12Impl::Resour
            lhs.Space                   == rhs.Space                   &&
            lhs.SRBRootIndex            == rhs.SRBRootIndex            &&
            lhs.SRBOffsetFromTableStart == rhs.SRBOffsetFromTableStart &&
-           lhs.ImtblSamplerAssigned    == rhs.ImtblSamplerAssigned;
-    // clang-format on
-}
-
-inline bool ResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
-{
-    // Ignore resource names.
-    // clang-format off
-    return lhs.ShaderStages == rhs.ShaderStages &&
-           lhs.ArraySize    == rhs.ArraySize    &&
-           lhs.ResourceType == rhs.ResourceType &&
-           lhs.VarType      == rhs.VarType      &&
-           lhs.Flags        == rhs.Flags;
+           lhs.ImtblSamplerAssigned    == rhs.ImtblSamplerAssigned    &&
+           lhs.RootParamType           == rhs.RootParamType;
     // clang-format on
 }
 
@@ -90,8 +79,6 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
 
         ReserveSpaceForDescription(MemPool, Desc);
 
-        std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> StaticResCacheTblSizes = {};
-
         SHADER_TYPE StaticResStages = SHADER_TYPE_UNKNOWN; // Shader stages that have static resources
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
@@ -100,18 +87,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             m_ShaderStages |= ResDesc.ShaderStages;
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-            {
                 StaticResStages |= ResDesc.ShaderStages;
-
-                // Use artifial root signature:
-                // SRVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_SRV (0)
-                // UAVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_UAV (1)
-                // CBVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_CBV (2)
-                // Samplers at root index D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER (3)
-                const Uint32 RootIndex = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
-                VERIFY_EXPR(ResDesc.ArraySize > 0);
-                StaticResCacheTblSizes[RootIndex] += ResDesc.ArraySize;
-            }
         }
 
         m_NumShaderStages = static_cast<Uint8>(PlatformMisc::CountOneBits(static_cast<Uint32>(m_ShaderStages)));
@@ -136,6 +112,8 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
 
         MemPool.Reserve();
 
+        static_assert(std::is_trivially_destructible<ResourceAttribs>::value,
+                      "ResourceAttribs objects must be constructed to be properly destructed in case an excpetion is thrown");
         m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(std::max(1u, m_Desc.NumResources));
         m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
 
@@ -146,10 +124,15 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
 
         CopyDescription(MemPool, Desc);
 
+        StaticResCacheTblSizesArrayType StaticResCacheTblSizes = {};
+        AllocateRootParameters(StaticResCacheTblSizes);
+
         if (StaticVarStageCount > 0)
         {
             m_pStaticResCache = MemPool.Construct<ShaderResourceCacheD3D12>(CacheContentType::Signature);
-            m_StaticVarsMgrs  = MemPool.Allocate<ShaderVariableManagerD3D12>(StaticVarStageCount);
+            // Constructor of ShaderVariableManagerD3D12 is noexcept, so we can safely construct all manager objects.
+            // Moreover, all objects must be constructed if an exception is thrown for Destruct() method to work properly.
+            m_StaticVarsMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(StaticVarStageCount, std::ref(*this), std::ref(*m_pStaticResCache));
 
             m_pStaticResCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
 #ifdef DILIGENT_DEBUG
@@ -158,14 +141,8 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             m_pStaticResCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_CBV).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_CBV], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
             m_pStaticResCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, false);
 #endif
-        }
 
-        CreateLayout();
-
-        if (StaticVarStageCount > 0)
-        {
-            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-
+            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
             for (Uint32 i = 0; i < m_StaticVarIndex.size(); ++i)
             {
                 Int8 Idx = m_StaticVarIndex[i];
@@ -173,10 +150,32 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
                 {
                     VERIFY_EXPR(Idx < StaticVarStageCount);
                     const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    new (m_StaticVarsMgrs + Idx) ShaderVariableManagerD3D12{*this, *m_pStaticResCache};
                     m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
                 }
             }
+        }
+        else
+        {
+#ifdef DILIGENT_DEBUG
+            for (auto TblSize : StaticResCacheTblSizes)
+                VERIFY(TblSize == 0, "The size of every static resource cache table must be zero because there are no static resources in the PRS.");
+#endif
+        }
+
+        if (m_Desc.SRBAllocationGranularity > 1)
+        {
+            std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
+            for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
+            {
+                constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+
+                Uint32 UnusedNumVars       = 0;
+                ShaderVariableDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
+            }
+
+            auto CacheTableSizes = GetCacheTableSizes();
+            auto CacheMemorySize = ShaderResourceCacheD3D12::GetRequiredMemorySize(static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
+            m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
         }
 
         m_Hash = CalculateHash();
@@ -188,7 +187,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::CreateLayout()
+void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTblSizesArrayType& StaticResCacheTblSizes)
 {
     // Index of the assigned sampler, for every texture SRV in m_Desc.Resources, or InvalidSamplerInd.
     std::vector<Uint32> TextureSrvToAssignedSamplerInd(m_Desc.NumResources, ResourceAttribs::InvalidSamplerInd);
@@ -228,8 +227,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
 
     // The total number of resources (counting array size), for every descriptor range type
     std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> NumResources = {};
-    // Static resource cache table sizes
-    std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> StaticResCacheTblSizes = {};
+    StaticResCacheTblSizes.fill(0);
 
     // Allocate registers for immutable samplers first
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
@@ -260,14 +258,14 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[AssignedSamplerInd];
         }
 
-        const auto DescriptorRangeType     = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
-        const bool IsRTSizedArray          = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0;
-        Uint32     Register                = 0;
-        Uint32     Space                   = 0;
-        Uint32     SRBRootIndex            = ResourceAttribs::InvalidSRBRootIndex;
-        Uint32     SRBOffsetFromTableStart = ResourceAttribs::InvalidOffset;
-        Uint32     SigRootIndex            = ResourceAttribs::InvalidSigRootIndex;
-        Uint32     SigOffsetFromTableStart = ResourceAttribs::InvalidOffset;
+        const auto d3d12DescriptorRangeType = ResourceTypeToD3D12DescriptorRangeType(ResDesc.ResourceType);
+        const bool IsRTSizedArray           = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0;
+        Uint32     Register                 = 0;
+        Uint32     Space                    = 0;
+        Uint32     SRBRootIndex             = ResourceAttribs::InvalidSRBRootIndex;
+        Uint32     SRBOffsetFromTableStart  = ResourceAttribs::InvalidOffset;
+        Uint32     SigRootIndex             = ResourceAttribs::InvalidSigRootIndex;
+        Uint32     SigOffsetFromTableStart  = ResourceAttribs::InvalidOffset;
 
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
@@ -276,7 +274,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             // UAVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_UAV (1)
             // CBVs at root index D3D12_DESCRIPTOR_RANGE_TYPE_CBV (2)
             // Samplers at root index D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER (3)
-            SigRootIndex            = DescriptorRangeType;
+            SigRootIndex            = d3d12DescriptorRangeType;
             SigOffsetFromTableStart = StaticResCacheTblSizes[SigRootIndex];
             StaticResCacheTblSizes[SigRootIndex] += ResDesc.ArraySize;
         }
@@ -295,8 +293,8 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             {
                 // Normal resources go into space 0.
                 Space    = 0;
-                Register = NumResources[DescriptorRangeType];
-                NumResources[DescriptorRangeType] += ResDesc.ArraySize;
+                Register = NumResources[d3d12DescriptorRangeType];
+                NumResources[d3d12DescriptorRangeType] += ResDesc.ArraySize;
             }
 
             const auto UseDynamicOffset  = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
@@ -325,7 +323,7 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             }
 
             ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType, d3d12RootParamType,
-                                               DescriptorRangeType, ResDesc.ArraySize, Register, Space,
+                                               d3d12DescriptorRangeType, ResDesc.ArraySize, Register, Space,
                                                SRBRootIndex, SRBOffsetFromTableStart);
         }
         else
@@ -351,22 +349,6 @@ void PipelineResourceSignatureD3D12Impl::CreateLayout()
             };
     }
     ParamsBuilder.InitializeMgr(GetRawAllocator(), m_RootParams);
-
-    if (m_Desc.SRBAllocationGranularity > 1)
-    {
-        std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
-        for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
-        {
-            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-
-            Uint32 UnusedNumVars       = 0;
-            ShaderVariableDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
-        }
-
-        auto CacheTableSizes = GetCacheTableSizes();
-        auto CacheMemorySize = ShaderResourceCacheD3D12::GetRequiredMemorySize(static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
-    }
 }
 
 PipelineResourceSignatureD3D12Impl::~PipelineResourceSignatureD3D12Impl()
@@ -399,11 +381,14 @@ void PipelineResourceSignatureD3D12Impl::Destruct()
         m_pStaticResCache = nullptr;
     }
 
-    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+    if (m_ImmutableSamplers != nullptr)
     {
-        m_ImmutableSamplers[i].~ImmutableSamplerAttribs();
+        for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+        {
+            m_ImmutableSamplers[i].~ImmutableSamplerAttribs();
+        }
+        m_ImmutableSamplers = nullptr;
     }
-    m_ImmutableSamplers = nullptr;
 
     if (void* pRawMem = m_pResourceAttribs)
     {
@@ -434,7 +419,7 @@ bool PipelineResourceSignatureD3D12Impl::IsCompatibleWith(const PipelineResource
     for (Uint32 r = 0; r < LResCount; ++r)
     {
         if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)) ||
-            !ResourcesCompatible(GetResourceDesc(r), Other.GetResourceDesc(r)))
+            !PipelineResourcesCompatible(GetResourceDesc(r), Other.GetResourceDesc(r)))
             return false;
     }
 
@@ -1071,7 +1056,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
                                                          Uint32                    DeviceCtxId,
                                                          Uint32                    BaseRootIndex,
                                                          bool                      IsCompute,
-                                                         bool                      CommitDynamicBuffers)
+                                                         bool                      CommitDynamicBuffers) const
 {
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
@@ -1123,7 +1108,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
                                                           DeviceContextD3D12Impl*   pDeviceCtx,
                                                           Uint32                    DeviceCtxId,
                                                           bool                      IsCompute,
-                                                          Uint32                    BaseRootIndex)
+                                                          Uint32                    BaseRootIndex) const
 {
     auto* pd3d12Device = GetDevice()->GetD3D12Device();
 
