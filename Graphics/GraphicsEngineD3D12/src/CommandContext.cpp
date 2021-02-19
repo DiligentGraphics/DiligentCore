@@ -251,7 +251,10 @@ void StateTransitionHelper::AddD3D12ResourceBarriers(TopLevelASD3D12Impl& TLAS, 
 {
     // Acceleration structure is always in D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
     // and requires UAV barrier instead of state transition.
-    m_RequireUAVBarrier |= (m_OldState == RESOURCE_STATE_BUILD_AS_WRITE);
+    // If either old or new state is a write state, we need to issue a UAV barrier to complete
+    // all previous read/write operations.
+    if (m_OldState == RESOURCE_STATE_BUILD_AS_WRITE || m_Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE)
+        m_RequireUAVBarrier = true;
 
 #ifdef DILIGENT_DEVELOPMENT
     if (m_Barrier.NewState & RESOURCE_STATE_RAY_TRACING)
@@ -265,7 +268,10 @@ void StateTransitionHelper::AddD3D12ResourceBarriers(BottomLevelASD3D12Impl& BLA
 {
     // Acceleration structure is always in D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
     // and requires UAV barrier instead of state transition.
-    m_RequireUAVBarrier |= (m_OldState == RESOURCE_STATE_BUILD_AS_WRITE);
+    // If either old or new state is a write state, we need to issue a UAV barrier to complete
+    // all previous read/write operations.
+    if (m_OldState == RESOURCE_STATE_BUILD_AS_WRITE || m_Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE)
+        m_RequireUAVBarrier = true;
 }
 
 template <typename ResourceType>
