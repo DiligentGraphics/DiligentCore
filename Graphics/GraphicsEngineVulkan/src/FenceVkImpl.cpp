@@ -64,6 +64,15 @@ FenceVkImpl::~FenceVkImpl()
     }
 }
 
+void FenceVkImpl::UpdateLastCompletedFenceValue(uint64_t NewValue)
+{
+    auto LastCompletedValue = m_LastCompletedFenceValue.load();
+    while (!m_LastCompletedFenceValue.compare_exchange_strong(LastCompletedValue, std::max(LastCompletedValue, NewValue)))
+    {
+        // If exchange fails, LastCompletedValue will hold the actual value of m_LastCompletedFenceValue.
+    }
+}
+
 Uint64 FenceVkImpl::GetCompletedValue()
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
@@ -74,8 +83,7 @@ Uint64 FenceVkImpl::GetCompletedValue()
         auto status = LogicalDevice.GetFenceStatus(Value_Fence.second);
         if (status == VK_SUCCESS)
         {
-            if (Value_Fence.first > m_LastCompletedFenceValue)
-                m_LastCompletedFenceValue = Value_Fence.first;
+            UpdateLastCompletedFenceValue(Value_Fence.first);
             m_FencePool.DisposeFence(std::move(Value_Fence.second));
             m_PendingFences.pop_front();
         }
@@ -85,14 +93,13 @@ Uint64 FenceVkImpl::GetCompletedValue()
         }
     }
 
-    return m_LastCompletedFenceValue;
+    return m_LastCompletedFenceValue.load();
 }
 
 void FenceVkImpl::Reset(Uint64 Value)
 {
-    DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
-    if (Value > m_LastCompletedFenceValue)
-        m_LastCompletedFenceValue = Value;
+    DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue.load(), "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
+    UpdateLastCompletedFenceValue(Value);
 }
 
 
@@ -115,8 +122,7 @@ void FenceVkImpl::Wait(Uint64 Value)
 
         DEV_CHECK_ERR(status == VK_SUCCESS, "All pending fences must now be complete!");
         (void)status;
-        if (val_fence.first > m_LastCompletedFenceValue)
-            m_LastCompletedFenceValue = val_fence.first;
+        UpdateLastCompletedFenceValue(val_fence.first);
         m_FencePool.DisposeFence(std::move(val_fence.second));
 
         m_PendingFences.pop_front();

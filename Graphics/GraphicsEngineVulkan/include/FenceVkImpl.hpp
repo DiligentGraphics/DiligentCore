@@ -31,6 +31,8 @@
 /// Declaration of Diligent::FenceVkImpl class
 
 #include <deque>
+#include <atomic>
+
 #include "FenceVk.h"
 #include "FenceBase.hpp"
 #include "VulkanUtilities/VulkanFencePool.hpp"
@@ -76,9 +78,11 @@ public:
     void Wait(Uint64 Value);
 
 private:
+    inline void UpdateLastCompletedFenceValue(uint64_t NewValue);
+
     VulkanUtilities::VulkanFencePool                             m_FencePool;
     std::deque<std::pair<Uint64, VulkanUtilities::FenceWrapper>> m_PendingFences;
-    volatile Uint64                                              m_LastCompletedFenceValue = 0;
+    std::atomic_uint64_t                                         m_LastCompletedFenceValue{0};
 };
 
 } // namespace Diligent
