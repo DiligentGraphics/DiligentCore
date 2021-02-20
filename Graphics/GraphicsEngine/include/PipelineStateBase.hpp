@@ -77,11 +77,12 @@ private:
     /// \param CreateInfo        - Pipeline state create info.
     /// \param bIsDeviceInternal - Flag indicating if the pipeline state is an internal device object and
     ///							   must not keep a strong reference to the device.
-    PipelineStateBase(IReferenceCounters*      pRefCounters,
-                      RenderDeviceImplType*    pDevice,
-                      const PipelineStateDesc& PSODesc,
-                      bool                     bIsDeviceInternal = false) :
-        TDeviceObjectBase{pRefCounters, pDevice, PSODesc, bIsDeviceInternal}
+    PipelineStateBase(IReferenceCounters*            pRefCounters,
+                      RenderDeviceImplType*          pDevice,
+                      const PipelineStateCreateInfo& CreateInfo,
+                      bool                           bIsDeviceInternal = false) :
+        TDeviceObjectBase{pRefCounters, pDevice, CreateInfo.PSODesc, bIsDeviceInternal},
+        m_UsingImplicitSignature{CreateInfo.ppResourceSignatures == nullptr || CreateInfo.ResourceSignaturesCount == 0}
     {
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0,
@@ -102,7 +103,7 @@ public:
                       RenderDeviceImplType*                  pDevice,
                       const GraphicsPipelineStateCreateInfo& GraphicsPipelineCI,
                       bool                                   bIsDeviceInternal = false) :
-        PipelineStateBase{pRefCounters, pDevice, GraphicsPipelineCI.PSODesc, bIsDeviceInternal}
+        PipelineStateBase{pRefCounters, pDevice, static_cast<const PipelineStateCreateInfo&>(GraphicsPipelineCI), bIsDeviceInternal}
     {
         try
         {
@@ -126,7 +127,7 @@ public:
                       RenderDeviceImplType*                 pDevice,
                       const ComputePipelineStateCreateInfo& ComputePipelineCI,
                       bool                                  bIsDeviceInternal = false) :
-        PipelineStateBase{pRefCounters, pDevice, ComputePipelineCI.PSODesc, bIsDeviceInternal}
+        PipelineStateBase{pRefCounters, pDevice, static_cast<const PipelineStateCreateInfo&>(ComputePipelineCI), bIsDeviceInternal}
     {
         try
         {
@@ -150,7 +151,7 @@ public:
                       RenderDeviceImplType*                    pDevice,
                       const RayTracingPipelineStateCreateInfo& RayTracingPipelineCI,
                       bool                                     bIsDeviceInternal = false) :
-        PipelineStateBase{pRefCounters, pDevice, RayTracingPipelineCI.PSODesc, bIsDeviceInternal}
+        PipelineStateBase{pRefCounters, pDevice, static_cast<const PipelineStateCreateInfo&>(RayTracingPipelineCI), bIsDeviceInternal}
     {
         try
         {
@@ -279,10 +280,10 @@ public:
     {
         *ppShaderResourceBinding = nullptr;
 
-        if (this->GetResourceSignatureCount() != 1)
+        if (!m_UsingImplicitSignature)
         {
-            LOG_ERROR_MESSAGE("PipelineState::CreateShaderResourceBinding is only allowed for pipelines that use a single "
-                              "resource signature. Use IPipelineResourceSignature::CreateShaderResourceBinding instead.");
+            LOG_ERROR_MESSAGE("IPipelineState::CreateShaderResourceBinding is not allowed for pipelines that use explicit "
+                              "resource signatures. Use IPipelineResourceSignature::CreateShaderResourceBinding instead.");
             return;
         }
 
@@ -292,10 +293,17 @@ public:
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
                                                                                 const Char* Name) override final
     {
-        if (this->GetResourceSignatureCount() != 1)
+        if (!m_UsingImplicitSignature)
         {
-            LOG_ERROR_MESSAGE("PipelineState::CreateShaderResourceBinding is only allowed for pipelines that use a single "
-                              "resource signature. Use IPipelineResourceSignature::GetStaticVariableByName instead.");
+            LOG_ERROR_MESSAGE("IPipelineState::CreateShaderResourceBinding is not allowed for pipelines that use explicit "
+                              "resource signatures. Use IPipelineResourceSignature::GetStaticVariableByName instead.");
+            return nullptr;
+        }
+
+        if ((m_ActiveShaderStages & ShaderType) == 0)
+        {
+            LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
             return nullptr;
         }
 
@@ -305,10 +313,17 @@ public:
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
                                                                                  Uint32      Index) override final
     {
-        if (this->GetResourceSignatureCount() != 1)
+        if (!m_UsingImplicitSignature)
         {
-            LOG_ERROR_MESSAGE("PipelineState::GetStaticVariableByIndex is only allowed for pipelines that use a single "
-                              "resource signature. Use IPipelineResourceSignature::GetStaticVariableByIndex instead.");
+            LOG_ERROR_MESSAGE("IPipelineState::GetStaticVariableByIndex is not allowed for pipelines that use explicit "
+                              "resource signatures. Use IPipelineResourceSignature::GetStaticVariableByIndex instead.");
+            return nullptr;
+        }
+
+        if ((m_ActiveShaderStages & ShaderType) == 0)
+        {
+            LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
             return nullptr;
         }
 
@@ -317,10 +332,17 @@ public:
 
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
     {
-        if (this->GetResourceSignatureCount() != 1)
+        if (!m_UsingImplicitSignature)
         {
-            LOG_ERROR_MESSAGE("PipelineState::GetStaticVariableCount is only allowed for pipelines that use a single "
-                              "resource signature. Use IPipelineResourceSignature::GetStaticVariableCount instead.");
+            LOG_ERROR_MESSAGE("IPipelineState::GetStaticVariableCount is not allowed for pipelines that use explicit "
+                              "resource signatures. Use IPipelineResourceSignature::GetStaticVariableCount instead.");
+            return 0;
+        }
+
+        if ((m_ActiveShaderStages & ShaderType) == 0)
+        {
+            LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
             return 0;
         }
 
@@ -329,10 +351,10 @@ public:
 
     virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final
     {
-        if (this->GetResourceSignatureCount() != 1)
+        if (!m_UsingImplicitSignature)
         {
-            LOG_ERROR_MESSAGE("PipelineState::BindStaticResources is only allowed for pipelines that use a single "
-                              "resource signature. Use IPipelineResourceSignature::BindStaticResources instead.");
+            LOG_ERROR_MESSAGE("IPipelineState::BindStaticResources is not allowed for pipelines that use explicit "
+                              "resource signatures. Use IPipelineResourceSignature::BindStaticResources instead.");
             return;
         }
 
@@ -408,13 +430,13 @@ protected:
             if (pShader != nullptr)
             {
                 ShaderStages.emplace_back(ValidatedCast<ShaderImplType>(pShader));
-#ifdef DILIGENT_DEBUG
                 const auto ShaderType = pShader->GetDesc().ShaderType;
+                VERIFY((m_ActiveShaderStages & ShaderType) == 0,
+                       "Shader stage ", GetShaderTypeLiteralName(ShaderType), " has already been initialized in PSO '", this->m_Desc.Name, "'.");
+                m_ActiveShaderStages |= ShaderType;
+#ifdef DILIGENT_DEBUG
                 for (Uint32 i = 0; i + 1 < ShaderStages.size(); ++i)
-                {
-                    VERIFY(ShaderStages[i].Type != ShaderType,
-                           "Shader stage ", GetShaderTypeLiteralName(ShaderType), " has already been initialized in PSO '", this->m_Desc.Name, "'.");
-                }
+                    VERIFY_EXPR(ShaderStages[i].Type != ShaderType);
 #endif
             }
         };
@@ -461,6 +483,7 @@ protected:
         VERIFY_EXPR(CreateInfo.pCS->GetDesc().ShaderType == SHADER_TYPE_COMPUTE);
 
         ShaderStages.emplace_back(ValidatedCast<ShaderImplType>(CreateInfo.pCS));
+        m_ActiveShaderStages = SHADER_TYPE_COMPUTE;
 
         VERIFY_EXPR(!ShaderStages.empty());
     }
@@ -473,12 +496,13 @@ protected:
 
         std::unordered_set<IShader*> UniqueShaders;
 
-        auto AddShader = [&ShaderStages, &UniqueShaders](IShader* pShader) {
+        auto AddShader = [&ShaderStages, &UniqueShaders, this](IShader* pShader) {
             if (pShader != nullptr && UniqueShaders.insert(pShader).second)
             {
                 const auto ShaderType = pShader->GetDesc().ShaderType;
                 const auto StageInd   = GetShaderTypePipelineIndex(ShaderType, PIPELINE_TYPE_RAY_TRACING);
                 auto&      Stage      = ShaderStages[StageInd];
+                m_ActiveShaderStages |= ShaderType;
                 Stage.Append(ValidatedCast<ShaderImplType>(pShader));
             }
         };
@@ -763,6 +787,12 @@ private:
     }
 
 protected:
+    /// Shader stages that are active in this PSO.
+    SHADER_TYPE m_ActiveShaderStages = SHADER_TYPE_UNKNOWN;
+
+    /// True if the pipeline was created using implicit root signature.
+    const bool m_UsingImplicitSignature;
+
     struct GraphicsPipelineData
     {
         GraphicsPipelineDesc Desc;

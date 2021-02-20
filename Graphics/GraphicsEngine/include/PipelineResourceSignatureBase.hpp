@@ -295,11 +295,7 @@ protected:
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
         const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
-        {
-            LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
             return 0;
-        }
 
         VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
         return StaticVarMgrs[VarMngrInd].GetVariableCount();
@@ -318,11 +314,7 @@ protected:
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
         const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
-        {
-            LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
             return nullptr;
-        }
 
         VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
         return StaticVarMgrs[VarMngrInd].GetVariable(Name);
@@ -341,11 +333,7 @@ protected:
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
         const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
-        {
-            LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
             return nullptr;
-        }
 
         VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
         return StaticVarMgrs[VarMngrInd].GetVariable(Index);
