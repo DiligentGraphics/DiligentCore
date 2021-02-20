@@ -135,7 +135,7 @@ void ShaderVariableManagerD3D12::Destroy(IMemoryAllocator& Allocator)
     }
 }
 
-ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(const Char* Name)
+ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(const Char* Name) const
 {
     ShaderVariableD3D12Impl* pVar = nullptr;
     for (Uint32 v = 0; v < m_NumVariables; ++v)
@@ -152,7 +152,7 @@ ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(const Char* Nam
 }
 
 
-ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(Uint32 Index)
+ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(Uint32 Index) const
 {
     if (Index >= m_NumVariables)
     {

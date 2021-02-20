@@ -747,51 +747,24 @@ void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourc
 
 Uint32 PipelineResourceSignatureVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
-    const auto VarMngrInd = GetStaticVariableCountHelper(ShaderType);
-    if (VarMngrInd < 0)
-        return 0;
-
-    auto& StaticVarMgr = m_StaticVarsMgrs[VarMngrInd];
-    return StaticVarMgr.GetVariableCount();
+    return GetStaticVariableCountImpl(ShaderType, m_StaticVarsMgrs);
 }
 
 IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
-    const auto VarMngrInd = GetStaticVariableByNameHelper(ShaderType, Name);
-    if (VarMngrInd < 0)
-        return nullptr;
-
-    auto& StaticVarMgr = m_StaticVarsMgrs[VarMngrInd];
-    return StaticVarMgr.GetVariable(Name);
+    return GetStaticVariableByNameImpl(ShaderType, Name, m_StaticVarsMgrs);
 }
 
 IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    const auto VarMngrInd = GetStaticVariableByIndexHelper(ShaderType, Index);
-    if (VarMngrInd < 0)
-        return nullptr;
-
-    const auto& StaticVarMgr = m_StaticVarsMgrs[VarMngrInd];
-    return StaticVarMgr.GetVariable(Index);
+    return GetStaticVariableByIndexImpl(ShaderType, Index, m_StaticVarsMgrs);
 }
 
 void PipelineResourceSignatureVkImpl::BindStaticResources(Uint32            ShaderFlags,
                                                           IResourceMapping* pResMapping,
                                                           Uint32            Flags)
 {
-    const auto PipelineType = GetPipelineType();
-    for (auto StaticResStageIdx : m_StaticResStageIndex)
-    {
-        if (StaticResStageIdx >= 0)
-        {
-            // ShaderInd is the shader type pipeline index here
-            const auto ShaderType = GetShaderTypeFromPipelineIndex(StaticResStageIdx, PipelineType);
-            if (ShaderFlags & ShaderType)
-            {
-                m_StaticVarsMgrs[StaticResStageIdx].BindResources(pResMapping, Flags);
-            }
-        }
-    }
+    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags, m_StaticVarsMgrs);
 }
 
 void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache,

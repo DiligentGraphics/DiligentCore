@@ -99,8 +99,8 @@ public:
 
     void Destroy(IMemoryAllocator& Allocator);
 
-    ShaderVariableD3D12Impl* GetVariable(const Char* Name);
-    ShaderVariableD3D12Impl* GetVariable(Uint32 Index);
+    ShaderVariableD3D12Impl* GetVariable(const Char* Name) const;
+    ShaderVariableD3D12Impl* GetVariable(Uint32 Index) const;
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 

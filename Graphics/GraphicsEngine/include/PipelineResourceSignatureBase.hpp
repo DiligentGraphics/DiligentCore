@@ -282,13 +282,14 @@ protected:
 #endif
     }
 
-    Int8 GetStaticVariableCountHelper(SHADER_TYPE ShaderType) const
+    template <typename ShaderVarManagerType>
+    Uint32 GetStaticVariableCountImpl(SHADER_TYPE ShaderType, const ShaderVarManagerType StaticVarMgrs[]) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
-            return -1;
+            return 0;
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
@@ -297,19 +298,21 @@ protected:
         {
             LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
+            return 0;
         }
 
-        VERIFY_EXPR(VarMngrInd < 0 || static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return VarMngrInd;
+        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
+        return StaticVarMgrs[VarMngrInd].GetVariableCount();
     }
 
-    Int8 GetStaticVariableByNameHelper(SHADER_TYPE ShaderType, const Char* Name) const
+    template <typename ShaderVarManagerType>
+    IShaderResourceVariable* GetStaticVariableByNameImpl(SHADER_TYPE ShaderType, const Char* Name, const ShaderVarManagerType StaticVarMgrs[]) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
-            return -1;
+            return nullptr;
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
@@ -318,19 +321,21 @@ protected:
         {
             LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
+            return nullptr;
         }
 
-        VERIFY_EXPR(VarMngrInd < 0 || static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return VarMngrInd;
+        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
+        return StaticVarMgrs[VarMngrInd].GetVariable(Name);
     }
 
-    Int8 GetStaticVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index) const
+    template <typename ShaderVarManagerType>
+    IShaderResourceVariable* GetStaticVariableByIndexImpl(SHADER_TYPE ShaderType, Uint32 Index, const ShaderVarManagerType StaticVarMgrs[]) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
-            return -1;
+            return nullptr;
         }
 
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
@@ -339,10 +344,34 @@ protected:
         {
             LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is inactive in PSO '", this->m_Desc.Name, "'.");
+            return nullptr;
         }
 
-        VERIFY_EXPR(VarMngrInd < 0 || static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return VarMngrInd;
+        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
+        return StaticVarMgrs[VarMngrInd].GetVariable(Index);
+    }
+
+    template <typename ShaderVarManagerType>
+    void BindStaticResourcesImpl(Uint32               ShaderFlags,
+                                 IResourceMapping*    pResMapping,
+                                 Uint32               Flags,
+                                 ShaderVarManagerType StaticVarMgrs[])
+    {
+        const auto PipelineType = GetPipelineType();
+        for (Uint32 ShaderInd = 0; ShaderInd < m_StaticResStageIndex.size(); ++ShaderInd)
+        {
+            const auto VarMngrInd = m_StaticResStageIndex[ShaderInd];
+            if (VarMngrInd >= 0)
+            {
+                VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
+                // ShaderInd is the shader type pipeline index here
+                const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
+                if (ShaderFlags & ShaderType)
+                {
+                    StaticVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
+                }
+            }
+        }
     }
 
     // Finds a sampler that is assigned to texture Tex, when combined texture samplers are used.
