@@ -349,7 +349,7 @@ void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipeline
     auto* pResBindingD3D12Impl = ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding);
     auto& ResourceCache        = pResBindingD3D12Impl->GetResourceCache();
 
-    pResBindingD3D12Impl->GetSignature()->TransitionResources(ResourceCache, CmdCtx, true, false);
+    ResourceCache.TransitionResources(CmdCtx, true, false);
 }
 
 void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -368,12 +368,12 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
 
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
-        pSignature->TransitionResources(ResourceCache, CmdCtx, true, false);
+        ResourceCache.TransitionResources(CmdCtx, true, false);
     }
 #ifdef DILIGENT_DEVELOPMENT
     else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
-        pSignature->TransitionResources(ResourceCache, CmdCtx, false, true);
+        ResourceCache.TransitionResources(CmdCtx, false, true);
     }
 #endif
 

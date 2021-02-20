@@ -88,10 +88,12 @@
 namespace Diligent
 {
 
+class CommandContext;
+
 class ShaderResourceCacheD3D12
 {
 public:
-    enum class CacheContentType
+    enum class CacheContentType : Uint8
     {
         Signature = 0, // The cache is used by the pipeline resource signature to hold static resources.
         SRB       = 1  // The cache is used by SRB to hold resources of all types (static, mutable, dynamic).
@@ -99,9 +101,8 @@ public:
 
     explicit ShaderResourceCacheD3D12(CacheContentType ContentType) noexcept :
         m_NumTables{0},
-        m_ContentType{static_cast<Uint32>(ContentType)}
+        m_ContentType{ContentType}
     {
-        VERIFY_EXPR(GetContentType() == ContentType);
     }
 
     // clang-format off
@@ -113,12 +114,12 @@ public:
 
     ~ShaderResourceCacheD3D12();
 
-    static size_t GetRequiredMemorySize(Uint32 NumTables,
-                                        Uint32 TableSizes[]);
+    static size_t GetRequiredMemorySize(Uint32       NumTables,
+                                        const Uint32 TableSizes[]);
 
     void Initialize(IMemoryAllocator& MemAllocator,
                     Uint32            NumTables,
-                    Uint32            TableSizes[]);
+                    const Uint32      TableSizes[]);
 
     static constexpr Uint32 InvalidDescriptorOffset = ~0u;
 
@@ -131,6 +132,11 @@ public:
         // Note that for dynamic resources, this is the only available CPU descriptor handle.
         D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {0};
         RefCntAutoPtr<IDeviceObject> pObject;
+
+        __forceinline void TransitionResource(CommandContext& Ctx);
+#ifdef DILIGENT_DEVELOPMENT
+        void DvpVerifyResourceState();
+#endif
     };
 
     class RootTable
@@ -316,18 +322,48 @@ public:
         return DstDescrHandle;
     }
 
+    template <class TOperation>
+    __forceinline void ProcessTableResources(Uint32                      RootInd,
+                                             const D3D12_ROOT_PARAMETER& d3d12Param,
+                                             D3D12_DESCRIPTOR_HEAP_TYPE  dbgHeapType,
+                                             TOperation                  Operation)
+    {
+        auto& TableResources = GetRootTable(RootInd);
+        for (UINT r = 0; r < d3d12Param.DescriptorTable.NumDescriptorRanges; ++r)
+        {
+            const auto& range = d3d12Param.DescriptorTable.pDescriptorRanges[r];
+            VERIFY(dbgHeapType == D3D12DescriptorRangeTypeToD3D12HeapType(range.RangeType), "Mistmatch between descriptor heap type and descriptor range type");
+            for (UINT d = 0; d < range.NumDescriptors; ++d)
+            {
+                const auto Offset = range.OffsetInDescriptorsFromTableStart + d;
+                auto&      Res    = TableResources.GetResource(Offset, dbgHeapType);
+                Operation(Offset, range, Res);
+            }
+        }
+    }
+
+    void TransitionResources(CommandContext& Ctx,
+                             bool            PerformTransitions,
+                             bool            ValidateStates);
+
     Uint32& GetDynamicRootBuffersCounter() { return m_NumDynamicRootBuffers; }
 
     // Returns the number of dynamic buffers bound as root views in the cache regardless of their variable types
     Uint32 GetNumDynamicRootBuffers() const { return m_NumDynamicRootBuffers; }
 
-    CacheContentType GetContentType() const { return static_cast<CacheContentType>(m_ContentType); }
+    CacheContentType GetContentType() const { return m_ContentType; }
 
 #ifdef DILIGENT_DEBUG
     //void DbgVerifyBoundDynamicCBsCounter() const;
 #endif
 
 private:
+    Resource& GetResource(Uint32 Idx)
+    {
+        VERIFY_EXPR(Idx < m_TotalResourceCount);
+        return reinterpret_cast<Resource*>(reinterpret_cast<RootTable*>(m_pMemory) + m_NumTables)[Idx];
+    }
+
     // Allocation in a GPU-visible sampler descriptor heap
     DescriptorHeapAllocation m_SamplerHeapSpace;
 
@@ -341,9 +377,13 @@ private:
     Uint32 m_NumDynamicRootBuffers = 0;
 
     // The number of descriptor tables in the cache
-    Uint32 m_NumTables : 31;
+    Uint32 m_NumTables = 0;
+
+    // The total number of resources in the cache
+    Uint32 m_TotalResourceCount = 0;
+
     // Indicates what types of resources are stored in the cache
-    const Uint32 m_ContentType : 1;
+    const CacheContentType m_ContentType;
 };
 
 } // namespace Diligent

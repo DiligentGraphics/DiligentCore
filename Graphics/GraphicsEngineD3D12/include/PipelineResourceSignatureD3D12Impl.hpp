@@ -133,6 +133,13 @@ public:
         Uint32 OffsetFromTableStart(CacheContentType Type) const { return Type == CacheContentType::SRB ? SRBOffsetFromTableStart : SigOffsetFromTableStart; }
 
         D3D12_ROOT_PARAMETER_TYPE GetD3D12RootParamType() const { return static_cast<D3D12_ROOT_PARAMETER_TYPE>(RootParamType); }
+
+        bool IsRootView() const
+        {
+            return (GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_CBV ||
+                    GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_SRV ||
+                    GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_UAV);
+        }
     };
 
     const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
@@ -259,11 +266,6 @@ public:
     bool IsBound(Uint32                    ArrayIndex,
                  Uint32                    ResIndex,
                  ShaderResourceCacheD3D12& ResourceCache) const;
-
-    void TransitionResources(ShaderResourceCacheD3D12& ResourceCache,
-                             CommandContext&           Ctx,
-                             bool                      PerformResourceTransitions,
-                             bool                      ValidateStates) const;
 
     void CommitRootTables(ShaderResourceCacheD3D12& ResourceCache,
                           CommandContext&           Ctx,
