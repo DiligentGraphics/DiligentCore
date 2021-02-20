@@ -121,7 +121,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
             for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
             {
-                Int8 Idx = m_StaticResStageIndex[i];
+                auto Idx = m_StaticResStageIndex[i];
                 if (Idx >= 0)
                 {
                     VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
@@ -381,35 +381,14 @@ bool PipelineResourceSignatureD3D12Impl::IsCompatibleWith(const PipelineResource
     if (GetHash() != Other.GetHash())
         return false;
 
-    if (GetDesc().BindingIndex != Other.GetDesc().BindingIndex)
+    if (!PipelineResourceSignaturesCompatible(GetDesc(), Other.GetDesc()))
         return false;
 
-    const Uint32 LResCount = GetTotalResourceCount();
-    const Uint32 RResCount = Other.GetTotalResourceCount();
-
-    if (LResCount != RResCount)
-        return false;
-
-    for (Uint32 r = 0; r < LResCount; ++r)
+    const auto ResCount = GetTotalResourceCount();
+    VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
+    for (Uint32 r = 0; r < ResCount; ++r)
     {
-        if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)) ||
-            !PipelineResourcesCompatible(GetResourceDesc(r), Other.GetResourceDesc(r)))
-            return false;
-    }
-
-    const Uint32 LSampCount = GetDesc().NumImmutableSamplers;
-    const Uint32 RSampCount = Other.GetDesc().NumImmutableSamplers;
-
-    if (LSampCount != RSampCount)
-        return false;
-
-    for (Uint32 s = 0; s < LSampCount; ++s)
-    {
-        const auto& LSamp = GetDesc().ImmutableSamplers[s];
-        const auto& RSamp = Other.GetDesc().ImmutableSamplers[s];
-
-        if (LSamp.ShaderStages != RSamp.ShaderStages ||
-            !(LSamp.Desc == RSamp.Desc))
+        if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)))
             return false;
     }
 
@@ -453,20 +432,12 @@ size_t PipelineResourceSignatureD3D12Impl::CalculateHash() const
     if (m_Desc.NumResources == 0 && m_Desc.NumImmutableSamplers == 0)
         return 0;
 
-    size_t Hash = ComputeHash(m_Desc.NumResources, m_Desc.NumImmutableSamplers, m_Desc.BindingIndex);
-
+    auto Hash = CalculatePipelineResourceSignatureDescHash(m_Desc);
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
-        const auto& Res  = m_Desc.Resources[i];
         const auto& Attr = m_pResourceAttribs[i];
-
-        HashCombine(Hash, Res.ArraySize, Uint32{Res.ShaderStages}, Uint32{Res.VarType}, Uint32{Res.Flags},
-                    Attr.Register, Attr.Space, Attr.SRBRootIndex, Attr.SRBOffsetFromTableStart, Attr.IsImmutableSamplerAssigned());
-    }
-
-    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
-    {
-        HashCombine(Hash, Uint32{m_Desc.ImmutableSamplers[i].ShaderStages}, m_Desc.ImmutableSamplers[i].Desc);
+        HashCombine(Hash, Attr.Register, Attr.Space, Attr.SRBRootIndex, Attr.SRBOffsetFromTableStart,
+                    Attr.RootParamType, Attr.IsImmutableSamplerAssigned());
     }
 
     return Hash;

@@ -624,20 +624,12 @@ size_t PipelineResourceSignatureVkImpl::CalculateHash() const
     if (m_Desc.NumResources == 0 && m_Desc.NumImmutableSamplers == 0)
         return 0;
 
-    size_t Hash = ComputeHash(m_Desc.NumResources, m_Desc.NumImmutableSamplers, m_Desc.BindingIndex);
-
+    auto Hash = CalculatePipelineResourceSignatureDescHash(m_Desc);
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
-        const auto& Res  = m_Desc.Resources[i];
         const auto& Attr = m_pResourceAttribs[i];
-
-        HashCombine(Hash, Res.ArraySize, Uint32{Res.ShaderStages}, Uint32{Res.VarType}, static_cast<Uint32>(Attr.GetDescriptorType()),
-                    Attr.BindingIndex, Attr.DescrSet, Attr.IsImmutableSamplerAssigned());
-    }
-
-    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
-    {
-        HashCombine(Hash, Uint32{m_Desc.ImmutableSamplers[i].ShaderStages}, m_Desc.ImmutableSamplers[i].Desc);
+        HashCombine(Hash, static_cast<Uint32>(Attr.GetDescriptorType()), Attr.BindingIndex, Attr.DescrType,
+                    Attr.DescrSet, Attr.IsImmutableSamplerAssigned(), Attr.SRBCacheOffset);
     }
 
     return Hash;
@@ -677,11 +669,14 @@ void PipelineResourceSignatureVkImpl::Destruct()
         m_pStaticResCache = nullptr;
     }
 
-    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+    if (m_ImmutableSamplers != nullptr)
     {
-        m_ImmutableSamplers[i].~ImmutableSamplerAttribs();
+        for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+        {
+            m_ImmutableSamplers[i].~ImmutableSamplerAttribs();
+        }
+        m_ImmutableSamplers = nullptr;
     }
-    m_ImmutableSamplers = nullptr;
 
     if (void* pRawMem = m_pResourceAttribs)
     {
@@ -700,35 +695,14 @@ bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSig
     if (GetHash() != Other.GetHash())
         return false;
 
-    if (GetDesc().BindingIndex != Other.GetDesc().BindingIndex)
+    if (!PipelineResourceSignaturesCompatible(GetDesc(), Other.GetDesc()))
         return false;
 
-    const Uint32 LResCount = GetTotalResourceCount();
-    const Uint32 RResCount = Other.GetTotalResourceCount();
-
-    if (LResCount != RResCount)
-        return false;
-
-    for (Uint32 r = 0; r < LResCount; ++r)
+    const auto ResCount = GetTotalResourceCount();
+    VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
+    for (Uint32 r = 0; r < ResCount; ++r)
     {
-        if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)) ||
-            !PipelineResourcesCompatible(GetResourceDesc(r), Other.GetResourceDesc(r)))
-            return false;
-    }
-
-    const Uint32 LSampCount = GetDesc().NumImmutableSamplers;
-    const Uint32 RSampCount = Other.GetDesc().NumImmutableSamplers;
-
-    if (LSampCount != RSampCount)
-        return false;
-
-    for (Uint32 s = 0; s < LSampCount; ++s)
-    {
-        const auto& LSamp = GetDesc().ImmutableSamplers[s];
-        const auto& RSamp = Other.GetDesc().ImmutableSamplers[s];
-
-        if (LSamp.ShaderStages != RSamp.ShaderStages ||
-            !(LSamp.Desc == RSamp.Desc))
+        if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)))
             return false;
     }
 

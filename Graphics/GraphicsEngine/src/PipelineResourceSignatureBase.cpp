@@ -245,5 +245,69 @@ Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
     return -1;
 }
 
+/// Returns true if two pipeline resources are compatible
+inline bool PipelineResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
+{
+    // Ignore resource names.
+    // clang-format off
+    return lhs.ShaderStages == rhs.ShaderStages &&
+           lhs.ArraySize    == rhs.ArraySize    &&
+           lhs.ResourceType == rhs.ResourceType &&
+           lhs.VarType      == rhs.VarType      &&
+           lhs.Flags        == rhs.Flags;
+    // clang-format on
+}
+
+bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& Desc0,
+                                          const PipelineResourceSignatureDesc& Desc1) noexcept
+{
+    if (Desc0.BindingIndex != Desc1.BindingIndex)
+        return false;
+
+    if (Desc0.NumResources != Desc1.NumResources)
+        return false;
+
+    for (Uint32 r = 0; r < Desc0.NumResources; ++r)
+    {
+        if (!PipelineResourcesCompatible(Desc0.Resources[r], Desc1.Resources[r]))
+            return false;
+    }
+
+    if (Desc0.NumImmutableSamplers != Desc1.NumImmutableSamplers)
+        return false;
+
+    for (Uint32 s = 0; s < Desc0.NumImmutableSamplers; ++s)
+    {
+        const auto& Samp0 = Desc0.ImmutableSamplers[s];
+        const auto& Samp1 = Desc1.ImmutableSamplers[s];
+
+        if (Samp0.ShaderStages != Samp1.ShaderStages ||
+            !(Samp0.Desc == Samp1.Desc))
+            return false;
+    }
+
+    return true;
+}
+
+size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatureDesc& Desc) noexcept
+{
+    if (Desc.NumResources == 0 && Desc.NumImmutableSamplers == 0)
+        return 0;
+
+    size_t Hash = ComputeHash(Desc.NumResources, Desc.NumImmutableSamplers, Desc.BindingIndex);
+
+    for (Uint32 i = 0; i < Desc.NumResources; ++i)
+    {
+        const auto& Res = Desc.Resources[i];
+        HashCombine(Hash, Uint32{Res.ShaderStages}, Res.ArraySize, Uint32{Res.ResourceType}, Uint32{Res.VarType}, Uint32{Res.Flags});
+    }
+
+    for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
+    {
+        HashCombine(Hash, Uint32{Desc.ImmutableSamplers[i].ShaderStages}, Desc.ImmutableSamplers[i].Desc);
+    }
+
+    return Hash;
+}
 
 } // namespace Diligent

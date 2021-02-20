@@ -58,18 +58,12 @@ Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
                            const char*                 ResourceName,
                            const char*                 SamplerSuffix);
 
-/// Returns true if two pipeline resources are compatible
-inline bool PipelineResourcesCompatible(const PipelineResourceDesc& lhs, const PipelineResourceDesc& rhs)
-{
-    // Ignore resource names.
-    // clang-format off
-    return lhs.ShaderStages == rhs.ShaderStages &&
-           lhs.ArraySize    == rhs.ArraySize    &&
-           lhs.ResourceType == rhs.ResourceType &&
-           lhs.VarType      == rhs.VarType      &&
-           lhs.Flags        == rhs.Flags;
-    // clang-format on
-}
+/// Returns true if two pipeline resource signature descriptions are compatible, and false otherwise
+bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& Desc0,
+                                          const PipelineResourceSignatureDesc& Desc1) noexcept;
+
+/// Calculates hash of the pipeline resource signature description.
+size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatureDesc& Desc) noexcept;
 
 /// Template class implementing base functionality of the pipeline resource signature object.
 
