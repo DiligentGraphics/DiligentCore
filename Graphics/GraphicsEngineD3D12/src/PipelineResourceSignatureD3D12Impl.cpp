@@ -718,45 +718,70 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
 {
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
-        auto& RootView = m_RootParams.GetRootView(rv);
-        auto  RootInd  = RootView.RootIndex;
+        const auto& RootView = m_RootParams.GetRootView(rv);
+        const auto  RootInd  = RootView.RootIndex;
 
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        if (Res.IsNull())
+        {
+            LOG_ERROR_MESSAGE("Failed to bind root view at index ", BaseRootIndex + RootInd, ": no resource is bound in the cache.");
+            continue;
+        }
+
+        BufferD3D12Impl* pBuffer = nullptr;
         if (Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
         {
-            if (auto* pBuff = Res.pObject.RawPtr<BufferD3D12Impl>())
-            {
-                bool IsDynamic = pBuff->GetDesc().Usage == USAGE_DYNAMIC;
-                if (IsDynamic == CommitDynamicBuffers)
-                {
-                    auto CBVAddress = pBuff->GetGPUAddress(DeviceCtxId, pDeviceCtx);
-                    if (IsCompute)
-                        CmdCtx.GetCommandList()->SetComputeRootConstantBufferView(BaseRootIndex + RootInd, CBVAddress);
-                    else
-                        CmdCtx.GetCommandList()->SetGraphicsRootConstantBufferView(BaseRootIndex + RootInd, CBVAddress);
-                }
-            }
+            // No need to QueryInterface() - the type is verified when a resource is bound
+            pBuffer = Res.pObject.RawPtr<BufferD3D12Impl>();
         }
         else if (Res.Type == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                  Res.Type == SHADER_RESOURCE_TYPE_BUFFER_UAV)
         {
-            if (auto* pBuffView = Res.pObject.RawPtr<BufferViewD3D12Impl>())
-            {
-                auto* pBuffer   = pBuffView->GetBuffer<BufferD3D12Impl>();
-                bool  IsDynamic = pBuffer->GetDesc().Usage == USAGE_DYNAMIC;
-                if (IsDynamic == CommitDynamicBuffers)
-                {
-                    auto SRVAddress = pBuffer->GetGPUAddress(DeviceCtxId, pDeviceCtx);
-                    if (IsCompute)
-                        CmdCtx.GetCommandList()->SetComputeRootShaderResourceView(BaseRootIndex + RootInd, SRVAddress);
-                    else
-                        CmdCtx.GetCommandList()->SetGraphicsRootShaderResourceView(BaseRootIndex + RootInd, SRVAddress);
-                }
-            }
+            auto* pBuffView = Res.pObject.RawPtr<BufferViewD3D12Impl>();
+            pBuffer         = pBuffView->GetBuffer<BufferD3D12Impl>();
         }
         else
         {
             UNEXPECTED("Unexpected root view resource type");
+        }
+        VERIFY_EXPR(pBuffer != nullptr);
+
+        auto IsDynamic = pBuffer->GetDesc().Usage == USAGE_DYNAMIC;
+        if (IsDynamic != CommitDynamicBuffers)
+            continue;
+
+        auto BufferGPUAddress = pBuffer->GetGPUAddress(DeviceCtxId, pDeviceCtx);
+        VERIFY_EXPR(BufferGPUAddress != 0);
+
+        auto* pd3d12CmdList = CmdCtx.GetCommandList();
+        switch (Res.Type)
+        {
+            case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
+                VERIFY_EXPR(RootView.GetParameterType() == D3D12_ROOT_PARAMETER_TYPE_CBV);
+                if (IsCompute)
+                    pd3d12CmdList->SetComputeRootConstantBufferView(BaseRootIndex + RootInd, BufferGPUAddress);
+                else
+                    pd3d12CmdList->SetGraphicsRootConstantBufferView(BaseRootIndex + RootInd, BufferGPUAddress);
+                break;
+
+            case SHADER_RESOURCE_TYPE_BUFFER_SRV:
+                VERIFY_EXPR(RootView.GetParameterType() == D3D12_ROOT_PARAMETER_TYPE_SRV);
+                if (IsCompute)
+                    pd3d12CmdList->SetComputeRootShaderResourceView(BaseRootIndex + RootInd, BufferGPUAddress);
+                else
+                    pd3d12CmdList->SetGraphicsRootShaderResourceView(BaseRootIndex + RootInd, BufferGPUAddress);
+                break;
+
+            case SHADER_RESOURCE_TYPE_BUFFER_UAV:
+                VERIFY_EXPR(RootView.GetParameterType() == D3D12_ROOT_PARAMETER_TYPE_UAV);
+                if (IsCompute)
+                    pd3d12CmdList->SetComputeRootUnorderedAccessView(BaseRootIndex + RootInd, BufferGPUAddress);
+                else
+                    pd3d12CmdList->SetGraphicsRootUnorderedAccessView(BaseRootIndex + RootInd, BufferGPUAddress);
+                break;
+
+            default:
+                UNEXPECTED("Unexpected root view resource type");
         }
     }
 }

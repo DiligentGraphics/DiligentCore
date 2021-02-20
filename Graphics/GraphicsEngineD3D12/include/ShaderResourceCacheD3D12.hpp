@@ -133,6 +133,8 @@ public:
         D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {0};
         RefCntAutoPtr<IDeviceObject> pObject;
 
+        bool IsNull() const { return pObject == nullptr; }
+
         __forceinline void TransitionResource(CommandContext& Ctx);
 #ifdef DILIGENT_DEVELOPMENT
         void DvpVerifyResourceState();
