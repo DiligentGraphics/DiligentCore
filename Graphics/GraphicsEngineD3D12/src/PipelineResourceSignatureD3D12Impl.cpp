@@ -509,6 +509,8 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
     auto* const d3d12Device      = GetDevice()->GetD3D12Device();
     const auto  SrcCacheType     = SrcResourceCache.GetContentType();
     const auto  DstCacheType     = DstResourceCache.GetContentType();
+    VERIFY_EXPR(SrcCacheType == ShaderResourceCacheD3D12::CacheContentType::Signature);
+    VERIFY_EXPR(DstCacheType == ShaderResourceCacheD3D12::CacheContentType::SRB);
 
     auto& DstBoundDynamicCBsCounter = DstResourceCache.GetDynamicRootBuffersCounter();
 
@@ -524,14 +526,14 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
 
         const auto  HeapType     = IsSampler ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         const auto  DstRootIndex = Attr.RootIndex(DstCacheType);
-        const auto& SrcRootTable = SrcResourceCache.GetRootTable(Attr.RootIndex(SrcCacheType));
+        const auto  SrcRootIndex = Attr.RootIndex(SrcCacheType);
+        const auto& SrcRootTable = SrcResourceCache.GetRootTable(SrcRootIndex);
         auto&       DstRootTable = DstResourceCache.GetRootTable(DstRootIndex);
 
-        for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+        auto SrcCacheOffset = Attr.OffsetFromTableStart(SrcCacheType);
+        auto DstCacheOffset = Attr.OffsetFromTableStart(DstCacheType);
+        for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd, ++SrcCacheOffset, ++DstCacheOffset)
         {
-            const auto SrcCacheOffset = Attr.OffsetFromTableStart(SrcCacheType) + ArrInd;
-            const auto DstCacheOffset = Attr.OffsetFromTableStart(DstCacheType) + ArrInd;
-
             const auto& SrcRes = SrcRootTable.GetResource(SrcCacheOffset);
             if (!SrcRes.pObject)
                 LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
@@ -785,8 +787,6 @@ private:
 
 void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
 {
-    // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Binding-Objects-to-Shader-Variables
-
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12{pBuffer, IID_BufferD3D12};
@@ -1000,13 +1000,13 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
 
     if (ResourceCache.GetContentType() == CacheContentType::Signature)
     {
-        VERIFY(DstTableCPUDescriptorHandle.ptr == 0, "Static shader resources should never be assigned shader visible descriptor space.");
+        VERIFY(DstTableCPUDescriptorHandle.ptr == 0, "Static shader resources should never be assigned descriptor space.");
     }
     else if (ResourceCache.GetContentType() == CacheContentType::SRB)
     {
         if (Attribs.GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
         {
-            VERIFY(DstTableCPUDescriptorHandle.ptr != 0, "Shader resources allocated in descriptor tables must be assigned descriptor space");
+            VERIFY(DstTableCPUDescriptorHandle.ptr != 0, "Shader resources allocated in descriptor tables must be assigned descriptor space.");
         }
         else
         {
@@ -1014,7 +1014,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                     ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                     ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV),
                    "Only constant buffers and dynamic buffers views can be allocated as root views");
-            VERIFY(DstTableCPUDescriptorHandle.ptr == 0, "Resources allocated as root views should never be assigned descriptor space");
+            VERIFY(DstTableCPUDescriptorHandle.ptr == 0, "Resources allocated as root views should never be assigned descriptor space.");
         }
     }
     else
@@ -1025,7 +1025,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
 
     if (pObj)
     {
-        static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update this function to handle the new resource type");
+        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update this function to handle the new resource type");
         switch (ResDesc.ResourceType)
         {
             case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
@@ -1120,17 +1120,20 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
             auto& SamplerAttribs = Signature.GetResourceAttribs(Attribs.SamplerInd);
             VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
 
-            const auto CacheType            = ResourceCache.GetContentType();
-            auto       SamplerArrInd        = SamplerResDesc.ArraySize > 1 ? ArrayIndex : 0;
-            const auto RootIndex            = SamplerAttribs.RootIndex(CacheType);
-            const auto OffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType) + SamplerArrInd;
-            auto&      DstSam               = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart);
+            if (!SamplerAttribs.IsImmutableSamplerAssigned())
+            {
+                const auto CacheType            = ResourceCache.GetContentType();
+                auto       SamplerArrInd        = SamplerResDesc.ArraySize > 1 ? ArrayIndex : 0;
+                const auto RootIndex            = SamplerAttribs.RootIndex(CacheType);
+                const auto OffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType) + SamplerArrInd;
+                auto&      DstSam               = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart);
 
-            if (DstSam.pObject != nullptr && SamplerResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-                LOG_ERROR_MESSAGE("Sampler variable '", SamplerResDesc.Name, "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. ",
-                                  "Use another shader resource binding instance or label the variable as dynamic if you need to bind another sampler.");
+                if (DstSam.pObject != nullptr && SamplerResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+                    LOG_ERROR_MESSAGE("Sampler variable '", SamplerResDesc.Name, "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. ",
+                                      "Use another shader resource binding instance or label the variable as dynamic if you need to bind another sampler.");
 
-            DstSam = ShaderResourceCacheD3D12::Resource{};
+                DstSam = ShaderResourceCacheD3D12::Resource{};
+            }
         }
     }
 }
@@ -1196,11 +1199,7 @@ bool PipelineResourceSignatureD3D12Impl::IsBound(Uint32                    Array
         if (OffsetFromTableStart + ArrayIndex < RootTable.GetSize())
         {
             const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex);
-            if (CachedRes.pObject != nullptr)
-            {
-                VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0 || CachedRes.pObject.RawPtr<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC, "No relevant descriptor handle");
-                return true;
-            }
+            return !CachedRes.IsNull();
         }
     }
 
