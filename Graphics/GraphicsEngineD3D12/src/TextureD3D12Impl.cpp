@@ -467,7 +467,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
             case TEXTURE_VIEW_SHADER_RESOURCE:
             {
                 VERIFY(m_Desc.BindFlags & BIND_SHADER_RESOURCE, "BIND_SHADER_RESOURCE flag is not set");
-                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                 CreateSRV(UpdatedViewDesc, ViewDescriptor.GetCpuHandle());
             }
             break;
@@ -475,7 +475,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
             case TEXTURE_VIEW_RENDER_TARGET:
             {
                 VERIFY(m_Desc.BindFlags & BIND_RENDER_TARGET, "BIND_RENDER_TARGET flag is not set");
-                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
                 CreateRTV(UpdatedViewDesc, ViewDescriptor.GetCpuHandle());
             }
             break;
@@ -483,7 +483,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
             case TEXTURE_VIEW_DEPTH_STENCIL:
             {
                 VERIFY(m_Desc.BindFlags & BIND_DEPTH_STENCIL, "BIND_DEPTH_STENCIL is not set");
-                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
                 CreateDSV(UpdatedViewDesc, ViewDescriptor.GetCpuHandle());
             }
             break;
@@ -491,7 +491,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
             case TEXTURE_VIEW_UNORDERED_ACCESS:
             {
                 VERIFY(m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "BIND_UNORDERED_ACCESS flag is not set");
-                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                ViewDescriptor = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                 CreateUAV(UpdatedViewDesc, ViewDescriptor.GetCpuHandle());
             }
             break;
@@ -505,7 +505,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
             VERIFY_EXPR((m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0 && (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY));
 
             {
-                TexArraySRVDescriptor           = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+                TexArraySRVDescriptor           = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
                 TextureViewDesc TexArraySRVDesc = UpdatedViewDesc;
                 // Create texture array SRV
                 TexArraySRVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
@@ -513,7 +513,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
                 CreateSRV(TexArraySRVDesc, TexArraySRVDescriptor.GetCpuHandle());
             }
 
-            MipUAVDescriptors = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_Desc.MipLevels);
+            MipUAVDescriptors = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_Desc.MipLevels);
             for (Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
             {
                 TextureViewDesc UAVDesc = UpdatedViewDesc;

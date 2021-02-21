@@ -840,7 +840,7 @@ void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResour
                        });
 }
 
-DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
+DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, "Invalid heap type");
     return m_CPUDescriptorHeaps[Type].Allocate(Count);

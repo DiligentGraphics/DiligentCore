@@ -290,8 +290,6 @@ private:
 
     void Destruct();
 
-    std::vector<Uint32, STDAllocatorRawMem<Uint32>> GetCacheTableSizes() const;
-
 private:
     ResourceAttribs*            m_pResourceAttribs  = nullptr; // [m_Desc.NumResources]
     ShaderResourceCacheD3D12*   m_pStaticResCache   = nullptr;

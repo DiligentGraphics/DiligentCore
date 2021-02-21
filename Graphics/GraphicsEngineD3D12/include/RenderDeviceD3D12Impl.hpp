@@ -176,7 +176,7 @@ public:
 
     RootSignatureCacheD3D12& GetRootSignatureCache() { return m_RootSignatureCache; }
 
-    DescriptorHeapAllocation AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
+    DescriptorHeapAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
     DescriptorHeapAllocation AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
 
     /// Implementation of IRenderDevice::IdleGPU() in Direct3D12 backend.

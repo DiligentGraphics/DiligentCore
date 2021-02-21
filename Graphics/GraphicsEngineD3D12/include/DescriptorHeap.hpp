@@ -179,6 +179,22 @@ public:
         return GPUHandle;
     }
 
+    template <typename HandleType>
+    HandleType GetHandle(Uint32 Offset = 0) const;
+
+    template <>
+    D3D12_CPU_DESCRIPTOR_HANDLE GetHandle<D3D12_CPU_DESCRIPTOR_HANDLE>(Uint32 Offset) const
+    {
+        return GetCpuHandle(Offset);
+    }
+
+    template <>
+    D3D12_GPU_DESCRIPTOR_HANDLE GetHandle<D3D12_GPU_DESCRIPTOR_HANDLE>(Uint32 Offset) const
+    {
+        return GetGpuHandle(Offset);
+    }
+
+
     // Returns pointer to D3D12 descriptor heap that contains this allocation
     ID3D12DescriptorHeap* GetDescriptorHeap() { return m_pDescriptorHeap; }
 

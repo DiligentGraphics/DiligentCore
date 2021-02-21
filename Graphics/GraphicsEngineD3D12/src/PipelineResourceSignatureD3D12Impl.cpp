@@ -111,12 +111,6 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             m_StaticVarsMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
 
             m_pStaticResCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
-#ifdef DILIGENT_DEBUG
-            m_pStaticResCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_SRV).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_SRV], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
-            m_pStaticResCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_UAV).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_UAV], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
-            m_pStaticResCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_CBV).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_CBV], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
-            m_pStaticResCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, false);
-#endif
 
             constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
             for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
@@ -149,9 +143,8 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
                 ShaderVariableDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
             }
 
-            auto CacheTableSizes = GetCacheTableSizes();
-            auto CacheMemorySize = ShaderResourceCacheD3D12::GetRequiredMemorySize(static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
-            m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
+            auto CacheMemorySize = ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams);
+            m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize.TotalSize);
         }
 
         m_Hash = CalculateHash();
@@ -443,131 +436,11 @@ size_t PipelineResourceSignatureD3D12Impl::CalculateHash() const
     return Hash;
 }
 
-std::vector<Uint32, STDAllocatorRawMem<Uint32>> PipelineResourceSignatureD3D12Impl::GetCacheTableSizes() const
-{
-    // Get root table size for every root index
-    // m_RootParams keeps root tables sorted by the array index, not the root index
-    // Root views are treated as one-descriptor tables
-    std::vector<Uint32, STDAllocatorRawMem<Uint32>> CacheTableSizes(m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews(), 0, STD_ALLOCATOR_RAW_MEM(Uint32, GetRawAllocator(), "Allocator for vector<Uint32>"));
-    for (Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
-    {
-        const auto& RootParam = m_RootParams.GetRootTable(rt);
-        VERIFY(CacheTableSizes[RootParam.RootIndex] == 0, "Cache table at index ", RootParam.RootIndex,
-               " has already been initialized. This is a bug as each root index must be used only once.");
-        CacheTableSizes[RootParam.RootIndex] = RootParam.GetDescriptorTableSize();
-    }
-
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        const auto& RootParam = m_RootParams.GetRootView(rv);
-        VERIFY(CacheTableSizes[RootParam.RootIndex] == 0, "Cache table at index ", RootParam.RootIndex,
-               " has already been initialized. This is a bug as each root index must be used only once.");
-        CacheTableSizes[RootParam.RootIndex] = 1;
-    }
-
-    return CacheTableSizes;
-}
-
 void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache,
                                                               IMemoryAllocator&         CacheMemAllocator,
                                                               const char*               DbgPipelineName) const
 {
-    const auto CacheTableSizes = GetCacheTableSizes();
-
-    // Initialize resource cache to hold root tables
-    ResourceCache.Initialize(CacheMemAllocator, static_cast<Uint32>(CacheTableSizes.size()), CacheTableSizes.data());
-
-    // Allocate space in GPU-visible descriptor heap for static and mutable variables only
-    Uint32 TotalSrvCbvUavDescriptors = m_RootParams.GetTotalSrvCbvUavSlots(ROOT_PARAMETER_GROUP_STATIC_MUTABLE);
-    Uint32 TotalSamplerDescriptors   = m_RootParams.GetTotalSamplerSlots(ROOT_PARAMETER_GROUP_STATIC_MUTABLE);
-
-    DescriptorHeapAllocation CbcSrvUavHeapSpace, SamplerHeapSpace;
-    if (TotalSrvCbvUavDescriptors > 0)
-    {
-        CbcSrvUavHeapSpace = GetDevice()->AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, TotalSrvCbvUavDescriptors);
-        DEV_CHECK_ERR(!CbcSrvUavHeapSpace.IsNull(),
-                      "Failed to allocate ", TotalSrvCbvUavDescriptors, " GPU-visible CBV/SRV/UAV descriptor",
-                      (TotalSrvCbvUavDescriptors > 1 ? "s" : ""),
-                      ". Consider increasing GPUDescriptorHeapSize[0] in EngineD3D12CreateInfo.");
-    }
-    VERIFY_EXPR(TotalSrvCbvUavDescriptors == 0 && CbcSrvUavHeapSpace.IsNull() || CbcSrvUavHeapSpace.GetNumHandles() == TotalSrvCbvUavDescriptors);
-
-    if (TotalSamplerDescriptors > 0)
-    {
-        SamplerHeapSpace = GetDevice()->AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, TotalSamplerDescriptors);
-        DEV_CHECK_ERR(!SamplerHeapSpace.IsNull(),
-                      "Failed to allocate ", TotalSamplerDescriptors, " GPU-visible Sampler descriptor",
-                      (TotalSamplerDescriptors > 1 ? "s" : ""),
-                      ". Consider using immutable samplers in the Pipeline State Object or "
-                      "increasing GPUDescriptorHeapSize[1] in EngineD3D12CreateInfo.");
-    }
-    VERIFY_EXPR(TotalSamplerDescriptors == 0 && SamplerHeapSpace.IsNull() || SamplerHeapSpace.GetNumHandles() == TotalSamplerDescriptors);
-
-    // Iterate through all root static/mutable tables and assign start offsets. The tables are tightly packed, so
-    // start offset of table N+1 is start offset of table N plus the size of table N.
-    // Root tables with dynamic resources as well as root views are not assigned space in GPU-visible allocation
-    // (root views are simply not processed)
-    Uint32 SrvCbvUavTblStartOffset = 0;
-    Uint32 SamplerTblStartOffset   = 0;
-    for (Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
-    {
-        const auto& RootParam      = m_RootParams.GetRootTable(rt);
-        const auto& d3d12RootParam = RootParam.d3d12RootParam;
-        auto&       RootTableCache = ResourceCache.GetRootTable(RootParam.RootIndex);
-        const bool  IsDynamic      = RootParam.Group == ROOT_PARAMETER_GROUP_DYNAMIC;
-
-        VERIFY_EXPR(d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
-
-        const auto TableSize = RootParam.GetDescriptorTableSize();
-        VERIFY(TableSize > 0, "Unexpected empty descriptor table");
-
-        const auto HeapType = D3D12DescriptorRangeTypeToD3D12HeapType(d3d12RootParam.DescriptorTable.pDescriptorRanges[0].RangeType);
-
-#ifdef DILIGENT_DEBUG
-        RootTableCache.SetDebugAttribs(TableSize, HeapType, IsDynamic);
-#endif
-
-        if (!IsDynamic)
-        {
-            if (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-            {
-                RootTableCache.m_TableStartOffset = SrvCbvUavTblStartOffset;
-                SrvCbvUavTblStartOffset += TableSize;
-            }
-            else
-            {
-                RootTableCache.m_TableStartOffset = SamplerTblStartOffset;
-                SamplerTblStartOffset += TableSize;
-            }
-        }
-        else
-        {
-            // Space for dynamic variables is allocated at every commit
-            VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset);
-        }
-    }
-    VERIFY_EXPR(SrvCbvUavTblStartOffset == TotalSrvCbvUavDescriptors);
-    VERIFY_EXPR(SamplerTblStartOffset == TotalSamplerDescriptors);
-
-#ifdef DILIGENT_DEBUG
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        const auto& RootParam      = m_RootParams.GetRootView(rv);
-        const auto& d3d12RootParam = RootParam.d3d12RootParam;
-        auto&       RootTableCache = ResourceCache.GetRootTable(RootParam.RootIndex);
-        const bool  IsDynamic      = RootParam.Group == ROOT_PARAMETER_GROUP_DYNAMIC;
-
-        // Root views are not assigned valid table start offset
-        VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset);
-
-        VERIFY_EXPR((d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
-                     d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
-                     d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV));
-        RootTableCache.SetDebugAttribs(1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, IsDynamic);
-    }
-#endif
-
-    ResourceCache.SetDescriptorHeapSpace(std::move(CbcSrvUavHeapSpace), std::move(SamplerHeapSpace));
+    ResourceCache.Initialize(CacheMemAllocator, m_pDevice, m_RootParams);
 }
 
 inline void UpdateDynamicBuffersCounter(const BufferD3D12Impl*    pOldBuff,
@@ -659,11 +532,11 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
             const auto SrcCacheOffset = Attr.OffsetFromTableStart(SrcCacheType) + ArrInd;
             const auto DstCacheOffset = Attr.OffsetFromTableStart(DstCacheType) + ArrInd;
 
-            const auto& SrcRes = SrcRootTable.GetResource(SrcCacheOffset, HeapType);
+            const auto& SrcRes = SrcRootTable.GetResource(SrcCacheOffset);
             if (!SrcRes.pObject)
                 LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-            auto& DstRes = DstRootTable.GetResource(DstCacheOffset, HeapType);
+            auto& DstRes = DstRootTable.GetResource(DstCacheOffset);
             if (DstRes.pObject != SrcRes.pObject)
             {
                 DEV_CHECK_ERR(DstRes.pObject == nullptr, "Static resource has already been initialized, and the new resource does not match previously assigned resource.");
@@ -687,15 +560,12 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
                 DstRes.Type                = SrcRes.Type;
                 DstRes.CPUDescriptorHandle = SrcRes.CPUDescriptorHandle;
 
-                if (IsSampler)
+                if (!Attr.IsRootView())
                 {
-                    auto DstHandle = DstResourceCache.CopyDescriptors<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(d3d12Device, SrcRes.CPUDescriptorHandle, 1, DstRootIndex, DstCacheOffset);
-                    VERIFY_EXPR(DstHandle.ptr != 0);
-                }
-                else
-                {
-                    auto DstHandle = DstResourceCache.CopyDescriptors<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(d3d12Device, SrcRes.CPUDescriptorHandle, 1, DstRootIndex, DstCacheOffset);
-                    VERIFY_EXPR(DstHandle.ptr != 0 || Attr.IsRootView());
+                    auto DstDescrHandle = DstResourceCache.GetDescriptorTableHandle<D3D12_CPU_DESCRIPTOR_HANDLE>(
+                        HeapType, ROOT_PARAMETER_GROUP_STATIC_MUTABLE, DstRootIndex, DstCacheOffset);
+                    VERIFY_EXPR(DstDescrHandle.ptr != 0);
+                    d3d12Device->CopyDescriptorsSimple(1, DstDescrHandle, SrcRes.CPUDescriptorHandle, HeapType);
                 }
             }
             else
@@ -721,7 +591,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
         const auto& RootView = m_RootParams.GetRootView(rv);
         const auto  RootInd  = RootView.RootIndex;
 
-        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0);
         if (Res.IsNull())
         {
             LOG_ERROR_MESSAGE("Failed to bind root view at index ", BaseRootIndex + RootInd, ": no resource is bound in the cache.");
@@ -757,7 +627,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
         switch (Res.Type)
         {
             case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-                VERIFY_EXPR(RootView.GetParameterType() == D3D12_ROOT_PARAMETER_TYPE_CBV);
+                VERIFY_EXPR(RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
                 if (IsCompute)
                     pd3d12CmdList->SetComputeRootConstantBufferView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
@@ -765,7 +635,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
                 break;
 
             case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-                VERIFY_EXPR(RootView.GetParameterType() == D3D12_ROOT_PARAMETER_TYPE_SRV);
+                VERIFY_EXPR(RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV);
                 if (IsCompute)
                     pd3d12CmdList->SetComputeRootShaderResourceView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
@@ -773,7 +643,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
                 break;
 
             case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-                VERIFY_EXPR(RootView.GetParameterType() == D3D12_ROOT_PARAMETER_TYPE_UAV);
+                VERIFY_EXPR(RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV);
                 if (IsCompute)
                     pd3d12CmdList->SetComputeRootUnorderedAccessView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
@@ -793,130 +663,87 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
                                                           bool                      IsCompute,
                                                           Uint32                    BaseRootIndex) const
 {
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    auto* const pd3d12Device = GetDevice()->GetD3D12Device();
 
-    Uint32 NumDynamicCbvSrvUavDescriptors = m_RootParams.GetTotalSrvCbvUavSlots(ROOT_PARAMETER_GROUP_DYNAMIC);
-    Uint32 NumDynamicSamplerDescriptors   = m_RootParams.GetTotalSamplerSlots(ROOT_PARAMETER_GROUP_DYNAMIC);
-
-    DescriptorHeapAllocation DynamicCbvSrvUavDescriptors, DynamicSamplerDescriptors;
-    if (NumDynamicCbvSrvUavDescriptors > 0)
+    std::array<DescriptorHeapAllocation, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> DynamicDescriptorAllocations;
+    for (Uint32 heap_type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; heap_type < D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1; ++heap_type)
     {
-        DynamicCbvSrvUavDescriptors = CmdCtx.AllocateDynamicGPUVisibleDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, NumDynamicCbvSrvUavDescriptors);
-        DEV_CHECK_ERR(DynamicCbvSrvUavDescriptors.GetDescriptorHeap() != nullptr,
-                      "Failed to allocate ", NumDynamicCbvSrvUavDescriptors, " dynamic GPU-visible CBV/SRV/UAV descriptor",
-                      (NumDynamicCbvSrvUavDescriptors > 1 ? "s" : ""),
-                      ". Consider increasing GPUDescriptorHeapDynamicSize[0] in EngineD3D12CreateInfo "
-                      "or optimizing dynamic resource utilization by using static or mutable shader resource variables instead.");
+        const auto d3d12HeapType = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(heap_type);
+
+        auto NumDynamicDescriptors = m_RootParams.GetTotalTableSlots(d3d12HeapType, ROOT_PARAMETER_GROUP_DYNAMIC);
+        if (NumDynamicDescriptors > 0)
+        {
+            auto& Allocation = DynamicDescriptorAllocations[d3d12HeapType];
+            Allocation       = CmdCtx.AllocateDynamicGPUVisibleDescriptor(d3d12HeapType, NumDynamicDescriptors);
+
+            DEV_CHECK_ERR(!Allocation.IsNull(),
+                          "Failed to allocate ", NumDynamicDescriptors, " dynamic GPU-visible ",
+                          (d3d12HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ? "CBV/SRV/UAV" : "Sampler"),
+                          " descriptor(s). Consider increasing GPUDescriptorHeapDynamicSize[", heap_type,
+                          "] in EngineD3D12CreateInfo or optimizing dynamic resource utilization by using static "
+                          "or mutable shader resource variables instead.");
+
+            // Copy all all dynamic descriptors from the CPU-only cache allocation
+            auto& SrcDynamicAllocation = ResourceCache.GetDescriptorAllocation(d3d12HeapType, ROOT_PARAMETER_GROUP_DYNAMIC);
+            VERIFY_EXPR(SrcDynamicAllocation.GetNumHandles() == NumDynamicDescriptors);
+            pd3d12Device->CopyDescriptorsSimple(NumDynamicDescriptors, Allocation.GetCpuHandle(), SrcDynamicAllocation.GetCpuHandle(), d3d12HeapType);
+        }
     }
 
-    if (NumDynamicSamplerDescriptors > 0)
-    {
-        DynamicSamplerDescriptors = CmdCtx.AllocateDynamicGPUVisibleDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, NumDynamicSamplerDescriptors);
-        DEV_CHECK_ERR(DynamicSamplerDescriptors.GetDescriptorHeap() != nullptr,
-                      "Failed to allocate ", NumDynamicSamplerDescriptors, " dynamic GPU-visible Sampler descriptor",
-                      (NumDynamicSamplerDescriptors > 1 ? "s" : ""),
-                      ". Consider using immutable samplers in the Pipeline State Object, increasing GPUDescriptorHeapDynamicSize[1] in "
-                      "EngineD3D12CreateInfo, or optimizing dynamic resource utilization by using static or mutable shader resource variables instead.");
-    }
-
-    CommandContext::ShaderDescriptorHeaps Heaps{ResourceCache.GetSrvCbvUavDescriptorHeap(), ResourceCache.GetSamplerDescriptorHeap()};
+    CommandContext::ShaderDescriptorHeaps Heaps{
+        ResourceCache.GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ROOT_PARAMETER_GROUP_STATIC_MUTABLE),
+        ResourceCache.GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, ROOT_PARAMETER_GROUP_STATIC_MUTABLE),
+    };
     if (Heaps.pSamplerHeap == nullptr)
-        Heaps.pSamplerHeap = DynamicSamplerDescriptors.GetDescriptorHeap();
+        Heaps.pSamplerHeap = DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].GetDescriptorHeap();
 
     if (Heaps.pSrvCbvUavHeap == nullptr)
-        Heaps.pSrvCbvUavHeap = DynamicCbvSrvUavDescriptors.GetDescriptorHeap();
+        Heaps.pSrvCbvUavHeap = DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetDescriptorHeap();
 
-    if (NumDynamicCbvSrvUavDescriptors > 0)
-        VERIFY(DynamicCbvSrvUavDescriptors.GetDescriptorHeap() == Heaps.pSrvCbvUavHeap, "Inconsistent CbvSrvUav descriptor heaps");
-    if (NumDynamicSamplerDescriptors > 0)
-        VERIFY(DynamicSamplerDescriptors.GetDescriptorHeap() == Heaps.pSamplerHeap, "Inconsistent Sampler descriptor heaps");
+    VERIFY((DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].IsNull() ||
+            DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetDescriptorHeap() == Heaps.pSrvCbvUavHeap),
+           "Inconsistent CBV/SRV/UAV descriptor heaps");
+    VERIFY((DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].IsNull() ||
+            DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].GetDescriptorHeap() == Heaps.pSamplerHeap),
+           "Inconsistent Sampler descriptor heaps");
 
     if (Heaps)
         CmdCtx.SetDescriptorHeaps(Heaps);
 
-    // Offset to the beginning of the current dynamic CBV_SRV_UAV/SAMPLER table from
-    // the start of the allocation
-    Uint32 DynamicCbvSrvUavTblOffset = 0;
-    Uint32 DynamicSamplerTblOffset   = 0;
+    const auto NumRootTables = m_RootParams.GetNumRootTables();
+    for (Uint32 rt = 0; rt < NumRootTables; ++rt)
+    {
+        const auto& RootTable = m_RootParams.GetRootTable(rt);
 
-    m_RootParams.ProcessRootTables(
-        [&](Uint32                      RootInd,
-            const RootParameter&        RootTable,
-            const D3D12_ROOT_PARAMETER& d3d12Param,
-            bool                        IsResourceTable,
-            D3D12_DESCRIPTOR_HEAP_TYPE  dbgHeapType) //
+        const auto TableOffsetInGroupAllocation = RootTable.TableOffsetInGroupAllocation;
+        VERIFY_EXPR(TableOffsetInGroupAllocation != RootParameter::InvalidTableOffsetInGroupAllocation);
+
+        const auto& d3d12Param = RootTable.d3d12RootParam;
+        VERIFY_EXPR(d3d12Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
+        const auto& d3d12Table = d3d12Param.DescriptorTable;
+
+        const auto d3d12HeapType = d3d12Table.pDescriptorRanges[0].RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER ?
+            D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER :
+            D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+
+        D3D12_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle{};
+        if (RootTable.Group == ROOT_PARAMETER_GROUP_DYNAMIC)
         {
-            D3D12_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle;
+            auto& DynamicAllocation      = DynamicDescriptorAllocations[d3d12HeapType];
+            RootTableGPUDescriptorHandle = DynamicAllocation.GetGpuHandle(TableOffsetInGroupAllocation);
+        }
+        else
+        {
+            RootTableGPUDescriptorHandle = ResourceCache.GetDescriptorTableHandle<D3D12_GPU_DESCRIPTOR_HANDLE>(
+                d3d12HeapType, ROOT_PARAMETER_GROUP_STATIC_MUTABLE, RootTable.RootIndex);
+            VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle");
+        }
 
-            bool IsDynamicTable = RootTable.Group == ROOT_PARAMETER_GROUP_DYNAMIC;
-            if (IsDynamicTable)
-            {
-                RootTableGPUDescriptorHandle = IsResourceTable ?
-                    DynamicCbvSrvUavDescriptors.GetGpuHandle(DynamicCbvSrvUavTblOffset) :
-                    DynamicSamplerDescriptors.GetGpuHandle(DynamicSamplerTblOffset);
-            }
-            else
-            {
-                RootTableGPUDescriptorHandle = IsResourceTable ?
-                    ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootInd) :
-                    ResourceCache.GetShaderVisibleTableGPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootInd);
-                VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle");
-            }
-
-            if (IsCompute)
-                CmdCtx.GetCommandList()->SetComputeRootDescriptorTable(BaseRootIndex + RootInd, RootTableGPUDescriptorHandle);
-            else
-                CmdCtx.GetCommandList()->SetGraphicsRootDescriptorTable(BaseRootIndex + RootInd, RootTableGPUDescriptorHandle);
-
-            if (IsDynamicTable)
-            {
-                ResourceCache.ProcessTableResources(
-                    RootInd, d3d12Param, dbgHeapType,
-                    [&](UINT                                OffsetFromTableStart,
-                        const D3D12_DESCRIPTOR_RANGE&       range,
-                        ShaderResourceCacheD3D12::Resource& Res) //
-                    {
-                        if (IsResourceTable)
-                        {
-                            VERIFY(DynamicCbvSrvUavTblOffset < NumDynamicCbvSrvUavDescriptors, "Not enough space in the descriptor heap allocation");
-
-                            if (Res.CPUDescriptorHandle.ptr != 0)
-                            {
-                                pd3d12Device->CopyDescriptorsSimple(1, DynamicCbvSrvUavDescriptors.GetCpuHandle(DynamicCbvSrvUavTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                            }
-#ifdef DILIGENT_DEVELOPMENT
-                            else
-                            {
-                                LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
-                            }
-#endif
-
-                            ++DynamicCbvSrvUavTblOffset;
-                        }
-                        else
-                        {
-                            VERIFY(DynamicSamplerTblOffset < NumDynamicSamplerDescriptors, "Not enough space in the descriptor heap allocation");
-
-                            if (Res.CPUDescriptorHandle.ptr != 0)
-                            {
-                                pd3d12Device->CopyDescriptorsSimple(1, DynamicSamplerDescriptors.GetCpuHandle(DynamicSamplerTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-                            }
-#ifdef DILIGENT_DEVELOPMENT
-                            else
-                            {
-                                LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
-                            }
-#endif
-
-                            ++DynamicSamplerTblOffset;
-                        }
-                    }); //
-            }
-        } //
-    );
-
-    VERIFY_EXPR(DynamicCbvSrvUavTblOffset == NumDynamicCbvSrvUavDescriptors);
-    VERIFY_EXPR(DynamicSamplerTblOffset == NumDynamicSamplerDescriptors);
+        if (IsCompute)
+            CmdCtx.GetCommandList()->SetComputeRootDescriptorTable(BaseRootIndex + RootTable.RootIndex, RootTableGPUDescriptorHandle);
+        else
+            CmdCtx.GetCommandList()->SetGraphicsRootDescriptorTable(BaseRootIndex + RootTable.RootIndex, RootTableGPUDescriptorHandle);
+    }
 
     // Commit non-dynamic root buffer views
     constexpr auto CommitDynamicBuffers = false;
@@ -934,14 +761,9 @@ struct BindResourceHelper
     const PipelineResourceDesc&                                ResDesc;
     const PipelineResourceSignatureD3D12Impl::ResourceAttribs& Attribs;
     const Uint32                                               ArrayIndex;
-    D3D12_CPU_DESCRIPTOR_HANDLE                                ShdrVisibleHeapCPUDescriptorHandle;
+    D3D12_CPU_DESCRIPTOR_HANDLE                                DstTableCPUDescriptorHandle;
     PipelineResourceSignatureD3D12Impl const&                  Signature;
     ShaderResourceCacheD3D12&                                  ResourceCache;
-
-#ifdef DILIGENT_DEBUG
-    bool                      dbgIsDynamic = false;
-    D3D12_ROOT_PARAMETER_TYPE dbgParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-#endif
 
     void BindResource(IDeviceObject* pObj) const;
 
@@ -990,14 +812,13 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
         DstRes.CPUDescriptorHandle = pBuffD3D12->GetCBVHandle();
         VERIFY(DstRes.CPUDescriptorHandle.ptr != 0 || pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC, "No relevant CBV CPU descriptor handle");
 
-        if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
+        if (DstTableCPUDescriptorHandle.ptr != 0)
         {
-            // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
-            // the descriptor is copied by the RootSignature when resources are committed
-            VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
+            VERIFY(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || DstRes.pObject == nullptr,
+                   "Static and mutable resource descriptors must be copied only once");
             VERIFY_EXPR(DstRes.CPUDescriptorHandle.ptr != 0);
 
-            GetD3D12Device()->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
 
         UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const BufferD3D12Impl>(), pBuffD3D12, ResourceCache.GetDynamicRootBuffersCounter(), Attribs.GetD3D12RootParamType());
@@ -1031,13 +852,15 @@ void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
         DstRes.CPUDescriptorHandle = pSamplerD3D12->GetCPUDescriptorHandle();
         VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "No relevant D3D12 sampler descriptor handle");
 
-        if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
+        if (DstTableCPUDescriptorHandle.ptr != 0)
         {
-            // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
-            // the descriptor is copied by the RootSignature when resources are committed
-            VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
-
-            GetD3D12Device()->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+            VERIFY(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
+            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+        }
+        else
+        {
+            VERIFY(ResourceCache.GetContentType() == ShaderResourceCacheD3D12::CacheContentType::Signature,
+                   "Samplers must always be allocated in root tables and thus assigned descriptor");
         }
 
         DstRes.pObject = std::move(pSamplerD3D12);
@@ -1063,15 +886,17 @@ void BindResourceHelper::CacheAccelStruct(IDeviceObject* pTLAS) const
 
         DstRes.Type                = SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
         DstRes.CPUDescriptorHandle = pTLASD3D12->GetCPUDescriptorHandle();
+
         VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "No relevant D3D12 resource");
-
-        if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
+        if (DstTableCPUDescriptorHandle.ptr != 0)
         {
-            // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
-            // the descriptor is copied by the RootSignature when resources are committed
-            VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
-
-            GetD3D12Device()->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            VERIFY(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
+            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        }
+        else
+        {
+            VERIFY(ResourceCache.GetContentType() == ShaderResourceCacheD3D12::CacheContentType::Signature,
+                   "Acceleration structures are always allocated in root tables and thus must have a descriptor");
         }
 
         DstRes.pObject = std::move(pTLASD3D12);
@@ -1150,13 +975,12 @@ void BindResourceHelper::CacheResourceView(IDeviceObject*       pView,
         DstRes.CPUDescriptorHandle = pViewD3D12->GetCPUDescriptorHandle();
         VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "No relevant D3D12 view");
 
-        if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
+        if (DstTableCPUDescriptorHandle.ptr != 0)
         {
-            // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
-            // the descriptor is copied by the RootSignature when resources are committed
-            VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
+            VERIFY(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || DstRes.pObject == nullptr,
+                   "Static and mutable resource descriptors must be copied only once");
 
-            GetD3D12Device()->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
 
         UpdateDynamicBuffersCounter(DstRes.pObject.RawPtr<const TResourceViewType>(), pViewD3D12, ResourceCache.GetDynamicRootBuffersCounter(), Attribs.GetD3D12RootParamType());
@@ -1176,16 +1000,13 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
 
     if (ResourceCache.GetContentType() == CacheContentType::Signature)
     {
-        VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Static shader resources should never be assigned shader visible descriptor space.");
+        VERIFY(DstTableCPUDescriptorHandle.ptr == 0, "Static shader resources should never be assigned shader visible descriptor space.");
     }
     else if (ResourceCache.GetContentType() == CacheContentType::SRB)
     {
         if (Attribs.GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
         {
-            if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr != 0, "Shader resources allocated in non-dynamic descriptor tables must be assigned shader-visible descriptor space");
-            else
-                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Shader resources allocated in dynamic descriptor tables should never be assigned shader-visible descriptor space");
+            VERIFY(DstTableCPUDescriptorHandle.ptr != 0, "Shader resources allocated in descriptor tables must be assigned descriptor space");
         }
         else
         {
@@ -1193,7 +1014,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                     ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                     ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV),
                    "Only constant buffers and dynamic buffers views can be allocated as root views");
-            VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Resourcesa allocated as root views should never be assigned shader-visible descriptor space");
+            VERIFY(DstTableCPUDescriptorHandle.ptr == 0, "Resources allocated as root views should never be assigned descriptor space");
         }
     }
     else
@@ -1232,14 +1053,23 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                                     const auto SamplerArrInd        = SamplerResDesc.ArraySize > 1 ? ArrayIndex : 0;
                                     const auto RootIndex            = SamplerAttribs.RootIndex(CacheType);
                                     const auto OffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType) + SamplerArrInd;
-                                    auto&      SampleDstRes         = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+                                    auto&      SampleDstRes         = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart);
+
+                                    D3D12_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle{};
+                                    if (CacheType != ShaderResourceCacheD3D12::CacheContentType::Signature)
+                                    {
+                                        const auto RootParamGroup = VariableTypeToRootParameterGroup(SamplerResDesc.VarType);
+                                        // Static/mutable resources are allocated in GPU-visible descriptor heap, while dynamic resources - in CPU-only heap.
+                                        CPUDescriptorHandle = ResourceCache.GetDescriptorTableHandle<D3D12_CPU_DESCRIPTOR_HANDLE>(
+                                            D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, RootParamGroup, RootIndex, OffsetFromTableStart);
+                                    }
 
                                     BindResourceHelper SeparateSampler{
                                         SampleDstRes,
                                         SamplerResDesc,
                                         SamplerAttribs,
                                         SamplerArrInd,
-                                        ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootIndex, OffsetFromTableStart),
+                                        CPUDescriptorHandle,
                                         Signature,
                                         ResourceCache};
                                     SeparateSampler.BindResource(pSampler);
@@ -1294,7 +1124,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
             auto       SamplerArrInd        = SamplerResDesc.ArraySize > 1 ? ArrayIndex : 0;
             const auto RootIndex            = SamplerAttribs.RootIndex(CacheType);
             const auto OffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType) + SamplerArrInd;
-            auto&      DstSam               = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+            auto&      DstSam               = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart);
 
             if (DstSam.pObject != nullptr && SamplerResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
                 LOG_ERROR_MESSAGE("Sampler variable '", SamplerResDesc.Name, "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. ",
@@ -1323,25 +1153,27 @@ void PipelineResourceSignatureD3D12Impl::BindResource(IDeviceObject*            
     VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
 
     auto& RootTable = ResourceCache.GetRootTable(RootIndex);
-    auto& DstRes    = RootTable.GetResource(OffsetFromTableStart, IsSampler ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    auto& DstRes    = RootTable.GetResource(OffsetFromTableStart);
 
-    auto ShdrVisibleHeapCPUDescriptorHandle = IsSampler ?
-        ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootIndex, OffsetFromTableStart) :
-        ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootIndex, OffsetFromTableStart);
+    D3D12_CPU_DESCRIPTOR_HANDLE DstTableCPUDescriptorHandle{};
+    if (CacheType != ShaderResourceCacheD3D12::CacheContentType::Signature && !Attribs.IsRootView())
+    {
+        const auto RootParamGroup = VariableTypeToRootParameterGroup(ResDesc.VarType);
+        // Static/mutable resources are allocated in GPU-visible descriptor heap, while dynamic resources - in CPU-only heap.
+        DstTableCPUDescriptorHandle =
+            ResourceCache.GetDescriptorTableHandle<D3D12_CPU_DESCRIPTOR_HANDLE>(
+                IsSampler ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+                RootParamGroup, RootIndex, OffsetFromTableStart);
+    }
 
     BindResourceHelper Helper{
         DstRes,
         ResDesc,
         Attribs,
         ArrayIndex,
-        ShdrVisibleHeapCPUDescriptorHandle,
+        DstTableCPUDescriptorHandle,
         *this,
         ResourceCache};
-
-#ifdef DILIGENT_DEBUG
-    Helper.dbgIsDynamic = RootTable.DbgIsDynamic();
-    Helper.dbgParamType = Attribs.GetD3D12RootParamType();
-#endif
 
     Helper.BindResource(pObj);
 }
@@ -1363,9 +1195,7 @@ bool PipelineResourceSignatureD3D12Impl::IsBound(Uint32                    Array
         const auto& RootTable = ResourceCache.GetRootTable(RootIndex);
         if (OffsetFromTableStart + ArrayIndex < RootTable.GetSize())
         {
-            const auto& CachedRes =
-                RootTable.GetResource(OffsetFromTableStart + ArrayIndex,
-                                      ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex);
             if (CachedRes.pObject != nullptr)
             {
                 VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0 || CachedRes.pObject.RawPtr<BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC, "No relevant descriptor handle");

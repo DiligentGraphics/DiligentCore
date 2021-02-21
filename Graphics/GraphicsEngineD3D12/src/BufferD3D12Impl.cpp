@@ -224,7 +224,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
         if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
         {
-            m_CBVDescriptorAllocation = pRenderDeviceD3D12->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            m_CBVDescriptorAllocation = pRenderDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
         }
     }
@@ -297,7 +297,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
     {
-        m_CBVDescriptorAllocation = pRenderDeviceD3D12->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        m_CBVDescriptorAllocation = pRenderDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
     }
 }
@@ -324,13 +324,13 @@ void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
         BufferViewDesc ViewDesc = OrigViewDesc;
         if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
         {
-            auto UAVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            auto UAVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             CreateUAV(ViewDesc, UAVHandleAlloc.GetCpuHandle());
             *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewD3D12Impl instance", BufferViewD3D12Impl, bIsDefaultView ? this : nullptr)(GetDevice(), ViewDesc, this, std::move(UAVHandleAlloc), bIsDefaultView);
         }
         else if (ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE)
         {
-            auto SRVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            auto SRVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             CreateSRV(ViewDesc, SRVHandleAlloc.GetCpuHandle());
             *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewD3D12Impl instance", BufferViewD3D12Impl, bIsDefaultView ? this : nullptr)(GetDevice(), ViewDesc, this, std::move(SRVHandleAlloc), bIsDefaultView);
         }

@@ -102,7 +102,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
     if (*m_Desc.Name != 0)
         m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
 
-    m_DescriptorHandle = pDeviceD3D12->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    m_DescriptorHandle = pDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC d3d12SRVDesc;
     d3d12SRVDesc.ViewDimension                            = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;

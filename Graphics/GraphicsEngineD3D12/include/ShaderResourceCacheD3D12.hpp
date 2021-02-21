@@ -82,13 +82,18 @@
 //                 .....       |   DescrptHndl[0]  ...  DescrptHndl[n-1]   |    ....
 //
 
+#include <array>
+#include <memory>
+
 #include "DescriptorHeap.hpp"
 #include "Shader.h"
+#include "RootParamsManager.hpp"
 
 namespace Diligent
 {
 
 class CommandContext;
+class RenderDeviceD3D12Impl;
 
 class ShaderResourceCacheD3D12
 {
@@ -100,9 +105,10 @@ public:
     };
 
     explicit ShaderResourceCacheD3D12(CacheContentType ContentType) noexcept :
-        m_NumTables{0},
         m_ContentType{ContentType}
     {
+        for (auto& HeapIndex : m_AllocationIndex)
+            HeapIndex.fill(-1);
     }
 
     // clang-format off
@@ -114,12 +120,22 @@ public:
 
     ~ShaderResourceCacheD3D12();
 
-    static size_t GetRequiredMemorySize(Uint32       NumTables,
-                                        const Uint32 TableSizes[]);
+    struct MemoryRequirements
+    {
+        Uint32 NumTables                = 0;
+        Uint32 TotalResources           = 0;
+        Uint32 NumDescriptorAllocations = 0;
+        size_t TotalSize                = 0;
+    };
+    static MemoryRequirements GetMemoryRequirements(const RootParamsManager& RootParams);
 
     void Initialize(IMemoryAllocator& MemAllocator,
                     Uint32            NumTables,
                     const Uint32      TableSizes[]);
+
+    void Initialize(IMemoryAllocator&        MemAllocator,
+                    RenderDeviceD3D12Impl*   pDevice,
+                    const RootParamsManager& RootParams);
 
     static constexpr Uint32 InvalidDescriptorOffset = ~0u;
 
@@ -144,204 +160,83 @@ public:
     class RootTable
     {
     public:
-        RootTable(Uint32 NumResources, Resource* pResources) noexcept :
+        RootTable(Uint32 NumResources, Resource* pResources, Uint32 TableStartOffset = InvalidDescriptorOffset) noexcept :
             // clang-format off
-            m_NumResources{NumResources},
-            m_pResources  {pResources  }
+            m_NumResources    {NumResources    },
+            m_pResources      {pResources      },
+            m_TableStartOffset{TableStartOffset}
         // clang-format on
         {}
 
-        inline const Resource& GetResource(Uint32 OffsetFromTableStart) const
+        const Resource& GetResource(Uint32 OffsetFromTableStart) const
+        {
+            VERIFY(OffsetFromTableStart < m_NumResources, "Root table is not large enough to store descriptor at offset ", OffsetFromTableStart);
+            return m_pResources[OffsetFromTableStart];
+        }
+        Resource& GetResource(Uint32 OffsetFromTableStart)
         {
             VERIFY(OffsetFromTableStart < m_NumResources, "Root table is not large enough to store descriptor at offset ", OffsetFromTableStart);
             return m_pResources[OffsetFromTableStart];
         }
 
-        inline const Resource& GetResource(Uint32                           OffsetFromTableStart,
-                                           const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType) const
-        {
-            VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type");
-            VERIFY(OffsetFromTableStart < m_NumResources, "Root table is not large enough to store descriptor at offset ", OffsetFromTableStart);
-            return m_pResources[OffsetFromTableStart];
-        }
-        inline Resource& GetResource(Uint32                           OffsetFromTableStart,
-                                     const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType)
-        {
-            return const_cast<Resource&>(const_cast<const RootTable*>(this)->GetResource(OffsetFromTableStart, dbgDescriptorHeapType));
-        }
+        Uint32 GetSize() const { return m_NumResources; }
+        Uint32 GetStartOffset() const { return m_TableStartOffset; }
 
-        inline Uint32 GetSize() const { return m_NumResources; }
-
+    private:
         // Offset from the start of the descriptor heap allocation to the start of the table
-        Uint32 m_TableStartOffset = InvalidDescriptorOffset;
-
-#ifdef DILIGENT_DEBUG
-        void SetDebugAttribs(Uint32                           MaxOffset,
-                             const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType,
-                             bool                             isDynamic)
-        {
-            VERIFY_EXPR(m_NumResources == MaxOffset);
-            m_dbgHeapType  = dbgDescriptorHeapType;
-            m_dbgIsDynamic = isDynamic;
-        }
-
-        D3D12_DESCRIPTOR_HEAP_TYPE DbgGetHeapType() const { return m_dbgHeapType; }
-        bool                       DbgIsDynamic() const { return m_dbgIsDynamic; }
-#endif
+        const Uint32 m_TableStartOffset;
 
         // The total number of resources in the table, accounting for array size
         const Uint32 m_NumResources;
 
-    private:
-#ifdef DILIGENT_DEBUG
-        D3D12_DESCRIPTOR_HEAP_TYPE m_dbgHeapType  = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-        bool                       m_dbgIsDynamic = false;
-#endif
-
         Resource* const m_pResources;
     };
 
-    inline RootTable& GetRootTable(Uint32 RootIndex)
+    RootTable& GetRootTable(Uint32 RootIndex)
     {
         VERIFY_EXPR(RootIndex < m_NumTables);
-        return reinterpret_cast<RootTable*>(m_pMemory)[RootIndex];
+        return reinterpret_cast<RootTable*>(m_pMemory.get())[RootIndex];
     }
-    inline const RootTable& GetRootTable(Uint32 RootIndex) const
+    const RootTable& GetRootTable(Uint32 RootIndex) const
     {
         VERIFY_EXPR(RootIndex < m_NumTables);
-        return reinterpret_cast<const RootTable*>(m_pMemory)[RootIndex];
+        return reinterpret_cast<const RootTable*>(m_pMemory.get())[RootIndex];
     }
 
-    inline Uint32 GetNumRootTables() const { return m_NumTables; }
+    Uint32 GetNumRootTables() const { return m_NumTables; }
 
-    void SetDescriptorHeapSpace(DescriptorHeapAllocation&& CbcSrvUavHeapSpace, DescriptorHeapAllocation&& SamplerHeapSpace)
+    ID3D12DescriptorHeap* GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE HeapType, ROOT_PARAMETER_GROUP Group)
     {
-        VERIFY(m_SamplerHeapSpace.GetCpuHandle().ptr == 0 && m_CbvSrvUavHeapSpace.GetCpuHandle().ptr == 0, "Space has already been allocated in GPU descriptor heaps");
-#ifdef DILIGENT_DEBUG
-        Uint32 NumSamplerDescriptors = 0, NumSrvCbvUavDescriptors = 0;
-        for (Uint32 rt = 0; rt < m_NumTables; ++rt)
-        {
-            const auto& Tbl = GetRootTable(rt);
-            if (Tbl.m_TableStartOffset != InvalidDescriptorOffset)
-            {
-                if (Tbl.DbgGetHeapType() == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-                {
-                    VERIFY(Tbl.m_TableStartOffset == NumSrvCbvUavDescriptors, "Descriptor space allocation is not continuous");
-                    NumSrvCbvUavDescriptors = std::max(NumSrvCbvUavDescriptors, Tbl.m_TableStartOffset + Tbl.GetSize());
-                }
-                else
-                {
-                    VERIFY(Tbl.m_TableStartOffset == NumSamplerDescriptors, "Descriptor space allocation is not continuous");
-                    NumSamplerDescriptors = std::max(NumSamplerDescriptors, Tbl.m_TableStartOffset + Tbl.GetSize());
-                }
-            }
-        }
-        VERIFY(NumSrvCbvUavDescriptors == CbcSrvUavHeapSpace.GetNumHandles() || NumSrvCbvUavDescriptors == 0 && CbcSrvUavHeapSpace.IsNull(), "Unexpected descriptor heap allocation size");
-        VERIFY(NumSamplerDescriptors == SamplerHeapSpace.GetNumHandles() || NumSamplerDescriptors == 0 && SamplerHeapSpace.IsNull(), "Unexpected descriptor heap allocation size");
-#endif
-
-        m_CbvSrvUavHeapSpace = std::move(CbcSrvUavHeapSpace);
-        m_SamplerHeapSpace   = std::move(SamplerHeapSpace);
+        auto AllocationIdx = m_AllocationIndex[HeapType][Group];
+        return AllocationIdx >= 0 ? m_DescriptorAllocations[AllocationIdx].GetDescriptorHeap() : nullptr;
     }
 
-    ID3D12DescriptorHeap* GetSrvCbvUavDescriptorHeap() { return m_CbvSrvUavHeapSpace.GetDescriptorHeap(); }
-    ID3D12DescriptorHeap* GetSamplerDescriptorHeap() { return m_SamplerHeapSpace.GetDescriptorHeap(); }
-
-    // Returns CPU descriptor handle of a shader visible descriptor heap allocation
-    template <D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
-    D3D12_CPU_DESCRIPTOR_HANDLE GetShaderVisibleTableCPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0) const
+    // Returns CPU/GPU descriptor handle of a descriptor heap allocation
+    template <typename HandleType>
+    HandleType GetDescriptorTableHandle(
+        D3D12_DESCRIPTOR_HEAP_TYPE HeapType,
+        ROOT_PARAMETER_GROUP       Group,
+        Uint32                     RootParamInd,
+        Uint32                     OffsetFromTableStart = 0) const
     {
         const auto& RootParam = GetRootTable(RootParamInd);
-        VERIFY(HeapType == RootParam.DbgGetHeapType(), "Invalid descriptor heap type");
+        VERIFY(RootParam.GetStartOffset() != InvalidDescriptorOffset, "This root parameter is not assigned a valid descriptor table offset");
+        VERIFY(OffsetFromTableStart < RootParam.GetSize(), "Offset is out of range");
 
-        D3D12_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle = {0};
-        // Descriptor heap allocation is not assigned for dynamic resources or
-        // in a special case when resource cache is used to store static
-        // variable assignments for a shader. It is also not assigned for root views.
-        if (RootParam.m_TableStartOffset != InvalidDescriptorOffset)
-        {
-            VERIFY(OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
-            if (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
-            {
-                VERIFY_EXPR(!m_SamplerHeapSpace.IsNull());
-                CPUDescriptorHandle = m_SamplerHeapSpace.GetCpuHandle(RootParam.m_TableStartOffset + OffsetFromTableStart);
-            }
-            else if (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-            {
-                VERIFY_EXPR(!m_CbvSrvUavHeapSpace.IsNull());
-                CPUDescriptorHandle = m_CbvSrvUavHeapSpace.GetCpuHandle(RootParam.m_TableStartOffset + OffsetFromTableStart);
-            }
-            else
-            {
-                UNEXPECTED("Unexpected descriptor heap type");
-            }
-        }
+        const auto AllocationIdx = m_AllocationIndex[HeapType][Group];
+        VERIFY(AllocationIdx >= 0, "Descriptor space is not assigned to this table");
+        VERIFY_EXPR(AllocationIdx < m_NumDescriptorAllocations);
 
-        return CPUDescriptorHandle;
+        return m_DescriptorAllocations[AllocationIdx].GetHandle<HandleType>(RootParam.GetStartOffset() + OffsetFromTableStart);
     }
 
-    // Returns GPU descriptor handle of a shader visible descriptor table
-    template <D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
-    D3D12_GPU_DESCRIPTOR_HANDLE GetShaderVisibleTableGPUDescriptorHandle(Uint32 RootParamInd, Uint32 OffsetFromTableStart = 0) const
+    DescriptorHeapAllocation& GetDescriptorAllocation(D3D12_DESCRIPTOR_HEAP_TYPE HeapType,
+                                                      ROOT_PARAMETER_GROUP       Group)
     {
-        const auto& RootParam = GetRootTable(RootParamInd);
-        VERIFY(RootParam.m_TableStartOffset != InvalidDescriptorOffset, "GPU descriptor handle must never be requested for dynamic resources");
-        VERIFY(OffsetFromTableStart < RootParam.m_NumResources, "Offset is out of range");
-
-        D3D12_GPU_DESCRIPTOR_HANDLE GPUDescriptorHandle = {0};
-        VERIFY(HeapType == RootParam.DbgGetHeapType(), "Invalid descriptor heap type");
-        if (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
-        {
-            VERIFY_EXPR(!m_SamplerHeapSpace.IsNull());
-            GPUDescriptorHandle = m_SamplerHeapSpace.GetGpuHandle(RootParam.m_TableStartOffset + OffsetFromTableStart);
-        }
-        else if (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-        {
-            VERIFY_EXPR(!m_CbvSrvUavHeapSpace.IsNull());
-            GPUDescriptorHandle = m_CbvSrvUavHeapSpace.GetGpuHandle(RootParam.m_TableStartOffset + OffsetFromTableStart);
-        }
-        else
-        {
-            UNEXPECTED("Unexpected descriptor heap type");
-        }
-
-        return GPUDescriptorHandle;
-    }
-
-    template <D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
-    D3D12_CPU_DESCRIPTOR_HANDLE CopyDescriptors(ID3D12Device*               pd3d12Device,
-                                                D3D12_CPU_DESCRIPTOR_HANDLE SrcDescrHandle,
-                                                Uint32                      NumDescriptors,
-                                                Uint32                      RootParamInd,
-                                                Uint32                      OffsetFromTableStart)
-    {
-        auto DstDescrHandle = GetShaderVisibleTableCPUDescriptorHandle<HeapType>(RootParamInd, OffsetFromTableStart);
-        if (DstDescrHandle.ptr != 0)
-        {
-            VERIFY_EXPR(SrcDescrHandle.ptr != 0);
-            pd3d12Device->CopyDescriptorsSimple(NumDescriptors, DstDescrHandle, SrcDescrHandle, HeapType);
-        }
-        return DstDescrHandle;
-    }
-
-    template <class TOperation>
-    __forceinline void ProcessTableResources(Uint32                      RootInd,
-                                             const D3D12_ROOT_PARAMETER& d3d12Param,
-                                             D3D12_DESCRIPTOR_HEAP_TYPE  dbgHeapType,
-                                             TOperation                  Operation)
-    {
-        auto& TableResources = GetRootTable(RootInd);
-        for (UINT r = 0; r < d3d12Param.DescriptorTable.NumDescriptorRanges; ++r)
-        {
-            const auto& range = d3d12Param.DescriptorTable.pDescriptorRanges[r];
-            VERIFY(dbgHeapType == D3D12DescriptorRangeTypeToD3D12HeapType(range.RangeType), "Mistmatch between descriptor heap type and descriptor range type");
-            for (UINT d = 0; d < range.NumDescriptors; ++d)
-            {
-                const auto Offset = range.OffsetInDescriptorsFromTableStart + d;
-                auto&      Res    = TableResources.GetResource(Offset, dbgHeapType);
-                Operation(Offset, range, Res);
-            }
-        }
+        const auto AllocationIdx = m_AllocationIndex[HeapType][Group];
+        VERIFY(AllocationIdx >= 0, "Descriptor space is not assigned to this combination of heap type and parameter group");
+        VERIFY_EXPR(AllocationIdx < m_NumDescriptorAllocations);
+        return m_DescriptorAllocations[AllocationIdx];
     }
 
     void TransitionResources(CommandContext& Ctx,
@@ -363,29 +258,37 @@ private:
     Resource& GetResource(Uint32 Idx)
     {
         VERIFY_EXPR(Idx < m_TotalResourceCount);
-        return reinterpret_cast<Resource*>(reinterpret_cast<RootTable*>(m_pMemory) + m_NumTables)[Idx];
+        return reinterpret_cast<Resource*>(reinterpret_cast<RootTable*>(m_pMemory.get()) + m_NumTables)[Idx];
     }
 
-    // Allocation in a GPU-visible sampler descriptor heap
-    DescriptorHeapAllocation m_SamplerHeapSpace;
+    size_t AllocateMemory(IMemoryAllocator& MemAllocator);
 
-    // Allocation in a GPU-visible CBV/SRV/UAV descriptor heap
-    DescriptorHeapAllocation m_CbvSrvUavHeapSpace;
+    std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
 
-    IMemoryAllocator* m_pAllocator = nullptr;
-    void*             m_pMemory    = nullptr;
+    // Descriptor heap allocations, indexed by m_AllocationIndex
+    DescriptorHeapAllocation* m_DescriptorAllocations = nullptr;
 
-    // The number of the dynamic buffers bound in the resource cache regardless of their variable type
+    // The number of the dynamic buffers bound in the resource cache as root views
+    // regardless of their variable type
     Uint32 m_NumDynamicRootBuffers = 0;
-
-    // The number of descriptor tables in the cache
-    Uint32 m_NumTables = 0;
 
     // The total number of resources in the cache
     Uint32 m_TotalResourceCount = 0;
 
+    // The number of descriptor tables in the cache
+    Uint16 m_NumTables = 0;
+
+    // The number of descriptor heap allocations
+    Uint8 m_NumDescriptorAllocations = 0;
+
     // Indicates what types of resources are stored in the cache
     const CacheContentType m_ContentType;
+
+    // Descriptor allocation index in m_DescriptorAllocations array for every descriptor heap type
+    // (CBV_SRV_UAV, SAMPLER) and GPU visibility.
+    // -1 indicates no allocation.
+    std::array<std::array<Int8, ROOT_PARAMETER_GROUP_COUNT>, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> m_AllocationIndex{};
 };
+static_assert(sizeof(ShaderResourceCacheD3D12) == sizeof(void*) * 3 + 16, "Unexpected sizeof(ShaderResourceCacheD3D12) - did you pack the members properly?");
 
 } // namespace Diligent

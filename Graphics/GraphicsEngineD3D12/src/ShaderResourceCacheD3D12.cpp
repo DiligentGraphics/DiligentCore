@@ -39,54 +39,228 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheD3D12::GetRequiredMemorySize(Uint32       NumTables,
-                                                       const Uint32 TableSizes[])
+ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemoryRequirements(const RootParamsManager& RootParams)
 {
-    size_t MemorySize = NumTables * sizeof(RootTable);
-    for (Uint32 t = 0; t < NumTables; ++t)
-        MemorySize += TableSizes[t] * sizeof(Resource);
+    const auto NumRootTables = RootParams.GetNumRootTables();
+    const auto NumRootViews  = RootParams.GetNumRootViews();
+
+    MemoryRequirements MemReqs;
+
+    for (auto d3d12HeapType : {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER})
+    {
+        for (Uint32 group = 0; group < ROOT_PARAMETER_GROUP_COUNT; ++group)
+        {
+            auto GroupType = static_cast<ROOT_PARAMETER_GROUP>(group);
+
+            auto TotalTableResources = RootParams.GetTotalTableSlots(d3d12HeapType, GroupType);
+            MemReqs.TotalResources += TotalTableResources;
+            if (TotalTableResources != 0)
+            {
+                // Every non-empty table from each group will need a descriptor table
+                ++MemReqs.NumDescriptorAllocations;
+            }
+        }
+    }
+    // Root views' resources are stored in one-descriptor tables
+    MemReqs.TotalResources += NumRootViews;
+
+    static_assert(sizeof(RootTable) % sizeof(void*) == 0, "sizeof(RootTable) is not aligned by the sizeof(void*)");
+    static_assert(sizeof(Resource) % sizeof(void*) == 0, "sizeof(Resource) is not aligned by the sizeof(void*)");
+
+    MemReqs.NumTables = NumRootTables + NumRootViews;
+
+    MemReqs.TotalSize = (MemReqs.NumTables * sizeof(RootTable) +
+                         MemReqs.TotalResources * sizeof(Resource) +
+                         MemReqs.NumDescriptorAllocations * sizeof(DescriptorHeapAllocation));
+
+    return MemReqs;
+}
+
+
+// Memory layout:
+//                                         __________________________________________________________
+//  m_pMemory                             |             m_pResources, m_NumResources                 |
+//  |                                     |                                                          |
+//  V                                     |                                                          V
+//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
+//       |                                                A
+//       |                                                |
+//       |________________________________________________|
+//                    m_pResources, m_NumResources
+//
+
+size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator)
+{
+    VERIFY(!m_pMemory, "Memory has already been allocated");
+
+    const auto MemorySize =
+        (m_NumTables * sizeof(RootTable) +
+         m_TotalResourceCount * sizeof(Resource) +
+         m_NumDescriptorAllocations * sizeof(DescriptorHeapAllocation));
+
+    if (MemorySize > 0)
+    {
+        m_pMemory = decltype(m_pMemory){
+            ALLOCATE_RAW(MemAllocator, "Memory for shader resource cache data", MemorySize),
+            STDDeleter<void, IMemoryAllocator>(MemAllocator) //
+        };
+
+        auto* const pTables     = reinterpret_cast<RootTable*>(m_pMemory.get());
+        auto* const pResources  = reinterpret_cast<Resource*>(pTables + m_NumTables);
+        m_DescriptorAllocations = m_NumDescriptorAllocations > 0 ? reinterpret_cast<DescriptorHeapAllocation*>(pResources + m_TotalResourceCount) : nullptr;
+
+        for (Uint32 res = 0; res < m_TotalResourceCount; ++res)
+            new (pResources + res) Resource{};
+
+        for (Uint32 i = 0; i < m_NumDescriptorAllocations; ++i)
+            new (m_DescriptorAllocations + i) DescriptorHeapAllocation{};
+    }
+
     return MemorySize;
 }
 
-// http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Cache-Structure
-void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator, Uint32 NumTables, const Uint32 TableSizes[])
+void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator,
+                                          Uint32            NumTables,
+                                          const Uint32      TableSizes[])
 {
-    // Memory layout:
-    //                                         __________________________________________________________
-    //  m_pMemory                             |             m_pResources, m_NumResources                 |
-    //  |                                     |                                                          |
-    //  V                                     |                                                          V
-    //  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
-    //       |                                                A
-    //       |                                                |
-    //       |________________________________________________|
-    //                    m_pResources, m_NumResources
-    //
-
-    VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
-    m_pAllocator = &MemAllocator;
-    m_NumTables  = NumTables;
+    m_NumTables = static_cast<decltype(m_NumTables)>(NumTables);
+    VERIFY_EXPR(m_NumTables == NumTables);
 
     m_TotalResourceCount = 0;
-    for (Uint32 t = 0; t < NumTables; ++t)
+    for (Uint32 t = 0; t < m_NumTables; ++t)
         m_TotalResourceCount += TableSizes[t];
-    const auto MemorySize = NumTables * sizeof(RootTable) + m_TotalResourceCount * sizeof(Resource);
-    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumTables, TableSizes));
-    if (MemorySize > 0)
-    {
-        m_pMemory         = ALLOCATE_RAW(*m_pAllocator, "Memory for shader resource cache data", MemorySize);
-        auto* pTables     = reinterpret_cast<RootTable*>(m_pMemory);
-        auto* pCurrResPtr = reinterpret_cast<Resource*>(pTables + m_NumTables);
-        for (Uint32 res = 0; res < m_TotalResourceCount; ++res)
-            new (pCurrResPtr + res) Resource{};
 
-        for (Uint32 t = 0; t < NumTables; ++t)
-        {
-            new (&GetRootTable(t)) RootTable{TableSizes[t], TableSizes[t] > 0 ? pCurrResPtr : nullptr};
-            pCurrResPtr += TableSizes[t];
-        }
-        VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory + MemorySize);
+    m_DescriptorAllocations = 0;
+
+    AllocateMemory(MemAllocator);
+
+    Uint32 ResIdx = 0;
+    for (Uint32 t = 0; t < m_NumTables; ++t)
+    {
+        new (&GetRootTable(t)) RootTable{TableSizes[t], TableSizes[t] > 0 ? &GetResource(ResIdx) : nullptr};
+        ResIdx += TableSizes[t];
     }
+}
+
+
+void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
+                                          RenderDeviceD3D12Impl*   pDevice,
+                                          const RootParamsManager& RootParams)
+{
+    const auto MemReq = GetMemoryRequirements(RootParams);
+
+    m_NumTables = static_cast<decltype(m_NumTables)>(MemReq.NumTables);
+    VERIFY_EXPR(m_NumTables == MemReq.NumTables);
+
+    m_TotalResourceCount = MemReq.TotalResources;
+
+    m_NumDescriptorAllocations = static_cast<decltype(m_NumDescriptorAllocations)>(MemReq.NumDescriptorAllocations);
+    VERIFY_EXPR(m_NumDescriptorAllocations == MemReq.NumDescriptorAllocations);
+
+    const auto MemSize = AllocateMemory(MemAllocator);
+    VERIFY_EXPR(MemSize == MemReq.TotalSize);
+
+#ifdef DILIGENT_DEBUG
+    std::vector<bool> RootTableInitFlags(MemReq.NumTables);
+#endif
+
+    Uint32 ResIdx = 0;
+
+    // Initialize root tables
+    for (Uint32 i = 0; i < RootParams.GetNumRootTables(); ++i)
+    {
+        const auto& RootTbl = RootParams.GetRootTable(i);
+        VERIFY(!RootTableInitFlags[RootTbl.RootIndex], "Root table at index ", RootTbl.RootIndex, " has already been initialized.");
+        VERIFY_EXPR(RootTbl.TableOffsetInGroupAllocation != RootParameter::InvalidTableOffsetInGroupAllocation);
+
+        const auto TableSize = RootTbl.GetDescriptorTableSize();
+        VERIFY(TableSize > 0, "Unexpected empty descriptor table");
+
+        new (&GetRootTable(RootTbl.RootIndex)) RootTable{
+            TableSize,
+            &GetResource(ResIdx),
+            RootTbl.TableOffsetInGroupAllocation};
+        ResIdx += TableSize;
+
+#ifdef DILIGENT_DEBUG
+        RootTableInitFlags[RootTbl.RootIndex] = true;
+#endif
+    }
+
+    // Initialize one-descriptor tables for root views
+    for (Uint32 i = 0; i < RootParams.GetNumRootViews(); ++i)
+    {
+        const auto& RootView = RootParams.GetRootView(i);
+        VERIFY(!RootTableInitFlags[RootView.RootIndex], "Root table at index ", RootView.RootIndex, " has already been initialized.");
+        VERIFY_EXPR(RootView.TableOffsetInGroupAllocation == RootParameter::InvalidTableOffsetInGroupAllocation);
+        VERIFY_EXPR((RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
+                     RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
+                     RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV));
+
+        new (&GetRootTable(RootView.RootIndex)) RootTable{
+            1,
+            &GetResource(ResIdx)};
+        ++ResIdx;
+
+#ifdef DILIGENT_DEBUG
+        RootTableInitFlags[RootView.RootIndex] = true;
+#endif
+    }
+    VERIFY_EXPR(ResIdx == m_TotalResourceCount);
+
+#ifdef DILIGENT_DEBUG
+    for (size_t i = 0; i < RootTableInitFlags.size(); ++i)
+    {
+        VERIFY(RootTableInitFlags[i], "Root table at index ", i, " has not been initialized");
+    }
+#endif
+
+    // Initialize descriptor heap allocations
+    Uint32 AllocationCount = 0;
+    for (auto d3d12HeapType : {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER})
+    {
+        for (Uint32 group = 0; group < ROOT_PARAMETER_GROUP_COUNT; ++group)
+        {
+            auto GroupType = static_cast<ROOT_PARAMETER_GROUP>(group);
+
+            auto  TotalTableResources = RootParams.GetTotalTableSlots(d3d12HeapType, GroupType);
+            auto& AllocationIndex     = m_AllocationIndex[d3d12HeapType][GroupType];
+            if (TotalTableResources != 0)
+            {
+                AllocationIndex  = static_cast<Int8>(AllocationCount++);
+                auto& Allocation = m_DescriptorAllocations[AllocationIndex];
+                VERIFY_EXPR(Allocation.IsNull());
+
+                if (GroupType == ROOT_PARAMETER_GROUP_STATIC_MUTABLE)
+                {
+                    // For static/mutable parameters, allocate GPU-visible descriptor space
+                    Allocation = pDevice->AllocateGPUDescriptors(d3d12HeapType, TotalTableResources);
+                }
+                else if (GroupType == ROOT_PARAMETER_GROUP_DYNAMIC)
+                {
+                    // For dynamic parameters, allocate CPU-only descriptor space
+                    Allocation = pDevice->AllocateDescriptors(d3d12HeapType, TotalTableResources);
+                }
+                else
+                {
+                    UNEXPECTED("Unexpected root parameter group type");
+                }
+
+                DEV_CHECK_ERR(!Allocation.IsNull(),
+                              "Failed to allocate ", TotalTableResources, ' ',
+                              (GroupType == ROOT_PARAMETER_GROUP_STATIC_MUTABLE ? "GPU-visible" : "CPU-only"), ' ',
+                              (d3d12HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ? "CBV/SRV/UAV" : "Sampler"),
+                              " descriptor(s). Consider increasing ",
+                              (GroupType == ROOT_PARAMETER_GROUP_STATIC_MUTABLE ? "GPUDescriptorHeapSize" : "CPUDescriptorHeapSize"),
+                              '[', int{d3d12HeapType}, "] in EngineD3D12CreateInfo.");
+            }
+            else
+            {
+                AllocationIndex = -1;
+            }
+        }
+    }
+    VERIFY_EXPR(AllocationCount == m_NumDescriptorAllocations);
 }
 
 ShaderResourceCacheD3D12::~ShaderResourceCacheD3D12()
@@ -97,8 +271,8 @@ ShaderResourceCacheD3D12::~ShaderResourceCacheD3D12()
             GetResource(res).~Resource();
         for (Uint32 t = 0; t < m_NumTables; ++t)
             GetRootTable(t).~RootTable();
-
-        m_pAllocator->Free(m_pMemory);
+        for (Uint32 i = 0; i < m_NumDescriptorAllocations; ++i)
+            m_DescriptorAllocations[i].~DescriptorHeapAllocation();
     }
 }
 

@@ -57,11 +57,11 @@ void DbgValidateD3D12RootTable(const D3D12_ROOT_DESCRIPTOR_TABLE& d3d12Tbl)
         VERIFY(Range.NumDescriptors != 0, "Range must contain at lest one descriptor");
         if (IsSampler)
         {
-            VERIFY(Range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "All ranges in a sampler table must be D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER");
+            VERIFY(Range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "All ranges in the sampler table must be D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER");
         }
         else
         {
-            VERIFY(Range.RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER is only valid for a sampler table");
+            VERIFY(Range.RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER is not allowed in the resource table");
         }
 
         CurrOffset += Range.NumDescriptors;
@@ -71,13 +71,20 @@ void DbgValidateD3D12RootTable(const D3D12_ROOT_DESCRIPTOR_TABLE& d3d12Tbl)
 
 } // namespace
 
-RootParameter::RootParameter(ROOT_PARAMETER_GROUP        _Group,
-                             Uint32                      _RootIndex,
-                             const D3D12_ROOT_PARAMETER& _d3d12RootParam) noexcept :
-    d3d12RootParam{_d3d12RootParam},
-    RootIndex{_RootIndex},
-    Group{_Group}
+RootParameter::RootParameter(Uint32                      _RootIndex,
+                             ROOT_PARAMETER_GROUP        _Group,
+                             const D3D12_ROOT_PARAMETER& _d3d12RootParam,
+                             Uint32                      _TableOffsetInGroupAllocation) noexcept :
+    // clang-format off
+    RootIndex                   {_RootIndex},
+    Group                       {_Group},
+    TableOffsetInGroupAllocation{_TableOffsetInGroupAllocation},
+    d3d12RootParam              {_d3d12RootParam}
+// clang-format on
 {
+    VERIFY_EXPR(RootIndex == _RootIndex);
+    VERIFY_EXPR(Group == Group);
+
 #ifdef DILIGENT_DEBUG
     if (d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
         DbgValidateD3D12RootTable(d3d12RootParam.DescriptorTable);
@@ -165,6 +172,68 @@ bool RootParamsManager::operator==(const RootParamsManager& RootParams) const
     return true;
 }
 
+#ifdef DILIGENT_DEBUG
+void RootParamsManager::Validate() const
+{
+    std::array<std::array<std::vector<bool>, ROOT_PARAMETER_GROUP_COUNT>, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> DescriptorSlots;
+    for (auto d3d12HeapType : {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER})
+    {
+        for (Uint32 group = 0; group < ROOT_PARAMETER_GROUP_COUNT; ++group)
+        {
+            const auto Group = static_cast<ROOT_PARAMETER_GROUP>(group);
+            DescriptorSlots[d3d12HeapType][Group].resize(GetTotalTableSlots(d3d12HeapType, Group));
+        }
+    }
+
+    for (Uint32 i = 0; i < GetNumRootTables(); ++i)
+    {
+        const auto& RootTbl = GetRootTable(i);
+        VERIFY_EXPR(RootTbl.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
+        const auto& d3d12DescriptorTbl = RootTbl.d3d12RootParam.DescriptorTable;
+        DbgValidateD3D12RootTable(d3d12DescriptorTbl);
+        const auto d3d12HeapType = D3D12DescriptorRangeTypeToD3D12HeapType(d3d12DescriptorTbl.pDescriptorRanges[0].RangeType);
+        const auto TableOffset   = RootTbl.TableOffsetInGroupAllocation;
+        VERIFY_EXPR(TableOffset != RootParameter::InvalidTableOffsetInGroupAllocation);
+
+        auto& TableSlots = DescriptorSlots[d3d12HeapType][RootTbl.Group];
+        for (Uint32 r = 0; r < d3d12DescriptorTbl.NumDescriptorRanges; ++r)
+        {
+            const auto& d3d12Range = d3d12DescriptorTbl.pDescriptorRanges[r];
+            VERIFY_EXPR(D3D12DescriptorRangeTypeToD3D12HeapType(d3d12Range.RangeType) == d3d12HeapType);
+            VERIFY_EXPR(d3d12Range.NumDescriptors > 0);
+            const auto RangeStartOffset = TableOffset + d3d12Range.OffsetInDescriptorsFromTableStart;
+            VERIFY(RangeStartOffset + d3d12Range.NumDescriptors <= TableSlots.size(),
+                   "Descriptor range exceeds allocated descriptor table size");
+            for (Uint32 slot = RangeStartOffset; slot < RangeStartOffset + d3d12Range.NumDescriptors; ++slot)
+            {
+                VERIFY(!TableSlots[slot], "Slot ", slot, " has already been used by another descriptor range. Overlapping ranges is a bug.");
+                TableSlots[slot] = true;
+            }
+        }
+    }
+
+    for (auto d3d12HeapType : {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER})
+    {
+        for (Uint32 group = 0; group < ROOT_PARAMETER_GROUP_COUNT; ++group)
+        {
+            const auto& TableSlots = DescriptorSlots[d3d12HeapType][group];
+            for (size_t i = 0; i < TableSlots.size(); ++i)
+            {
+                VERIFY(TableSlots[i], "Descriptor ", i, " is not used by any of the descriptor ranges. All ranges must be tightly packed.");
+            }
+        }
+    }
+
+    for (Uint32 i = 0; i < GetNumRootViews(); ++i)
+    {
+        const auto& RootView = GetRootView(i);
+        VERIFY(RootView.TableOffsetInGroupAllocation == RootParameter::InvalidTableOffsetInGroupAllocation,
+               "Root views must not be assigned to descriptor table allocations.");
+    }
+}
+#endif
+
+
 
 RootParamsBuilder::RootParamsBuilder()
 {
@@ -194,7 +263,7 @@ RootParameter& RootParamsBuilder::AddRootView(D3D12_ROOT_PARAMETER_TYPE Paramete
     D3D12_ROOT_PARAMETER d3d12RootParam{ParameterType, {}, Visibility};
     d3d12RootParam.Descriptor.ShaderRegister = Register;
     d3d12RootParam.Descriptor.RegisterSpace  = RegisterSpace;
-    m_RootViews.emplace_back(Group, RootIndex, d3d12RootParam);
+    m_RootViews.emplace_back(RootIndex, Group, d3d12RootParam);
 
     return m_RootViews.back();
 }
@@ -243,11 +312,6 @@ RootParamsBuilder::RootTableData& RootParamsBuilder::AddRootTable(Uint32        
     m_RootTables.emplace_back(RootIndex, Visibility, Group, NumRangesInNewTable);
 
     return m_RootTables.back();
-}
-
-inline ROOT_PARAMETER_GROUP VariableTypeToRootParameterGroup(SHADER_RESOURCE_VARIABLE_TYPE VarType)
-{
-    return VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC ? ROOT_PARAMETER_GROUP_DYNAMIC : ROOT_PARAMETER_GROUP_STATIC_MUTABLE;
 }
 
 void RootParamsBuilder::AllocateResourceSlot(SHADER_TYPE                   ShaderStages,
@@ -387,19 +451,22 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
 #endif
         memcpy(pCurrDescrRangePtr, d3d12SrcTbl.pDescriptorRanges, d3d12SrcTbl.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE));
 
+        const auto d3d12HeapType = D3D12DescriptorRangeTypeToD3D12HeapType(d3d12SrcTbl.pDescriptorRanges[0].RangeType);
+
+        auto& TableOffsetInGroupAllocation = ParamsMgr.m_TotalTableSlots[d3d12HeapType][SrcTbl.Group];
+
         auto* pTbl = new (pRootTables + rt) RootParameter{
-            SrcTbl.Group, SrcTbl.RootIndex,
+            SrcTbl.RootIndex, SrcTbl.Group,
             D3D12_ROOT_PARAMETER //
             {
                 D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
                 D3D12_ROOT_DESCRIPTOR_TABLE{d3d12SrcTbl.NumDescriptorRanges, pCurrDescrRangePtr},
                 d3d12SrcParam.ShaderVisibility //
-            }                                  //
+            },
+            TableOffsetInGroupAllocation //
         };
 
-        const auto IsSampler = pTbl->d3d12RootParam.DescriptorTable.pDescriptorRanges[0].RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        (IsSampler ? ParamsMgr.m_TotalSamplerSlots : ParamsMgr.m_TotalSrvCbvUavSlots)[pTbl->Group] += pTbl->GetDescriptorTableSize();
-
+        TableOffsetInGroupAllocation += pTbl->GetDescriptorTableSize();
         pCurrDescrRangePtr += d3d12SrcTbl.NumDescriptorRanges;
     }
     VERIFY_EXPR(pCurrDescrRangePtr == pDescriptorRanges + TotalRangesCount);
@@ -413,11 +480,14 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
                 d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
                 d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV),
                "Unexpected parameter type: SBV, SRV or UAV is expected");
-        new (pRootViews + rv) RootParameter{SrcView.Group, SrcView.RootIndex, d3d12RootParam};
+        new (pRootViews + rv) RootParameter{SrcView.RootIndex, SrcView.Group, d3d12RootParam};
     }
-
     ParamsMgr.m_pRootTables = NumRootTables != 0 ? pRootTables : nullptr;
     ParamsMgr.m_pRootViews  = NumRootViews != 0 ? pRootViews : nullptr;
+
+#ifdef DILIGENT_DEBUG
+    ParamsMgr.Validate();
+#endif
 }
 
 } // namespace Diligent
