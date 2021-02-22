@@ -217,12 +217,13 @@ DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Coun
     ++m_AllocationsCounter;
     // Copy invalid descriptors. If the descriptors are accessed, this will cause device removal.
     {
-        auto*      pd3d12Device      = m_DeviceD3D12Impl.GetD3D12Device();
-        const auto InvalidCPUHandles = m_pd3d12InvalidDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-        auto       DstCPUHandle      = CPUHandle;
-        for (Uint32 FisrtDescr = 0; FisrtDescr < Count; FisrtDescr += InvalidDescriptorsCount, DstCPUHandle.ptr += InvalidDescriptorsCount)
+        auto* const pd3d12Device      = m_DeviceD3D12Impl.GetD3D12Device();
+        const auto  InvalidCPUHandles = m_pd3d12InvalidDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+        for (Uint32 FisrtDescr = 0; FisrtDescr < Count; FisrtDescr += InvalidDescriptorsCount)
         {
             auto NumDescrsToCopy = std::min(Count - FisrtDescr, InvalidDescriptorsCount);
+            auto DstCPUHandle    = CPUHandle;
+            DstCPUHandle.ptr += FisrtDescr * m_DescriptorSize;
             pd3d12Device->CopyDescriptorsSimple(NumDescrsToCopy, DstCPUHandle, InvalidCPUHandles, m_HeapDesc.Type);
         }
     }
