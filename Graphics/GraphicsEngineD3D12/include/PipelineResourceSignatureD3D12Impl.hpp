@@ -36,6 +36,7 @@
 #include "SRBMemoryAllocator.hpp"
 #include "RootParamsManager.hpp"
 #include "ShaderResourceCacheD3D12.hpp"
+#include "ResourceBindingMap.hpp"
 
 namespace Diligent
 {
@@ -48,8 +49,6 @@ class ShaderVariableManagerD3D12;
 /// Implementation of the Diligent::PipelineResourceSignatureD3D12Impl class
 class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceD3D12Impl>
 {
-    friend class RootSignatureD3D12;
-
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceD3D12Impl>;
 
@@ -281,6 +280,15 @@ public:
                          Uint32                    BaseRootIndex,
                          bool                      IsCompute,
                          bool                      CommitDynamicBuffers) const;
+
+    const RootParamsManager& GetRootParams() const { return m_RootParams; }
+
+    // Adds resources and immutable samplers from this signature to the
+    // resource binding map.
+    void UpdateShaderResourceBindingMap(ResourceBinding::TMap& ResourceMap, SHADER_TYPE ShaderStage, Uint32 BaseRegisterSpace) const;
+
+    // Returns true if there is an immutable sampler array in the given shader stage.
+    bool HasImmutableSamplerArray(SHADER_TYPE ShaderStage) const;
 
 private:
     using StaticResCacheTblSizesArrayType = std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1>;

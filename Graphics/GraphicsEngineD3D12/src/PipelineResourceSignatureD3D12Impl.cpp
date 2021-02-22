@@ -754,6 +754,75 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
 }
 
 
+void PipelineResourceSignatureD3D12Impl::UpdateShaderResourceBindingMap(ResourceBinding::TMap& ResourceMap, SHADER_TYPE ShaderStage, Uint32 BaseRegisterSpace) const
+{
+    VERIFY(ShaderStage != SHADER_TYPE_UNKNOWN && IsPowerOfTwo(ShaderStage), "Only single shader stage must be provided.");
+
+    for (Uint32 r = 0, ResCount = GetTotalResourceCount(); r < ResCount; ++r)
+    {
+        const auto& ResDesc = GetResourceDesc(r);
+        const auto& Attribs = GetResourceAttribs(r);
+
+        if ((ResDesc.ShaderStages & ShaderStage) != 0)
+        {
+            ResourceBinding::BindInfo BindInfo //
+                {
+                    Attribs.Register,
+                    Attribs.Space + BaseRegisterSpace,
+                    ResDesc.ArraySize //
+                };
+            auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
+            VERIFY(IsUnique, "Shader resource '", ResDesc.Name,
+                   "' already present in the binding map. Every shader resource in PSO must be unambiguously defined by "
+                   "only one resource signature. This error should've been caught by ValidatePipelineResourceSignatures().");
+        }
+    }
+
+    for (Uint32 samp = 0, SampCount = GetImmutableSamplerCount(); samp < SampCount; ++samp)
+    {
+        const auto& ImtblSam = GetImmutableSamplerDesc(samp);
+        const auto& SampAttr = GetImmutableSamplerAttribs(samp);
+
+        if ((ImtblSam.ShaderStages & ShaderStage) != 0)
+        {
+            String SampName{ImtblSam.SamplerOrTextureName};
+            if (IsUsingCombinedSamplers())
+                SampName += GetCombinedSamplerSuffix();
+
+            ResourceBinding::BindInfo BindInfo //
+                {
+                    SampAttr.ShaderRegister,
+                    SampAttr.RegisterSpace + BaseRegisterSpace,
+                    SampAttr.ArraySize //
+                };
+
+            auto it_inserted = ResourceMap.emplace(HashMapStringKey{SampName}, BindInfo);
+#ifdef DILIGENT_DEBUG
+            if (!it_inserted.second)
+            {
+                const auto& ExistingBindInfo = it_inserted.first->second;
+                VERIFY(ExistingBindInfo.BindPoint == BindInfo.BindPoint,
+                       "Bind point defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
+                VERIFY(ExistingBindInfo.Space == BindInfo.Space,
+                       "Register space defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
+            }
+#endif
+        }
+    }
+}
+
+bool PipelineResourceSignatureD3D12Impl::HasImmutableSamplerArray(SHADER_TYPE ShaderStage) const
+{
+    for (Uint32 s = 0; s < GetImmutableSamplerCount(); ++s)
+    {
+        const auto& ImtblSam = GetImmutableSamplerDesc(s);
+        const auto& SampAttr = GetImmutableSamplerAttribs(s);
+        if ((ImtblSam.ShaderStages & ShaderStage) != 0 && SampAttr.ArraySize > 1)
+            return true;
+    }
+    return false;
+}
+
 namespace
 {
 

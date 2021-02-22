@@ -35,11 +35,9 @@
 #include "D3D12TypeConversions.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DXGITypeConversions.hpp"
-#include "ShaderResourceBindingD3D12Impl.hpp"
 #include "CommandContext.hpp"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
-#include "ShaderVariableD3D12.hpp"
 #include "DynamicLinearAllocator.hpp"
 #include "DXBCUtils.hpp"
 #include "DXCompiler.hpp"
@@ -47,6 +45,7 @@
 
 namespace Diligent
 {
+
 namespace
 {
 #ifdef _MSC_VER
@@ -119,7 +118,6 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
     std::array<typename TShaderStages::value_type*, MAX_SHADERS_IN_PIPELINE> StagesPtr     = {};
     std::array<Uint32, MAX_SHADERS_IN_PIPELINE>                              ShaderIndices = {};
 
-    // prepare
     for (auto& Stage : ShaderStages)
     {
         const auto Idx = GetShaderTypePipelineIndex(Stage.Type, PIPELINE_TYPE_RAY_TRACING);
@@ -292,7 +290,7 @@ void GetShaderResourceTypeAndFlags(const D3DShaderResourceAttribs& Attribs,
 {
     OutFlags = PIPELINE_RESOURCE_FLAG_UNKNOWN;
 
-    switch (static_cast<Uint32>(Attribs.GetInputType()))
+    switch (int{Attribs.GetInputType()})
     {
         case D3D_SIT_CBUFFER:
             OutType = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
@@ -361,6 +359,7 @@ void VerifyResourceMerge(const D3DShaderResourceAttribs& ExistingRes,
                   "' exists in multiple shaders from the same shader stage, but its array size is not consistent between "
                   "shaders. All variables with the same name from the same shader stage must have the same array size.");
 }
+
 } // namespace
 
 
@@ -401,36 +400,39 @@ size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 }
 
 
-void PipelineStateD3D12Impl::CreateDefaultResourceSignature(const PipelineStateCreateInfo& CreateInfo,
-                                                            TShaderStages&                 ShaderStages,
-                                                            LocalRootSignatureD3D12*       pLocalRootSig,
-                                                            IPipelineResourceSignature**   ppImplicitSignature)
+RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultResourceSignature(
+    RenderDeviceD3D12Impl*         pDevice,
+    const PipelineStateCreateInfo& CreateInfo,
+    TShaderStages&                 ShaderStages,
+    LocalRootSignatureD3D12*       pLocalRootSig)
 {
+    const auto& LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
+
     struct UniqueResource
     {
-        D3DShaderResourceAttribs const* Attribs   = nullptr;
-        Uint32                          DescIndex = ~0u;
+        const D3DShaderResourceAttribs& Attribs;
+
+        // Resource index
+        const Uint32 DescIndex;
     };
-    using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, UniqueResource, HashMapStringKey::Hasher>;
+    std::unordered_map<HashMapStringKey, UniqueResource, HashMapStringKey::Hasher> UniqueNames;
 
     std::vector<PipelineResourceDesc> Resources;
-    ResourceNameToIndex_t             UniqueNames;
     const char*                       pCombinedSamplerSuffix = nullptr;
-    const auto&                       LayoutDesc             = CreateInfo.PSODesc.ResourceLayout;
 
     for (auto& Stage : ShaderStages)
     {
         UniqueNames.clear();
         for (auto* pShader : Stage.Shaders)
         {
-            const auto DefaultVarType  = LayoutDesc.DefaultVariableType;
-            auto&      ShaderResources = *pShader->GetShaderResources();
-            const auto HandleResource  = [&](const D3DShaderResourceAttribs& Res, Uint32) //
+            const auto& ShaderResources = *pShader->GetShaderResources();
+
+            const auto HandleResource = [&](const D3DShaderResourceAttribs& Res, Uint32) //
             {
                 if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Res))
                     return;
 
-                auto IterAndAssigned = UniqueNames.emplace(HashMapStringKey{Res.Name}, UniqueResource{&Res, static_cast<Uint32>(Resources.size())});
+                auto IterAndAssigned = UniqueNames.emplace(HashMapStringKey{Res.Name}, UniqueResource{Res, static_cast<Uint32>(Resources.size())});
                 if (IterAndAssigned.second)
                 {
                     SHADER_RESOURCE_TYPE    Type;
@@ -439,15 +441,15 @@ void PipelineStateD3D12Impl::CreateDefaultResourceSignature(const PipelineStateC
 
                     if (Res.BindCount == 0)
                     {
-                        LOG_ERROR_AND_THROW("Is shader '", pShader->GetDesc().Name, "' resource '", Res.Name, "' uses runtime sized array, ",
-                                            "you must explicitlly set resource signature to specify array size");
+                        LOG_ERROR_AND_THROW("Resource '", Res.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
+                                            "Use explicit resource signature to specify the array size.");
                     }
 
-                    Resources.emplace_back(Stage.Type, Res.Name, Res.BindCount, Type, DefaultVarType, Flags);
+                    Resources.emplace_back(Stage.Type, Res.Name, Res.BindCount, Type, LayoutDesc.DefaultVariableType, Flags);
                 }
                 else
                 {
-                    VerifyResourceMerge(*IterAndAssigned.first->second.Attribs, Res);
+                    VerifyResourceMerge(IterAndAssigned.first->second.Attribs, Res);
                 }
             };
 
@@ -481,8 +483,8 @@ void PipelineStateD3D12Impl::CreateDefaultResourceSignature(const PipelineStateC
                         // apply new variable type to sampler too
                         if (ShaderResources.IsUsingCombinedTextureSamplers() && Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
                         {
-                            String SampName = String{Var.Name} + ShaderResources.GetCombinedSamplerSuffix();
-                            auto   SampIter = UniqueNames.find(HashMapStringKey{SampName.c_str()});
+                            auto SampName = String{Var.Name} + ShaderResources.GetCombinedSamplerSuffix();
+                            auto SampIter = UniqueNames.find(HashMapStringKey{SampName.c_str()});
                             if (SampIter != UniqueNames.end())
                                 Resources[SampIter->second.DescIndex].VarType = Var.Type;
                         }
@@ -492,6 +494,7 @@ void PipelineStateD3D12Impl::CreateDefaultResourceSignature(const PipelineStateC
         }
     }
 
+    RefCntAutoPtr<IPipelineResourceSignature> pImplicitSignature;
     if (Resources.size())
     {
         PipelineResourceSignatureDesc ResSignDesc;
@@ -504,11 +507,13 @@ void PipelineStateD3D12Impl::CreateDefaultResourceSignature(const PipelineStateC
         ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
         ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
 
-        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, ppImplicitSignature, true);
+        pDevice->CreatePipelineResourceSignature(ResSignDesc, &pImplicitSignature, true);
 
-        if (*ppImplicitSignature == nullptr)
+        if (!pImplicitSignature)
             LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
     }
+
+    return pImplicitSignature;
 }
 
 PipelineStateD3D12Impl::ResourceInfo PipelineStateD3D12Impl::GetResourceInfo(const char* Name, SHADER_TYPE Stage) const
@@ -539,39 +544,43 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                                                TShaderStages&                 ShaderStages,
                                                LocalRootSignatureD3D12*       pLocalRootSig)
 {
-    const Uint32                              SignatureCount = CreateInfo.ResourceSignaturesCount;
-    RefCntAutoPtr<IPipelineResourceSignature> pImplicitSignature;
-
-    if (SignatureCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
+    Uint32 SignatureCount = 0;
+    if (CreateInfo.ResourceSignaturesCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
     {
-        CreateDefaultResourceSignature(CreateInfo, ShaderStages, pLocalRootSig, &pImplicitSignature);
-
-        if (pImplicitSignature != nullptr)
+        auto pImplicitSignature = CreateDefaultResourceSignature(GetDevice(), CreateInfo, ShaderStages, pLocalRootSig);
+        if (pImplicitSignature)
         {
             VERIFY_EXPR(pImplicitSignature->GetDesc().BindingIndex == 0);
-            m_Signatures[0]  = ValidatedCast<PipelineResourceSignatureD3D12Impl>(pImplicitSignature.RawPtr());
-            m_SignatureCount = 1;
+            SignatureCount = 1;
+            m_ResourceSignatures.reset(new RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[SignatureCount]);
+            m_ResourceSignatures[0] = pImplicitSignature.RawPtr<PipelineResourceSignatureD3D12Impl>();
         }
     }
     else
     {
+        Uint32 MaxSignatureBindingIndex = 0;
+        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+        {
+            auto* pSignature = ValidatedCast<PipelineResourceSignatureD3D12Impl>(CreateInfo.ppResourceSignatures[i]);
+            VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
+            MaxSignatureBindingIndex = std::max(MaxSignatureBindingIndex, Uint32{pSignature->GetDesc().BindingIndex});
+        }
+        SignatureCount = MaxSignatureBindingIndex + 1;
+        m_ResourceSignatures.reset(new RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[SignatureCount]);
+
         // TODO: move to base class
         const auto PipelineType = CreateInfo.PSODesc.PipelineType;
-        for (Uint32 i = 0; i < SignatureCount; ++i)
+        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
         {
             auto* pSignature = ValidatedCast<PipelineResourceSignatureD3D12Impl>(CreateInfo.ppResourceSignatures[i]);
             VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
 
-            const Uint8 Index = pSignature->GetDesc().BindingIndex;
+            const auto Index = pSignature->GetDesc().BindingIndex;
 
 #ifdef DILIGENT_DEBUG
-            VERIFY(Index < m_Signatures.size(),
-                   "Pipeline resource signature specifies binding index ", Uint32{Index}, " that exceeds the limit (", m_Signatures.size() - 1,
-                   "). This error should've been caught by ValidatePipelineResourceSignatureDesc.");
-
-            VERIFY(m_Signatures[Index] == nullptr,
+            VERIFY(m_ResourceSignatures[Index] == nullptr,
                    "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
-                   " conflicts with another resource signature '", m_Signatures[Index]->GetDesc().Name,
+                   " conflicts with another resource signature '", m_ResourceSignatures[Index]->GetDesc().Name,
                    "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
 
             for (Uint32 s = 0, StageCount = pSignature->GetNumActiveShaderStages(); s < StageCount; ++s)
@@ -584,12 +593,11 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
             }
 #endif
 
-            m_SignatureCount    = std::max<Uint8>(m_SignatureCount, Index + 1);
-            m_Signatures[Index] = pSignature;
+            m_ResourceSignatures[Index] = pSignature;
         }
     }
 
-    m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_Signatures.data(), m_SignatureCount);
+    m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_ResourceSignatures.get(), SignatureCount);
     if (!m_RootSig)
         LOG_ERROR_AND_THROW("Failed to create root signature");
 
@@ -605,79 +613,44 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        const auto& Shaders           = ShaderStages[s].Shaders;
-        auto&       ByteCodes         = ShaderStages[s].ByteCodes;
-        const auto  ShaderType        = ShaderStages[s].Type;
-        bool        HasImtblSampArray = false;
+        const auto& Shaders    = ShaderStages[s].Shaders;
+        auto&       ByteCodes  = ShaderStages[s].ByteCodes;
+        const auto  ShaderType = ShaderStages[s].Type;
 
+        bool                  HasImtblSamArray = false;
         ResourceBinding::TMap ResourceMap;
-        for (Uint32 Sig = 0, SigCount = GetSignatureCount(); Sig < SigCount; ++Sig)
+        // Note that we must use signatures from m_ResourceSignatures for resource binding map,
+        // because signatures from m_RootSig may have resources with different names.
+        for (Uint32 sign = 0; sign < SignatureCount; ++sign)
         {
-            auto* pSignature = GetSignature(Sig);
-            if (pSignature != nullptr)
-            {
-                const Uint32 FirstSpace = m_RootSig->GetFirstRegisterSpace(Sig);
+            const PipelineResourceSignatureD3D12Impl* const pSignature = m_ResourceSignatures[sign];
+            if (pSignature == nullptr)
+                continue;
 
-                for (Uint32 r = 0, ResCount = pSignature->GetTotalResourceCount(); r < ResCount; ++r)
-                {
-                    const auto& ResDesc = pSignature->GetResourceDesc(r);
-                    const auto& Attribs = pSignature->GetResourceAttribs(r);
+            VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
+            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, m_RootSig->GetBaseRegisterSpace(sign));
 
-                    if (ResDesc.ShaderStages & ShaderType)
-                    {
-                        auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, ResourceBinding::BindInfo{Attribs.Register, Attribs.Space + FirstSpace, ResDesc.ArraySize}).second;
-                        VERIFY(IsUnique, "resource name must be unique");
-                    }
-                }
-
-                for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
-                {
-                    const auto&               ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
-                    const auto&               SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
-                    ResourceBinding::BindInfo BindInfo{SampAttr.ShaderRegister, SampAttr.RegisterSpace + FirstSpace, SampAttr.ArraySize};
-
-                    if (ImtblSam.ShaderStages & ShaderType)
-                    {
-                        HasImtblSampArray = HasImtblSampArray || (SampAttr.ArraySize > 1);
-
-                        String SampName{ImtblSam.SamplerOrTextureName};
-                        if (pSignature->IsUsingCombinedSamplers())
-                            SampName += pSignature->GetCombinedSamplerSuffix();
-
-                        auto it_inserted = ResourceMap.emplace(HashMapStringKey{SampName}, BindInfo);
-#ifdef DILIGENT_DEBUG
-                        if (!it_inserted.second)
-                        {
-                            const auto& ExistingBindInfo = it_inserted.first->second;
-                            VERIFY(ExistingBindInfo.BindPoint == BindInfo.BindPoint,
-                                   "Bind point defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
-                            VERIFY(ExistingBindInfo.Space == BindInfo.Space,
-                                   "Register space defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
-                        }
-#endif
-                    }
-                }
-            }
+            if (pSignature->HasImmutableSamplerArray(ShaderType))
+                HasImtblSamArray = true;
         }
 
         if (pLocalRootSig != nullptr && pLocalRootSig->IsDefined())
         {
             bool IsUnique = ResourceMap.emplace(HashMapStringKey{pLocalRootSig->GetName()}, ResourceBinding::BindInfo{pLocalRootSig->GetShaderRegister(), pLocalRootSig->GetRegisterSpace(), 1}).second;
             if (!IsUnique)
-                LOG_ERROR_AND_THROW("Shader record constant buffer is already exist in resource signature");
+                LOG_ERROR_AND_THROW("Shader record constant buffer already exists in the resource signature");
         }
 
         for (size_t i = 0; i < Shaders.size(); ++i)
         {
-            auto*             pShader   = Shaders[i];
+            const auto* const pShader   = Shaders[i];
             auto&             pBytecode = ByteCodes[i];
-            CComPtr<ID3DBlob> pBlob;
-            Uint32            VerMajor, VerMinor;
 
+            Uint32 VerMajor, VerMinor;
             pShader->GetShaderResources()->GetShaderModel(VerMajor, VerMinor);
             const bool IsSM51orAbove = ((VerMajor == 5 && VerMinor >= 1) || VerMajor >= 6);
 
-            if (HasImtblSampArray && IsSM51orAbove)
+            if (HasImtblSamArray && IsSM51orAbove)
             {
                 LOG_ERROR_AND_THROW("One of resource signatures uses immutable sampler array that is not allowed in shader model 5.1 and above.");
             }
@@ -689,6 +662,7 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                                     "Compile the shader using SM5.1+ or change the resource layout to use only one space.");
             }
 
+            CComPtr<ID3DBlob> pBlob;
             if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
             {
                 if (!compiler)
@@ -708,76 +682,85 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
             pBytecode = pBlob;
 
 #ifdef DILIGENT_DEVELOPMENT
-            const auto& pShaderResources = pShader->GetShaderResources();
-            m_ShaderResources.emplace_back(pShaderResources);
-
-            // Check compatibility between shader resources and resource signature.
-            const auto HandleResource = [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
-            {
-                if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Attribs))
-                    return;
-
-                if (Attribs.GetInputType() == D3D_SIT_SAMPLER)
-                    return;
-
-                auto Info = GetResourceInfo(Attribs.Name, ShaderType);
-                if (!Info)
-                {
-                    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
-                                        "' that is not present in any pipeline resource signature that is used to create pipeline state '",
-                                        m_Desc.Name, "'.");
-                }
-
-                SHADER_RESOURCE_TYPE    Type;
-                PIPELINE_RESOURCE_FLAGS Flags;
-                GetShaderResourceTypeAndFlags(Attribs, Type, Flags);
-                if (Type != Info.ResDesc->ResourceType)
-                {
-                    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
-                                        "' and type '", GetShaderResourceTypeLiteralName(Type), "' that is not compatible with type '",
-                                        GetShaderResourceTypeLiteralName(Info.ResDesc->ResourceType), "' in pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
-                }
-
-                if ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != (Info.ResDesc->Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER))
-                {
-                    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", Attribs.Name,
-                                        "' that is", ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
-                                        " labeled as formatted buffer, while the same resource specified by the pipeline resource signature '",
-                                        Info.Signature->GetDesc().Name, "' is", ((Info.ResDesc->Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
-                                        " labeled as such.");
-                }
-
-                if (Attribs.BindCount == 0)
-                {
-                    if ((Info.ResDesc->Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0)
-                    {
-                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
-                                            "' that is runtime-sized array, but in resource signature '", Info.Signature->GetDesc().Name,
-                                            "' resource defined without PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
-                    }
-                }
-                else
-                {
-                    if (Info.ResDesc->ArraySize < Attribs.BindCount)
-                    {
-                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", Attribs.Name,
-                                            "' whose array size (", Attribs.BindCount, ") is greater than the array size (",
-                                            Info.ResDesc->ArraySize, ") specified by the pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
-                    }
-
-                    if (Info.ResDesc->Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY)
-                    {
-                        LOG_WARNING_MESSAGE("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
-                                            "' that defined in resource signature '", Info.Signature->GetDesc().Name,
-                                            "' with flag PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY, but resource is not a runtime-sized array.");
-                    }
-                }
-            };
-            pShaderResources->ProcessResources(HandleResource, HandleResource, HandleResource, HandleResource, HandleResource, HandleResource, HandleResource);
+            m_ShaderResources.emplace_back(pShader->GetShaderResources());
+            DvpValidateShaderResources(pShader, pLocalRootSig);
 #endif
         }
     }
 }
+
+#ifdef DILIGENT_DEVELOPMENT
+void PipelineStateD3D12Impl::DvpValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig) const
+{
+    const auto& pShaderResources = pShader->GetShaderResources();
+    const auto  ShaderType       = pShader->GetDesc().ShaderType;
+
+    // Check compatibility between shader resources and resource signature.
+    const auto HandleResource = [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
+    {
+        if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Attribs))
+            return;
+
+        if (Attribs.GetInputType() == D3D_SIT_SAMPLER)
+            return;
+
+        auto Info = GetResourceInfo(Attribs.Name, ShaderType);
+        if (!Info)
+        {
+            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
+                                "' that is not present in any pipeline resource signature used to create pipeline state '",
+                                m_Desc.Name, "'.");
+        }
+
+        SHADER_RESOURCE_TYPE    Type;
+        PIPELINE_RESOURCE_FLAGS Flags;
+        GetShaderResourceTypeAndFlags(Attribs, Type, Flags);
+        if (Type != Info.ResDesc->ResourceType)
+        {
+            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
+                                "' and type '", GetShaderResourceTypeLiteralName(Type), "' that is not compatible with type '",
+                                GetShaderResourceTypeLiteralName(Info.ResDesc->ResourceType), "' in pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
+        }
+
+        if ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != (Info.ResDesc->Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER))
+        {
+            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", Attribs.Name,
+                                "' that is", ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
+                                " labeled as formatted buffer, while the same resource specified by the pipeline resource signature '",
+                                Info.Signature->GetDesc().Name, "' is", ((Info.ResDesc->Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
+                                " labeled as such.");
+        }
+
+        if (Attribs.BindCount == 0)
+        {
+            if ((Info.ResDesc->Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0)
+            {
+                LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
+                                    "' that is runtime-sized array, but in resource signature '", Info.Signature->GetDesc().Name,
+                                    "' resource defined without PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
+            }
+        }
+        else
+        {
+            if (Info.ResDesc->ArraySize < Attribs.BindCount)
+            {
+                LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", Attribs.Name,
+                                    "' whose array size (", Attribs.BindCount, ") is greater than the array size (",
+                                    Info.ResDesc->ArraySize, ") specified by the pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
+            }
+
+            if (Info.ResDesc->Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY)
+            {
+                LOG_WARNING_MESSAGE("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
+                                    "' that defined in resource signature '", Info.Signature->GetDesc().Name,
+                                    "' with flag PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY, but resource is not a runtime-sized array.");
+            }
+        }
+    };
+    pShaderResources->ProcessResources(HandleResource, HandleResource, HandleResource, HandleResource, HandleResource, HandleResource, HandleResource);
+}
+#endif
+
 
 template <typename PSOCreateInfoType>
 void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo,
@@ -1100,7 +1083,6 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
 
 void PipelineStateD3D12Impl::Destruct()
 {
-    m_Signatures.fill({});
     m_RootSig.Release();
 
     if (m_pd3d12PSO)

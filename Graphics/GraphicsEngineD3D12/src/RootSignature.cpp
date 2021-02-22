@@ -30,8 +30,6 @@
 #include "RootSignature.hpp"
 #include "CommandContext.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "TextureD3D12Impl.hpp"
-#include "TopLevelASD3D12Impl.hpp"
 #include "D3D12TypeConversions.hpp"
 #include "HashUtils.hpp"
 
@@ -44,37 +42,41 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
                                        Uint32                                                   SignatureCount,
                                        size_t                                                   Hash) :
     ObjectBase<IObject>{pRefCounters},
-    m_SignatureCount{static_cast<Uint8>(SignatureCount)},
+    m_SignatureCount{SignatureCount},
     m_Hash{Hash},
     m_Cache{pDeviceD3D12Impl->GetRootSignatureCache()}
 {
-    VERIFY(m_SignatureCount == SignatureCount, "Signature count (", SignatureCount, ") exceeds maximum representable value");
+    if (m_SignatureCount > 0)
+    {
+        m_ResourceSignatures.reset(new ResourceSignatureInfo[m_SignatureCount]);
+    }
 
     for (Uint32 i = 0; i < SignatureCount; ++i)
     {
-        m_Signatures[i] = ppSignatures[i];
-
+        m_ResourceSignatures[i].pSignature = ppSignatures[i];
         if (ppSignatures[i] != nullptr)
         {
             VERIFY(ppSignatures[i]->GetDesc().BindingIndex == i, "Signature placed to another binding index");
         }
     }
 
-    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-    rootSignatureDesc.Flags                     = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-    Uint32 TotalParams              = 0;
-    Uint32 Totald3d12StaticSamplers = 0;
-    Uint32 TotalDescriptorRanges    = 0;
+    // The total number of root parameters in all resource signatures.
+    Uint32 TotalParams = 0;
+    // The total number of static samplers, accounting for array size, in all resource signatures.
+    Uint32 TotalImmutableSamplers = 0;
+    // The total number of descriptor ranges in all descriptor tables from all resource signatures.
+    Uint32 TotalDescriptorRanges = 0;
     for (Uint32 s = 0; s < m_SignatureCount; ++s)
     {
-        auto& pSignature = m_Signatures[s];
+        auto& SignInfo = m_ResourceSignatures[s];
+
+        const PipelineResourceSignatureD3D12Impl* const pSignature = SignInfo.pSignature;
         if (pSignature == nullptr)
             continue;
 
-        auto& RootParams = pSignature->m_RootParams;
+        const auto& RootParams = pSignature->GetRootParams();
 
-        m_FirstRootIndex[s] = static_cast<Uint16>(TotalParams);
+        SignInfo.BaseRootIndex = TotalParams;
         TotalParams += RootParams.GetNumRootTables() + RootParams.GetNumRootViews();
 
         for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
@@ -88,41 +90,55 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
             const auto& ImtblSam = pSignature->GetImmutableSamplerAttribs(samp);
             VERIFY_EXPR(ImtblSam.IsValid());
 
-            Totald3d12StaticSamplers += ImtblSam.ArraySize;
+            TotalImmutableSamplers += ImtblSam.ArraySize;
         }
     }
 
-    std::vector<D3D12_ROOT_PARAMETER, STDAllocatorRawMem<D3D12_ROOT_PARAMETER>>           d3d12Parameters(TotalParams, D3D12_ROOT_PARAMETER{}, STD_ALLOCATOR_RAW_MEM(D3D12_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<D3D12_ROOT_PARAMETER>"));
-    std::vector<D3D12_DESCRIPTOR_RANGE, STDAllocatorRawMem<D3D12_DESCRIPTOR_RANGE>>       d3d12DescrRanges(TotalDescriptorRanges, D3D12_DESCRIPTOR_RANGE{}, STD_ALLOCATOR_RAW_MEM(D3D12_DESCRIPTOR_RANGE, GetRawAllocator(), "Allocator for vector<D3D12_DESCRIPTOR_RANGE>"));
-    std::vector<D3D12_STATIC_SAMPLER_DESC, STDAllocatorRawMem<D3D12_STATIC_SAMPLER_DESC>> d3d12StaticSamplers(STD_ALLOCATOR_RAW_MEM(D3D12_STATIC_SAMPLER_DESC, GetRawAllocator(), "Allocator for vector<D3D12_STATIC_SAMPLER_DESC>"));
-    d3d12StaticSamplers.reserve(Totald3d12StaticSamplers);
+    // Reserve space for all root parameters
+    std::vector<D3D12_ROOT_PARAMETER, STDAllocatorRawMem<D3D12_ROOT_PARAMETER>> d3d12Parameters(
+        TotalParams,
+        D3D12_ROOT_PARAMETER{static_cast<D3D12_ROOT_PARAMETER_TYPE>(-1)},
+        STD_ALLOCATOR_RAW_MEM(D3D12_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<D3D12_ROOT_PARAMETER>"));
+    // ... descriptor ranges,
+    std::vector<D3D12_DESCRIPTOR_RANGE, STDAllocatorRawMem<D3D12_DESCRIPTOR_RANGE>> d3d12DescrRanges(
+        TotalDescriptorRanges,
+        D3D12_DESCRIPTOR_RANGE{},
+        STD_ALLOCATOR_RAW_MEM(D3D12_DESCRIPTOR_RANGE, GetRawAllocator(), "Allocator for vector<D3D12_DESCRIPTOR_RANGE>"));
+    // ... and static samplers.
+    std::vector<D3D12_STATIC_SAMPLER_DESC, STDAllocatorRawMem<D3D12_STATIC_SAMPLER_DESC>> d3d12StaticSamplers(
+        STD_ALLOCATOR_RAW_MEM(D3D12_STATIC_SAMPLER_DESC, GetRawAllocator(), "Allocator for vector<D3D12_STATIC_SAMPLER_DESC>"));
+    d3d12StaticSamplers.reserve(TotalImmutableSamplers);
 
     auto descr_range_it = d3d12DescrRanges.begin();
 
     Uint32 BaseRegisterSpace = 0;
     for (Uint32 sig = 0; sig < m_SignatureCount; ++sig)
     {
-        m_FirstRegisterSpace[sig] = static_cast<Uint16>(BaseRegisterSpace);
+        auto& SignInfo = m_ResourceSignatures[sig];
 
-        const auto& pSignature = m_Signatures[sig];
+        SignInfo.BaseRegisterSpace = BaseRegisterSpace;
+
+        const PipelineResourceSignatureD3D12Impl* const pSignature = SignInfo.pSignature;
         if (pSignature == nullptr)
             continue;
 
-        const auto& RootParams     = pSignature->m_RootParams;
-        const auto  FirstRootIndex = m_FirstRootIndex[sig];
+        const auto& RootParams = pSignature->GetRootParams();
 
         Uint32 MaxSpaceUsed = 0;
         for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
         {
-            const auto&  RootTable     = RootParams.GetRootTable(rt);
-            const auto&  d3d12SrcParam = RootTable.d3d12RootParam;
-            const auto&  d3d12SrcTbl   = d3d12SrcParam.DescriptorTable;
-            const Uint32 RootIndex     = FirstRootIndex + RootTable.RootIndex;
+            const auto& RootTable     = RootParams.GetRootTable(rt);
+            const auto& d3d12SrcParam = RootTable.d3d12RootParam;
+            const auto& d3d12SrcTbl   = d3d12SrcParam.DescriptorTable;
+            // Offset root parameter index by the base root index of the current resource signature
+            const Uint32 RootIndex = SignInfo.BaseRootIndex + RootTable.RootIndex;
             VERIFY(d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && d3d12SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected");
             auto& d3d12DstParam = d3d12Parameters[RootIndex];
             auto& d3d12DstTbl   = d3d12DstParam.DescriptorTable;
 
             d3d12DstParam = d3d12SrcParam;
+            // Copy all ranges from the source descriptor table and offset register space values by
+            // the base register space of the current resource signature.
             memcpy(&*descr_range_it, d3d12SrcTbl.pDescriptorRanges, d3d12SrcTbl.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE));
             d3d12DstTbl.pDescriptorRanges = &*descr_range_it;
             for (Uint32 r = 0; r < d3d12SrcTbl.NumDescriptorRanges; ++r, ++descr_range_it)
@@ -136,14 +152,16 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
         {
             const auto&  RootView      = RootParams.GetRootView(rv);
             const auto&  d3d12SrcParam = RootView.d3d12RootParam;
-            const Uint32 RootIndex     = FirstRootIndex + RootView.RootIndex;
+            const Uint32 RootIndex     = SignInfo.BaseRootIndex + RootView.RootIndex;
             VERIFY((d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
                     d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
                     d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV),
                    "Root CBV, SRV or UAV is expected");
+
             MaxSpaceUsed = std::max(MaxSpaceUsed, d3d12SrcParam.Descriptor.RegisterSpace);
 
             d3d12Parameters[RootIndex] = d3d12SrcParam;
+            // Offset register space value by the base register space of the current resource signature.
             d3d12Parameters[RootIndex].Descriptor.RegisterSpace += BaseRegisterSpace;
         }
 
@@ -182,17 +200,26 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
     }
     m_TotalSpacesUsed = BaseRegisterSpace;
 
+#ifdef DILIGENT_DEBUG
+    for (size_t i = 0; i < d3d12Parameters.size(); ++i)
+    {
+        VERIFY(d3d12Parameters[i].ParameterType != -1, "Root parameter at index ", i, " has not been initialized");
+    }
+#endif
+
     VERIFY_EXPR(descr_range_it == d3d12DescrRanges.end());
 
+    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{};
+    rootSignatureDesc.Flags         = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     rootSignatureDesc.NumParameters = static_cast<UINT>(d3d12Parameters.size());
-    rootSignatureDesc.pParameters   = d3d12Parameters.size() ? d3d12Parameters.data() : nullptr;
+    rootSignatureDesc.pParameters   = !d3d12Parameters.empty() ? d3d12Parameters.data() : nullptr;
 
-    rootSignatureDesc.NumStaticSamplers = Totald3d12StaticSamplers;
+    rootSignatureDesc.NumStaticSamplers = TotalImmutableSamplers;
     rootSignatureDesc.pStaticSamplers   = nullptr;
     if (!d3d12StaticSamplers.empty())
     {
         rootSignatureDesc.pStaticSamplers = d3d12StaticSamplers.data();
-        VERIFY_EXPR(d3d12StaticSamplers.size() == Totald3d12StaticSamplers);
+        VERIFY_EXPR(d3d12StaticSamplers.size() == TotalImmutableSamplers);
     }
 
     CComPtr<ID3DBlob> signature;
@@ -217,21 +244,17 @@ RootSignatureD3D12::~RootSignatureD3D12()
 }
 
 LocalRootSignatureD3D12::LocalRootSignatureD3D12(const char* pCBName, Uint32 ShaderRecordSize) :
-    m_pName{pCBName},
+    m_Name{pCBName != nullptr ? pCBName : ""},
     m_ShaderRecordSize{ShaderRecordSize}
 {
-    VERIFY_EXPR((m_pName != nullptr) == (m_ShaderRecordSize > 0));
+    VERIFY_EXPR(!m_Name.empty() == (m_ShaderRecordSize > 0));
 }
 
-bool LocalRootSignatureD3D12::IsShaderRecord(const D3DShaderResourceAttribs& CB)
+bool LocalRootSignatureD3D12::IsShaderRecord(const D3DShaderResourceAttribs& CB) const
 {
-    if (m_ShaderRecordSize > 0 &&
-        CB.GetInputType() == D3D_SIT_CBUFFER &&
-        strcmp(m_pName, CB.Name) == 0)
-    {
-        return true;
-    }
-    return false;
+    return (m_ShaderRecordSize > 0 &&
+            CB.GetInputType() == D3D_SIT_CBUFFER &&
+            m_Name == CB.Name);
 }
 
 bool LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint32 RegisterSpace)
@@ -267,20 +290,15 @@ bool LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint32 RegisterSpace
 }
 
 
-namespace
+bool RootSignatureD3D12::IsCompatibleWith(const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> ppSignatures[], Uint32 SignatureCount) const noexcept
 {
-bool RootSignatureCompare(const RootSignatureD3D12* lhs, const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount) noexcept
-{
-    const Uint32 LSigCount = lhs->GetSignatureCount();
-    const Uint32 RSigCount = SignatureCount;
-
-    if (LSigCount != RSigCount)
+    if (GetSignatureCount() != SignatureCount)
         return false;
 
-    for (Uint32 i = 0; i < LSigCount; ++i)
+    for (Uint32 i = 0; i < SignatureCount; ++i)
     {
-        auto* pLSig = lhs->GetSignature(i);
-        auto* pRSig = ppSignatures[i].RawPtr();
+        const PipelineResourceSignatureD3D12Impl* const pLSig = m_ResourceSignatures[i].pSignature;
+        const PipelineResourceSignatureD3D12Impl* const pRSig = ppSignatures[i];
 
         if (pLSig == pRSig)
             continue;
@@ -288,12 +306,14 @@ bool RootSignatureCompare(const RootSignatureD3D12* lhs, const RefCntAutoPtr<Pip
         if ((pLSig == nullptr) != (pRSig == nullptr))
             return false;
 
+        if (pLSig == nullptr || pRSig == nullptr)
+            continue;
+
         if (!pLSig->IsCompatibleWith(*pRSig))
             return false;
     }
     return true;
 }
-} // namespace
 
 RootSignatureCacheD3D12::RootSignatureCacheD3D12(RenderDeviceD3D12Impl& DeviceD3D12Impl) :
     m_DeviceD3D12Impl{DeviceD3D12Impl}
@@ -301,8 +321,8 @@ RootSignatureCacheD3D12::RootSignatureCacheD3D12(RenderDeviceD3D12Impl& DeviceD3
 
 RootSignatureCacheD3D12::~RootSignatureCacheD3D12()
 {
-    std::lock_guard<std::mutex> Lock{m_RootSigCacheGuard};
-    VERIFY(m_RootSigCache.empty(), "All pipeline layouts must be released");
+    std::lock_guard<std::mutex> Lock{m_RootSigCacheMtx};
+    VERIFY(m_RootSigCache.empty(), "All pipeline resource signatures must be released before the cache is destroyed.");
 }
 
 RefCntAutoPtr<RootSignatureD3D12> RootSignatureCacheD3D12::GetRootSig(const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount)
@@ -323,14 +343,14 @@ RefCntAutoPtr<RootSignatureD3D12> RootSignatureCacheD3D12::GetRootSig(const RefC
         }
     }
 
-    std::lock_guard<std::mutex> Lock{m_RootSigCacheGuard};
+    std::lock_guard<std::mutex> Lock{m_RootSigCacheMtx};
 
     auto Range = m_RootSigCache.equal_range(Hash);
     for (auto Iter = Range.first; Iter != Range.second; ++Iter)
     {
         if (auto Ptr = Iter->second.Lock())
         {
-            if (RootSignatureCompare(Ptr, ppSignatures, SignatureCount))
+            if (Ptr->IsCompatibleWith(ppSignatures, SignatureCount))
                 return Ptr;
         }
     }
@@ -344,10 +364,9 @@ RefCntAutoPtr<RootSignatureD3D12> RootSignatureCacheD3D12::GetRootSig(const RefC
 
 void RootSignatureCacheD3D12::OnDestroyRootSig(RootSignatureD3D12* pRootSig)
 {
-    std::lock_guard<std::mutex> Lock{m_RootSigCacheGuard};
+    std::lock_guard<std::mutex> Lock{m_RootSigCacheMtx};
 
     auto Range = m_RootSigCache.equal_range(pRootSig->GetHash());
-
     for (auto Iter = Range.first; Iter != Range.second;)
     {
         if (!Iter->second.IsValid())

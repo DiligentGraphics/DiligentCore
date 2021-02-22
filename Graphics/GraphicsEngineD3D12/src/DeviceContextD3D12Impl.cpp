@@ -310,21 +310,21 @@ void DeviceContextD3D12Impl::CommitRootTables(RootTableInfo& RootInfo)
         RootInfo.bRootTablesCommited = true;
         for (Uint32 s = 0; s < RootSig.GetSignatureCount(); ++s)
         {
-            auto* pSignature = RootSig.GetSignature(s);
+            auto* pSignature = RootSig.GetResourceSignature(s);
             auto* pSRB       = RootInfo.SRBs[s];
 
             if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
                 continue;
 
             VERIFY_EXPR(pSRB != nullptr);
-            pSignature->CommitRootTables(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), IsCompute, RootSig.GetFirstRootIndex(s));
+            pSignature->CommitRootTables(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), IsCompute, RootSig.GetBaseRootIndex(s));
         }
     }
 
     RootInfo.bRootViewsCommitted = true;
     for (Uint32 s = 0; s < RootSig.GetSignatureCount(); ++s)
     {
-        auto* pSignature = RootSig.GetSignature(s);
+        auto* pSignature = RootSig.GetResourceSignature(s);
         auto* pSRB       = RootInfo.SRBs[s];
 
         if (pSignature == nullptr || pSignature->GetNumRootViews() == 0)
@@ -332,7 +332,7 @@ void DeviceContextD3D12Impl::CommitRootTables(RootTableInfo& RootInfo)
 
         VERIFY_EXPR(pSRB != nullptr);
         constexpr auto CommitDynamicBuffers = true;
-        pSignature->CommitRootViews(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), RootSig.GetFirstRootIndex(s), IsCompute, CommitDynamicBuffers);
+        pSignature->CommitRootViews(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), RootSig.GetBaseRootIndex(s), IsCompute, CommitDynamicBuffers);
     }
 }
 
@@ -410,7 +410,7 @@ void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources()
 
     for (Uint32 i = 0; i < SignCount; ++i)
     {
-        auto* pSignature = RootSig.GetSignature(i);
+        auto* pSignature = RootSig.GetResourceSignature(i);
         if (pSignature == nullptr)
             continue;
 

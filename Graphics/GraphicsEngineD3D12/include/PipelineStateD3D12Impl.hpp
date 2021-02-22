@@ -35,12 +35,12 @@
 #include "PipelineStateBase.hpp"
 #include "RootSignature.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "ShaderD3D12Impl.hpp"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+class ShaderD3D12Impl;
+class ShaderResourcesD3D12;
 
 /// Pipeline state object implementation in Direct3D12 backend.
 class PipelineStateD3D12Impl final : public PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>
@@ -75,12 +75,12 @@ public:
 
     const RootSignatureD3D12* GetRootSignature() const { return m_RootSig; }
 
-    Uint32 GetSignatureCount() const { return m_SignatureCount; }
+    Uint32 GetSignatureCount() const { return m_RootSig->GetSignatureCount(); }
 
     PipelineResourceSignatureD3D12Impl* GetSignature(Uint32 index) const
     {
-        VERIFY_EXPR(index < m_SignatureCount);
-        return m_Signatures[index].RawPtr<PipelineResourceSignatureD3D12Impl>();
+        VERIFY_EXPR(index < GetSignatureCount());
+        return m_ResourceSignatures[index];
     }
 
 private:
@@ -107,10 +107,11 @@ private:
                            TShaderStages&                 ShaderStages,
                            LocalRootSignatureD3D12*       pLocalRootSig);
 
-    void CreateDefaultResourceSignature(const PipelineStateCreateInfo& CreateInfo,
-                                        TShaderStages&                 ShaderStages,
-                                        LocalRootSignatureD3D12*       pLocalRootSig,
-                                        IPipelineResourceSignature**   ppImplicitSignature);
+    static RefCntAutoPtr<IPipelineResourceSignature> CreateDefaultResourceSignature(
+        RenderDeviceD3D12Impl*         pDevice,
+        const PipelineStateCreateInfo& CreateInfo,
+        TShaderStages&                 ShaderStages,
+        LocalRootSignatureD3D12*       pLocalRootSig);
 
     void Destruct();
 
@@ -126,20 +127,22 @@ private:
     };
     ResourceInfo GetResourceInfo(const char* Name, SHADER_TYPE Stage) const;
 
+#ifdef DILIGENT_DEVELOPMENT
+    void DvpValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig) const;
+#endif
+
 private:
     CComPtr<ID3D12DeviceChild>        m_pd3d12PSO;
     RefCntAutoPtr<RootSignatureD3D12> m_RootSig;
 
-    using SignatureArrayType = RootSignatureD3D12::SignatureArrayType;
-
-    Uint8              m_SignatureCount = 0;
-    SignatureArrayType m_Signatures     = {};
+    // NB:  Pipeline resource signatures used to create the PSO may NOT be the same as
+    //      pipeline resource signatures in m_RootSig, because the latter may be used from the
+    //      cache. While the two signatures may be compatible, they resource names may not be identical.
+    std::unique_ptr<RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[]> m_ResourceSignatures;
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages
     std::vector<std::shared_ptr<const ShaderResourcesD3D12>> m_ShaderResources;
-    // Resource info for every resource in m_ShaderResources, in the same order
-    //std::vector<PipelineLayoutVk::ResourceInfo> m_ResInfo;
 #endif
 };
 
