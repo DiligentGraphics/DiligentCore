@@ -253,10 +253,6 @@ public:
 
     CacheContentType GetContentType() const { return m_ContentType; }
 
-#ifdef DILIGENT_DEBUG
-    //void DbgVerifyBoundDynamicCBsCounter() const;
-#endif
-
 private:
     Resource& GetResource(Uint32 Idx)
     {

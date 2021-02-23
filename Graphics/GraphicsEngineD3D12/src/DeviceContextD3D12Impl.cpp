@@ -355,10 +355,6 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
     auto& CmdCtx               = GetCmdContext();
     auto* pSignature           = pResBindingD3D12Impl->GetSignature();
 
-#ifdef DILIGENT_DEBUG
-    //ResourceCache.DbgVerifyDynamicBuffersCounter();
-#endif
-
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         ResourceCache.TransitionResourceStates(CmdCtx, ShaderResourceCacheD3D12::StateTransitionMode::Transition);

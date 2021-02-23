@@ -485,24 +485,4 @@ void ShaderResourceCacheD3D12::TransitionResourceStates(CommandContext& Ctx, Sta
     }
 }
 
-
-
-#ifdef DILIGENT_DEBUG
-//void ShaderResourceCacheD3D12::DbgVerifyBoundDynamicCBsCounter() const
-//{
-//    Uint32 NumDynamicCBsBound = 0;
-//    for (Uint32 t = 0; t < m_NumTables; ++t)
-//    {
-//        const auto& RT = GetRootTable(t);
-//        for (Uint32 res = 0; res < RT.GetSize(); ++res)
-//        {
-//            const auto& Res = RT.GetResource(res);
-//            if (Res.Type == CachedResourceType::CBV && Res.pObject && Res.pObject.RawPtr<const BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC)
-//                ++NumDynamicCBsBound;
-//        }
-//    }
-//    VERIFY(NumDynamicCBsBound == m_NumDynamicCBsBound, "The number of dynamic CBs bound is invalid");
-//}
-#endif
-
 } // namespace Diligent

@@ -285,7 +285,8 @@ public:
                                       Uint32                          ResIndex,
                                       const ShaderResourceCacheD3D12& ResourceCache,
                                       const char*                     ShaderName,
-                                      const char*                     PSOName) const;
+                                      const char*                     PSOName,
+                                      Uint32&                         DynamicRootBuffersCounter) const;
 #endif
 
 private:

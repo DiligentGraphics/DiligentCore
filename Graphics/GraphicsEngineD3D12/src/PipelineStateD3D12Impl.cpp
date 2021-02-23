@@ -821,6 +821,8 @@ void PipelineStateD3D12Impl::DvpVerifySRBResources(ShaderResourceBindingD3D12Imp
         }
     }
 
+    std::array<Uint32, MAX_RESOURCE_SIGNATURES> DynamicRootBuffersCounters{};
+
     auto attrib_it = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)
     {
@@ -837,13 +839,26 @@ void PipelineStateD3D12Impl::DvpVerifySRBResources(ShaderResourceBindingD3D12Imp
                     }
 
                     const auto& SRBCache = pSRBs[attrib_it->SignatureIndex]->GetResourceCache();
-                    attrib_it->pSignature->DvpValidateCommittedResource(Attribs, attrib_it->ResourceIndex, SRBCache, pResources->GetShaderName(), m_Desc.Name);
+                    attrib_it->pSignature->DvpValidateCommittedResource(Attribs, attrib_it->ResourceIndex, SRBCache, pResources->GetShaderName(),
+                                                                        m_Desc.Name, DynamicRootBuffersCounters[attrib_it->SignatureIndex]);
                 }
                 ++attrib_it;
             } //
         );
     }
     VERIFY_EXPR(attrib_it == m_ResourceAttibutions.end());
+
+#    ifdef DILIGENT_DEBUG
+    for (Uint32 sign = 0; sign < SignCount; ++sign)
+    {
+        auto* const pSRB = pSRBs[sign];
+        if (pSRB == nullptr)
+            continue;
+
+        const auto& SRBCache = pSRB->GetResourceCache();
+        VERIFY(SRBCache.GetNumDynamicRootBuffers() == DynamicRootBuffersCounters[sign], "Incorrect root buffers counter");
+    }
+#    endif
 }
 
 #endif
