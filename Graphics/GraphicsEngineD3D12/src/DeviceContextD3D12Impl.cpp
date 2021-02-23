@@ -315,14 +315,22 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo)
 
         auto* const pSRB = RootInfo.SRBs[s];
         DEV_CHECK_ERR(pSRB != nullptr, "No SRB is committed and binding index ", s);
+        VERIFY_EXPR(pSRB->GetBindingIndex() == s);
+        const auto& ResourceCache = pSRB->GetResourceCache();
         if (!RootInfo.bRootTablesCommited)
         {
-            pSignature->CommitRootTables(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), IsCompute, RootSig.GetBaseRootIndex(s));
+            pSignature->CommitRootTables(ResourceCache, CmdCtx, this, GetContextId(), IsCompute, RootSig.GetBaseRootIndex(s));
         }
 
         // Always commit root views. This method is not called if root views are up to date
-        constexpr auto CommitDynamicBuffers = true;
-        pSignature->CommitRootViews(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), RootSig.GetBaseRootIndex(s), IsCompute, CommitDynamicBuffers);
+        if (auto DynamicRootBuffersMask = ResourceCache.GetDynamicRootBuffersMask())
+        {
+            pSignature->CommitRootViews(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), RootSig.GetBaseRootIndex(s), IsCompute, DynamicRootBuffersMask);
+        }
+        else
+        {
+            VERIFY((RootInfo.DynamicBuffersMask & (Uint64{1} << s)) == 0, "There are no dynamic root buffers in the cache, but the bit in DynamicBuffersMask is set");
+        }
     }
 
     RootInfo.bRootTablesCommited = true;
@@ -355,6 +363,10 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
     auto& CmdCtx               = GetCmdContext();
     auto* pSignature           = pResBindingD3D12Impl->GetSignature();
 
+#ifdef DILIGENT_DEBUG
+    ResourceCache.DbgValidateDynamicBuffersMask();
+#endif
+
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         ResourceCache.TransitionResourceStates(CmdCtx, ShaderResourceCacheD3D12::StateTransitionMode::Transition);
@@ -371,7 +383,7 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
 
     RootInfo.SRBs[SRBIndex] = pResBindingD3D12Impl;
 
-    if (ResourceCache.GetDynamicRootBuffersCounter() > 0)
+    if (ResourceCache.GetDynamicRootBuffersMask() != 0)
         RootInfo.SetDynamicBufferBit(SRBIndex);
     else
         RootInfo.ClearDynamicBufferBit(SRBIndex);

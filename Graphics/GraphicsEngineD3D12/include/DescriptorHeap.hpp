@@ -196,7 +196,7 @@ public:
 
 
     // Returns pointer to D3D12 descriptor heap that contains this allocation
-    ID3D12DescriptorHeap* GetDescriptorHeap() { return m_pDescriptorHeap; }
+    ID3D12DescriptorHeap* GetDescriptorHeap() const { return m_pDescriptorHeap; }
 
 
     // clang-format off

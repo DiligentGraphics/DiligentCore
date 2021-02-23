@@ -442,88 +442,6 @@ void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCach
     ResourceCache.Initialize(CacheMemAllocator, m_pDevice, m_RootParams);
 }
 
-inline void UpdateDynamicRootBuffersCounter(const BufferD3D12Impl*    pOldBuff,
-                                            const BufferD3D12Impl*    pNewBuff,
-                                            Uint32&                   BuffCounter,
-                                            D3D12_ROOT_PARAMETER_TYPE d3d12RootParamType)
-{
-    if (pOldBuff != nullptr && pOldBuff->GetDesc().Usage == USAGE_DYNAMIC)
-    {
-        if (d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_CBV)
-        {
-            // Only count dynamic buffers bound as root views
-            VERIFY(BuffCounter > 0, "There is a dynamic root buffer in the resource cache, but dynamic buffers counter is zero");
-            --BuffCounter;
-        }
-        else
-        {
-            VERIFY_EXPR(pOldBuff->GetD3D12Resource() != nullptr);
-        }
-    }
-    if (pNewBuff != nullptr && pNewBuff->GetDesc().Usage == USAGE_DYNAMIC)
-    {
-        if (d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_CBV)
-        {
-            // Only count dynamic buffers bound as root views
-            ++BuffCounter;
-        }
-        else
-        {
-            DEV_CHECK_ERR(pNewBuff->GetD3D12Resource() != nullptr,
-                          "Dynamic constant buffers that don't have backing d3d12 resource must be bound as root views");
-        }
-    }
-}
-
-inline void UpdateDynamicRootBuffersCounter(const BufferViewD3D12Impl* pOldBuffView,
-                                            const BufferViewD3D12Impl* pNewBuffView,
-                                            Uint32&                    BuffCounter,
-                                            D3D12_ROOT_PARAMETER_TYPE  d3d12RootParamType)
-{
-    if (pOldBuffView != nullptr)
-    {
-        auto* const pOldBuff = pOldBuffView->GetBuffer<BufferD3D12Impl>();
-        if (pOldBuff->GetDesc().Usage == USAGE_DYNAMIC)
-        {
-            if (d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_SRV || d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_UAV)
-            {
-                // Only count dynamic buffers bound as root views
-                VERIFY(BuffCounter > 0, "There is a dynamic root buffer in the resource cache, but dynamic buffers counter is zero");
-                --BuffCounter;
-            }
-            else
-            {
-                VERIFY_EXPR(pOldBuff->GetD3D12Resource() != nullptr);
-            }
-        }
-    }
-    if (pNewBuffView != nullptr)
-    {
-        auto* const pNewBuffer = pNewBuffView->GetBuffer<BufferD3D12Impl>();
-        if (pNewBuffer->GetDesc().Usage == USAGE_DYNAMIC)
-        {
-            if (d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_SRV || d3d12RootParamType == D3D12_ROOT_PARAMETER_TYPE_UAV)
-            {
-                // Only count dynamic buffers bound as root views
-                ++BuffCounter;
-            }
-            else
-            {
-                DEV_CHECK_ERR(pNewBuffer->GetD3D12Resource() != nullptr,
-                              "Dynamic buffers that don't have backing d3d12 resource must be bound as root views");
-            }
-        }
-    }
-}
-
-inline void UpdateDynamicRootBuffersCounter(const TextureViewD3D12Impl*,
-                                            const TextureViewD3D12Impl*,
-                                            Uint32&,
-                                            D3D12_ROOT_PARAMETER_TYPE)
-{
-}
-
-
 void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderResourceCacheD3D12& DstResourceCache) const
 {
     if (m_pStaticResCache == nullptr)
@@ -539,8 +457,6 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
     VERIFY_EXPR(SrcCacheType == ShaderResourceCacheD3D12::CacheContentType::Signature);
     VERIFY_EXPR(DstCacheType == ShaderResourceCacheD3D12::CacheContentType::SRB);
 
-    auto& DynamicRootBuffersCounter = DstResourceCache.GetDynamicRootBuffersCounter();
-
     for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
     {
         const auto& ResDesc   = GetResourceDesc(r);
@@ -555,7 +471,7 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
         const auto  DstRootIndex = Attr.RootIndex(DstCacheType);
         const auto  SrcRootIndex = Attr.RootIndex(SrcCacheType);
         const auto& SrcRootTable = SrcResourceCache.GetRootTable(SrcRootIndex);
-        auto&       DstRootTable = DstResourceCache.GetRootTable(DstRootIndex);
+        const auto& DstRootTable = const_cast<const ShaderResourceCacheD3D12&>(DstResourceCache).GetRootTable(DstRootIndex);
 
         auto SrcCacheOffset = Attr.OffsetFromTableStart(SrcCacheType);
         auto DstCacheOffset = Attr.OffsetFromTableStart(DstCacheType);
@@ -565,29 +481,12 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
             if (!SrcRes.pObject)
                 LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-            auto& DstRes = DstRootTable.GetResource(DstCacheOffset);
+            const auto& DstRes = DstRootTable.GetResource(DstCacheOffset);
             if (DstRes.pObject != SrcRes.pObject)
             {
                 DEV_CHECK_ERR(DstRes.pObject == nullptr, "Static resource has already been initialized, and the new resource does not match previously assigned resource.");
 
-                if (SrcRes.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
-                {
-                    UpdateDynamicRootBuffersCounter(DstRes.pObject.RawPtr<const BufferD3D12Impl>(),
-                                                    SrcRes.pObject.RawPtr<const BufferD3D12Impl>(),
-                                                    DynamicRootBuffersCounter,
-                                                    Attr.GetD3D12RootParamType());
-                }
-                else if (SrcRes.Type == SHADER_RESOURCE_TYPE_BUFFER_SRV || SrcRes.Type == SHADER_RESOURCE_TYPE_BUFFER_UAV)
-                {
-                    UpdateDynamicRootBuffersCounter(DstRes.pObject.RawPtr<const BufferViewD3D12Impl>(),
-                                                    SrcRes.pObject.RawPtr<const BufferViewD3D12Impl>(),
-                                                    DynamicRootBuffersCounter,
-                                                    Attr.GetD3D12RootParamType());
-                }
-
-                DstRes.pObject             = SrcRes.pObject;
-                DstRes.Type                = SrcRes.Type;
-                DstRes.CPUDescriptorHandle = SrcRes.CPUDescriptorHandle;
+                DstResourceCache.CopyResource(DstRootIndex, DstCacheOffset, SrcRes);
 
                 if (!Attr.IsRootView())
                 {
@@ -607,20 +506,22 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
-                                                         CommandContext&           CmdCtx,
-                                                         DeviceContextD3D12Impl*   pDeviceCtx,
-                                                         Uint32                    DeviceCtxId,
-                                                         Uint32                    BaseRootIndex,
-                                                         bool                      IsCompute,
-                                                         bool                      CommitDynamicBuffers) const
+void PipelineResourceSignatureD3D12Impl::CommitRootViews(const ShaderResourceCacheD3D12& ResourceCache,
+                                                         CommandContext&                 CmdCtx,
+                                                         DeviceContextD3D12Impl*         pDeviceCtx,
+                                                         Uint32                          DeviceCtxId,
+                                                         Uint32                          BaseRootIndex,
+                                                         bool                            IsCompute,
+                                                         Uint64                          BuffersMask) const
 {
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
+    while (BuffersMask != 0)
     {
-        const auto& RootView = m_RootParams.GetRootView(rv);
-        const auto  RootInd  = RootView.RootIndex;
+        const auto  BufferBit = ExtractLSB(BuffersMask);
+        const auto  RootInd   = PlatformMisc::GetLSB(BufferBit);
+        const auto& CacheTbl  = ResourceCache.GetRootTable(RootInd);
+        VERIFY_EXPR(CacheTbl.IsRootView());
 
-        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0);
+        const auto& Res = CacheTbl.GetResource(0);
         if (Res.IsNull())
         {
             LOG_ERROR_MESSAGE("Failed to bind root view at index ", BaseRootIndex + RootInd, ": no resource is bound in the cache.");
@@ -645,18 +546,13 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
         }
         VERIFY_EXPR(pBuffer != nullptr);
 
-        auto IsDynamic = pBuffer->GetDesc().Usage == USAGE_DYNAMIC;
-        if (IsDynamic != CommitDynamicBuffers)
-            continue;
-
-        auto BufferGPUAddress = pBuffer->GetGPUAddress(DeviceCtxId, pDeviceCtx);
+        const auto BufferGPUAddress = pBuffer->GetGPUAddress(DeviceCtxId, pDeviceCtx);
         VERIFY_EXPR(BufferGPUAddress != 0);
 
-        auto* pd3d12CmdList = CmdCtx.GetCommandList();
+        auto* const pd3d12CmdList = CmdCtx.GetCommandList();
         switch (Res.Type)
         {
             case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-                VERIFY_EXPR(RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
                 if (IsCompute)
                     pd3d12CmdList->SetComputeRootConstantBufferView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
@@ -664,7 +560,6 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
                 break;
 
             case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-                VERIFY_EXPR(RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV);
                 if (IsCompute)
                     pd3d12CmdList->SetComputeRootShaderResourceView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
@@ -672,7 +567,6 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
                 break;
 
             case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-                VERIFY_EXPR(RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV);
                 if (IsCompute)
                     pd3d12CmdList->SetComputeRootUnorderedAccessView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
@@ -685,12 +579,12 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(ShaderResourceCacheD3D1
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D12& ResourceCache,
-                                                          CommandContext&           CmdCtx,
-                                                          DeviceContextD3D12Impl*   pDeviceCtx,
-                                                          Uint32                    DeviceCtxId,
-                                                          bool                      IsCompute,
-                                                          Uint32                    BaseRootIndex) const
+void PipelineResourceSignatureD3D12Impl::CommitRootTables(const ShaderResourceCacheD3D12& ResourceCache,
+                                                          CommandContext&                 CmdCtx,
+                                                          DeviceContextD3D12Impl*         pDeviceCtx,
+                                                          Uint32                          DeviceCtxId,
+                                                          bool                            IsCompute,
+                                                          Uint32                          BaseRootIndex) const
 {
     auto* const pd3d12Device = GetDevice()->GetD3D12Device();
 
@@ -785,9 +679,11 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
     }
 
     // Commit non-dynamic root buffer views
-    constexpr auto CommitDynamicBuffers = false;
-    CommitRootViews(ResourceCache, CmdCtx, pDeviceCtx,
-                    DeviceCtxId, BaseRootIndex, IsCompute, CommitDynamicBuffers);
+    if (auto NonDynamicBuffersMask = ResourceCache.GetNonDynamicRootBuffersMask())
+    {
+        CommitRootViews(ResourceCache, CmdCtx, pDeviceCtx, DeviceCtxId,
+                        BaseRootIndex, IsCompute, NonDynamicBuffersMask);
+    }
 
     // Manually destroy DescriptorHeapAllocation objects we created.
     for (auto* pAllocation : pDynamicDescriptorAllocations)
@@ -867,15 +763,18 @@ bool PipelineResourceSignatureD3D12Impl::HasImmutableSamplerArray(SHADER_TYPE Sh
     return false;
 }
 
+
 namespace
 {
 
 struct BindResourceHelper
 {
-    ShaderResourceCacheD3D12::Resource&                        DstRes;
+    const ShaderResourceCacheD3D12::Resource&                  DstRes;
     const PipelineResourceDesc&                                ResDesc;
     const PipelineResourceSignatureD3D12Impl::ResourceAttribs& Attribs;
+    const Uint32                                               RootIndex;
     const Uint32                                               ArrayIndex;
+    const Uint32                                               OffsetFromTableStart;
     D3D12_CPU_DESCRIPTOR_HANDLE                                DstTableCPUDescriptorHandle;
     PipelineResourceSignatureD3D12Impl const&                  Signature;
     ShaderResourceCacheD3D12&                                  ResourceCache;
@@ -921,24 +820,22 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
             return;
         }
 
-        DstRes.Type                = ResDesc.ResourceType;
-        DstRes.CPUDescriptorHandle = pBuffD3D12->GetCBVHandle();
-        VERIFY(DstRes.CPUDescriptorHandle.ptr != 0 || pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC, "No relevant CBV CPU descriptor handle");
+        const auto CPUDescriptorHandle = pBuffD3D12->GetCBVHandle();
+        VERIFY(CPUDescriptorHandle.ptr != 0 || pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC, "No relevant CBV CPU descriptor handle");
 
         if (DstTableCPUDescriptorHandle.ptr != 0)
         {
             VERIFY(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || DstRes.pObject == nullptr,
                    "Static and mutable resource descriptors must be copied only once");
-            VERIFY_EXPR(DstRes.CPUDescriptorHandle.ptr != 0);
+            VERIFY_EXPR(CPUDescriptorHandle.ptr != 0);
 
-            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
 
-        UpdateDynamicRootBuffersCounter(DstRes.pObject.RawPtr<const BufferD3D12Impl>(), pBuffD3D12, ResourceCache.GetDynamicRootBuffersCounter(), Attribs.GetD3D12RootParamType());
-
-        DstRes.pObject = std::move(pBuffD3D12);
+        ResourceCache.SetResource(RootIndex, OffsetFromTableStart, ResDesc.ResourceType, CPUDescriptorHandle, std::move(pBuffD3D12));
     }
 }
+
 
 void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
 {
@@ -960,15 +857,13 @@ void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
             return;
         }
 
-        DstRes.Type = SHADER_RESOURCE_TYPE_SAMPLER;
-
-        DstRes.CPUDescriptorHandle = pSamplerD3D12->GetCPUDescriptorHandle();
-        VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "No relevant D3D12 sampler descriptor handle");
+        const auto CPUDescriptorHandle = pSamplerD3D12->GetCPUDescriptorHandle();
+        VERIFY(CPUDescriptorHandle.ptr != 0, "No relevant D3D12 sampler descriptor handle");
 
         if (DstTableCPUDescriptorHandle.ptr != 0)
         {
             VERIFY(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
-            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
         }
         else
         {
@@ -976,14 +871,15 @@ void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
                    "Samplers must always be allocated in root tables and thus assigned descriptor");
         }
 
-        DstRes.pObject = std::move(pSamplerD3D12);
+        ResourceCache.SetResource(RootIndex, OffsetFromTableStart, ResDesc.ResourceType, CPUDescriptorHandle, std::move(pSamplerD3D12));
     }
     else
     {
-        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '", GetShaderResourcePrintName(ResDesc, ArrayIndex), "'."
-                                                                                                                                                   "Incorect object type: sampler is expected.");
+        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '",
+                          GetShaderResourcePrintName(ResDesc, ArrayIndex), "'. Incorect object type: sampler is expected.");
     }
 }
+
 
 void BindResourceHelper::CacheAccelStruct(IDeviceObject* pTLAS) const
 {
@@ -997,14 +893,13 @@ void BindResourceHelper::CacheAccelStruct(IDeviceObject* pTLAS) const
             return;
         }
 
-        DstRes.Type                = SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
-        DstRes.CPUDescriptorHandle = pTLASD3D12->GetCPUDescriptorHandle();
 
-        VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "No relevant D3D12 resource");
+        const auto CPUDescriptorHandle = pTLASD3D12->GetCPUDescriptorHandle();
+        VERIFY(CPUDescriptorHandle.ptr != 0, "No relevant D3D12 resource");
         if (DstTableCPUDescriptorHandle.ptr != 0)
         {
             VERIFY(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
-            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
         else
         {
@@ -1012,9 +907,10 @@ void BindResourceHelper::CacheAccelStruct(IDeviceObject* pTLAS) const
                    "Acceleration structures are always allocated in root tables and thus must have a descriptor");
         }
 
-        DstRes.pObject = std::move(pTLASD3D12);
+        ResourceCache.SetResource(RootIndex, OffsetFromTableStart, ResDesc.ResourceType, CPUDescriptorHandle, std::move(pTLASD3D12));
     }
 }
+
 
 template <typename TResourceViewType>
 struct ResourceViewTraits
@@ -1084,23 +980,20 @@ void BindResourceHelper::CacheResourceView(IDeviceObject*       pView,
             return;
         }
 
-        DstRes.Type                = ResDesc.ResourceType;
-        DstRes.CPUDescriptorHandle = pViewD3D12->GetCPUDescriptorHandle();
-        VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "No relevant D3D12 view");
+        const auto CPUDescriptorHandle = pViewD3D12->GetCPUDescriptorHandle();
+        VERIFY(CPUDescriptorHandle.ptr != 0, "No relevant D3D12 view");
 
         if (DstTableCPUDescriptorHandle.ptr != 0)
         {
             VERIFY(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || DstRes.pObject == nullptr,
                    "Static and mutable resource descriptors must be copied only once");
 
-            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            GetD3D12Device()->CopyDescriptorsSimple(1, DstTableCPUDescriptorHandle, CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
-
-        UpdateDynamicRootBuffersCounter(DstRes.pObject.RawPtr<const TResourceViewType>(), pViewD3D12, ResourceCache.GetDynamicRootBuffersCounter(), Attribs.GetD3D12RootParamType());
 
         BindSamplerProc(pViewD3D12);
 
-        DstRes.pObject = std::move(pViewD3D12);
+        ResourceCache.SetResource(RootIndex, OffsetFromTableStart, ResDesc.ResourceType, CPUDescriptorHandle, std::move(pViewD3D12));
     }
 }
 
@@ -1162,11 +1055,11 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                                 if (pSampler)
                                 {
                                     VERIFY_EXPR(ResDesc.ArraySize == SamplerResDesc.ArraySize || SamplerResDesc.ArraySize == 1);
-                                    const auto CacheType            = ResourceCache.GetContentType();
-                                    const auto SamplerArrInd        = SamplerResDesc.ArraySize > 1 ? ArrayIndex : 0;
-                                    const auto RootIndex            = SamplerAttribs.RootIndex(CacheType);
-                                    const auto OffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType) + SamplerArrInd;
-                                    auto&      SampleDstRes         = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart);
+                                    const auto CacheType               = ResourceCache.GetContentType();
+                                    const auto SamplerArrInd           = SamplerResDesc.ArraySize > 1 ? ArrayIndex : 0;
+                                    const auto SamRootIndex            = SamplerAttribs.RootIndex(CacheType);
+                                    const auto SamOffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType) + SamplerArrInd;
+                                    auto&      SampleDstRes            = const_cast<const ShaderResourceCacheD3D12&>(ResourceCache).GetRootTable(SamRootIndex).GetResource(SamOffsetFromTableStart);
 
                                     D3D12_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle{};
                                     if (CacheType != ShaderResourceCacheD3D12::CacheContentType::Signature)
@@ -1181,7 +1074,9 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
                                         SampleDstRes,
                                         SamplerResDesc,
                                         SamplerAttribs,
+                                        SamRootIndex,
                                         SamplerArrInd,
+                                        SamOffsetFromTableStart,
                                         CPUDescriptorHandle,
                                         Signature,
                                         ResourceCache};
@@ -1226,7 +1121,7 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
             LOG_ERROR_MESSAGE("Shader variable '", ResDesc.Name, "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. ",
                               "Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource.");
 
-        DstRes = ShaderResourceCacheD3D12::Resource{};
+        ResourceCache.ResetResource(RootIndex, OffsetFromTableStart);
         if (Attribs.IsCombinedWithSampler())
         {
             auto& SamplerResDesc = Signature.GetResourceDesc(Attribs.SamplerInd);
@@ -1235,17 +1130,17 @@ void BindResourceHelper::BindResource(IDeviceObject* pObj) const
 
             if (!SamplerAttribs.IsImmutableSamplerAssigned())
             {
-                const auto CacheType            = ResourceCache.GetContentType();
-                auto       SamplerArrInd        = SamplerResDesc.ArraySize > 1 ? ArrayIndex : 0;
-                const auto RootIndex            = SamplerAttribs.RootIndex(CacheType);
-                const auto OffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType) + SamplerArrInd;
-                auto&      DstSam               = ResourceCache.GetRootTable(RootIndex).GetResource(OffsetFromTableStart);
+                const auto  CacheType               = ResourceCache.GetContentType();
+                auto        SamplerArrInd           = SamplerResDesc.ArraySize > 1 ? ArrayIndex : 0;
+                const auto  SamRootIndex            = SamplerAttribs.RootIndex(CacheType);
+                const auto  SamOffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(CacheType) + SamplerArrInd;
+                const auto& DstSam                  = const_cast<const ShaderResourceCacheD3D12&>(ResourceCache).GetRootTable(SamRootIndex).GetResource(SamOffsetFromTableStart);
 
                 if (DstSam.pObject != nullptr && SamplerResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
                     LOG_ERROR_MESSAGE("Sampler variable '", SamplerResDesc.Name, "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. ",
                                       "Use another shader resource binding instance or label the variable as dynamic if you need to bind another sampler.");
 
-                DstSam = ShaderResourceCacheD3D12::Resource{};
+                ResourceCache.ResetResource(SamRootIndex, SamOffsetFromTableStart);
             }
         }
     }
@@ -1268,8 +1163,8 @@ void PipelineResourceSignatureD3D12Impl::BindResource(IDeviceObject*            
 
     VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
 
-    auto& RootTable = ResourceCache.GetRootTable(RootIndex);
-    auto& DstRes    = RootTable.GetResource(OffsetFromTableStart);
+    const auto& RootTable = const_cast<const ShaderResourceCacheD3D12&>(ResourceCache).GetRootTable(RootIndex);
+    const auto& DstRes    = RootTable.GetResource(OffsetFromTableStart);
 
     D3D12_CPU_DESCRIPTOR_HANDLE DstTableCPUDescriptorHandle{};
     if (CacheType != ShaderResourceCacheD3D12::CacheContentType::Signature && !Attribs.IsRootView())
@@ -1286,7 +1181,9 @@ void PipelineResourceSignatureD3D12Impl::BindResource(IDeviceObject*            
         DstRes,
         ResDesc,
         Attribs,
+        RootIndex,
         ArrayIndex,
+        OffsetFromTableStart,
         DstTableCPUDescriptorHandle,
         *this,
         ResourceCache};
@@ -1319,13 +1216,13 @@ bool PipelineResourceSignatureD3D12Impl::IsBound(Uint32                         
     return false;
 }
 
+
 #ifdef DILIGENT_DEVELOPMENT
 bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
                                                                       Uint32                          ResIndex,
                                                                       const ShaderResourceCacheD3D12& ResourceCache,
                                                                       const char*                     ShaderName,
-                                                                      const char*                     PSOName,
-                                                                      Uint32&                         DynamicRootBuffersCounter) const
+                                                                      const char*                     PSOName) const
 {
     const auto& ResDesc    = GetResourceDesc(ResIndex);
     const auto& ResAttribs = GetResourceAttribs(ResIndex);
@@ -1392,7 +1289,9 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DS
                     if (const auto* pBuffD3D12 = CachedRes.pObject.RawPtr<BufferD3D12Impl>())
                     {
                         if (pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                            ++DynamicRootBuffersCounter;
+                            VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
+                        else
+                            VERIFY_EXPR((ResourceCache.GetNonDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
                     }
                 }
                 break;
@@ -1405,8 +1304,11 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DS
                     if (const auto* pBuffViewD3D12 = CachedRes.pObject.RawPtr<BufferViewD3D12Impl>())
                     {
                         const auto* pBuffD3D12 = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
+                        VERIFY_EXPR(pBuffD3D12 != nullptr);
                         if (pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                            ++DynamicRootBuffersCounter;
+                            VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
+                        else
+                            VERIFY_EXPR((ResourceCache.GetNonDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
                     }
                 }
                 break;

@@ -255,20 +255,20 @@ public:
                  Uint32                          ResIndex,
                  const ShaderResourceCacheD3D12& ResourceCache) const;
 
-    void CommitRootTables(ShaderResourceCacheD3D12& ResourceCache,
-                          CommandContext&           Ctx,
-                          DeviceContextD3D12Impl*   pDeviceCtx,
-                          Uint32                    DeviceCtxId,
-                          bool                      IsCompute,
-                          Uint32                    BaseRootIndex) const;
+    void CommitRootTables(const ShaderResourceCacheD3D12& ResourceCache,
+                          CommandContext&                 Ctx,
+                          DeviceContextD3D12Impl*         pDeviceCtx,
+                          Uint32                          DeviceCtxId,
+                          bool                            IsCompute,
+                          Uint32                          BaseRootIndex) const;
 
-    void CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
-                         CommandContext&           Ctx,
-                         DeviceContextD3D12Impl*   pDeviceCtx,
-                         Uint32                    DeviceCtxId,
-                         Uint32                    BaseRootIndex,
-                         bool                      IsCompute,
-                         bool                      CommitDynamicBuffers) const;
+    void CommitRootViews(const ShaderResourceCacheD3D12& ResourceCache,
+                         CommandContext&                 Ctx,
+                         DeviceContextD3D12Impl*         pDeviceCtx,
+                         Uint32                          DeviceCtxId,
+                         Uint32                          BaseRootIndex,
+                         bool                            IsCompute,
+                         Uint64                          BuffersMask) const;
 
     const RootParamsManager& GetRootParams() const { return m_RootParams; }
 
@@ -285,8 +285,7 @@ public:
                                       Uint32                          ResIndex,
                                       const ShaderResourceCacheD3D12& ResourceCache,
                                       const char*                     ShaderName,
-                                      const char*                     PSOName,
-                                      Uint32&                         DynamicRootBuffersCounter) const;
+                                      const char*                     PSOName) const;
 #endif
 
 private:
