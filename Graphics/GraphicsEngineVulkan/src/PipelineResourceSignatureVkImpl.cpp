@@ -189,10 +189,10 @@ inline TEXTURE_VIEW_TYPE DescriptorTypeToTextureView(DescriptorType Type)
     }
 }
 
-Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
-                           DescriptorType                       DescType,
-                           const PipelineResourceSignatureDesc& Desc,
-                           const char*                          SamplerSuffix)
+Uint32 FindImmutableSamplerVk(const PipelineResourceDesc&          Res,
+                              DescriptorType                       DescType,
+                              const PipelineResourceSignatureDesc& Desc,
+                              const char*                          SamplerSuffix)
 {
     if (DescType == DescriptorType::CombinedImageSampler)
     {
@@ -206,10 +206,10 @@ Int32 FindImmutableSampler(const PipelineResourceDesc&          Res,
     else
     {
         UNEXPECTED("Immutable sampler can only be assigned to a sampled image or separate sampler");
-        return -1;
+        return InvalidImmutableSamplerIndex;
     }
 
-    return Diligent::FindImmutableSampler(Desc.ImmutableSamplers, Desc.NumImmutableSamplers, Res.ShaderStages, Res.Name, SamplerSuffix);
+    return FindImmutableSampler(Desc.ImmutableSamplers, Desc.NumImmutableSamplers, Res.ShaderStages, Res.Name, SamplerSuffix);
 }
 
 } // namespace
@@ -443,8 +443,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& C
             // Only search for immutable sampler for combined image samplers and separate samplers.
             // Note that for DescriptorType::SeparateImage with immutable sampler, we will initialize
             // a separate immutable sampler below. It will not be assigned to the image variable.
-            const auto SrcImmutableSamplerInd = FindImmutableSampler(ResDesc, DescrType, m_Desc, GetCombinedSamplerSuffix());
-            if (SrcImmutableSamplerInd >= 0)
+            const auto SrcImmutableSamplerInd = FindImmutableSamplerVk(ResDesc, DescrType, m_Desc, GetCombinedSamplerSuffix());
+            if (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex)
             {
                 auto&       ImmutableSampler     = m_ImmutableSamplers[SrcImmutableSamplerInd];
                 const auto& ImmutableSamplerDesc = m_Desc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
@@ -1592,14 +1592,17 @@ bool PipelineResourceSignatureVkImpl::IsBound(Uint32                       Array
 #ifdef DILIGENT_DEVELOPMENT
 bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs,
                                                                    Uint32                            ResIndex,
-                                                                   ShaderResourceCacheVk&            ResourceCache) const
+                                                                   const ShaderResourceCacheVk&      ResourceCache,
+                                                                   const char*                       ShaderName,
+                                                                   const char*                       PSOName) const
 {
     VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-    const auto& ResInfo    = m_Desc.Resources[ResIndex];
+    const auto& ResDesc    = m_Desc.Resources[ResIndex];
     const auto& ResAttribs = m_pResourceAttribs[ResIndex];
-    VERIFY(strcmp(ResInfo.Name, SPIRVAttribs.Name) == 0, "Inconsistent resource names");
+    VERIFY(strcmp(ResDesc.Name, SPIRVAttribs.Name) == 0, "Inconsistent resource names");
 
-    bool BindingsOK = true;
+    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && ResAttribs.IsImmutableSamplerAssigned())
+        return true; // Skip immutable separate samplers
 
     const auto& DescrSetResources = ResourceCache.GetDescriptorSet(ResAttribs.DescrSet);
     const auto  CacheType         = ResourceCache.GetContentType();
@@ -1607,16 +1610,43 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
 
     VERIFY_EXPR(SPIRVAttribs.ArraySize <= ResAttribs.ArraySize);
 
-    switch (ResAttribs.GetDescriptorType())
+    bool BindingsOK = true;
+    for (Uint32 ArrIndex = 0; ArrIndex < SPIRVAttribs.ArraySize; ++ArrIndex)
     {
-        case DescriptorType::UniformBuffer:
-        case DescriptorType::UniformBufferDynamic:
+        if (!IsBound(ArrIndex, ResIndex, ResourceCache))
         {
-            VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-            for (Uint32 i = 0; i < SPIRVAttribs.ArraySize; ++i)
-            {
-                const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
+            LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(SPIRVAttribs, ArrIndex),
+                              "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
+            BindingsOK = false;
+            continue;
+        }
 
+        if (ResAttribs.IsCombinedWithSampler())
+        {
+            auto& SamplerResDesc = GetResourceDesc(ResAttribs.SamplerInd);
+            auto& SamplerAttribs = GetResourceAttribs(ResAttribs.SamplerInd);
+            VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+            VERIFY_EXPR(SamplerResDesc.ArraySize == 1 || SamplerResDesc.ArraySize == ResDesc.ArraySize);
+            if (!SamplerAttribs.IsImmutableSamplerAssigned())
+            {
+                if (ArrIndex < SamplerResDesc.ArraySize)
+                {
+                    if (!IsBound(ArrIndex, ResAttribs.SamplerInd, ResourceCache))
+                    {
+                        LOG_ERROR_MESSAGE("No sampler is bound to sampler variable '", GetShaderResourcePrintName(SamplerResDesc, ArrIndex),
+                                          "' combined with texture '", SPIRVAttribs.Name, "' in shader '", ShaderName, "' of PSO '", PSOName, "'.");
+                        BindingsOK = false;
+                    }
+                }
+            }
+        }
+
+        const auto& Res = DescrSetResources.GetResource(CacheOffset + ArrIndex);
+        switch (ResAttribs.GetDescriptorType())
+        {
+            case DescriptorType::UniformBuffer:
+            case DescriptorType::UniformBufferDynamic:
+                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
                 // When can use raw cast here because the dynamic type is verified when the resource
                 // is bound. It will be null if the type is incorrect.
                 if (const auto* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>())
@@ -1626,29 +1656,18 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                         // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                         LOG_WARNING_MESSAGE("The size of uniform buffer '",
                                             pBufferVk->GetDesc().Name, "' bound to shader variable '",
-                                            GetShaderResourcePrintName(ResInfo, i), "' is ", pBufferVk->GetDesc().uiSizeInBytes,
+                                            GetShaderResourcePrintName(SPIRVAttribs, ArrIndex), "' is ", pBufferVk->GetDesc().uiSizeInBytes,
                                             " bytes, but the shader expects at least ", SPIRVAttribs.BufferStaticSize,
                                             " bytes.");
                     }
                 }
-                else
-                {
-                    // Missing resource error is logged by BindResourceHelper::CacheUniformBuffer
-                }
-            }
-        }
-        break;
+                break;
 
-        case DescriptorType::StorageBuffer:
-        case DescriptorType::StorageBuffer_ReadOnly:
-        case DescriptorType::StorageBufferDynamic:
-        case DescriptorType::StorageBufferDynamic_ReadOnly:
-        {
-            VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV || ResInfo.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
-            for (Uint32 i = 0; i < SPIRVAttribs.ArraySize; ++i)
-            {
-                const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
-
+            case DescriptorType::StorageBuffer:
+            case DescriptorType::StorageBuffer_ReadOnly:
+            case DescriptorType::StorageBufferDynamic:
+            case DescriptorType::StorageBufferDynamic_ReadOnly:
+                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
                 // When can use raw cast here because the dynamic type is verified when the resource
                 // is bound. It will be null if the type is incorrect.
                 if (auto* pBufferViewVk = Res.pObject.RawPtr<BufferViewVkImpl>())
@@ -1663,7 +1682,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                         {
                             // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                             LOG_WARNING_MESSAGE("The size of buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
-                                                GetShaderResourcePrintName(ResInfo, i), "' is ", ViewDesc.ByteWidth, " bytes, but the shader expects at least ",
+                                                GetShaderResourcePrintName(SPIRVAttribs, ArrIndex), "' is ", ViewDesc.ByteWidth, " bytes, but the shader expects at least ",
                                                 SPIRVAttribs.BufferStaticSize, " bytes.");
                         }
                     }
@@ -1675,44 +1694,33 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                             // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.
                             LOG_WARNING_MESSAGE("The size (", ViewDesc.ByteWidth, ") and stride (", BuffDesc.ElementByteStride, ") of buffer view '",
                                                 ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
-                                                GetShaderResourcePrintName(ResInfo, i), "' are incompatible with what the shader expects. This may be the result of the array element size mismatch.");
+                                                GetShaderResourcePrintName(SPIRVAttribs, ArrIndex), "' are incompatible with what the shader expects. This may be the result of the array element size mismatch.");
                         }
                     }
                 }
-                else
-                {
-                    // Missing resource error is logged by BindResourceHelper::CacheStorageBuffer
-                }
-            }
-        }
-        break;
+                break;
 
-        case DescriptorType::StorageImage:
-        case DescriptorType::SeparateImage:
-        case DescriptorType::CombinedImageSampler:
-        {
-            VERIFY_EXPR(ResInfo.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResInfo.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-            for (Uint32 i = 0; i < SPIRVAttribs.ArraySize; ++i)
-            {
-                const auto& Res = DescrSetResources.GetResource(CacheOffset + i);
+            case DescriptorType::StorageImage:
+            case DescriptorType::SeparateImage:
+            case DescriptorType::CombinedImageSampler:
+                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
                 // When can use raw cast here because the dynamic type is verified when the resource
                 // is bound. It will be null if the type is incorrect.
                 if (const auto* pTexViewVk = Res.pObject.RawPtr<TextureViewVkImpl>())
                 {
-                    if (!ValidateResourceViewDimension(ResInfo.Name, ResInfo.ArraySize, i, pTexViewVk, SPIRVAttribs.GetResourceDimension(), SPIRVAttribs.IsMultisample()))
+                    if (!ValidateResourceViewDimension(SPIRVAttribs.Name, SPIRVAttribs.ArraySize, ArrIndex, pTexViewVk, SPIRVAttribs.GetResourceDimension(), SPIRVAttribs.IsMultisample()))
                         BindingsOK = false;
                 }
                 else
                 {
                     // Missing resource error is logged by BindResourceHelper::CacheImage
                 }
-            }
-        }
-        break;
+                break;
 
-        default:
-            break;
-            // Nothing to do
+            default:
+                break;
+                // Nothing to do
+        }
     }
 
     return BindingsOK;

@@ -185,12 +185,6 @@ public:
         return m_pResourceAttribs[ResIndex];
     }
 
-    const PipelineResourceDesc& GetResourceDesc(Uint32 ResIndex) const
-    {
-        VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-        return m_Desc.Resources[ResIndex];
-    }
-
     struct ImmutableSamplerAttribs
     {
         RefCntAutoPtr<ISampler> Ptr;
@@ -203,12 +197,6 @@ public:
     {
         VERIFY_EXPR(SampIndex < m_Desc.NumImmutableSamplers);
         return m_ImmutableSamplers[SampIndex];
-    }
-
-    const ImmutableSamplerDesc& GetImmutableSamplerDesc(Uint32 SampIndex) const
-    {
-        VERIFY_EXPR(SampIndex < m_Desc.NumImmutableSamplers);
-        return m_Desc.ImmutableSamplers[SampIndex];
     }
 
     VkDescriptorSetLayout GetVkDescriptorSetLayout(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId]; }
@@ -278,7 +266,9 @@ public:
     /// Verifies committed resource attribs using the SPIRV resource attributes from the PSO.
     bool DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs,
                                       Uint32                            ResIndex,
-                                      ShaderResourceCacheVk&            ResourceCache) const;
+                                      const ShaderResourceCacheVk&      ResourceCache,
+                                      const char*                       ShaderName,
+                                      const char*                       PSOName) const;
 #endif
 
     // Returns the descriptor set index in the resource cache

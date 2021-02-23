@@ -49,14 +49,15 @@ namespace Diligent
 /// Validates pipeline resource signature description and throws an exception in case of an error.
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false);
 
+static constexpr Uint32 InvalidImmutableSamplerIndex = ~0u;
 /// Finds an immutable sampler for the resource name 'ResourceName' that is defined in shader stages 'ShaderStages'.
 /// If 'SamplerSuffix' is not null, it will be appended to the 'ResourceName'.
-/// Returns an index of the sampler in ImtblSamplers array, or -1 if there is no suitable sampler.
-Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
-                           Uint32                      NumImtblSamplers,
-                           SHADER_TYPE                 ShaderStages,
-                           const char*                 ResourceName,
-                           const char*                 SamplerSuffix);
+/// Returns an index of the sampler in ImtblSamplers array, or InvalidImmutableSamplerIndex if there is no suitable sampler.
+Uint32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
+                            Uint32                      NumImtblSamplers,
+                            SHADER_TYPE                 ShaderStages,
+                            const char*                 ResourceName,
+                            const char*                 SamplerSuffix);
 
 /// Returns true if two pipeline resource signature descriptions are compatible, and false otherwise
 bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& Desc0,
@@ -176,6 +177,41 @@ public:
 
         UNEXPECTED("Index is out of range");
         return SHADER_TYPE_UNKNOWN;
+    }
+
+    static constexpr Uint32 InvalidResourceIndex = ~0u;
+    /// Finds a resource with the given name in the specified shader stage and returns its
+    /// index in m_Desc.Resources[], or InvalidResourceIndex if the resource is not found.
+    Uint32 FindResource(SHADER_TYPE ShaderStage, const char* ResourceName) const
+    {
+        for (Uint32 r = 0; r < this->m_Desc.NumResources; ++r)
+        {
+            const auto& ResDesc = this->m_Desc.Resources[r];
+            if ((ResDesc.ShaderStages & ShaderStage) != 0 && strcmp(ResDesc.Name, ResourceName) == 0)
+                return r;
+        }
+
+        return InvalidResourceIndex;
+    }
+
+    /// Finds an immutable with the given name in the specified shader stage and returns its
+    /// index in m_Desc.ImmutableSamplers[], or InvalidImmutableSamplerIndex if the sampler is not found.
+    Uint32 FindImmutableSampler(SHADER_TYPE ShaderStage, const char* ResourceName) const
+    {
+        return Diligent::FindImmutableSampler(this->m_Desc.ImmutableSamplers, this->m_Desc.NumImmutableSamplers,
+                                              ShaderStage, ResourceName, GetCombinedSamplerSuffix());
+    }
+
+    const PipelineResourceDesc& GetResourceDesc(Uint32 ResIndex) const
+    {
+        VERIFY_EXPR(ResIndex < this->m_Desc.NumResources);
+        return this->m_Desc.Resources[ResIndex];
+    }
+
+    const ImmutableSamplerDesc& GetImmutableSamplerDesc(Uint32 SampIndex) const
+    {
+        VERIFY_EXPR(SampIndex < this->m_Desc.NumImmutableSamplers);
+        return this->m_Desc.ImmutableSamplers[SampIndex];
     }
 
 protected:

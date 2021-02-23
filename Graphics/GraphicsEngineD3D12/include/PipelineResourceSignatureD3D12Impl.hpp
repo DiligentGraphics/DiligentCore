@@ -45,6 +45,7 @@ class CommandContext;
 class RenderDeviceD3D12Impl;
 class DeviceContextD3D12Impl;
 class ShaderVariableManagerD3D12;
+struct D3DShaderResourceAttribs;
 
 /// Implementation of the Diligent::PipelineResourceSignatureD3D12Impl class
 class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceD3D12Impl>
@@ -147,12 +148,6 @@ public:
         return m_pResourceAttribs[ResIndex];
     }
 
-    const PipelineResourceDesc& GetResourceDesc(Uint32 ResIndex) const
-    {
-        VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-        return m_Desc.Resources[ResIndex];
-    }
-
     struct ImmutableSamplerAttribs
     {
     private:
@@ -195,12 +190,6 @@ public:
     {
         VERIFY_EXPR(SampIndex < m_Desc.NumImmutableSamplers);
         return m_ImmutableSamplers[SampIndex];
-    }
-
-    const ImmutableSamplerDesc& GetImmutableSamplerDesc(Uint32 SampIndex) const
-    {
-        VERIFY_EXPR(SampIndex < m_Desc.NumImmutableSamplers);
-        return m_Desc.ImmutableSamplers[SampIndex];
     }
 
     Uint32 GetTotalRootParamsCount() const
@@ -262,9 +251,9 @@ public:
                       Uint32                    ResIndex,
                       ShaderResourceCacheD3D12& ResourceCache) const;
 
-    bool IsBound(Uint32                    ArrayIndex,
-                 Uint32                    ResIndex,
-                 ShaderResourceCacheD3D12& ResourceCache) const;
+    bool IsBound(Uint32                          ArrayIndex,
+                 Uint32                          ResIndex,
+                 const ShaderResourceCacheD3D12& ResourceCache) const;
 
     void CommitRootTables(ShaderResourceCacheD3D12& ResourceCache,
                           CommandContext&           Ctx,
@@ -289,6 +278,15 @@ public:
 
     // Returns true if there is an immutable sampler array in the given shader stage.
     bool HasImmutableSamplerArray(SHADER_TYPE ShaderStage) const;
+
+#ifdef DILIGENT_DEVELOPMENT
+    /// Verifies committed resource using the resource attributes from the PSO.
+    bool DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
+                                      Uint32                          ResIndex,
+                                      const ShaderResourceCacheD3D12& ResourceCache,
+                                      const char*                     ShaderName,
+                                      const char*                     PSOName) const;
+#endif
 
 private:
     using StaticResCacheTblSizesArrayType = std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1>;

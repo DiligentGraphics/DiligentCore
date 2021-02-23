@@ -391,13 +391,13 @@ private:
         using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
 
-        Bitfield             ActiveSRBMask      = 0; // Indicates which SRBs are active in current PSO
-        Bitfield             DynamicBuffersMask = 0; // Indicates which SRBs have dynamic buffers
-        bool                 bRootViewsCommitted;    // Indicates if root views have been committed since the time SRB  has been committed.
-        bool                 bRootTablesCommited;
-        ID3D12RootSignature* pRootSig;
+        Bitfield             ActiveSRBMask       = 0;     // Indicates which SRBs are active in current PSO
+        Bitfield             DynamicBuffersMask  = 0;     // Indicates which SRBs have dynamic buffers
+        bool                 bRootViewsCommitted = false; // Indicates if root views have been committed since the time SRB  has been committed.
+        bool                 bRootTablesCommited = false;
+        ID3D12RootSignature* pRootSig            = nullptr;
 
-        std::array<class ShaderResourceBindingD3D12Impl*, MAX_RESOURCE_SIGNATURES> SRBs;
+        std::array<class ShaderResourceBindingD3D12Impl*, MAX_RESOURCE_SIGNATURES> SRBs{};
 
         RootTableInfo()
         {
@@ -455,10 +455,10 @@ private:
         // Indicates if currently committed D3D12 vertex buffers are up to date
         bool bCommittedD3D12VBsUpToDate = false;
 
-        // Indicates if currently committed D3D11 index buffer is up to date
+        // Indicates if currently committed D3D12 index buffer is up to date
         bool bCommittedD3D12IBUpToDate = false;
 
-        // AZ TODO
+        // Indicates if currently committed resources have been validated
         bool CommittedResourcesValidated = false;
     } m_State;
 

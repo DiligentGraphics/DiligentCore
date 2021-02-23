@@ -1109,7 +1109,8 @@ void PipelineStateVkImpl::DvpVerifySRBResources(SRBArray& SRBs) const
                     const auto  SignBindIndex = SignDesc.BindingIndex;
                     if (auto* pSRB = SRBs[SignBindIndex])
                     {
-                        res_info->Signature->DvpValidateCommittedResource(ResAttribs, res_info->ResIndex, pSRB->GetResourceCache());
+                        res_info->Signature->DvpValidateCommittedResource(ResAttribs, res_info->ResIndex, pSRB->GetResourceCache(),
+                                                                          pResources->GetShaderName(), m_Desc.Name);
                     }
                     else
                     {

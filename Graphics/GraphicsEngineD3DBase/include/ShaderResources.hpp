@@ -372,6 +372,11 @@ public:
             HandleAccelStruct(AS, n);
         }
     }
+    template <typename THandler>
+    void ProcessResources(THandler Handler) const
+    {
+        ProcessResources(Handler, Handler, Handler, Handler, Handler, Handler, Handler);
+    }
 
     bool        IsCompatibleWith(const ShaderResources& Resources) const;
     bool        IsUsingCombinedTextureSamplers() const { return m_SamplerSuffix != nullptr; }

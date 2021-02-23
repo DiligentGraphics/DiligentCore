@@ -222,11 +222,11 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 #undef LOG_PRS_ERROR_AND_THROW
 
 
-Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
-                           Uint32                      NumImtblSamplers,
-                           SHADER_TYPE                 ShaderStages,
-                           const char*                 ResourceName,
-                           const char*                 SamplerSuffix)
+Uint32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
+                            Uint32                      NumImtblSamplers,
+                            SHADER_TYPE                 ShaderStages,
+                            const char*                 ResourceName,
+                            const char*                 SamplerSuffix)
 {
     for (Uint32 s = 0; s < NumImtblSamplers; ++s)
     {
@@ -242,7 +242,7 @@ Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
         }
     }
 
-    return -1;
+    return InvalidImmutableSamplerIndex;
 }
 
 /// Returns true if two pipeline resources are compatible

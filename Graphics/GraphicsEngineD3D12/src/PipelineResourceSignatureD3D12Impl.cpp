@@ -176,9 +176,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
             //    and we will be looking for the 'Texture_sampler' name.
             //  - When combined texture samplers are not used, sampler suffix will be null,
             //    and we will be looking for the sampler name itself.
-            const auto SrcImmutableSamplerInd = FindImmutableSampler(m_Desc.ImmutableSamplers, m_Desc.NumImmutableSamplers, ResDesc.ShaderStages,
-                                                                     ResDesc.Name, GetCombinedSamplerSuffix());
-            if (SrcImmutableSamplerInd >= 0)
+            const auto SrcImmutableSamplerInd = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
+            if (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex)
             {
                 ResourceToImmutableSamplerInd[i] = SrcImmutableSamplerInd;
                 // Set the immutable sampler array size to match the resource array size
@@ -1250,9 +1249,9 @@ void PipelineResourceSignatureD3D12Impl::BindResource(IDeviceObject*            
     Helper.BindResource(pObj);
 }
 
-bool PipelineResourceSignatureD3D12Impl::IsBound(Uint32                    ArrayIndex,
-                                                 Uint32                    ResIndex,
-                                                 ShaderResourceCacheD3D12& ResourceCache) const
+bool PipelineResourceSignatureD3D12Impl::IsBound(Uint32                          ArrayIndex,
+                                                 Uint32                          ResIndex,
+                                                 const ShaderResourceCacheD3D12& ResourceCache) const
 {
     const auto& ResDesc              = GetResourceDesc(ResIndex);
     const auto& Attribs              = GetResourceAttribs(ResIndex);
@@ -1265,14 +1264,82 @@ bool PipelineResourceSignatureD3D12Impl::IsBound(Uint32                    Array
     if (RootIndex < ResourceCache.GetNumRootTables())
     {
         const auto& RootTable = ResourceCache.GetRootTable(RootIndex);
-        if (OffsetFromTableStart + ArrayIndex < RootTable.GetSize())
+        if (OffsetFromTableStart < RootTable.GetSize())
         {
-            const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrayIndex);
+            const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart);
             return !CachedRes.IsNull();
         }
     }
 
     return false;
 }
+
+#ifdef DILIGENT_DEVELOPMENT
+bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
+                                                                      Uint32                          ResIndex,
+                                                                      const ShaderResourceCacheD3D12& ResourceCache,
+                                                                      const char*                     ShaderName,
+                                                                      const char*                     PSOName) const
+{
+    const auto& ResDesc    = GetResourceDesc(ResIndex);
+    const auto& ResAttribs = GetResourceAttribs(ResIndex);
+    VERIFY_EXPR(strcmp(ResDesc.Name, D3DAttribs.Name) == 0);
+    VERIFY_EXPR(D3DAttribs.BindCount <= ResDesc.ArraySize);
+
+    if ((ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER) && ResAttribs.IsImmutableSamplerAssigned())
+        return true;
+
+    const auto  CacheType            = ResourceCache.GetContentType();
+    const auto  RootIndex            = ResAttribs.RootIndex(CacheType);
+    const auto  OffsetFromTableStart = ResAttribs.OffsetFromTableStart(CacheType);
+    const auto& RootTable            = ResourceCache.GetRootTable(RootIndex);
+
+    bool BindingsOK = true;
+    for (Uint32 ArrIndex = 0; ArrIndex < D3DAttribs.BindCount; ++ArrIndex)
+    {
+        if (!IsBound(ArrIndex, ResIndex, ResourceCache))
+        {
+            LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(D3DAttribs.Name, D3DAttribs.BindCount, ArrIndex),
+                              "' in shader '", ShaderName, "' of PSO '", PSOName, "'.");
+            BindingsOK = false;
+            continue;
+        }
+
+        if (ResAttribs.IsCombinedWithSampler())
+        {
+            auto& SamplerResDesc = GetResourceDesc(ResAttribs.SamplerInd);
+            auto& SamplerAttribs = GetResourceAttribs(ResAttribs.SamplerInd);
+            VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+            VERIFY_EXPR(SamplerResDesc.ArraySize == 1 || SamplerResDesc.ArraySize == ResDesc.ArraySize);
+            if (!SamplerAttribs.IsImmutableSamplerAssigned())
+            {
+                if (ArrIndex < SamplerResDesc.ArraySize)
+                {
+                    if (!IsBound(ArrIndex, ResAttribs.SamplerInd, ResourceCache))
+                    {
+                        LOG_ERROR_MESSAGE("No sampler is bound to sampler variable '", GetShaderResourcePrintName(SamplerResDesc, ArrIndex),
+                                          "' combined with texture '", D3DAttribs.Name, "' in shader '", ShaderName, "' of PSO '", PSOName, "'.");
+                        BindingsOK = false;
+                    }
+                }
+            }
+        }
+
+        if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV)
+        {
+            const auto& CachedRes = RootTable.GetResource(OffsetFromTableStart);
+            // When can use raw cast here because the dynamic type is verified when the resource
+            // is bound. It will be null if the type is incorrect.
+            if (const auto* pTexViewD3D12 = CachedRes.pObject.RawPtr<TextureViewD3D12Impl>())
+            {
+                if (!ValidateResourceViewDimension(D3DAttribs.Name, D3DAttribs.BindCount, ArrIndex, pTexViewD3D12, D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample()))
+                    BindingsOK = false;
+            }
+        }
+    }
+    return BindingsOK;
+}
+#endif
+
 
 } // namespace Diligent

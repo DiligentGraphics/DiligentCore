@@ -437,7 +437,7 @@ void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources()
         }
     }
 
-    //m_pPipelineState->DvpVerifySRBResources(RootInfo.SRBs);
+    m_pPipelineState->DvpVerifySRBResources(RootInfo.SRBs.data(), static_cast<Uint32>(RootInfo.SRBs.size()));
 
     m_State.CommittedResourcesValidated = true;
 }
