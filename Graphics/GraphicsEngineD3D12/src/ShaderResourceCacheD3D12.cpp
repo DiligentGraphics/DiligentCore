@@ -462,23 +462,26 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
 }
 #endif // DILIGENT_DEVELOPMENT
 
-void ShaderResourceCacheD3D12::TransitionResources(CommandContext& Ctx,
-                                                   bool            PerformTransitions,
-                                                   bool            ValidateStates)
+void ShaderResourceCacheD3D12::TransitionResourceStates(CommandContext& Ctx, StateTransitionMode Mode)
 {
     for (Uint32 r = 0; r < m_TotalResourceCount; ++r)
     {
         auto& Res = GetResource(r);
-        if (PerformTransitions)
+        switch (Mode)
         {
-            Res.TransitionResource(Ctx);
-        }
+            case StateTransitionMode::Transition:
+                Res.TransitionResource(Ctx);
+                break;
+
+            case StateTransitionMode::Verify:
 #ifdef DILIGENT_DEVELOPMENT
-        else if (ValidateStates)
-        {
-            Res.DvpVerifyResourceState();
-        }
+                Res.DvpVerifyResourceState();
 #endif
+                break;
+
+            default:
+                UNEXPECTED("Unexpected mode");
+        }
     }
 }
 

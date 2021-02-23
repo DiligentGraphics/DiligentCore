@@ -399,11 +399,6 @@ private:
 
         std::array<class ShaderResourceBindingD3D12Impl*, MAX_RESOURCE_SIGNATURES> SRBs{};
 
-        RootTableInfo()
-        {
-            memset(this, 0, sizeof(*this));
-        }
-
         __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
         {
             return !bRootViewsCommitted || !bRootTablesCommited || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
@@ -415,7 +410,8 @@ private:
     __forceinline RootTableInfo& GetRootTableInfo(PIPELINE_TYPE PipelineType);
 
     template <bool IsCompute>
-    __forceinline void CommitRootTables(RootTableInfo& RootInfo);
+    __forceinline void CommitRootTablesAndViews(RootTableInfo& RootInfo);
+
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();
 #endif

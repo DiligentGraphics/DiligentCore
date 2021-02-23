@@ -239,9 +239,12 @@ public:
         return m_DescriptorAllocations[AllocationIdx];
     }
 
-    void TransitionResources(CommandContext& Ctx,
-                             bool            PerformTransitions,
-                             bool            ValidateStates);
+    enum class StateTransitionMode
+    {
+        Transition,
+        Verify
+    };
+    void TransitionResourceStates(CommandContext& Ctx, StateTransitionMode Mode);
 
     Uint32& GetDynamicRootBuffersCounter() { return m_NumDynamicRootBuffers; }
 
