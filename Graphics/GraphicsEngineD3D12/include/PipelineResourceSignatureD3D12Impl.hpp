@@ -255,20 +255,19 @@ public:
                  Uint32                          ResIndex,
                  const ShaderResourceCacheD3D12& ResourceCache) const;
 
-    void CommitRootTables(const ShaderResourceCacheD3D12& ResourceCache,
-                          CommandContext&                 Ctx,
-                          DeviceContextD3D12Impl*         pDeviceCtx,
-                          Uint32                          DeviceCtxId,
-                          bool                            IsCompute,
-                          Uint32                          BaseRootIndex) const;
+    struct CommitCacheResourcesAttribs
+    {
+        const ShaderResourceCacheD3D12& ResourceCache;
+        CommandContext&                 Ctx;
+        DeviceContextD3D12Impl*         pDeviceCtx;
+        Uint32                          DeviceCtxId;
+        bool                            IsCompute;
+        Uint32                          BaseRootIndex;
+    };
+    void CommitRootTables(const CommitCacheResourcesAttribs& CommitAttribs) const;
 
-    void CommitRootViews(const ShaderResourceCacheD3D12& ResourceCache,
-                         CommandContext&                 Ctx,
-                         DeviceContextD3D12Impl*         pDeviceCtx,
-                         Uint32                          DeviceCtxId,
-                         Uint32                          BaseRootIndex,
-                         bool                            IsCompute,
-                         Uint64                          BuffersMask) const;
+    void CommitRootViews(const CommitCacheResourcesAttribs& CommitAttribs,
+                         Uint64                             BuffersMask) const;
 
     const RootParamsManager& GetRootParams() const { return m_RootParams; }
 

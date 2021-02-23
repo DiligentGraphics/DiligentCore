@@ -506,20 +506,16 @@ void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderReso
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::CommitRootViews(const ShaderResourceCacheD3D12& ResourceCache,
-                                                         CommandContext&                 CmdCtx,
-                                                         DeviceContextD3D12Impl*         pDeviceCtx,
-                                                         Uint32                          DeviceCtxId,
-                                                         Uint32                          BaseRootIndex,
-                                                         bool                            IsCompute,
-                                                         Uint64                          BuffersMask) const
+void PipelineResourceSignatureD3D12Impl::CommitRootViews(const CommitCacheResourcesAttribs& CommitAttribs,
+                                                         Uint64                             BuffersMask) const
 {
     while (BuffersMask != 0)
     {
         const auto  BufferBit = ExtractLSB(BuffersMask);
         const auto  RootInd   = PlatformMisc::GetLSB(BufferBit);
-        const auto& CacheTbl  = ResourceCache.GetRootTable(RootInd);
+        const auto& CacheTbl  = CommitAttribs.ResourceCache.GetRootTable(RootInd);
         VERIFY_EXPR(CacheTbl.IsRootView());
+        const auto& BaseRootIndex = CommitAttribs.BaseRootIndex;
 
         const auto& Res = CacheTbl.GetResource(0);
         if (Res.IsNull())
@@ -546,28 +542,28 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const ShaderResourceCac
         }
         VERIFY_EXPR(pBuffer != nullptr);
 
-        const auto BufferGPUAddress = pBuffer->GetGPUAddress(DeviceCtxId, pDeviceCtx);
+        const auto BufferGPUAddress = pBuffer->GetGPUAddress(CommitAttribs.DeviceCtxId, CommitAttribs.pDeviceCtx);
         VERIFY_EXPR(BufferGPUAddress != 0);
 
-        auto* const pd3d12CmdList = CmdCtx.GetCommandList();
+        auto* const pd3d12CmdList = CommitAttribs.Ctx.GetCommandList();
         switch (Res.Type)
         {
             case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-                if (IsCompute)
+                if (CommitAttribs.IsCompute)
                     pd3d12CmdList->SetComputeRootConstantBufferView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
                     pd3d12CmdList->SetGraphicsRootConstantBufferView(BaseRootIndex + RootInd, BufferGPUAddress);
                 break;
 
             case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-                if (IsCompute)
+                if (CommitAttribs.IsCompute)
                     pd3d12CmdList->SetComputeRootShaderResourceView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
                     pd3d12CmdList->SetGraphicsRootShaderResourceView(BaseRootIndex + RootInd, BufferGPUAddress);
                 break;
 
             case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-                if (IsCompute)
+                if (CommitAttribs.IsCompute)
                     pd3d12CmdList->SetComputeRootUnorderedAccessView(BaseRootIndex + RootInd, BufferGPUAddress);
                 else
                     pd3d12CmdList->SetGraphicsRootUnorderedAccessView(BaseRootIndex + RootInd, BufferGPUAddress);
@@ -579,13 +575,12 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const ShaderResourceCac
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::CommitRootTables(const ShaderResourceCacheD3D12& ResourceCache,
-                                                          CommandContext&                 CmdCtx,
-                                                          DeviceContextD3D12Impl*         pDeviceCtx,
-                                                          Uint32                          DeviceCtxId,
-                                                          bool                            IsCompute,
-                                                          Uint32                          BaseRootIndex) const
+void PipelineResourceSignatureD3D12Impl::CommitRootTables(const CommitCacheResourcesAttribs& CommitAttribs) const
 {
+    const auto& ResourceCache = CommitAttribs.ResourceCache;
+    const auto& BaseRootIndex = CommitAttribs.BaseRootIndex;
+    auto&       CmdCtx        = CommitAttribs.Ctx;
+
     auto* const pd3d12Device = GetDevice()->GetD3D12Device();
 
     // Having an array of actual DescriptorHeapAllocation objects introduces unncessary overhead when
@@ -672,7 +667,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(const ShaderResourceCa
             VERIFY(RootTableGPUDescriptorHandle.ptr != 0, "Unexpected null GPU descriptor handle");
         }
 
-        if (IsCompute)
+        if (CommitAttribs.IsCompute)
             CmdCtx.GetCommandList()->SetComputeRootDescriptorTable(BaseRootIndex + RootTable.RootIndex, RootTableGPUDescriptorHandle);
         else
             CmdCtx.GetCommandList()->SetGraphicsRootDescriptorTable(BaseRootIndex + RootTable.RootIndex, RootTableGPUDescriptorHandle);
@@ -681,8 +676,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(const ShaderResourceCa
     // Commit non-dynamic root buffer views
     if (auto NonDynamicBuffersMask = ResourceCache.GetNonDynamicRootBuffersMask())
     {
-        CommitRootViews(ResourceCache, CmdCtx, pDeviceCtx, DeviceCtxId,
-                        BaseRootIndex, IsCompute, NonDynamicBuffersMask);
+        CommitRootViews(CommitAttribs, NonDynamicBuffersMask);
     }
 
     // Manually destroy DescriptorHeapAllocation objects we created.

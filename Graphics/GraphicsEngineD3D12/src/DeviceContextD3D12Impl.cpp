@@ -316,16 +316,31 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo)
         auto* const pSRB = RootInfo.SRBs[s];
         DEV_CHECK_ERR(pSRB != nullptr, "No SRB is committed and binding index ", s);
         VERIFY_EXPR(pSRB->GetBindingIndex() == s);
-        const auto& ResourceCache = pSRB->GetResourceCache();
+
+        const auto& ResourceCache          = pSRB->GetResourceCache();
+        const auto  DynamicRootBuffersMask = ResourceCache.GetDynamicRootBuffersMask();
+        if (DynamicRootBuffersMask == 0 && RootInfo.bRootTablesCommited)
+            continue;
+
+        PipelineResourceSignatureD3D12Impl::CommitCacheResourcesAttribs CommitAttribs //
+            {
+                ResourceCache,
+                CmdCtx,
+                this,
+                GetContextId(),
+                IsCompute,
+                RootSig.GetBaseRootIndex(s) //
+            };
         if (!RootInfo.bRootTablesCommited)
         {
-            pSignature->CommitRootTables(ResourceCache, CmdCtx, this, GetContextId(), IsCompute, RootSig.GetBaseRootIndex(s));
+            pSignature->CommitRootTables(CommitAttribs);
         }
 
-        // Always commit root views. This method is not called if root views are up to date
-        if (auto DynamicRootBuffersMask = ResourceCache.GetDynamicRootBuffersMask())
+        // Always commit root views even when bRootViewsCommitted is true.
+        // This method is not called if root views are up to date.
+        if (DynamicRootBuffersMask != 0)
         {
-            pSignature->CommitRootViews(pSRB->GetResourceCache(), CmdCtx, this, GetContextId(), RootSig.GetBaseRootIndex(s), IsCompute, DynamicRootBuffersMask);
+            pSignature->CommitRootViews(CommitAttribs, DynamicRootBuffersMask);
         }
         else
         {
