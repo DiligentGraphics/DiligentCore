@@ -206,7 +206,6 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
 
         Ctx.GetCommandList()->SetComputeRoot32BitConstants(0, 6, &CBData, 0);
 
-        // TODO: Shouldn't we transition top mip to shader resource state?
         D3D12_CPU_DESCRIPTOR_HANDLE DstDescriptorRange     = DescriptorAlloc.GetCpuHandle();
         const Uint32                MaxMipsHandledByCS     = 4; // Max number of mip levels processed by one CS shader invocation
         UINT                        DstRangeSize           = 1 + MaxMipsHandledByCS;

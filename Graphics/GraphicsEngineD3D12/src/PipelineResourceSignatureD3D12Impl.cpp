@@ -694,7 +694,14 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
 {
     auto* const pd3d12Device = GetDevice()->GetD3D12Device();
 
-    std::array<DescriptorHeapAllocation, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> DynamicDescriptorAllocations;
+    // Having an array of actual DescriptorHeapAllocation objects introduces unncessary overhead when
+    // there are no dynamic variables as constructors and desctructors are always called. To avoid this
+    // overhead we will construct DescriptorHeapAllocation in-place only when they are really needed.
+    std::array<DescriptorHeapAllocation*, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> pDynamicDescriptorAllocations{};
+
+    // Reserve space for DescriptorHeapAllocation objects (do NOT zero-out!)
+    alignas(DescriptorHeapAllocation) uint8_t DynamicDescriptorAllocationsRawMem[sizeof(DescriptorHeapAllocation) * (D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1)];
+
     for (Uint32 heap_type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; heap_type < D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1; ++heap_type)
     {
         const auto d3d12HeapType = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(heap_type);
@@ -702,10 +709,13 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
         auto NumDynamicDescriptors = m_RootParams.GetTotalTableSlots(d3d12HeapType, ROOT_PARAMETER_GROUP_DYNAMIC);
         if (NumDynamicDescriptors > 0)
         {
-            auto& Allocation = DynamicDescriptorAllocations[d3d12HeapType];
-            Allocation       = CmdCtx.AllocateDynamicGPUVisibleDescriptor(d3d12HeapType, NumDynamicDescriptors);
+            auto& pAllocation = pDynamicDescriptorAllocations[d3d12HeapType];
 
-            DEV_CHECK_ERR(!Allocation.IsNull(),
+            // Create new DescriptorHeapAllocation in-place
+            pAllocation = new (&DynamicDescriptorAllocationsRawMem[sizeof(DescriptorHeapAllocation) * heap_type])
+                DescriptorHeapAllocation{CmdCtx.AllocateDynamicGPUVisibleDescriptor(d3d12HeapType, NumDynamicDescriptors)};
+
+            DEV_CHECK_ERR(!pAllocation->IsNull(),
                           "Failed to allocate ", NumDynamicDescriptors, " dynamic GPU-visible ",
                           (d3d12HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ? "CBV/SRV/UAV" : "Sampler"),
                           " descriptor(s). Consider increasing GPUDescriptorHeapDynamicSize[", heap_type,
@@ -715,25 +725,25 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
             // Copy all all dynamic descriptors from the CPU-only cache allocation
             auto& SrcDynamicAllocation = ResourceCache.GetDescriptorAllocation(d3d12HeapType, ROOT_PARAMETER_GROUP_DYNAMIC);
             VERIFY_EXPR(SrcDynamicAllocation.GetNumHandles() == NumDynamicDescriptors);
-            pd3d12Device->CopyDescriptorsSimple(NumDynamicDescriptors, Allocation.GetCpuHandle(), SrcDynamicAllocation.GetCpuHandle(), d3d12HeapType);
+            pd3d12Device->CopyDescriptorsSimple(NumDynamicDescriptors, pAllocation->GetCpuHandle(), SrcDynamicAllocation.GetCpuHandle(), d3d12HeapType);
         }
     }
+
+    auto* pSrvCbvUavDynamicAllocation = pDynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV];
+    auto* pSamplerDynamicAllocation   = pDynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER];
 
     CommandContext::ShaderDescriptorHeaps Heaps{
         ResourceCache.GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ROOT_PARAMETER_GROUP_STATIC_MUTABLE),
         ResourceCache.GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, ROOT_PARAMETER_GROUP_STATIC_MUTABLE),
     };
-    if (Heaps.pSamplerHeap == nullptr)
-        Heaps.pSamplerHeap = DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].GetDescriptorHeap();
+    if (Heaps.pSrvCbvUavHeap == nullptr && pSrvCbvUavDynamicAllocation != nullptr)
+        Heaps.pSrvCbvUavHeap = pSrvCbvUavDynamicAllocation->GetDescriptorHeap();
+    if (Heaps.pSamplerHeap == nullptr && pSamplerDynamicAllocation != nullptr)
+        Heaps.pSamplerHeap = pSamplerDynamicAllocation->GetDescriptorHeap();
 
-    if (Heaps.pSrvCbvUavHeap == nullptr)
-        Heaps.pSrvCbvUavHeap = DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetDescriptorHeap();
-
-    VERIFY((DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].IsNull() ||
-            DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetDescriptorHeap() == Heaps.pSrvCbvUavHeap),
+    VERIFY(pSrvCbvUavDynamicAllocation == nullptr || pSrvCbvUavDynamicAllocation->GetDescriptorHeap() == Heaps.pSrvCbvUavHeap,
            "Inconsistent CBV/SRV/UAV descriptor heaps");
-    VERIFY((DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].IsNull() ||
-            DynamicDescriptorAllocations[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].GetDescriptorHeap() == Heaps.pSamplerHeap),
+    VERIFY(pSamplerDynamicAllocation == nullptr || pSamplerDynamicAllocation->GetDescriptorHeap() == Heaps.pSamplerHeap,
            "Inconsistent Sampler descriptor heaps");
 
     if (Heaps)
@@ -758,7 +768,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
         D3D12_GPU_DESCRIPTOR_HANDLE RootTableGPUDescriptorHandle{};
         if (RootTable.Group == ROOT_PARAMETER_GROUP_DYNAMIC)
         {
-            auto& DynamicAllocation      = DynamicDescriptorAllocations[d3d12HeapType];
+            auto& DynamicAllocation      = *pDynamicDescriptorAllocations[d3d12HeapType];
             RootTableGPUDescriptorHandle = DynamicAllocation.GetGpuHandle(TableOffsetInGroupAllocation);
         }
         else
@@ -778,6 +788,13 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(ShaderResourceCacheD3D
     constexpr auto CommitDynamicBuffers = false;
     CommitRootViews(ResourceCache, CmdCtx, pDeviceCtx,
                     DeviceCtxId, BaseRootIndex, IsCompute, CommitDynamicBuffers);
+
+    // Manually destroy DescriptorHeapAllocation objects we created.
+    for (auto* pAllocation : pDynamicDescriptorAllocations)
+    {
+        if (pAllocation != nullptr)
+            pAllocation->~DescriptorHeapAllocation();
+    }
 }
 
 
