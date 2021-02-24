@@ -100,14 +100,14 @@ public:
         return GetSignature();
     }
 
+    virtual bool DILIGENT_CALL_TYPE StaticResourcesInitialized() const override final
+    {
+        return m_bStaticResourcesInitialized;
+    }
+
     ResourceSignatureType* GetSignature() const
     {
         return m_pPRS.RawPtr<ResourceSignatureType>();
-    }
-
-    bool StaticResourcesInitialized() const
-    {
-        return m_bStaticResourcesInitialized;
     }
 
     void SetStaticResourcesInitialized()

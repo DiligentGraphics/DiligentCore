@@ -119,6 +119,9 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     VIRTUAL IShaderResourceVariable* METHOD(GetVariableByIndex)(THIS_
                                                                 SHADER_TYPE ShaderType,
                                                                 Uint32      Index) PURE;
+
+    /// Returns true if static resources have been initialized in this SRB.
+    VIRTUAL bool METHOD(StaticResourcesInitialized)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -128,12 +131,12 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-//#  define IShaderResourceBinding_GetPipelineState(This)                            CALL_IFACE_METHOD(ShaderResourceBinding, GetPipelineState,                       This)
-#    define IShaderResourceBinding_GetPipelineResourceSignature(This)                CALL_IFACE_METHOD(ShaderResourceBinding, GetPipelineResourceSignature,           This)
-#    define IShaderResourceBinding_BindResources(This, ...)                          CALL_IFACE_METHOD(ShaderResourceBinding, BindResources,                          This, __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableByName(This, ...)                      CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableByName,                      This, __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableCount(This, ...)                       CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableCount,                       This, __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableByIndex(This, ...)                     CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableByIndex,                     This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetPipelineResourceSignature(This) CALL_IFACE_METHOD(ShaderResourceBinding, GetPipelineResourceSignature, This)
+#    define IShaderResourceBinding_BindResources(This, ...)           CALL_IFACE_METHOD(ShaderResourceBinding, BindResources,                This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByName(This, ...)       CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableByName,            This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableCount(This, ...)        CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableCount,             This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByIndex(This, ...)      CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableByIndex,           This, __VA_ARGS__)
+#    define IShaderResourceBinding_StaticResourcesInitialized(This)   CALL_IFACE_METHOD(ShaderResourceBinding, StaticResourcesInitialized,   This)
 
 // clang-format on
 

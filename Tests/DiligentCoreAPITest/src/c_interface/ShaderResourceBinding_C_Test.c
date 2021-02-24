@@ -74,6 +74,9 @@ int TestShaderResourceBindingCInterface(struct IShaderResourceBinding* pSRB)
 
     IPipelineResourceSignature_InitializeStaticSRBResources(pPRS, pSRB);
 
+    if (!IShaderResourceBinding_StaticResourcesInitialized(pSRB))
+        ++num_errors;
+
     return num_errors;
 }
 

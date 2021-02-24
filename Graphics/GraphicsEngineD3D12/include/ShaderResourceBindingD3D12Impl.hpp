@@ -41,7 +41,7 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IShaderResourceBindingD3D12 interface
-// sizeof(ShaderResourceBindingD3D12Impl) == 104 (x64, msvc, Release)
+// sizeof(ShaderResourceBindingD3D12Impl) == 96 (x64, msvc, Release)
 class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineResourceSignatureD3D12Impl>
 {
 public:
@@ -68,11 +68,6 @@ private:
 
     ShaderResourceCacheD3D12    m_ShaderResourceCache;
     ShaderVariableManagerD3D12* m_pShaderVarMgrs = nullptr;
-
-    // Resource layout index in m_ShaderResourceCache array for every shader stage,
-    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ShaderVarIndex = {-1, -1, -1, -1, -1, -1};
-    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 };
 
 } // namespace Diligent

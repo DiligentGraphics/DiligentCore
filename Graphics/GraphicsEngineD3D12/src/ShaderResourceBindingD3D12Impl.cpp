@@ -46,8 +46,6 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
 {
     try
     {
-        m_ShaderVarIndex.fill(-1);
-
         const auto NumShaders = GetNumShaders();
 
         FixedLinearAllocator MemPool{GetRawAllocator()};

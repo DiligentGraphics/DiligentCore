@@ -44,7 +44,7 @@ namespace Diligent
 class PipelineResourceSignatureVkImpl;
 
 /// Implementation of the Diligent::IShaderResourceBindingVk interface
-// sizeof(ShaderResourceBindingVkImpl) == 72 (x64, msvc, Release)
+// sizeof(ShaderResourceBindingVkImpl) == 64 (x64, msvc, Release)
 class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineResourceSignatureVkImpl>
 {
 public:
