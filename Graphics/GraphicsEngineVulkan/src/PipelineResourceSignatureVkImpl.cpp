@@ -713,9 +713,9 @@ void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourc
                                                                   bool                     InitStaticResources)
 {
     auto& SRBAllocator  = m_pDevice->GetSRBAllocator();
-    auto  pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this);
+    auto* pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this);
     if (InitStaticResources)
-        pResBindingVk->InitializeStaticResources(nullptr);
+        InitializeStaticSRBResources(pResBindingVk);
     pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 
@@ -779,7 +779,17 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
     }
 }
 
-void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& DstResourceCache) const
+void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const
+{
+    InitializeStaticSRBResourcesImpl(ValidatedCast<ShaderResourceBindingVkImpl>(pSRB),
+                                     [&](ShaderResourceBindingVkImpl* pSRBVk) //
+                                     {
+                                         CopyStaticResources(pSRBVk->GetResourceCache());
+                                     } //
+    );
+}
+
+void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk& DstResourceCache) const
 {
     if (!HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) || m_pStaticResCache == nullptr)
         return;

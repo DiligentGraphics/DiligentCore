@@ -68,9 +68,6 @@ public:
     /// Implementation of IShaderResourceBinding::GetVariableByIndex() in Vulkan backend.
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
-    /// Implementation of IShaderResourceBinding::InitializeStaticResourcesWithSignature() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature) override final;
-
     ShaderResourceCacheVk& GetResourceCache() { return m_ShaderResourceCache; }
 
 private:

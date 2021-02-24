@@ -393,7 +393,7 @@ void PipelineResourceSignatureD3D12Impl::CreateShaderResourceBinding(IShaderReso
     auto& SRBAllocator     = m_pDevice->GetSRBAllocator();
     auto* pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this);
     if (InitStaticResources)
-        pResBindingD3D12->InitializeStaticResources(nullptr);
+        InitializeStaticSRBResources(pResBindingD3D12);
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
 }
 
@@ -442,7 +442,17 @@ void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCach
     ResourceCache.Initialize(CacheMemAllocator, m_pDevice, m_RootParams);
 }
 
-void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(ShaderResourceCacheD3D12& DstResourceCache) const
+void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const
+{
+    InitializeStaticSRBResourcesImpl(ValidatedCast<ShaderResourceBindingD3D12Impl>(pSRB),
+                                     [&](ShaderResourceBindingD3D12Impl* pSRBD3D12) //
+                                     {
+                                         CopyStaticResources(pSRBD3D12->GetResourceCache());
+                                     } //
+    );
+}
+
+void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCacheD3D12& DstResourceCache) const
 {
     if (m_pStaticResCache == nullptr)
         return;

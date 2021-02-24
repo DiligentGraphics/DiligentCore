@@ -228,6 +228,8 @@ public:
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureVkImpl>(pPRS));
     }
 
+    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final;
+
     SRBMemoryAllocator& GetSRBMemoryAllocator()
     {
         return m_SRBMemAllocator;
@@ -238,7 +240,7 @@ public:
                               const char*            DbgPipelineName) const;
 
     // Copies static resources from the static resource cache to the destination cache
-    void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
+    void CopyStaticResources(ShaderResourceCacheVk& ResourceCache) const;
 
     // Binds object pObj to resource with index ResIndex in m_Desc.Resources and
     // array index ArrayIndex.

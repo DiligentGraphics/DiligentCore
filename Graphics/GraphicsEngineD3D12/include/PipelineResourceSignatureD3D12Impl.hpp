@@ -226,6 +226,8 @@ public:
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureD3D12Impl>(pPRS));
     }
 
+    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final;
+
     bool IsCompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const;
 
     bool IsIncompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const
@@ -242,7 +244,7 @@ public:
                               IMemoryAllocator&         CacheMemAllocator,
                               const char*               DbgPipelineName) const;
 
-    void InitializeStaticSRBResources(ShaderResourceCacheD3D12& ResourceCache) const;
+    void CopyStaticResources(ShaderResourceCacheD3D12& ResourceCache) const;
 
     // Binds object pObj to resource with index ResIndex in m_Desc.Resources and
     // array index ArrayIndex.

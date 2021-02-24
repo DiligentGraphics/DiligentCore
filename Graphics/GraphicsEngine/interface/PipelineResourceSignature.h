@@ -239,7 +239,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     ///                                        binding object is written.
     /// \param [in] InitStaticResources      - If set to true, the method will initialize static resources in
     ///                                        the created object, which has the exact same effect as calling 
-    ///                                        IShaderResourceBinding::InitializeStaticResources().
+    ///                                        IPipelineResourceSignature::InitializeStaticSRBResources().
     VIRTUAL void METHOD(CreateShaderResourceBinding)(THIS_
                                                      IShaderResourceBinding** ppShaderResourceBinding,
                                                      bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
@@ -318,7 +318,26 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     VIRTUAL Uint32 METHOD(GetStaticVariableCount)(THIS_
                                                   SHADER_TYPE ShaderType) CONST PURE;
     
-    /// AZ TODO: comment
+    /// Initializes static resources in the shader binding object.
+
+    /// If static shader resources were not initialized when the SRB was created,
+    /// this method must be called to initialize them before the SRB can be used.
+    /// The method should be called after all static variables have been initialized
+    /// in the signature.
+    ///
+    /// \param [in] pShaderResourceBinding - Shader resource binding object to initialize.
+    ///                                      The pipeline resource signature must be compatible
+    ///                                      with the shader resource binding object.
+    ///
+    /// \note   If static resources have already been initialized in the SRB and the method
+    ///         is called again, it will have no effect and a warning messge will be displayed.
+    VIRTUAL void METHOD(InitializeStaticSRBResources)(THIS_
+                                                      struct IShaderResourceBinding* pShaderResourceBinding) CONST PURE;
+
+    /// Returns true if the signature is compatible with another one.
+
+    /// \remarks    Two signatures are compatible if they contain identical resources, defined in the samer order
+    ///             disregarding their names.
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineResourceSignature* pPRS) CONST PURE;
 };
@@ -337,6 +356,7 @@ DILIGENT_END_INTERFACE
 #    define IPipelineResourceSignature_GetStaticVariableByName(This, ...)      CALL_IFACE_METHOD(PipelineResourceSignature, GetStaticVariableByName,     This, __VA_ARGS__)
 #    define IPipelineResourceSignature_GetStaticVariableByIndex(This, ...)     CALL_IFACE_METHOD(PipelineResourceSignature, GetStaticVariableByIndex,    This, __VA_ARGS__)
 #    define IPipelineResourceSignature_GetStaticVariableCount(This, ...)       CALL_IFACE_METHOD(PipelineResourceSignature, GetStaticVariableCount,      This, __VA_ARGS__)
+#    define IPipelineResourceSignature_InitializeStaticSRBResources(This, ...) CALL_IFACE_METHOD(PipelineResourceSignature, InitializeStaticSRBResources,This, __VA_ARGS__)
 #    define IPipelineResourceSignature_IsCompatibleWith(This, ...)             CALL_IFACE_METHOD(PipelineResourceSignature, IsCompatibleWith,            This, __VA_ARGS__)
 
 // clang-format on

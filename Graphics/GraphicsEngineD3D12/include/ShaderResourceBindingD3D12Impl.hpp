@@ -61,8 +61,6 @@ public:
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
-    virtual void DILIGENT_CALL_TYPE InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature) override final;
-
     ShaderResourceCacheD3D12& GetResourceCache() { return m_ShaderResourceCache; }
 
 private:

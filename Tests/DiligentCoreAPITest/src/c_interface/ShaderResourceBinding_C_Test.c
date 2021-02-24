@@ -26,6 +26,7 @@
  */
 
 #include "ShaderResourceBinding.h"
+#include "PipelineResourceSignature.h"
 
 int TestObjectCInterface(struct IObject* pObject);
 
@@ -34,7 +35,6 @@ int TestShaderResourceBindingCInterface(struct IShaderResourceBinding* pSRB)
     IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct IPipelineState*             pPSO     = NULL;
     struct IPipelineResourceSignature* pPRS     = NULL;
     IShaderResourceVariable*           pVar     = NULL;
     Uint32                             VarCount = 0;
@@ -56,10 +56,6 @@ int TestShaderResourceBindingCInterface(struct IShaderResourceBinding* pSRB)
     if (RefCnt2 != RefCnt1 - 1)
         ++num_errors;
 
-    //pPSO = IShaderResourceBinding_GetPipelineState(pSRB);
-    //if (pPSO == NULL)
-    //    ++num_errors;
-
     pPRS = IShaderResourceBinding_GetPipelineResourceSignature(pSRB);
     if (pPRS == NULL)
         ++num_errors;
@@ -76,7 +72,7 @@ int TestShaderResourceBindingCInterface(struct IShaderResourceBinding* pSRB)
     if (pVar == NULL)
         ++num_errors;
 
-    IShaderResourceBinding_InitializeStaticResources(pSRB, pPSO);
+    IPipelineResourceSignature_InitializeStaticSRBResources(pPRS, pSRB);
 
     return num_errors;
 }

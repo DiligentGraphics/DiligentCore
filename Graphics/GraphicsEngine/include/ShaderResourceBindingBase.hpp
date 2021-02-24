@@ -95,39 +95,9 @@ public:
     }
 
     /// Implementation of IShaderResourceBinding::GetPipelineResourceSignature().
-    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetPipelineResourceSignature() override final
+    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetPipelineResourceSignature() const override final
     {
-        return m_pPRS;
-    }
-
-    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override
-    {
-        if (StaticResourcesInitialized())
-        {
-            LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object. The operation will be ignored.");
-            return;
-        }
-
-        const IPipelineResourceSignature* pResourceSignature = nullptr;
-        if (pPipelineState != nullptr)
-        {
-            pResourceSignature = pPipelineState->GetResourceSignature(GetBindingIndex());
-            if (pResourceSignature == nullptr)
-            {
-                LOG_ERROR_MESSAGE("Shader resource binding is not compatible with pipeline state.");
-                return;
-            }
-
-#ifdef DILIGENT_DEVELOPMENT
-            if (!pResourceSignature->IsCompatibleWith(GetSignature()))
-            {
-                LOG_ERROR_MESSAGE("Shader resource binding is not compatible with pipeline state.");
-                return;
-            }
-#endif
-        }
-
-        InitializeStaticResourcesWithSignature(pResourceSignature);
+        return GetSignature();
     }
 
     ResourceSignatureType* GetSignature() const
@@ -138,6 +108,12 @@ public:
     bool StaticResourcesInitialized() const
     {
         return m_bStaticResourcesInitialized;
+    }
+
+    void SetStaticResourcesInitialized()
+    {
+        VERIFY_EXPR(!m_bStaticResourcesInitialized);
+        m_bStaticResourcesInitialized = true;
     }
 
 protected:

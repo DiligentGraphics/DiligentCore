@@ -136,14 +136,4 @@ IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariableByIndex(SHAD
     return GetVariableByIndexImpl(ShaderType, Index, m_pShaderVarMgrs);
 }
 
-void ShaderResourceBindingD3D12Impl::InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature)
-{
-    if (pResourceSignature == nullptr)
-        pResourceSignature = GetPipelineResourceSignature();
-
-    auto* pPRSD3D12 = ValidatedCast<const PipelineResourceSignatureD3D12Impl>(pResourceSignature);
-    pPRSD3D12->InitializeStaticSRBResources(m_ShaderResourceCache);
-    m_bStaticResourcesInitialized = true;
-}
-
 } // namespace Diligent

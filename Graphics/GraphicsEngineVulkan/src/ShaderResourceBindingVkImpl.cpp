@@ -133,14 +133,4 @@ IShaderResourceVariable* ShaderResourceBindingVkImpl::GetVariableByIndex(SHADER_
     return GetVariableByIndexImpl(ShaderType, Index, m_pShaderVarMgrs);
 }
 
-void ShaderResourceBindingVkImpl::InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature)
-{
-    if (pResourceSignature == nullptr)
-        pResourceSignature = GetPipelineResourceSignature();
-
-    auto* pPRSVk = ValidatedCast<const PipelineResourceSignatureVkImpl>(pResourceSignature);
-    pPRSVk->InitializeStaticSRBResources(m_ShaderResourceCache);
-    m_bStaticResourcesInitialized = true;
-}
-
 } // namespace Diligent

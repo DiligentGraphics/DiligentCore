@@ -424,7 +424,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     BindResources(SHADER_TYPE_VERTEX);
     BindResources(SHADER_TYPE_PIXEL);
 
-    pSRB->InitializeStaticResources(pPSO);
+    pPSO->InitializeStaticSRBResources(pSRB);
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -657,7 +657,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     BindResources(SHADER_TYPE_VERTEX);
     BindResources(SHADER_TYPE_PIXEL);
 
-    pSRB->InitializeStaticResources(pPSO);
+    pPSO->InitializeStaticSRBResources(pSRB);
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -851,7 +851,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, RefBuffers.GetViewObjects(BuffArr_DynIdx)[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, RefBuffers.GetViewObjects(BuffArr_DynIdx + 1), 0, DynamicBuffArraySize);
 
-    pSRB->InitializeStaticResources(pPSO);
+    pPSO->InitializeStaticSRBResources(pSRB);
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -1002,7 +1002,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, RefTextures.GetViewObjects(Tex2DArr_DynIdx)[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, RefTextures.GetViewObjects(Tex2DArr_DynIdx + 1), 0, DynamicTexArraySize);
 
-    pSRB->InitializeStaticResources(pPSO);
+    pPSO->InitializeStaticSRBResources(pSRB);
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -1176,7 +1176,7 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     BindResources(SHADER_TYPE_VERTEX);
     BindResources(SHADER_TYPE_PIXEL);
 
-    pSRB->InitializeStaticResources(pPSO);
+    pPSO->InitializeStaticSRBResources(pSRB);
 
     auto* pContext = pEnv->GetDeviceContext();
 
@@ -1315,7 +1315,7 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_SamArr_Mut", SetArray, pSamObjs.data(), 0, MutableSamArraySize);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_SamArr_Dyn", SetArray, pSamObjs.data(), 0, DynamicSamArraySize);
 
-    pSRB->InitializeStaticResources(pPSO);
+    pPSO->InitializeStaticSRBResources(pSRB);
 
     auto* pContext = pEnv->GetDeviceContext();
 

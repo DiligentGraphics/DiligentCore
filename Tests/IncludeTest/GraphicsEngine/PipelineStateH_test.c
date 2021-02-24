@@ -47,4 +47,6 @@ void TestPipelineState_CInterface(IPipelineState* pPSO)
 
     bool Compatible = IPipelineState_IsCompatibleWith(pPSO, (IPipelineState*)NULL);
     (void)Compatible;
+
+    IPipelineState_InitializeStaticSRBResources(pPSO, (struct IShaderResourceBinding*)NULL);
 }

@@ -361,6 +361,18 @@ public:
         return this->GetResourceSignature(0)->BindStaticResources(ShaderFlags, pResourceMapping, Flags);
     }
 
+    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final
+    {
+        if (!m_UsingImplicitSignature)
+        {
+            LOG_ERROR_MESSAGE("IPipelineState::InitializeStaticSRBResources is not allowed for pipelines that use explicit "
+                              "resource signatures. Use IPipelineResourceSignature::InitializeStaticSRBResources instead.");
+            return;
+        }
+
+        return this->GetResourceSignature(0)->InitializeStaticSRBResources(pSRB);
+    }
+
 protected:
     using TNameToGroupIndexMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
 

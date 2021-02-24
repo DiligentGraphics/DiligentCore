@@ -392,6 +392,29 @@ protected:
         }
     }
 
+    template <typename SRBImplType, typename InitResourcesHandler>
+    void InitializeStaticSRBResourcesImpl(SRBImplType* pSRB, InitResourcesHandler Handler) const
+    {
+        DEV_CHECK_ERR(pSRB != nullptr, "SRB must not be null");
+        if (pSRB->StaticResourcesInitialized())
+        {
+            LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object.");
+            return;
+        }
+
+        const auto* const pSRBSignature = pSRB->GetPipelineResourceSignature();
+#ifdef DILIGENT_DEVELOPMENT
+        if (!pSRBSignature->IsCompatibleWith(this))
+        {
+            LOG_ERROR_MESSAGE("Shader resource binding is not compatible with resource signature '", this->m_Desc.Name, "'.");
+        }
+#endif
+
+        Handler(pSRB);
+
+        pSRB->SetStaticResourcesInitialized();
+    }
+
     // Finds a sampler that is assigned to texture Tex, when combined texture samplers are used.
     // Returns an index of the sampler in m_Desc.Resources array, or InvalidSamplerValue if there is
     // no such sampler, or if combined samplers are not used.

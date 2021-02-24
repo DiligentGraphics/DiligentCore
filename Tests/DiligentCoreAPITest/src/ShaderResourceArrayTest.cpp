@@ -226,7 +226,7 @@ TEST(ShaderResourceLayout, ResourceArray)
     pPSO->BindStaticResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_KEEP_EXISTING);
     pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2DTest2")->SetArray(ppSRVs, 1, 1);
 
-    pSRB->InitializeStaticResources();
+    pPSO->InitializeStaticSRBResources(pSRB);
     pSRB->BindResources(SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_KEEP_EXISTING | BIND_SHADER_RESOURCES_UPDATE_MUTABLE | BIND_SHADER_RESOURCES_UPDATE_DYNAMIC);
     ppSRVs[0] = pTextures[4]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
     pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2DTest")->SetArray(ppSRVs, 3, 1);

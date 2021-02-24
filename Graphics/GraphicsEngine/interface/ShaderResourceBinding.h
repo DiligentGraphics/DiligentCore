@@ -69,7 +69,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
 
     /// The method calls AddRef() on the returned interface,
     /// so Release() must be called to avoid memory leaks.
-    VIRTUAL struct IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS) PURE;
+    VIRTUAL struct IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS) CONST PURE;
 
 
     /// Binds mutable and dynamice resources using the resource mapping
@@ -119,30 +119,6 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     VIRTUAL IShaderResourceVariable* METHOD(GetVariableByIndex)(THIS_
                                                                 SHADER_TYPE ShaderType,
                                                                 Uint32      Index) PURE;
-
-
-    /// Initializes static resources
-    // Deprecated: use InitializeStaticResourcesWithSignature()
-
-    /// If the parent pipeline state object contain static resources
-    /// (see Diligent::SHADER_RESOURCE_VARIABLE_TYPE_STATIC), this method must be called
-    /// once to initialize static resources in this shader resource binding object.
-    /// The method must be called after all static variables are initialized
-    /// in the PSO.
-    /// \param [in] pPipelineState - Pipeline state to copy static shader resource
-    ///                              bindings from. The pipeline state must be compatible
-    ///                              with this shader resource binding object.
-    ///                              If null pointer is provided, the pipeline state
-    ///                              that this SRB object was created from is used.
-    /// \note The method must be called exactly once. If static resources have
-    ///       already been initialized and the method is called again, it will have
-    ///       no effect and a warning messge will be displayed.
-    VIRTUAL void METHOD(InitializeStaticResources)(THIS_
-                                                   const struct IPipelineState* pPipelineState DEFAULT_VALUE(nullptr)) PURE;
-    
-    /// AZ TODO: comment
-    VIRTUAL void METHOD(InitializeStaticResourcesWithSignature)(THIS_
-                                                               const struct IPipelineResourceSignature* pResourceSignature DEFAULT_VALUE(nullptr)) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -158,8 +134,6 @@ DILIGENT_END_INTERFACE
 #    define IShaderResourceBinding_GetVariableByName(This, ...)                      CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableByName,                      This, __VA_ARGS__)
 #    define IShaderResourceBinding_GetVariableCount(This, ...)                       CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableCount,                       This, __VA_ARGS__)
 #    define IShaderResourceBinding_GetVariableByIndex(This, ...)                     CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableByIndex,                     This, __VA_ARGS__)
-#    define IShaderResourceBinding_InitializeStaticResources(This, ...)              CALL_IFACE_METHOD(ShaderResourceBinding, InitializeStaticResources,              This, __VA_ARGS__)
-#    define IShaderResourceBinding_InitializeStaticResourcesWithSignature(This, ...) CALL_IFACE_METHOD(ShaderResourceBinding, InitializeStaticResourcesWithSignature, This, __VA_ARGS__)
 
 // clang-format on
 

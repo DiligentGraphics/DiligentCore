@@ -44,4 +44,6 @@ void TestPipelineResourceSignature(struct IPipelineResourceSignature* pSign)
 
     bool Comp = IPipelineResourceSignature_IsCompatibleWith(pSign, (const struct IPipelineResourceSignature*)NULL);
     (void)Comp;
+
+    IPipelineResourceSignature_InitializeStaticSRBResources(pSign, (struct IShaderResourceBinding*)NULL);
 }

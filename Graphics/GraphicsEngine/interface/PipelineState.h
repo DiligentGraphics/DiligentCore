@@ -513,12 +513,17 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     VIRTUAL const RayTracingPipelineDesc REF METHOD(GetRayTracingPipelineDesc)(THIS) CONST PURE;
 
 
-    /// Binds resources for all shaders in the pipeline state
+    /// Binds resources for all shaders in the pipeline state.
 
-    /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
-    ///                           Any combination of Diligent::SHADER_TYPE may be used.
+    /// \param [in] ShaderFlags      - Flags that specify shader stages, for which resources will be bound.
+    ///                                Any combination of Diligent::SHADER_TYPE may be used.
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
-    /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
+    /// \param [in] Flags            - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
+    ///
+    /// \remarks    This metod is only allowed for pipelines that use implicit resource signature
+    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    ///             For pipelines that use explicit resource signatures, use
+    ///             IPipelineResourceSignature::BindStaticResources() method.
     VIRTUAL void METHOD(BindStaticResources)(THIS_
                                              Uint32             ShaderFlags,
                                              IResourceMapping*  pResourceMapping,
@@ -526,56 +531,98 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 
     
     /// Returns the number of static shader resource variables.
-    /// Deprecated: use GetResourceSignature() and call IPipelineResourceSignature::GetStaticVariableCount().
 
     /// \param [in] ShaderType - Type of the shader.
-    /// \remark Only static variables (that can be accessed directly through the PSO) are counted.
-    ///         Mutable and dynamic variables are accessed through Shader Resource Binding object.
+    ///
+    /// \remarks    Only static variables (that can be accessed directly through the PSO) are counted.
+    ///             Mutable and dynamic variables are accessed through Shader Resource Binding object.
+    ///
+    ///             This metod is only allowed for pipelines that use implicit resource signature
+    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    ///             For pipelines that use explicit resource signatures, use
+    ///             IPipelineResourceSignature::GetStaticVariableCount() method.
     VIRTUAL Uint32 METHOD(GetStaticVariableCount)(THIS_
                                                   SHADER_TYPE ShaderType) CONST PURE;
 
     
     /// Returns static shader resource variable. If the variable is not found,
     /// returns nullptr.
-    /// Deprecated: use GetResourceSignature() and call IPipelineResourceSignature::GetStaticVariableByName().
     
-    /// \param [in] ShaderType - Type of the shader to look up the variable. 
+    /// \param [in] ShaderType - The type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
-    /// \param [in] Name - Name of the variable.
-    /// \remarks The method does not increment the reference counter
-    ///          of the returned interface.
+    /// \param [in] Name       - Name of the variable.
+    ///
+    /// \remarks    The method does not increment the reference counter
+    ///             of the returned interface.
+    ///
+    ///             This metod is only allowed for pipelines that use implicit resource signature
+    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    ///             For pipelines that use explicit resource signatures, use
+    ///             IPipelineResourceSignature::GetStaticVariableByName() method.
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByName)(THIS_
                                                                      SHADER_TYPE ShaderType,
                                                                      const Char* Name) PURE;
 
     
     /// Returns static shader resource variable by its index.
-    /// Deprecated: use GetResourceSignature() and call IPipelineResourceSignature::GetStaticVariableByIndex().
 
-    /// \param [in] ShaderType - Type of the shader to look up the variable. 
+    /// \param [in] ShaderType - The type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
-    /// \param [in] Index - Shader variable index. The index must be between
-    ///                     0 and the total number of variables returned by 
-    ///                     GetStaticVariableCount().
-    /// \remarks Only static shader resource variables can be accessed through this method.
-    ///          Mutable and dynamic variables are accessed through Shader Resource 
-    ///          Binding object
+    /// \param [in] Index      - Shader variable index. The index must be between
+    ///                          0 and the total number of variables returned by 
+    ///                          GetStaticVariableCount().
+    ///
+    /// \remarks    Only static shader resource variables can be accessed through this method.
+    ///             Mutable and dynamic variables are accessed through Shader Resource 
+    ///             Binding object.
+    ///
+    ///             This metod is only allowed for pipelines that use implicit resource signature
+    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    ///             For pipelines that use explicit resource signatures, use
+    ///             IPipelineResourceSignature::GetStaticVariableByIndex() method.
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByIndex)(THIS_
                                                                       SHADER_TYPE ShaderType,
                                                                       Uint32      Index) PURE;
 
 
     /// Creates a shader resource binding object.
-    /// Deprecated: use GetResourceSignature() and call IPipelineResourceSignature::CreateShaderResourceBinding().
 
-    /// \param [out] ppShaderResourceBinding - memory location where pointer to the new shader resource
+    /// \param [out] ppShaderResourceBinding - Memory location where pointer to the new shader resource
     ///                                        binding object is written.
-    /// \param [in] InitStaticResources      - if set to true, the method will initialize static resources in
+    /// \param [in] InitStaticResources      - If set to true, the method will initialize static resources in
     ///                                        the created object, which has the exact same effect as calling 
-    ///                                        IShaderResourceBinding::InitializeStaticResources().
+    ///                                        IPipelineState::InitializeStaticSRBResources().
+    ///
+    /// \remarks    This metod is only allowed for pipelines that use implicit resource signature
+    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    ///             For pipelines that use explicit resource signatures, use
+    ///             IPipelineResourceSignature::CreateShaderResourceBinding() method.
     VIRTUAL void METHOD(CreateShaderResourceBinding)(THIS_
                                                      IShaderResourceBinding** ppShaderResourceBinding,
                                                      bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
+
+
+
+    /// Initializes static resources in the shader binding object.
+
+    /// If static shader resources were not initialized when the SRB was created,
+    /// this method must be called to initialize them before the SRB can be used.
+    /// The method should be called after all static variables have been initialized
+    /// in the PSO.
+    ///
+    /// \param [in] pShaderResourceBinding - Shader resource binding object to initialize.
+    ///                                      The pipeline state must be compatible
+    ///                                      with the shader resource binding object.
+    ///
+    /// \note   If static resources have already been initialized in the SRB and the method
+    ///         is called again, it will have no effect and a warning messge will be displayed.
+    ///
+    /// \remarks    This metod is only allowed for pipelines that use implicit resource signature
+    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    ///             For pipelines that use explicit resource signatures, use
+    ///             IPipelineResourceSignature::InitializeStaticSRBResources() method.
+    VIRTUAL void METHOD(InitializeStaticSRBResources)(THIS_
+                                                      struct IShaderResourceBinding* pShaderResourceBinding) CONST PURE;
 
 
     /// Checks if this pipeline state object is compatible with another PSO
@@ -606,10 +653,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
                                           const struct IPipelineState* pPSO) CONST PURE;
 
     
-    /// AZ TODO: comment
+    /// Returns the number of pipeline resource signature used to created this pipeline.
     VIRTUAL Uint32 METHOD(GetResourceSignatureCount)(THIS) CONST PURE;
 
-    /// AZ TODO: comment
+    /// Returns pipeline resource signature at the give index.
     VIRTUAL IPipelineResourceSignature* METHOD(GetResourceSignature)(THIS_
                                                                      Uint32 Index) CONST PURE;
 };
@@ -623,16 +670,17 @@ DILIGENT_END_INTERFACE
 
 #    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
 
-#    define IPipelineState_GetGraphicsPipelineDesc(This)          CALL_IFACE_METHOD(PipelineState, GetGraphicsPipelineDesc,     This)
-#    define IPipelineState_GetRayTracingPipelineDesc(This)        CALL_IFACE_METHOD(PipelineState, GetRayTracingPipelineDesc,   This)
-#    define IPipelineState_BindStaticResources(This, ...)         CALL_IFACE_METHOD(PipelineState, BindStaticResources,         This, __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableCount(This, ...)      CALL_IFACE_METHOD(PipelineState, GetStaticVariableCount,      This, __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByName(This, ...)     CALL_IFACE_METHOD(PipelineState, GetStaticVariableByName,     This, __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByIndex(This, ...)    CALL_IFACE_METHOD(PipelineState, GetStaticVariableByIndex,    This, __VA_ARGS__)
-#    define IPipelineState_CreateShaderResourceBinding(This, ...) CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding, This, __VA_ARGS__)
-#    define IPipelineState_IsCompatibleWith(This, ...)            CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,            This, __VA_ARGS__)
-#    define IPipelineState_GetResourceSignatureCount(This)        CALL_IFACE_METHOD(PipelineState, GetResourceSignatureCount,   This)
-#    define IPipelineState_GetResourceSignature(This, ...)        CALL_IFACE_METHOD(PipelineState, GetResourceSignature,        This, __VA_ARGS__)
+#    define IPipelineState_GetGraphicsPipelineDesc(This)           CALL_IFACE_METHOD(PipelineState, GetGraphicsPipelineDesc,      This)
+#    define IPipelineState_GetRayTracingPipelineDesc(This)         CALL_IFACE_METHOD(PipelineState, GetRayTracingPipelineDesc,    This)
+#    define IPipelineState_BindStaticResources(This, ...)          CALL_IFACE_METHOD(PipelineState, BindStaticResources,          This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableCount(This, ...)       CALL_IFACE_METHOD(PipelineState, GetStaticVariableCount,       This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByName(This, ...)      CALL_IFACE_METHOD(PipelineState, GetStaticVariableByName,      This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByIndex(This, ...)     CALL_IFACE_METHOD(PipelineState, GetStaticVariableByIndex,     This, __VA_ARGS__)
+#    define IPipelineState_CreateShaderResourceBinding(This, ...)  CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding,  This, __VA_ARGS__)
+#    define IPipelineState_InitializeStaticSRBResources(This, ...) CALL_IFACE_METHOD(PipelineState, InitializeStaticSRBResources, This, __VA_ARGS__)
+#    define IPipelineState_IsCompatibleWith(This, ...)             CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,             This, __VA_ARGS__)
+#    define IPipelineState_GetResourceSignatureCount(This)         CALL_IFACE_METHOD(PipelineState, GetResourceSignatureCount,    This)
+#    define IPipelineState_GetResourceSignature(This, ...)         CALL_IFACE_METHOD(PipelineState, GetResourceSignature,         This, __VA_ARGS__)
 
 // clang-format on
 
