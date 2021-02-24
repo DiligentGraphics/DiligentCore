@@ -41,15 +41,14 @@ namespace Diligent
 {
 
 /// Implementation of the Diligent::IShaderResourceBindingD3D12 interface
-// sizeof(ShaderResourceBindingD3D12Impl) == 152 (x64, msvc, Release)
+// sizeof(ShaderResourceBindingD3D12Impl) == 104 (x64, msvc, Release)
 class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineResourceSignatureD3D12Impl>
 {
 public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineResourceSignatureD3D12Impl>;
 
     ShaderResourceBindingD3D12Impl(IReferenceCounters*                 pRefCounters,
-                                   PipelineResourceSignatureD3D12Impl* pPRS,
-                                   bool                                IsDeviceInternal);
+                                   PipelineResourceSignatureD3D12Impl* pPRS);
     ~ShaderResourceBindingD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingD3D12, TBase)
@@ -62,16 +61,9 @@ public:
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
-    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override final;
-
     virtual void DILIGENT_CALL_TYPE InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature) override final;
 
     ShaderResourceCacheD3D12& GetResourceCache() { return m_ShaderResourceCache; }
-
-    bool StaticResourcesInitialized() const
-    {
-        return m_bStaticResourcesInitialized;
-    }
 
 private:
     void Destruct();
@@ -83,9 +75,6 @@ private:
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ShaderVarIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
-
-    bool        m_bStaticResourcesInitialized = false;
-    const Uint8 m_NumShaders                  = 0;
 };
 
 } // namespace Diligent

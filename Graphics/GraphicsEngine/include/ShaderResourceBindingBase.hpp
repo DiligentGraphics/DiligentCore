@@ -60,11 +60,22 @@ public:
     /// \param pPRS         - Pipeline resource signature that this SRB belongs to.
     /// \param IsInternal   - Flag indicating if the shader resource binding is an internal object and
     ///                       must not keep a strong reference to the pipeline resource signature.
-    ShaderResourceBindingBase(IReferenceCounters* pRefCounters, ResourceSignatureType* pPRS, bool IsInternal = false) :
+    ShaderResourceBindingBase(IReferenceCounters* pRefCounters, ResourceSignatureType* pPRS) :
         TObjectBase{pRefCounters},
-        m_spPRS{IsInternal ? nullptr : pPRS},
         m_pPRS{pPRS}
-    {}
+    {
+        m_ActiveShaderStageIndex.fill(-1);
+
+        const auto NumShaders   = GetNumShaders();
+        const auto PipelineType = GetPipelineType();
+        for (Uint32 s = 0; s < NumShaders; ++s)
+        {
+            const auto ShaderType = pPRS->GetActiveShaderStageType(s);
+            const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+
+            m_ActiveShaderStageIndex[ShaderInd] = static_cast<Int8>(s);
+        }
+    }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBinding, TObjectBase)
 
@@ -75,7 +86,12 @@ public:
 
     PIPELINE_TYPE GetPipelineType() const
     {
-        return ValidatedCast<ResourceSignatureType>(m_pPRS)->GetPipelineType();
+        return m_pPRS->GetPipelineType();
+    }
+
+    Uint32 GetNumShaders() const
+    {
+        return m_pPRS->GetNumActiveShaderStages();
     }
 
     /// Implementation of IShaderResourceBinding::GetPipelineResourceSignature().
@@ -84,82 +100,146 @@ public:
         return m_pPRS;
     }
 
+    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override
+    {
+        if (StaticResourcesInitialized())
+        {
+            LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object. The operation will be ignored.");
+            return;
+        }
+
+        const IPipelineResourceSignature* pResourceSignature = nullptr;
+        if (pPipelineState != nullptr)
+        {
+            pResourceSignature = pPipelineState->GetResourceSignature(GetBindingIndex());
+            if (pResourceSignature == nullptr)
+            {
+                LOG_ERROR_MESSAGE("Shader resource binding is not compatible with pipeline state.");
+                return;
+            }
+
+#ifdef DILIGENT_DEVELOPMENT
+            if (!pResourceSignature->IsCompatibleWith(GetSignature()))
+            {
+                LOG_ERROR_MESSAGE("Shader resource binding is not compatible with pipeline state.");
+                return;
+            }
+#endif
+        }
+
+        InitializeStaticResourcesWithSignature(pResourceSignature);
+    }
+
     ResourceSignatureType* GetSignature() const
     {
-        return ValidatedCast<ResourceSignatureType>(m_pPRS);
+        return m_pPRS.RawPtr<ResourceSignatureType>();
+    }
+
+    bool StaticResourcesInitialized() const
+    {
+        return m_bStaticResourcesInitialized;
     }
 
 protected:
-    Int8 GetVariableByNameHelper(SHADER_TYPE ShaderType, const char* Name, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
+    template <typename ShaderVarManagerType>
+    IShaderResourceVariable* GetVariableByNameImpl(SHADER_TYPE                ShaderType,
+                                                   const char*                Name,
+                                                   const ShaderVarManagerType ShaderVarMgrs[]) const
     {
         const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is invalid for ", GetPipelineTypeString(PipelineType), " pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
-            return -1;
+            return nullptr;
         }
 
-        const auto ShaderInd    = GetShaderTypePipelineIndex(ShaderType, PipelineType);
-        const auto ResLayoutInd = ResourceLayoutIndex[ShaderInd];
-        if (ResLayoutInd < 0)
-        {
-            LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
-        }
+        const auto ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const auto MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
+        if (MgrInd < 0)
+            return nullptr;
 
-        return ResLayoutInd;
+        VERIFY_EXPR(static_cast<Uint32>(MgrInd) < GetNumShaders());
+        return ShaderVarMgrs[MgrInd].GetVariable(Name);
     }
 
-    Int8 GetVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
+    template <typename ShaderVarManagerType>
+    Uint32 GetVariableCountImpl(SHADER_TYPE ShaderType, const ShaderVarManagerType ShaderVarMgrs[]) const
     {
         const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is invalid for ", GetPipelineTypeString(PipelineType), " pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
-            return -1;
+            return 0;
         }
 
-        const auto ShaderInd    = GetShaderTypePipelineIndex(ShaderType, PipelineType);
-        const auto ResLayoutInd = ResourceLayoutIndex[ShaderInd];
-        if (ResLayoutInd < 0)
-        {
-            LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
-        }
+        const auto ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const auto MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
+        if (MgrInd < 0)
+            return 0;
 
-        return ResLayoutInd;
+        VERIFY_EXPR(static_cast<Uint32>(MgrInd) < GetNumShaders());
+        return ShaderVarMgrs[MgrInd].GetVariableCount();
     }
 
-    Int8 GetVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
+    template <typename ShaderVarManagerType>
+    IShaderResourceVariable* GetVariableByIndexImpl(SHADER_TYPE                ShaderType,
+                                                    Uint32                     Index,
+                                                    const ShaderVarManagerType ShaderVarMgrs[]) const
+
     {
         const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
                                 " as the stage is invalid for ", GetPipelineTypeString(PipelineType), " pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
-            return -1;
+            return nullptr;
         }
 
-        const auto ShaderInd    = GetShaderTypePipelineIndex(ShaderType, PipelineType);
-        const auto ResLayoutInd = ResourceLayoutIndex[ShaderInd];
-        if (ResLayoutInd < 0)
+        const auto ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const auto MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
+        if (MgrInd < 0)
+            return nullptr;
+
+        VERIFY_EXPR(static_cast<Uint32>(MgrInd) < GetNumShaders());
+        return ShaderVarMgrs[MgrInd].GetVariable(Index);
+    }
+
+    template <typename ShaderVarManagerType>
+    void BindResourcesImpl(Uint32               ShaderFlags,
+                           IResourceMapping*    pResMapping,
+                           Uint32               Flags,
+                           ShaderVarManagerType ShaderVarMgrs[]) const
+    {
+        const auto PipelineType = GetPipelineType();
+        for (Int32 ShaderInd = 0; ShaderInd < static_cast<Int32>(m_ActiveShaderStageIndex.size()); ++ShaderInd)
         {
-            LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in pipeline resource signature '", m_pPRS->GetDesc().Name, "'.");
+            auto VarMngrInd = m_ActiveShaderStageIndex[ShaderInd];
+            if (VarMngrInd >= 0)
+            {
+                // ShaderInd is the shader type pipeline index here
+                const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
+                if ((ShaderFlags & ShaderType) != 0)
+                {
+                    ShaderVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
+                }
+            }
         }
-
-        return ResLayoutInd;
     }
 
 protected:
     /// Strong reference to pipeline resource signature. We must use strong reference, because
     /// shader resource binding uses pipeline resource signature's memory allocator to allocate
     /// memory for shader resource cache.
-    RefCntAutoPtr<ResourceSignatureType> m_spPRS;
+    RefCntAutoPtr<ResourceSignatureType> m_pPRS;
 
-    IPipelineResourceSignature* m_pPRS = nullptr;
+    // Index of the active shader stage that has resources, for every shader
+    // type in the pipeline (given by GetShaderTypePipelineIndex(ShaderType, m_PipelineType)).
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ActiveShaderStageIndex = {-1, -1, -1, -1, -1, -1};
+    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
+
+    bool m_bStaticResourcesInitialized = false;
 };
 
 } // namespace Diligent

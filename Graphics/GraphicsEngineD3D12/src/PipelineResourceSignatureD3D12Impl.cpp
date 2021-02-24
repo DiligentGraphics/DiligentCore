@@ -391,7 +391,7 @@ void PipelineResourceSignatureD3D12Impl::CreateShaderResourceBinding(IShaderReso
                                                                      bool                     InitStaticResources)
 {
     auto& SRBAllocator     = m_pDevice->GetSRBAllocator();
-    auto* pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this, false);
+    auto* pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this);
     if (InitStaticResources)
         pResBindingD3D12->InitializeStaticResources(nullptr);
     pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));

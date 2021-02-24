@@ -51,8 +51,7 @@ public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineResourceSignatureVkImpl>;
 
     ShaderResourceBindingVkImpl(IReferenceCounters*              pRefCounters,
-                                PipelineResourceSignatureVkImpl* pPRS,
-                                bool                             IsDeviceInternal);
+                                PipelineResourceSignatureVkImpl* pPRS);
     ~ShaderResourceBindingVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingVk, TBase)
@@ -69,25 +68,13 @@ public:
     /// Implementation of IShaderResourceBinding::GetVariableByIndex() in Vulkan backend.
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
-    /// Implementation of IShaderResourceBinding::InitializeStaticResources() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override final;
-
     /// Implementation of IShaderResourceBinding::InitializeStaticResourcesWithSignature() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature) override final;
 
     ShaderResourceCacheVk& GetResourceCache() { return m_ShaderResourceCache; }
 
-    bool StaticResourcesInitialized() const { return m_bStaticResourcesInitialized; }
-
 private:
     void Destruct();
-
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ShaderVarIndex = {-1, -1, -1, -1, -1, -1};
-    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
-
-    bool m_bStaticResourcesInitialized = false;
-
-    const Uint8 m_NumShaders = 0;
 
     ShaderResourceCacheVk    m_ShaderResourceCache;
     ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;

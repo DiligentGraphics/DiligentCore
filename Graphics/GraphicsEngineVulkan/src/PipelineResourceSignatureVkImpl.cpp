@@ -713,7 +713,7 @@ void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourc
                                                                   bool                     InitStaticResources)
 {
     auto& SRBAllocator  = m_pDevice->GetSRBAllocator();
-    auto  pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this, false);
+    auto  pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this);
     if (InitStaticResources)
         pResBindingVk->InitializeStaticResources(nullptr);
     pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));

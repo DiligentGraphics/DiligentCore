@@ -34,28 +34,27 @@ namespace Diligent
 {
 
 ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounters*                 pRefCounters,
-                                                               PipelineResourceSignatureD3D12Impl* pPRS,
-                                                               bool                                IsDeviceInternal) :
+                                                               PipelineResourceSignatureD3D12Impl* pPRS) :
     // clang-format off
     TBase
     {
         pRefCounters,
-        pPRS,
-        IsDeviceInternal
+        pPRS
     },
-    m_ShaderResourceCache{ShaderResourceCacheD3D12::CacheContentType::SRB},
-    m_NumShaders         {static_cast<decltype(m_NumShaders)>(pPRS->GetNumActiveShaderStages())}
+    m_ShaderResourceCache{ShaderResourceCacheD3D12::CacheContentType::SRB}
 // clang-format on
 {
     try
     {
         m_ShaderVarIndex.fill(-1);
 
+        const auto NumShaders = GetNumShaders();
+
         FixedLinearAllocator MemPool{GetRawAllocator()};
-        MemPool.AddSpace<ShaderVariableManagerD3D12>(m_NumShaders);
+        MemPool.AddSpace<ShaderVariableManagerD3D12>(NumShaders);
         MemPool.Reserve();
         // Constructor of ShaderVariableManagerD3D12 is noexcept, so we can safely construct all managers.
-        m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(m_NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
+        m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
 
         // The memory is now owned by ShaderResourceBindingD3D12Impl and will be freed by Destruct().
         auto* Ptr = MemPool.ReleaseOwnership();
@@ -69,24 +68,24 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         auto& ResourceCacheDataAllocator = SRBMemAllocator.GetResourceCacheDataAllocator(0);
         pPRS->InitSRBResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
 
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        for (Uint32 s = 0; s < NumShaders; ++s)
         {
             const auto ShaderType = pPRS->GetActiveShaderStageType(s);
             const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
+            const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
+            VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
 
             auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
 
             // It is important that initialization is separated from construction because it provides exception safety.
             constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-            m_pShaderVarMgrs[s].Initialize(
+            m_pShaderVarMgrs[MgrInd].Initialize(
                 *pPRS,
                 VarDataAllocator,
                 AllowedVarTypes,
                 _countof(AllowedVarTypes),
                 ShaderType //
             );
-
-            m_ShaderVarIndex[ShaderInd] = static_cast<Int8>(s);
         }
     }
     catch (...)
@@ -107,7 +106,7 @@ void ShaderResourceBindingD3D12Impl::Destruct()
     if (m_pShaderVarMgrs != nullptr)
     {
         auto& SRBMemAllocator = GetSignature()->GetSRBMemoryAllocator();
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        for (Uint32 s = 0; s < GetNumShaders(); ++s)
         {
             auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
             m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
@@ -119,75 +118,22 @@ void ShaderResourceBindingD3D12Impl::Destruct()
 
 void ShaderResourceBindingD3D12Impl::BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)
 {
-    const auto PipelineType = GetPipelineType();
-    for (Int32 ShaderInd = 0; ShaderInd < static_cast<Int32>(m_ShaderVarIndex.size()); ++ShaderInd)
-    {
-        auto VarMngrInd = m_ShaderVarIndex[ShaderInd];
-        if (VarMngrInd >= 0)
-        {
-            // ShaderInd is the shader type pipeline index here
-            const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
-            if (ShaderFlags & ShaderType)
-            {
-                m_pShaderVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
-            }
-        }
-    }
+    BindResourcesImpl(ShaderFlags, pResMapping, Flags, m_pShaderVarMgrs);
 }
 
 IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
 {
-    auto VarMngrInd = GetVariableByNameHelper(ShaderType, Name, m_ShaderVarIndex);
-    if (VarMngrInd < 0)
-        return nullptr;
-
-    VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < Uint32{m_NumShaders});
-    return m_pShaderVarMgrs[VarMngrInd].GetVariable(Name);
+    return GetVariableByNameImpl(ShaderType, Name, m_pShaderVarMgrs);
 }
 
 Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
-    auto VarMngrInd = GetVariableCountHelper(ShaderType, m_ShaderVarIndex);
-    if (VarMngrInd < 0)
-        return 0;
-
-    VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < Uint32{m_NumShaders});
-    return m_pShaderVarMgrs[VarMngrInd].GetVariableCount();
+    return GetVariableCountImpl(ShaderType, m_pShaderVarMgrs);
 }
 
 IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    auto VarMngrInd = GetVariableByIndexHelper(ShaderType, Index, m_ShaderVarIndex);
-    if (VarMngrInd < 0)
-        return nullptr;
-
-    VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < Uint32{m_NumShaders});
-    return m_pShaderVarMgrs[VarMngrInd].GetVariable(Index);
-}
-
-void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineState* pPipelineState)
-{
-    if (StaticResourcesInitialized())
-    {
-        LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object. The operation will be ignored.");
-        return;
-    }
-
-    if (pPipelineState == nullptr)
-    {
-        InitializeStaticResourcesWithSignature(nullptr);
-    }
-    else
-    {
-        auto* pSign = pPipelineState->GetResourceSignature(GetBindingIndex());
-        if (pSign == nullptr)
-        {
-            LOG_ERROR_MESSAGE("Shader resource binding is not compatible with pipeline state.");
-            return;
-        }
-
-        InitializeStaticResourcesWithSignature(pSign);
-    }
+    return GetVariableByIndexImpl(ShaderType, Index, m_pShaderVarMgrs);
 }
 
 void ShaderResourceBindingD3D12Impl::InitializeStaticResourcesWithSignature(const IPipelineResourceSignature* pResourceSignature)
