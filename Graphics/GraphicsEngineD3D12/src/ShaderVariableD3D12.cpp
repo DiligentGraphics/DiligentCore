@@ -97,7 +97,7 @@ void ShaderVariableManagerD3D12::Initialize(const PipelineResourceSignatureD3D12
 
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
-    auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
+    const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
 
     if (m_NumVariables == 0)
         return;

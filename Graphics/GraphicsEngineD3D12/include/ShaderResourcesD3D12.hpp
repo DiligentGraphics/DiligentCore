@@ -30,35 +30,6 @@
 /// \file
 /// Declaration of Diligent::ShaderResourcesD3D12 class
 
-//  ShaderResourcesD3D12 are created by ShaderD3D12Impl instances. They are then used by ShaderResourceLayoutD3D12 objects, which are
-//  created by instances of PipelineStatesD3D12Impl and ShaderD3D12Impl
-//
-//    _________________
-//   |                 |
-//   | ShaderD3D12Impl |
-//   |_________________|
-//            |
-//            |shared_ptr
-//    ________V_____________                  _____________________________________________________________________
-//   |                      |  unique_ptr    |        |           |           |           |           |            |
-//   | ShaderResourcesD3D12 |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  |  Samplers  |
-//   |______________________|                |________|___________|___________|___________|___________|____________|
-//                                                      A                              A                   A
-//                                                       \                            /                     \
-//                                                       Copy                       Copy                    Copy
-//    ___________________________                  ________\________________________/_________________________\_________________________________________
-//   |                           |   unique_ptr   |                   |                 |               |                  |                 |          |
-//   | ShaderResourceLayoutD3D12 |--------------->|   SRV_CBV_UAV[0]  |  SRV_CBV_UAV[1] |       ...     |    Sampler[0]    |    Sampler[1]   |   ...    |
-//   |___________________________|                |___________________|_________________|_______________|__________________|_________________|__________|
-//              A                                           |                                                    A
-//              |                                           |___________________SamplerId________________________|
-//              |
-//    __________|_____________
-//   |                        |
-//   | PipelineStateD3D12Impl |
-//   |________________________|
-//
-
 #include "ShaderResources.hpp"
 
 namespace Diligent
