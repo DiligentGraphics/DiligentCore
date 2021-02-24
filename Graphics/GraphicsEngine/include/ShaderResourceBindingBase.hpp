@@ -107,7 +107,7 @@ public:
 
     ResourceSignatureType* GetSignature() const
     {
-        return m_pPRS.RawPtr<ResourceSignatureType>();
+        return m_pPRS.template RawPtr<ResourceSignatureType>();
     }
 
     void SetStaticResourcesInitialized()
