@@ -52,6 +52,7 @@ static const INTERFACE_ID IID_FenceVk =
 /// Exposes Vulkan-specific functionality of a fence object.
 DILIGENT_BEGIN_INTERFACE(IFenceVk, IFence)
 {
+    VIRTUAL VkSemaphore METHOD(GetVkSemaphore)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 

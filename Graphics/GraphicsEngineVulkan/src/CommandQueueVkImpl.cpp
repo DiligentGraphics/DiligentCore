@@ -148,31 +148,66 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
     // Increment the value before submitting the buffer to be overly safe
     auto FenceValue = m_NextFenceValue.fetch_add(1);
 
-    m_LastSyncPoint = CreateSyncPoint(FenceValue);
+    if (false)
+    {
+        auto vkSemahore = m_pFence->GetVkSemaphore();
 
-    m_TempSignalSemaphores.clear();
-    m_LastSyncPoint->GetSemaphores(m_TempSignalSemaphores);
+        uint32_t SubmitCount =
+            (InSubmitInfo.waitSemaphoreCount != 0 ||
+             InSubmitInfo.commandBufferCount != 0 ||
+             InSubmitInfo.signalSemaphoreCount != 0) ?
+            2 :
+            1;
 
-    for (uint32_t s = 0; s < InSubmitInfo.signalSemaphoreCount; ++s)
-        m_TempSignalSemaphores.push_back(InSubmitInfo.pSignalSemaphores[s]);
+        VkTimelineSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo{};
+        TimelineSemaphoreSubmitInfo.sType                     = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+        TimelineSemaphoreSubmitInfo.pNext                     = nullptr;
+        TimelineSemaphoreSubmitInfo.waitSemaphoreValueCount   = 0;
+        TimelineSemaphoreSubmitInfo.pWaitSemaphoreValues      = nullptr;
+        TimelineSemaphoreSubmitInfo.signalSemaphoreValueCount = 1;
+        TimelineSemaphoreSubmitInfo.pSignalSemaphoreValues    = &FenceValue;
 
-    VkSubmitInfo SubmitInfo         = InSubmitInfo;
-    SubmitInfo.signalSemaphoreCount = static_cast<Uint32>(m_TempSignalSemaphores.size());
-    SubmitInfo.pSignalSemaphores    = m_TempSignalSemaphores.data();
+        VkSubmitInfo SubmitInfoTimelineSemaphore{};
+        SubmitInfoTimelineSemaphore.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        SubmitInfoTimelineSemaphore.pNext                = &TimelineSemaphoreSubmitInfo;
+        SubmitInfoTimelineSemaphore.waitSemaphoreCount   = 0;
+        SubmitInfoTimelineSemaphore.pWaitSemaphores      = nullptr;
+        SubmitInfoTimelineSemaphore.signalSemaphoreCount = 1;
+        SubmitInfoTimelineSemaphore.pSignalSemaphores    = &vkSemahore;
 
-    const uint32_t SubmitCount =
-        (SubmitInfo.waitSemaphoreCount != 0 ||
-         SubmitInfo.commandBufferCount != 0 ||
-         SubmitInfo.signalSemaphoreCount != 0) ?
-        1 :
-        0;
+        VkSubmitInfo SubmitInfoArray[] = {SubmitInfoTimelineSemaphore, InSubmitInfo};
 
-    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, m_LastSyncPoint->GetFence());
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
-    (void)err;
+        auto err = vkQueueSubmit(m_VkQueue, SubmitCount, SubmitInfoArray, VK_NULL_HANDLE);
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+        (void)err;
+    }
+    else
+    {
+        m_LastSyncPoint = CreateSyncPoint(FenceValue);
 
-    m_pFence->AddPendingSyncPoint(m_CommandQueueId, FenceValue, m_LastSyncPoint);
+        m_TempSignalSemaphores.clear();
+        m_LastSyncPoint->GetSemaphores(m_TempSignalSemaphores);
 
+        for (uint32_t s = 0; s < InSubmitInfo.signalSemaphoreCount; ++s)
+            m_TempSignalSemaphores.push_back(InSubmitInfo.pSignalSemaphores[s]);
+
+        VkSubmitInfo SubmitInfo         = InSubmitInfo;
+        SubmitInfo.signalSemaphoreCount = static_cast<Uint32>(m_TempSignalSemaphores.size());
+        SubmitInfo.pSignalSemaphores    = m_TempSignalSemaphores.data();
+
+        const uint32_t SubmitCount =
+            (SubmitInfo.waitSemaphoreCount != 0 ||
+             SubmitInfo.commandBufferCount != 0 ||
+             SubmitInfo.signalSemaphoreCount != 0) ?
+            1 :
+            0;
+
+        auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, m_LastSyncPoint->GetFence());
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+        (void)err;
+
+        m_pFence->AddPendingSyncPoint(m_CommandQueueId, FenceValue, m_LastSyncPoint);
+    }
     return FenceValue;
 }
 
@@ -224,6 +259,32 @@ void CommandQueueVkImpl::SignalFence(VkFence vkFence)
     auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
     (void)err;
+}
+
+void DILIGENT_CALL_TYPE CommandQueueVkImpl::SignalSemaphore(VkSemaphore vkSemaphore, uint64_t value)
+{
+    std::lock_guard<std::mutex> Lock{m_QueueMutex};
+
+    VkTimelineSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo{};
+    TimelineSemaphoreSubmitInfo.sType                     = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+    TimelineSemaphoreSubmitInfo.pNext                     = nullptr;
+    TimelineSemaphoreSubmitInfo.waitSemaphoreValueCount   = 0;
+    TimelineSemaphoreSubmitInfo.pWaitSemaphoreValues      = nullptr;
+    TimelineSemaphoreSubmitInfo.signalSemaphoreValueCount = 1;
+    TimelineSemaphoreSubmitInfo.pSignalSemaphoreValues    = &value;
+
+    VkSubmitInfo SubmitInfo{};
+    SubmitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.pNext                = &TimelineSemaphoreSubmitInfo;
+    SubmitInfo.waitSemaphoreCount   = 0;
+    SubmitInfo.pWaitSemaphores      = nullptr;
+    SubmitInfo.signalSemaphoreCount = 1;
+    SubmitInfo.pSignalSemaphores    = &vkSemaphore;
+
+    VkSubmitInfo SubmitInfoArray[] = {SubmitInfo, SubmitInfo};
+
+    auto vkResult = vkQueueSubmit(m_VkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
+    DEV_CHECK_ERR(vkResult == VK_SUCCESS, "Failed Signal Timeline Semaphore");
 }
 
 VkResult CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)

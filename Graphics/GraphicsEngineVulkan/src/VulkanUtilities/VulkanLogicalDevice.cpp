@@ -569,6 +569,16 @@ VkResult VulkanLogicalDevice::GetFenceStatus(VkFence fence) const
     return vkGetFenceStatus(m_VkDevice, fence);
 }
 
+VkResult VulkanLogicalDevice::GetSemaphoreCounter(VkSemaphore semaphore, uint64_t* semaphoreValue) const
+{
+    return vkGetSemaphoreCounterValue(m_VkDevice, semaphore, semaphoreValue);
+}
+
+VkResult VulkanLogicalDevice::SignalSemaphore(VkSemaphore semaphore, const VkSemaphoreSignalInfo& SignalInfo) const
+{
+    return vkSignalSemaphore(m_VkDevice, &SignalInfo);
+}
+
 VkResult VulkanLogicalDevice::ResetFence(VkFence fence) const
 {
     auto err = vkResetFences(m_VkDevice, 1, &fence);
@@ -582,6 +592,11 @@ VkResult VulkanLogicalDevice::WaitForFences(uint32_t       fenceCount,
                                             uint64_t       timeout) const
 {
     return vkWaitForFences(m_VkDevice, fenceCount, pFences, waitAll, timeout);
+}
+
+VkResult VulkanLogicalDevice::WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo, uint64_t timeout) const
+{
+    return vkWaitSemaphores(m_VkDevice, &WaitInfo, timeout);
 }
 
 void VulkanLogicalDevice::UpdateDescriptorSets(uint32_t                    descriptorWriteCount,
