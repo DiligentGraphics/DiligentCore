@@ -92,24 +92,6 @@ static D3D_FEATURE_LEVEL GetD3DFeatureLevel(ID3D12Device* pd3d12Device)
     return FeatureLevelsData.MaxSupportedFeatureLevel;
 }
 
-ID3D12Device2* RenderDeviceD3D12Impl::GetD3D12Device2()
-{
-    if (!m_pd3d12Device2)
-    {
-        CHECK_D3D_RESULT_THROW(m_pd3d12Device->QueryInterface(IID_PPV_ARGS(&m_pd3d12Device2)), "Failed to get ID3D12Device2");
-    }
-    return m_pd3d12Device2;
-}
-
-ID3D12Device5* RenderDeviceD3D12Impl::GetD3D12Device5()
-{
-    if (!m_pd3d12Device5)
-    {
-        CHECK_D3D_RESULT_THROW(m_pd3d12Device->QueryInterface(IID_PPV_ARGS(&m_pd3d12Device5)), "Failed to get ID3D12Device5");
-    }
-    return m_pd3d12Device5;
-}
-
 RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
                                              IEngineFactory*              pEngineFactory,
@@ -360,6 +342,21 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         SamCaps.BorderSamplingModeSupported   = True;
         SamCaps.AnisotropicFilteringSupported = True;
         SamCaps.LODBiasSupported              = True;
+
+
+#ifdef DILIGENT_DEVELOPMENT
+#    define CHECK_D3D12_DEVICE_VERSION(Version)               \
+        if (CComQIPtr<ID3D12Device##Version>{m_pd3d12Device}) \
+            m_MaxD3D12DeviceVersion = Version;
+
+        CHECK_D3D12_DEVICE_VERSION(1)
+        CHECK_D3D12_DEVICE_VERSION(2)
+        CHECK_D3D12_DEVICE_VERSION(3)
+        CHECK_D3D12_DEVICE_VERSION(4)
+        CHECK_D3D12_DEVICE_VERSION(5)
+
+#    undef CHECK_D3D12_DEVICE_VERSION
+#endif
     }
     catch (...)
     {
@@ -408,7 +405,7 @@ void RenderDeviceD3D12Impl::FreeCommandContext(PooledCommandContext&& Ctx)
     std::lock_guard<std::mutex> LockGuard(m_ContextPoolMutex);
     m_ContextPool.emplace_back(std::move(Ctx));
 #ifdef DILIGENT_DEVELOPMENT
-    Atomics::AtomicDecrement(m_AllocatedCtxCounter);
+    m_AllocatedCtxCounter.fetch_add(-1);
 #endif
 }
 
@@ -528,7 +525,7 @@ RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateComma
             Ctx->Reset(m_CmdListManager);
             Ctx->SetID(ID);
 #ifdef DILIGENT_DEVELOPMENT
-            Atomics::AtomicIncrement(m_AllocatedCtxCounter);
+            m_AllocatedCtxCounter.fetch_add(1);
 #endif
             return Ctx;
         }
@@ -539,7 +536,7 @@ RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateComma
     auto  pCtx            = new (pRawMem) CommandContext(m_CmdListManager);
     pCtx->SetID(ID);
 #ifdef DILIGENT_DEVELOPMENT
-    Atomics::AtomicIncrement(m_AllocatedCtxCounter);
+    m_AllocatedCtxCounter.fetch_add(1);
 #endif
     return PooledCommandContext(pCtx, CmdCtxAllocator);
 }

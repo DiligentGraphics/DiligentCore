@@ -29,6 +29,9 @@
 
 /// \file
 /// Declaration of Diligent::RenderDeviceD3D12Impl class
+
+#include <atomic>
+
 #include "RenderDeviceD3D12.h"
 #include "RenderDeviceD3DBase.hpp"
 #include "RenderDeviceNextGenBase.hpp"
@@ -36,7 +39,6 @@
 #include "CommandListManager.hpp"
 #include "CommandContext.hpp"
 #include "D3D12DynamicHeap.hpp"
-#include "Atomics.hpp"
 #include "CommandQueueD3D12.h"
 #include "GenerateMips.hpp"
 #include "QueryManagerD3D12.hpp"
@@ -216,8 +218,20 @@ public:
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
-    ID3D12Device2* GetD3D12Device2();
-    ID3D12Device5* GetD3D12Device5();
+#define GET_D3D12_DEVICE(Version)                                                  \
+    ID3D12Device##Version* GetD3D12Device##Version()                               \
+    {                                                                              \
+        DEV_CHECK_ERR(m_MaxD3D12DeviceVersion >= Version, "ID3D12Device", Version, \
+                      " is not supported. Maximum supported version: ",            \
+                      m_MaxD3D12DeviceVersion);                                    \
+        return static_cast<ID3D12Device##Version*>(m_pd3d12Device.p);              \
+    }
+    GET_D3D12_DEVICE(1)
+    GET_D3D12_DEVICE(2)
+    GET_D3D12_DEVICE(3)
+    GET_D3D12_DEVICE(4)
+    GET_D3D12_DEVICE(5)
+#undef GET_D3D12_DEVICE
 
     struct Properties
     {
@@ -248,9 +262,6 @@ private:
 
     CComPtr<ID3D12Device> m_pd3d12Device;
 
-    CComPtr<ID3D12Device2> m_pd3d12Device2;
-    CComPtr<ID3D12Device5> m_pd3d12Device5;
-
     EngineD3D12CreateInfo m_EngineAttribs;
 
     CPUDescriptorHeap m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
@@ -262,7 +273,7 @@ private:
     std::mutex                                                                  m_ContextPoolMutex;
     std::vector<PooledCommandContext, STDAllocatorRawMem<PooledCommandContext>> m_ContextPool;
 #ifdef DILIGENT_DEVELOPMENT
-    Atomics::AtomicLong m_AllocatedCtxCounter = 0;
+    std::atomic_int m_AllocatedCtxCounter{0};
 #endif
 
     D3D12DynamicMemoryManager m_DynamicMemoryManager;
@@ -278,6 +289,10 @@ private:
 
     FixedBlockMemoryAllocator m_RootSignatureAllocator;
     RootSignatureCacheD3D12   m_RootSignatureCache;
+
+#ifdef DILIGENT_DEVELOPMENT
+    Uint32 m_MaxD3D12DeviceVersion = 0;
+#endif
 };
 
 } // namespace Diligent
