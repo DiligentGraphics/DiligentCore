@@ -51,7 +51,9 @@ static const INTERFACE_ID IID_FenceVk =
 
 /// Exposes Vulkan-specific functionality of a fence object.
 DILIGENT_BEGIN_INTERFACE(IFenceVk, IFence)
-{
+{       /// Waits until the fence reaches the specified value, on the host.
+    VIRTUAL VkSemaphore METHOD(GetVkSemaphore)(THIS) PURE;
+    VIRTUAL void METHOD(WaitForCompletion)(THIS_ Uint64 Value) PURE;
 };
 DILIGENT_END_INTERFACE
 

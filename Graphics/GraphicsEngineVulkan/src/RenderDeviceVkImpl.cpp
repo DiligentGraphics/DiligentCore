@@ -407,9 +407,9 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(Uint32                             
         for (auto& val_fence : *pFences)
         {
             auto* pFenceVkImpl = val_fence.second.RawPtr<FenceVkImpl>();
-            auto  vkFence      = pFenceVkImpl->GetVkFence();
-            m_CommandQueues[QueueIndex].CmdQueue->SignalFence(vkFence);
-            pFenceVkImpl->AddPendingFence(std::move(vkFence), val_fence.first);
+            auto  vkSemaphore  = pFenceVkImpl->GetVkSemaphore();
+        
+            m_CommandQueues[QueueIndex].CmdQueue->SignalSemaphore(vkSemaphore, val_fence.first);
         }
     }
 }

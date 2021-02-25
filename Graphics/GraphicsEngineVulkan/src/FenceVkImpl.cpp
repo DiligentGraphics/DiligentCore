@@ -37,90 +37,70 @@ namespace Diligent
 FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
                          RenderDeviceVkImpl* pRendeDeviceVkImpl,
                          const FenceDesc&    Desc,
-                         bool                IsDeviceInternal) :
-    // clang-format off
-    TFenceBase
-    {
-        pRefCounters,
-        pRendeDeviceVkImpl,
-        Desc,
-        IsDeviceInternal
-    },
-    m_FencePool{pRendeDeviceVkImpl->GetLogicalDevice().GetSharedPtr()}
-// clang-format on
+                         bool                IsDeviceInternal) :   
+    TFenceBase { pRefCounters,pRendeDeviceVkImpl, Desc,  IsDeviceInternal },
+    m_Semaphore { VK_NULL_HANDLE }
 {
+    VkSemaphoreTypeCreateInfo SemaphoreTypeCI = {};
+    SemaphoreTypeCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    SemaphoreTypeCI.pNext = nullptr;
+    SemaphoreTypeCI.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    SemaphoreTypeCI.initialValue = 0;
+
+    VkSemaphoreCreateInfo SemaphoreCI = {};
+    SemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    SemaphoreCI.pNext = &SemaphoreTypeCI;
+
+    m_Semaphore = m_pDevice->GetLogicalDevice().CreateSemaphore(SemaphoreCI, "");
 }
 
 FenceVkImpl::~FenceVkImpl()
 {
-    if (!m_PendingFences.empty())
-    {
-        LOG_INFO_MESSAGE("FenceVkImpl::~FenceVkImpl(): waiting for ", m_PendingFences.size(), " pending Vulkan ",
-                         (m_PendingFences.size() > 1 ? "fences." : "fence."));
-        // Vulkan spec states that all queue submission commands that refer to
-        // a fence must have completed execution before the fence is destroyed.
-        // (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyFence-fence-01120)
-        Wait(UINT64_MAX);
-    }
 }
 
 Uint64 FenceVkImpl::GetCompletedValue()
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-    while (!m_PendingFences.empty())
-    {
-        auto& Value_Fence = m_PendingFences.front();
+    Uint64 SemaphoreCounter;
+    auto VkResult = LogicalDevice.GetSemaphoreCounter(m_Semaphore, &SemaphoreCounter);
+    DEV_CHECK_ERR(VkResult == VK_SUCCESS, "Timeline Semaphore Unknown Error");
+    return SemaphoreCounter;
+    
+}
 
-        auto status = LogicalDevice.GetFenceStatus(Value_Fence.second);
-        if (status == VK_SUCCESS)
-        {
-            if (Value_Fence.first > m_LastCompletedFenceValue)
-                m_LastCompletedFenceValue = Value_Fence.first;
-            m_FencePool.DisposeFence(std::move(Value_Fence.second));
-            m_PendingFences.pop_front();
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    return m_LastCompletedFenceValue;
+VkSemaphore DILIGENT_CALL_TYPE FenceVkImpl::GetVkSemaphore()
+{
+    return m_Semaphore;
 }
 
 void FenceVkImpl::Reset(Uint64 Value)
 {
-    DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
-    if (Value > m_LastCompletedFenceValue)
-        m_LastCompletedFenceValue = Value;
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+
+    VkSemaphoreSignalInfo SignalInfo = {};
+    SignalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
+    SignalInfo.pNext = nullptr;
+    SignalInfo.semaphore = m_Semaphore;
+    SignalInfo.value = Value;
+
+    auto VkResult = LogicalDevice.SignalSemaphore(m_Semaphore, SignalInfo);
+    DEV_CHECK_ERR(VkResult == VK_SUCCESS, "Timeline Semaphore Unknown Error");
 }
 
-
-void FenceVkImpl::Wait(Uint64 Value)
-{
+void FenceVkImpl::WaitForCompletion(Uint64 Value)
+{   
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-    while (!m_PendingFences.empty())
-    {
-        auto& val_fence = m_PendingFences.front();
-        if (val_fence.first > Value)
-            break;
 
-        auto status = LogicalDevice.GetFenceStatus(val_fence.second);
-        if (status == VK_NOT_READY)
-        {
-            VkFence FenceToWait = val_fence.second;
-
-            status = LogicalDevice.WaitForFences(1, &FenceToWait, VK_TRUE, UINT64_MAX);
-        }
-
-        DEV_CHECK_ERR(status == VK_SUCCESS, "All pending fences must now be complete!");
-        (void)status;
-        if (val_fence.first > m_LastCompletedFenceValue)
-            m_LastCompletedFenceValue = val_fence.first;
-        m_FencePool.DisposeFence(std::move(val_fence.second));
-
-        m_PendingFences.pop_front();
-    }
+    VkSemaphoreWaitInfo WaitInfo = {};
+    WaitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    WaitInfo.pNext = nullptr;
+    WaitInfo.flags = 0;
+    WaitInfo.semaphoreCount = 1;
+    WaitInfo.pSemaphores = &m_Semaphore;
+    WaitInfo.pValues = &Value;
+    
+    auto VkResult = LogicalDevice.WaitSemaphores(WaitInfo, UINT64_MAX);
+    DEV_CHECK_ERR(VkResult == VK_SUCCESS, "Timeline Semaphore Unknown Error");   
 }
 
 } // namespace Diligent

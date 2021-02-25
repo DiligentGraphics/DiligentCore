@@ -56,24 +56,39 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMutex};
 
-    Atomics::Int64 FenceValue = m_NextFenceValue;
+    const uint64_t FenceValue = m_NextFenceValue;
     // Increment the value before submitting the buffer to be overly safe
     Atomics::AtomicIncrement(m_NextFenceValue);
 
-    auto vkFence = m_pFence->GetVkFence();
+    auto vkSemahore = m_pFence->GetVkSemaphore();
 
     uint32_t SubmitCount =
         (SubmitInfo.waitSemaphoreCount != 0 ||
          SubmitInfo.commandBufferCount != 0 ||
          SubmitInfo.signalSemaphoreCount != 0) ?
-        1 :
-        0;
-    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, vkFence);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
-    (void)err;
+        2 :
+        1;
 
-    // We must atomically place the (value, fence) pair into the deque
-    m_pFence->AddPendingFence(std::move(vkFence), FenceValue);
+     VkTimelineSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo = {};
+     TimelineSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+     TimelineSemaphoreSubmitInfo.pNext = nullptr;
+     TimelineSemaphoreSubmitInfo.waitSemaphoreValueCount = 0;
+     TimelineSemaphoreSubmitInfo.pWaitSemaphoreValues = nullptr;
+     TimelineSemaphoreSubmitInfo.signalSemaphoreValueCount = 1;
+     TimelineSemaphoreSubmitInfo.pSignalSemaphoreValues = &FenceValue;
+
+     VkSubmitInfo SubmitInfoTimelineSemaphore = {};
+     SubmitInfoTimelineSemaphore.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+     SubmitInfoTimelineSemaphore.pNext = &TimelineSemaphoreSubmitInfo;
+     SubmitInfoTimelineSemaphore.waitSemaphoreCount = 0;
+     SubmitInfoTimelineSemaphore.pWaitSemaphores = nullptr;
+     SubmitInfoTimelineSemaphore.signalSemaphoreCount  = 1;
+     SubmitInfoTimelineSemaphore.pSignalSemaphores = &vkSemahore;
+    
+    VkSubmitInfo SubmitInfoArray[] = { SubmitInfoTimelineSemaphore, SubmitInfo  };
+
+    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, SubmitInfoArray, VK_NULL_HANDLE);
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
 
     return FenceValue;
 }
@@ -108,7 +123,7 @@ Uint64 CommandQueueVkImpl::WaitForIdle()
     Atomics::AtomicIncrement(m_NextFenceValue);
     vkQueueWaitIdle(m_VkQueue);
     // For some reason after idling the queue not all fences are signaled
-    m_pFence->Wait(UINT64_MAX);
+    m_pFence->WaitForCompletion(UINT64_MAX);
     m_pFence->Reset(LastCompletedFenceValue);
     return LastCompletedFenceValue;
 }
@@ -126,6 +141,32 @@ void CommandQueueVkImpl::SignalFence(VkFence vkFence)
     auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
     (void)err;
+}
+
+void DILIGENT_CALL_TYPE CommandQueueVkImpl::SignalSemaphore(VkSemaphore vkSemaphore, uint64_t value)
+{
+    std::lock_guard<std::mutex> Lock{m_QueueMutex};
+
+    VkTimelineSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo = {};
+    TimelineSemaphoreSubmitInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+    TimelineSemaphoreSubmitInfo.pNext = nullptr;
+    TimelineSemaphoreSubmitInfo.waitSemaphoreValueCount = 0;
+    TimelineSemaphoreSubmitInfo.pWaitSemaphoreValues = nullptr;
+    TimelineSemaphoreSubmitInfo.signalSemaphoreValueCount = 1;
+    TimelineSemaphoreSubmitInfo.pSignalSemaphoreValues = &value;
+
+    VkSubmitInfo SubmitInfo = {};
+    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.pNext = &TimelineSemaphoreSubmitInfo;
+    SubmitInfo.waitSemaphoreCount = 0;
+    SubmitInfo.pWaitSemaphores = nullptr;
+    SubmitInfo.signalSemaphoreCount  = 1;
+    SubmitInfo.pSignalSemaphores = &vkSemaphore;
+    
+    VkSubmitInfo SubmitInfoArray[] = { SubmitInfo, SubmitInfo  };
+
+    auto vkResult = vkQueueSubmit(m_VkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
+    DEV_CHECK_ERR(vkResult == VK_SUCCESS, "Failed Signal Timeline Semaphore");
 }
 
 VkResult CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)
