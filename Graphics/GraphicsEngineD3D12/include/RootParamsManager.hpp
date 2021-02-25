@@ -109,6 +109,21 @@ static_assert(sizeof(RootParameter) == sizeof(D3D12_ROOT_PARAMETER) + sizeof(Uin
 
 
 /// Container for root parameters
+
+/// RootParamsManager keeps root parameters of a single pipeline resource signature.
+/// When resource signatures are combined into a single d3d12 root signature,
+/// root indices and shader spaces are biased based on earlier signatures.
+
+// Note that root index is NOT the same as the index of
+// the root table or index of the root view, e.g.
+//
+//   Root Index |  Root Table Index | Root View Index
+//       0      |         0         |
+//       1      |                   |        0
+//       2      |         1         |
+//       3      |         2         |
+//       4      |                   |        1
+//
 class RootParamsManager
 {
 public:
@@ -137,9 +152,10 @@ public:
         return m_pRootViews[ViewInd];
     }
 
-    Uint32 GetTotalTableSlots(D3D12_DESCRIPTOR_HEAP_TYPE d3d12HeapType, ROOT_PARAMETER_GROUP Group) const
+    // Returns the total number of resources in a given parameter group and descriptor heap type
+    Uint32 GetParameterGroupSize(D3D12_DESCRIPTOR_HEAP_TYPE d3d12HeapType, ROOT_PARAMETER_GROUP Group) const
     {
-        return m_TotalTableSlots[d3d12HeapType][Group];
+        return m_ParameterGroupSizes[d3d12HeapType][Group];
     }
 
     bool operator==(const RootParamsManager& RootParams) const;
@@ -160,7 +176,7 @@ private:
     const RootParameter* m_pRootViews  = nullptr;
 
     // The total number of resources placed in descriptor tables for each heap type and parameter group type
-    std::array<std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT>, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> m_TotalTableSlots{};
+    std::array<std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT>, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> m_ParameterGroupSizes{};
 };
 
 class RootParamsBuilder

@@ -181,7 +181,7 @@ void RootParamsManager::Validate() const
         for (Uint32 group = 0; group < ROOT_PARAMETER_GROUP_COUNT; ++group)
         {
             const auto Group = static_cast<ROOT_PARAMETER_GROUP>(group);
-            DescriptorSlots[d3d12HeapType][Group].resize(GetTotalTableSlots(d3d12HeapType, Group));
+            DescriptorSlots[d3d12HeapType][Group].resize(GetParameterGroupSize(d3d12HeapType, Group));
         }
     }
 
@@ -251,7 +251,9 @@ RootParameter& RootParamsBuilder::AddRootView(D3D12_ROOT_PARAMETER_TYPE Paramete
                                               ROOT_PARAMETER_GROUP      Group)
 {
 #ifdef DILIGENT_DEBUG
-    VERIFY(ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV || ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV || ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV,
+    VERIFY((ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
+            ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
+            ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV),
            "Unexpected parameter type SBV, SRV or UAV is expected");
 
     for (const auto& RootTbl : m_RootTables)
@@ -453,7 +455,7 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
 
         const auto d3d12HeapType = D3D12DescriptorRangeTypeToD3D12HeapType(d3d12SrcTbl.pDescriptorRanges[0].RangeType);
 
-        auto& TableOffsetInGroupAllocation = ParamsMgr.m_TotalTableSlots[d3d12HeapType][SrcTbl.Group];
+        auto& TableOffsetInGroupAllocation = ParamsMgr.m_ParameterGroupSizes[d3d12HeapType][SrcTbl.Group];
 
         auto* pTbl = new (pRootTables + rt) RootParameter{
             SrcTbl.RootIndex, SrcTbl.Group,

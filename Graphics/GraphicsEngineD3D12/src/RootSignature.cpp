@@ -36,11 +36,11 @@
 namespace Diligent
 {
 
-RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                                      pRefCounters,
-                                       RenderDeviceD3D12Impl*                                   pDeviceD3D12Impl,
-                                       const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures,
-                                       Uint32                                                   SignatureCount,
-                                       size_t                                                   Hash) :
+RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                                     pRefCounters,
+                                       RenderDeviceD3D12Impl*                                  pDeviceD3D12Impl,
+                                       const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> ppSignatures[],
+                                       Uint32                                                  SignatureCount,
+                                       size_t                                                  Hash) :
     ObjectBase<IObject>{pRefCounters},
     m_SignatureCount{SignatureCount},
     m_Hash{Hash},
@@ -94,7 +94,7 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
         }
     }
 
-    // Reserve space for all root parameters
+    // Reserve space for all d3d12 root parameters
     std::vector<D3D12_ROOT_PARAMETER, STDAllocatorRawMem<D3D12_ROOT_PARAMETER>> d3d12Parameters(
         TotalParams,
         D3D12_ROOT_PARAMETER{static_cast<D3D12_ROOT_PARAMETER_TYPE>(-1)},
@@ -262,19 +262,18 @@ bool LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint32 RegisterSpace
     if (m_ShaderRecordSize == 0)
         return false;
 
-    VERIFY(m_RegisterSpace == ~0u || m_pd3d12RootSignature == nullptr, "This root signature is already created");
+    VERIFY(m_RegisterSpace == ~0u || m_pd3d12RootSignature == nullptr, "This root signature has already been initialized.");
 
     m_RegisterSpace = RegisterSpace;
 
-    D3D12_ROOT_SIGNATURE_DESC d3d12RootSignatureDesc = {};
-    D3D12_ROOT_PARAMETER      d3d12Params            = {};
-
+    D3D12_ROOT_PARAMETER d3d12Params{};
     d3d12Params.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     d3d12Params.ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
     d3d12Params.Constants.Num32BitValues = m_ShaderRecordSize / 4;
     d3d12Params.Constants.RegisterSpace  = m_RegisterSpace;
     d3d12Params.Constants.ShaderRegister = GetShaderRegister();
 
+    D3D12_ROOT_SIGNATURE_DESC d3d12RootSignatureDesc{};
     d3d12RootSignatureDesc.Flags         = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
     d3d12RootSignatureDesc.NumParameters = 1;
     d3d12RootSignatureDesc.pParameters   = &d3d12Params;
@@ -328,14 +327,14 @@ RootSignatureCacheD3D12::~RootSignatureCacheD3D12()
 RefCntAutoPtr<RootSignatureD3D12> RootSignatureCacheD3D12::GetRootSig(const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount)
 {
     size_t Hash = 0;
-    if (SignatureCount)
+    if (SignatureCount > 0)
     {
         HashCombine(Hash, SignatureCount);
         for (Uint32 i = 0; i < SignatureCount; ++i)
         {
             if (ppSignatures[i] != nullptr)
             {
-                VERIFY(ppSignatures[i]->GetDesc().BindingIndex == i, "Signature placed to another binding index");
+                VERIFY(ppSignatures[i]->GetDesc().BindingIndex == i, "Signature placed at another binding index");
                 HashCombine(Hash, ppSignatures[i]->GetHash());
             }
             else

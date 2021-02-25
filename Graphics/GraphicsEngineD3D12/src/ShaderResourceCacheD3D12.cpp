@@ -52,7 +52,7 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
         {
             auto GroupType = static_cast<ROOT_PARAMETER_GROUP>(group);
 
-            auto TotalTableResources = RootParams.GetTotalTableSlots(d3d12HeapType, GroupType);
+            auto TotalTableResources = RootParams.GetParameterGroupSize(d3d12HeapType, GroupType);
             MemReqs.TotalResources += TotalTableResources;
             if (TotalTableResources != 0)
             {
@@ -82,7 +82,7 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
 //  m_pMemory                             |             m_pResources, m_NumResources                 |
 //  |                                     |                                                          |
 //  V                                     |                                                          V
-//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
+//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |  DescriptorHeapAllocation[0]  |  ...
 //       |                                                A
 //       |                                                |
 //       |________________________________________________|
@@ -123,7 +123,10 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator,
                                           Uint32            NumTables,
                                           const Uint32      TableSizes[])
 {
-    DEV_CHECK_ERR(NumTables < MaxRootTables, "The number of root tables (", NumTables, ") exceeds maximum allowed value (", MaxRootTables, ").");
+    VERIFY(GetContentType() == CacheContentType::Signature,
+           "This method should be called to initialize the cache to store resources of a pipeline resource signature");
+
+    DEV_CHECK_ERR(NumTables <= MaxRootTables, "The number of root tables (", NumTables, ") exceeds maximum allowed value (", MaxRootTables, ").");
 
     m_NumTables = static_cast<decltype(m_NumTables)>(NumTables);
     VERIFY_EXPR(m_NumTables == NumTables);
@@ -149,9 +152,12 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
                                           RenderDeviceD3D12Impl*   pDevice,
                                           const RootParamsManager& RootParams)
 {
+    VERIFY(GetContentType() == CacheContentType::SRB,
+           "This method should be called to initialize the cache to store resources of an SRB");
+
     const auto MemReq = GetMemoryRequirements(RootParams);
 
-    DEV_CHECK_ERR(MemReq.NumTables < MaxRootTables, "The number of root tables (", MemReq.NumTables, ") exceeds maximum allowed value (", MaxRootTables, ").");
+    DEV_CHECK_ERR(MemReq.NumTables <= MaxRootTables, "The number of root tables (", MemReq.NumTables, ") exceeds maximum allowed value (", MaxRootTables, ").");
 
     m_NumTables = static_cast<decltype(m_NumTables)>(MemReq.NumTables);
     VERIFY_EXPR(m_NumTables == MemReq.NumTables);
@@ -230,10 +236,11 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
         {
             auto GroupType = static_cast<ROOT_PARAMETER_GROUP>(group);
 
-            auto  TotalTableResources = RootParams.GetTotalTableSlots(d3d12HeapType, GroupType);
+            auto  TotalTableResources = RootParams.GetParameterGroupSize(d3d12HeapType, GroupType);
             auto& AllocationIndex     = m_AllocationIndex[d3d12HeapType][GroupType];
             if (TotalTableResources != 0)
             {
+                VERIFY_EXPR(AllocationIndex == -1);
                 AllocationIndex  = static_cast<Int8>(AllocationCount++);
                 auto& Allocation = m_DescriptorAllocations[AllocationIndex];
                 VERIFY_EXPR(Allocation.IsNull());
@@ -404,8 +411,8 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
             }
             else
             {
-                VERIFY((m_DynamicRootBuffersMask & DynamicBufferBit) == 0, "Bit must not be set when there are no buffer.");
-                VERIFY((m_NonDynamicRootBuffersMask & DynamicBufferBit) == 0, "Bit must not be set when there are no buffer.");
+                VERIFY((m_DynamicRootBuffersMask & DynamicBufferBit) == 0, "Bit must not be set when there is no buffer.");
+                VERIFY((m_NonDynamicRootBuffersMask & DynamicBufferBit) == 0, "Bit must not be set when there is no buffer.");
             }
         }
         else
@@ -484,7 +491,11 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
         {
             auto* pTlasD3D12 = pObject.RawPtr<TopLevelASD3D12Impl>();
             if (pTlasD3D12->IsInKnownState())
+            {
+                // We must always call TransitionResource() even when the state is already
+                // RESOURCE_STATE_RAY_TRACING because it is treated as UAV
                 Ctx.TransitionResource(*pTlasD3D12, RESOURCE_STATE_RAY_TRACING);
+            }
         }
         break;
 

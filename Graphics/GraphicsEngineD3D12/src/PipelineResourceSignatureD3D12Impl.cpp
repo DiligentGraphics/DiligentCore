@@ -606,7 +606,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(const CommitCacheResou
     {
         const auto d3d12HeapType = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(heap_type);
 
-        auto NumDynamicDescriptors = m_RootParams.GetTotalTableSlots(d3d12HeapType, ROOT_PARAMETER_GROUP_DYNAMIC);
+        auto NumDynamicDescriptors = m_RootParams.GetParameterGroupSize(d3d12HeapType, ROOT_PARAMETER_GROUP_DYNAMIC);
         if (NumDynamicDescriptors > 0)
         {
             auto& pAllocation = pDynamicDescriptorAllocations[d3d12HeapType];

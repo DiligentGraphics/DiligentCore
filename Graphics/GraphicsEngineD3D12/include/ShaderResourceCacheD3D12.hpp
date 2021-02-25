@@ -38,7 +38,7 @@
 //  m_pMemory                             |             m_pResources, m_NumResources == m            |
 //  |                                     |                                                          |
 //  V                                     |                                                          V
-//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
+//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |  DescriptorHeapAllocation[0]  |  ...
 //       |                                                A \
 //       |                                                |  \
 //       |________________________________________________|   \RefCntAutoPtr
@@ -49,7 +49,10 @@
 //  Nrt = m_NumTables
 //
 //
-// The cache is also assigned decriptor heap space to store shader visible descriptor handles (for non-dynamic resources).
+// The cache is also assigned decriptor heap space to store descriptor handles.
+// Static and mutable table resources are stored in shader-visible heap.
+// Dynamic table resources are stored in CPU-only heap.
+// Root views are not assigned descriptor space.
 //
 //
 //      DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
@@ -70,7 +73,6 @@
 //
 // The allocation is inexed by the offset from the beginning of the root table.
 // Each root table is assigned the space to store exactly m_NumResources resources.
-// Dynamic resources are not assigned space in the descriptor heap allocation.
 //
 //
 //
@@ -81,6 +83,24 @@
 //                             V
 //                 .....       |   DescrptHndl[0]  ...  DescrptHndl[n-1]   |    ....
 //
+//
+//
+// The cache stores resources for both root tables and root views.
+// Resources of root views are treated as single-descriptor tables
+// Example:
+//
+//   Root Index |  Is Root View  | Num Resources
+//      0       |      No        |    1+
+//      1       |      Yes       |    1
+//      2       |      Yes       |    1
+//      3       |      No        |    1+
+//      4       |      Yes       |    1+
+//      5       |      Yes       |    1+
+//      6       |      No        |    1
+//      7       |      No        |    1
+//      8       |      Yes       |    1+
+// Note that resource cache that is used by signature may contain empty tables.
+
 
 #include <array>
 #include <memory>
@@ -112,10 +132,10 @@ public:
     }
 
     // clang-format off
-    ShaderResourceCacheD3D12             (const ShaderResourceCacheD3D12&) = delete;
-    ShaderResourceCacheD3D12             (ShaderResourceCacheD3D12&&)      = delete;
-    ShaderResourceCacheD3D12& operator = (const ShaderResourceCacheD3D12&) = delete;
-    ShaderResourceCacheD3D12& operator = (ShaderResourceCacheD3D12&&)      = delete;
+    ShaderResourceCacheD3D12             (const ShaderResourceCacheD3D12&)  = delete;
+    ShaderResourceCacheD3D12             (      ShaderResourceCacheD3D12&&) = delete;
+    ShaderResourceCacheD3D12& operator = (const ShaderResourceCacheD3D12&)  = delete;
+    ShaderResourceCacheD3D12& operator = (      ShaderResourceCacheD3D12&&) = delete;
     // clang-format on
 
     ~ShaderResourceCacheD3D12();
@@ -129,10 +149,14 @@ public:
     };
     static MemoryRequirements GetMemoryRequirements(const RootParamsManager& RootParams);
 
+    // Initializes resource cache to hold the given number of root tables, no descriptor space
+    // is allocated (this is used to initialize the cache for a pipeline resource signature).
     void Initialize(IMemoryAllocator& MemAllocator,
                     Uint32            NumTables,
                     const Uint32      TableSizes[]);
 
+    // Initializes resource cache to hold the resources of a root parameters manager
+    // (this is used to initialize the cache for an SRB).
     void Initialize(IMemoryAllocator&        MemAllocator,
                     RenderDeviceD3D12Impl*   pDevice,
                     const RootParamsManager& RootParams);
@@ -145,14 +169,16 @@ public:
 
         SHADER_RESOURCE_TYPE Type = SHADER_RESOURCE_TYPE_UNKNOWN;
         // CPU descriptor handle of a cached resource in CPU-only descriptor heap.
-        // Note that for dynamic resources, this is the only available CPU descriptor handle.
-        D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {0};
+        D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {};
         RefCntAutoPtr<IDeviceObject> pObject;
 
         bool IsNull() const { return pObject == nullptr; }
 
+        // Transitions resource to the shader resource state required by Type member.
         __forceinline void TransitionResource(CommandContext& Ctx);
+
 #ifdef DILIGENT_DEVELOPMENT
+        // Verifies that resource is in correct shader resource state required by Type member.
         void DvpVerifyResourceState();
 #endif
     };
@@ -207,13 +233,14 @@ public:
         Resource* const m_pResources;
     };
 
-
+    // Sets the resource at the given root index and offset from the table start
     const Resource& SetResource(Uint32                         RootIndex,
                                 Uint32                         OffsetFromTableStart,
                                 SHADER_RESOURCE_TYPE           Type,
                                 D3D12_CPU_DESCRIPTOR_HANDLE    CPUDescriptorHandle,
                                 RefCntAutoPtr<IDeviceObject>&& pObject);
 
+    // Copies the resource to the given root index and offset from the table start
     const Resource& CopyResource(Uint32          RootIndex,
                                  Uint32          OffsetFromTableStart,
                                  const Resource& SrcRes)
@@ -221,6 +248,7 @@ public:
         return SetResource(RootIndex, OffsetFromTableStart, SrcRes.Type, SrcRes.CPUDescriptorHandle, RefCntAutoPtr<IDeviceObject>{SrcRes.pObject});
     }
 
+    // Resets the resource at the given root index and offset from the table start to default state
     const Resource& ResetResource(Uint32 RootIndex,
                                   Uint32 OffsetFromTableStart)
     {
@@ -274,11 +302,15 @@ public:
         Transition,
         Verify
     };
+    // Transitions all resources in the cache
     void TransitionResourceStates(CommandContext& Ctx, StateTransitionMode Mode);
 
     CacheContentType GetContentType() const { return m_ContentType; }
 
+    // Returns the bitmask indicating root views with bound dynamic buffers
     Uint64 GetDynamicRootBuffersMask() const { return m_DynamicRootBuffersMask; }
+
+    // Returns the bitmask indicating root views with bound non-dynamic buffers
     Uint64 GetNonDynamicRootBuffersMask() const { return m_NonDynamicRootBuffersMask; }
 
 #ifdef DILIGENT_DEBUG
@@ -308,7 +340,7 @@ private:
     // Descriptor heap allocations, indexed by m_AllocationIndex
     DescriptorHeapAllocation* m_DescriptorAllocations = nullptr;
 
-    // The total number of resources in the cache
+    // The total number of resources in all descriptor tables
     Uint32 m_TotalResourceCount = 0;
 
     // The number of descriptor tables in the cache
@@ -321,7 +353,7 @@ private:
     const CacheContentType m_ContentType;
 
     // Descriptor allocation index in m_DescriptorAllocations array for every descriptor heap type
-    // (CBV_SRV_UAV, SAMPLER) and GPU visibility.
+    // (CBV_SRV_UAV, SAMPLER) and GPU visibility (false, true).
     // -1 indicates no allocation.
     std::array<std::array<Int8, ROOT_PARAMETER_GROUP_COUNT>, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> m_AllocationIndex{};
 

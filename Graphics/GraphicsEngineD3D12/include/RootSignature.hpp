@@ -30,13 +30,27 @@
 /// \file
 /// Declaration of Diligent::RootSignatureD3D12 class
 
-#include <array>
+// Root signature object combines multiple pipeline resource signatures into a single
+// d3d12 root signature. The signatures "stack" on top of each other. Their "local"
+// root indices and register spaces are biased by the root indices and spaces of
+// previous signatures.
+//
+//   __________________________________________________________
+//  |                                                          |
+//  |  Pipeline Resource Signature 2 (NRootIndices2, NSpaces2) |  BaseRootIndex2 = BaseRootIndex1 + NRootIndices1
+//  |__________________________________________________________|  BaseSpace2     = BaseSpace1 + NSpaces1
+//  |                                                          |
+//  |  Pipeline Resource Signature 1 (NRootIndices1, NSpaces1) |  BaseRootIndex1 = BaseRootIndex0 + NRootIndices0
+//  |__________________________________________________________|  BaseSpace1     = BaseSpace0 + NSpaces0
+//  |                                                          |
+//  |  Pipeline Resource Signature 0 (NRootIndices0, NSpaces0) |  BaseRootIndex0 = 0
+//  |__________________________________________________________|  BaseSpace0     = 0
+//
+
 #include <mutex>
 #include <unordered_map>
 #include <memory>
 
-#include "D3D12TypeConversions.hpp"
-#include "ShaderResourceCacheD3D12.hpp"
 #include "PipelineResourceSignatureD3D12Impl.hpp"
 #include "PrivateConstants.h"
 #include "ShaderResources.hpp"
@@ -52,11 +66,11 @@ class RootSignatureCacheD3D12;
 class RootSignatureD3D12 final : public ObjectBase<IObject>
 {
 public:
-    RootSignatureD3D12(IReferenceCounters*                                      pRefCounters,
-                       RenderDeviceD3D12Impl*                                   pDeviceD3D12Impl,
-                       const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* ppSignatures,
-                       Uint32                                                   SignatureCount,
-                       size_t                                                   Hash);
+    RootSignatureD3D12(IReferenceCounters*                                     pRefCounters,
+                       RenderDeviceD3D12Impl*                                  pDeviceD3D12Impl,
+                       const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> ppSignatures[],
+                       Uint32                                                  SignatureCount,
+                       size_t                                                  Hash);
     ~RootSignatureD3D12();
 
     size_t GetHash() const { return m_Hash; }
@@ -87,6 +101,7 @@ public:
         return m_ResourceSignatures[BindingIndex].BaseRegisterSpace;
     }
 
+    /// Returns the total number of register spaces used by all resource signatures
     Uint32 GetTotalSpaces() const
     {
         return m_TotalSpacesUsed;
@@ -148,7 +163,7 @@ private:
 };
 
 
-
+/// Root signature cache that deduplicates RootSignatureD3D12 objects.
 class RootSignatureCacheD3D12
 {
 public:
