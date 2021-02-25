@@ -38,7 +38,7 @@ FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
                          RenderDeviceVkImpl* pRendeDeviceVkImpl,
                          const FenceDesc&    Desc,
                          bool                IsDeviceInternal) :   
-    TFenceBase { pRefCounters,pRendeDeviceVkImpl, Desc,  IsDeviceInternal },
+    TFenceBase { pRefCounters, pRendeDeviceVkImpl, Desc, IsDeviceInternal },
     m_Semaphore { VK_NULL_HANDLE }
 {
     VkSemaphoreTypeCreateInfo SemaphoreTypeCI = {};
@@ -51,12 +51,10 @@ FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
     SemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     SemaphoreCI.pNext = &SemaphoreTypeCI;
 
-    m_Semaphore = m_pDevice->GetLogicalDevice().CreateSemaphore(SemaphoreCI, "");
+    m_Semaphore = m_pDevice->GetLogicalDevice().CreateSemaphore(SemaphoreCI, Desc.Name);
 }
 
-FenceVkImpl::~FenceVkImpl()
-{
-}
+FenceVkImpl::~FenceVkImpl() {}
 
 Uint64 FenceVkImpl::GetCompletedValue()
 {
@@ -64,8 +62,7 @@ Uint64 FenceVkImpl::GetCompletedValue()
     Uint64 SemaphoreCounter;
     auto VkResult = LogicalDevice.GetSemaphoreCounter(m_Semaphore, &SemaphoreCounter);
     DEV_CHECK_ERR(VkResult == VK_SUCCESS, "Timeline Semaphore Unknown Error");
-    return SemaphoreCounter;
-    
+    return SemaphoreCounter;   
 }
 
 VkSemaphore DILIGENT_CALL_TYPE FenceVkImpl::GetVkSemaphore()
