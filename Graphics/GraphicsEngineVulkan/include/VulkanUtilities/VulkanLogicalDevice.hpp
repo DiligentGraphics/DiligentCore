@@ -188,11 +188,14 @@ public:
     VkResult FlushMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) const;
 
     VkResult GetFenceStatus(VkFence fence) const;
+    VkResult GetSemaphoreCounter(VkSemaphore semaphore, uint64_t* pSemaphoreValue) const;
+    VkResult SignalSemaphore(VkSemaphore semaphore, const VkSemaphoreSignalInfo& SignalInfo) const;
     VkResult ResetFence(VkFence fence) const;
     VkResult WaitForFences(uint32_t       fenceCount,
                            const VkFence* pFences,
                            VkBool32       waitAll,
                            uint64_t       timeout) const;
+    VkResult WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo, uint64_t timeout) const;
 
     void UpdateDescriptorSets(uint32_t                    descriptorWriteCount,
                               const VkWriteDescriptorSet* pDescriptorWrites,

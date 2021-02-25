@@ -86,6 +86,12 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, IObject)
     /// Signals the given fence
     VIRTUAL void METHOD(SignalFence)(THIS_
                                      VkFence vkFence) PURE;
+
+    /// Signals the given timeline semaphore
+    VIRTUAL void METHOD(SignalSemaphore)(THIS_
+                                         VkSemaphore vkSemaphore,
+                                         uint64_t value) PURE;
+
 };
 DILIGENT_END_INTERFACE
 

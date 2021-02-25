@@ -98,6 +98,10 @@ void FenceVkImpl::Reset(Uint64 Value)
     UpdateLastCompletedFenceValue(Value);
 }
 
+VkSemaphore FenceVkImpl::GetVkSemaphore()
+{
+    return m_Semaphore;
+}
 
 void FenceVkImpl::Wait(Uint64 Value)
 {

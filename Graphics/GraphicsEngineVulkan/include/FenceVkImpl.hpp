@@ -71,12 +71,17 @@ public:
     /// Implementation of IFence::Wait() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
 
+    /// Implementation of IFence::GetVkSemaphore().
+    virtual VkSemaphore DILIGENT_CALL_TYPE GetVkSemaphore() override final;
+
     VulkanUtilities::VulkanRecycledSemaphore ExtractSignalSemaphore(CommandQueueIndex CommandQueueId, Uint64 Value);
 
     void AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 Value, SyncPointVkPtr SyncPoint);
 
 private:
     Uint64 InternalGetCompletedValue();
+
+    VulkanUtilities::SemaphoreWrapper m_Semaphore;
 
     static constexpr Uint32 RequiredArraySize = 8;
 
