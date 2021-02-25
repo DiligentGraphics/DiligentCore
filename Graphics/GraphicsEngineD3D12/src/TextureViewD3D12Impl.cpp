@@ -55,8 +55,8 @@ TextureViewD3D12Impl::TextureViewD3D12Impl(IReferenceCounters*        pRefCounte
     if (!TexArraySRVDescriptor.IsNull() && !MipLevelUAVDescriptors.IsNull())
     {
         m_MipGenerationDescriptors = ALLOCATE(GetRawAllocator(), "Raw memory for DescriptorHeapAllocation", DescriptorHeapAllocation, 2);
-        new (&m_MipGenerationDescriptors[0]) DescriptorHeapAllocation(std::move(TexArraySRVDescriptor));
-        new (&m_MipGenerationDescriptors[1]) DescriptorHeapAllocation(std::move(MipLevelUAVDescriptors));
+        new (&m_MipGenerationDescriptors[0]) DescriptorHeapAllocation{std::move(TexArraySRVDescriptor)};
+        new (&m_MipGenerationDescriptors[1]) DescriptorHeapAllocation{std::move(MipLevelUAVDescriptors)};
     }
 }
 

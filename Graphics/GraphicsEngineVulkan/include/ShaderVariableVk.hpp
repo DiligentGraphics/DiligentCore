@@ -103,6 +103,8 @@ public:
 
     Uint32 GetVariableCount() const { return m_NumVariables; }
 
+    IObject& GetOwner() { return m_Owner; }
+
 private:
     friend ShaderVariableVkImpl;
     using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
@@ -150,12 +152,14 @@ private:
 };
 
 // sizeof(ShaderVariableVkImpl) == 24 (x64)
-class ShaderVariableVkImpl final : public IShaderResourceVariable
+class ShaderVariableVkImpl final : public ShaderVariableBase<ShaderVariableManagerVk, IShaderResourceVariable>
 {
 public:
+    using TBase = ShaderVariableBase<ShaderVariableManagerVk, IShaderResourceVariable>;
+
     ShaderVariableVkImpl(ShaderVariableManagerVk& ParentManager,
                          Uint32                   ResIndex) :
-        m_ParentManager{ParentManager},
+        TBase{ParentManager},
         m_ResIndex{ResIndex}
     {}
 
@@ -166,41 +170,15 @@ public:
     ShaderVariableVkImpl& operator= (ShaderVariableVkImpl&&)      = delete;
     // clang-format on
 
-
-    virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final
-    {
-        return m_ParentManager.m_Owner.GetReferenceCounters();
-    }
-
-    virtual Atomics::Long DILIGENT_CALL_TYPE AddRef() override final
-    {
-        return m_ParentManager.m_Owner.AddRef();
-    }
-
-    virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
-    {
-        return m_ParentManager.m_Owner.Release();
-    }
-
-    void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
-    {
-        if (ppInterface == nullptr)
-            return;
-
-        *ppInterface = nullptr;
-        if (IID == IID_ShaderResourceVariable || IID == IID_Unknown)
-        {
-            *ppInterface = this;
-            (*ppInterface)->AddRef();
-        }
-    }
-
     virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
     {
         return GetDesc().VarType;
     }
 
-    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final;
+    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+    {
+        BindResource(pObject, 0);
+    }
 
     virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
                                              Uint32                FirstElement,
@@ -219,20 +197,25 @@ public:
         return m_ParentManager.GetVariableIndex(*this);
     }
 
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final;
-
-private:
-    friend ShaderVariableManagerVk;
-    using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+    {
+        return m_ParentManager.m_pSignature->IsBound(ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
+    }
 
     const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
-    const ResourceAttribs&      GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
 
-    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const;
+    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+    {
+        m_ParentManager.m_pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
+    }
 
 private:
-    ShaderVariableManagerVk& m_ParentManager;
-    const Uint32             m_ResIndex; // Index in Signatures' m_Desc.Resources
+    using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
+
+    const ResourceAttribs& GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
+
+private:
+    const Uint32 m_ResIndex; // Index in Signatures' m_Desc.Resources
 };
 
 } // namespace Diligent

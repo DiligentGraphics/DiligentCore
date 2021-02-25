@@ -41,10 +41,10 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
                                          const TopLevelASDesc&  Desc) :
     TTopLevelASBase{pRefCounters, pDeviceD3D12, Desc}
 {
-    auto*       pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
-    const auto& Limits                   = pDeviceD3D12->GetProperties();
-    UINT64      ResultDataMaxSizeInBytes = 0;
+    auto* const pd3d12Device = pDeviceD3D12->GetD3D12Device5();
+    const auto& Limits       = pDeviceD3D12->GetProperties();
 
+    UINT64 ResultDataMaxSizeInBytes = 0;
     if (m_Desc.CompactedSize > 0)
     {
         ResultDataMaxSizeInBytes = m_Desc.CompactedSize;
@@ -64,7 +64,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
 
         pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12TopLevelInputs, &d3d12TopLevelPrebuildInfo);
         if (d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)
-            LOG_ERROR_AND_THROW("Failed to get ray tracing acceleration structure prebuild info");
+            LOG_ERROR_AND_THROW("Failed to get ray tracing acceleration structure prebuild info.");
 
         ResultDataMaxSizeInBytes = d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes;
 
@@ -72,25 +72,25 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
         m_ScratchSize.Update = static_cast<Uint32>(d3d12TopLevelPrebuildInfo.UpdateScratchDataSizeInBytes);
     }
 
-    D3D12_HEAP_PROPERTIES HeapProps;
+    D3D12_HEAP_PROPERTIES HeapProps{};
     HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
     HeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
     HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
     HeapProps.CreationNodeMask     = 1;
     HeapProps.VisibleNodeMask      = 1;
 
-    D3D12_RESOURCE_DESC d3d12ASDesc = {};
-    d3d12ASDesc.Dimension           = D3D12_RESOURCE_DIMENSION_BUFFER;
-    d3d12ASDesc.Alignment           = 0;
-    d3d12ASDesc.Width               = ResultDataMaxSizeInBytes;
-    d3d12ASDesc.Height              = 1;
-    d3d12ASDesc.DepthOrArraySize    = 1;
-    d3d12ASDesc.MipLevels           = 1;
-    d3d12ASDesc.Format              = DXGI_FORMAT_UNKNOWN;
-    d3d12ASDesc.SampleDesc.Count    = 1;
-    d3d12ASDesc.SampleDesc.Quality  = 0;
-    d3d12ASDesc.Layout              = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    d3d12ASDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    D3D12_RESOURCE_DESC d3d12ASDesc{};
+    d3d12ASDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+    d3d12ASDesc.Alignment          = 0;
+    d3d12ASDesc.Width              = ResultDataMaxSizeInBytes;
+    d3d12ASDesc.Height             = 1;
+    d3d12ASDesc.DepthOrArraySize   = 1;
+    d3d12ASDesc.MipLevels          = 1;
+    d3d12ASDesc.Format             = DXGI_FORMAT_UNKNOWN;
+    d3d12ASDesc.SampleDesc.Count   = 1;
+    d3d12ASDesc.SampleDesc.Quality = 0;
+    d3d12ASDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    d3d12ASDesc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
     auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                                                     &d3d12ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
@@ -104,7 +104,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
 
     m_DescriptorHandle = pDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-    D3D12_SHADER_RESOURCE_VIEW_DESC d3d12SRVDesc;
+    D3D12_SHADER_RESOURCE_VIEW_DESC d3d12SRVDesc{};
     d3d12SRVDesc.ViewDimension                            = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
     d3d12SRVDesc.Shader4ComponentMapping                  = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     d3d12SRVDesc.Format                                   = DXGI_FORMAT_UNKNOWN;

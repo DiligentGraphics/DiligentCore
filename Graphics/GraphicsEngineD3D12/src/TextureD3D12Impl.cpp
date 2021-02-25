@@ -36,12 +36,10 @@
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 
-using namespace Diligent;
-
 namespace Diligent
 {
 
-DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
+static DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
 {
     if (Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
     {

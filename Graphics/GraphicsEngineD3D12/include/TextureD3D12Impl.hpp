@@ -98,8 +98,6 @@ protected:
     void CreateUAV(TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle);
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT* m_StagingFootprints = nullptr;
-
-    friend class RenderDeviceD3D12Impl;
 };
 
 } // namespace Diligent

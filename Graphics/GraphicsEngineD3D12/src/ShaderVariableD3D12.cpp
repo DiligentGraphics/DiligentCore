@@ -28,7 +28,6 @@
 #include "pch.h"
 
 #include "ShaderVariableD3D12.hpp"
-#include "ShaderResourceVariableBase.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
@@ -42,7 +41,7 @@ void ShaderVariableManagerD3D12::ProcessSignatureResources(const PipelineResourc
                                                            HandlerType                               Handler)
 {
     const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    const bool   UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
+    const bool   UsingCombinedSamplers = Signature.IsUsingCombinedSamplers();
 
     for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
@@ -59,7 +58,7 @@ void ShaderVariableManagerD3D12::ProcessSignatureResources(const PipelineResourc
                     continue;
 
                 if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-                    (!UsingSeparateSamplers || Attr.IsImmutableSamplerAssigned()))
+                    (UsingCombinedSamplers || Attr.IsImmutableSamplerAssigned()))
                     continue;
 
                 Handler(r);
@@ -137,18 +136,13 @@ void ShaderVariableManagerD3D12::Destroy(IMemoryAllocator& Allocator)
 
 ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(const Char* Name) const
 {
-    ShaderVariableD3D12Impl* pVar = nullptr;
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
-        auto&       Var = m_pVariables[v];
-        const auto& Res = Var.GetDesc();
-        if (strcmp(Res.Name, Name) == 0)
-        {
-            pVar = &Var;
-            break;
-        }
+        auto& Var = m_pVariables[v];
+        if (strcmp(Var.GetDesc().Name, Name) == 0)
+            return &Var;
     }
-    return pVar;
+    return nullptr;
 }
 
 
@@ -168,18 +162,18 @@ Uint32 ShaderVariableManagerD3D12::GetVariableIndex(const ShaderVariableD3D12Imp
     if (m_pVariables == nullptr)
     {
         LOG_ERROR("This shader variable manager has no variables");
-        return static_cast<Uint32>(-1);
+        return ~0u;
     }
 
-    auto Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_pVariables);
-    VERIFY(Offset % sizeof(ShaderVariableD3D12Impl) == 0, "Offset is not multiple of ShaderVariableD3D12Impl class size");
+    const auto Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_pVariables);
+    DEV_CHECK_ERR(Offset % sizeof(ShaderVariableD3D12Impl) == 0, "Offset is not multiple of ShaderVariableD3D12Impl class size");
     auto Index = static_cast<Uint32>(Offset / sizeof(ShaderVariableD3D12Impl));
     if (Index < m_NumVariables)
         return Index;
     else
     {
         LOG_ERROR("Failed to get variable index. The variable ", &Variable, " does not belong to this shader variable manager");
-        return static_cast<Uint32>(-1);
+        return ~0u;
     }
 }
 
@@ -192,43 +186,8 @@ void ShaderVariableManagerD3D12::BindResources(IResourceMapping* pResourceMappin
 
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
-        auto&       Var = m_pVariables[v];
-        const auto& Res = Var.GetDesc();
-
-        if ((Flags & (1u << Res.VarType)) == 0)
-            continue;
-
-        for (Uint32 ArrInd = 0; ArrInd < Res.ArraySize; ++ArrInd)
-        {
-            if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Var.IsBound(ArrInd))
-                continue;
-
-            const auto*                  VarName = Res.Name;
-            RefCntAutoPtr<IDeviceObject> pObj;
-            pResourceMapping->GetResource(VarName, &pObj, ArrInd);
-            if (pObj)
-            {
-                Var.BindResource(pObj, ArrInd);
-            }
-            else
-            {
-                if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Var.IsBound(ArrInd))
-                {
-                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '",
-                                      GetShaderResourcePrintName(Res, ArrInd),
-                                      "': resource is not found in the resource mapping. "
-                                      "Do not use BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag to suppress the message if this is not an issue.");
-                }
-            }
-        }
+        m_pVariables[v].BindResources<ShaderVariableD3D12Impl>(pResourceMapping, Flags);
     }
-}
-
-
-
-void ShaderVariableD3D12Impl::Set(IDeviceObject* pObject)
-{
-    BindResource(pObject, 0);
 }
 
 void ShaderVariableD3D12Impl::SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)
@@ -238,22 +197,6 @@ void ShaderVariableD3D12Impl::SetArray(IDeviceObject* const* ppObjects, Uint32 F
 
     for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
         BindResource(ppObjects[Elem], FirstElement + Elem);
-}
-
-bool ShaderVariableD3D12Impl::IsBound(Uint32 ArrayIndex) const
-{
-    auto* pSignature    = m_ParentManager.m_pSignature;
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
-
-    return pSignature->IsBound(ArrayIndex, m_ResIndex, ResourceCache);
-}
-
-void ShaderVariableD3D12Impl::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
-{
-    auto* pSignature    = m_ParentManager.m_pSignature;
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
-
-    pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, ResourceCache);
 }
 
 } // namespace Diligent

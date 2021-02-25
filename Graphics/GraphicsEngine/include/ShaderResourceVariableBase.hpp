@@ -492,32 +492,23 @@ std::string GetShaderGroupName(const ShaderVectorType& Shaders)
     return Name;
 }
 
-struct DefaultShaderVariableIDComparator
-{
-    bool operator()(const INTERFACE_ID& IID) const
-    {
-        return IID == IID_ShaderResourceVariable || IID == IID_Unknown;
-    } // namespace Diligent
-};
-
 /// Base implementation of a shader variable
-template <typename ResourceLayoutType,
-          typename ResourceVariableBaseInterface = IShaderResourceVariable,
-          typename VariableIDComparator          = DefaultShaderVariableIDComparator>
+template <typename VarManagerType,
+          typename ResourceVariableBaseInterface = IShaderResourceVariable>
 struct ShaderVariableBase : public ResourceVariableBaseInterface
 {
-    ShaderVariableBase(ResourceLayoutType& ParentResLayout) :
-        m_ParentResLayout{ParentResLayout}
+    ShaderVariableBase(VarManagerType& ParentManager) :
+        m_ParentManager{ParentManager}
     {
     }
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override
     {
         if (ppInterface == nullptr)
             return;
 
         *ppInterface = nullptr;
-        if (VariableIDComparator{}(IID))
+        if (IID == IID_ShaderResourceVariable || IID == IID_Unknown)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
@@ -526,21 +517,55 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 
     virtual Atomics::Long DILIGENT_CALL_TYPE AddRef() override final
     {
-        return m_ParentResLayout.GetOwner().AddRef();
+        return m_ParentManager.GetOwner().AddRef();
     }
 
     virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
     {
-        return m_ParentResLayout.GetOwner().Release();
+        return m_ParentManager.GetOwner().Release();
     }
 
     virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final
     {
-        return m_ParentResLayout.GetOwner().GetReferenceCounters();
+        return m_ParentManager.GetOwner().GetReferenceCounters();
+    }
+
+    template <typename ThisImplType>
+    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+    {
+        auto* const pThis = static_cast<ThisImplType*>(this);
+
+        const auto& ResDesc = pThis->GetDesc();
+
+        if ((Flags & (1u << ResDesc.VarType)) == 0)
+            return;
+
+        for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+        {
+            if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0 && pThis->IsBound(ArrInd))
+                continue;
+
+            RefCntAutoPtr<IDeviceObject> pObj;
+            pResourceMapping->GetResource(ResDesc.Name, &pObj, ArrInd);
+            if (pObj)
+            {
+                pThis->BindResource(pObj, ArrInd);
+            }
+            else
+            {
+                if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !pThis->IsBound(ArrInd))
+                {
+                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '",
+                                      GetShaderResourcePrintName(ResDesc, ArrInd),
+                                      "': resource is not found in the resource mapping. "
+                                      "Do not use BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag to suppress the message if this is not an issue.");
+                }
+            }
+        }
     }
 
 protected:
-    ResourceLayoutType& m_ParentResLayout;
+    VarManagerType& m_ParentManager;
 };
 
 } // namespace Diligent

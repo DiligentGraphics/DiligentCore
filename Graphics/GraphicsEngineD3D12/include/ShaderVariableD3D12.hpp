@@ -37,28 +37,26 @@
 //  * ShaderVariableManagerD3D12 is used by PipelineResourceSignatureD3D12Impl to manage static resources and by
 //    ShaderResourceBindingD3D12Impl to manage mutable and dynamic resources
 //
-//          _____________________________                   ________________________________________________________________________________
-//         |                             |                 |                              |                               |                 |
-//    .----|  ShaderVariableManagerD3D12 |---------------->|  ShaderVariableD3D12Impl[0]  |   ShaderVariableD3D12Impl[1]  |     ...         |
-//    |    |_____________________________|                 |______________________________|_______________________________|_________________|
-//    |                |                                                    |                               |
-//    |                |                                               m_ResIndex                       m_ResIndex
-//    |                |                                                    |                               |
-//    |   _____________V____________________                      __________V_______________________________V_________________________________
-//    |  |                                  | m_pResourceAttribs |                  |                  |             |                        |
-//    |  |PipelineResourceSignatureD3D12Impl|------------------->|    Resource[0]   |    Resource[1]   |     ...     |   Resource[s+m+d-1]    |
-//    |  |__________________________________|                    |__________________|__________________|_____________|________________________|
-//    |                                                                |                                                    |
-//    |                                                                |                                                    |
-//    |                                                                | (RootTable, Offset)                               / (RootTable, Offset)
-//    |                                                                \                                                  /
-//    |     __________________________                   _______________V________________________________________________V_______
-//    |    |                          |                 |                                                                        |
-//    '--->| ShaderResourceCacheD3D12 |---------------->|                                   Resources                            |
-//         |__________________________|                 |________________________________________________________________________|
+//            _____________________________                   ________________________________________________________________________________
+//           |                             |                 |                              |                               |                 |
+//      .----|  ShaderVariableManagerD3D12 |---------------->|  ShaderVariableD3D12Impl[0]  |   ShaderVariableD3D12Impl[1]  |     ...         |
+//      |    |_____________________________|                 |______________________________|_______________________________|_________________|
+//      |                |                                                    |                               |
+//      |          m_pSignature                                          m_ResIndex                       m_ResIndex
+//      |                |                                                    |                               |
+//      |   _____________V____________________                      __________V_______________________________V_________________________________
+//      |  |                                  | m_pResourceAttribs |                  |                  |             |                        |
+//      |  |PipelineResourceSignatureD3D12Impl|------------------->|    Resource[0]   |    Resource[1]   |     ...     |   Resource[s+m+d-1]    |
+//      |  |__________________________________|                    |__________________|__________________|_____________|________________________|
+//      |                                                                |                                                    |
+// m_ResourceCache                                                       |                                                    |
+//      |                                                                | (RootTable, Offset)                               / (RootTable, Offset)
+//      |                                                                \                                                  /
+//      |     __________________________                   _______________V________________________________________________V_______
+//      |    |                          |                 |                                                                        |
+//      '--->| ShaderResourceCacheD3D12 |---------------->|                                   Resources                            |
+//           |__________________________|                 |________________________________________________________________________|
 //
-
-#include <memory>
 
 #include "ShaderResourceVariableD3D.h"
 #include "ShaderResourceVariableBase.hpp"
@@ -109,6 +107,8 @@ public:
 
     Uint32 GetVariableCount() const { return m_NumVariables; }
 
+    IObject& GetOwner() { return m_Owner; }
+
 private:
     friend ShaderVariableD3D12Impl;
     using ResourceAttribs = PipelineResourceSignatureD3D12Impl::ResourceAttribs;
@@ -117,12 +117,12 @@ private:
 
     const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const
     {
-        VERIFY_EXPR(m_pSignature);
+        VERIFY_EXPR(m_pSignature != nullptr);
         return m_pSignature->GetResourceDesc(Index);
     }
     const ResourceAttribs& GetResourceAttribs(Uint32 Index) const
     {
-        VERIFY_EXPR(m_pSignature);
+        VERIFY_EXPR(m_pSignature != nullptr);
         return m_pSignature->GetResourceAttribs(Index);
     }
 
@@ -138,9 +138,9 @@ private:
 
     IObject& m_Owner;
 
-    // Variable mgr is owned by either Pipeline Resource Signature (in which case m_ResourceCache references
+    // Variable manager is owned by either Pipeline Resource Signature (in which case m_ResourceCache references
     // static resource cache owned by the same signature object), or by SRB object (in which case
-    // m_ResourceCache references the cache in the SRB). Thus the cache and the resource layout
+    // m_ResourceCache references the cache in the SRB). Thus the cache and the signature
     // (which the variables reference) are guaranteed to be alive while the manager is alive.
     ShaderResourceCacheD3D12& m_ResourceCache;
 
@@ -156,12 +156,13 @@ private:
 };
 
 // sizeof(ShaderVariableD3D12Impl) == 24 (x64)
-class ShaderVariableD3D12Impl final : public IShaderResourceVariableD3D
+class ShaderVariableD3D12Impl final : public ShaderVariableBase<ShaderVariableManagerD3D12, IShaderResourceVariableD3D>
 {
 public:
+    using TBase = ShaderVariableBase<ShaderVariableManagerD3D12, IShaderResourceVariableD3D>;
     ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
                             Uint32                      ResIndex) :
-        m_ParentManager{ParentManager},
+        TBase{ParentManager},
         m_ResIndex{ResIndex}
     {}
 
@@ -171,21 +172,6 @@ public:
     ShaderVariableD3D12Impl& operator= (const ShaderVariableD3D12Impl&) = delete;
     ShaderVariableD3D12Impl& operator= (ShaderVariableD3D12Impl&&)      = delete;
     // clang-format on
-
-    virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final
-    {
-        return m_ParentManager.m_Owner.GetReferenceCounters();
-    }
-
-    virtual Atomics::Long DILIGENT_CALL_TYPE AddRef() override final
-    {
-        return m_ParentManager.m_Owner.AddRef();
-    }
-
-    virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
-    {
-        return m_ParentManager.m_Owner.Release();
-    }
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
@@ -205,7 +191,10 @@ public:
         return GetDesc().VarType;
     }
 
-    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final;
+    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+    {
+        BindResource(pObject, 0);
+    }
 
     virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final;
 
@@ -222,33 +211,30 @@ public:
         return m_ParentManager.GetVariableIndex(*this);
     }
 
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final;
-
-    virtual HLSLShaderResourceDesc DILIGENT_CALL_TYPE GetHLSLResourceDesc() const override final
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
     {
-        const auto& ResDesc    = GetDesc();
-        const auto& ResAttribs = GetAttribs();
+        return m_ParentManager.m_pSignature->IsBound(ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
+    }
 
-        HLSLShaderResourceDesc HLSLResDesc;
-        HLSLResDesc.Name           = ResDesc.Name;
-        HLSLResDesc.Type           = ResDesc.ResourceType;
-        HLSLResDesc.ArraySize      = ResDesc.ArraySize;
-        HLSLResDesc.ShaderRegister = ResAttribs.Register;
-        return HLSLResDesc;
+    virtual void DILIGENT_CALL_TYPE GetHLSLResourceDesc(HLSLShaderResourceDesc& HLSLResDesc) const override final
+    {
+        GetResourceDesc(HLSLResDesc);
+        HLSLResDesc.ShaderRegister = GetAttribs().Register;
+    }
+
+    const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
+
+    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+    {
+        m_ParentManager.m_pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
     }
 
 private:
-    friend ShaderVariableManagerD3D12;
     using ResourceAttribs = PipelineResourceSignatureD3D12Impl::ResourceAttribs;
-
-    const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
-    const ResourceAttribs&      GetAttribs() const { return m_ParentManager.GetResourceAttribs(m_ResIndex); }
-
-    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const;
+    const ResourceAttribs& GetAttribs() const { return m_ParentManager.GetResourceAttribs(m_ResIndex); }
 
 private:
-    ShaderVariableManagerD3D12& m_ParentManager;
-    const Uint32                m_ResIndex;
+    const Uint32 m_ResIndex;
 };
 
 } // namespace Diligent
