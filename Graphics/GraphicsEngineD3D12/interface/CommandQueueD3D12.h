@@ -53,11 +53,16 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, IObject)
     /// Returns the fence value that will be signaled next time
     VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS) CONST PURE;
 
-    /// Executes a given command list
+    /// Submits command lists for execution.
 
-    /// \return Fence value associated with the executed command list
+    /// \param[in]  NumCommandLists - The number of command lists to submit.
+    /// \param[in]  ppCommandLists  - A pointer to the array of NumCommandLists command
+    ///                               lists to submit.
+    ///
+    /// \return Fence value associated with the executed command lists.
     VIRTUAL Uint64 METHOD(Submit)(THIS_
-                                  ID3D12GraphicsCommandList* commandList) PURE;
+                                  Uint32                    NumCommandLists,
+                                  ID3D12CommandList* const* ppCommandLists) PURE;
 
     /// Returns D3D12 command queue. May return null if queue is anavailable
     VIRTUAL ID3D12CommandQueue* METHOD(GetD3D12CommandQueue)(THIS) PURE;

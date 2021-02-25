@@ -226,8 +226,9 @@ public:
     /// Implementation of IDeviceContext::FinishCommandList() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE FinishCommandList(class ICommandList** ppCommandList) override final;
 
-    /// Implementation of IDeviceContext::ExecuteCommandList() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE ExecuteCommandList(class ICommandList* pCommandList) override final;
+    /// Implementation of IDeviceContext::ExecuteCommandLists() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE ExecuteCommandLists(Uint32               NumCommandLists,
+                                                        ICommandList* const* ppCommandLists) override final;
 
     /// Implementation of IDeviceContext::SignalFence() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE SignalFence(IFence* pFence, Uint64 Value) override final;

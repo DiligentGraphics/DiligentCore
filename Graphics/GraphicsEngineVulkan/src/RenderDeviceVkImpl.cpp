@@ -399,7 +399,7 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(Uint32                             
 )
 {
     // Submit the command list to the queue
-    auto CmbBuffInfo       = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, SubmitInfo, true);
+    auto CmbBuffInfo       = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, true, SubmitInfo);
     SubmittedFenceValue    = CmbBuffInfo.FenceValue;
     SubmittedCmdBuffNumber = CmbBuffInfo.CmdBufferNumber;
     if (pFences != nullptr)
@@ -443,7 +443,7 @@ void RenderDeviceVkImpl::FlushStaleResources(Uint32 CmdQueueIndex)
     // Submit empty command buffer to the queue. This will effectively signal the fence and
     // discard all resources
     VkSubmitInfo DummySumbitInfo = {};
-    TRenderDeviceBase::SubmitCommandBuffer(0, DummySumbitInfo, true);
+    TRenderDeviceBase::SubmitCommandBuffer(0, true, DummySumbitInfo);
 }
 
 void RenderDeviceVkImpl::ReleaseStaleResources(bool ForceRelease)

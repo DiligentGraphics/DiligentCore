@@ -98,7 +98,7 @@ protected:
         if (this->m_bIsDeferred)
         {
             // For deferred context, reset submitted cmd queue mask
-            m_SubmittedBuffersCmdQueueMask = 0;
+            m_SubmittedBuffersCmdQueueMask.store(0);
         }
         else
         {
@@ -116,7 +116,7 @@ protected:
     // For deferred contexts, this will accumulate bits of the queues to which command buffers
     // were submitted to before FinishFrame() was called. This mask is used to release resources
     // allocated by the context during the frame when FinishFrame() is called.
-    Uint64 m_SubmittedBuffersCmdQueueMask = 0;
+    std::atomic_uint64_t m_SubmittedBuffersCmdQueueMask{0};
 };
 
 } // namespace Diligent

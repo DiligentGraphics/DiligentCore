@@ -38,8 +38,6 @@
 #include "InlineShaders/RayTracingTestHLSL.h"
 #include "RayTracingTestConstants.hpp"
 
-#include "Vulkan/TestingEnvironmentVk.hpp"
-
 namespace Diligent
 {
 

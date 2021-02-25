@@ -233,8 +233,9 @@ public:
     /// Implementation of IDeviceContext::FinishCommandList() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE FinishCommandList(class ICommandList** ppCommandList) override final;
 
-    /// Implementation of IDeviceContext::ExecuteCommandList() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE ExecuteCommandList(class ICommandList* pCommandList) override final;
+    /// Implementation of IDeviceContext::ExecuteCommandLists() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE ExecuteCommandLists(Uint32               NumCommandLists,
+                                                        ICommandList* const* ppCommandLists) override final;
 
     /// Implementation of IDeviceContext::SignalFence() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE SignalFence(IFence* pFence, Uint64 Value) override final;
@@ -396,6 +397,9 @@ private:
     void               CommitVkVertexBuffers();
     void               CommitViewports();
     void               CommitScissorRects();
+
+    void Flush(Uint32               NumCommandLists,
+               ICommandList* const* ppCommandLists);
 
     __forceinline void TransitionOrVerifyBufferState(BufferVkImpl&                  Buffer,
                                                      RESOURCE_STATE_TRANSITION_MODE TransitionMode,

@@ -46,7 +46,7 @@ extern "C"
 namespace Diligent
 {
 
-namespace Test
+namespace Testing
 {
 
 void PrintShaderResources(IShader* pShader)
@@ -76,7 +76,7 @@ void PrintShaderResources(IShader* pShader)
     LOG_INFO_MESSAGE(ss.str());
 }
 
-} // namespace Test
+} // namespace Testing
 
 } // namespace Diligent
 namespace
@@ -258,7 +258,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         if (!deviceCaps.IsMetalDevice())
         {
             // Resource queries from shader are not supported in Metal
-            Diligent::Test::PrintShaderResources(pVS);
+            Diligent::Testing::PrintShaderResources(pVS);
         }
     }
 
@@ -313,7 +313,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         if (!deviceCaps.IsMetalDevice())
         {
             // Resource queries from shader are not supported in Metal
-            Diligent::Test::PrintShaderResources(pPS);
+            Diligent::Testing::PrintShaderResources(pPS);
         }
     }
 

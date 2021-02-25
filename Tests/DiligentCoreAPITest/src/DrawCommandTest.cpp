@@ -25,6 +25,9 @@
  *  of the possibility of such damages.
  */
 
+#include <thread>
+#include <array>
+
 #include "TestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
@@ -38,24 +41,79 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if D3D12_SUPPORTED
-void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if VULKAN_SUPPORTED
-void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if METAL_SUPPORTED
-void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
+
+void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        switch (deviceType)
+        {
+#if D3D11_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D11:
+                RenderDrawCommandReferenceD3D11(pSwapChain, pClearColor);
+                break;
+#endif
+
+#if D3D12_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D12:
+                RenderDrawCommandReferenceD3D12(pSwapChain, pClearColor);
+                break;
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
+                RenderDrawCommandReferenceGL(pSwapChain, pClearColor);
+                break;
+
+#endif
+
+#if VULKAN_SUPPORTED
+            case RENDER_DEVICE_TYPE_VULKAN:
+                RenderDrawCommandReferenceVk(pSwapChain, pClearColor);
+                break;
+#endif
+
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                RenderDrawCommandReferenceMtl(pSwapChain, pClearColor);
+                break;
+#endif
+
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
+        }
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+}
 
 } // namespace Testing
 
@@ -177,58 +235,10 @@ protected:
         auto* pEnv       = TestingEnvironment::GetInstance();
         auto* pDevice    = pEnv->GetDevice();
         auto* pSwapChain = pEnv->GetSwapChain();
-        auto* pContext   = pEnv->GetDeviceContext();
 
         TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
-        if (pTestingSwapChain)
-        {
-            pContext->Flush();
-            pContext->InvalidateState();
-
-            auto deviceType = pDevice->GetDeviceCaps().DevType;
-            switch (deviceType)
-            {
-#if D3D11_SUPPORTED
-                case RENDER_DEVICE_TYPE_D3D11:
-                    RenderDrawCommandReferenceD3D11(pSwapChain);
-                    break;
-#endif
-
-#if D3D12_SUPPORTED
-                case RENDER_DEVICE_TYPE_D3D12:
-                    RenderDrawCommandReferenceD3D12(pSwapChain);
-                    break;
-#endif
-
-#if GL_SUPPORTED || GLES_SUPPORTED
-                case RENDER_DEVICE_TYPE_GL:
-                case RENDER_DEVICE_TYPE_GLES:
-                    RenderDrawCommandReferenceGL(pSwapChain);
-                    break;
-
-#endif
-
-#if VULKAN_SUPPORTED
-                case RENDER_DEVICE_TYPE_VULKAN:
-                    RenderDrawCommandReferenceVk(pSwapChain);
-                    break;
-#endif
-
-#if METAL_SUPPORTED
-                case RENDER_DEVICE_TYPE_METAL:
-                    RenderDrawCommandReferenceMtl(pSwapChain);
-                    break;
-#endif
-
-                default:
-                    LOG_ERROR_AND_THROW("Unsupported device type");
-            }
-
-            pTestingSwapChain->TakeSnapshot();
-        }
-
+        RenderDrawCommandReference(pSwapChain);
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -1478,6 +1488,75 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
     DrawIndexedIndirectAttribs drawAttrs{VT_UINT32, DRAW_FLAG_VERIFY_ALL, RESOURCE_STATE_TRANSITION_MODE_TRANSITION};
     drawAttrs.IndirectDrawArgsOffset = 5 * sizeof(Uint32);
     pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DeferredContexts)
+{
+    auto* pEnv = TestingEnvironment::GetInstance();
+    if (pEnv->GetNumDeferredContexts() == 0)
+    {
+        GTEST_SKIP() << "Deferred contexts are not supported by this device";
+    }
+    VERIFY(pEnv->GetNumDeferredContexts() >= 2, "At least two deferred contexts are expected");
+
+    auto* pSwapChain    = pEnv->GetSwapChain();
+    auto* pImmediateCtx = pEnv->GetDeviceContext();
+
+    Uint32 Indices[] = {0, 1, 2, 3, 4, 5};
+    auto   pVB       = CreateVertexBuffer(Vert, sizeof(Vert));
+    auto   pIB       = CreateIndexBuffer(Indices, _countof(Indices));
+
+    StateTransitionDesc Barriers[] = //
+        {
+            {pVB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, true},
+            {pIB, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_INDEX_BUFFER, true} //
+        };
+    pImmediateCtx->TransitionResourceStates(_countof(Barriers), Barriers);
+
+    ITextureView* pRTVs[]      = {pSwapChain->GetCurrentBackBufferRTV()};
+    const float   ClearColor[] = {0.f, 0.f, 0.f, 0.0f};
+    pImmediateCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pImmediateCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    constexpr Uint32                                    NumThreads = 2;
+    std::array<std::thread, NumThreads>                 WorkerThreads;
+    std::array<RefCntAutoPtr<ICommandList>, NumThreads> CmdLists;
+    std::array<ICommandList*, NumThreads>               CmdListPtrs;
+    for (Uint32 i = 0; i < NumThreads; ++i)
+    {
+        WorkerThreads[i] = std::thread(
+            [&](Uint32 thread_id) //
+            {
+                auto* pCtx = pEnv->GetDeviceContext(thread_id + 1);
+
+                pCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+                IBuffer* pVBs[]    = {pVB};
+                Uint32   Offsets[] = {0};
+                pCtx->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_VERIFY, SET_VERTEX_BUFFERS_FLAG_RESET);
+                pCtx->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+                pCtx->SetPipelineState(sm_pDrawPSO);
+
+                DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+                drawAttrs.FirstIndexLocation = 3 * thread_id;
+                pCtx->DrawIndexed(drawAttrs);
+
+                pCtx->FinishCommandList(&CmdLists[thread_id]);
+                CmdListPtrs[thread_id] = CmdLists[thread_id];
+            },
+            i);
+    }
+
+    for (auto& t : WorkerThreads)
+        t.join();
+
+    pImmediateCtx->ExecuteCommandLists(NumThreads, CmdListPtrs.data());
+
+    for (size_t i = 0; i < NumThreads; ++i)
+        pEnv->GetDeviceContext(i + 1)->FinishFrame();
 
     Present();
 }

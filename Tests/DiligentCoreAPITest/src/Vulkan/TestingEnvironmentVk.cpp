@@ -63,7 +63,7 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
 
     volkLoadInstance(pRenderDeviceVk->GetVkInstance());
 
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{m_pDeviceContext, IID_DeviceContextVk};
+    RefCntAutoPtr<IDeviceContextVk> pContextVk{GetDeviceContext(), IID_DeviceContextVk};
 
     auto* pQeueVk          = pContextVk->LockCommandQueue();
     auto  QueueFamilyIndex = pQeueVk->GetQueueFamilyIndex();
@@ -383,7 +383,7 @@ VkCommandBuffer TestingEnvironmentVk::AllocateCommandBuffer()
 
 void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool WaitForIdle)
 {
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{m_pDeviceContext, IID_DeviceContextVk};
+    RefCntAutoPtr<IDeviceContextVk> pContextVk{GetDeviceContext(), IID_DeviceContextVk};
 
     auto* pQeueVk = pContextVk->LockCommandQueue();
     auto  vkQueue = pQeueVk->GetVkQueue();
