@@ -38,6 +38,7 @@
 #include "TextureViewD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
 #include "D3D12TypeConversions.hpp"
+#include "ShaderVariableD3D.hpp"
 
 namespace Diligent
 {
@@ -1302,10 +1303,13 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DS
 
             case SHADER_RESOURCE_TYPE_BUFFER_SRV:
             case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-                if (ResAttribs.GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_SRV ||
-                    ResAttribs.GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_UAV)
+                if (const auto* pBuffViewD3D12 = CachedRes.pObject.RawPtr<BufferViewD3D12Impl>())
                 {
-                    if (const auto* pBuffViewD3D12 = CachedRes.pObject.RawPtr<BufferViewD3D12Impl>())
+                    if (!VerifyBufferViewModeD3D(pBuffViewD3D12, D3DAttribs, ShaderName))
+                        BindingsOK = false;
+
+                    if (ResAttribs.GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_SRV ||
+                        ResAttribs.GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_UAV)
                     {
                         const auto* pBuffD3D12 = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
                         VERIFY_EXPR(pBuffD3D12 != nullptr);

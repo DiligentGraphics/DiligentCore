@@ -14,7 +14,7 @@ set(INCLUDE
     include/RenderDeviceD3DBase.hpp
     include/ShaderD3DBase.hpp
     include/ShaderResources.hpp
-    include/ShaderVariableD3DBase.hpp
+    include/ShaderVariableD3D.hpp
     include/SwapChainD3DBase.hpp
 )
 

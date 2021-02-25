@@ -27,79 +27,25 @@
 
 #pragma once
 
-#include "ShaderResourceVariableBase.hpp"
-#include "ShaderResourceVariableD3D.h"
 
 /// \file
-/// Declaration of Diligent::ShaderVariableD3DBase class
 
 namespace Diligent
 {
 
-struct D3DVariableIDComparator
-{
-    bool operator()(const INTERFACE_ID& IID) const
-    {
-        return IID == IID_ShaderResourceVariableD3D || IID == IID_ShaderResourceVariable || IID == IID_Unknown;
-    }
-};
-
-template <typename TShaderResourceLayout>
-struct ShaderVariableD3DBase : public ShaderVariableBase<TShaderResourceLayout, IShaderResourceVariableD3D, D3DVariableIDComparator>
-{
-    using TBase = ShaderVariableBase<TShaderResourceLayout, IShaderResourceVariableD3D, D3DVariableIDComparator>;
-
-    ShaderVariableD3DBase(TShaderResourceLayout&          ParentResLayout,
-                          const D3DShaderResourceAttribs& Attribs,
-                          SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
-        // clang-format off
-        TBase          {ParentResLayout},
-        m_Attribs      {Attribs        },
-        m_VariableType {VariableType   }
-    // clang-format on
-    {
-    }
-
-    virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
-    {
-        return m_VariableType;
-    }
-
-    virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
-    {
-        ResourceDesc = GetHLSLResourceDesc();
-    }
-
-    virtual HLSLShaderResourceDesc DILIGENT_CALL_TYPE GetHLSLResourceDesc() const override final
-    {
-        return m_Attribs.GetHLSLResourceDesc();
-    }
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
-    {
-        return m_ParentResLayout.GetVariableIndex(*this);
-    }
-
-    const D3DShaderResourceAttribs& m_Attribs;
-
-protected:
-    const SHADER_RESOURCE_VARIABLE_TYPE m_VariableType;
-};
-
-
 template <typename BufferViewImplType>
-bool VerifyBufferViewModeD3D(BufferViewImplType* pViewD3D11, const D3DShaderResourceAttribs& Attribs, const char* ShaderName)
+bool VerifyBufferViewModeD3D(BufferViewImplType* pViewD3D, const D3DShaderResourceAttribs& Attribs, const char* ShaderName)
 {
-    if (pViewD3D11 == nullptr)
+    if (pViewD3D == nullptr)
         return true;
 
-    const auto& ViewDesc = pViewD3D11->GetDesc();
-    const auto& BuffDesc = pViewD3D11->GetBuffer()->GetDesc();
+    const auto& ViewDesc = pViewD3D->GetDesc();
+    const auto& BuffDesc = pViewD3D->GetBuffer()->GetDesc();
 
     auto LogBufferBindingError = [&](const char* Msg) //
     {
-        LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name,
-                          "' to shader variable '", Attribs.Name, "' in shader '", ShaderName, "': ", Msg);
+        LOG_ERROR_MESSAGE("Buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name,
+                          "' bound to shader variable '", Attribs.Name, "' in shader '", ShaderName, "' is invalid: ", Msg);
     };
 
     switch (Attribs.GetInputType())
