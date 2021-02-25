@@ -63,22 +63,14 @@ public:
     /// fence object itself is protected by mutex.
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
-    /// Implementation of IFence::Reset() in Vulkan backend.
+    virtual VkSemaphore DILIGENT_CALL_TYPE GetVkSemaphore() override final;
+    
     virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
-    VulkanUtilities::FenceWrapper GetVkFence() { return m_FencePool.GetFence(); }
+    virtual void DILIGENT_CALL_TYPE WaitForCompletion(Uint64 Value) override final;
 
-    void AddPendingFence(VulkanUtilities::FenceWrapper&& vkFence, Uint64 FenceValue)
-    {
-        m_PendingFences.emplace_back(FenceValue, std::move(vkFence));
-    }
-
-    void Wait(Uint64 Value);
-
-private:
-    VulkanUtilities::VulkanFencePool                             m_FencePool;
-    std::deque<std::pair<Uint64, VulkanUtilities::FenceWrapper>> m_PendingFences;
-    volatile Uint64                                              m_LastCompletedFenceValue = 0;
+private:   
+    VulkanUtilities::SemaphoreWrapper m_Semaphore;
 };
 
 } // namespace Diligent

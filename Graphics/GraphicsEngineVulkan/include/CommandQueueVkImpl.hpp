@@ -81,6 +81,10 @@ public:
     /// Implementation of ICommandQueueVk::SignalFence().
     virtual void DILIGENT_CALL_TYPE SignalFence(VkFence vkFence) override final;
 
+     /// Implementation of ICommandQueueVk::SignalSemaphore().
+    virtual void DILIGENT_CALL_TYPE SignalSemaphore(VkSemaphore vkSemaphore, uint64_t value) override final;
+
+
     void SetFence(RefCntAutoPtr<FenceVkImpl> pFence) { m_pFence = std::move(pFence); }
 
 private:

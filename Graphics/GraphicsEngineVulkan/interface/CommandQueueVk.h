@@ -79,13 +79,15 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, IObject)
     VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS) PURE;
 
     /// Blocks execution until all pending GPU commands are complete
-
-    /// \return Last completed fence value
     VIRTUAL Uint64 METHOD(WaitForIdle)(THIS) PURE;
 
     /// Signals the given fence
     VIRTUAL void METHOD(SignalFence)(THIS_
                                      VkFence vkFence) PURE;
+    /// Signals the given timeline semaphore
+    VIRTUAL void METHOD(SignalSemaphore)(THIS_
+                                     VkSemaphore vkSemaphore, uint64_t value) PURE;
+
 };
 DILIGENT_END_INTERFACE
 

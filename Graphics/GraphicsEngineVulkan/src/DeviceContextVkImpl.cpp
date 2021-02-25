@@ -2170,7 +2170,7 @@ void DeviceContextVkImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushC
     if (FlushContext)
         Flush();
     auto* pFenceVk = ValidatedCast<FenceVkImpl>(pFence);
-    pFenceVk->Wait(Value);
+    pFenceVk->WaitForCompletion(Value);
 }
 
 void DeviceContextVkImpl::WaitForIdle()
