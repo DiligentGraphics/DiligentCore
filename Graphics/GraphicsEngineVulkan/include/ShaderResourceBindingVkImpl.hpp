@@ -74,7 +74,7 @@ private:
     void Destruct();
 
     ShaderResourceCacheVk    m_ShaderResourceCache;
-    ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
+    ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr; // [m_NumShaders]
 };
 
 } // namespace Diligent

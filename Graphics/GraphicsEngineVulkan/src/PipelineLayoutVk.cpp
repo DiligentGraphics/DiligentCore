@@ -61,36 +61,8 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
     VERIFY(m_SignatureCount == 0 && m_DescrSetCount == 0 && !m_VkPipelineLayout,
            "This pipeline layout is already initialized");
 
-    for (Uint32 i = 0; i < SignatureCount; ++i)
-    {
-        auto* pSignature = ValidatedCast<PipelineResourceSignatureVkImpl>(ppSignatures[i]);
-        VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
-
-        const Uint8 Index = pSignature->GetDesc().BindingIndex;
-
-#ifdef DILIGENT_DEBUG
-        VERIFY(Index < m_Signatures.size(),
-               "Pipeline resource signature specifies binding index ", Uint32{Index}, " that exceeds the limit (", m_Signatures.size() - 1,
-               "). This error should've been caught by ValidatePipelineResourceSignatureDesc.");
-
-        VERIFY(m_Signatures[Index] == nullptr,
-               "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
-               " conflicts with another resource signature '", m_Signatures[Index]->GetDesc().Name,
-               "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
-
-        for (Uint32 s = 0, StageCount = pSignature->GetNumActiveShaderStages(); s < StageCount; ++s)
-        {
-            const auto ShaderType = pSignature->GetActiveShaderStageType(s);
-            VERIFY(IsConsistentShaderType(ShaderType, PipelineType),
-                   "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
-                   " has shader stage '", GetShaderTypeLiteralName(ShaderType), "' that is not compatible with pipeline type '",
-                   GetPipelineTypeString(PipelineType), "'.");
-        }
-#endif
-
-        m_SignatureCount    = std::max<Uint8>(m_SignatureCount, Index + 1);
-        m_Signatures[Index] = pSignature;
-    }
+    PipelineResourceSignatureVkImpl::CopyResourceSignatures(PipelineType, SignatureCount, ppSignatures,
+                                                            m_Signatures.data(), m_Signatures.size(), m_SignatureCount);
 
     std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureVkImpl::MAX_DESCRIPTOR_SETS> DescSetLayouts;
 

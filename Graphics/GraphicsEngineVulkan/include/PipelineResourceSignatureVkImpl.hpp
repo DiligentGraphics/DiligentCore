@@ -224,7 +224,10 @@ public:
     /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
     {
-        VERIFY_EXPR(pPRS != nullptr);
+        if (pPRS == nullptr)
+        {
+            return GetHash() == 0;
+        }
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureVkImpl>(pPRS));
     }
 
@@ -329,7 +332,7 @@ private:
     // Static resource cache for all static resources
     ShaderResourceCacheVk* m_pStaticResCache = nullptr;
     // Static variables manager for every shader stage
-    ShaderVariableManagerVk* m_StaticVarsMgrs = nullptr; // [m_NumShaderStages]
+    ShaderVariableManagerVk* m_StaticVarsMgrs = nullptr; // [GetNumStaticResStages()]
 
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 

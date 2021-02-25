@@ -92,7 +92,6 @@ public:
                                                     SubpassDesc&                                                  SubpassDesc);
 
 
-    void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
 
     struct ShaderStageInfo
     {

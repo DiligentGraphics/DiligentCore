@@ -326,7 +326,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         auto* pSignature = Layout.GetSignature(i);
-        if (pSignature == nullptr)
+        if (pSignature == nullptr || pSignature->GetNumDescriptorSets() == 0)
             continue;
 
         BindInfo.ActiveSRBMask |= 1u << i;
@@ -349,13 +349,20 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     Uint32 sign = 0;
     for (; sign < SignCount; ++sign)
     {
-        const auto* LayoutSign = Layout.GetSignature(sign);
-        if (LayoutSign == nullptr)
-            continue;
+        const auto* pLayoutSign = Layout.GetSignature(sign);
+        const auto* pSRBSign    = BindInfo.SRBs[sign] != nullptr ? BindInfo.SRBs[sign]->GetSignature() : nullptr;
 
-        auto* pSRB = BindInfo.SRBs[sign];
-        if (pSRB == nullptr || LayoutSign->IsIncompatibleWith(*pSRB->GetSignature()))
+        if ((pLayoutSign == nullptr || pLayoutSign->GetNumDescriptorSets() == 0) != (pSRBSign == nullptr || pSRBSign->GetNumDescriptorSets() == 0))
+        {
+            // One signature is null or empty while the other is not - SRB is not compatible with the layout.
             break;
+        }
+
+        if (pLayoutSign != nullptr && pSRBSign != nullptr && pLayoutSign->IsIncompatibleWith(*pSRBSign))
+        {
+            // Signatures are incompatible
+            break;
+        }
     }
 
     // Unbind incompatible shader resources
@@ -375,6 +382,8 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         BindInfo.ClearDynamicBufferBit(sign);
     }
 #endif
+
+    m_State.CommittedResourcesValidated = false;
 }
 
 DeviceContextVkImpl::DescriptorSetBindInfo& DeviceContextVkImpl::GetDescriptorSetBindInfo(PIPELINE_TYPE Type)

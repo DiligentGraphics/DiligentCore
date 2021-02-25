@@ -110,6 +110,7 @@ void ShaderResourceBindingVkImpl::Destruct()
         }
 
         GetRawAllocator().Free(m_pShaderVarMgrs);
+        m_pShaderVarMgrs = nullptr;
     }
 }
 

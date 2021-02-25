@@ -860,7 +860,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_ADDRESS_MODE, Uint8)
     /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_CLAMP/D3D12_TEXTURE_ADDRESS_MODE_CLAMP. OpenGL counterpart: GL_CLAMP_TO_EDGE
     TEXTURE_ADDRESS_CLAMP	= 3,
 
-    /// Texture coordinates outside the range [0.0, 1.0] are set to the border color specified
+    /// Texture coordinates outside the range [0.0, 1.0] are set to the border color
     /// specified in SamplerDesc structure. \n
     /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_BORDER/D3D12_TEXTURE_ADDRESS_MODE_BORDER. OpenGL counterpart: GL_CLAMP_TO_BORDER
     TEXTURE_ADDRESS_BORDER	= 4,

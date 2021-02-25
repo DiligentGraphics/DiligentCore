@@ -47,7 +47,7 @@ namespace Diligent
 {
 
 /// Validates pipeline resource signature description and throws an exception in case of an error.
-void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false);
+void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc, bool ShaderResourceRuntimeArraySupported) noexcept(false);
 
 static constexpr Uint32 InvalidImmutableSamplerIndex = ~0u;
 /// Finds an immutable sampler for the resource name 'ResourceName' that is defined in shader stages 'ShaderStages'.
@@ -94,7 +94,7 @@ public:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
-        ValidatePipelineResourceSignatureDesc(Desc);
+        ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDeviceCaps().Features.ShaderResourceRuntimeArray);
 
         // Determine shader stages that have any resources as well as
         // shader stages that have static resources.
@@ -155,6 +155,11 @@ public:
         return PlatformMisc::CountOneBits(Uint32{m_ShaderStages});
     }
 
+    SHADER_TYPE GetActiveShaderStages() const
+    {
+        return m_ShaderStages;
+    }
+
     // Returns the number of shader stages that have static resources.
     Uint32 GetNumStaticResStages() const
     {
@@ -212,6 +217,46 @@ public:
     {
         VERIFY_EXPR(SampIndex < this->m_Desc.NumImmutableSamplers);
         return this->m_Desc.ImmutableSamplers[SampIndex];
+    }
+
+    template <typename TPipelineResourceSignature>
+    static void CopyResourceSignatures(PIPELINE_TYPE                             PipelineType,
+                                       const Uint32                              SignatureCount,
+                                       IPipelineResourceSignature*               ppResourceSignatures[],
+                                       RefCntAutoPtr<TPipelineResourceSignature> DstSignatures[],
+                                       const size_t                              MaxDstSignatureCount,
+                                       Uint8&                                    DstSignatureCount)
+    {
+        for (Uint32 i = 0; i < SignatureCount; ++i)
+        {
+            auto* pSignature = ValidatedCast<TPipelineResourceSignature>(ppResourceSignatures[i]);
+            VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
+
+            const Uint8 Index = pSignature->GetDesc().BindingIndex;
+
+#ifdef DILIGENT_DEBUG
+            VERIFY(Index < MaxDstSignatureCount,
+                   "Pipeline resource signature specifies binding index ", Uint32{Index}, " that exceeds the limit (", MaxDstSignatureCount - 1,
+                   "). This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+
+            VERIFY(DstSignatures[Index] == nullptr,
+                   "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
+                   " conflicts with another resource signature '", DstSignatures[Index]->GetDesc().Name,
+                   "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
+
+            for (Uint32 s = 0, StageCount = pSignature->GetNumActiveShaderStages(); s < StageCount; ++s)
+            {
+                const auto ShaderType = pSignature->GetActiveShaderStageType(s);
+                VERIFY(IsConsistentShaderType(ShaderType, PipelineType),
+                       "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
+                       " has shader stage '", GetShaderTypeLiteralName(ShaderType), "' that is not compatible with pipeline type '",
+                       GetPipelineTypeString(PipelineType), "'.");
+            }
+#endif
+
+            DstSignatureCount    = std::max<Uint8>(DstSignatureCount, Index + 1);
+            DstSignatures[Index] = pSignature;
+        }
     }
 
 protected:

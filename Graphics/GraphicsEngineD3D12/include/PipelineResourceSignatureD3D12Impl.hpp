@@ -222,7 +222,10 @@ public:
 
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
     {
-        VERIFY_EXPR(pPRS != nullptr);
+        if (pPRS == nullptr)
+        {
+            return GetHash() == 0;
+        }
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureD3D12Impl>(pPRS));
     }
 
@@ -300,7 +303,7 @@ private:
 private:
     ResourceAttribs*            m_pResourceAttribs  = nullptr; // [m_Desc.NumResources]
     ShaderResourceCacheD3D12*   m_pStaticResCache   = nullptr;
-    ShaderVariableManagerD3D12* m_StaticVarsMgrs    = nullptr; // [m_NumShaderStages]
+    ShaderVariableManagerD3D12* m_StaticVarsMgrs    = nullptr; // [GetNumStaticResStages()]
     ImmutableSamplerAttribs*    m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 
     RootParamsManager m_RootParams;

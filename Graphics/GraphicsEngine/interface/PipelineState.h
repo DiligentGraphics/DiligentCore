@@ -630,7 +630,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// If two pipeline state objects are compatible, they can use shader resource binding
     /// objects interchangebly, i.e. SRBs created by one PSO can be committed
     /// when another PSO is bound.
-    /// \param [in] pPSO - Pointer to the pipeline state object to check compatibility with
+    /// \param [in] pPSO - Pointer to the pipeline state object to check compatibility with.
     /// \return     true if this PSO is compatbile with pPSO. false otherwise.
     /// \remarks    The function only checks that shader resource layouts are compatible, but 
     ///             does not check if resource types match. For instance, if a pixel shader in one PSO
@@ -652,11 +652,14 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineState* pPSO) CONST PURE;
 
-    
+
     /// Returns the number of pipeline resource signature used to created this pipeline.
     VIRTUAL Uint32 METHOD(GetResourceSignatureCount)(THIS) CONST PURE;
 
     /// Returns pipeline resource signature at the give index.
+
+    /// \param [in] Index - Index of the resource signature, same as BindingIndex in PipelineResourceSignatureDesc.
+    /// \return     Pointer to pipeline resource signature interface.
     VIRTUAL IPipelineResourceSignature* METHOD(GetResourceSignature)(THIS_
                                                                      Uint32 Index) CONST PURE;
 };

@@ -1114,7 +1114,7 @@ void PipelineStateVkImpl::DvpVerifySRBResources(SRBArray& SRBs) const
                     }
                     else
                     {
-                        LOG_ERROR_MESSAGE("No SRB is bound to binding index ", SignBindIndex, " for signature '", SignDesc.Name, '\'');
+                        LOG_ERROR_MESSAGE("No SRB is bound to binding index ", Uint32{SignBindIndex}, " for signature '", SignDesc.Name, '\'');
                     }
                 }
                 ++res_info;

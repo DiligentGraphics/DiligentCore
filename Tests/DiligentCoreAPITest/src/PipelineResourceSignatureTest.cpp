@@ -36,8 +36,6 @@
 
 #include "gtest/gtest.h"
 
-#include "InlineShaders/PipelineResourceSignatureTestHLSL.h"
-
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -134,41 +132,23 @@ protected:
         return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, Macros, [&](ShaderCreateInfo& ShaderCI) {});
     }
 
-    static RefCntAutoPtr<IShader> CreateShaderFromSource(SHADER_TYPE        ShaderType,
-                                                         const char*        Source,
-                                                         const char*        EntryPoint,
-                                                         const char*        Name,
-                                                         bool               UseCombinedSamplers,
-                                                         const ShaderMacro* Macros         = nullptr,
-                                                         SHADER_COMPILER    ShaderCompiler = SHADER_COMPILER_DEFAULT)
+    static RefCntAutoPtr<IShader> CreateShaderFromFileDXC(SHADER_TYPE        ShaderType,
+                                                          const char*        File,
+                                                          const char*        EntryPoint,
+                                                          const char*        Name,
+                                                          const ShaderMacro* Macros = nullptr)
     {
-        ShaderCreateInfo ShaderCI;
-        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.ShaderCompiler             = ShaderCompiler;
-        ShaderCI.Source                     = Source;
-        ShaderCI.Macros                     = Macros;
-        ShaderCI.Desc.Name                  = Name;
-        ShaderCI.EntryPoint                 = EntryPoint;
-        ShaderCI.Desc.ShaderType            = ShaderType;
-        ShaderCI.UseCombinedTextureSamplers = UseCombinedSamplers;
-
-        RefCntAutoPtr<IShader> pShader;
-        TestingEnvironment::GetInstance()->GetDevice()->CreateShader(ShaderCI, &pShader);
-        return pShader;
-    }
-
-    static RefCntAutoPtr<IShader> CreateShaderFromSourceDXC(SHADER_TYPE        ShaderType,
-                                                            const char*        Source,
-                                                            const char*        EntryPoint,
-                                                            const char*        Name,
-                                                            bool               UseCombinedSamplers,
-                                                            const ShaderMacro* Macros = nullptr)
-    {
-        return CreateShaderFromSource(ShaderType, Source, EntryPoint, Name, UseCombinedSamplers, Macros, SHADER_COMPILER_DXC);
+        return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, Macros, [&](ShaderCreateInfo& ShaderCI) { ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC; });
     }
 
     static void TestFormattedOrStructuredBuffer(BUFFER_MODE BufferMode);
+
+    enum SRB_COMPAT_MODE
+    {
+        SRB_COMPAT_MODE_INSERT_SIGNATURE_TO_END,
+        SRB_COMPAT_MODE_INSERT_SIGNATURE_TO_MIDDLE,
+    };
+    static void TestSRBCompatibility(SRB_COMPAT_MODE Mode);
 
     static RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
 };
@@ -295,9 +275,12 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, RefTextures.GetViewObjects(Tex2D_StaticIdx)[0]);
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SetArray, RefTextures.GetViewObjects(Tex2DArr_StaticIdx), 0, StaticTexArraySize);
 
-    RefCntAutoPtr<ISampler> pSampler;
-    pDevice->CreateSampler(SamplerDesc{}, &pSampler);
-    SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Sampler", Set, pSampler);
+    if (!pDevice->GetDeviceCaps().IsGLDevice())
+    {
+        RefCntAutoPtr<ISampler> pSampler;
+        pDevice->CreateSampler(SamplerDesc{}, &pSampler);
+        SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Sampler", Set, pSampler);
+    }
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPRS->CreateShaderResourceBinding(&pSRB, true);
@@ -328,6 +311,11 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     auto* const pEnv     = TestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
+
+    if (!pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    {
+        GTEST_SKIP();
+    }
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -396,9 +384,12 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
     SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_3", Set, RefTextures.GetView(2));
 
-    RefCntAutoPtr<ISampler> pSampler;
-    pDevice->CreateSampler(SamplerDesc{}, &pSampler);
-    SET_STATIC_VAR(pPRS[2], SHADER_TYPE_PIXEL, "g_Sampler", Set, pSampler);
+    if (!pDevice->GetDeviceCaps().IsGLDevice())
+    {
+        RefCntAutoPtr<ISampler> pSampler;
+        pDevice->CreateSampler(SamplerDesc{}, &pSampler);
+        SET_STATIC_VAR(pPRS[2], SHADER_TYPE_PIXEL, "g_Sampler", Set, pSampler);
+    }
 
     for (Uint32 i = 0; i < _countof(pPRS); ++i)
     {
@@ -437,6 +428,11 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
     auto* const pEnv     = TestingEnvironment::GetInstance();
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
+
+    if (!pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    {
+        GTEST_SKIP();
+    }
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -551,6 +547,11 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
 
+    if (!pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    {
+        GTEST_SKIP();
+    }
+
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -640,6 +641,11 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
+    if (!pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    {
+        GTEST_SKIP();
+    }
+
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -660,7 +666,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
         BIND_UNIFORM_BUFFER //
     };
 
-    RefCntAutoPtr<IPipelineResourceSignature> pSignature1;
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature0;
     {
         const PipelineResourceDesc Resources[] =
             {
@@ -673,8 +679,8 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
         Desc.NumResources = _countof(Resources);
         Desc.BindingIndex = 0;
 
-        pDevice->CreatePipelineResourceSignature(Desc, &pSignature1);
-        ASSERT_NE(pSignature1, nullptr);
+        pDevice->CreatePipelineResourceSignature(Desc, &pSignature0);
+        ASSERT_NE(pSignature0, nullptr);
     }
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature2;
@@ -748,7 +754,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
 
-    IPipelineResourceSignature* Signatures[] = {pSignature1, pSignature2, pSignature3};
+    IPipelineResourceSignature* Signatures[] = {pSignature0, pSignature2, pSignature3};
 
     PSOCreateInfo.ppResourceSignatures    = Signatures;
     PSOCreateInfo.ResourceSignaturesCount = _countof(Signatures);
@@ -758,14 +764,14 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     ASSERT_NE(pPSO, nullptr);
 
     ASSERT_EQ(pPSO->GetResourceSignatureCount(), 4u);
-    ASSERT_EQ(pPSO->GetResourceSignature(0), pSignature1);
+    ASSERT_EQ(pPSO->GetResourceSignature(0), pSignature0);
     ASSERT_EQ(pPSO->GetResourceSignature(1), nullptr);
     ASSERT_EQ(pPSO->GetResourceSignature(2), pSignature2);
     ASSERT_EQ(pPSO->GetResourceSignature(3), pSignature3);
 
-    RefCntAutoPtr<IShaderResourceBinding> pSRB1;
-    pSignature1->CreateShaderResourceBinding(&pSRB1, true);
-    ASSERT_NE(pSRB1, nullptr);
+    RefCntAutoPtr<IShaderResourceBinding> pSRB0;
+    pSignature0->CreateShaderResourceBinding(&pSRB0, true);
+    ASSERT_NE(pSRB0, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB2;
     pSignature2->CreateShaderResourceBinding(&pSRB2, true);
@@ -775,14 +781,14 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     pSignature3->CreateShaderResourceBinding(&pSRB3, true);
     ASSERT_NE(pSRB3, nullptr);
 
-    pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(RefBuffers.GetBuffer(0));
+    pSRB0->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(RefBuffers.GetBuffer(0));
     pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(RefTextures.GetView(0));
 
     ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    pContext->CommitShaderResources(pSRB1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->CommitShaderResources(pSRB0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->CommitShaderResources(pSRB3, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -795,16 +801,33 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
 }
 
 
-TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
+void PipelineResourceSignatureTest::TestSRBCompatibility(const SRB_COMPAT_MODE Mode)
 {
-    auto* pEnv       = TestingEnvironment::GetInstance();
-    auto* pDevice    = pEnv->GetDevice();
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    RefCntAutoPtr<IPipelineResourceSignature> pSignature1;
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    float ClearColor[] = {0.25, 0.625, 0.375, 0.125};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ReferenceTextures RefTextures{
+        2,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+    ReferenceBuffers RefBuffers{
+        1,
+        USAGE_DEFAULT,
+        BIND_UNIFORM_BUFFER //
+    };
+
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature0;
     {
         const PipelineResourceDesc Resources[] =
             {
@@ -816,22 +839,32 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
         Desc.NumResources = _countof(Resources);
         Desc.BindingIndex = 0;
 
-        pDevice->CreatePipelineResourceSignature(Desc, &pSignature1);
-        ASSERT_NE(pSignature1, nullptr);
+        pDevice->CreatePipelineResourceSignature(Desc, &pSignature0);
+        ASSERT_NE(pSignature0, nullptr);
+    }
+
+    RefCntAutoPtr<IPipelineResourceSignature> pEmptySignature;
+    {
+        PipelineResourceSignatureDesc Desc;
+        Desc.BindingIndex = 1;
+
+        pDevice->CreatePipelineResourceSignature(Desc, &pEmptySignature);
+        ASSERT_NE(pEmptySignature, nullptr);
+        EXPECT_TRUE(pEmptySignature->IsCompatibleWith(nullptr));
     }
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature2;
     {
         const PipelineResourceDesc Resources[] =
             {
-                {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-                {SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+                {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
             };
 
         SamplerDesc SamLinearWrapDesc{
             FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
             TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
-        ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_PIXEL, "g_Texture", SamLinearWrapDesc}};
+        ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", SamLinearWrapDesc}};
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources                  = Resources;
@@ -850,14 +883,14 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
     {
         const PipelineResourceDesc Resources[] =
             {
-                {SHADER_TYPE_PIXEL, "g_Texture2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-                {SHADER_TYPE_PIXEL, "g_Texture2_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+                {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture2_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
             };
 
         SamplerDesc SamLinearWrapDesc{
             FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
             TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
-        ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_PIXEL, "g_Texture2", SamLinearWrapDesc}};
+        ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture2", SamLinearWrapDesc}};
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources                  = Resources;
@@ -866,7 +899,7 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
         Desc.NumImmutableSamplers       = _countof(ImmutableSamplers);
         Desc.UseCombinedTextureSamplers = true;
         Desc.CombinedSamplerSuffix      = "_sampler";
-        Desc.BindingIndex               = 3;
+        Desc.BindingIndex               = (Mode == SRB_COMPAT_MODE_INSERT_SIGNATURE_TO_END ? 3 : 1);
 
         pDevice->CreatePipelineResourceSignature(Desc, &pSignature3);
         ASSERT_NE(pSignature3, nullptr);
@@ -886,49 +919,76 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
     GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-    auto pVS  = CreateShaderFromSource(SHADER_TYPE_VERTEX, HLSL::PRSTest1_VS.c_str(), "main", "PRS test - VS", true);
-    auto pPS  = CreateShaderFromSource(SHADER_TYPE_PIXEL, HLSL::PRSTest1_PS.c_str(), "main", "PRS test - PS", true);
-    auto pPS2 = CreateShaderFromSource(SHADER_TYPE_PIXEL, HLSL::PRSTest2_PS.c_str(), "main", "PRS test 2 - PS", true);
-    ASSERT_TRUE(pVS && pPS && pPS2);
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("Tex2D_Ref", RefTextures.GetColor(0));
+    Macros.AddShaderMacro("Buff_Ref", RefBuffers.GetValue(0));
+
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "SRBCompatibility1.hlsl", "VSMain", "SRBCompatibility1 VS", Macros);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "SRBCompatibility1.hlsl", "PSMain", "SRBCompatibility1 PS", Macros);
+    ASSERT_TRUE(pVS && pPS);
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
 
-    IPipelineResourceSignature* Signatures1[] = {pSignature1, pSignature2};
+    IPipelineResourceSignature* Signatures1[] = {pSignature0, pSignature2};
 
     PSOCreateInfo.ppResourceSignatures    = Signatures1;
     PSOCreateInfo.ResourceSignaturesCount = _countof(Signatures1);
 
-    RefCntAutoPtr<IPipelineState> pPSO1;
-    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO1);
-    ASSERT_NE(pPSO1, nullptr);
+    RefCntAutoPtr<IPipelineState> pPSO0x2;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO0x2);
+    ASSERT_NE(pPSO0x2, nullptr);
 
-    ASSERT_EQ(pPSO1->GetResourceSignatureCount(), 3u);
-    ASSERT_EQ(pPSO1->GetResourceSignature(0), pSignature1);
-    ASSERT_EQ(pPSO1->GetResourceSignature(1), nullptr);
-    ASSERT_EQ(pPSO1->GetResourceSignature(2), pSignature2);
+    EXPECT_EQ(pPSO0x2->GetResourceSignatureCount(), 3u);
+    EXPECT_EQ(pPSO0x2->GetResourceSignature(0), pSignature0);
+    EXPECT_EQ(pPSO0x2->GetResourceSignature(1), nullptr);
+    EXPECT_EQ(pPSO0x2->GetResourceSignature(2), pSignature2);
 
-    PSOCreateInfo.pVS = pVS;
+    Macros.AddShaderMacro("Tex2D_2_Ref", RefTextures.GetColor(1));
+
+    auto pVS2 = CreateShaderFromFile(SHADER_TYPE_VERTEX, "SRBCompatibility2.hlsl", "VSMain", "SRBCompatibility2 VS", Macros);
+    auto pPS2 = CreateShaderFromFile(SHADER_TYPE_PIXEL, "SRBCompatibility2.hlsl", "PSMain", "SRBCompatibility2 PS", Macros);
+    ASSERT_TRUE(pVS2 && pPS2);
+
+    PSOCreateInfo.pVS = pVS2;
     PSOCreateInfo.pPS = pPS2;
 
-    IPipelineResourceSignature* Signatures2[] = {pSignature1, pSignature2, pSignature3};
+    RefCntAutoPtr<IPipelineState> pPSO0x23, pPSO032;
+    if (Mode == SRB_COMPAT_MODE_INSERT_SIGNATURE_TO_END)
+    {
+        IPipelineResourceSignature* Signatures2[] = {pSignature0, pEmptySignature, pSignature2, pSignature3};
 
-    PSOCreateInfo.ppResourceSignatures    = Signatures2;
-    PSOCreateInfo.ResourceSignaturesCount = _countof(Signatures2);
+        PSOCreateInfo.ppResourceSignatures    = Signatures2;
+        PSOCreateInfo.ResourceSignaturesCount = _countof(Signatures2);
 
-    RefCntAutoPtr<IPipelineState> pPSO2;
-    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO2);
-    ASSERT_NE(pPSO2, nullptr);
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO0x23);
+        ASSERT_NE(pPSO0x23, nullptr);
 
-    ASSERT_EQ(pPSO2->GetResourceSignatureCount(), 4u);
-    ASSERT_EQ(pPSO2->GetResourceSignature(0), pSignature1);
-    ASSERT_EQ(pPSO2->GetResourceSignature(1), nullptr);
-    ASSERT_EQ(pPSO2->GetResourceSignature(2), pSignature2);
-    ASSERT_EQ(pPSO2->GetResourceSignature(3), pSignature3);
+        ASSERT_EQ(pPSO0x23->GetResourceSignatureCount(), 4u);
+        ASSERT_EQ(pPSO0x23->GetResourceSignature(0), pSignature0);
+        ASSERT_EQ(pPSO0x23->GetResourceSignature(1), pEmptySignature);
+        ASSERT_EQ(pPSO0x23->GetResourceSignature(2), pSignature2);
+        ASSERT_EQ(pPSO0x23->GetResourceSignature(3), pSignature3);
+    }
+    else
+    {
+        IPipelineResourceSignature* Signatures2[] = {pSignature0, pSignature2, pSignature3};
 
-    RefCntAutoPtr<IShaderResourceBinding> pSRB1;
-    pSignature1->CreateShaderResourceBinding(&pSRB1, true);
-    ASSERT_NE(pSRB1, nullptr);
+        PSOCreateInfo.ppResourceSignatures    = Signatures2;
+        PSOCreateInfo.ResourceSignaturesCount = _countof(Signatures2);
+
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO032);
+        ASSERT_NE(pPSO032, nullptr);
+
+        ASSERT_EQ(pPSO032->GetResourceSignatureCount(), 3u);
+        ASSERT_EQ(pPSO032->GetResourceSignature(0), pSignature0);
+        ASSERT_EQ(pPSO032->GetResourceSignature(1), pSignature3);
+        ASSERT_EQ(pPSO032->GetResourceSignature(2), pSignature2);
+    }
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB0;
+    pSignature0->CreateShaderResourceBinding(&pSRB0, true);
+    ASSERT_NE(pSRB0, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB2;
     pSignature2->CreateShaderResourceBinding(&pSRB2, true);
@@ -938,57 +998,102 @@ TEST_F(PipelineResourceSignatureTest, SRBCompatibility)
     pSignature3->CreateShaderResourceBinding(&pSRB3, true);
     ASSERT_NE(pSRB3, nullptr);
 
+    pSRB0->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(RefBuffers.GetBuffer(0));
+    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(RefTextures.GetView(0));
+    pSRB3->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(RefTextures.GetView(1));
+
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    {
+        // draw 1
+        pContext->CommitShaderResources(pSRB0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION); // BindingIndex == 0
+        pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION); // BindingIndex == 2
+
+        pContext->SetPipelineState(pPSO0x2);
+
+        DrawAttribs drawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+        pContext->Draw(drawAttrs);
+    }
+    {
+        // draw 2
+        if (Mode == SRB_COMPAT_MODE_INSERT_SIGNATURE_TO_END)
+        {
+            pContext->SetPipelineState(pPSO0x23);
+            // reuse pSRB0, pSRB2
+            pContext->CommitShaderResources(pSRB3, RESOURCE_STATE_TRANSITION_MODE_TRANSITION); // BindingIndex == 3
+        }
+        else
+        {
+            pContext->SetPipelineState(pPSO032);
+            // reuse pSRB0
+            pContext->CommitShaderResources(pSRB3, RESOURCE_STATE_TRANSITION_MODE_TRANSITION); // BindingIndex == 1
+            pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION); // BindingIndex == 2
+        }
+
+        DrawAttribs drawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+        pContext->Draw(drawAttrs);
+    }
+    {
+        // draw 3
+        pContext->SetPipelineState(pPSO0x2);
+        if (Mode == SRB_COMPAT_MODE_INSERT_SIGNATURE_TO_END)
+        {
+            // reuse pSRB0, pSRB2
+        }
+        else
+        {
+            // reuse pSRB0
+            pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION); // BindingIndex == 2
+        }
+
+        DrawAttribs drawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+        pContext->Draw(drawAttrs);
+    }
+    pSwapChain->Present();
+}
+
+TEST_F(PipelineResourceSignatureTest, SRBCompatibility1)
+{
+    TestSRBCompatibility(SRB_COMPAT_MODE_INSERT_SIGNATURE_TO_END);
+}
+
+TEST_F(PipelineResourceSignatureTest, SRBCompatibility2)
+{
+    TestSRBCompatibility(SRB_COMPAT_MODE_INSERT_SIGNATURE_TO_MIDDLE);
+}
+
+TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    if (!pDevice->GetDeviceCaps().Features.MeshShaders)
+    {
+        GTEST_SKIP() << "Mesh shader is not supported by this device";
+    }
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    float ClearColor[] = {0.25, 0.625, 0.375, 0.125};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
     ReferenceTextures RefTextures{
-        2,
+        1,
         128, 128,
         USAGE_DEFAULT,
         BIND_SHADER_RESOURCE,
         TEXTURE_VIEW_SHADER_RESOURCE //
     };
     ReferenceBuffers RefBuffers{
-        1,
+        2,
         USAGE_DEFAULT,
         BIND_UNIFORM_BUFFER //
     };
-
-    pSRB1->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(RefBuffers.GetBuffer(0));
-    pSRB2->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(RefTextures.GetView(0));
-    pSRB3->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(RefTextures.GetView(1));
-
-    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
-    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-
-    // draw 1
-    pContext->CommitShaderResources(pSRB1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-
-    pContext->SetPipelineState(pPSO1);
-
-    DrawAttribs drawAttrs(3, DRAW_FLAG_VERIFY_ALL);
-    pContext->Draw(drawAttrs);
-
-    // draw 2
-    pContext->CommitShaderResources(pSRB3, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    // reuse pSRB1, pSRB2
-
-    pContext->SetPipelineState(pPSO2);
-
-    pContext->Draw(drawAttrs);
-}
-
-TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
-{
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.MeshShaders)
-    {
-        GTEST_SKIP() << "Mesh shader is not supported by this device";
-    }
-
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pSwapChain = pEnv->GetSwapChain();
-
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignaturePS;
     {
@@ -1062,8 +1167,12 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-    auto pVS = CreateShaderFromSourceDXC(SHADER_TYPE_VERTEX, HLSL::GraphicsAndMeshShader_VS.c_str(), "main", "GraphicsAndMeshShader - VS", true);
-    auto pPS = CreateShaderFromSourceDXC(SHADER_TYPE_PIXEL, HLSL::GraphicsAndMeshShader_PS.c_str(), "main", "GraphicsAndMeshShader - PS", true);
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("Tex2D_Ref", RefTextures.GetColor(0));
+    Macros.AddShaderMacro("Buff_Ref", RefBuffers.GetValue(0));
+
+    auto pVS = CreateShaderFromFileDXC(SHADER_TYPE_VERTEX, "GraphicsAndMeshShader.hlsl", "VSMain", "GraphicsAndMeshShader VS", Macros);
+    auto pPS = CreateShaderFromFileDXC(SHADER_TYPE_PIXEL, "GraphicsAndMeshShader.hlsl", "PSMain", "GraphicsAndMeshShader PS", Macros);
     ASSERT_TRUE(pVS && pPS);
 
     PSOCreateInfo.pVS = pVS;
@@ -1088,7 +1197,9 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     PSODesc.PipelineType               = PIPELINE_TYPE_MESH;
     GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_UNDEFINED; // unused
 
-    auto pMS = CreateShaderFromSourceDXC(SHADER_TYPE_MESH, HLSL::GraphicsAndMeshShader_MS.c_str(), "main", "GraphicsAndMeshShader - MS", true);
+    Macros.UpdateMacro("Buff_Ref", RefBuffers.GetValue(1));
+
+    auto pMS = CreateShaderFromFileDXC(SHADER_TYPE_MESH, "GraphicsAndMeshShader.hlsl", "MSMain", "GraphicsAndMeshShader MS", Macros);
     ASSERT_TRUE(pMS);
 
     PSOCreateInfo.pVS = nullptr;
@@ -1121,43 +1232,37 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     pSignatureMS->CreateShaderResourceBinding(&MeshSRB, true);
     ASSERT_NE(MeshSRB, nullptr);
 
-    ReferenceTextures RefTextures{
-        1,
-        128, 128,
-        USAGE_DEFAULT,
-        BIND_SHADER_RESOURCE,
-        TEXTURE_VIEW_SHADER_RESOURCE //
-    };
-    ReferenceBuffers RefBuffers{
-        2,
-        USAGE_DEFAULT,
-        BIND_UNIFORM_BUFFER //
-    };
-
     PixelSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(RefTextures.GetView(0));
     VertexSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")->Set(RefBuffers.GetBuffer(0));
     MeshSRB->GetVariableByName(SHADER_TYPE_MESH, "Constants")->Set(RefBuffers.GetBuffer(1));
 
     ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     // draw triangles
-    pContext->CommitShaderResources(PixelSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    pContext->CommitShaderResources(VertexSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    {
+        pContext->CommitShaderResources(PixelSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);  // BindingIndex == 0
+        pContext->CommitShaderResources(VertexSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION); // BindingIndex == 1
 
-    pContext->SetPipelineState(pGraphicsPSO);
+        pContext->SetPipelineState(pGraphicsPSO);
 
-    DrawAttribs drawAttrs(3, DRAW_FLAG_VERIFY_ALL);
-    pContext->Draw(drawAttrs);
+        DrawAttribs drawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+        pContext->Draw(drawAttrs);
+    }
 
     // draw meshes
-    pContext->CommitShaderResources(MeshSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    // reuse PixelSRB
+    {
+        pContext->SetPipelineState(pMeshPSO);
 
-    pContext->SetPipelineState(pMeshPSO);
+        pContext->CommitShaderResources(MeshSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION); // BindingIndex == 1
+        // reuse PixelSRB
 
-    DrawMeshAttribs drawMeshAttrs(1, DRAW_FLAG_VERIFY_ALL);
-    pContext->DrawMesh(drawMeshAttrs);
+        DrawMeshAttribs drawMeshAttrs(1, DRAW_FLAG_VERIFY_ALL);
+        pContext->DrawMesh(drawMeshAttrs);
+    }
+
+    pSwapChain->Present();
 }
 
 
@@ -1438,7 +1543,7 @@ TEST_F(PipelineResourceSignatureTest, StructuredBuffers)
     TestFormattedOrStructuredBuffer(BUFFER_MODE_STRUCTURED);
 }
 
-TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
+static void TestVulkanDescriptorIndexing(bool IsGLSL, IShaderSourceInputStreamFactory* pShaderSourceFactory)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -1470,14 +1575,15 @@ TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
     {
         const PipelineResourceDesc Resources[] =
             {
-                {SHADER_TYPE_COMPUTE, "g_Textures", TexArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER},
+                {SHADER_TYPE_COMPUTE, "g_Textures", TexArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_COMPUTE, "g_Sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
                 {SHADER_TYPE_COMPUTE, "g_OutImage", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
             };
 
         SamplerDesc SamLinearWrapDesc{
             FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
             TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
-        ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_PIXEL, "g_Textures", SamLinearWrapDesc}};
+        ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_COMPUTE, "g_Sampler", SamLinearWrapDesc}};
 
         PipelineResourceSignatureDesc Desc;
         Desc.Resources            = Resources;
@@ -1500,7 +1606,8 @@ TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
     ShaderMacroHelper Macros;
 
     Macros.AddShaderMacro("NUM_TEXTURES", TexArraySize);
-    Macros.AddShaderMacro("float4", "vec4");
+    if (IsGLSL)
+        Macros.AddShaderMacro("float4", "vec4");
     for (Uint32 i = 0; i < TexArraySize; ++i)
         Macros.AddShaderMacro((String{"Tex2D_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(i));
 
@@ -1508,13 +1615,14 @@ TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
     {
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
         ShaderCI.UseCombinedTextureSamplers = true;
         ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
         ShaderCI.EntryPoint                 = "main";
         ShaderCI.Desc.Name                  = "DescrIndexingTest - CS";
-        ShaderCI.FilePath                   = "VulkanDescriptorIndexing.glsl";
         ShaderCI.Macros                     = Macros;
+        ShaderCI.SourceLanguage             = IsGLSL ? SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM : SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.FilePath                   = IsGLSL ? "VulkanDescriptorIndexing.glsl" : "VulkanDescriptorIndexing.hlsl";
+
         pDevice->CreateShader(ShaderCI, &pCS);
         ASSERT_NE(pCS, nullptr);
     }
@@ -1537,11 +1645,6 @@ TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
     pSignature->CreateShaderResourceBinding(&pSRB, true);
     ASSERT_NE(pSRB, nullptr);
 
-    RefCntAutoPtr<ISampler> pSampler;
-    pDevice->CreateSampler(SamplerDesc{}, &pSampler);
-    for (Uint32 i = 0; i < TexArraySize; ++i)
-        RefTextures.GetView(i)->SetSampler(pSampler);
-
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     ASSERT_TRUE(pTestingSwapChain);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_OutImage")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
@@ -1555,6 +1658,16 @@ TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing)
     pContext->DispatchCompute(DispatchAttribs);
 
     pSwapChain->Present();
+}
+
+TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing_GLSL)
+{
+    TestVulkanDescriptorIndexing(true, pShaderSourceFactory);
+}
+
+TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing_HLSL)
+{
+    TestVulkanDescriptorIndexing(false, pShaderSourceFactory);
 }
 
 } // namespace Diligent

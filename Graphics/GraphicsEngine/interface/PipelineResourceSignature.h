@@ -185,9 +185,6 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// to different slots.
     Uint8  BindingIndex DEFAULT_INITIALIZER(0);
     
-    /// AZ TODO: comment
-    Uint16 BindingOffsets [SHADER_RESOURCE_TYPE_LAST + 1]  DEFAULT_INITIALIZER({});
-    
     /// If set to true, textures will be combined with texture samplers.
     /// The CombinedSamplerSuffix member defines the suffix added to the texture variable
     /// name to get corresponding sampler name. When using combined samplers,

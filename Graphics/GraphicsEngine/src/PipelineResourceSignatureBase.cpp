@@ -37,7 +37,7 @@ namespace Diligent
 
 #define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
-void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false)
+void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc, bool ShaderResourceRuntimeArraySupported) noexcept(false)
 {
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
         LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Uint32{Desc.BindingIndex}, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
@@ -80,6 +80,11 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                     "but the stages must not overlap.");
         }
         UsedStages |= Res.ShaderStages;
+
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && !ShaderResourceRuntimeArraySupported)
+        {
+            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags: RUNTIME_ARRAY can be used only if ShaderResourceRuntimeArray device feature is enabled.");
+        }
 
         static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please add the new resource type to the switch below");
         switch (Res.ResourceType)
