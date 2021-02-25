@@ -63,7 +63,7 @@ public:
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
     /// Implementation of IPipelineState::GetResourceSignatureCount() in Direct3D12 backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return GetSignatureCount(); }
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_RootSig->GetSignatureCount(); }
 
     /// Implementation of IPipelineState::GetResourceSignature() in Direct3D12 backend.
     virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final { return GetSignature(Index); }
@@ -77,13 +77,11 @@ public:
     /// Implementation of IPipelineStateD3D12::GetD3D12RootSignature().
     virtual ID3D12RootSignature* DILIGENT_CALL_TYPE GetD3D12RootSignature() const override final { return m_RootSig->GetD3D12RootSignature(); }
 
-    const RootSignatureD3D12* GetRootSignature() const { return m_RootSig; }
-
-    Uint32 GetSignatureCount() const { return m_RootSig->GetSignatureCount(); }
+    const RootSignatureD3D12& GetRootSignature() const { return *m_RootSig; }
 
     PipelineResourceSignatureD3D12Impl* GetSignature(Uint32 index) const
     {
-        VERIFY_EXPR(index < GetSignatureCount());
+        VERIFY_EXPR(index < GetResourceSignatureCount());
         return m_ResourceSignatures[index];
     }
 

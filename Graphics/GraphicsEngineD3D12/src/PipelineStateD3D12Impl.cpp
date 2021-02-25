@@ -26,6 +26,7 @@
  */
 
 #include "pch.h"
+
 #include <array>
 #include <sstream>
 #include <d3dcompiler.h>
@@ -672,7 +673,7 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 
 PipelineStateD3D12Impl::ResourceAttribution PipelineStateD3D12Impl::GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
 {
-    const auto SignCount = GetSignatureCount();
+    const auto SignCount = GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
         const auto* const pSignature = GetSignature(sign);

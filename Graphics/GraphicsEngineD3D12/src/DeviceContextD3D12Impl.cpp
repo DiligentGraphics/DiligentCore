@@ -227,7 +227,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 
     auto& CmdCtx        = GetCmdContext();
     auto& RootInfo      = GetRootTableInfo(PSODesc.PipelineType);
-    auto* pd3d12RootSig = pPipelineStateD3D12->GetRootSignature()->GetD3D12RootSignature();
+    auto* pd3d12RootSig = pPipelineStateD3D12->GetRootSignature().GetD3D12RootSignature();
 
     if (RootInfo.pRootSig != pd3d12RootSig)
     {
@@ -238,7 +238,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         RootInfo.ActiveSRBMask              = 0;
         m_State.CommittedResourcesValidated = false;
 
-        for (Uint32 i = 0, SignCount = pPipelineStateD3D12->GetSignatureCount(); i < SignCount; ++i)
+        for (Uint32 i = 0, SignCount = pPipelineStateD3D12->GetResourceSignatureCount(); i < SignCount; ++i)
         {
             const auto* pSignature = pPipelineStateD3D12->GetSignature(i);
             if (pSignature != nullptr)
@@ -304,7 +304,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 template <bool IsCompute>
 void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo)
 {
-    const auto& RootSig = *m_pPipelineState->GetRootSignature();
+    const auto& RootSig = m_pPipelineState->GetRootSignature();
 
     auto& CmdCtx = GetCmdContext();
     for (Uint32 s = 0; s < RootSig.GetSignatureCount(); ++s)

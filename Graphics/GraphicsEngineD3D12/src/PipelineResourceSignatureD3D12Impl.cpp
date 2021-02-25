@@ -26,6 +26,9 @@
  */
 
 #include "pch.h"
+
+#include <unordered_map>
+
 #include "PipelineResourceSignatureD3D12Impl.hpp"
 #include "ShaderResourceCacheD3D12.hpp"
 #include "ShaderVariableD3D12.hpp"
@@ -60,6 +63,68 @@ inline bool ResourcesCompatible(const PipelineResourceSignatureD3D12Impl::Resour
     // clang-format on
 }
 
+void ValidateD3D12PipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false)
+{
+    {
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResNameToShaderStages;
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        {
+            const auto& Res = Desc.Resources[i];
+
+            ResNameToShaderStages.emplace(Res.Name, Res.ShaderStages);
+            auto range          = ResNameToShaderStages.equal_range(Res.Name);
+            auto multi_stage_it = ResNameToShaderStages.end();
+            for (auto it = range.first; it != range.second; ++it)
+            {
+                if (!IsPowerOfTwo(it->second))
+                {
+                    if (multi_stage_it == ResNameToShaderStages.end())
+                        multi_stage_it = it;
+                    else
+                    {
+                        LOG_ERROR_AND_THROW("Pipeline resource signature '", (Desc.Name != nullptr ? Desc.Name : ""),
+                                            "' defines separate resources with the name '", Res.Name, "' in shader stages ",
+                                            GetShaderStagesString(multi_stage_it->second), " and ",
+                                            GetShaderStagesString(it->second),
+                                            ". In Direct3D12 backend, only one resource in the group of resources with the same name can be shared between more than "
+                                            "one shader stages. To solve this problem, use single shader stage for all but one resource with the same name.");
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> SamNameToShaderStages;
+        for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
+        {
+            const auto& Sam = Desc.ImmutableSamplers[i];
+
+            const auto* Name = Sam.SamplerOrTextureName;
+            SamNameToShaderStages.emplace(Name, Sam.ShaderStages);
+            auto range          = SamNameToShaderStages.equal_range(Name);
+            auto multi_stage_it = SamNameToShaderStages.end();
+            for (auto it = range.first; it != range.second; ++it)
+            {
+                if (!IsPowerOfTwo(it->second))
+                {
+                    if (multi_stage_it == SamNameToShaderStages.end())
+                        multi_stage_it = it;
+                    else
+                    {
+                        LOG_ERROR_AND_THROW("Pipeline resource signature '", (Desc.Name != nullptr ? Desc.Name : ""),
+                                            "' defines immutable sampler with the name '", Name, "' in shader stages ",
+                                            GetShaderStagesString(multi_stage_it->second), " and ",
+                                            GetShaderStagesString(it->second),
+                                            ". In Direct3D12 backend, only one immutable sampler in the group of samplers with the same name can be shared between more than "
+                                            "one shader stages. To solve this problem, use single shader stage for all but one immutable sampler with the same name.");
+                    }
+                }
+            }
+        }
+    }
+}
+
 } // namespace
 
 
@@ -70,6 +135,8 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
     m_SRBMemAllocator{GetRawAllocator()}
 {
+    ValidateD3D12PipelineResourceSignatureDesc(Desc);
+
     try
     {
         FixedLinearAllocator MemPool{GetRawAllocator()};
