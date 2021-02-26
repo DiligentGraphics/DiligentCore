@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.17)
 
 project(DiligentCoreAPITest)
 
-file(GLOB COMMON_SOURCE LIST_DIRECTORIES false src/*)
+file(GLOB COMMON_SOURCE LIST_DIRECTORIES false src/* src/ObjectCreationFailure/*)
 file(GLOB COMMON_INCLUDE LIST_DIRECTORIES false include/*)
 file(GLOB INLINE_SHADERS LIST_DIRECTORIES false include/InlineShaders/*)
 file(GLOB_RECURSE SHADERS LIST_DIRECTORIES false assets/shaders/*.*)

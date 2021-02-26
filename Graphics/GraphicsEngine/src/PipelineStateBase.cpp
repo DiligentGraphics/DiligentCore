@@ -268,7 +268,8 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc) noexce
                 if ((it->second & Var.ShaderStages) != 0)
                 {
                     LOG_PSO_ERROR_AND_THROW("Shader variable '", Var.Name, "' is defined in overlapping shader stages (", GetShaderStagesString(Var.ShaderStages),
-                                            " and ", GetShaderStagesString(it->second), "), which is not allowed.");
+                                            " and ", GetShaderStagesString(it->second),
+                                            "). Multiple variables with the same name are allowed, but shader stages they use must not overlap.");
                 }
             }
             UniqueVariables.emplace(Var.Name, Var.ShaderStages);
@@ -286,7 +287,8 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc) noexce
                 if ((it->second & Sam.ShaderStages) != 0)
                 {
                     LOG_PSO_ERROR_AND_THROW("Immutable sampler '", Sam.SamplerOrTextureName, "' is defined in overlapping shader stages (", GetShaderStagesString(Sam.ShaderStages),
-                                            " and ", GetShaderStagesString(it->second), "), which is not allowed.");
+                                            " and ", GetShaderStagesString(it->second),
+                                            "). Multiple immutable samplers with the same name are allowed, but shader stages they use must not overlap.");
                 }
             }
             UniqueSamplers.emplace(Sam.SamplerOrTextureName, Sam.ShaderStages);

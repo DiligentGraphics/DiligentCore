@@ -58,6 +58,8 @@ namespace Testing
 TestingEnvironment* TestingEnvironment::m_pTheEnvironment = nullptr;
 std::atomic_int     TestingEnvironment::m_NumAllowedErrors;
 
+std::vector<std::string> TestingEnvironment::m_ExpectedErrorSubstrings;
+
 void TestingEnvironment::MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,
                                          const Char*            Message,
                                          const char*            Function,
@@ -73,6 +75,15 @@ void TestingEnvironment::MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,
         else
         {
             m_NumAllowedErrors--;
+            if (!m_ExpectedErrorSubstrings.empty())
+            {
+                const auto& ErrorSubstring = m_ExpectedErrorSubstrings.back();
+                if (strstr(Message, ErrorSubstring.c_str()) == nullptr)
+                {
+                    ADD_FAILURE() << "Expected error substring '" << ErrorSubstring << "' was not found in the error message";
+                }
+                m_ExpectedErrorSubstrings.pop_back();
+            }
         }
     }
 
@@ -86,6 +97,16 @@ void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* Inf
     {
         std::cout << InfoMessage;
     }
+    if (m_NumAllowedErrors == 0)
+    {
+        m_ExpectedErrorSubstrings.clear();
+    }
+}
+
+void TestingEnvironment::PushExpectedErrorSubstring(const char* Str)
+{
+    VERIFY_EXPR(Str != nullptr && Str[0] != '\0');
+    m_ExpectedErrorSubstrings.push_back(Str);
 }
 
 Uint32 TestingEnvironment::FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,

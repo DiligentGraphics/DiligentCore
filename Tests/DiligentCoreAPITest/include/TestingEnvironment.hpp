@@ -117,6 +117,8 @@ public:
         return m_NeedWARPResourceArrayIndexingBugWorkaround;
     }
 
+    static void PushExpectedErrorSubstring(const char* Str);
+
 protected:
     NativeWindow CreateNativeWindow();
 
@@ -150,6 +152,8 @@ protected:
     SHADER_COMPILER                            m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
 
     static std::atomic_int m_NumAllowedErrors;
+
+    static std::vector<std::string> m_ExpectedErrorSubstrings;
 
     // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
     // Shader resource array indexing always references array element 0 when shaders are compiled.
