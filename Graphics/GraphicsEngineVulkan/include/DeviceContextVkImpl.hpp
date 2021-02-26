@@ -479,11 +479,11 @@ private:
         /// Flag indicating if currently committed index buffer is up to date
         bool CommittedIBUpToDate = false;
 
+        bool CommittedResourcesValidated = false;
+
         Uint32 NumCommands = 0;
 
         VkPipelineBindPoint vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-
-        bool CommittedResourcesValidated = false;
     } m_State;
 
     // Graphics/mesh, compute, ray tracing
@@ -507,12 +507,18 @@ private:
             // The total number of descriptors with dynamic offset, given by pSignature->GetDynamicOffsetCount().
             // Note that this is not the actual number of dynamic buffers in the resource cache.
             Uint32 DynamicOffsetCount = 0;
+
+#ifdef DILIGENT_DEVELOPMENT
+            // The DescriptorSetBaseInd that was used in the last BindDescriptorSets() call
+            Uint32 LastBoundDSBaseInd = ~0u;
+#endif
         };
         std::array<ResourceInfo, MAX_RESOURCE_SIGNATURES> Resources;
 
+#ifdef DILIGENT_DEVELOPMENT
         // Do not use strong references!
         std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES> SRBs = {};
-
+#endif
         using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
 

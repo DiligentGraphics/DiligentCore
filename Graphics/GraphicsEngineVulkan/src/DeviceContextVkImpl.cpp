@@ -445,6 +445,10 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
         VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
         m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, ResInfo.DescriptorSetBaseInd, SetCount,
                                            ResInfo.vkSets.data(), ResInfo.DynamicOffsetCount, m_DynamicBufferOffsets.data());
+
+#ifdef DILIGENT_DEVELOPMENT
+        ResInfo.LastBoundDSBaseInd = ResInfo.DescriptorSetBaseInd;
+#endif
     }
 
     VERIFY_EXPR((StaleSRBFlags & BindInfo.ActiveSRBMask) == 0);
@@ -481,15 +485,15 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
         }
 
         auto* pSRBSign = pSRB->GetSignature();
-        VERIFY_EXPR(pSRBSign != nullptr);
+        DEV_CHECK_ERR(pSRBSign != nullptr, "SRB must not be null");
 
         if (!pLayoutSign->IsCompatibleWith(*pSRBSign))
         {
-            LOG_ERROR_MESSAGE("Shader resource binding at index ", i, " with signature '", pSRBSign->GetDesc().Name,
+            LOG_ERROR_MESSAGE("Shader resource binding at index (", i, ") with signature '", pSRBSign->GetDesc().Name,
                               "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");
         }
 
-        VERIFY((BindInfo.StaleSRBMask & BindInfo.ActiveSRBMask) == 0, "CommitDescriptorSets() must be called before validation.");
+        DEV_CHECK_ERR((BindInfo.StaleSRBMask & BindInfo.ActiveSRBMask) == 0, "CommitDescriptorSets() must be called before validation.");
 
         const auto& ResInfo = BindInfo.Resources[i];
         const auto  DSCount = pLayoutSign->GetNumDescriptorSets();
@@ -499,6 +503,11 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
                           "descriptor set with index ", s, " is not bound for resource signature '",
                           pLayoutSign->GetDesc().Name, "', binding index ", i, ".");
         }
+
+        DEV_CHECK_ERR(ResInfo.LastBoundDSBaseInd == ResInfo.DescriptorSetBaseInd,
+                      "Shader resource binding at index ", i, " has descriptor set base offset ", ResInfo.DescriptorSetBaseInd,
+                      ", but currently bound descriptor sets have base offset ", ResInfo.LastBoundDSBaseInd,
+                      "; one of the resource signatures with lower binding index is not compatible.");
     }
 
     m_pPipelineState->DvpVerifySRBResources(BindInfo.SRBs);
@@ -607,7 +616,9 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
     VERIFY_EXPR(DSIndex == ResourceCache.GetNumDescriptorSets());
 
+#ifdef DILIGENT_DEVELOPMENT
     BindInfo.SRBs[SRBIndex] = pResBindingVkImpl;
+#endif
 
     m_DynamicBufferOffsets.resize(std::max<size_t>(m_DynamicBufferOffsets.size(), pSignature->GetDynamicOffsetCount()));
 
