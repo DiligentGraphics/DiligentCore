@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "HashUtils.hpp"
+#include "StringTools.hpp"
 
 namespace Diligent
 {
@@ -191,6 +192,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
 
 
     std::unordered_map<HashMapStringKey, std::vector<std::pair<SHADER_TYPE, const IPipelineResourceSignature*>>, HashMapStringKey::Hasher> AllResources;
+    std::unordered_map<HashMapStringKey, std::vector<std::pair<SHADER_TYPE, const IPipelineResourceSignature*>>, HashMapStringKey::Hasher> AllImtblSamplers;
 
     std::array<const IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> ppSignatures = {};
     for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
@@ -220,11 +222,74 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
             {
                 if ((StageSig.first & ResDesc.ShaderStages) != 0)
                 {
-                    LOG_PSO_ERROR_AND_THROW("Shader resource '", ResDesc.Name, "' is found in more than one resource signature in the same stage ('", SignDesc.Name,
-                                            "' and '", StageSig.second->GetDesc().Name, "'). Every shader resource in PSO must be unambiguously defined by only one resource signature.");
+                    VERIFY(StageSig.second != pSignature, "Overlapping resources in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
+
+                    LOG_PSO_ERROR_AND_THROW("Shader resource '", ResDesc.Name, "' is found in more than one resource signature ('", SignDesc.Name,
+                                            "' and '", StageSig.second->GetDesc().Name,
+                                            "') in the same shader stage. Every shader resource in the PSO must be unambiguously defined by only one resource signature.");
                 }
             }
             StageSignatures.emplace_back(ResDesc.ShaderStages, pSignature);
+        }
+
+        for (Uint32 res = 0; res < SignDesc.NumImmutableSamplers; ++res)
+        {
+            const auto& SamDesc = SignDesc.ImmutableSamplers[res];
+
+            auto& StageSignatures = AllImtblSamplers[SamDesc.SamplerOrTextureName];
+            for (auto& StageSig : StageSignatures)
+            {
+                if ((StageSig.first & SamDesc.ShaderStages) != 0)
+                {
+                    VERIFY(StageSig.second != pSignature, "Overlapping immutable samplers in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
+
+                    LOG_PSO_ERROR_AND_THROW("Immutable sampler '", SamDesc.SamplerOrTextureName, "' is found in more than one resource signature ('", SignDesc.Name,
+                                            "' and '", StageSig.second->GetDesc().Name,
+                                            "') in the same stage. Every immutable sampler in the PSO must be unambiguously defined by only one resource signature.");
+                }
+            }
+            StageSignatures.emplace_back(SamDesc.ShaderStages, pSignature);
+        }
+    }
+}
+
+void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc) noexcept(false)
+{
+    const auto& Layout = PSODesc.ResourceLayout;
+    {
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> UniqueVariables;
+        for (Uint32 i = 0; i < Layout.NumVariables; ++i)
+        {
+            const auto& Var = Layout.Variables[i];
+
+            auto range = UniqueVariables.equal_range(Var.Name);
+            for (auto it = range.first; it != range.second; ++it)
+            {
+                if ((it->second & Var.ShaderStages) != 0)
+                {
+                    LOG_PSO_ERROR_AND_THROW("Shader variable '", Var.Name, "' is defined in overlapping shader stages (", GetShaderStagesString(Var.ShaderStages),
+                                            " and ", GetShaderStagesString(it->second), "), which is not allowed.");
+                }
+            }
+            UniqueVariables.emplace(Var.Name, Var.ShaderStages);
+        }
+    }
+    {
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> UniqueSamplers;
+        for (Uint32 i = 0; i < Layout.NumImmutableSamplers; ++i)
+        {
+            const auto& Sam = Layout.ImmutableSamplers[i];
+
+            auto range = UniqueSamplers.equal_range(Sam.SamplerOrTextureName);
+            for (auto it = range.first; it != range.second; ++it)
+            {
+                if ((it->second & Sam.ShaderStages) != 0)
+                {
+                    LOG_PSO_ERROR_AND_THROW("Immutable sampler '", Sam.SamplerOrTextureName, "' is defined in overlapping shader stages (", GetShaderStagesString(Sam.ShaderStages),
+                                            " and ", GetShaderStagesString(it->second), "), which is not allowed.");
+                }
+            }
+            UniqueSamplers.emplace(Sam.SamplerOrTextureName, Sam.ShaderStages);
         }
     }
 }
@@ -250,6 +315,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     ValidateBlendStateDesc(PSODesc, GraphicsPipeline);
     ValidateRasterizerStateDesc(PSODesc, GraphicsPipeline);
     ValidateDepthStencilDesc(PSODesc, GraphicsPipeline);
+    ValidatePipelineResourceLayoutDesc(PSODesc);
 
 
     if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
@@ -323,6 +389,7 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be COMPUTE.");
 
     ValidatePipelineResourceSignatures(CreateInfo);
+    ValidatePipelineResourceLayoutDesc(PSODesc);
 
     if (CreateInfo.pCS == nullptr)
         LOG_PSO_ERROR_AND_THROW("Compute shader must not be null.");
@@ -337,6 +404,7 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING.");
 
     ValidatePipelineResourceSignatures(CreateInfo);
+    ValidatePipelineResourceLayoutDesc(PSODesc);
 
     if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
     {
@@ -448,6 +516,32 @@ void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcep
 {
     CorrectBlendStateDesc(GraphicsPipeline);
     CorrectDepthStencilDesc(GraphicsPipeline);
+}
+
+Uint32 FindPipelineResourceLayoutVariable(const PipelineResourceLayoutDesc& LayoutDesc,
+                                          const char*                       Name,
+                                          SHADER_TYPE                       ShaderStage,
+                                          const char*                       CombinedSamplerSuffix)
+{
+    for (Uint32 i = 0; i < LayoutDesc.NumVariables; ++i)
+    {
+        const auto& Var = LayoutDesc.Variables[i];
+        if ((Var.ShaderStages & ShaderStage) != 0 && StreqSuff(Name, Var.Name, CombinedSamplerSuffix))
+        {
+#ifdef DILIGENT_DEBUG
+            for (Uint32 j = i + 1; j < LayoutDesc.NumVariables; ++j)
+            {
+                const auto& Var2 = LayoutDesc.Variables[j];
+                VERIFY(!((Var2.ShaderStages & ShaderStage) != 0 && StreqSuff(Name, Var2.Name, CombinedSamplerSuffix)),
+                       "There must be no variables with overlapping stages in Desc.ResourceLayout. "
+                       "This error should've been caught by ValidatePipelineResourceLayoutDesc().");
+            }
+#endif
+            return i;
+        }
+    }
+
+    return InvalidPipelineResourceLayoutVariableIndex;
 }
 
 } // namespace Diligent

@@ -29,6 +29,8 @@
 
 #include <array>
 #include <sstream>
+#include <unordered_map>
+#include <unordered_set>
 #include <d3dcompiler.h>
 
 #ifdef FindResource
@@ -417,46 +419,73 @@ RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultR
     struct UniqueResource
     {
         const D3DShaderResourceAttribs& Attribs;
+        const SHADER_TYPE               ShaderStages;
 
-        // Resource index
-        const Uint32 DescIndex;
+        bool operator==(const UniqueResource& Res) const
+        {
+            return strcmp(Attribs.Name, Res.Attribs.Name) == 0 && ShaderStages == Res.ShaderStages;
+        }
+
+        struct Hasher
+        {
+            size_t operator()(const UniqueResource& Res) const
+            {
+                return ComputeHash(CStringHash<Char>{}(Res.Attribs.Name), Uint32{Res.ShaderStages});
+            }
+        };
     };
-    std::unordered_map<HashMapStringKey, UniqueResource, HashMapStringKey::Hasher> UniqueNames;
+    std::unordered_set<UniqueResource, UniqueResource::Hasher> UniqueResources;
 
     std::vector<PipelineResourceDesc> Resources;
     const char*                       pCombinedSamplerSuffix = nullptr;
 
     for (auto& Stage : ShaderStages)
     {
-        UniqueNames.clear();
         for (auto* pShader : Stage.Shaders)
         {
             const auto& ShaderResources = *pShader->GetShaderResources();
 
             ShaderResources.ProcessResources(
-                [&](const D3DShaderResourceAttribs& Res, Uint32) //
+                [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
                 {
-                    if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Res))
+                    if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Attribs))
                         return;
 
-                    auto IterAndAssigned = UniqueNames.emplace(HashMapStringKey{Res.Name}, UniqueResource{Res, static_cast<Uint32>(Resources.size())});
+                    const char* const SamplerSuffix =
+                        (ShaderResources.IsUsingCombinedTextureSamplers() && Attribs.GetInputType() == D3D_SIT_SAMPLER) ?
+                        ShaderResources.GetCombinedSamplerSuffix() :
+                        nullptr;
+
+                    auto ShaderStages = Stage.Type;
+                    auto VarType      = LayoutDesc.DefaultVariableType;
+
+                    const auto VarIndex = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Stage.Type, SamplerSuffix);
+                    if (VarIndex != InvalidPipelineResourceLayoutVariableIndex)
+                    {
+                        const auto& Var = LayoutDesc.Variables[VarIndex];
+
+                        ShaderStages = Var.ShaderStages;
+                        VarType      = Var.Type;
+                    }
+
+                    auto IterAndAssigned = UniqueResources.emplace(UniqueResource{Attribs, ShaderStages});
                     if (IterAndAssigned.second)
                     {
-                        SHADER_RESOURCE_TYPE    Type;
-                        PIPELINE_RESOURCE_FLAGS Flags;
-                        GetShaderResourceTypeAndFlags(Res, Type, Flags);
+                        SHADER_RESOURCE_TYPE    ResType = SHADER_RESOURCE_TYPE_UNKNOWN;
+                        PIPELINE_RESOURCE_FLAGS Flags   = PIPELINE_RESOURCE_FLAG_UNKNOWN;
+                        GetShaderResourceTypeAndFlags(Attribs, ResType, Flags);
 
-                        if (Res.BindCount == 0)
+                        if (Attribs.BindCount == 0)
                         {
-                            LOG_ERROR_AND_THROW("Resource '", Res.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
+                            LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
                                                 "Use explicit resource signature to specify the array size.");
                         }
 
-                        Resources.emplace_back(Stage.Type, Res.Name, Res.BindCount, Type, LayoutDesc.DefaultVariableType, Flags);
+                        Resources.emplace_back(ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarType, Flags);
                     }
                     else
                     {
-                        VerifyResourceMerge(IterAndAssigned.first->second.Attribs, Res);
+                        VerifyResourceMerge(IterAndAssigned.first->Attribs, Attribs);
                     }
                 } //
             );
@@ -472,29 +501,6 @@ RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultR
                 else
                 {
                     pCombinedSamplerSuffix = ShaderResources.GetCombinedSamplerSuffix();
-                }
-            }
-
-            for (Uint32 i = 0; i < LayoutDesc.NumVariables; ++i)
-            {
-                const auto& Var = LayoutDesc.Variables[i];
-                if (Var.ShaderStages & Stage.Type)
-                {
-                    auto Iter = UniqueNames.find(HashMapStringKey{Var.Name});
-                    if (Iter != UniqueNames.end())
-                    {
-                        auto& Res   = Resources[Iter->second.DescIndex];
-                        Res.VarType = Var.Type;
-
-                        // apply new variable type to sampler too
-                        if (ShaderResources.IsUsingCombinedTextureSamplers() && Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
-                        {
-                            auto SampName = String{Var.Name} + ShaderResources.GetCombinedSamplerSuffix();
-                            auto SampIter = UniqueNames.find(HashMapStringKey{SampName.c_str()});
-                            if (SampIter != UniqueNames.end())
-                                Resources[SampIter->second.DescIndex].VarType = Var.Type;
-                        }
-                    }
                 }
             }
         }
@@ -550,33 +556,11 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
         SignatureCount = MaxSignatureBindingIndex + 1;
         m_ResourceSignatures.reset(new RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[SignatureCount]);
 
-        // TODO: move to base class
-        const auto PipelineType = CreateInfo.PSODesc.PipelineType;
-        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            auto* pSignature = ValidatedCast<PipelineResourceSignatureD3D12Impl>(CreateInfo.ppResourceSignatures[i]);
-            VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
-
-            const auto Index = pSignature->GetDesc().BindingIndex;
-
-#ifdef DILIGENT_DEBUG
-            VERIFY(m_ResourceSignatures[Index] == nullptr,
-                   "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
-                   " conflicts with another resource signature '", m_ResourceSignatures[Index]->GetDesc().Name,
-                   "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
-
-            for (Uint32 s = 0, StageCount = pSignature->GetNumActiveShaderStages(); s < StageCount; ++s)
-            {
-                const auto ShaderType = pSignature->GetActiveShaderStageType(s);
-                VERIFY(IsConsistentShaderType(ShaderType, PipelineType),
-                       "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
-                       " has shader stage '", GetShaderTypeLiteralName(ShaderType), "' that is not compatible with pipeline type '",
-                       GetPipelineTypeString(PipelineType), "'.");
-            }
-#endif
-
-            m_ResourceSignatures[Index] = pSignature;
-        }
+        Uint8 DbgSignatureCount = 0;
+        PipelineResourceSignatureD3D12Impl::CopyResourceSignatures(CreateInfo.PSODesc.PipelineType, CreateInfo.ResourceSignaturesCount,
+                                                                   CreateInfo.ppResourceSignatures, m_ResourceSignatures.get(), SignatureCount,
+                                                                   DbgSignatureCount);
+        VERIFY_EXPR(DbgSignatureCount == SignatureCount);
     }
 
     m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_ResourceSignatures.get(), SignatureCount);

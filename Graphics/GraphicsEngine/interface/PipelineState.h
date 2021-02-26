@@ -75,7 +75,9 @@ typedef struct SampleDesc SampleDesc;
 /// Describes shader variable
 struct ShaderResourceVariableDesc
 {
-    /// Shader stages this resources variable applies to. More than one shader stage can be specified.
+    /// Shader stages this resources variable applies to. If more than one shader stage is specified,
+    /// the variable will be shared between these stages. Shader stages used by different variables
+    /// with the same name must not overlap.
     SHADER_TYPE                   ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Shader variable name
@@ -109,6 +111,9 @@ struct PipelineResourceLayoutDesc
     Uint32                              NumVariables         DEFAULT_INITIALIZER(0);
 
     /// Array of shader resource variable descriptions               
+
+    /// There may be multiple variables with the same name that use different shader stages,
+    /// but the stages must not overlap.
     const ShaderResourceVariableDesc*   Variables            DEFAULT_INITIALIZER(nullptr);
                                                             
     /// Number of immutable samplers in ImmutableSamplers array   
