@@ -1367,4 +1367,135 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
     pSwapChain->Present();
 }
 
+
+TEST_F(ShaderResourceLayoutTest, MergedVarStages)
+{
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
+    float ClearColor[] = {0.125, 0.875, 0.25, 0.125};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    // Prepare buffers and textures with reference values
+    ReferenceBuffers RefBuffers{
+        3,
+        USAGE_DEFAULT,
+        BIND_UNIFORM_BUFFER //
+    };
+    ReferenceTextures RefTextures{
+        3,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
+
+    ShaderMacroHelper Macros;
+
+    // Add macros that define reference colors
+    Macros.AddShaderMacro("Buff_Static_Ref", RefBuffers.GetValue(0));
+    Macros.AddShaderMacro("Buff_Mut_Ref", RefBuffers.GetValue(1));
+    Macros.AddShaderMacro("Buff_Dyn_Ref", RefBuffers.GetValue(2));
+
+    Macros.AddShaderMacro("Tex2D_Static_Ref", RefTextures.GetColor(0));
+    Macros.AddShaderMacro("Tex2D_Mut_Ref", RefTextures.GetColor(1));
+    Macros.AddShaderMacro("Tex2D_Dyn_Ref", RefTextures.GetColor(2));
+
+
+    // clang-format off
+    std::vector<ShaderResourceDesc> Resources = 
+    {
+        ShaderResourceDesc{"UniformBuff_Stat", SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 1},
+        ShaderResourceDesc{"UniformBuff_Mut",  SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 1},
+        ShaderResourceDesc{"UniformBuff_Dyn",  SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 1},
+        ShaderResourceDesc{"g_Tex2D_Static", SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
+        ShaderResourceDesc{"g_Tex2D_Mut",    SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
+        ShaderResourceDesc{"g_Tex2D_Dyn",    SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1}
+    };
+    if (!deviceCaps.IsGLDevice())
+    {
+        Resources.emplace_back("g_Tex2D_Static_sampler", SHADER_RESOURCE_TYPE_SAMPLER, 1);
+        Resources.emplace_back("g_Tex2D_Mut_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, 1);
+        Resources.emplace_back("g_Tex2D_Dyn_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, 1);
+    }
+    // clang-format on
+
+    auto ModifyShaderCI = [](ShaderCreateInfo& ShaderCI) {
+        ShaderCI.UseCombinedTextureSamplers = true;
+    };
+    auto pVS = CreateShader("ShaderResourceLayoutTest.MergedVarStages - VS",
+                            "MergedVarStages.hlsl",
+                            "VSMain",
+                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            Resources.data(), static_cast<Uint32>(Resources.size()), ModifyShaderCI);
+    auto pPS = CreateShader("ShaderResourceLayoutTest.MergedVarStages - PS",
+                            "MergedVarStages.hlsl",
+                            "PSMain",
+                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            Resources.data(), static_cast<Uint32>(Resources.size()), ModifyShaderCI);
+    ASSERT_NE(pVS, nullptr);
+    ASSERT_NE(pPS, nullptr);
+
+    // clang-format off
+    const ShaderResourceVariableDesc Vars[] =
+    {
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "UniformBuff_Stat", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "UniformBuff_Mut",  SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "UniformBuff_Dyn",  SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+    };
+
+    const ImmutableSamplerDesc ImmutableSamplers[] = 
+    {
+        ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static", SamplerDesc{}},
+        ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",    SamplerDesc{}},
+        ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",    SamplerDesc{}}
+    };
+    // clang-format on
+
+    PipelineResourceLayoutDesc ResourceLayout;
+    ResourceLayout.Variables            = Vars;
+    ResourceLayout.NumVariables         = _countof(Vars);
+    ResourceLayout.ImmutableSamplers    = ImmutableSamplers;
+    ResourceLayout.NumImmutableSamplers = _countof(ImmutableSamplers);
+
+    RefCntAutoPtr<IPipelineState>         pPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    CreateGraphicsPSO(pVS, pPS, ResourceLayout, pPSO, pSRB);
+    ASSERT_NE(pPSO, nullptr);
+    ASSERT_NE(pSRB, nullptr);
+
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "UniformBuff_Stat", Set, RefBuffers.GetBuffer(0));
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "UniformBuff_Mut", Set, RefBuffers.GetBuffer(1));
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "UniformBuff_Dyn", Set, RefBuffers.GetBuffer(2));
+
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2D_Static", Set, RefTextures.GetView(0));
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, RefTextures.GetView(1));
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, RefTextures.GetView(2));
+
+    pPSO->InitializeStaticSRBResources(pSRB);
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(DrawAttrs);
+
+    pSwapChain->Present();
+}
+
 } // namespace
