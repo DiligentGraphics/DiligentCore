@@ -33,26 +33,22 @@
 #include "ShaderResourceBindingGL.h"
 #include "RenderDeviceGL.h"
 #include "ShaderResourceBindingBase.hpp"
-#include "GLProgramResources.hpp"
-#include "ShaderBase.hpp"
-#include "GLProgramResourceCache.hpp"
-#include "GLPipelineResourceLayout.hpp"
+#include "ShaderResourcesGL.hpp"
+#include "ShaderResourceCacheGL.hpp"
+#include "ShaderVariableGL.hpp"
+#include "PipelineResourceSignatureGLImpl.hpp"
 
 namespace Diligent
 {
 
-class PipelineStateGLImpl;
-
 /// Shader resource binding object implementation in OpenGL backend.
-class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<IShaderResourceBindingGL, PipelineStateGLImpl>
+class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<IShaderResourceBindingGL, PipelineResourceSignatureGLImpl>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL, PipelineStateGLImpl>;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL, PipelineResourceSignatureGLImpl>;
 
-    ShaderResourceBindingGLImpl(IReferenceCounters*  pRefCounters,
-                                PipelineStateGLImpl* pPSO,
-                                GLProgramResources*  ProgramResources,
-                                Uint32               NumPrograms);
+    ShaderResourceBindingGLImpl(IReferenceCounters*              pRefCounters,
+                                PipelineResourceSignatureGLImpl* pPRS);
     ~ShaderResourceBindingGLImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
@@ -71,19 +67,17 @@ public:
     /// Implementation of IShaderResourceBinding::GetVariableByIndex() in OpenGL backend.
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
-    /// Implementation of IShaderResourceBinding::InitializeStaticResources() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override final;
-
-    const GLProgramResourceCache& GetResourceCache(PipelineStateGLImpl* pdbgPSO);
+    ShaderResourceCacheGL&       GetResourceCache() { return m_ShaderResourceCache; }
+    ShaderResourceCacheGL const& GetResourceCache() const { return m_ShaderResourceCache; }
 
 private:
-    // The resource layout only references mutable and dynamic variables
-    GLPipelineResourceLayout m_ResourceLayout;
+    void Destruct();
 
     // The resource cache holds resource bindings for all variables
-    GLProgramResourceCache m_ResourceCache;
+    ShaderResourceCacheGL m_ShaderResourceCache;
 
-    bool m_bIsStaticResourcesBound = false;
+    // The resource layout only references mutable and dynamic variables
+    ShaderVariableGL* m_pShaderVarMgrs = nullptr; // [GetNumShaders()]
 };
 
 } // namespace Diligent

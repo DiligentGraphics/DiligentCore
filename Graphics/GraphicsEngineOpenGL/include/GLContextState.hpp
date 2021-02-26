@@ -31,6 +31,7 @@
 #include "GLObjectWrapper.hpp"
 #include "UniqueIdentifier.hpp"
 #include "GLContext.hpp"
+#include "AsyncWritableResource.hpp"
 
 namespace Diligent
 {
@@ -55,8 +56,8 @@ public:
     void BindImage         (Uint32 Index, class BufferViewGLImpl* pBuffView, GLenum Access, GLenum Format);
     void BindStorageBlock  (Int32 Index, const GLObjectWrappers::GLBufferObj& Buff, GLintptr Offset, GLsizeiptr Size);
 
-    void EnsureMemoryBarrier(Uint32 RequiredBarriers, class AsyncWritableResource *pRes = nullptr);
-    void SetPendingMemoryBarriers(Uint32 PendingBarriers);
+    void EnsureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, class AsyncWritableResource *pRes = nullptr);
+    void SetPendingMemoryBarriers(MEMORY_BARRIER PendingBarriers);
     
     void EnableDepthTest        (bool bEnable);
     void EnableDepthWrites      (bool bEnable);
@@ -202,7 +203,7 @@ private:
     };
     std::vector<BoundSSBOInfo> m_BoundStorageBlocks;
 
-    Uint32 m_PendingMemoryBarriers = 0;
+    MEMORY_BARRIER m_PendingMemoryBarriers = MEMORY_BARRIER_NONE;
 
     class EnableStateHelper
     {

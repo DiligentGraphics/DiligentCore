@@ -658,7 +658,11 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
                                           const struct IPipelineState* pPSO) CONST PURE;
 
 
-    /// Returns the number of pipeline resource signature used to created this pipeline.
+    /// Returns the number of pipeline resource signatures used by this pipeline.
+
+    /// \remarks  After the PSO is created, pipeline resource signatures are arranged by their binding indices.
+    ///           The value returned by this function is given by the maximum signature binding index plus one,
+    ///           and thus may not be equal to PipelineStateCreateInfo::ResourceSignaturesCount.
     VIRTUAL Uint32 METHOD(GetResourceSignatureCount)(THIS) CONST PURE;
 
     /// Returns pipeline resource signature at the give index.

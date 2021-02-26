@@ -33,7 +33,7 @@
 #include "RenderDevice.h"
 #include "GLObjectWrapper.hpp"
 #include "RenderDeviceGLImpl.hpp"
-#include "GLProgramResources.hpp"
+#include "ShaderResourcesGL.hpp"
 
 namespace Diligent
 {
@@ -92,11 +92,20 @@ public:
     /// Implementation of IShader::GetResource() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
-    static GLObjectWrappers::GLProgramObj LinkProgram(ShaderGLImpl** ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
+    struct ShaderStageInfo
+    {
+        ShaderStageInfo(const ShaderGLImpl* _pShader);
+
+        SHADER_TYPE         Type    = SHADER_TYPE_UNKNOWN;
+        const ShaderGLImpl* pShader = nullptr;
+    };
+    static GLObjectWrappers::GLProgramObj LinkProgram(const ShaderStageInfo* pShaderStagess, Uint32 NumShaders, bool IsSeparableProgram);
+
+    const std::shared_ptr<const ShaderResourcesGL>& GetShaderResources() const { return m_pShaderResources; }
 
 private:
-    GLObjectWrappers::GLShaderObj m_GLShaderObj;
-    GLProgramResources            m_Resources;
+    GLObjectWrappers::GLShaderObj            m_GLShaderObj;
+    std::shared_ptr<const ShaderResourcesGL> m_pShaderResources;
 };
 
 } // namespace Diligent

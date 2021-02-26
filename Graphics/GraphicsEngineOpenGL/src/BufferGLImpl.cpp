@@ -220,7 +220,7 @@ IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_BufferGL, TBufferBase)
 void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const void* pData)
 {
     BufferMemoryBarrier(
-        GL_BUFFER_UPDATE_BARRIER_BIT, // Reads or writes to buffer objects via any OpenGL API functions that allow
+        MEMORY_BARRIER_BUFFER_UPDATE, // Reads or writes to buffer objects via any OpenGL API functions that allow
                                       // modifying their contents will reflect data written by shaders prior to the barrier.
                                       // Additionally, writes via these commands issued after the barrier will wait on
                                       // the completion of any shader writes to the same memory initiated prior to the barrier.
@@ -240,13 +240,13 @@ void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Si
 void BufferGLImpl::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
 {
     BufferMemoryBarrier(
-        GL_BUFFER_UPDATE_BARRIER_BIT, // Reads or writes to buffer objects via any OpenGL API functions that allow
+        MEMORY_BARRIER_BUFFER_UPDATE, // Reads or writes to buffer objects via any OpenGL API functions that allow
                                       // modifying their contents will reflect data written by shaders prior to the barrier.
                                       // Additionally, writes via these commands issued after the barrier will wait on
                                       // the completion of any shader writes to the same memory initiated prior to the barrier.
         CtxState);
     SrcBufferGL.BufferMemoryBarrier(
-        GL_BUFFER_UPDATE_BARRIER_BIT,
+        MEMORY_BARRIER_BUFFER_UPDATE,
         CtxState);
 
     // Whilst glCopyBufferSubData() can be used to copy data between buffers bound to any two targets,
@@ -271,7 +271,7 @@ void BufferGLImpl::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFla
 void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint32 Offset, Uint32 Length, PVoid& pMappedData)
 {
     BufferMemoryBarrier(
-        GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT, // Access by the client to persistent mapped regions of buffer
+        MEMORY_BARRIER_CLIENT_MAPPED_BUFFER, // Access by the client to persistent mapped regions of buffer
                                              // objects will reflect data written by shaders prior to the barrier.
                                              // Note that this may cause additional synchronization operations.
         CtxState);
@@ -346,23 +346,12 @@ void BufferGLImpl::Unmap(GLContextState& CtxState)
     (void)Result;
 }
 
-void BufferGLImpl::BufferMemoryBarrier(Uint32 RequiredBarriers, GLContextState& GLContextState)
+void BufferGLImpl::BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState)
 {
 #if GL_ARB_shader_image_load_store
 #    ifdef DILIGENT_DEBUG
     {
-        // clang-format off
-        constexpr Uint32 BufferBarriers =
-            GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT  |
-            GL_ELEMENT_ARRAY_BARRIER_BIT        |
-            GL_UNIFORM_BARRIER_BIT              |
-            GL_COMMAND_BARRIER_BIT              |
-            GL_BUFFER_UPDATE_BARRIER_BIT        |
-            GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT |
-            GL_SHADER_STORAGE_BARRIER_BIT       |
-            GL_TEXTURE_FETCH_BARRIER_BIT        |
-            GL_SHADER_IMAGE_ACCESS_BARRIER_BIT;
-        // clang-format on
+        constexpr Uint32 BufferBarriers = MEMORY_BARRIER_ALL_BUFFER_BARRIERS;
         VERIFY((RequiredBarriers & BufferBarriers) != 0, "At least one buffer memory barrier flag should be set");
         VERIFY((RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag");
     }

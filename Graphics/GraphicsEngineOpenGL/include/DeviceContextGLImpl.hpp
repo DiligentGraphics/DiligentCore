@@ -42,6 +42,7 @@
 #include "PipelineStateGLImpl.hpp"
 #include "BottomLevelASBase.hpp"
 #include "TopLevelASBase.hpp"
+#include "ShaderResourceBindingGLImpl.hpp"
 
 namespace Diligent
 {
@@ -272,8 +273,6 @@ public:
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 
-    void BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding);
-
     GLContextState& GetContextState() { return m_ContextState; }
 
     void CommitRenderTargets();
@@ -296,10 +295,44 @@ private:
     __forceinline void PrepareForIndirectDraw(IBuffer* pAttribsBuffer);
     __forceinline void PostDraw();
 
+    using TBindings = PipelineResourceSignatureGLImpl::TBindings;
+    void BindProgramResources(MEMORY_BARRIER& NewMemoryBarriers, const ShaderResourceBindingGLImpl* pShaderResBindingGL, TBindings& Bindings);
+    void BindProgramResources();
+
+#ifdef DILIGENT_DEVELOPMENT
+    void DvpValidateCommittedShaderResources();
+#endif
+
     void BeginSubpass();
     void EndSubpass();
 
-    Uint32 m_CommitedResourcesTentativeBarriers = 0;
+    struct SRBState
+    {
+        // Do not use strong references!
+        std::array<ShaderResourceBindingGLImpl*, MAX_RESOURCE_SIGNATURES> SRBs = {};
+
+        using Bitfield = Uint8;
+        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
+
+        Bitfield ActiveSRBMask = 0; // Indicates which SRBs are active in current PSO
+        Bitfield StaleSRBMask  = 0; // Indicates stale SRBs that have descriptor sets that need to be bound
+
+#ifdef DILIGENT_DEVELOPMENT
+        bool CommittedResourcesValidated = false;
+
+        // Binding offsets that was used at last BindProgramResources() call.
+        std::array<TBindings, MAX_RESOURCE_SIGNATURES> BoundResOffsets = {};
+#endif
+
+        SRBState()
+        {}
+
+        void SetStaleSRBBit(Uint32 Index) { StaleSRBMask |= static_cast<Bitfield>(1u << Index); }
+        void ClearStaleSRBBit(Uint32 Index) { StaleSRBMask &= static_cast<Bitfield>(~(1u << Index)); }
+
+    } m_BindInfo;
+
+    MEMORY_BARRIER m_CommitedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
 
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;
     std::vector<class BufferGLImpl*>  m_BoundWritableBuffers;

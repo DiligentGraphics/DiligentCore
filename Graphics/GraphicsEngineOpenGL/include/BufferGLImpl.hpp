@@ -74,7 +74,7 @@ public:
     void MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint32 Offset, Uint32 Length, PVoid& pMappedData);
     void Unmap(GLContextState& CtxState);
 
-    void BufferMemoryBarrier(Uint32 RequiredBarriers, class GLContextState& GLContextState);
+    void BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, class GLContextState& GLContextState);
 
     const GLObjectWrappers::GLBufferObj& GetGLHandle() { return m_GlBuffer; }
 

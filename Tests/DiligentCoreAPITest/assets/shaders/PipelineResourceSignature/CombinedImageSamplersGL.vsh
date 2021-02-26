@@ -69,6 +69,6 @@ void main()
     out_Color   = Col[gl_VertexIndex % 3] * VerifyResources();
 #else
     gl_Position = Pos[gl_VertexID];
-    out_Color   = Col[gl_VertexIndex % 3] * VerifyResources();
+    out_Color   = Col[gl_VertexID % 3] * VerifyResources();
 #endif
 }

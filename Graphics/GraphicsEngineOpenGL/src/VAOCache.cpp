@@ -129,10 +129,10 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
                 VERIFY(pCurrBuf != nullptr, "No buffer bound to slot ", BuffSlot);
 
                 ValidatedCast<BufferGLImpl>(pCurrBuf)->BufferMemoryBarrier(
-                    GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT, // Vertex data sourced from buffer objects after the barrier
-                                                        // will reflect data written by shaders prior to the barrier.
-                                                        // The set of buffer objects affected by this bit is derived
-                                                        // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
+                    MEMORY_BARRIER_VERTEX_BUFFER, // Vertex data sourced from buffer objects after the barrier
+                                                  // will reflect data written by shaders prior to the barrier.
+                                                  // The set of buffer objects affected by this bit is derived
+                                                  // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
                     GLState);
 
                 CurrStreamKey.BufferUId = pCurrBuf ? pCurrBuf->GetUniqueID() : 0;
@@ -151,10 +151,10 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
     if (pIndexBuffer)
     {
         pIndexBufferGL->BufferMemoryBarrier(
-            GL_ELEMENT_ARRAY_BARRIER_BIT, // Vertex array indices sourced from buffer objects after the barrier
-                                          // will reflect data written by shaders prior to the barrier.
-                                          // The buffer objects affected by this bit are derived from the
-                                          // ELEMENT_ARRAY_BUFFER binding.
+            MEMORY_BARRIER_INDEX_BUFFER, // Vertex array indices sourced from buffer objects after the barrier
+                                         // will reflect data written by shaders prior to the barrier.
+                                         // The buffer objects affected by this bit are derived from the
+                                         // ELEMENT_ARRAY_BUFFER binding.
             GLState);
     }
 

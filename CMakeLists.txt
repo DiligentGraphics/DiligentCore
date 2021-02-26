@@ -14,11 +14,6 @@ set(CMAKE_XCODE_SCHEME_MALLOC_SCRIBBLE YES)
 # Place guard pages on each side of large (4096 bytes or more) buffers
 set(CMAKE_XCODE_SCHEME_MALLOC_GUARD_EDGES YES)
 
-
-        ### !!!TEMPORARY!!!
-        set(DILIGENT_NO_OPENGL ON CACHE BOOL "Temporary disable OpenGL backend")
-
-
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
     message(STATUS "CMAKE_BUILD_TYPE is not specified, default to Debug. Note that this is only relevant for single-configuration generators (such as Makefile Generators and Ninja).")

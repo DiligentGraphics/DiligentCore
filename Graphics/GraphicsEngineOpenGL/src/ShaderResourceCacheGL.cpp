@@ -26,33 +26,33 @@
  */
 
 #include "pch.h"
-#include "GLProgramResourceCache.hpp"
+#include "ShaderResourceCacheGL.hpp"
 
 namespace Diligent
 {
 
-size_t GLProgramResourceCache::GetRequriedMemorySize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount)
+size_t ShaderResourceCacheGL::GetRequriedMemorySize(Uint32 UBCount, Uint32 TextureCount, Uint32 ImageCount, Uint32 SSBOCount)
 {
     // clang-format off
     auto MemSize = 
                 sizeof(CachedUB)           * UBCount + 
-                sizeof(CachedResourceView) * SamplerCount + 
+                sizeof(CachedResourceView) * TextureCount + 
                 sizeof(CachedResourceView) * ImageCount + 
                 sizeof(CachedSSBO)         * SSBOCount;
     // clang-format on
     return MemSize;
 }
 
-void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount, IMemoryAllocator& MemAllocator)
+void ShaderResourceCacheGL::Initialize(Uint32 UBCount, Uint32 TextureCount, Uint32 ImageCount, Uint32 SSBOCount, IMemoryAllocator& MemAllocator)
 {
     // clang-format off
-    m_SmplrsOffset    = static_cast<Uint16>(m_UBsOffset    + sizeof(CachedUB)           * UBCount);
-    m_ImgsOffset      = static_cast<Uint16>(m_SmplrsOffset + sizeof(CachedResourceView) * SamplerCount);
-    m_SSBOsOffset     = static_cast<Uint16>(m_ImgsOffset   + sizeof(CachedResourceView) * ImageCount);
-    m_MemoryEndOffset = static_cast<Uint16>(m_SSBOsOffset  + sizeof(CachedSSBO)         * SSBOCount);
+    m_TexturesOffset  = static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * UBCount);
+    m_ImagesOffset    = static_cast<Uint16>(m_TexturesOffset + sizeof(CachedResourceView) * TextureCount);
+    m_SSBOsOffset     = static_cast<Uint16>(m_ImagesOffset   + sizeof(CachedResourceView) * ImageCount);
+    m_MemoryEndOffset = static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * SSBOCount);
 
     VERIFY_EXPR(GetUBCount()      == static_cast<Uint32>(UBCount));
-    VERIFY_EXPR(GetSamplerCount() == static_cast<Uint32>(SamplerCount));
+    VERIFY_EXPR(GetTextureCount() == static_cast<Uint32>(TextureCount));
     VERIFY_EXPR(GetImageCount()   == static_cast<Uint32>(ImageCount));
     VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(SSBOCount));
     // clang-format on
@@ -60,7 +60,7 @@ void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uin
     VERIFY_EXPR(m_pResourceData == nullptr);
     size_t BufferSize = m_MemoryEndOffset;
 
-    VERIFY_EXPR(BufferSize == GetRequriedMemorySize(UBCount, SamplerCount, ImageCount, SSBOCount));
+    VERIFY_EXPR(BufferSize == GetRequriedMemorySize(UBCount, TextureCount, ImageCount, SSBOCount));
 
 #ifdef DILIGENT_DEBUG
     m_pdbgMemoryAllocator = &MemAllocator;
@@ -75,8 +75,8 @@ void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uin
     for (Uint32 cb = 0; cb < UBCount; ++cb)
         new (&GetUB(cb)) CachedUB;
 
-    for (Uint32 s = 0; s < SamplerCount; ++s)
-        new (&GetSampler(s)) CachedResourceView;
+    for (Uint32 s = 0; s < TextureCount; ++s)
+        new (&GetTexture(s)) CachedResourceView;
 
     for (Uint32 i = 0; i < ImageCount; ++i)
         new (&GetImage(i)) CachedResourceView;
@@ -85,12 +85,12 @@ void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uin
         new (&GetSSBO(s)) CachedSSBO;
 }
 
-GLProgramResourceCache::~GLProgramResourceCache()
+ShaderResourceCacheGL::~ShaderResourceCacheGL()
 {
-    VERIFY(!IsInitialized(), "Shader resource cache memory must be released with GLProgramResourceCache::Destroy()");
+    VERIFY(!IsInitialized(), "Shader resource cache memory must be released with ShaderResourceCacheGL::Destroy()");
 }
 
-void GLProgramResourceCache::Destroy(IMemoryAllocator& MemAllocator)
+void ShaderResourceCacheGL::Destroy(IMemoryAllocator& MemAllocator)
 {
     if (!IsInitialized())
         return;
@@ -100,8 +100,8 @@ void GLProgramResourceCache::Destroy(IMemoryAllocator& MemAllocator)
     for (Uint32 cb = 0; cb < GetUBCount(); ++cb)
         GetUB(cb).~CachedUB();
 
-    for (Uint32 s = 0; s < GetSamplerCount(); ++s)
-        GetSampler(s).~CachedResourceView();
+    for (Uint32 s = 0; s < GetTextureCount(); ++s)
+        GetTexture(s).~CachedResourceView();
 
     for (Uint32 i = 0; i < GetImageCount(); ++i)
         GetImage(i).~CachedResourceView();
@@ -113,8 +113,8 @@ void GLProgramResourceCache::Destroy(IMemoryAllocator& MemAllocator)
         MemAllocator.Free(m_pResourceData);
 
     m_pResourceData   = nullptr;
-    m_SmplrsOffset    = InvalidResourceOffset;
-    m_ImgsOffset      = InvalidResourceOffset;
+    m_TexturesOffset  = InvalidResourceOffset;
+    m_ImagesOffset    = InvalidResourceOffset;
     m_SSBOsOffset     = InvalidResourceOffset;
     m_MemoryEndOffset = InvalidResourceOffset;
 }

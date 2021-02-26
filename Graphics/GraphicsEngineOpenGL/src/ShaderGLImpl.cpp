@@ -41,6 +41,11 @@ using namespace Diligent;
 namespace Diligent
 {
 
+ShaderGLImpl::ShaderStageInfo::ShaderStageInfo(const ShaderGLImpl* _pShader) :
+    Type{_pShader->GetDesc().ShaderType},
+    pShader{_pShader}
+{}
+
 ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceGLImpl*     pDeviceGL,
                            const ShaderCreateInfo& ShaderCI,
@@ -158,16 +163,15 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 
     if (deviceCaps.Features.SeparablePrograms)
     {
-        ShaderGLImpl*                  ThisShader[]         = {this};
-        GLObjectWrappers::GLProgramObj Program              = LinkProgram(ThisShader, 1, true);
-        Uint32                         UniformBufferBinding = 0;
-        Uint32                         SamplerBinding       = 0;
-        Uint32                         ImageBinding         = 0;
-        Uint32                         StorageBufferBinding = 0;
-        auto                           pImmediateCtx        = m_pDevice->GetImmediateContext();
+        ShaderStageInfo                ThisShader[]  = {ShaderStageInfo{this}};
+        GLObjectWrappers::GLProgramObj Program       = LinkProgram(ThisShader, 1, true);
+        auto                           pImmediateCtx = m_pDevice->GetImmediateContext();
         VERIFY_EXPR(pImmediateCtx);
         auto& GLState = pImmediateCtx.RawPtr<DeviceContextGLImpl>()->GetContextState();
-        m_Resources.LoadUniforms(m_Desc.ShaderType, Program, GLState, UniformBufferBinding, SamplerBinding, ImageBinding, StorageBufferBinding);
+
+        std::unique_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
+        pResources->LoadUniforms(m_Desc.ShaderType, Program, GLState);
+        m_pShaderResources.reset(pResources.release());
     }
 }
 
@@ -178,7 +182,7 @@ ShaderGLImpl::~ShaderGLImpl()
 IMPLEMENT_QUERY_INTERFACE(ShaderGLImpl, IID_ShaderGL, TShaderBase)
 
 
-GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl** ppShaders, Uint32 NumShaders, bool IsSeparableProgram)
+GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(const ShaderStageInfo* pShaderStagess, Uint32 NumShaders, bool IsSeparableProgram)
 {
     VERIFY(!IsSeparableProgram || NumShaders == 1, "Number of shaders must be 1 when separable program is created");
 
@@ -190,7 +194,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl** ppShader
 
     for (Uint32 i = 0; i < NumShaders; ++i)
     {
-        auto* pCurrShader = ppShaders[i];
+        auto* pCurrShader = pShaderStagess[i].pShader;
         glAttachShader(GLProg, pCurrShader->m_GLShaderObj);
         CHECK_GL_ERROR("glAttachShader() failed");
     }
@@ -229,7 +233,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl** ppShader
 
     for (Uint32 i = 0; i < NumShaders; ++i)
     {
-        auto* pCurrShader = ValidatedCast<ShaderGLImpl>(ppShaders[i]);
+        auto* pCurrShader = ValidatedCast<const ShaderGLImpl>(pShaderStagess[i].pShader);
         glDetachShader(GLProg, pCurrShader->m_GLShaderObj);
         CHECK_GL_ERROR("glDetachShader() failed");
     }
@@ -241,7 +245,7 @@ Uint32 ShaderGLImpl::GetResourceCount() const
 {
     if (m_pDevice->GetDeviceCaps().Features.SeparablePrograms)
     {
-        return m_Resources.GetVariableCount();
+        return m_pShaderResources->GetVariableCount();
     }
     else
     {
@@ -255,7 +259,7 @@ void ShaderGLImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
     if (m_pDevice->GetDeviceCaps().Features.SeparablePrograms)
     {
         DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
-        ResourceDesc = m_Resources.GetResourceDesc(Index);
+        ResourceDesc = m_pShaderResources->GetResourceDesc(Index);
     }
     else
     {

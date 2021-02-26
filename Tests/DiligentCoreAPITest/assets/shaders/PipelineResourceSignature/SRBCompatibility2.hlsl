@@ -27,28 +27,32 @@ float4 VerifyResources()
     AllCorrect *= CheckValue(g_Texture2.SampleLevel(g_Texture2_sampler, UV.xy, 0.0), Tex2D_2_Ref);
     AllCorrect *= CheckValue(g_Data, Buff_Ref);
 
-	return AllCorrect;
+    return AllCorrect;
 }
 
-void VSMain(in  uint    VertId    : SV_VertexID,
-            out float4 f4Color    : COLOR,
-            out float4 f4Position : SV_Position)
+struct VSOutput
+{
+    float4 Position : SV_Position;
+    float4 Color    : COLOR;
+};
+
+void VSMain(in  uint     VertId : SV_VertexID,
+            out VSOutput PSIn)
 {
     float4 Pos[3];
     Pos[0] = float4(+0.0, -0.5, 0.0, 1.0);
     Pos[1] = float4(+0.5, +0.5, 0.0, 1.0);
     Pos[2] = float4(+1.0, -0.5, 0.0, 1.0);
+    
+    PSIn.Color = float4(VertId % 3 == 0 ? 1.0 : 0.0, 
+                        VertId % 3 == 1 ? 1.0 : 0.0,
+                        VertId % 3 == 2 ? 1.0 : 0.0,
+                        1.0) * VerifyResources();
 
-    f4Color = float4(VertId % 3 == 0 ? 1.0 : 0.0, 
-                     VertId % 3 == 1 ? 1.0 : 0.0,
-                     VertId % 3 == 2 ? 1.0 : 0.0,
-                     1.0) * VerifyResources();
-
-    f4Position = Pos[VertId];
+    PSIn.Position = Pos[VertId];
 }
 
-float4 PSMain(in float4 in_f4Color : COLOR,
-              in float4 f4Position : SV_Position) : SV_Target
+float4 PSMain(in VSOutput PSIn) : SV_Target
 {
-    return in_f4Color * VerifyResources();
+    return PSIn.Color * VerifyResources();
 }

@@ -13,12 +13,13 @@ set(INCLUDE
     include/GLContext.hpp
     include/GLContextState.hpp
     include/GLObjectWrapper.hpp
-    include/GLProgramResourceCache.hpp
-    include/GLPipelineResourceLayout.hpp
-    include/GLProgramResources.hpp
+    include/ShaderResourceCacheGL.hpp
+    include/ShaderVariableGL.hpp
+    include/ShaderResourcesGL.hpp
     include/GLTypeConversions.hpp
     include/pch.h
     include/PipelineStateGLImpl.hpp
+    include/PipelineResourceSignatureGLImpl.hpp
     include/QueryGLImpl.hpp
     include/RenderDeviceGLImpl.hpp
     include/RenderPassGLImpl.hpp
@@ -67,11 +68,12 @@ set(SOURCE
     src/FramebufferGLImpl.cpp
     src/GLContextState.cpp
     src/GLObjectWrapper.cpp
-    src/GLProgramResourceCache.cpp
-    src/GLPipelineResourceLayout.cpp
-    src/GLProgramResources.cpp
+    src/ShaderResourceCacheGL.cpp
+    src/ShaderVariableGL.cpp
+    src/ShaderResourcesGL.cpp
     src/GLTypeConversions.cpp
     src/PipelineStateGLImpl.cpp
+    src/PipelineResourceSignatureGLImpl.cpp
     src/QueryGLImpl.cpp
     src/RenderDeviceGLImpl.cpp
     src/RenderPassGLImpl.cpp

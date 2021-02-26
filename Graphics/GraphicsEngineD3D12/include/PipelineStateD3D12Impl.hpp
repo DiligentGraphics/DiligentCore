@@ -121,6 +121,7 @@ private:
 
     void Destruct();
 
+#ifdef DILIGENT_DEVELOPMENT
     struct ResourceAttribution
     {
         static constexpr Uint32 InvalidSignatureIndex = ~0u;
@@ -154,12 +155,11 @@ private:
 
         bool IsImmutableSampler() const
         {
-            return *this && ImmutableSamplerIndex != InvalidSamplerIndex;
+            return operator bool() && ImmutableSamplerIndex != InvalidSamplerIndex;
         }
     };
     ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const;
 
-#ifdef DILIGENT_DEVELOPMENT
     void DvpValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig);
 #endif
 

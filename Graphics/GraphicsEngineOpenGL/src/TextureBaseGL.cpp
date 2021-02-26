@@ -503,7 +503,7 @@ void TextureBaseGL::UpdateData(GLContextState& CtxState, Uint32 MipLevel, Uint32
     //      data written by shaders prior to the barrier. Additionally, texture writes from these
     //      commands issued after the barrier will not execute until all shader writes initiated prior
     //      to the barrier complete
-    TextureMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT, CtxState);
+    TextureMemoryBarrier(MEMORY_BARRIER_TEXTURE_UPDATE, CtxState);
 }
 
 //void TextureBaseGL::UpdateData(Uint32 Offset, Uint32 Size, const void* pData)
@@ -647,19 +647,12 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
 }
 
 
-void TextureBaseGL::TextureMemoryBarrier(Uint32 RequiredBarriers, GLContextState& GLContextState)
+void TextureBaseGL::TextureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState)
 {
 #if GL_ARB_shader_image_load_store
 #    ifdef DILIGENT_DEBUG
     {
-        // clang-format off
-        constexpr Uint32 TextureBarriers =
-            GL_TEXTURE_FETCH_BARRIER_BIT       |
-            GL_SHADER_IMAGE_ACCESS_BARRIER_BIT |
-            GL_PIXEL_BUFFER_BARRIER_BIT        |
-            GL_TEXTURE_UPDATE_BARRIER_BIT      |
-            GL_FRAMEBUFFER_BARRIER_BIT;
-        // clang-format on
+        constexpr Uint32 TextureBarriers = MEMORY_BARRIER_ALL_TEXTURE_BARRIERS;
         VERIFY((RequiredBarriers & TextureBarriers) != 0, "At least one texture memory barrier flag should be set");
         VERIFY((RequiredBarriers & ~TextureBarriers) == 0, "Inappropriate texture memory barrier flag");
     }

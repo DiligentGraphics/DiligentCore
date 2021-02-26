@@ -84,7 +84,7 @@ public:
 
     GLenum GetGLTexFormat() const { return m_GLTexFormat; }
 
-    void TextureMemoryBarrier(Uint32 RequiredBarriers, class GLContextState& GLContextState);
+    void TextureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, class GLContextState& GLContextState);
 
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint) = 0;
 

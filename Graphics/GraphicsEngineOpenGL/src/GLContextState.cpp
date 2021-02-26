@@ -80,7 +80,7 @@ void GLContextState::Invalidate()
     // executed next frame when needed
     if (m_PendingMemoryBarriers != 0)
         EnsureMemoryBarrier(m_PendingMemoryBarriers);
-    m_PendingMemoryBarriers = 0;
+    m_PendingMemoryBarriers = MEMORY_BARRIER_NONE;
 #endif
 
     // Unity messes up at least VAO left in the context,
@@ -378,7 +378,7 @@ void GLContextState::BindBuffer(GLenum BindTarget, const GLObjectWrappers::GLBuf
     DEV_CHECK_GL_ERROR("Failed to bind buffer ", static_cast<GLint>(Buff), " to target ", BindTarget);
 }
 
-void GLContextState::EnsureMemoryBarrier(Uint32 RequiredBarriers, AsyncWritableResource* pRes /* = nullptr */)
+void GLContextState::EnsureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, AsyncWritableResource* pRes /* = nullptr */)
 {
 #if GL_ARB_shader_image_load_store
     // Every resource tracks its own pending memory barriers.
@@ -401,7 +401,7 @@ void GLContextState::EnsureMemoryBarrier(Uint32 RequiredBarriers, AsyncWritableR
     // This situation does not seem to be a problem though since a barier cannot be executed
     // twice in any situation
 
-    Uint32 ResourcePendingBarriers = 0;
+    MEMORY_BARRIER ResourcePendingBarriers = MEMORY_BARRIER_NONE;
     if (pRes)
     {
         // If resource is specified, only set up memory barriers
@@ -427,7 +427,7 @@ void GLContextState::EnsureMemoryBarrier(Uint32 RequiredBarriers, AsyncWritableR
 #endif
 }
 
-void GLContextState::SetPendingMemoryBarriers(Uint32 PendingBarriers)
+void GLContextState::SetPendingMemoryBarriers(MEMORY_BARRIER PendingBarriers)
 {
     m_PendingMemoryBarriers |= PendingBarriers;
 }

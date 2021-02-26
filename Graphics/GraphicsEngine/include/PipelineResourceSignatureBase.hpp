@@ -155,11 +155,6 @@ public:
         return PlatformMisc::CountOneBits(Uint32{m_ShaderStages});
     }
 
-    SHADER_TYPE GetActiveShaderStages() const
-    {
-        return m_ShaderStages;
-    }
-
     // Returns the number of shader stages that have static resources.
     Uint32 GetNumStaticResStages() const
     {

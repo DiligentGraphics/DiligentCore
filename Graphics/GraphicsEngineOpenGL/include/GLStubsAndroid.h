@@ -516,6 +516,10 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 #   define GL_ARB_shader_image_load_store 1
 #endif
 
+#ifndef GL_MAX_IMAGE_UNITS
+#   define GL_MAX_IMAGE_UNITS 0x8F38
+#endif
+
 #ifndef GL_ARB_shader_storage_buffer_object
 #   define GL_ARB_shader_storage_buffer_object 1
 #endif

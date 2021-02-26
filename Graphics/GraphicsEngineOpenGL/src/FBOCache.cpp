@@ -246,7 +246,7 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
 
         auto* pColorTexGL = pRTView->GetTexture<TextureBaseGL>();
         pColorTexGL->TextureMemoryBarrier(
-            GL_FRAMEBUFFER_BARRIER_BIT, // Reads and writes via framebuffer object attachments after the
+            MEMORY_BARRIER_FRAMEBUFFER, // Reads and writes via framebuffer object attachments after the
                                         // barrier will reflect data written by shaders prior to the barrier.
                                         // Additionally, framebuffer writes issued after the barrier will wait
                                         // on the completion of all shader writes issued prior to the barrier.
@@ -259,7 +259,7 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
     if (pDSV)
     {
         auto* pDepthTexGL = pDSV->GetTexture<TextureBaseGL>();
-        pDepthTexGL->TextureMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT, ContextState);
+        pDepthTexGL->TextureMemoryBarrier(MEMORY_BARRIER_FRAMEBUFFER, ContextState);
         Key.DSId    = pDepthTexGL->GetUniqueID();
         Key.DSVDesc = pDSV->GetDesc();
     }

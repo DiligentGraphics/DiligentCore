@@ -64,7 +64,7 @@ vec4 VerifyResources()
     AllCorrect *= CheckValue(g_StorageBuffArr_Dyn[1].data, BuffArr_Dyn_Ref1);
 #endif    
 
-	return AllCorrect;
+    return AllCorrect;
 }
 
 #ifdef VERTEX_SHADER
@@ -77,7 +77,7 @@ vec4 VerifyResources()
 #ifndef GL_ES
 out gl_PerVertex
 {
-	vec4 gl_Position;
+    vec4 gl_Position;
 };
 #endif
 
@@ -104,7 +104,7 @@ void main()
     out_Color = Col[gl_VertexIndex % 3] * VerifyResources();
 #else
     gl_Position = Pos[gl_VertexID];
-    out_Color = Col[gl_VertexIndex % 3] * VerifyResources();
+    out_Color = Col[gl_VertexID % 3] * VerifyResources();
 #endif
 }
 #endif
