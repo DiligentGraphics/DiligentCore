@@ -588,28 +588,29 @@ void GetShaderResourceTypeAndFlags(SPIRVShaderResourceAttribs::ResourceType Type
     }
 }
 
-void VerifyResourceMerge(const SPIRVShaderResourceAttribs& ExistingRes,
+void VerifyResourceMerge(const PipelineStateDesc&          PSODesc,
+                         const SPIRVShaderResourceAttribs& ExistingRes,
                          const SPIRVShaderResourceAttribs& NewResAttribs)
 {
-    DEV_CHECK_ERR(ExistingRes.Type == NewResAttribs.Type,
-                  "Shader variable '", NewResAttribs.Name,
-                  "' exists in multiple shaders from the same shader stage, but its type is not consistent between "
-                  "shaders. All variables with the same name from the same shader stage must have the same type.");
+#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                          \
+    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                                  \
+                        "' is shared between multiple shaders in pipeline '", (PSODesc.Name ? PSODesc.Name : ""), \
+                        "', but its " PropertyName " varies. A variable shared between multiple shaders "         \
+                        "must be defined identically in all shaders. Either use separate variables for "          \
+                        "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
 
-    DEV_CHECK_ERR(ExistingRes.ResourceDim == NewResAttribs.ResourceDim,
-                  "Shader variable '", NewResAttribs.Name,
-                  "' exists in multiple shaders from the same shader stage, but its resource dimension is not consistent between "
-                  "shaders. All variables with the same name from the same shader stage must have the same resource dimension.");
+    if (ExistingRes.Type != NewResAttribs.Type)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("type");
 
-    DEV_CHECK_ERR(ExistingRes.ArraySize == NewResAttribs.ArraySize,
-                  "Shader variable '", NewResAttribs.Name,
-                  "' exists in multiple shaders from the same shader stage, but its array size is not consistent between "
-                  "shaders. All variables with the same name from the same shader stage must have the same array size.");
+    if (ExistingRes.ResourceDim != NewResAttribs.ResourceDim)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("resource dimension");
 
-    DEV_CHECK_ERR(ExistingRes.IsMS == NewResAttribs.IsMS,
-                  "Shader variable '", NewResAttribs.Name,
-                  "' exists in multiple shaders from the same shader stage, but its multisample flag is not consistent between "
-                  "shaders. All variables with the same name from the same shader stage must either be multisample or non-multisample.");
+    if (ExistingRes.ArraySize != NewResAttribs.ArraySize)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("array size");
+
+    if (ExistingRes.IsMS != NewResAttribs.IsMS)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("mutlisample state");
+#undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
 }
 
 } // namespace
@@ -816,7 +817,7 @@ void PipelineStateVkImpl::CreateDefaultSignature(const PipelineStateCreateInfo& 
                     }
                     else
                     {
-                        VerifyResourceMerge(IterAndAssigned.first->Attribs, Attribs);
+                        VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->Attribs, Attribs);
                     }
                 });
 

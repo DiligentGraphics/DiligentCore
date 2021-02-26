@@ -61,8 +61,11 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
     VERIFY(m_SignatureCount == 0 && m_DescrSetCount == 0 && !m_VkPipelineLayout,
            "This pipeline layout is already initialized");
 
-    PipelineResourceSignatureVkImpl::CopyResourceSignatures(PipelineType, SignatureCount, ppSignatures,
-                                                            m_Signatures.data(), m_Signatures.size(), m_SignatureCount);
+    auto MaxSignatureBindIndex =
+        PipelineResourceSignatureVkImpl::CopyResourceSignatures(PipelineType, SignatureCount, ppSignatures,
+                                                                m_Signatures.data(), m_Signatures.size());
+    m_SignatureCount = static_cast<Uint8>(MaxSignatureBindIndex + 1);
+    VERIFY_EXPR(m_SignatureCount == MaxSignatureBindIndex + 1);
 
     std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureVkImpl::MAX_DESCRIPTOR_SETS> DescSetLayouts;
 

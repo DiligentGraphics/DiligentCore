@@ -349,23 +349,29 @@ void GetShaderResourceTypeAndFlags(const D3DShaderResourceAttribs& Attribs,
     }
 }
 
-void VerifyResourceMerge(const D3DShaderResourceAttribs& ExistingRes,
+void VerifyResourceMerge(const PipelineStateDesc&        PSODesc,
+                         const D3DShaderResourceAttribs& ExistingRes,
                          const D3DShaderResourceAttribs& NewResAttribs)
 {
-    DEV_CHECK_ERR(ExistingRes.GetInputType() == NewResAttribs.GetInputType(),
-                  "Shader variable '", NewResAttribs.Name,
-                  "' exists in multiple shaders from the same shader stage, but its input type is not consistent between "
-                  "shaders. All variables with the same name from the same shader stage must have the same input type.");
+#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                          \
+    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                                  \
+                        "' is shared between multiple shaders in pipeline '", (PSODesc.Name ? PSODesc.Name : ""), \
+                        "', but its " PropertyName " varies. A variable shared between multiple shaders "         \
+                        "must be defined identically in all shaders. Either use separate variables for "          \
+                        "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
 
-    DEV_CHECK_ERR(ExistingRes.GetSRVDimension() == NewResAttribs.GetSRVDimension(),
-                  "Shader variable '", NewResAttribs.Name,
-                  "' exists in multiple shaders from the same shader stage, but its SRV dimension is not consistent between "
-                  "shaders. All variables with the same name from the same shader stage must have the same SRV dimension.");
+    if (ExistingRes.GetInputType() != NewResAttribs.GetInputType())
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("input type");
 
-    DEV_CHECK_ERR(ExistingRes.BindCount == NewResAttribs.BindCount,
-                  "Shader variable '", NewResAttribs.Name,
-                  "' exists in multiple shaders from the same shader stage, but its array size is not consistent between "
-                  "shaders. All variables with the same name from the same shader stage must have the same array size.");
+    if (ExistingRes.GetSRVDimension() != NewResAttribs.GetSRVDimension())
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("resource dimension");
+
+    if (ExistingRes.BindCount != NewResAttribs.BindCount)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("array size");
+
+    if (ExistingRes.IsMultisample() != NewResAttribs.IsMultisample())
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("mutlisample state");
+#undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
 }
 
 } // namespace
@@ -456,6 +462,7 @@ RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultR
                         ShaderResources.GetCombinedSamplerSuffix() :
                         nullptr;
 
+                    // Use default variable type and current shader stages
                     auto ShaderStages = Stage.Type;
                     auto VarType      = LayoutDesc.DefaultVariableType;
 
@@ -463,7 +470,7 @@ RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultR
                     if (VarIndex != InvalidPipelineResourceLayoutVariableIndex)
                     {
                         const auto& Var = LayoutDesc.Variables[VarIndex];
-
+                        // Use shader stages and variable type from the variable desc
                         ShaderStages = Var.ShaderStages;
                         VarType      = Var.Type;
                     }
@@ -485,7 +492,7 @@ RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultR
                     }
                     else
                     {
-                        VerifyResourceMerge(IterAndAssigned.first->Attribs, Attribs);
+                        VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->Attribs, Attribs);
                     }
                 } //
             );
@@ -522,7 +529,7 @@ RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultR
         pDevice->CreatePipelineResourceSignature(ResSignDesc, &pImplicitSignature, true);
 
         if (!pImplicitSignature)
-            LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
+            LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "'.");
     }
 
     return pImplicitSignature;
@@ -549,28 +556,27 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
         Uint32 MaxSignatureBindingIndex = 0;
         for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
         {
-            auto* pSignature = ValidatedCast<PipelineResourceSignatureD3D12Impl>(CreateInfo.ppResourceSignatures[i]);
+            const auto* pSignature = ValidatedCast<const PipelineResourceSignatureD3D12Impl>(CreateInfo.ppResourceSignatures[i]);
             VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
             MaxSignatureBindingIndex = std::max(MaxSignatureBindingIndex, Uint32{pSignature->GetDesc().BindingIndex});
         }
         SignatureCount = MaxSignatureBindingIndex + 1;
         m_ResourceSignatures.reset(new RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[SignatureCount]);
 
-        Uint8 DbgSignatureCount = 0;
-        PipelineResourceSignatureD3D12Impl::CopyResourceSignatures(CreateInfo.PSODesc.PipelineType, CreateInfo.ResourceSignaturesCount,
-                                                                   CreateInfo.ppResourceSignatures, m_ResourceSignatures.get(), SignatureCount,
-                                                                   DbgSignatureCount);
-        VERIFY_EXPR(DbgSignatureCount == SignatureCount);
+        auto DbgMaxSignatureBindingIndex =
+            PipelineResourceSignatureD3D12Impl::CopyResourceSignatures(CreateInfo.PSODesc.PipelineType, CreateInfo.ResourceSignaturesCount,
+                                                                       CreateInfo.ppResourceSignatures, m_ResourceSignatures.get(), SignatureCount);
+        VERIFY_EXPR(DbgMaxSignatureBindingIndex == MaxSignatureBindingIndex);
     }
 
     m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_ResourceSignatures.get(), SignatureCount);
     if (!m_RootSig)
-        LOG_ERROR_AND_THROW("Failed to create root signature");
+        LOG_ERROR_AND_THROW("Failed to create root signature for pipeline '", m_Desc.Name, "'.");
 
     if (pLocalRootSig != nullptr && pLocalRootSig->IsDefined())
     {
         if (!pLocalRootSig->Create(GetDevice()->GetD3D12Device(), m_RootSig->GetTotalSpaces()))
-            LOG_ERROR_AND_THROW("Failed to create local root signature");
+            LOG_ERROR_AND_THROW("Failed to create local root signature for pipeline '", m_Desc.Name, "'.");
     }
 
     // Verify that pipeline layout is compatible with shader resources and
@@ -831,7 +837,7 @@ void PipelineStateD3D12Impl::DvpVerifySRBResources(ShaderResourceBindingD3D12Imp
     VERIFY_EXPR(attrib_it == m_ResourceAttibutions.end());
 }
 
-#endif
+#endif // DILIGENT_DEVELOPMENT
 
 
 template <typename PSOCreateInfoType>

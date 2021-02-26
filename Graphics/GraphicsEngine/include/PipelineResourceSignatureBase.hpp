@@ -220,13 +220,13 @@ public:
     }
 
     template <typename TPipelineResourceSignature>
-    static void CopyResourceSignatures(PIPELINE_TYPE                             PipelineType,
-                                       const Uint32                              SignatureCount,
-                                       IPipelineResourceSignature*               ppResourceSignatures[],
-                                       RefCntAutoPtr<TPipelineResourceSignature> DstSignatures[],
-                                       const size_t                              MaxDstSignatureCount,
-                                       Uint8&                                    DstSignatureCount)
+    static Uint32 CopyResourceSignatures(PIPELINE_TYPE                             PipelineType,
+                                         const Uint32                              SignatureCount,
+                                         IPipelineResourceSignature*               ppResourceSignatures[],
+                                         RefCntAutoPtr<TPipelineResourceSignature> DstSignatures[],
+                                         const size_t                              MaxDstSignatureCount)
     {
+        Uint32 MaxSignatureBindIndex = 0;
         for (Uint32 i = 0; i < SignatureCount; ++i)
         {
             auto* pSignature = ValidatedCast<TPipelineResourceSignature>(ppResourceSignatures[i]);
@@ -254,9 +254,10 @@ public:
             }
 #endif
 
-            DstSignatureCount    = std::max<Uint8>(DstSignatureCount, Index + 1);
-            DstSignatures[Index] = pSignature;
+            MaxSignatureBindIndex = std::max<Uint32>(MaxSignatureBindIndex, Index);
+            DstSignatures[Index]  = pSignature;
         }
+        return MaxSignatureBindIndex;
     }
 
 protected:
