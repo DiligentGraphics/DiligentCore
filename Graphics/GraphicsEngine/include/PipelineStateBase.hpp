@@ -554,9 +554,6 @@ protected:
         if (ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_GEN, PIPELINE_TYPE_RAY_TRACING)].Count() == 0)
             LOG_ERROR_AND_THROW("At least one shader with type SHADER_TYPE_RAY_GEN must be provided.");
 
-        if (ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_MISS, PIPELINE_TYPE_RAY_TRACING)].Count() == 0)
-            LOG_ERROR_AND_THROW("At least one shader with type SHADER_TYPE_RAY_MISS must be provided.");
-
         // Remove empty stages
         for (auto iter = ShaderStages.begin(); iter != ShaderStages.end();)
         {

@@ -449,7 +449,7 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecu
         {
             case SHADER_TYPE_RAY_GEN:
             case SHADER_TYPE_RAY_MISS:
-            case SHADER_TYPE_RAY_CLOSEST_HIT: break;
+            case SHADER_TYPE_CALLABLE: break;
             default:
                 LOG_PSO_ERROR_AND_THROW(GetShaderTypeLiteralName(Group.pShader->GetDesc().ShaderType), " is not a valid type for ray tracing general shader.");
         }

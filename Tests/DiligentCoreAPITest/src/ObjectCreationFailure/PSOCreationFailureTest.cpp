@@ -25,6 +25,8 @@
  *  of the possibility of such damages.
  */
 
+#include <array>
+
 #include "TestingEnvironment.hpp"
 #include "GraphicsAccessories.hpp"
 
@@ -50,12 +52,73 @@ float4 main() : SV_Target
 }
 )";
 
+static const char g_TrivialMSSource[] = R"(
+struct VertexOut
+{
+    float4 Pos : SV_Position;
+};
+
+[numthreads(1,1,1)]
+[outputtopology("triangle")]
+void main(out indices  uint3     tris[1],
+          out vertices VertexOut verts[3])
+{
+    SetMeshOutputCounts(4, 2);
+
+    tris[0] = uint3(0, 1, 2);
+    verts[0].Pos = float4(0.0, 0.0, 0.0, 1.0);
+    verts[1].Pos = float4(-1.0, 1.0, 0.0, 1.0);
+    verts[2].Pos = float4(1.0, 1.0, 0.0, 1.0);
+}
+)";
+
 static const char g_TrivialCSSource[] = R"(
 [numthreads(8,8,1)]
 void main()
 {
 }
 )";
+
+static const char g_TrivialRGenSource[] = R"(
+[shader("raygeneration")]
+void main()
+{}
+)";
+
+static const char g_TrivialRMissSource[] = R"(
+struct RTPayload { float4 Color; };
+[shader("miss")]
+void main(inout RTPayload payload)
+{}
+)";
+
+static const char g_TrivialRCHitSource[] = R"(
+struct RTPayload { float4 Color; };
+[shader("closesthit")]
+void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
+{}
+)";
+
+static const char g_TrivialRAHitSource[] = R"(
+struct RTPayload { float4 Color; };
+[shader("anyhit")]
+void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
+{}
+)";
+
+static const char g_TrivialRIntSource[] = R"(
+[shader("intersection")]
+void main()
+{}
+)";
+
+static const char g_TrivialRCallSource[] = R"(
+struct Params { float4 Col; };
+[shader("callable")]
+void main(inout Params params)
+{}
+)";
+
 
 class PSOCreationFailureTest : public ::testing::Test
 {
@@ -64,6 +127,9 @@ protected:
     {
         auto* const pEnv    = TestingEnvironment::GetInstance();
         auto* const pDevice = pEnv->GetDevice();
+
+        sm_HasMeshShader = pDevice->GetDeviceCaps().Features.MeshShaders;
+        sm_HasRayTracing = pDevice->GetDeviceCaps().Features.RayTracing;
 
         ShaderCreateInfo Attrs;
         Attrs.Source                     = g_TrivialVSSource;
@@ -109,6 +175,90 @@ protected:
             RefCntAutoPtr<IPipelineState> pComputePSO;
             pDevice->CreateComputePipelineState(GetComputePSOCreateInfo("PSOCreationFailureTest - OK compute PSO"), &pComputePSO);
             ASSERT_TRUE(pComputePSO);
+        }
+
+        if (sm_HasMeshShader)
+        {
+            Attrs.ShaderCompiler = SHADER_COMPILER_DXC;
+
+            Attrs.Source          = g_TrivialMSSource;
+            Attrs.Desc.ShaderType = SHADER_TYPE_MESH;
+            Attrs.Desc.Name       = "TrivialMS DXC (PSOCreationFailureTest)";
+            pDevice->CreateShader(Attrs, &sm_pTrivialMS);
+            ASSERT_TRUE(sm_pTrivialMS);
+
+            Attrs.Source          = g_TrivialPSSource;
+            Attrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
+            Attrs.Desc.Name       = "TrivialPS DXC (PSOCreationFailureTest)";
+            pDevice->CreateShader(Attrs, &sm_pTrivialPS_DXC);
+            ASSERT_TRUE(sm_pTrivialPS_DXC);
+
+            sm_DefaultMeshPsoCI.PSODesc.Name                      = "PSOCreationFailureTest - default mesh PSO desc";
+            sm_DefaultMeshPsoCI.GraphicsPipeline.NumRenderTargets = 1;
+            sm_DefaultMeshPsoCI.GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_RGBA8_UNORM;
+            sm_DefaultMeshPsoCI.GraphicsPipeline.DSVFormat        = TEX_FORMAT_D32_FLOAT;
+            sm_DefaultMeshPsoCI.PSODesc.PipelineType              = PIPELINE_TYPE_MESH;
+
+            sm_DefaultMeshPsoCI.pMS = sm_pTrivialMS;
+            sm_DefaultMeshPsoCI.pPS = sm_pTrivialPS_DXC;
+
+            RefCntAutoPtr<IPipelineState> pMeshPSO;
+            pDevice->CreateGraphicsPipelineState(GetMeshPSOCreateInfo("PSOCreationFailureTest - OK mesh PSO"), &pMeshPSO);
+            ASSERT_TRUE(pMeshPSO);
+        }
+
+        if (sm_HasRayTracing)
+        {
+            Attrs.ShaderCompiler = SHADER_COMPILER_DXC;
+
+            Attrs.Source          = g_TrivialRGenSource;
+            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_GEN;
+            Attrs.Desc.Name       = "TrivialRGen (PSOCreationFailureTest)";
+            pDevice->CreateShader(Attrs, &sm_pTrivialRG);
+            ASSERT_TRUE(sm_pTrivialRG);
+
+            Attrs.Source          = g_TrivialRMissSource;
+            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_MISS;
+            Attrs.Desc.Name       = "TrivialRMiss (PSOCreationFailureTest)";
+            pDevice->CreateShader(Attrs, &sm_pTrivialRMiss);
+            ASSERT_TRUE(sm_pTrivialRMiss);
+
+            Attrs.Source          = g_TrivialRCallSource;
+            Attrs.Desc.ShaderType = SHADER_TYPE_CALLABLE;
+            Attrs.Desc.Name       = "TrivialRCall (PSOCreationFailureTest)";
+            pDevice->CreateShader(Attrs, &sm_pTrivialRCall);
+            ASSERT_TRUE(sm_pTrivialRCall);
+
+            Attrs.Source          = g_TrivialRCHitSource;
+            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;
+            Attrs.Desc.Name       = "TrivialRCHit (PSOCreationFailureTest)";
+            pDevice->CreateShader(Attrs, &sm_pTrivialRCHit);
+            ASSERT_TRUE(sm_pTrivialRCHit);
+
+            Attrs.Source          = g_TrivialRAHitSource;
+            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_ANY_HIT;
+            Attrs.Desc.Name       = "TrivialRAHit (PSOCreationFailureTest)";
+            pDevice->CreateShader(Attrs, &sm_pTrivialRAHit);
+            ASSERT_TRUE(sm_pTrivialRAHit);
+
+            Attrs.Source          = g_TrivialRIntSource;
+            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_INTERSECTION;
+            Attrs.Desc.Name       = "TrivialRInt (PSOCreationFailureTest)";
+            pDevice->CreateShader(Attrs, &sm_pTrivialRInt);
+            ASSERT_TRUE(sm_pTrivialRInt);
+
+            sm_DefaultRayTracingPsoCI.PSODesc.Name         = "PSOCreationFailureTest - default ray tracing PSO desc";
+            sm_DefaultRayTracingPsoCI.PSODesc.PipelineType = PIPELINE_TYPE_RAY_TRACING;
+
+            sm_DefaultRayTracingPsoCI.RayTracingPipeline.MaxRecursionDepth = 1;
+
+            sm_GeneralGroups[0]                          = {"Main", sm_pTrivialRG};
+            sm_DefaultRayTracingPsoCI.pGeneralShaders    = sm_GeneralGroups.data();
+            sm_DefaultRayTracingPsoCI.GeneralShaderCount = static_cast<Uint32>(sm_GeneralGroups.size());
+
+            RefCntAutoPtr<IPipelineState> pRayTracingPSO;
+            pDevice->CreateGraphicsPipelineState(GetMeshPSOCreateInfo("PSOCreationFailureTest - OK ray tracing PSO"), &pRayTracingPSO);
+            ASSERT_TRUE(pRayTracingPSO);
         }
 
         RenderPassDesc RPDesc;
@@ -215,7 +365,15 @@ protected:
     {
         sm_pTrivialVS.Release();
         sm_pTrivialPS.Release();
+        sm_pTrivialPS_DXC.Release();
+        sm_pTrivialMS.Release();
         sm_pTrivialCS.Release();
+        sm_pTrivialRG.Release();
+        sm_pTrivialRMiss.Release();
+        sm_pTrivialRCall.Release();
+        sm_pTrivialRCHit.Release();
+        sm_pTrivialRAHit.Release();
+        sm_pTrivialRInt.Release();
         sm_pRenderPass.Release();
         sm_pSignature0.Release();
         sm_pSignature0A.Release();
@@ -236,14 +394,52 @@ protected:
         }
         return CI;
     }
+
+    static GraphicsPipelineStateCreateInfo GetMeshPSOCreateInfo(const char* Name, bool UseRenderPass = false)
+    {
+        VERIFY_EXPR(HasMeshShader());
+
+        auto CI{sm_DefaultMeshPsoCI};
+        CI.PSODesc.Name = Name;
+        if (UseRenderPass)
+        {
+            CI.GraphicsPipeline.NumRenderTargets = 0;
+            CI.GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_UNKNOWN;
+            CI.GraphicsPipeline.DSVFormat        = TEX_FORMAT_UNKNOWN;
+            CI.GraphicsPipeline.pRenderPass      = sm_pRenderPass;
+        }
+        return CI;
+    }
+
     static ComputePipelineStateCreateInfo GetComputePSOCreateInfo(const char* Name)
     {
         auto CI{sm_DefaultComputePsoCI};
         CI.PSODesc.Name = Name;
         return CI;
     }
+
+    static RayTracingPipelineStateCreateInfo GetRayTracingPSOCreateInfo(const char* Name)
+    {
+        VERIFY_EXPR(HasRayTracing());
+
+        auto CI{sm_DefaultRayTracingPsoCI};
+        CI.PSODesc.Name = Name;
+        return CI;
+    }
+
     static IShader* GetVS() { return sm_pTrivialVS; }
     static IShader* GetPS() { return sm_pTrivialPS; }
+    static IShader* GetMS() { return sm_pTrivialMS; }
+
+    static IShader* GetRayGen() { return sm_pTrivialRG; }
+    static IShader* GetRayMiss() { return sm_pTrivialRMiss; }
+    static IShader* GetCallable() { return sm_pTrivialRCall; }
+    static IShader* GetRayClosestHit() { return sm_pTrivialRCHit; }
+    static IShader* GetRayAnyHit() { return sm_pTrivialRAHit; }
+    static IShader* GetRayIntersection() { return sm_pTrivialRInt; }
+
+    static bool HasMeshShader() { return sm_HasMeshShader; }
+    static bool HasRayTracing() { return sm_HasRayTracing; }
 
     static void TestCreatePSOFailure(GraphicsPipelineStateCreateInfo CI, const char* ExpectedErrorSubstring)
     {
@@ -284,6 +480,26 @@ protected:
         ASSERT_FALSE(pPSO);
     }
 
+    static void TestCreatePSOFailure(RayTracingPipelineStateCreateInfo CI, const char* ExpectedErrorSubstring)
+    {
+        auto* const pEnv    = TestingEnvironment::GetInstance();
+        auto* const pDevice = pEnv->GetDevice();
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+
+        pEnv->SetErrorAllowance(2, "Errors below are expected: testing PSO creation failure\n");
+        pEnv->PushExpectedErrorSubstring(ExpectedErrorSubstring);
+        pDevice->CreateRayTracingPipelineState(CI, &pPSO);
+
+        CI.PSODesc.Name = nullptr;
+        pEnv->SetErrorAllowance(2);
+        pEnv->PushExpectedErrorSubstring(ExpectedErrorSubstring);
+        pDevice->CreateRayTracingPipelineState(CI, &pPSO);
+
+        pEnv->SetErrorAllowance(0);
+        ASSERT_FALSE(pPSO);
+    }
+
 protected:
     static RefCntAutoPtr<IPipelineResourceSignature> sm_pSignature0;
     static RefCntAutoPtr<IPipelineResourceSignature> sm_pSignature0A;
@@ -293,24 +509,55 @@ protected:
 private:
     static RefCntAutoPtr<IShader>     sm_pTrivialVS;
     static RefCntAutoPtr<IShader>     sm_pTrivialPS;
+    static RefCntAutoPtr<IShader>     sm_pTrivialPS_DXC;
+    static RefCntAutoPtr<IShader>     sm_pTrivialMS;
+    static RefCntAutoPtr<IShader>     sm_pTrivialRG;
+    static RefCntAutoPtr<IShader>     sm_pTrivialRMiss;
+    static RefCntAutoPtr<IShader>     sm_pTrivialRCHit;
+    static RefCntAutoPtr<IShader>     sm_pTrivialRAHit;
+    static RefCntAutoPtr<IShader>     sm_pTrivialRInt;
+    static RefCntAutoPtr<IShader>     sm_pTrivialRCall;
     static RefCntAutoPtr<IShader>     sm_pTrivialCS;
     static RefCntAutoPtr<IRenderPass> sm_pRenderPass;
 
-    static GraphicsPipelineStateCreateInfo sm_DefaultGraphicsPsoCI;
-    static ComputePipelineStateCreateInfo  sm_DefaultComputePsoCI;
+    static GraphicsPipelineStateCreateInfo   sm_DefaultGraphicsPsoCI;
+    static GraphicsPipelineStateCreateInfo   sm_DefaultMeshPsoCI;
+    static ComputePipelineStateCreateInfo    sm_DefaultComputePsoCI;
+    static RayTracingPipelineStateCreateInfo sm_DefaultRayTracingPsoCI;
+
+    static std::array<RayTracingGeneralShaderGroup, 1> sm_GeneralGroups;
+
+    static bool sm_HasMeshShader;
+    static bool sm_HasRayTracing;
 };
 
 RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialVS;
 RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialPS;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialPS_DXC;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialMS;
 RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialCS;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialRG;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialRMiss;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialRCHit;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialRAHit;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialRInt;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialRCall;
 RefCntAutoPtr<IRenderPass>                PSOCreationFailureTest::sm_pRenderPass;
 RefCntAutoPtr<IPipelineResourceSignature> PSOCreationFailureTest::sm_pSignature0;
 RefCntAutoPtr<IPipelineResourceSignature> PSOCreationFailureTest::sm_pSignature0A;
 RefCntAutoPtr<IPipelineResourceSignature> PSOCreationFailureTest::sm_pSignature1;
 RefCntAutoPtr<IPipelineResourceSignature> PSOCreationFailureTest::sm_pSignature1A;
 
-GraphicsPipelineStateCreateInfo PSOCreationFailureTest::sm_DefaultGraphicsPsoCI;
-ComputePipelineStateCreateInfo  PSOCreationFailureTest::sm_DefaultComputePsoCI;
+GraphicsPipelineStateCreateInfo   PSOCreationFailureTest::sm_DefaultGraphicsPsoCI;
+GraphicsPipelineStateCreateInfo   PSOCreationFailureTest::sm_DefaultMeshPsoCI;
+ComputePipelineStateCreateInfo    PSOCreationFailureTest::sm_DefaultComputePsoCI;
+RayTracingPipelineStateCreateInfo PSOCreationFailureTest::sm_DefaultRayTracingPsoCI;
+
+std::array<RayTracingGeneralShaderGroup, 1> PSOCreationFailureTest::sm_GeneralGroups;
+
+bool PSOCreationFailureTest::sm_HasMeshShader;
+bool PSOCreationFailureTest::sm_HasRayTracing;
+
 
 TEST_F(PSOCreationFailureTest, InvalidGraphicsPipelineType)
 {
@@ -656,6 +903,247 @@ TEST_F(PSOCreationFailureTest, InvalidCS)
     auto PsoCI{GetComputePSOCreateInfo("PSO Create Failure - invalid CS")};
     PsoCI.pCS = GetPS();
     TestCreatePSOFailure(PsoCI, "SHADER_TYPE_PIXEL is not a valid type for compute shader");
+}
+
+TEST_F(PSOCreationFailureTest, NullMS)
+{
+    if (!HasMeshShader())
+        GTEST_SKIP();
+
+    auto PsoCI{GetMeshPSOCreateInfo("PSO Create Failure - null MS")};
+    PsoCI.pMS = nullptr;
+    TestCreatePSOFailure(PsoCI, "Mesh shader must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidMS)
+{
+    if (!HasMeshShader())
+        GTEST_SKIP();
+
+    auto PsoCI{GetMeshPSOCreateInfo("PSO Create Failure - Invalid MS")};
+    PsoCI.pMS = GetPS();
+    TestCreatePSOFailure(PsoCI, "SHADER_TYPE_PIXEL is not a valid type for mesh shader");
+}
+
+TEST_F(PSOCreationFailureTest, NullRG)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - NUll ray-gen shader")};
+    PsoCI.pGeneralShaders    = nullptr;
+    PsoCI.GeneralShaderCount = 0;
+    TestCreatePSOFailure(PsoCI, "At least one shader with type SHADER_TYPE_RAY_GEN must be provided");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidRTPipelineType)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - Invalid RT pipeline type")};
+    PsoCI.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+    TestCreatePSOFailure(PsoCI, "Pipeline type must be RAY_TRACING");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidShaderRecord)
+{
+    if (!HasRayTracing() || !TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().IsD3DDevice())
+        GTEST_SKIP();
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - Invalid shader record")};
+    PsoCI.pShaderRecordName                   = "ShaderRecord";
+    PsoCI.RayTracingPipeline.ShaderRecordSize = 0;
+    TestCreatePSOFailure(PsoCI, "pShaderRecordName must not be null if RayTracingPipeline.ShaderRecordSize is not zero");
+}
+
+TEST_F(PSOCreationFailureTest, TooBigRayRecursionDepth)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - too big ray recursion depth")};
+    PsoCI.RayTracingPipeline.MaxRecursionDepth = std::numeric_limits<decltype(PsoCI.RayTracingPipeline.MaxRecursionDepth)>::max();
+    TestCreatePSOFailure(PsoCI, "MaxRecursionDepth (255) exceeds device limit");
+}
+
+TEST_F(PSOCreationFailureTest, NullShaderGroupName)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingGeneralShaderGroup GeneralGroups[] = {{"Main", GetRayGen()}, {nullptr, GetRayMiss()}};
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - null shader group name")};
+    PsoCI.pGeneralShaders    = GeneralGroups;
+    PsoCI.GeneralShaderCount = _countof(GeneralGroups);
+    TestCreatePSOFailure(PsoCI, "pGeneralShaders[1].Name must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, EmptyShaderGroupName)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingGeneralShaderGroup GeneralGroups[] = {{"Main", GetRayGen()}, {"", GetRayMiss()}};
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - empty shader group name")};
+    PsoCI.pGeneralShaders    = GeneralGroups;
+    PsoCI.GeneralShaderCount = _countof(GeneralGroups);
+    TestCreatePSOFailure(PsoCI, "pGeneralShaders[1].Name must not be empty");
+}
+
+TEST_F(PSOCreationFailureTest, NonUniqueShaderGroupName)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingGeneralShaderGroup GeneralGroups[] = {{"Main", GetRayGen()}, {"Main", GetRayMiss()}};
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - non-unique shader group name")};
+    PsoCI.pGeneralShaders    = GeneralGroups;
+    PsoCI.GeneralShaderCount = _countof(GeneralGroups);
+    TestCreatePSOFailure(PsoCI, "pGeneralShaders[1].Name ('Main') has already been assigned to another group. All group names must be unique.");
+}
+
+TEST_F(PSOCreationFailureTest, NullGeneralShader)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingGeneralShaderGroup GeneralGroups[] = {{"Main", GetRayGen()}, {"Entry", nullptr}};
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - null general shader")};
+    PsoCI.pGeneralShaders    = GeneralGroups;
+    PsoCI.GeneralShaderCount = _countof(GeneralGroups);
+    TestCreatePSOFailure(PsoCI, "pGeneralShaders[1].pShader must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, NullTriHitShader)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingTriangleHitShaderGroup HitGroups[] = {{"ClosestHit", nullptr}};
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - null triangle closest hit shader")};
+    PsoCI.pTriangleHitShaders    = HitGroups;
+    PsoCI.TriangleHitShaderCount = _countof(HitGroups);
+    TestCreatePSOFailure(PsoCI, "pTriangleHitShaders[0].pClosestHitShader must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, NullProcHitShader)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingProceduralHitShaderGroup HitGroups[] = {{"Intersection", nullptr}};
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - null procedural intersection shader")};
+    PsoCI.pProceduralHitShaders    = HitGroups;
+    PsoCI.ProceduralHitShaderCount = _countof(HitGroups);
+    TestCreatePSOFailure(PsoCI, "pProceduralHitShaders[0].pIntersectionShader must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidShaderinGeneralGroup)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingGeneralShaderGroup GeneralGroups[] = {{"Main", GetRayGen()}, {"Miss", GetRayMiss()}, {"Call", GetCallable()}, {"Hit", GetRayClosestHit()}};
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - invalid shader in general group")};
+    PsoCI.pGeneralShaders    = GeneralGroups;
+    PsoCI.GeneralShaderCount = _countof(GeneralGroups);
+    TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_CLOSEST_HIT is not a valid type for ray tracing general shader");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidShaderinTriangleHitGroup1)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingTriangleHitShaderGroup HitGroups[] = {
+        {"CHit", GetRayClosestHit(), nullptr},
+        {"CHit-AHit", GetRayClosestHit(), GetRayAnyHit()},
+        {"Miss", GetRayMiss()} //
+    };
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - invalid shader in triangle hit group - 1")};
+    PsoCI.pTriangleHitShaders    = HitGroups;
+    PsoCI.TriangleHitShaderCount = _countof(HitGroups);
+    TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_MISS is not a valid type for ray tracing triangle closest hit");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidShaderinTriangleHitGroup2)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingTriangleHitShaderGroup HitGroups[] = {
+        {"CHit", GetRayClosestHit(), nullptr},
+        {"CHit-AHit", GetRayClosestHit(), GetRayAnyHit()},
+        {"CHit-Miss", GetRayClosestHit(), GetRayIntersection()} //
+    };
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - invalid shader in triangle hit group - 2")};
+    PsoCI.pTriangleHitShaders    = HitGroups;
+    PsoCI.TriangleHitShaderCount = _countof(HitGroups);
+    TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_INTERSECTION is not a valid type for ray tracing triangle any hit");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup1)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingProceduralHitShaderGroup HitGroups[] = {
+        {"Int", GetRayIntersection(), nullptr, nullptr},
+        {"Int-CHit", GetRayIntersection(), GetRayClosestHit(), nullptr},
+        {"Int-CHit-AHit", GetRayIntersection(), GetRayClosestHit(), GetRayAnyHit()},
+        {"Call", GetCallable(), nullptr, nullptr} //
+    };
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - invalid shader in procedural hit group - 1")};
+    PsoCI.pProceduralHitShaders    = HitGroups;
+    PsoCI.ProceduralHitShaderCount = _countof(HitGroups);
+    TestCreatePSOFailure(PsoCI, "SHADER_TYPE_CALLABLE is not a valid type for ray tracing procedural intersection");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup2)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingProceduralHitShaderGroup HitGroups[] = {
+        {"Int", GetRayIntersection(), nullptr, nullptr},
+        {"Int-CHit", GetRayIntersection(), GetRayClosestHit(), nullptr},
+        {"Int-CHit-AHit", GetRayIntersection(), GetRayClosestHit(), GetRayAnyHit()},
+        {"Int-RG", GetRayIntersection(), GetRayGen(), nullptr} //
+    };
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - invalid shader in procedural hit group - 2")};
+    PsoCI.pProceduralHitShaders    = HitGroups;
+    PsoCI.ProceduralHitShaderCount = _countof(HitGroups);
+    TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_GEN is not a valid type for ray tracing procedural closest hit");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup3)
+{
+    if (!HasRayTracing())
+        GTEST_SKIP();
+
+    const RayTracingProceduralHitShaderGroup HitGroups[] = {
+        {"Int", GetRayIntersection(), nullptr, nullptr},
+        {"Int-CHit", GetRayIntersection(), GetRayClosestHit(), nullptr},
+        {"Int-CHit-AHit", GetRayIntersection(), GetRayClosestHit(), GetRayAnyHit()},
+        {"Int-CHit-CHit", GetRayIntersection(), GetRayClosestHit(), GetRayClosestHit()} //
+    };
+
+    auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - invalid shader in procedural hit group - 3")};
+    PsoCI.pProceduralHitShaders    = HitGroups;
+    PsoCI.ProceduralHitShaderCount = _countof(HitGroups);
+    TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_CLOSEST_HIT is not a valid type for ray tracing procedural any hit");
 }
 
 } // namespace
