@@ -59,7 +59,10 @@ void ShaderVariableManagerD3D12::ProcessSignatureResources(const PipelineResourc
 
                 if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
                     (UsingCombinedSamplers || Attr.IsImmutableSamplerAssigned()))
+                {
+                    // Skip samplers combined with textures and immutable samplers
                     continue;
+                }
 
                 Handler(r);
             }

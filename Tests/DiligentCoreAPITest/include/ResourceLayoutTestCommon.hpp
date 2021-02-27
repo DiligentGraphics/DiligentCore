@@ -202,6 +202,8 @@ public:
         std::fill(UsedValues.begin(), UsedValues.end(), false);
     }
 
+    size_t GetTextureCount() const { return Textures.size(); }
+
 private:
     std::vector<RefCntAutoPtr<ITexture>> Textures;
 

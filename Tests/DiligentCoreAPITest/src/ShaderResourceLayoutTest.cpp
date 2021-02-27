@@ -1395,6 +1395,11 @@ TEST_F(ShaderResourceLayoutTest, MergedVarStages)
         TEXTURE_VIEW_SHADER_RESOURCE //
     };
 
+    RefCntAutoPtr<ISampler> pSampler;
+    pDevice->CreateSampler(SamplerDesc{}, &pSampler);
+    for (Uint32 i = 0; i < RefTextures.GetTextureCount(); ++i)
+        RefTextures.GetView(i)->SetSampler(pSampler);
+
     ShaderMacroHelper Macros;
 
     // Add macros that define reference colors
@@ -1452,20 +1457,11 @@ TEST_F(ShaderResourceLayoutTest, MergedVarStages)
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
     };
-
-    const ImmutableSamplerDesc ImmutableSamplers[] = 
-    {
-        ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static", SamplerDesc{}},
-        ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",    SamplerDesc{}},
-        ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",    SamplerDesc{}}
-    };
     // clang-format on
 
     PipelineResourceLayoutDesc ResourceLayout;
-    ResourceLayout.Variables            = Vars;
-    ResourceLayout.NumVariables         = _countof(Vars);
-    ResourceLayout.ImmutableSamplers    = ImmutableSamplers;
-    ResourceLayout.NumImmutableSamplers = _countof(ImmutableSamplers);
+    ResourceLayout.Variables    = Vars;
+    ResourceLayout.NumVariables = _countof(Vars);
 
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -1479,6 +1475,9 @@ TEST_F(ShaderResourceLayoutTest, MergedVarStages)
 
     SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2D_Static", Set, RefTextures.GetView(0));
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_Mut", Set, RefTextures.GetView(1));
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, RefTextures.GetView(0));
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, nullptr); // Test resetting combined texture to null
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", Set, RefTextures.GetView(2));
 
     pPSO->InitializeStaticSRBResources(pSRB);

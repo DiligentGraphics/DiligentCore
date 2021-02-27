@@ -50,12 +50,10 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
     {
         for (Uint32 group = 0; group < ROOT_PARAMETER_GROUP_COUNT; ++group)
         {
-            auto GroupType = static_cast<ROOT_PARAMETER_GROUP>(group);
-
-            auto TotalTableResources = RootParams.GetParameterGroupSize(d3d12HeapType, GroupType);
-            MemReqs.TotalResources += TotalTableResources;
-            if (TotalTableResources != 0)
+            const auto ParamGroupSize = RootParams.GetParameterGroupSize(d3d12HeapType, static_cast<ROOT_PARAMETER_GROUP>(group));
+            if (ParamGroupSize != 0)
             {
+                MemReqs.TotalResources += ParamGroupSize;
                 // Every non-empty table from each group will need a descriptor table
                 ++MemReqs.NumDescriptorAllocations;
             }
@@ -145,6 +143,7 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator,
         new (&GetRootTable(t)) RootTable{TableSizes[t], TableSizes[t] > 0 ? &GetResource(ResIdx) : nullptr, false};
         ResIdx += TableSizes[t];
     }
+    VERIFY_EXPR(ResIdx == m_TotalResourceCount);
 }
 
 
