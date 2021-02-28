@@ -227,12 +227,12 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 
     auto& CmdCtx        = GetCmdContext();
     auto& RootInfo      = GetRootTableInfo(PSODesc.PipelineType);
-    auto* pd3d12RootSig = pPipelineStateD3D12->GetRootSignature().GetD3D12RootSignature();
+    auto* pd3d12RootSig = pPipelineStateD3D12->GetD3D12RootSignature();
 
-    if (RootInfo.pRootSig != pd3d12RootSig)
+    if (RootInfo.pd3d12RootSig != pd3d12RootSig)
     {
         // When root signature changes, all root resoruces must be committed
-        RootInfo.pRootSig                   = pd3d12RootSig;
+        RootInfo.pd3d12RootSig              = pd3d12RootSig;
         RootInfo.bRootTablesCommited        = false;
         RootInfo.bRootViewsCommitted        = false;
         RootInfo.ActiveSRBMask              = 0;
@@ -314,7 +314,10 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo)
             continue;
 
         auto* const pSRB = RootInfo.SRBs[s];
-        DEV_CHECK_ERR(pSRB != nullptr, "No SRB is committed and binding index ", s);
+        DEV_CHECK_ERR(pSRB != nullptr, "No SRB is committed at binding index ", s);
+        if (pSRB == nullptr)
+            continue;
+
         VERIFY_EXPR(pSRB->GetBindingIndex() == s);
 
         const auto& ResourceCache          = pSRB->GetResourceCache();

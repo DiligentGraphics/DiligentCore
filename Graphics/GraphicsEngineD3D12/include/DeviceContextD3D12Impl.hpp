@@ -395,7 +395,7 @@ private:
         Bitfield             DynamicBuffersMask  = 0;     // Indicates which SRBs have dynamic buffers
         bool                 bRootViewsCommitted = false; // Indicates if root views have been committed since the time SRB  has been committed.
         bool                 bRootTablesCommited = false;
-        ID3D12RootSignature* pRootSig            = nullptr;
+        ID3D12RootSignature* pd3d12RootSig       = nullptr;
 
         std::array<class ShaderResourceBindingD3D12Impl*, MAX_RESOURCE_SIGNATURES> SRBs{};
 
