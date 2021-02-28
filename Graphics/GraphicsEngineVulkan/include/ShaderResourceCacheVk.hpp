@@ -268,7 +268,7 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
                 Res.Type == DescriptorType::StorageBufferDynamic_ReadOnly)
             {
                 const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
-                const auto* pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBufferVk() : 0;
+                const auto* pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBuffer<const BufferVkImpl>() : 0;
                 auto        Offset        = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
                 Offsets[OffsetInd++]      = Offset;
                 ++res;

@@ -58,14 +58,4 @@ BufferViewVkImpl::~BufferViewVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_BuffView), m_pBuffer->GetDesc().CommandQueueMask);
 }
 
-const BufferVkImpl* BufferViewVkImpl::GetBufferVk() const
-{
-    return ValidatedCast<const BufferVkImpl>(m_pBuffer);
-}
-
-BufferVkImpl* BufferViewVkImpl::GetBufferVk()
-{
-    return ValidatedCast<BufferVkImpl>(m_pBuffer);
-}
-
 } // namespace Diligent

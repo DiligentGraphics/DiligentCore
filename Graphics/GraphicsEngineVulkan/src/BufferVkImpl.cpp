@@ -98,21 +98,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         {
             case BIND_UNORDERED_ACCESS:
             {
-                // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-                // HLSL formatted buffers are mapped to GLSL storage buffers:
-                //
-                //     RWBuffer<uint4> RWBuff
-                //
-                //                 |
-                //                 V
-                //
-                //     layout(std140, binding = 3) buffer RWBuff
-                //     {
-                //         uvec4 data[];
-                //     }g_RWBuff;
-                //
-                // So we have to set both VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT bits
-                VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                // RWStructured and RWByteAddress buffers are mapped to storage buffers in Vulkan.
+                // RW formatted buffers are mapped to storage texel buffers in Vulkan.
+                VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
                 // Each element of pDynamicOffsets of vkCmdBindDescriptorSets function which corresponds to a descriptor
                 // binding with type VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC must be a multiple of
@@ -123,10 +111,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             }
             case BIND_SHADER_RESOURCE:
             {
-                // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-                // HLSL buffer SRVs are mapped to storge buffers in GLSL, so we need to set both
-                // VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT flags
-                VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                // Structured and ByteAddress buffers are mapped to read-only storage buffers in Vulkan.
+                // Formatted buffers are mapped to uniform texel buffers in Vulkan.
+                VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
                 m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
                 m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
@@ -179,10 +166,12 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             m_DynamicData.emplace_back();
     }
 
-    if (m_Desc.Usage == USAGE_DYNAMIC && (VkBuffCI.usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)) == 0)
+    if (m_Desc.Usage == USAGE_DYNAMIC &&
+        (VkBuffCI.usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT)) == 0 &&
+        (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) == 0)
     {
-        // Dynamic constant/vertex/index buffers are suballocated in the upload heap when Map() is called.
-        // Dynamic buffers with SRV or UAV flags need to be allocated in GPU-only memory
+        // Dynamic constant/vertex/index/structured buffers are suballocated in the upload heap when Map() is called.
+        // Dynamic formatted buffers or writable buffers need to be allocated in GPU-local memory.
         constexpr RESOURCE_STATE State = static_cast<RESOURCE_STATE>(
             RESOURCE_STATE_VERTEX_BUFFER |
             RESOURCE_STATE_INDEX_BUFFER |
@@ -445,8 +434,7 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
 {
     VulkanUtilities::BufferViewWrapper BuffView;
     ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc);
-    if ((ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) &&
-        (m_Desc.Mode == BUFFER_MODE_FORMATTED || m_Desc.Mode == BUFFER_MODE_RAW))
+    if (m_Desc.Mode == BUFFER_MODE_FORMATTED)
     {
         VkBufferViewCreateInfo ViewCI = {};
 
@@ -454,21 +442,20 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
         ViewCI.pNext  = nullptr;
         ViewCI.flags  = 0; // reserved for future use
         ViewCI.buffer = m_VulkanBuffer;
-        if (m_Desc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType == VT_UNDEFINED)
-        {
-            ViewCI.format = VK_FORMAT_R32_UINT;
-        }
-        else
-        {
-            DEV_CHECK_ERR(ViewDesc.Format.ValueType != VT_UNDEFINED, "Undefined format");
-            ViewCI.format = TypeToVkFormat(ViewDesc.Format.ValueType, ViewDesc.Format.NumComponents, ViewDesc.Format.IsNormalized);
-        }
+        DEV_CHECK_ERR(ViewDesc.Format.ValueType != VT_UNDEFINED, "Undefined format");
+        ViewCI.format = TypeToVkFormat(ViewDesc.Format.ValueType, ViewDesc.Format.NumComponents, ViewDesc.Format.IsNormalized);
         ViewCI.offset = ViewDesc.ByteOffset; // offset in bytes from the base address of the buffer
         ViewCI.range  = ViewDesc.ByteWidth;  // size in bytes of the buffer view
 
         const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
         BuffView                  = LogicalDevice.CreateBufferView(ViewCI, ViewDesc.Name);
     }
+    else if (m_Desc.Mode == BUFFER_MODE_STRUCTURED ||
+             m_Desc.Mode == BUFFER_MODE_RAW)
+    {
+        // Strucutred and raw buffers are mapped to storage buffers in GLSL
+    }
+
     return BuffView;
 }
 

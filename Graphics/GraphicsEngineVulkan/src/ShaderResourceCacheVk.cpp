@@ -388,7 +388,7 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescript
     // clang-format on
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get uniform buffer write info: cached object is null");
 
-    auto* pBuffVk = pObject.RawPtr<const BufferVkImpl>();
+    const auto* pBuffVk = pObject.RawPtr<const BufferVkImpl>();
     // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
     // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
     VERIFY_EXPR((pBuffVk->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) != 0);
@@ -415,9 +415,9 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
     // clang-format on
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get storage buffer write info: cached object is null");
 
-    auto* const pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
+    const auto* pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
     const auto& ViewDesc    = pBuffViewVk->GetDesc();
-    auto* const pBuffVk     = pBuffViewVk->GetBufferVk();
+    const auto* pBuffVk     = pBuffViewVk->GetBuffer<const BufferVkImpl>();
     VERIFY(Type == DescriptorType::StorageBufferDynamic || Type == DescriptorType::StorageBufferDynamic_ReadOnly || pBuffVk->GetDesc().Usage != USAGE_DYNAMIC,
            "Dynamic buffer must be used with StorageBufferDynamic or StorageBufferDynamic_ReadOnly descriptor");
 
@@ -466,7 +466,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
 
     bool IsStorageImage = (Type == DescriptorType::StorageImage);
 
-    auto* pTexViewVk = pObject.RawPtr<const TextureViewVkImpl>();
+    const auto* pTexViewVk = pObject.RawPtr<const TextureViewVkImpl>();
     VERIFY_EXPR(pTexViewVk->GetDesc().ViewType == (IsStorageImage ? TEXTURE_VIEW_UNORDERED_ACCESS : TEXTURE_VIEW_SHADER_RESOURCE));
 
     VkDescriptorImageInfo DescrImgInfo;
@@ -477,7 +477,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
     {
         // Immutable samplers are permanently bound into the set layout; later binding a sampler
         // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
-        auto* pSamplerVk = ValidatedCast<const SamplerVkImpl>(pTexViewVk->GetSampler());
+        const auto* pSamplerVk = ValidatedCast<const SamplerVkImpl>(pTexViewVk->GetSampler());
         if (pSamplerVk != nullptr)
         {
             // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -524,7 +524,7 @@ VkBufferView ShaderResourceCacheVk::Resource::GetBufferViewWriteInfo() const
     // The following bits must have been set at buffer creation time:
     //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
     //  * VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
-    auto* pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
+    const auto* pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
     return pBuffViewVk->GetVkBufferView();
 }
 
@@ -533,7 +533,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
     VERIFY(Type == DescriptorType::Sampler, "Separate sampler resource is expected");
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get separate sampler descriptor write info: cached object is null");
 
-    auto* pSamplerVk = pObject.RawPtr<const SamplerVkImpl>();
+    const auto* pSamplerVk = pObject.RawPtr<const SamplerVkImpl>();
 
     VkDescriptorImageInfo DescrImgInfo;
     // For VK_DESCRIPTOR_TYPE_SAMPLER, only the sample member of each element of VkWriteDescriptorSet::pImageInfo is accessed (13.2.4)
@@ -548,7 +548,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetInputAttachmentDescrip
     VERIFY(Type == DescriptorType::InputAttachment, "Input attachment resource is expected");
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get input attachment write info: cached object is null");
 
-    auto* pTexViewVk = pObject.RawPtr<const TextureViewVkImpl>();
+    const auto* pTexViewVk = pObject.RawPtr<const TextureViewVkImpl>();
     VERIFY_EXPR(pTexViewVk->GetDesc().ViewType == TEXTURE_VIEW_SHADER_RESOURCE);
 
     VkDescriptorImageInfo DescrImgInfo;
@@ -564,7 +564,7 @@ VkWriteDescriptorSetAccelerationStructureKHR ShaderResourceCacheVk::Resource::Ge
     VERIFY(Type == DescriptorType::AccelerationStructure, "Acceleration structure resource is expected");
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get acceleration structure write info: cached object is null");
 
-    auto* pTLASVk = pObject.RawPtr<const TopLevelASVkImpl>();
+    const auto* pTLASVk = pObject.RawPtr<const TopLevelASVkImpl>();
 
     VkWriteDescriptorSetAccelerationStructureKHR DescrAS;
     DescrAS.sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
