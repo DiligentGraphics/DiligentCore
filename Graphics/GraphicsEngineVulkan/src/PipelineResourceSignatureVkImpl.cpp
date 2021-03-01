@@ -85,6 +85,9 @@ inline VkDescriptorType GetVkDescriptorType(DescriptorType Type)
 
 DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
 {
+    VERIFY((Res.Flags & ~GetValidPipelineResourceFlags(Res.ResourceType)) == 0,
+           "Invalid resource flags. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+
     const bool WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
     const bool CombinedSampler   = (Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) != 0;
     const bool UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
@@ -93,53 +96,29 @@ DescriptorType GetDescriptorType(const PipelineResourceDesc& Res)
     switch (Res.ResourceType)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-            VERIFY((Res.Flags & ~PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
-                   "NO_DYNAMIC_BUFFERS is the only valid flag allowed for constant buffers. "
-                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return WithDynamicOffset ? DescriptorType::UniformBufferDynamic : DescriptorType::UniformBuffer;
 
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
-            VERIFY((Res.Flags & ~PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) == 0,
-                   "COMBINED_SAMPLER is the only valid flag for a texture SRV. "
-                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return CombinedSampler ? DescriptorType::CombinedImageSampler : DescriptorType::SeparateImage;
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:
-            VERIFY((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) == 0,
-                   "NO_DYNAMIC_BUFFERS and FORMATTED_BUFFER are the only valid flags for a buffer SRV. "
-                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return UseTexelBuffer ? DescriptorType::UniformTexelBuffer :
                                     (WithDynamicOffset ? DescriptorType::StorageBufferDynamic_ReadOnly : DescriptorType::StorageBuffer_ReadOnly);
 
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
-            VERIFY(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN,
-                   "UNKNOWN is the only valid flag for a texture UAV. "
-                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return DescriptorType::StorageImage;
 
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-            VERIFY((Res.Flags & ~(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)) == 0,
-                   "NO_DYNAMIC_BUFFERS and FORMATTED_BUFFER are the only valid flags for a buffer UAV. "
-                   "This should've been caught by ValidatePipelineResourceSignatureDesc.");
             return UseTexelBuffer ? DescriptorType::StorageTexelBuffer :
                                     (WithDynamicOffset ? DescriptorType::StorageBufferDynamic : DescriptorType::StorageBuffer);
 
         case SHADER_RESOURCE_TYPE_SAMPLER:
-            VERIFY(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN,
-                   "UNKNOWN is the only valid flag for a sampler. "
-                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return DescriptorType::Sampler;
 
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
-            VERIFY(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN,
-                   "UNKNOWN is the only valid flag for an input attachment. "
-                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return DescriptorType::InputAttachment;
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
-            VERIFY(Res.Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN,
-                   "UNKNOWN is the only valid flag for an acceleration structure. "
-                   "This error should've been caught by ValidatePipelineResourceSignatureDesc.");
             return DescriptorType::AccelerationStructure;
 
         default:

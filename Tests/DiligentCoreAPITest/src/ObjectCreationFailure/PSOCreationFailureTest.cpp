@@ -26,6 +26,7 @@
  */
 
 #include <array>
+#include <limits>
 
 #include "TestingEnvironment.hpp"
 #include "GraphicsAccessories.hpp"
@@ -450,14 +451,15 @@ protected:
         pEnv->SetErrorAllowance(2, "Errors below are expected: testing PSO creation failure\n");
         pEnv->PushExpectedErrorSubstring(ExpectedErrorSubstring);
         pDevice->CreateGraphicsPipelineState(CI, &pPSO);
+        ASSERT_FALSE(pPSO);
 
         CI.PSODesc.Name = nullptr;
         pEnv->SetErrorAllowance(2);
         pEnv->PushExpectedErrorSubstring(ExpectedErrorSubstring);
         pDevice->CreateGraphicsPipelineState(CI, &pPSO);
+        ASSERT_FALSE(pPSO);
 
         pEnv->SetErrorAllowance(0);
-        ASSERT_FALSE(pPSO);
     }
 
     static void TestCreatePSOFailure(ComputePipelineStateCreateInfo CI, const char* ExpectedErrorSubstring)
@@ -470,14 +472,15 @@ protected:
         pEnv->SetErrorAllowance(2, "Errors below are expected: testing PSO creation failure\n");
         pEnv->PushExpectedErrorSubstring(ExpectedErrorSubstring);
         pDevice->CreateComputePipelineState(CI, &pPSO);
+        ASSERT_FALSE(pPSO);
 
         CI.PSODesc.Name = nullptr;
         pEnv->SetErrorAllowance(2);
         pEnv->PushExpectedErrorSubstring(ExpectedErrorSubstring);
         pDevice->CreateComputePipelineState(CI, &pPSO);
+        ASSERT_FALSE(pPSO);
 
         pEnv->SetErrorAllowance(0);
-        ASSERT_FALSE(pPSO);
     }
 
     static void TestCreatePSOFailure(RayTracingPipelineStateCreateInfo CI, const char* ExpectedErrorSubstring)
@@ -490,14 +493,15 @@ protected:
         pEnv->SetErrorAllowance(2, "Errors below are expected: testing PSO creation failure\n");
         pEnv->PushExpectedErrorSubstring(ExpectedErrorSubstring);
         pDevice->CreateRayTracingPipelineState(CI, &pPSO);
+        ASSERT_FALSE(pPSO);
 
         CI.PSODesc.Name = nullptr;
         pEnv->SetErrorAllowance(2);
         pEnv->PushExpectedErrorSubstring(ExpectedErrorSubstring);
         pDevice->CreateRayTracingPipelineState(CI, &pPSO);
+        ASSERT_FALSE(pPSO);
 
         pEnv->SetErrorAllowance(0);
-        ASSERT_FALSE(pPSO);
     }
 
 protected:

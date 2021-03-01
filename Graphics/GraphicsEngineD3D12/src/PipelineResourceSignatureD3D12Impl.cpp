@@ -333,6 +333,9 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
                 NumResources[d3d12DescriptorRangeType] += ResDesc.ArraySize;
             }
 
+            const auto dbgValidResourceFlags = GetValidPipelineResourceFlags(ResDesc.ResourceType);
+            VERIFY((ResDesc.Flags & ~dbgValidResourceFlags) == 0, "Invalid resource flags. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+
             const auto UseDynamicOffset  = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
             const auto IsFormattedBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
             const auto IsArray           = ResDesc.ArraySize != 1;
@@ -341,7 +344,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
             switch (ResDesc.ResourceType)
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-                    VERIFY(!IsFormattedBuffer, "Constant buffers can't be labeled as formatted. This error should've been cuaght by ValidatePipelineResourceSignatureDesc().");
+                    VERIFY(!IsFormattedBuffer, "Constant buffers can't be labeled as formatted. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
                     d3d12RootParamType = UseDynamicOffset && !IsArray ? D3D12_ROOT_PARAMETER_TYPE_CBV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
                     break;
 

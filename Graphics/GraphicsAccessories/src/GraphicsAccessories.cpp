@@ -1176,7 +1176,7 @@ const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
     }
 }
 
-String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/)
+String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/, const char* DelimeterString /*= "|"*/)
 {
     if (Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN)
         return GetFullName ? "PIPELINE_RESOURCE_FLAG_UNKNOWN" : "UNKNOWN";
@@ -1184,7 +1184,7 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
     while (Flags != PIPELINE_RESOURCE_FLAG_UNKNOWN)
     {
         if (!Str.empty())
-            Str += '|';
+            Str += DelimeterString;
 
         auto Flag = ExtractLSB(Flags);
 
@@ -1214,6 +1214,41 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
     return Str;
 }
 
+PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType)
+{
+
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+    switch (ResourceType)
+    {
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
+            return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
+
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
+            return PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
+
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:
+            return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
+
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
+            return PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
+
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:
+            return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
+
+        case SHADER_RESOURCE_TYPE_SAMPLER:
+            return PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
+
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
+            return PIPELINE_RESOURCE_FLAG_UNKNOWN;
+
+        case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
+            return PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
+
+        default:
+            UNEXPECTED("Unexpected resource type");
+            return PIPELINE_RESOURCE_FLAG_UNKNOWN;
+    }
+}
 
 Uint32 ComputeMipLevelsCount(Uint32 Width)
 {
