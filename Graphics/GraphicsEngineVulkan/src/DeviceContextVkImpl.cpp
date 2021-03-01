@@ -480,16 +480,16 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
         const auto* pSRB = BindInfo.SRBs[i];
         if (pSRB == nullptr)
         {
-            LOG_ERROR_MESSAGE("Shader resource binding is not bound to index (", i, ").");
+            LOG_ERROR_MESSAGE("Shader resource binding is not bound to index ", i, ". Did you call CommitShaderResources()?");
             continue;
         }
 
-        auto* pSRBSign = pSRB->GetSignature();
+        const auto* pSRBSign = pSRB->GetSignature();
         DEV_CHECK_ERR(pSRBSign != nullptr, "SRB must not be null");
 
         if (!pLayoutSign->IsCompatibleWith(*pSRBSign))
         {
-            LOG_ERROR_MESSAGE("Shader resource binding at index (", i, ") with signature '", pSRBSign->GetDesc().Name,
+            LOG_ERROR_MESSAGE("Shader resource binding at index ", i, " with signature '", pSRBSign->GetDesc().Name,
                               "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");
         }
 
@@ -770,15 +770,6 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     {
         CommitDescriptorSets(DescrSetBindInfo);
     }
-#if 0
-#    ifdef DILIGENT_DEBUG
-    else
-    {
-        if ( m_pPipelineState->dbgContainsShaderResources() )
-            LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
-    }
-#    endif
-#endif
 
     if (m_pPipelineState->GetGraphicsPipelineDesc().pRenderPass == nullptr)
     {
@@ -921,15 +912,6 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     {
         CommitDescriptorSets(DescrSetBindInfo);
     }
-#if 0
-#    ifdef DILIGENT_DEBUG
-    else
-    {
-        if ( m_pPipelineState->dbgContainsShaderResources() )
-            LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called" );
-    }
-#    endif
-#endif
 
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
