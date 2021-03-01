@@ -725,7 +725,10 @@ void PipelineStateD3D12Impl::DvpValidateShaderResources(const ShaderD3D12Impl* p
             {
                 const auto& ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
 
-                if (Type != ResDesc.ResourceType)
+                auto ResourceType = ResDesc.ResourceType;
+                if (ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
+                    ResourceType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+                if (Type != ResourceType)
                 {
                     LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
                                         "' and type '", GetShaderResourceTypeLiteralName(Type), "' that is not compatible with type '",

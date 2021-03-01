@@ -1180,6 +1180,7 @@ void BindResourceHelper::operator()(IDeviceObject* pObj) const
                 break;
 
             case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
+            case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
                 CacheResourceView<TextureViewD3D12Impl>(pObj, TEXTURE_VIEW_SHADER_RESOURCE);
                 break;
 

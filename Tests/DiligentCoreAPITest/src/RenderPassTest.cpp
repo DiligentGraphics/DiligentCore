@@ -180,6 +180,8 @@ protected:
         pContext->EndRenderPass();
     }
 
+    static void TestInputAttachment(bool UseSignature);
+
     static void Present()
     {
         auto* pEnv       = TestingEnvironment::GetInstance();
@@ -692,7 +694,7 @@ TEST_F(RenderPassTest, MSResolve)
     Present();
 }
 
-TEST_F(RenderPassTest, InputAttachment)
+void RenderPassTest::TestInputAttachment(bool UseSignature)
 {
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
@@ -887,10 +889,39 @@ TEST_F(RenderPassTest, InputAttachment)
         PSOCreateInfo.pVS = pVS;
         PSOCreateInfo.pPS = pPS;
 
+        RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+        IPipelineResourceSignature*               ppSignatures[1]{};
+        if (UseSignature)
+        {
+            PipelineResourceDesc Resources[] = //
+                {
+                    {SHADER_TYPE_PIXEL, "g_SubpassInput", 1, SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_RESOURCE_VARIABLE_TYPE_STATIC} //
+                };
+            PipelineResourceSignatureDesc PRSDesc;
+            PRSDesc.Name                       = "Render pass test - signature";
+            PRSDesc.UseCombinedTextureSamplers = true;
+            PRSDesc.Resources                  = Resources;
+            PRSDesc.NumResources               = _countof(Resources);
+
+            pDevice->CreatePipelineResourceSignature(PRSDesc, &pSignature);
+            ASSERT_NE(pSignature, nullptr);
+            ppSignatures[0]                       = pSignature;
+            PSOCreateInfo.ppResourceSignatures    = ppSignatures;
+            PSOCreateInfo.ResourceSignaturesCount = 1;
+        }
+
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pInputAttachmentPSO);
         ASSERT_NE(pInputAttachmentPSO, nullptr);
-        pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
-        pInputAttachmentPSO->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
+        if (pSignature)
+        {
+            pSignature->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            pSignature->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
+        }
+        else
+        {
+            pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            pInputAttachmentPSO->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
+        }
         ASSERT_NE(pInputAttachmentSRB, nullptr);
     }
 
@@ -945,5 +976,16 @@ TEST_F(RenderPassTest, InputAttachment)
 
     Present();
 }
+
+TEST_F(RenderPassTest, InputAttachment)
+{
+    TestInputAttachment(false);
+}
+
+TEST_F(RenderPassTest, InputAttachmentWithSignature)
+{
+    TestInputAttachment(true);
+}
+
 
 } // namespace

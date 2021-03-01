@@ -88,7 +88,6 @@ const std::string InputAttachmentTest_PS{
 R"(
 
 Texture2D<float4> g_SubpassInput;
-SamplerState      g_SubpassInput_sampler;
 
 struct PSInput 
 { 

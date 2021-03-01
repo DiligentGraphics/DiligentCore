@@ -461,6 +461,7 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
         break;
 
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
         {
             auto* pTexViewD3D12    = pObject.RawPtr<TextureViewD3D12Impl>();
             auto* pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
@@ -558,6 +559,7 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
         break;
 
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
         {
             const auto* pTexViewD3D12 = pObject.RawPtr<const TextureViewD3D12Impl>();
             const auto* pTexD3D12     = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
