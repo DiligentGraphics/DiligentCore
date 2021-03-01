@@ -70,7 +70,7 @@ namespace Diligent
 
 class ShaderVariableVkImpl;
 
-// sizeof(ShaderVariableManagerVk) == 32 (x64, msvc, Release)
+// sizeof(ShaderVariableManagerVk) == 40 (x64, msvc, Release)
 class ShaderVariableManagerVk
 {
 public:

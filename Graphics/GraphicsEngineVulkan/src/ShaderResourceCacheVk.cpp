@@ -50,6 +50,8 @@ size_t ShaderResourceCacheVk::GetRequiredMemorySize(Uint32 NumSets, const Uint32
 
 void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes)
 {
+    VERIFY(!m_pMemory, "Memory has already been allocated");
+
     // Memory layout:
     //
     //  m_pMemory
@@ -60,27 +62,29 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
     //
     //  Ns = m_NumSets
 
-    VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
-    m_pAllocator = &MemAllocator;
-    VERIFY(NumSets < std::numeric_limits<decltype(m_NumSets)>::max(), "NumSets (", NumSets, ") exceed maximum representable value");
-    m_NumSets        = static_cast<Uint16>(NumSets);
-    m_TotalResources = 0;
+    m_NumSets = static_cast<Uint16>(NumSets);
+    VERIFY(m_NumSets == NumSets, "NumSets (", NumSets, ") exceed maximum representable value");
 
+    m_TotalResources = 0;
     for (Uint32 t = 0; t < NumSets; ++t)
     {
         VERIFY_EXPR(SetSizes[t] > 0);
         m_TotalResources += SetSizes[t];
     }
 
-    auto MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
+    const auto MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
     VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes));
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumSets);
 #endif
     if (MemorySize > 0)
     {
-        m_pMemory         = ALLOCATE_RAW(*m_pAllocator, "Memory for shader resource cache data", MemorySize);
-        auto* pSets       = reinterpret_cast<DescriptorSet*>(m_pMemory);
+        m_pMemory = decltype(m_pMemory){
+            ALLOCATE_RAW(MemAllocator, "Memory for shader resource cache data", MemorySize),
+            STDDeleter<void, IMemoryAllocator>(MemAllocator) //
+        };
+
+        auto* pSets       = reinterpret_cast<DescriptorSet*>(m_pMemory.get());
         auto* pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
         for (Uint32 t = 0; t < NumSets; ++t)
         {
@@ -90,7 +94,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
             m_DbgInitializedResources[t].resize(SetSizes[t]);
 #endif
         }
-        VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory + MemorySize);
+        VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory.get() + MemorySize);
     }
 }
 
@@ -165,8 +169,34 @@ ShaderResourceCacheVk::~ShaderResourceCacheVk()
             pResources[res].~Resource();
         for (Uint32 t = 0; t < m_NumSets; ++t)
             GetDescriptorSet(t).~DescriptorSet();
+    }
+}
 
-        m_pAllocator->Free(m_pMemory);
+static RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
+{
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+    switch (Type)
+    {
+        // clang-format off
+        case DescriptorType::Sampler:                       return RESOURCE_STATE_UNKNOWN;
+        case DescriptorType::CombinedImageSampler:          return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::SeparateImage:                 return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::StorageImage:                  return RESOURCE_STATE_UNORDERED_ACCESS;
+        case DescriptorType::UniformTexelBuffer:            return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::StorageTexelBuffer:            return RESOURCE_STATE_UNORDERED_ACCESS;
+        case DescriptorType::StorageTexelBuffer_ReadOnly:   return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::UniformBuffer:                 return RESOURCE_STATE_CONSTANT_BUFFER;
+        case DescriptorType::UniformBufferDynamic:          return RESOURCE_STATE_CONSTANT_BUFFER;
+        case DescriptorType::StorageBuffer:                 return RESOURCE_STATE_UNORDERED_ACCESS;
+        case DescriptorType::StorageBuffer_ReadOnly:        return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::StorageBufferDynamic:          return RESOURCE_STATE_UNORDERED_ACCESS;
+        case DescriptorType::StorageBufferDynamic_ReadOnly: return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::InputAttachment:               return RESOURCE_STATE_SHADER_RESOURCE;
+        case DescriptorType::AccelerationStructure:         return RESOURCE_STATE_SHADER_RESOURCE;
+        // clang-format on
+        default:
+            UNEXPECTED("unknown descriptor type");
+            return RESOURCE_STATE_UNKNOWN;
     }
 }
 

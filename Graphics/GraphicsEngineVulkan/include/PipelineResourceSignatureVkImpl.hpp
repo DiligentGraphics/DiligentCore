@@ -65,9 +65,6 @@ enum class DescriptorType : Uint8
     Unknown = 0xFF,
 };
 
-RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type);
-
-
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class
 class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceVkImpl>
 {

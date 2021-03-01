@@ -54,6 +54,8 @@
 // Descriptor set for dynamic resources is assigned at every draw call
 
 #include <vector>
+#include <memory>
+
 #include "DescriptorPoolManager.hpp"
 #include "SPIRVShaderResources.hpp"
 #include "BufferVkImpl.hpp"
@@ -171,12 +173,12 @@ public:
     inline DescriptorSet& GetDescriptorSet(Uint32 Index)
     {
         VERIFY_EXPR(Index < m_NumSets);
-        return reinterpret_cast<DescriptorSet*>(m_pMemory)[Index];
+        return reinterpret_cast<DescriptorSet*>(m_pMemory.get())[Index];
     }
     inline const DescriptorSet& GetDescriptorSet(Uint32 Index) const
     {
         VERIFY_EXPR(Index < m_NumSets);
-        return reinterpret_cast<const DescriptorSet*>(m_pMemory)[Index];
+        return reinterpret_cast<const DescriptorSet*>(m_pMemory.get())[Index];
     }
 
     inline Uint32 GetNumDescriptorSets() const { return m_NumSets; }
@@ -200,16 +202,16 @@ public:
 private:
     Resource* GetFirstResourcePtr()
     {
-        return reinterpret_cast<Resource*>(reinterpret_cast<DescriptorSet*>(m_pMemory) + m_NumSets);
+        return reinterpret_cast<Resource*>(reinterpret_cast<DescriptorSet*>(m_pMemory.get()) + m_NumSets);
     }
     const Resource* GetFirstResourcePtr() const
     {
-        return reinterpret_cast<const Resource*>(reinterpret_cast<const DescriptorSet*>(m_pMemory) + m_NumSets);
+        return reinterpret_cast<const Resource*>(reinterpret_cast<const DescriptorSet*>(m_pMemory.get()) + m_NumSets);
     }
 
-    IMemoryAllocator* m_pAllocator = nullptr;
-    void*             m_pMemory    = nullptr;
-    Uint16            m_NumSets    = 0;
+    std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
+
+    Uint16 m_NumSets = 0;
 
     // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
     // regardless of the variable type. Note this variable is not equal to dynamic offsets count, which is constant.
@@ -253,7 +255,7 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
             if (Res.Type == DescriptorType::UniformBufferDynamic)
             {
                 const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
-                auto        Offset    = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
+                const auto  Offset    = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
                 Offsets[OffsetInd++]  = Offset;
                 ++res;
             }
@@ -268,8 +270,8 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
                 Res.Type == DescriptorType::StorageBufferDynamic_ReadOnly)
             {
                 const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
-                const auto* pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBuffer<const BufferVkImpl>() : 0;
-                auto        Offset        = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
+                const auto* pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBuffer<const BufferVkImpl>() : nullptr;
+                const auto  Offset        = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
                 Offsets[OffsetInd++]      = Offset;
                 ++res;
             }
@@ -281,12 +283,10 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
         for (; res < SetSize; ++res)
         {
             const auto& Res = DescrSet.GetResource(res);
-            // clang-format off
-            VERIFY(Res.Type != DescriptorType::UniformBufferDynamic && 
-                   Res.Type != DescriptorType::StorageBufferDynamic &&
-                   Res.Type != DescriptorType::StorageBufferDynamic_ReadOnly, 
-                   "All uniform and storage buffers are expected to go first in the beginning of each descriptor set");
-            // clang-format on
+            VERIFY((Res.Type != DescriptorType::UniformBufferDynamic &&
+                    Res.Type != DescriptorType::StorageBufferDynamic &&
+                    Res.Type != DescriptorType::StorageBufferDynamic_ReadOnly),
+                   "All dynamic uniform and storage buffers are expected to go first in the beginning of each descriptor set");
         }
 #endif
     }
