@@ -96,27 +96,41 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
         switch (BindFlag)
         {
-            case BIND_UNORDERED_ACCESS:
-            {
-                // RWStructured and RWByteAddress buffers are mapped to storage buffers in Vulkan.
-                // RW formatted buffers are mapped to storage texel buffers in Vulkan.
-                VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-
-                // Each element of pDynamicOffsets of vkCmdBindDescriptorSets function which corresponds to a descriptor
-                // binding with type VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC must be a multiple of
-                // VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment (13.2.5)
-                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
-                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
-                break;
-            }
             case BIND_SHADER_RESOURCE:
             {
-                // Structured and ByteAddress buffers are mapped to read-only storage buffers in Vulkan.
-                // Formatted buffers are mapped to uniform texel buffers in Vulkan.
-                VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                if (m_Desc.Mode == BUFFER_MODE_FORMATTED)
+                {
+                    // Formatted buffers are mapped to uniform texel buffers in Vulkan.
+                    VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+                    m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
+                }
+                else
+                {
+                    // Structured and ByteAddress buffers are mapped to read-only storage buffers in Vulkan.
+                    VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                    m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
+                }
 
-                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
-                m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
+                break;
+            }
+            case BIND_UNORDERED_ACCESS:
+            {
+                if (m_Desc.Mode == BUFFER_MODE_FORMATTED)
+                {
+                    // RW formatted buffers are mapped to storage texel buffers in Vulkan.
+                    VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+                    m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
+                }
+                else
+                {
+                    // RWStructured and RWByteAddress buffers are mapped to storage buffers in Vulkan.
+                    VkBuffCI.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                    // Each element of pDynamicOffsets of vkCmdBindDescriptorSets function which corresponds to a descriptor
+                    // binding with type VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC must be a multiple of
+                    // VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment (13.2.5)
+                    m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
+                }
+
                 break;
             }
             case BIND_VERTEX_BUFFER:
