@@ -55,6 +55,8 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         LOG_PRS_ERROR_AND_THROW("Desc.UseCombinedTextureSamplers is true, but Desc.CombinedSamplerSuffix is null or empty");
 
     std::unordered_map<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResourceShaderStages;
+    // Hash map of resources by name
+    std::unordered_multimap<HashMapStringKey, PipelineResourceDesc, HashMapStringKey::Hasher> ResourcesByName;
 
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
@@ -157,6 +159,8 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                 UNEXPECTED("Unexpected resource type");
         }
 
+        ResourcesByName.emplace(Res.Name, Res);
+
         // NB: when creating immutable sampler array, we have to define the sampler as both resource and
         //     immutable sampler. The sampler will not be exposed as a shader variable though.
         //if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
@@ -177,15 +181,21 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             const auto& Res = Desc.Resources[i];
             if (Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
             {
-                auto AssignedSamplerName = String{Res.Name} + Desc.CombinedSamplerSuffix;
-                for (Uint32 s = 0; s < Desc.NumResources; ++s)
-                {
-                    const auto& Sam = Desc.Resources[s];
-                    if (Sam.ResourceType != SHADER_RESOURCE_TYPE_SAMPLER)
-                        continue;
+                const auto AssignedSamplerName = String{Res.Name} + Desc.CombinedSamplerSuffix;
 
-                    if (AssignedSamplerName == Sam.Name && (Sam.ShaderStages & Res.ShaderStages) != 0)
+                auto sam_range = ResourcesByName.equal_range(AssignedSamplerName.c_str());
+                for (auto sam_it = sam_range.first; sam_it != sam_range.second; ++sam_it)
+                {
+                    const auto& Sam = sam_it->second;
+                    VERIFY_EXPR(AssignedSamplerName == Sam.Name);
+
+                    if ((Sam.ShaderStages & Res.ShaderStages) != 0)
                     {
+                        if (Sam.ResourceType != SHADER_RESOURCE_TYPE_SAMPLER)
+                        {
+                            LOG_PRS_ERROR_AND_THROW("Resource '", Sam.Name, "' combined with texture '", Res.Name, "' is not a sampler.");
+                        }
+
                         if (Sam.ShaderStages != Res.ShaderStages)
                         {
                             LOG_PRS_ERROR_AND_THROW("Texture '", Res.Name, "' and sampler '", Sam.Name, "' assigned to it use different shader stages.");
@@ -197,8 +207,20 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                                     "' does not match the type (", GetShaderVariableTypeLiteralName(Sam.VarType),
                                                     ") of sampler '", Sam.Name, "' that is assigned to it.");
                         }
+
+                        ResourcesByName.erase(sam_it);
+
+                        break;
                     }
                 }
+            }
+        }
+
+        for (auto& res_it : ResourcesByName)
+        {
+            if (res_it.second.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+            {
+                LOG_PRS_ERROR_AND_THROW("Sampler '", res_it.second.Name, "' is not assigned to any texture. All samplers must be assigned to textures when combined texture samplers are used.");
             }
         }
     }
