@@ -1580,6 +1580,13 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         TEXTURE_VIEW_SHADER_RESOURCE //
     };
 
+    constexpr Uint32 ConstBuffArraySize = 7;
+    ReferenceBuffers RefConstBuffers{
+        ConstBuffArraySize,
+        USAGE_DEFAULT,
+        BIND_UNIFORM_BUFFER //
+    };
+
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
 
     {
@@ -1587,6 +1594,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
             {
                 {SHADER_TYPE_COMPUTE, "g_Textures", TexArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_Sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_COMPUTE, "g_ConstantBuffers", ConstBuffArraySize, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_OutImage", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
             };
 
@@ -1616,10 +1624,13 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     ShaderMacroHelper Macros;
 
     Macros.AddShaderMacro("NUM_TEXTURES", TexArraySize);
+    Macros.AddShaderMacro("NUM_CONST_BUFFERS", ConstBuffArraySize);
     if (IsGLSL)
         Macros.AddShaderMacro("float4", "vec4");
     for (Uint32 i = 0; i < TexArraySize; ++i)
         Macros.AddShaderMacro((String{"Tex2D_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(i));
+    for (Uint32 i = 0; i < ConstBuffArraySize; ++i)
+        Macros.AddShaderMacro((String{"ConstBuff_Ref"} + std::to_string(i)).c_str(), RefConstBuffers.GetValue(i));
 
     RefCntAutoPtr<IShader> pCS;
     {
@@ -1660,6 +1671,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     ASSERT_TRUE(pTestingSwapChain);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_OutImage")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Textures")->SetArray(RefTextures.GetViewObjects(0), 0, TexArraySize);
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_ConstantBuffers")->SetArray(RefConstBuffers.GetBuffObjects(0), 0, ConstBuffArraySize);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);

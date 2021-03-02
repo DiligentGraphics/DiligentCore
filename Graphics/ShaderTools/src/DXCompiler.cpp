@@ -831,7 +831,12 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
         {
             NameAndBinding.second.SrcBindPoint = ResDesc.BindPoint;
             NameAndBinding.second.SrcSpace     = ResDesc.Space;
-            VERIFY_EXPR(ResDesc.BindCount == 0 || NameAndBinding.second.ArraySize >= ResDesc.BindCount);
+            // For some reason
+            //      Texture2D g_Textures[]
+            // produces BindCount == 0, but
+            //      ConstantBuffer<CBData> g_ConstantBuffers[]
+            // produces BindCount == UINT_MAX
+            VERIFY_EXPR(ResDesc.BindCount == 0 || ResDesc.BindCount == UINT_MAX || NameAndBinding.second.ArraySize >= ResDesc.BindCount);
 
             switch (ResDesc.Type)
             {

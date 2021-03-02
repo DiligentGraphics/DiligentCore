@@ -102,6 +102,15 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
         SkipCount = 1;
 
         UINT BindCount = BindingDesc.BindCount;
+        if (BindCount == UINT_MAX)
+        {
+            // For some reason
+            //      Texture2D g_Textures[]
+            // produces BindCount == 0, but
+            //      ConstantBuffer<CBData> g_ConstantBuffers[]
+            // produces BindCount == UINT_MAX
+            BindCount = 0;
+        }
 
         // Handle arrays
         // For shader models 5_0 and before, every resource array element is enumerated individually.

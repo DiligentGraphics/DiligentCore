@@ -634,6 +634,11 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                                     "Compile the shader using SM5.1+ or change the resource layout to use only one space.");
             }
 
+#ifdef DILIGENT_DEVELOPMENT
+            // Validate resources before remapping
+            DvpValidateShaderResources(pShader, pLocalRootSig);
+#endif
+
             CComPtr<ID3DBlob> pBlob;
             if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
             {
@@ -652,10 +657,6 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                     LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
             }
             pBytecode = pBlob;
-
-#ifdef DILIGENT_DEVELOPMENT
-            DvpValidateShaderResources(pShader, pLocalRootSig);
-#endif
         }
     }
 }
