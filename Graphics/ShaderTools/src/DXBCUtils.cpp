@@ -924,6 +924,7 @@ private:
     ShaderChunkHeader const&      Header;
     ResourceBindingPerType const& BindingsPerType;
 
+    static constexpr Uint32 RuntimeSizedArraySize = ~0u;
 
 private:
     void RemapResourceOperand(const OperandToken& Operand, Uint32* Token, const void* Finish);
@@ -1159,12 +1160,14 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Info->BindPoint == Token[2]);
             VERIFY_EXPR(Info->Type == ShaderResType::CBV);
 
-            if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
+            if (Token[3] != RuntimeSizedArraySize && Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid cbuffer bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
             if (Info->SrcSpace != Token[5])
                 LOG_ERROR_AND_THROW("Invalid cbuffer register space (", Token[5], "), expected (", Info->SrcSpace, ").");
 
-            Token[3] = Info->BindPoint + Info->ArraySize - 1;
+            if (Token[3] != RuntimeSizedArraySize)
+                Token[3] = Info->BindPoint + Info->ArraySize - 1;
+
             Token[5] = Info->Space;
             break;
         }
@@ -1193,12 +1196,14 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Info->BindPoint == Token[2]);
             VERIFY_EXPR(Info->Type == ShaderResType::Sampler);
 
-            if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
+            if (Token[3] != RuntimeSizedArraySize && Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid sampler bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
             if (Info->SrcSpace != Token[4])
                 LOG_ERROR_AND_THROW("Invalid sampler register space (", Token[4], "), expected (", Info->SrcSpace, ").");
 
-            Token[3] = Info->BindPoint + Info->ArraySize - 1;
+            if (Token[3] != RuntimeSizedArraySize)
+                Token[3] = Info->BindPoint + Info->ArraySize - 1;
+
             Token[4] = Info->Space;
             break;
         }
@@ -1230,12 +1235,14 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Info->BindPoint == Token[2]);
             VERIFY_EXPR(Info->Type == ShaderResType::SRV);
 
-            if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
+            if (Token[3] != RuntimeSizedArraySize && Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid texture bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
             if (Info->SrcSpace != Token[5])
                 LOG_ERROR_AND_THROW("Invalid texture register space (", Token[5], "), expected (", Info->SrcSpace, ").");
 
-            Token[3] = Info->BindPoint + Info->ArraySize - 1;
+            if (Token[3] != RuntimeSizedArraySize)
+                Token[3] = Info->BindPoint + Info->ArraySize - 1;
+
             Token[5] = Info->Space;
             break;
         }
@@ -1263,12 +1270,14 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Info->BindPoint == Token[2]);
             VERIFY_EXPR(Info->Type == ShaderResType::SRV);
 
-            if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
+            if (Token[3] != RuntimeSizedArraySize && Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid texture bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
             if (Info->SrcSpace != Token[4])
                 LOG_ERROR_AND_THROW("Invalid texture register space (", Token[4], "), expected (", Info->SrcSpace, ").");
 
-            Token[3] = Info->BindPoint + Info->ArraySize - 1;
+            if (Token[3] != RuntimeSizedArraySize)
+                Token[3] = Info->BindPoint + Info->ArraySize - 1;
+
             Token[4] = Info->Space;
             break;
         }
@@ -1300,12 +1309,14 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Info->BindPoint == Token[2]);
             VERIFY_EXPR(Info->Type == ShaderResType::UAV);
 
-            if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
+            if (Token[3] != RuntimeSizedArraySize && Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid UAV bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
             if (Info->SrcSpace != Token[5])
                 LOG_ERROR_AND_THROW("Invalid UAV register space (", Token[5], "), expected (", Info->SrcSpace, ").");
 
-            Token[3] = Info->BindPoint + Info->ArraySize - 1;
+            if (Token[3] != RuntimeSizedArraySize)
+                Token[3] = Info->BindPoint + Info->ArraySize - 1;
+
             Token[5] = Info->Space;
             break;
         }
@@ -1333,12 +1344,14 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             VERIFY_EXPR(Info->BindPoint == Token[2]);
             VERIFY_EXPR(Info->Type == ShaderResType::UAV);
 
-            if (Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
+            if (Token[3] != RuntimeSizedArraySize && Token[3] != Info->SrcBindPoint + Info->ArraySize - 1)
                 LOG_ERROR_AND_THROW("Invalid UAV bind point (", Token[3], "), expected (", Info->SrcBindPoint + Info->ArraySize - 1, ").");
             if (Info->SrcSpace != Token[4])
                 LOG_ERROR_AND_THROW("Invalid UAV register space (", Token[4], "), expected (", Info->SrcSpace, ").");
 
-            Token[3] = Info->BindPoint + Info->ArraySize - 1;
+            if (Token[3] != RuntimeSizedArraySize)
+                Token[3] = Info->BindPoint + Info->ArraySize - 1;
+
             Token[4] = Info->Space;
             break;
         }
