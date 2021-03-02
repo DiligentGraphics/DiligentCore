@@ -1580,6 +1580,15 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         TEXTURE_VIEW_SHADER_RESOURCE //
     };
 
+    constexpr Uint32  RWTexArraySize = 3;
+    ReferenceTextures RefRWTextures{
+        RWTexArraySize,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_UNORDERED_ACCESS,
+        TEXTURE_VIEW_UNORDERED_ACCESS //
+    };
+
     constexpr Uint32 SamArraySize = 3;
 
     constexpr Uint32 ConstBuffArraySize = 7;
@@ -1607,6 +1616,15 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         BUFFER_MODE_STRUCTURED //
     };
 
+    constexpr Uint32 RWStructBuffArraySize = 4;
+    ReferenceBuffers RefRWStructBuffers{
+        RWStructBuffArraySize,
+        USAGE_DEFAULT,
+        BIND_UNORDERED_ACCESS,
+        BUFFER_VIEW_UNORDERED_ACCESS,
+        BUFFER_MODE_STRUCTURED //
+    };
+
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
 
     {
@@ -1617,6 +1635,8 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
                 {SHADER_TYPE_COMPUTE, "g_ConstantBuffers", ConstBuffArraySize, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_FormattedBuffers", FmtBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_StructuredBuffers", StructBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
+                {SHADER_TYPE_COMPUTE, "g_RWTextures", RWTexArraySize, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
+                {SHADER_TYPE_COMPUTE, "g_RWStructBuffers", RWStructBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_OutImage", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
             };
 
@@ -1652,6 +1672,8 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     Macros.AddShaderMacro("NUM_CONST_BUFFERS", ConstBuffArraySize);
     Macros.AddShaderMacro("NUM_FMT_BUFFERS", FmtBuffArraySize);
     Macros.AddShaderMacro("NUM_STRUCT_BUFFERS", StructBuffArraySize);
+    Macros.AddShaderMacro("NUM_RWTEXTURES", RWTexArraySize);
+    Macros.AddShaderMacro("NUM_RWSTRUCT_BUFFERS", RWStructBuffArraySize);
     if (IsGLSL)
         Macros.AddShaderMacro("float4", "vec4");
     for (Uint32 i = 0; i < TexArraySize; ++i)
@@ -1662,6 +1684,10 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         Macros.AddShaderMacro((String{"FmtBuff_Ref"} + std::to_string(i)).c_str(), RefFmtBuffers.GetValue(i));
     for (Uint32 i = 0; i < StructBuffArraySize; ++i)
         Macros.AddShaderMacro((String{"StructBuff_Ref"} + std::to_string(i)).c_str(), RefStructBuffers.GetValue(i));
+    for (Uint32 i = 0; i < RWTexArraySize; ++i)
+        Macros.AddShaderMacro((String{"RWTex2D_Ref"} + std::to_string(i)).c_str(), RefRWTextures.GetColor(i));
+    for (Uint32 i = 0; i < RWStructBuffArraySize; ++i)
+        Macros.AddShaderMacro((String{"RWStructBuff_Ref"} + std::to_string(i)).c_str(), RefRWStructBuffers.GetValue(i));
 
     RefCntAutoPtr<IShader> pCS;
     {
@@ -1675,6 +1701,13 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         ShaderCI.FilePath                   = IsGLSL ? "RunTimeResourceArray.glsl" : "RunTimeResourceArray.hlsl";
         ShaderCI.CompileFlags               = SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS;
         ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+        if (!deviceCaps.IsD3DDevice() && !IsGLSL)
+        {
+            // Run-time resource arrays are not handled well by GLSLang: NonUniformResourceIndex is not defined;
+            // Constant buffer, structured buffer and RW structured buffer arrays have issues.
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
+        }
 
         pDevice->CreateShader(ShaderCI, &pCS);
         ASSERT_NE(pCS, nullptr);
@@ -1706,6 +1739,8 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_ConstantBuffers")->SetArray(RefConstBuffers.GetBuffObjects(0), 0, ConstBuffArraySize);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_FormattedBuffers")->SetArray(RefFmtBuffers.GetViewObjects(0), 0, FmtBuffArraySize);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_StructuredBuffers")->SetArray(RefStructBuffers.GetViewObjects(0), 0, StructBuffArraySize);
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_RWTextures")->SetArray(RefRWTextures.GetViewObjects(0), 0, RWTexArraySize);
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_RWStructBuffers")->SetArray(RefRWStructBuffers.GetViewObjects(0), 0, RWStructBuffArraySize);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);

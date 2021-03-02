@@ -15,6 +15,18 @@ struct StructBuffData
 };
 StructuredBuffer<StructBuffData> g_StructuredBuffers[];
 
+RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTextures[] : register(u10, space5);
+
+
+#ifndef VULKAN // RW structured buffers are not supported by DXC
+struct RWStructBuffData
+{
+    float4 Data;
+};
+RWStructuredBuffer<RWStructBuffData> g_RWStructBuffers[] : register(u10, space6);
+#endif
+
+
 float4 CheckValue(float4 Val, float4 Expected)
 {
     return float4(Val.x == Expected.x ? 1.0 : 0.0,
@@ -57,17 +69,34 @@ float4 VerifyResources(uint index, float2 coord)
     StructBuffRefValues[1] = StructBuff_Ref1;
     StructBuffRefValues[2] = StructBuff_Ref2;
 
-    uint TexIdx        = index % NUM_TEXTURES;
-    uint SamIdx        = index % NUM_SAMPLERS;
-    uint ConstBuffIdx  = index % NUM_CONST_BUFFERS;
-    uint FmtBuffIdx    = index % NUM_FMT_BUFFERS;
-    uint StructBuffIdx = index % NUM_STRUCT_BUFFERS;
+    float4 RWTexRefValues[NUM_TEXTURES];
+    RWTexRefValues[0] = RWTex2D_Ref0;
+    RWTexRefValues[1] = RWTex2D_Ref1;
+    RWTexRefValues[2] = RWTex2D_Ref2;
+
+    float4 RWStructBuffRefValues[NUM_RWSTRUCT_BUFFERS];
+    RWStructBuffRefValues[0] = RWStructBuff_Ref0;
+    RWStructBuffRefValues[1] = RWStructBuff_Ref1;
+    RWStructBuffRefValues[2] = RWStructBuff_Ref2;
+    RWStructBuffRefValues[3] = RWStructBuff_Ref3;
+
+    uint TexIdx          = index % NUM_TEXTURES;
+    uint SamIdx          = index % NUM_SAMPLERS;
+    uint ConstBuffIdx    = index % NUM_CONST_BUFFERS;
+    uint FmtBuffIdx      = index % NUM_FMT_BUFFERS;
+    uint StructBuffIdx   = index % NUM_STRUCT_BUFFERS;
+    uint RWTexIdx        = index % NUM_RWTEXTURES;
+    uint RWStructBuffIdx = index % NUM_RWSTRUCT_BUFFERS;
 
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
     AllCorrect *= CheckValue(g_Textures[NonUniformResourceIndex(TexIdx)].SampleLevel(g_Samplers[NonUniformResourceIndex(SamIdx)], coord, 0.0), TexRefValues[TexIdx]);
     AllCorrect *= CheckValue(g_ConstantBuffers[NonUniformResourceIndex(ConstBuffIdx)].Data, ConstBuffRefValues[ConstBuffIdx]);
     AllCorrect *= CheckValue(g_FormattedBuffers[NonUniformResourceIndex(FmtBuffIdx)].Load(0), FmtBuffRefValues[FmtBuffIdx]);
     AllCorrect *= CheckValue(g_StructuredBuffers[NonUniformResourceIndex(StructBuffIdx)][0].Data, StructBuffRefValues[StructBuffIdx]);
+    AllCorrect *= CheckValue(g_RWTextures[NonUniformResourceIndex(RWTexIdx)][int2(coord*10)], RWTexRefValues[RWTexIdx]);
+#ifndef VULKAN
+    AllCorrect *= CheckValue(g_RWStructBuffers[NonUniformResourceIndex(RWStructBuffIdx)][0].Data, RWStructBuffRefValues[RWStructBuffIdx]);
+#endif
 
     return AllCorrect;
 }

@@ -28,6 +28,7 @@
 #pragma once
 
 #include <vector>
+#include <atomic>
 
 #include "RenderDevice.h"
 #include "DeviceContext.h"
@@ -62,9 +63,11 @@ public:
 
         for (Uint32 i = 0; i < NumBuffers; ++i)
         {
+            static std::atomic_int Counter{10};
+
             auto& Value = Values[i];
-            auto  v     = static_cast<float>(i * 10);
-            Value       = float4(v + 1, v + 2, v + 3, v + 4);
+            float v     = static_cast<float>(Counter.fetch_add(10));
+            Value       = float4{v + 1, v + 2, v + 3, v + 4};
 
             std::vector<float4> InitData(16, Value);
 
@@ -170,7 +173,9 @@ public:
             auto& pTexture = Textures[i];
             auto& Value    = Values[i];
 
-            int v = (i % 15) + 1;
+            static std::atomic_int Counter{1};
+
+            int v = (Counter.fetch_add(1) % 15) + 1;
             Value = float4{
                 (v & 0x01) ? 1.f : 0.f,
                 (v & 0x02) ? 1.f : 0.f,

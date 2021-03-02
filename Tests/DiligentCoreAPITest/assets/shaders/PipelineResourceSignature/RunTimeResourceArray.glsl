@@ -17,6 +17,14 @@ layout(std140) readonly buffer g_StructuredBuffers
     vec4 Data;
 }g_StructuredBufferInst[];
 
+layout(rgba8) uniform image2D g_RWTextures[];
+
+layout(std140) buffer g_RWStructBuffers
+{
+    vec4 Data;
+}g_RWStructBuffersInst[];
+
+
 vec4 CheckValue(vec4 Val, vec4 Expected)
 {
     return vec4(Val.x == Expected.x ? 1.0 : 0.0,
@@ -47,29 +55,44 @@ vec4 VerifyResources(uint index, vec2 coord)
     ConstBuffRefValues[5] = ConstBuff_Ref5;
     ConstBuffRefValues[6] = ConstBuff_Ref6;
 
-    float4 FmtBuffRefValues[NUM_FMT_BUFFERS];
+    vec4 FmtBuffRefValues[NUM_FMT_BUFFERS];
     FmtBuffRefValues[0] = FmtBuff_Ref0;
     FmtBuffRefValues[1] = FmtBuff_Ref1;
     FmtBuffRefValues[2] = FmtBuff_Ref2;
     FmtBuffRefValues[3] = FmtBuff_Ref3;
     FmtBuffRefValues[4] = FmtBuff_Ref4;
 
-    float4 StructBuffRefValues[NUM_STRUCT_BUFFERS];
+    vec4 StructBuffRefValues[NUM_STRUCT_BUFFERS];
     StructBuffRefValues[0] = StructBuff_Ref0;
     StructBuffRefValues[1] = StructBuff_Ref1;
     StructBuffRefValues[2] = StructBuff_Ref2;
 
-    uint TexIdx        = index % NUM_TEXTURES;
-    uint SamIdx        = index % NUM_SAMPLERS;
-    uint BuffIdx       = index % NUM_CONST_BUFFERS;
-    uint FmtBuffIdx    = index % NUM_FMT_BUFFERS;
-    uint StructBuffIdx = index % NUM_STRUCT_BUFFERS;
+    vec4 RWTexRefValues[NUM_TEXTURES];
+    RWTexRefValues[0] = RWTex2D_Ref0;
+    RWTexRefValues[1] = RWTex2D_Ref1;
+    RWTexRefValues[2] = RWTex2D_Ref2;
+
+    float4 RWStructBuffRefValues[NUM_RWSTRUCT_BUFFERS];
+    RWStructBuffRefValues[0] = RWStructBuff_Ref0;
+    RWStructBuffRefValues[1] = RWStructBuff_Ref1;
+    RWStructBuffRefValues[2] = RWStructBuff_Ref2;
+    RWStructBuffRefValues[3] = RWStructBuff_Ref3;
+
+    uint TexIdx          = index % NUM_TEXTURES;
+    uint SamIdx          = index % NUM_SAMPLERS;
+    uint BuffIdx         = index % NUM_CONST_BUFFERS;
+    uint FmtBuffIdx      = index % NUM_FMT_BUFFERS;
+    uint StructBuffIdx   = index % NUM_STRUCT_BUFFERS;
+    uint RWTexIdx        = index % NUM_RWTEXTURES;
+    uint RWStructBuffIdx = index % NUM_RWSTRUCT_BUFFERS;
 
     vec4 AllCorrect = vec4(1.0, 1.0, 1.0, 1.0);
     AllCorrect *= CheckValue(textureLod(sampler2D(g_Textures[nonuniformEXT(TexIdx)], g_Samplers[nonuniformEXT(SamIdx)]), coord, 0.0), TexRefValues[TexIdx]);
     AllCorrect *= CheckValue(g_ConstantBufferInst[nonuniformEXT(BuffIdx)].Data, ConstBuffRefValues[BuffIdx]);
     AllCorrect *= CheckValue(texelFetch(g_FormattedBuffers[nonuniformEXT(FmtBuffIdx)], 0), FmtBuffRefValues[FmtBuffIdx]);
-    AllCorrect *= CheckValue(g_ConstantBufferInst[nonuniformEXT(StructBuffIdx)].Data, StructBuffRefValues[StructBuffIdx]);
+    AllCorrect *= CheckValue(g_StructuredBufferInst[nonuniformEXT(StructBuffIdx)].Data, StructBuffRefValues[StructBuffIdx]);
+    AllCorrect *= CheckValue(imageLoad(g_RWTextures[nonuniformEXT(RWTexIdx)], ivec2(coord * 10)), RWTexRefValues[RWTexIdx]);
+    AllCorrect *= CheckValue(g_RWStructBuffersInst[nonuniformEXT(RWStructBuffIdx)].Data, RWStructBuffRefValues[RWStructBuffIdx]);
 
     return AllCorrect;
 }
