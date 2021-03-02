@@ -22,7 +22,7 @@ float4 VerifyResources(uint index, float2 coord)
     RefValues[6] = Tex2D_Ref6;
     RefValues[7] = Tex2D_Ref7;
 
-    return CheckValue(g_Textures[index].Sample(g_Sampler, coord, 0.0), RefValues[index]);
+    return CheckValue(g_Textures[NonUniformResourceIndex(index)].SampleLevel(g_Sampler, coord, 0.0), RefValues[index]);
 }
 
 RWTexture2D<float4>  g_OutImage;
@@ -37,7 +37,7 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID,
         return;
 
     float4 Color = float4(float2(GlobalInvocationID.xy % 256u) / 256.0, 0.0, 1.0);
-    float2 uv = float2(GlobalInvocationID.xy + float2(0.5,0.5)) / float(Dim);
+    float2 uv = float2(GlobalInvocationID.xy + float2(0.5,0.5)) / float2(Dim);
     Color *= VerifyResources(LocalInvocationIndex % NUM_TEXTURES, uv);
 
     g_OutImage[GlobalInvocationID.xy] = Color;

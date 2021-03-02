@@ -2153,7 +2153,6 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
     ShaderCI.UseCombinedTextureSamplers = true;
     if (UseArray && pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
     {
@@ -2193,6 +2192,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         {
             ShaderCI.Source = UseArray ? HLSL::DrawTest_VSFormattedBufferArray.c_str() : HLSL::DrawTest_VSFormattedBuffers.c_str();
         }
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_NE(pVS, nullptr);
     }
@@ -2200,6 +2200,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
     RefCntAutoPtr<IShader> pPS;
     {
         ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Draw command test structured buffers - PS";

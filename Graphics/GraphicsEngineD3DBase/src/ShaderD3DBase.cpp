@@ -29,6 +29,9 @@
 #include <vector>
 #include <memory>
 
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
 #include <D3Dcompiler.h>
 
 #include <atlcomcli.h>
@@ -40,6 +43,7 @@
 #include "ShaderD3DBase.hpp"
 #include "DXCompiler.hpp"
 #include "HLSLUtils.hpp"
+#include "BasicMath.hpp"
 
 namespace Diligent
 {
@@ -104,6 +108,21 @@ static HRESULT CompileShader(const char*             Source,
     // report strange errors:
     // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
 #endif
+
+    for (auto CompileFlags = ShaderCI.CompileFlags; CompileFlags != SHADER_COMPILE_FLAG_NONE;)
+    {
+        auto Flag = ExtractLSB(CompileFlags);
+        static_assert(SHADER_COMPILE_FLAG_LAST == 1, "Please updated the switch below to handle the new shader flag");
+        switch (Flag)
+        {
+            case SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS:
+                dwShaderFlags |= D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES;
+                break;
+
+            default:
+                UNEXPECTED("Unexpected shader compile flag");
+        }
+    }
 
     D3DIncludeImpl IncludeImpl{ShaderCI.pShaderSourceStreamFactory};
     return D3DCompile(Source, SourceLength, NULL, nullptr, &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);

@@ -39,7 +39,7 @@ void main()
         return;
 
     vec4 Color = vec4(vec2(gl_GlobalInvocationID.xy % 256u) / 256.0, 0.0, 1.0);
-    vec2 uv = vec2(gl_GlobalInvocationID.xy + vec2(0.5,0.5)) / vec2(gl_WorkGroupSize.xy * gl_NumWorkGroups.xy);
+    vec2 uv = vec2(gl_GlobalInvocationID.xy + vec2(0.5,0.5)) / vec2(Dim);
     Color *= VerifyResources(gl_LocalInvocationIndex % NUM_TEXTURES, uv);
 
     imageStore(g_OutImage, ivec2(gl_GlobalInvocationID.xy),  Color);

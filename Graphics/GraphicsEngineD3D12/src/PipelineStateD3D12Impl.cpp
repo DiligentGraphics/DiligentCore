@@ -746,7 +746,7 @@ void PipelineStateD3D12Impl::DvpValidateShaderResources(const ShaderD3D12Impl* p
 
                 if (Attribs.BindCount == 0)
                 {
-                    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0)
+                    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0)
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
                                             "' that is runtime-sized array, but in resource signature '", pSignature->GetDesc().Name,

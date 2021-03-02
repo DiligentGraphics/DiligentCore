@@ -103,6 +103,9 @@ protected:
                                                        const ShaderMacro*  Macros,
                                                        ModifyCIHandlerType ModifyCIHandler)
     {
+        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pDevice = pEnv->GetDevice();
+
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -112,8 +115,8 @@ protected:
         ShaderCI.EntryPoint                 = EntryPoint;
         ShaderCI.Desc.ShaderType            = ShaderType;
         ShaderCI.UseCombinedTextureSamplers = false;
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
-        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
         if (pDevice->GetDeviceCaps().IsGLDevice())
             ShaderCI.UseCombinedTextureSamplers = true;
 
@@ -1308,6 +1311,7 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_GLSL;
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.Macros                     = Macros;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
     RefCntAutoPtr<IShader> pVS;
     {
@@ -1465,6 +1469,7 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
 
     auto ModifyShaderCI = [&](ShaderCreateInfo& ShaderCI) {
         ShaderCI.SourceLanguage = SrcLanguage;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         if (pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
         {
@@ -1543,15 +1548,20 @@ TEST_F(PipelineResourceSignatureTest, StructuredBuffers)
     TestFormattedOrStructuredBuffer(BUFFER_MODE_STRUCTURED);
 }
 
-static void TestVulkanDescriptorIndexing(bool IsGLSL, IShaderSourceInputStreamFactory* pShaderSourceFactory)
+static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactory* pShaderSourceFactory)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     const auto& deviceCaps = pDevice->GetDeviceCaps();
-    if (!deviceCaps.Features.ShaderResourceRuntimeArray || !deviceCaps.IsVulkanDevice())
+    if (!deviceCaps.Features.ShaderResourceRuntimeArray)
     {
-        GTEST_SKIP() << "Descriptor indexing is not supported by this device";
+        GTEST_SKIP() << "Shader Resource Runtime Arrays are not supported by this device";
+    }
+
+    if (IsGLSL && deviceCaps.IsD3DDevice())
+    {
+        GTEST_SKIP() << "Direct3D does not support GLSL";
     }
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
@@ -1575,7 +1585,7 @@ static void TestVulkanDescriptorIndexing(bool IsGLSL, IShaderSourceInputStreamFa
     {
         const PipelineResourceDesc Resources[] =
             {
-                {SHADER_TYPE_COMPUTE, "g_Textures", TexArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_COMPUTE, "g_Textures", TexArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_Sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
                 {SHADER_TYPE_COMPUTE, "g_OutImage", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
             };
@@ -1615,13 +1625,14 @@ static void TestVulkanDescriptorIndexing(bool IsGLSL, IShaderSourceInputStreamFa
     {
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.UseCombinedTextureSamplers = true;
         ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
         ShaderCI.EntryPoint                 = "main";
-        ShaderCI.Desc.Name                  = "DescrIndexingTest - CS";
+        ShaderCI.Desc.Name                  = "RunTimeResourceArray - CS";
         ShaderCI.Macros                     = Macros;
         ShaderCI.SourceLanguage             = IsGLSL ? SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM : SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.FilePath                   = IsGLSL ? "VulkanDescriptorIndexing.glsl" : "VulkanDescriptorIndexing.hlsl";
+        ShaderCI.FilePath                   = IsGLSL ? "RunTimeResourceArray.glsl" : "RunTimeResourceArray.hlsl";
+        ShaderCI.CompileFlags               = SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS;
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         pDevice->CreateShader(ShaderCI, &pCS);
         ASSERT_NE(pCS, nullptr);
@@ -1660,14 +1671,14 @@ static void TestVulkanDescriptorIndexing(bool IsGLSL, IShaderSourceInputStreamFa
     pSwapChain->Present();
 }
 
-TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing_GLSL)
+TEST_F(PipelineResourceSignatureTest, RunTimeResourceArray_GLSL)
 {
-    TestVulkanDescriptorIndexing(true, pShaderSourceFactory);
+    TestRunTimeResourceArray(true, pShaderSourceFactory);
 }
 
-TEST_F(PipelineResourceSignatureTest, VulkanDescriptorIndexing_HLSL)
+TEST_F(PipelineResourceSignatureTest, RunTimeResourceArray_HLSL)
 {
-    TestVulkanDescriptorIndexing(false, pShaderSourceFactory);
+    TestRunTimeResourceArray(false, pShaderSourceFactory);
 }
 
 } // namespace Diligent

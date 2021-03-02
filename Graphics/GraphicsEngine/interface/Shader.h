@@ -240,6 +240,25 @@ struct ShaderVersion
 };
 typedef struct ShaderVersion ShaderVersion;
 
+
+// clang-format off
+
+/// Shader compilation flags
+DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
+{
+    /// No flags.
+    SHADER_COMPILE_FLAG_NONE = 0x0,
+
+    /// Enable unbounded resource arrays (e.g. Texture2D g_Texture[]).
+    SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS = 0x01,
+
+    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS
+};
+DEFINE_FLAG_ENUM_OPERATORS(SHADER_COMPILE_FLAGS);
+
+// clang-format on
+
+
 /// Shader creation attributes
 struct ShaderCreateInfo
 {
@@ -342,6 +361,8 @@ struct ShaderCreateInfo
     /// supported by the device.
     ShaderVersion GLESSLVersion DEFAULT_INITIALIZER({});
 
+    /// Shader compile flags (see Diligent::SHADER_COMPILE_FLAGS).
+    SHADER_COMPILE_FLAGS CompileFlags DEFAULT_INITIALIZER(SHADER_COMPILE_FLAG_NONE);
 
     /// Memory address where pointer to the compiler messages data blob will be written
 
