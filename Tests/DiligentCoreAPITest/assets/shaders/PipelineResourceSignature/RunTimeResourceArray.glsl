@@ -3,7 +3,7 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
 uniform texture2D g_Textures[];
-uniform sampler g_Sampler;
+uniform sampler g_Samplers[];
 
 uniform g_ConstantBuffers
 {
@@ -60,12 +60,13 @@ vec4 VerifyResources(uint index, vec2 coord)
     StructBuffRefValues[2] = StructBuff_Ref2;
 
     uint TexIdx        = index % NUM_TEXTURES;
+    uint SamIdx        = index % NUM_SAMPLERS;
     uint BuffIdx       = index % NUM_CONST_BUFFERS;
     uint FmtBuffIdx    = index % NUM_FMT_BUFFERS;
     uint StructBuffIdx = index % NUM_STRUCT_BUFFERS;
 
     vec4 AllCorrect = vec4(1.0, 1.0, 1.0, 1.0);
-    AllCorrect *= CheckValue(textureLod(sampler2D(g_Textures[nonuniformEXT(TexIdx)], g_Sampler), coord, 0.0), TexRefValues[TexIdx]);
+    AllCorrect *= CheckValue(textureLod(sampler2D(g_Textures[nonuniformEXT(TexIdx)], g_Samplers[nonuniformEXT(SamIdx)]), coord, 0.0), TexRefValues[TexIdx]);
     AllCorrect *= CheckValue(g_ConstantBufferInst[nonuniformEXT(BuffIdx)].Data, ConstBuffRefValues[BuffIdx]);
     AllCorrect *= CheckValue(texelFetch(g_FormattedBuffers[nonuniformEXT(FmtBuffIdx)], 0), FmtBuffRefValues[FmtBuffIdx]);
     AllCorrect *= CheckValue(g_ConstantBufferInst[nonuniformEXT(StructBuffIdx)].Data, StructBuffRefValues[StructBuffIdx]);

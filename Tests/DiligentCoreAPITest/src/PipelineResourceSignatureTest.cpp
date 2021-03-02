@@ -1580,6 +1580,8 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         TEXTURE_VIEW_SHADER_RESOURCE //
     };
 
+    constexpr Uint32 SamArraySize = 3;
+
     constexpr Uint32 ConstBuffArraySize = 7;
     ReferenceBuffers RefConstBuffers{
         ConstBuffArraySize,
@@ -1611,28 +1613,30 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         const PipelineResourceDesc Resources[] =
             {
                 {SHADER_TYPE_COMPUTE, "g_Textures", TexArraySize, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
-                {SHADER_TYPE_COMPUTE, "g_Sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                {SHADER_TYPE_COMPUTE, "g_Samplers", SamArraySize, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_ConstantBuffers", ConstBuffArraySize, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_FormattedBuffers", FmtBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_StructuredBuffers", StructBuffArraySize, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
                 {SHADER_TYPE_COMPUTE, "g_OutImage", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
             };
 
-        SamplerDesc SamLinearWrapDesc{
-            FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
-            TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
-        ImmutableSamplerDesc ImmutableSamplers[] = {{SHADER_TYPE_COMPUTE, "g_Sampler", SamLinearWrapDesc}};
-
         PipelineResourceSignatureDesc Desc;
-        Desc.Resources            = Resources;
-        Desc.NumResources         = _countof(Resources);
-        Desc.ImmutableSamplers    = ImmutableSamplers;
-        Desc.NumImmutableSamplers = _countof(ImmutableSamplers);
-        Desc.BindingIndex         = 0;
+        Desc.Resources    = Resources;
+        Desc.NumResources = _countof(Resources);
+        Desc.BindingIndex = 0;
 
         pDevice->CreatePipelineResourceSignature(Desc, &pSignature);
         ASSERT_NE(pSignature, nullptr);
     }
+
+    SamplerDesc SamLinearWrapDesc{
+        FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
+        TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
+    RefCntAutoPtr<ISampler> pSampler;
+    pDevice->CreateSampler(SamLinearWrapDesc, &pSampler);
+    ASSERT_NE(pSampler, nullptr);
+    IDeviceObject* ppSamplers[] = {pSampler, pSampler, pSampler};
+    static_assert(_countof(ppSamplers) == SamArraySize, "Invalid sampler array size");
 
     ComputePipelineStateCreateInfo PSOCreateInfo;
 
@@ -1644,6 +1648,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     ShaderMacroHelper Macros;
 
     Macros.AddShaderMacro("NUM_TEXTURES", TexArraySize);
+    Macros.AddShaderMacro("NUM_SAMPLERS", SamArraySize);
     Macros.AddShaderMacro("NUM_CONST_BUFFERS", ConstBuffArraySize);
     Macros.AddShaderMacro("NUM_FMT_BUFFERS", FmtBuffArraySize);
     Macros.AddShaderMacro("NUM_STRUCT_BUFFERS", StructBuffArraySize);
@@ -1697,6 +1702,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     ASSERT_TRUE(pTestingSwapChain);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_OutImage")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Textures")->SetArray(RefTextures.GetViewObjects(0), 0, TexArraySize);
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_Samplers")->SetArray(ppSamplers, 0, SamArraySize);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_ConstantBuffers")->SetArray(RefConstBuffers.GetBuffObjects(0), 0, ConstBuffArraySize);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_FormattedBuffers")->SetArray(RefFmtBuffers.GetViewObjects(0), 0, FmtBuffArraySize);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_StructuredBuffers")->SetArray(RefStructBuffers.GetViewObjects(0), 0, StructBuffArraySize);

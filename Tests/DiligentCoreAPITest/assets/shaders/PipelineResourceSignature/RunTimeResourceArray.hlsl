@@ -1,5 +1,5 @@
 Texture2D g_Textures[] : register(t0, space1);
-SamplerState g_Sampler;
+SamplerState g_Samplers[] : register(s4, space27);
 
 struct CBData
 {
@@ -58,12 +58,13 @@ float4 VerifyResources(uint index, float2 coord)
     StructBuffRefValues[2] = StructBuff_Ref2;
 
     uint TexIdx        = index % NUM_TEXTURES;
+    uint SamIdx        = index % NUM_SAMPLERS;
     uint ConstBuffIdx  = index % NUM_CONST_BUFFERS;
     uint FmtBuffIdx    = index % NUM_FMT_BUFFERS;
     uint StructBuffIdx = index % NUM_STRUCT_BUFFERS;
 
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
-    AllCorrect *= CheckValue(g_Textures[NonUniformResourceIndex(TexIdx)].SampleLevel(g_Sampler, coord, 0.0), TexRefValues[TexIdx]);
+    AllCorrect *= CheckValue(g_Textures[NonUniformResourceIndex(TexIdx)].SampleLevel(g_Samplers[NonUniformResourceIndex(SamIdx)], coord, 0.0), TexRefValues[TexIdx]);
     AllCorrect *= CheckValue(g_ConstantBuffers[NonUniformResourceIndex(ConstBuffIdx)].Data, ConstBuffRefValues[ConstBuffIdx]);
     AllCorrect *= CheckValue(g_FormattedBuffers[NonUniformResourceIndex(FmtBuffIdx)].Load(0), FmtBuffRefValues[FmtBuffIdx]);
     AllCorrect *= CheckValue(g_StructuredBuffers[NonUniformResourceIndex(StructBuffIdx)][0].Data, StructBuffRefValues[StructBuffIdx]);
