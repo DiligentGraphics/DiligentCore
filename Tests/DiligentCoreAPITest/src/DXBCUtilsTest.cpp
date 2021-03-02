@@ -71,7 +71,7 @@ static void TestDXBCRemapping(const char* Source, const char* Entry, const char*
 
         String ResName{BindDesc.Name};
 
-        auto Iter = ResMap.find(HashMapStringKey{ResName.c_str()});
+        auto Iter = ResMap.find(ResName.c_str());
         if (Iter != ResMap.end())
         {
             EXPECT_EQ(BindDesc.BindPoint, Iter->second.BindPoint);
@@ -102,7 +102,7 @@ static void TestDXBCRemapping(const char* Source, const char* Entry, const char*
             ResName.resize(ArrStart);
         }
 
-        Iter = ResMap.find(HashMapStringKey{ResName.c_str()});
+        Iter = ResMap.find(ResName.c_str());
         if (Iter != ResMap.end())
         {
             EXPECT_LT(ArrayInd, Iter->second.ArraySize);
@@ -115,8 +115,6 @@ static void TestDXBCRemapping(const char* Source, const char* Entry, const char*
         ADD_FAILURE() << "Can't find shader resource '" << BindDesc.Name << "[" << ArrayInd << "]";
     }
 }
-
-using BindInfo = DXBCUtils::BindInfo;
 
 
 TEST(DXBCUtils, PatchSM50)
@@ -167,17 +165,19 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
     const Uint32 Space = 0;
 
     DXBCUtils::TResourceBindingMap ResMap;
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_1"}, BindInfo{Tex++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_2"}, BindInfo{Tex++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_3"}, BindInfo{Tex++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_4"}, BindInfo{Tex++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"g_InColorArray"}, BindInfo{Tex++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_1"}, BindInfo{UAV++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_2"}, BindInfo{UAV++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"g_Sampler_1"}, BindInfo{Samp++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"g_Sampler_2"}, BindInfo{Samp++, Space, 4});
-    ResMap.emplace(HashMapStringKey{"Constants1"}, BindInfo{Buff++, Space, 1});
-    ResMap.emplace(HashMapStringKey{"Constants2"}, BindInfo{Buff++, Space, 1});
+    // clang-format off
+    ResMap["g_Tex2D_1"]          = {Tex++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    ResMap["g_Tex2D_2"]          = {Tex++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    ResMap["g_Tex2D_3"]          = {Tex++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    ResMap["g_Tex2D_4"]          = {Tex++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    ResMap["g_InColorArray"]     = {Tex++,  Space, 1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+    ResMap["g_OutColorBuffer_1"] = {UAV++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    ResMap["g_OutColorBuffer_2"] = {UAV++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    ResMap["g_Sampler_1"]        = {Samp++, Space, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    ResMap["g_Sampler_2"]        = {Samp++, Space, 4, SHADER_RESOURCE_TYPE_SAMPLER        };
+    ResMap["Constants1"]         = {Buff++, Space, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    ResMap["Constants2"]         = {Buff++, Space, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    // clang-format on
 
     TestDXBCRemapping(Source, "PSMain", "ps_5_0", ResMap);
 }
@@ -232,28 +232,34 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
         const Uint32 Space = 0;
         Uint32       Tex   = 0;
         Uint32       Buff  = 0;
-        ResMap.emplace(HashMapStringKey{"g_Tex2D_2"}, BindInfo{Tex++, Space, 1});
-        ResMap.emplace(HashMapStringKey{"g_Tex2D_3"}, BindInfo{Tex++, Space, 1});
-        ResMap.emplace(HashMapStringKey{"Constants1"}, BindInfo{Buff++, Space, 1});
-        ResMap.emplace(HashMapStringKey{"Constants2"}, BindInfo{Buff++, Space, 1});
+        // clang-format off
+        ResMap["g_Tex2D_2"]  = {Tex++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        ResMap["g_Tex2D_3"]  = {Tex++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        ResMap["Constants1"] = {Buff++, Space, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        ResMap["Constants2"] = {Buff++, Space, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        // clang-format on
     }
     // space 1
     {
         const Uint32 Space = 1;
         Uint32       Samp  = 0;
         Uint32       UAV   = 0;
-        ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_1"}, BindInfo{UAV++, Space, 1});
-        ResMap.emplace(HashMapStringKey{"g_OutColorBuffer_2"}, BindInfo{UAV++, Space, 1});
-        ResMap.emplace(HashMapStringKey{"g_Sampler_1"}, BindInfo{Samp++, Space, 1});
-        ResMap.emplace(HashMapStringKey{"g_Sampler_2"}, BindInfo{Samp++, Space, 4});
+        // clang-format off
+        ResMap["g_OutColorBuffer_1"] = {UAV++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV};
+        ResMap["g_OutColorBuffer_2"] = {UAV++,  Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV};
+        ResMap["g_Sampler_1"]        = {Samp++, Space, 1, SHADER_RESOURCE_TYPE_SAMPLER    };
+        ResMap["g_Sampler_2"]        = {Samp++, Space, 4, SHADER_RESOURCE_TYPE_SAMPLER    };
+        // clang-format on
     }
     // space 2
     {
         const Uint32 Space = 2;
         Uint32       Tex   = 0;
-        ResMap.emplace(HashMapStringKey{"g_Tex2D_1"}, BindInfo{Tex++, Space, 1});
-        ResMap.emplace(HashMapStringKey{"g_Tex2D_4"}, BindInfo{Tex++, Space, 1});
-        ResMap.emplace(HashMapStringKey{"g_InColorArray"}, BindInfo{Tex++, Space, 1});
+        // clang-format off
+        ResMap["g_Tex2D_1"]      = {Tex++, Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV};
+        ResMap["g_Tex2D_4"]      = {Tex++, Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV};
+        ResMap["g_InColorArray"] = {Tex++, Space, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV};
+        // clang-format on
     }
 
     TestDXBCRemapping(Source, "PSMain", "ps_5_1", ResMap);
@@ -291,10 +297,12 @@ float4 PSMain(in float4 f4Position : SV_Position) : SV_Target
 )hlsl";
 
     DXBCUtils::TResourceBindingMap ResMap;
-    ResMap.emplace(HashMapStringKey{"g_Sampler"}, BindInfo{11, 3, 1});
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_StatArray"}, BindInfo{22, 3, 8});
-    ResMap.emplace(HashMapStringKey{"g_Tex2D_DynArray"}, BindInfo{0, 2, 100});
-    ResMap.emplace(HashMapStringKey{"Constants"}, BindInfo{44, 1, 1});
+    // clang-format off
+    ResMap["g_Sampler"]         = {11, 3,   1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    ResMap["g_Tex2D_StatArray"] = {22, 3,   8, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    ResMap["g_Tex2D_DynArray"]  = { 0, 2, 100, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    ResMap["Constants"]         = {44, 1,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    // clang-format on
 
     TestDXBCRemapping(Source, "PSMain", "ps_5_1", ResMap);
 }

@@ -31,38 +31,35 @@
 
 #include "Constants.h"
 #include "HashUtils.hpp"
+#include "Shader.h"
 
 namespace Diligent
 {
 
 struct ResourceBinding
 {
-    enum ResType : Uint32
-    {
-        CBV     = 0,
-        SRV     = 1,
-        Sampler = 2,
-        UAV     = 3,
-        Count,
-    };
-
     struct BindInfo
     {
-        // new bind point & space
         Uint32 BindPoint = ~0u;
         Uint32 Space     = ~0u;
         Uint32 ArraySize = 0;
 
-        // current (previous) bind point & space
-        mutable Uint32  SrcBindPoint = ~0u;
-        mutable Uint32  SrcSpace     = ~0u;
-        mutable ResType Type         = ResType::Count;
-        mutable Uint32  UID          = ~0u; // Unique resource record ID
+#ifdef DILIGENT_DEBUG
+        SHADER_RESOURCE_TYPE ResType = SHADER_RESOURCE_TYPE_UNKNOWN;
+#endif
 
-        BindInfo() {}
+        BindInfo()
+        {}
 
-        BindInfo(Uint32 _BindPoint, Uint32 _Space, Uint32 _ArraySize) :
-            BindPoint{_BindPoint}, Space{_Space}, ArraySize{_ArraySize}
+        BindInfo(Uint32 _BindPoint, Uint32 _Space, Uint32 _ArraySize, SHADER_RESOURCE_TYPE _ResType) :
+            // clang-format off
+            BindPoint{_BindPoint},
+            Space    {_Space    },
+            ArraySize{_ArraySize}
+#ifdef DILIGENT_DEBUG
+            , ResType{_ResType  }
+#endif
+        // clang-format on
         {}
     };
 

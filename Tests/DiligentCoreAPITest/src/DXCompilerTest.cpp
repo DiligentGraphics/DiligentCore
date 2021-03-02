@@ -200,12 +200,14 @@ TEST(DXCompilerTest, RemapBindingsRG)
     ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
     IDXCompiler::TResourceBindingMap BindigMap;
-    BindigMap["g_TLAS"]        = {15, 0, 1};
-    BindigMap["g_ColorBuffer"] = {7, 1, 1};
-    BindigMap["g_Tex"]         = {101, 0, 2};
-    BindigMap["g_TexSampler"]  = {0, 2, 1};
-    BindigMap["cbConstants"]   = {9, 0, 1};
-    BindigMap["g_AnotherRes"]  = {567, 5, 1};
+    // clang-format off
+    BindigMap["g_TLAS"]        = { 15, 0, 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT   };
+    BindigMap["g_ColorBuffer"] = {  7, 1, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_Tex"]         = {101, 0, 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_TexSampler"]  = {  0, 2, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["cbConstants"]   = {  9, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["g_AnotherRes"]  = {567, 5, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    // clang-format on
     CComPtr<IDxcBlob> pRemappedDXIL;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
@@ -237,11 +239,13 @@ TEST(DXCompilerTest, RemapBindingsRG)
         EXPECT_EQ(BindDesc.Space, 0U);
     }
 
-    BindigMap["g_TLAS"]        = {0, 0, 1};
-    BindigMap["g_ColorBuffer"] = {1, 0, 1};
-    BindigMap["g_Tex"]         = {2, 0, 2};
-    BindigMap["g_TexSampler"]  = {0, 1, 1};
-    BindigMap["cbConstants"]   = {1, 1, 1};
+    // clang-format off
+    BindigMap["g_TLAS"]        = {0, 0, 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT   };
+    BindigMap["g_ColorBuffer"] = {1, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_Tex"]         = {2, 0, 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_TexSampler"]  = {0, 1, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["cbConstants"]   = {1, 1, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    // clang-format on
     CComPtr<IDxcBlob> pRemappedDXIL2;
     pDXC->RemapResourceBindings(BindigMap, pRemappedDXIL, &pRemappedDXIL2);
     ASSERT_TRUE(pRemappedDXIL2);
@@ -317,12 +321,14 @@ float4 main() : SV_TARGET
     ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
     IDXCompiler::TResourceBindingMap BindigMap;
-    BindigMap["g_Tex1"]       = {101, 0, 1};
-    BindigMap["g_Tex2"]       = {22, 0, 1};
-    BindigMap["g_TexSampler"] = {0, 0, 1};
-    BindigMap["cbConstants1"] = {9, 0, 1};
-    BindigMap["cbConstants2"] = {3, 0, 1};
-    BindigMap["g_AnotherRes"] = {567, 0, 1};
+    // clang-format off
+    BindigMap["g_Tex1"]       = {101, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_Tex2"]       = { 22, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_TexSampler"] = {  0, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["cbConstants1"] = {  9, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["cbConstants2"] = {  3, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["g_AnotherRes"] = {567, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    // clang-format oN
     CComPtr<IDxcBlob> pRemappedDXIL;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
@@ -355,12 +361,14 @@ float4 main() : SV_TARGET
     }
 
     BindigMap.clear();
-    BindigMap["g_Tex1"]       = {0, 2, 1};
-    BindigMap["g_Tex2"]       = {55, 4, 1};
-    BindigMap["g_TexSampler"] = {1, 2, 1};
-    BindigMap["cbConstants1"] = {8, 3, 1};
-    BindigMap["cbConstants2"] = {4, 6, 1};
-    BindigMap["g_AnotherRes"] = {567, 0, 1};
+    // clang-format off
+    BindigMap["g_Tex1"]       = {  0, 2, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_Tex2"]       = { 55, 4, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_TexSampler"] = {  1, 2, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["cbConstants1"] = {  8, 3, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["cbConstants2"] = {  4, 6, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["g_AnotherRes"] = {567, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    // clang-format oN
     pRemappedDXIL             = nullptr;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
@@ -453,16 +461,18 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
     ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
     IDXCompiler::TResourceBindingMap BindigMap;
-    BindigMap["g_Tex"]          = {101, 0, 4};
-    BindigMap["g_Tex3D"]        = {22, 0, 1};
-    BindigMap["g_TexSampler"]   = {0, 0, 1};
-    BindigMap["g_Buffer1"]      = {9, 0, 5};
-    BindigMap["g_Buffer2"]      = {0, 1, 10};
-    BindigMap["g_ColorBuffer1"] = {180, 0, 1};
-    BindigMap["g_ColorBuffer2"] = {333, 0, 1};
-    BindigMap["g_ColorBuffer3"] = {1, 0, 1};
-    BindigMap["Constants"]      = {8, 0, 1};
-    BindigMap["g_AnotherRes"]   = {567, 0, 1};
+    // clang-format off
+    BindigMap["g_Tex"]          = {101, 0,  4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_Tex3D"]        = { 22, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_TexSampler"]   = {  0, 0,  1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["g_Buffer1"]      = {  9, 0,  5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+    BindigMap["g_Buffer2"]      = {  0, 1, 10, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
+    BindigMap["g_ColorBuffer1"] = {180, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_ColorBuffer2"] = {333, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_ColorBuffer3"] = {  1, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["Constants"]      = {  8, 0,  1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["g_AnotherRes"]   = {567, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    // clang-format on
     CComPtr<IDxcBlob> pRemappedDXIL;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
@@ -511,17 +521,19 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
     }
 
     BindigMap.clear();
-    BindigMap["g_Tex"]          = {77, 1, 4};
-    BindigMap["g_Tex3D"]        = {90, 1, 1};
-    BindigMap["g_TexSampler"]   = {0, 1, 1};
-    BindigMap["g_Buffer1"]      = {15, 6, 5};
-    BindigMap["g_Buffer2"]      = {2, 7, 100};
-    BindigMap["g_ColorBuffer1"] = {33, 6, 1};
-    BindigMap["g_ColorBuffer2"] = {10, 100, 1};
-    BindigMap["g_ColorBuffer3"] = {11, 100, 1};
-    BindigMap["Constants"]      = {9, 3, 1};
-    BindigMap["g_AnotherRes"]   = {567, 0, 1};
-    pRemappedDXIL               = nullptr;
+    // clang-format off
+    BindigMap["g_Tex"]          = { 77,   1,   4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_Tex3D"]        = { 90,   1,   1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_TexSampler"]   = {  0,   1,   1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["g_Buffer1"]      = { 15,   6,   5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+    BindigMap["g_Buffer2"]      = {  2,   7, 100, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
+    BindigMap["g_ColorBuffer1"] = { 33,   6,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_ColorBuffer2"] = { 10, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_ColorBuffer3"] = { 11, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["Constants"]      = {  9,   3,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["g_AnotherRes"]   = {567,   0,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    // clang-format on
+    pRemappedDXIL = nullptr;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
     ASSERT_TRUE(pRemappedDXIL);
 

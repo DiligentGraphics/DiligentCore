@@ -341,6 +341,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
             const auto IsArray           = ResDesc.ArraySize != 1;
 
             d3d12RootParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
             switch (ResDesc.ResourceType)
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
@@ -635,6 +636,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const CommitCacheResour
         VERIFY_EXPR(BufferGPUAddress != 0);
 
         auto* const pd3d12CmdList = CommitAttribs.Ctx.GetCommandList();
+        static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
         switch (Res.Type)
         {
             case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
@@ -792,7 +794,8 @@ void PipelineResourceSignatureD3D12Impl::UpdateShaderResourceBindingMap(Resource
                 {
                     Attribs.Register,
                     Attribs.Space + BaseRegisterSpace,
-                    ResDesc.ArraySize //
+                    ResDesc.ArraySize,
+                    ResDesc.ResourceType //
                 };
             auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
             VERIFY(IsUnique, "Shader resource '", ResDesc.Name,
@@ -816,7 +819,8 @@ void PipelineResourceSignatureD3D12Impl::UpdateShaderResourceBindingMap(Resource
                 {
                     SampAttr.ShaderRegister,
                     SampAttr.RegisterSpace + BaseRegisterSpace,
-                    SampAttr.ArraySize //
+                    SampAttr.ArraySize,
+                    SHADER_RESOURCE_TYPE_SAMPLER //
                 };
 
             auto it_inserted = ResourceMap.emplace(HashMapStringKey{SampName}, BindInfo);

@@ -608,7 +608,14 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 
         if (pLocalRootSig != nullptr && pLocalRootSig->IsDefined())
         {
-            bool IsUnique = ResourceMap.emplace(HashMapStringKey{pLocalRootSig->GetName()}, ResourceBinding::BindInfo{pLocalRootSig->GetShaderRegister(), pLocalRootSig->GetRegisterSpace(), 1}).second;
+            ResourceBinding::BindInfo BindInfo //
+                {
+                    pLocalRootSig->GetShaderRegister(),
+                    pLocalRootSig->GetRegisterSpace(),
+                    1,
+                    SHADER_RESOURCE_TYPE_CONSTANT_BUFFER //
+                };
+            bool IsUnique = ResourceMap.emplace(HashMapStringKey{pLocalRootSig->GetName()}, BindInfo).second;
             if (!IsUnique)
                 LOG_ERROR_AND_THROW("Shader record constant buffer already exists in the resource signature");
         }
