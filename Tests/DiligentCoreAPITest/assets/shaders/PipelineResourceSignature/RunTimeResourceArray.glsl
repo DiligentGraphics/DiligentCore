@@ -10,6 +10,13 @@ uniform g_ConstantBuffers
     vec4 Data;
 }g_ConstantBufferInst[];
 
+uniform samplerBuffer g_FormattedBuffers[];
+
+layout(std140) readonly buffer g_StructuredBuffers
+{
+    vec4 Data;
+}g_StructuredBufferInst[];
+
 vec4 CheckValue(vec4 Val, vec4 Expected)
 {
     return vec4(Val.x == Expected.x ? 1.0 : 0.0,
@@ -40,12 +47,28 @@ vec4 VerifyResources(uint index, vec2 coord)
     ConstBuffRefValues[5] = ConstBuff_Ref5;
     ConstBuffRefValues[6] = ConstBuff_Ref6;
 
-    uint TexIdx = index % NUM_TEXTURES;
-    uint BuffIdx = index % NUM_CONST_BUFFERS;
+    float4 FmtBuffRefValues[NUM_FMT_BUFFERS];
+    FmtBuffRefValues[0] = FmtBuff_Ref0;
+    FmtBuffRefValues[1] = FmtBuff_Ref1;
+    FmtBuffRefValues[2] = FmtBuff_Ref2;
+    FmtBuffRefValues[3] = FmtBuff_Ref3;
+    FmtBuffRefValues[4] = FmtBuff_Ref4;
+
+    float4 StructBuffRefValues[NUM_STRUCT_BUFFERS];
+    StructBuffRefValues[0] = StructBuff_Ref0;
+    StructBuffRefValues[1] = StructBuff_Ref1;
+    StructBuffRefValues[2] = StructBuff_Ref2;
+
+    uint TexIdx        = index % NUM_TEXTURES;
+    uint BuffIdx       = index % NUM_CONST_BUFFERS;
+    uint FmtBuffIdx    = index % NUM_FMT_BUFFERS;
+    uint StructBuffIdx = index % NUM_STRUCT_BUFFERS;
 
     vec4 AllCorrect = vec4(1.0, 1.0, 1.0, 1.0);
     AllCorrect *= CheckValue(textureLod(sampler2D(g_Textures[nonuniformEXT(TexIdx)], g_Sampler), coord, 0.0), TexRefValues[TexIdx]);
     AllCorrect *= CheckValue(g_ConstantBufferInst[nonuniformEXT(BuffIdx)].Data, ConstBuffRefValues[BuffIdx]);
+    AllCorrect *= CheckValue(texelFetch(g_FormattedBuffers[nonuniformEXT(FmtBuffIdx)], 0), FmtBuffRefValues[FmtBuffIdx]);
+    AllCorrect *= CheckValue(g_ConstantBufferInst[nonuniformEXT(StructBuffIdx)].Data, StructBuffRefValues[StructBuffIdx]);
 
     return AllCorrect;
 }

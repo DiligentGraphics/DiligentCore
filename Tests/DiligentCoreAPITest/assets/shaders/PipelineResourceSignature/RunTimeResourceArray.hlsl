@@ -7,6 +7,14 @@ struct CBData
 };
 ConstantBuffer<CBData> g_ConstantBuffers[] : register(b10, space5);
 
+Buffer g_FormattedBuffers[]: register(t15, space7);
+
+struct StructBuffData
+{
+    float4 Data;
+};
+StructuredBuffer<StructBuffData> g_StructuredBuffers[];
+
 float4 CheckValue(float4 Val, float4 Expected)
 {
     return float4(Val.x == Expected.x ? 1.0 : 0.0,
@@ -37,12 +45,28 @@ float4 VerifyResources(uint index, float2 coord)
     ConstBuffRefValues[5] = ConstBuff_Ref5;
     ConstBuffRefValues[6] = ConstBuff_Ref6;
 
-    uint TexIdx = index % NUM_TEXTURES;
-    uint BuffIdx = index % NUM_CONST_BUFFERS;
+    float4 FmtBuffRefValues[NUM_FMT_BUFFERS];
+    FmtBuffRefValues[0] = FmtBuff_Ref0;
+    FmtBuffRefValues[1] = FmtBuff_Ref1;
+    FmtBuffRefValues[2] = FmtBuff_Ref2;
+    FmtBuffRefValues[3] = FmtBuff_Ref3;
+    FmtBuffRefValues[4] = FmtBuff_Ref4;
+
+    float4 StructBuffRefValues[NUM_STRUCT_BUFFERS];
+    StructBuffRefValues[0] = StructBuff_Ref0;
+    StructBuffRefValues[1] = StructBuff_Ref1;
+    StructBuffRefValues[2] = StructBuff_Ref2;
+
+    uint TexIdx        = index % NUM_TEXTURES;
+    uint ConstBuffIdx  = index % NUM_CONST_BUFFERS;
+    uint FmtBuffIdx    = index % NUM_FMT_BUFFERS;
+    uint StructBuffIdx = index % NUM_STRUCT_BUFFERS;
 
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
     AllCorrect *= CheckValue(g_Textures[NonUniformResourceIndex(TexIdx)].SampleLevel(g_Sampler, coord, 0.0), TexRefValues[TexIdx]);
-    AllCorrect *= CheckValue(g_ConstantBuffers[NonUniformResourceIndex(BuffIdx)].Data, ConstBuffRefValues[BuffIdx]);
+    AllCorrect *= CheckValue(g_ConstantBuffers[NonUniformResourceIndex(ConstBuffIdx)].Data, ConstBuffRefValues[ConstBuffIdx]);
+    AllCorrect *= CheckValue(g_FormattedBuffers[NonUniformResourceIndex(FmtBuffIdx)].Load(0), FmtBuffRefValues[FmtBuffIdx]);
+    AllCorrect *= CheckValue(g_StructuredBuffers[NonUniformResourceIndex(StructBuffIdx)][0].Data, StructBuffRefValues[StructBuffIdx]);
 
     return AllCorrect;
 }
