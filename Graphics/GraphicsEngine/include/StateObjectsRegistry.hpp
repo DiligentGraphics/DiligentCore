@@ -66,6 +66,7 @@ public:
     static constexpr int DeletedObjectsToPurge = 32;
 
     StateObjectsRegistry(IMemoryAllocator& RawAllocator, const Char* RegistryName) :
+        m_NumDeletedObjects{0},
         m_DescToObjHashMap(STD_ALLOCATOR_RAW_MEM(HashMapElem, RawAllocator, "Allocator for unordered_map<ResourceDescType, RefCntWeakPtr<IDeviceObject> >")),
         m_RegistryName{RegistryName}
     {}
