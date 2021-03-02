@@ -739,14 +739,16 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 
     IDXCompiler::CompileAttribs CA;
 
-    auto Source = BuildHLSLSourceString(ShaderCI, ExtraDefinitions);
+    const auto Source = BuildHLSLSourceString(ShaderCI, ExtraDefinitions);
+
+    DxcDefine Defines[] = {{L"DXCOMPILER", L""}};
 
     CA.Source                     = Source.c_str();
     CA.SourceLength               = static_cast<Uint32>(Source.length());
     CA.EntryPoint                 = wstrEntryPoint.c_str();
     CA.Profile                    = wstrProfile.c_str();
-    CA.pDefines                   = nullptr;
-    CA.DefinesCount               = 0;
+    CA.pDefines                   = Defines;
+    CA.DefinesCount               = _countof(Defines);
     CA.pArgs                      = DxilArgs.data();
     CA.ArgsCount                  = static_cast<Uint32>(DxilArgs.size());
     CA.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;

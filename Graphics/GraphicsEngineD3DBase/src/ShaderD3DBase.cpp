@@ -124,8 +124,10 @@ static HRESULT CompileShader(const char*             Source,
         }
     }
 
+    D3D_SHADER_MACRO Macros[] = {{"D3DCOMPILER", ""}, {}};
+
     D3DIncludeImpl IncludeImpl{ShaderCI.pShaderSourceStreamFactory};
-    return D3DCompile(Source, SourceLength, NULL, nullptr, &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
+    return D3DCompile(Source, SourceLength, nullptr, Macros, &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
 }
 
 ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersion ShaderModel, IDXCompiler* DxCompiler)

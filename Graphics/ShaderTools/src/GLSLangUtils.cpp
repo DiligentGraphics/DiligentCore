@@ -525,7 +525,8 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     const char* SourceCode = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pFileData, SourceCodeLen);
 
-    std::string Defines = g_HLSLDefinitions;
+    std::string Defines{"#define GLSLANG\n\n"};
+    Defines.append(g_HLSLDefinitions);
     AppendShaderTypeDefinitions(Defines, ShaderCI.Desc.ShaderType);
 
     if (ExtraDefinitions != nullptr)
@@ -614,7 +615,7 @@ std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderTyp
     int         Lenghts[]       = {SourceCodeLen};
     Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
 
-    std::string Defines;
+    std::string Defines{"#define GLSLANG\n\n"};
     if (Macros != nullptr)
     {
         AppendShaderMacros(Defines, Macros);
