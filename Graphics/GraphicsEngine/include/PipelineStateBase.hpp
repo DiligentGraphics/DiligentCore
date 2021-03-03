@@ -51,6 +51,16 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
 void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false);
 void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecursion, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
+/// Validates that pipeline resource description 'ResDesc' is compatible with the actual resource
+/// attributes and throws an exception in case of an error.
+void ValidatePipelineResourceCompatibility(const PipelineResourceDesc& ResDesc,
+                                           SHADER_RESOURCE_TYPE        Type,
+                                           PIPELINE_RESOURCE_FLAGS     ResourceFlags,
+                                           Uint32                      ArraySize,
+                                           const char*                 ShaderName,
+                                           const char*                 SignatureName) noexcept(false);
+
+
 /// Copies ray tracing shader group names and also initializes the mapping from the group name to its index.
 void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
                             const RayTracingPipelineStateCreateInfo&                                CreateInfo,

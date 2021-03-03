@@ -514,6 +514,60 @@ void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32, HashMap
 #undef VALIDATE_SHADER_TYPE
 #undef LOG_PSO_ERROR_AND_THROW
 
+void ValidatePipelineResourceCompatibility(const PipelineResourceDesc& ResDesc,
+                                           SHADER_RESOURCE_TYPE        Type,
+                                           PIPELINE_RESOURCE_FLAGS     ResourceFlags,
+                                           Uint32                      ArraySize,
+                                           const char*                 ShaderName,
+                                           const char*                 SignatureName) noexcept(false)
+{
+    if (Type != ResDesc.ResourceType)
+    {
+        LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource with name '", ResDesc.Name,
+                            "' and type '", GetShaderResourceTypeLiteralName(Type), "' that is not compatible with type '",
+                            GetShaderResourceTypeLiteralName(ResDesc.ResourceType), "' specified in pipeline resource signature '", SignatureName, "'.");
+    }
+
+    if ((ResourceFlags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER))
+    {
+        LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                            "' that is", ((ResourceFlags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
+                            " labeled as formatted buffer, while the same resource specified by the pipeline resource signature '",
+                            SignatureName, "' is", ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
+                            " labeled as such.");
+    }
+
+    VERIFY(ResDesc.ArraySize > 0, "ResDesc.ArraySize can't be zero. This error should've be caught by ValidatePipelineResourceSignatureDesc().");
+
+    if (ArraySize == 0)
+    {
+        // ArraySize == 0 means that the resource is a runtime-sized array and ResDesc.ArraySize from the
+        // resource signature may have any non-zero value.
+        if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0)
+        {
+            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                "' that is a runtime-sized array, but in the resource signature '", SignatureName,
+                                "' the resource is defined without the PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
+        }
+    }
+    else
+    {
+        if (ResDesc.ArraySize < ArraySize)
+        {
+            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                "' whose array size (", ArraySize, ") is greater than the array size (",
+                                ResDesc.ArraySize, ") specified by the pipeline resource signature '", SignatureName, "'.");
+        }
+
+        //if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY)
+        //{
+        //    LOG_WARNING_MESSAGE("Shader '", ShaderName, "' contains resource with name '", ResDesc.Name,
+        //                        "' that is defined in resource signature '", SignatureName,
+        //                        "' with flag PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY, but the resource is not a runtime-sized array.");
+        //}
+    }
+}
+
 void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
 {
     CorrectBlendStateDesc(GraphicsPipeline);

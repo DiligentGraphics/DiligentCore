@@ -922,8 +922,8 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                     }
                     if (!Info)
                     {
-                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", SPIRVAttribs.Name,
-                                            "' that is not present in any pipeline resource signature that is used to create pipeline state '",
+                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
+                                            "' that is not present in any pipeline resource signature used to create pipeline state '",
                                             m_Desc.Name, "'.");
                     }
 
@@ -934,33 +934,15 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", SPIRVAttribs.Name,
                                             "' and type '", GetShaderResourceTypeLiteralName(Type), "' that is not compatible with type '",
-                                            GetShaderResourceTypeLiteralName(Info.Type), "' in pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
+                                            GetShaderResourceTypeLiteralName(Info.Type), "' specified in pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
                     }
 
                     if (Info.ResIndex != ~0u)
                     {
                         const auto& ResDesc = Info.Signature->GetResourceDesc(Info.ResIndex);
-
-                        if ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER))
-                        {
-                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
-                                                "' that is", ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
-                                                " labeled as formatted buffer, while the same resource specified by the pipeline resource signature '",
-                                                Info.Signature->GetDesc().Name, "' is", ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
-                                                " labeled as such.");
-                        }
-
-                        // SPIRVAttribs.ArraySize == 0 means that the resource is a runtime-sized array and ResDesc.ArraySize from the
-                        // resource signature may have any non-zero value.
-                        VERIFY(ResDesc.ArraySize > 0, "ResDesc.ArraySize can't be zero. This error should've be caught by ValidatePipelineResourceSignatureDesc().");
-                        if (ResDesc.ArraySize < SPIRVAttribs.ArraySize)
-                        {
-                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
-                                                "' whose array size (", SPIRVAttribs.ArraySize, ") is greater than the array size (",
-                                                ResDesc.ArraySize, ") specified by the pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
-                        }
+                        ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, SPIRVAttribs.ArraySize,
+                                                              pShader->GetDesc().Name, Info.Signature->GetDesc().Name);
                     }
-
                     SPIRV[SPIRVAttribs.BindingDecorationOffset]       = Info.BindingIndex;
                     SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = Info.DescrSetIndex;
 

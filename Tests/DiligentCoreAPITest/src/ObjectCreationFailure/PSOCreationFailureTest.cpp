@@ -39,21 +39,29 @@ using namespace Diligent::Testing;
 namespace
 {
 
-static const char g_TrivialVSSource[] = R"(
+static constexpr char g_TrivialVSSource[] = R"(
 void main(out float4 pos : SV_Position)
 {
     pos = float4(0.0, 0.0, 0.0, 0.0);
 }
 )";
 
-static const char g_TrivialPSSource[] = R"(
+static constexpr char g_TrivialPSSource[] = R"(
 float4 main() : SV_Target
 {
     return float4(0.0, 0.0, 0.0, 0.0);
 }
 )";
 
-static const char g_TrivialMSSource[] = R"(
+static constexpr char g_TexturePSSource[] = R"(
+Texture2D g_Texture;
+float4 main() : SV_Target
+{
+    return g_Texture.Load(int3(0,0,0));
+}
+)";
+
+static constexpr char g_TrivialMSSource[] = R"(
 struct VertexOut
 {
     float4 Pos : SV_Position;
@@ -73,47 +81,47 @@ void main(out indices  uint3     tris[1],
 }
 )";
 
-static const char g_TrivialCSSource[] = R"(
+static constexpr char g_TrivialCSSource[] = R"(
 [numthreads(8,8,1)]
 void main()
 {
 }
 )";
 
-static const char g_TrivialRGenSource[] = R"(
+static constexpr char g_TrivialRGenSource[] = R"(
 [shader("raygeneration")]
 void main()
 {}
 )";
 
-static const char g_TrivialRMissSource[] = R"(
+static constexpr char g_TrivialRMissSource[] = R"(
 struct RTPayload { float4 Color; };
 [shader("miss")]
 void main(inout RTPayload payload)
 {}
 )";
 
-static const char g_TrivialRCHitSource[] = R"(
+static constexpr char g_TrivialRCHitSource[] = R"(
 struct RTPayload { float4 Color; };
 [shader("closesthit")]
 void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {}
 )";
 
-static const char g_TrivialRAHitSource[] = R"(
+static constexpr char g_TrivialRAHitSource[] = R"(
 struct RTPayload { float4 Color; };
 [shader("anyhit")]
 void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {}
 )";
 
-static const char g_TrivialRIntSource[] = R"(
+static constexpr char g_TrivialRIntSource[] = R"(
 [shader("intersection")]
 void main()
 {}
 )";
 
-static const char g_TrivialRCallSource[] = R"(
+static constexpr char g_TrivialRCallSource[] = R"(
 struct Params { float4 Col; };
 [shader("callable")]
 void main(inout Params params)
@@ -132,27 +140,35 @@ protected:
         sm_HasMeshShader = pDevice->GetDeviceCaps().Features.MeshShaders;
         sm_HasRayTracing = pDevice->GetDeviceCaps().Features.RayTracing;
 
-        ShaderCreateInfo Attrs;
-        Attrs.Source                     = g_TrivialVSSource;
-        Attrs.EntryPoint                 = "main";
-        Attrs.Desc.ShaderType            = SHADER_TYPE_VERTEX;
-        Attrs.Desc.Name                  = "TrivialVS (PSOCreationFailureTest)";
-        Attrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-        Attrs.ShaderCompiler             = pEnv->GetDefaultCompiler(Attrs.SourceLanguage);
-        Attrs.UseCombinedTextureSamplers = true;
-        pDevice->CreateShader(Attrs, &sm_pTrivialVS);
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.Source                     = g_TrivialVSSource;
+        ShaderCI.EntryPoint                 = "main";
+        ShaderCI.Desc.ShaderType            = SHADER_TYPE_VERTEX;
+        ShaderCI.Desc.Name                  = "TrivialVS (PSOCreationFailureTest)";
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.UseCombinedTextureSamplers = true;
+        pDevice->CreateShader(ShaderCI, &sm_pTrivialVS);
         ASSERT_TRUE(sm_pTrivialVS);
 
-        Attrs.Source          = g_TrivialPSSource;
-        Attrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        Attrs.Desc.Name       = "TrivialPS (PSOCreationFailureTest)";
-        pDevice->CreateShader(Attrs, &sm_pTrivialPS);
+        ShaderCI.Source          = g_TrivialPSSource;
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.Desc.Name       = "TrivialPS (PSOCreationFailureTest)";
+        pDevice->CreateShader(ShaderCI, &sm_pTrivialPS);
         ASSERT_TRUE(sm_pTrivialPS);
 
-        Attrs.Source          = g_TrivialCSSource;
-        Attrs.Desc.ShaderType = SHADER_TYPE_COMPUTE;
-        Attrs.Desc.Name       = "TrivialCS (PSOCreationFailureTest)";
-        pDevice->CreateShader(Attrs, &sm_pTrivialCS);
+        ShaderCI.Source          = g_TexturePSSource;
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.Desc.Name       = "TexturePS (PSOCreationFailureTest)";
+        pDevice->CreateShader(ShaderCI, &sm_pTexturePS);
+        ASSERT_TRUE(sm_pTexturePS);
+
+
+
+        ShaderCI.Source          = g_TrivialCSSource;
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+        ShaderCI.Desc.Name       = "TrivialCS (PSOCreationFailureTest)";
+        pDevice->CreateShader(ShaderCI, &sm_pTrivialCS);
         ASSERT_TRUE(sm_pTrivialCS);
 
         sm_DefaultGraphicsPsoCI.PSODesc.Name                      = "PSOCreationFailureTest - default graphics PSO desc";
@@ -180,18 +196,18 @@ protected:
 
         if (sm_HasMeshShader)
         {
-            Attrs.ShaderCompiler = SHADER_COMPILER_DXC;
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
 
-            Attrs.Source          = g_TrivialMSSource;
-            Attrs.Desc.ShaderType = SHADER_TYPE_MESH;
-            Attrs.Desc.Name       = "TrivialMS DXC (PSOCreationFailureTest)";
-            pDevice->CreateShader(Attrs, &sm_pTrivialMS);
+            ShaderCI.Source          = g_TrivialMSSource;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_MESH;
+            ShaderCI.Desc.Name       = "TrivialMS DXC (PSOCreationFailureTest)";
+            pDevice->CreateShader(ShaderCI, &sm_pTrivialMS);
             ASSERT_TRUE(sm_pTrivialMS);
 
-            Attrs.Source          = g_TrivialPSSource;
-            Attrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
-            Attrs.Desc.Name       = "TrivialPS DXC (PSOCreationFailureTest)";
-            pDevice->CreateShader(Attrs, &sm_pTrivialPS_DXC);
+            ShaderCI.Source          = g_TrivialPSSource;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+            ShaderCI.Desc.Name       = "TrivialPS DXC (PSOCreationFailureTest)";
+            pDevice->CreateShader(ShaderCI, &sm_pTrivialPS_DXC);
             ASSERT_TRUE(sm_pTrivialPS_DXC);
 
             sm_DefaultMeshPsoCI.PSODesc.Name                      = "PSOCreationFailureTest - default mesh PSO desc";
@@ -210,42 +226,42 @@ protected:
 
         if (sm_HasRayTracing)
         {
-            Attrs.ShaderCompiler = SHADER_COMPILER_DXC;
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
 
-            Attrs.Source          = g_TrivialRGenSource;
-            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_GEN;
-            Attrs.Desc.Name       = "TrivialRGen (PSOCreationFailureTest)";
-            pDevice->CreateShader(Attrs, &sm_pTrivialRG);
+            ShaderCI.Source          = g_TrivialRGenSource;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_GEN;
+            ShaderCI.Desc.Name       = "TrivialRGen (PSOCreationFailureTest)";
+            pDevice->CreateShader(ShaderCI, &sm_pTrivialRG);
             ASSERT_TRUE(sm_pTrivialRG);
 
-            Attrs.Source          = g_TrivialRMissSource;
-            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_MISS;
-            Attrs.Desc.Name       = "TrivialRMiss (PSOCreationFailureTest)";
-            pDevice->CreateShader(Attrs, &sm_pTrivialRMiss);
+            ShaderCI.Source          = g_TrivialRMissSource;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_MISS;
+            ShaderCI.Desc.Name       = "TrivialRMiss (PSOCreationFailureTest)";
+            pDevice->CreateShader(ShaderCI, &sm_pTrivialRMiss);
             ASSERT_TRUE(sm_pTrivialRMiss);
 
-            Attrs.Source          = g_TrivialRCallSource;
-            Attrs.Desc.ShaderType = SHADER_TYPE_CALLABLE;
-            Attrs.Desc.Name       = "TrivialRCall (PSOCreationFailureTest)";
-            pDevice->CreateShader(Attrs, &sm_pTrivialRCall);
+            ShaderCI.Source          = g_TrivialRCallSource;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_CALLABLE;
+            ShaderCI.Desc.Name       = "TrivialRCall (PSOCreationFailureTest)";
+            pDevice->CreateShader(ShaderCI, &sm_pTrivialRCall);
             ASSERT_TRUE(sm_pTrivialRCall);
 
-            Attrs.Source          = g_TrivialRCHitSource;
-            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;
-            Attrs.Desc.Name       = "TrivialRCHit (PSOCreationFailureTest)";
-            pDevice->CreateShader(Attrs, &sm_pTrivialRCHit);
+            ShaderCI.Source          = g_TrivialRCHitSource;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;
+            ShaderCI.Desc.Name       = "TrivialRCHit (PSOCreationFailureTest)";
+            pDevice->CreateShader(ShaderCI, &sm_pTrivialRCHit);
             ASSERT_TRUE(sm_pTrivialRCHit);
 
-            Attrs.Source          = g_TrivialRAHitSource;
-            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_ANY_HIT;
-            Attrs.Desc.Name       = "TrivialRAHit (PSOCreationFailureTest)";
-            pDevice->CreateShader(Attrs, &sm_pTrivialRAHit);
+            ShaderCI.Source          = g_TrivialRAHitSource;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_ANY_HIT;
+            ShaderCI.Desc.Name       = "TrivialRAHit (PSOCreationFailureTest)";
+            pDevice->CreateShader(ShaderCI, &sm_pTrivialRAHit);
             ASSERT_TRUE(sm_pTrivialRAHit);
 
-            Attrs.Source          = g_TrivialRIntSource;
-            Attrs.Desc.ShaderType = SHADER_TYPE_RAY_INTERSECTION;
-            Attrs.Desc.Name       = "TrivialRInt (PSOCreationFailureTest)";
-            pDevice->CreateShader(Attrs, &sm_pTrivialRInt);
+            ShaderCI.Source          = g_TrivialRIntSource;
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_RAY_INTERSECTION;
+            ShaderCI.Desc.Name       = "TrivialRInt (PSOCreationFailureTest)";
+            pDevice->CreateShader(ShaderCI, &sm_pTrivialRInt);
             ASSERT_TRUE(sm_pTrivialRInt);
 
             sm_DefaultRayTracingPsoCI.PSODesc.Name         = "PSOCreationFailureTest - default ray tracing PSO desc";
@@ -367,6 +383,7 @@ protected:
         sm_pTrivialVS.Release();
         sm_pTrivialPS.Release();
         sm_pTrivialPS_DXC.Release();
+        sm_pTexturePS.Release();
         sm_pTrivialMS.Release();
         sm_pTrivialCS.Release();
         sm_pTrivialRG.Release();
@@ -431,6 +448,8 @@ protected:
     static IShader* GetVS() { return sm_pTrivialVS; }
     static IShader* GetPS() { return sm_pTrivialPS; }
     static IShader* GetMS() { return sm_pTrivialMS; }
+
+    static IShader* GetTexturePS() { return sm_pTexturePS; }
 
     static IShader* GetRayGen() { return sm_pTrivialRG; }
     static IShader* GetRayMiss() { return sm_pTrivialRMiss; }
@@ -514,6 +533,7 @@ private:
     static RefCntAutoPtr<IShader>     sm_pTrivialVS;
     static RefCntAutoPtr<IShader>     sm_pTrivialPS;
     static RefCntAutoPtr<IShader>     sm_pTrivialPS_DXC;
+    static RefCntAutoPtr<IShader>     sm_pTexturePS;
     static RefCntAutoPtr<IShader>     sm_pTrivialMS;
     static RefCntAutoPtr<IShader>     sm_pTrivialRG;
     static RefCntAutoPtr<IShader>     sm_pTrivialRMiss;
@@ -537,6 +557,7 @@ private:
 
 RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialVS;
 RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialPS;
+RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTexturePS;
 RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialPS_DXC;
 RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialMS;
 RefCntAutoPtr<IShader>                    PSOCreationFailureTest::sm_pTrivialCS;
@@ -1148,6 +1169,171 @@ TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup3)
     PsoCI.pProceduralHitShaders    = HitGroups;
     PsoCI.ProceduralHitShaderCount = _countof(HitGroups);
     TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_CLOSEST_HIT is not a valid type for ray tracing procedural any hit");
+}
+
+TEST_F(PSOCreationFailureTest, MissingResource)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "PSO Create Failure - missing resource";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_AnotherTexture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+    PRSDesc.UseCombinedTextureSamplers = true;
+    PRSDesc.Resources                  = Resources;
+    PRSDesc.NumResources               = _countof(Resources);
+
+    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+    ASSERT_NE(pPRS, nullptr);
+
+    IPipelineResourceSignature* ppSignatures[] = {pPRS};
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - missing resource")};
+    PsoCI.ppResourceSignatures    = ppSignatures;
+    PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
+
+    PsoCI.pPS = GetTexturePS();
+
+    TestCreatePSOFailure(PsoCI, "Shader 'TexturePS (PSOCreationFailureTest)' contains resource 'g_Texture' that is not present in any pipeline resource signature");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidResourceType)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "PSO Create Failure - Invalid Resource Type";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+    PRSDesc.UseCombinedTextureSamplers = true;
+    PRSDesc.Resources                  = Resources;
+    PRSDesc.NumResources               = _countof(Resources);
+
+    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+    ASSERT_NE(pPRS, nullptr);
+
+    IPipelineResourceSignature* ppSignatures[] = {pPRS};
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Invalid Resource Type")};
+    PsoCI.ppResourceSignatures    = ppSignatures;
+    PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
+
+    PsoCI.pPS = GetTexturePS();
+
+    TestCreatePSOFailure(PsoCI, "Shader 'TexturePS (PSOCreationFailureTest)' contains resource with name 'g_Texture' and type 'texture SRV' that is not compatible with type 'buffer SRV'");
+}
+
+TEST_F(PSOCreationFailureTest, InvalidArraySize)
+{
+    static constexpr char PSSource[] = R"(
+    Texture2D g_Texture[3];
+    float4 main() : SV_Target
+    {
+        return g_Texture[0].Load(int3(0,0,0)) + g_Texture[1].Load(int3(0,0,0)) + g_Texture[2].Load(int3(0,0,0));
+    }
+    )";
+
+    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pDevice = pEnv->GetDevice();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Source                     = PSSource;
+    ShaderCI.Desc.ShaderType            = SHADER_TYPE_PIXEL;
+    ShaderCI.Desc.Name                  = "Invalid Array Size (PSOCreationFailureTest)";
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.UseCombinedTextureSamplers = true;
+    RefCntAutoPtr<IShader> pPS;
+    pDevice->CreateShader(ShaderCI, &pPS);
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "PSO Create Failure - Invalid Array Size";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+
+    PRSDesc.UseCombinedTextureSamplers = true;
+    PRSDesc.Resources                  = Resources;
+    PRSDesc.NumResources               = _countof(Resources);
+
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+    ASSERT_NE(pPRS, nullptr);
+
+    IPipelineResourceSignature* ppSignatures[] = {pPRS};
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Invalid Array Size")};
+    PsoCI.ppResourceSignatures    = ppSignatures;
+    PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
+
+    PsoCI.pPS = pPS;
+
+    TestCreatePSOFailure(PsoCI, "Shader 'Invalid Array Size (PSOCreationFailureTest)' contains resource 'g_Texture' whose array size (3) is greater than the array size (2)");
+}
+
+
+TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
+{
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
+    if (!pDevice->GetDeviceCaps().Features.ShaderResourceRuntimeArray)
+    {
+        GTEST_SKIP();
+    }
+
+    static constexpr char PSSource[] = R"(
+    Texture2D g_Texture[];
+    cbuffer ConstBuffer
+    {
+        uint Index;
+    }
+    float4 main() : SV_Target
+    {
+        return g_Texture[Index].Load(int3(0,0,0));
+    }
+    )";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.Source          = PSSource;
+    ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+    ShaderCI.Desc.Name       = "Invalid Run-Time Array (PSOCreationFailureTest)";
+    ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
+    if (deviceCaps.IsVulkanDevice())
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC; // GLSLang does not handle HLSL run-time arrays properly
+    else
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.UseCombinedTextureSamplers = true;
+    ShaderCI.CompileFlags               = SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS;
+    RefCntAutoPtr<IShader> pPS;
+    pDevice->CreateShader(ShaderCI, &pPS);
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "PSO Create Failure - Invalid Run-Time Array";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "ConstBuffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_PIXEL, "g_Texture", 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+
+    PRSDesc.UseCombinedTextureSamplers = true;
+    PRSDesc.Resources                  = Resources;
+    PRSDesc.NumResources               = _countof(Resources);
+
+    RefCntAutoPtr<IPipelineResourceSignature> pPRS;
+    pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);
+    ASSERT_NE(pPRS, nullptr);
+
+    IPipelineResourceSignature* ppSignatures[] = {pPRS};
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Invalid Run-Time Array")};
+    PsoCI.ppResourceSignatures    = ppSignatures;
+    PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
+
+    PsoCI.pPS = pPS;
+
+    TestCreatePSOFailure(PsoCI, "Shader 'Invalid Run-Time Array (PSOCreationFailureTest)' contains resource 'g_Texture' that is a runtime-sized array, "
+                                "but in the resource signature 'PSO Create Failure - Invalid Run-Time Array' the resource is defined without the PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
 }
 
 } // namespace
