@@ -53,7 +53,7 @@ struct PatchedPipelineResourceSignatureDesc : PipelineResourceSignatureDesc
     PatchedPipelineResourceSignatureDesc(RenderDeviceGLImpl* pDeviceGL, const PipelineResourceSignatureDesc& Desc) :
         PipelineResourceSignatureDesc{Desc}
     {
-        if (NumImmutableSamplers > 0 && !pDeviceGL->GetDeviceCaps().Features.SeparablePrograms)
+        if (NumImmutableSamplers > 0 && ImmutableSamplers != nullptr && !pDeviceGL->GetDeviceCaps().Features.SeparablePrograms)
         {
             m_ImmutableSamplers.resize(NumImmutableSamplers);
 
@@ -97,16 +97,17 @@ BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc)
     switch (Desc.ResourceType)
     {
         // clang-format off
-        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER: return BINDING_RANGE_UNIFORM_BUFFER;
-        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:     return BINDING_RANGE_TEXTURE;
-        case SHADER_RESOURCE_TYPE_BUFFER_SRV:      return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_TEXTURE : BINDING_RANGE_STORAGE_BUFFER;
-        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:     return BINDING_RANGE_IMAGE;
-        case SHADER_RESOURCE_TYPE_BUFFER_UAV:      return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_IMAGE : BINDING_RANGE_STORAGE_BUFFER;
-        // clang-format on
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return BINDING_RANGE_UNIFORM_BUFFER;
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return BINDING_RANGE_TEXTURE;
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_TEXTURE : BINDING_RANGE_STORAGE_BUFFER;
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return BINDING_RANGE_IMAGE;
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_IMAGE : BINDING_RANGE_STORAGE_BUFFER;
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return BINDING_RANGE_TEXTURE;
+            // clang-format on
         case SHADER_RESOURCE_TYPE_SAMPLER:
-        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
         default:
+            UNEXPECTED("Unsupported resource type");
             return BINDING_RANGE_UNKNOWN;
     }
 }
@@ -124,7 +125,8 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
                                                                  const PipelineResourceSignatureDesc& Desc,
                                                                  bool                                 bIsDeviceInternal,
                                                                  int) :
-    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, bIsDeviceInternal}
+    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, bIsDeviceInternal},
+    m_SRBMemAllocator{GetRawAllocator()}
 {
     try
     {
@@ -145,6 +147,8 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
 
         MemPool.Reserve();
 
+        static_assert(std::is_trivially_destructible<ResourceAttribs>::value,
+                      "ResourceAttribs objects must be constructed to be properly destructed in case an excpetion is thrown");
         m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(std::max(1u, m_Desc.NumResources));
         m_ImmutableSamplers = MemPool.ConstructArray<SamplerPtr>(m_Desc.NumImmutableSamplers);
 
@@ -173,9 +177,23 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
                 {
                     VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
                     const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    m_StaticVarsMgrs[Idx].Initialize(*this, AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
+                    m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
                 }
             }
+        }
+
+        if (m_Desc.SRBAllocationGranularity > 1)
+        {
+            std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
+            for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
+            {
+                constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+
+                ShaderVariableDataSizes[s] = ShaderVariableManagerGL::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s));
+            }
+
+            const size_t CacheMemorySize = ShaderResourceCacheGL::GetRequriedMemorySize(m_BindingCount);
+            m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
         }
 
         m_Hash = CalculateHash();
@@ -189,7 +207,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
 
 void PipelineResourceSignatureGLImpl::CreateLayouts()
 {
-    std::array<Uint32, BINDING_RANGE_COUNT> StaticCounter = {};
+    TBindings StaticCounter = {};
 
     for (Uint32 s = 0; s < m_Desc.NumImmutableSamplers; ++s)
         GetDevice()->CreateSampler(m_Desc.ImmutableSamplers[s].Desc, &m_ImmutableSamplers[s]);
@@ -248,11 +266,7 @@ void PipelineResourceSignatureGLImpl::CreateLayouts()
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Initialize(StaticCounter[BINDING_RANGE_UNIFORM_BUFFER],
-                                      StaticCounter[BINDING_RANGE_TEXTURE],
-                                      StaticCounter[BINDING_RANGE_IMAGE],
-                                      StaticCounter[BINDING_RANGE_STORAGE_BUFFER],
-                                      GetRawAllocator());
+        m_pStaticResCache->Initialize(StaticCounter, GetRawAllocator());
         // Set immutable samplers for static resources.
         const auto ResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
@@ -326,14 +340,17 @@ void PipelineResourceSignatureGLImpl::Destruct()
         for (auto Idx : m_StaticResStageIndex)
         {
             if (Idx >= 0)
+            {
+                m_StaticVarsMgrs[Idx].DestroyVariables(RawAllocator);
                 m_StaticVarsMgrs[Idx].~ShaderVariableManagerGL();
+            }
         }
         m_StaticVarsMgrs = nullptr;
     }
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Destroy(RawAllocator);
+        m_pStaticResCache->~ShaderResourceCacheGL();
         m_pStaticResCache = nullptr;
     }
 
@@ -358,14 +375,14 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
     {
         const auto& ResDesc = m_Desc.Resources[r];
         const auto& ResAttr = m_pResourceAttribs[r];
-        const auto  Range   = PipelineResourceToBindingRange(ResDesc);
 
-        if (Range == BINDING_RANGE_UNKNOWN)
+        if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
             continue;
 
         if ((ResDesc.ShaderStages & Stages) == 0)
             continue;
 
+        const auto   Range        = PipelineResourceToBindingRange(ResDesc);
         const Uint32 BindingIndex = Bindings[Range] + ResAttr.CacheOffset;
 
         static_assert(BINDING_RANGE_COUNT == 4, "Please update the switch below to handle the new shader resource range");
@@ -630,13 +647,9 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
 #endif
 }
 
-void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache) const
+void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache, IMemoryAllocator& CacheMemAllocator) const
 {
-    ResourceCache.Initialize(m_BindingCount[BINDING_RANGE_UNIFORM_BUFFER],
-                             m_BindingCount[BINDING_RANGE_TEXTURE],
-                             m_BindingCount[BINDING_RANGE_IMAGE],
-                             m_BindingCount[BINDING_RANGE_STORAGE_BUFFER],
-                             GetRawAllocator());
+    ResourceCache.Initialize(m_BindingCount, CacheMemAllocator);
 }
 
 bool PipelineResourceSignatureGLImpl::IsCompatibleWith(const PipelineResourceSignatureGLImpl& Other) const
@@ -715,7 +728,8 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
         case BINDING_RANGE_TEXTURE:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
-                if (!ResourceCache.IsTextureBound(ResAttr.CacheOffset + ArrInd, ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV))
+                const bool IsTexView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
+                if (!ResourceCache.IsTextureBound(ResAttr.CacheOffset + ArrInd, IsTexView))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(GLAttribs, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
@@ -733,7 +747,8 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
         case BINDING_RANGE_IMAGE:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
-                if (!ResourceCache.IsImageBound(ResAttr.CacheOffset + ArrInd, ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV))
+                const bool IsImgView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+                if (!ResourceCache.IsImageBound(ResAttr.CacheOffset + ArrInd, IsImgView))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(GLAttribs, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");

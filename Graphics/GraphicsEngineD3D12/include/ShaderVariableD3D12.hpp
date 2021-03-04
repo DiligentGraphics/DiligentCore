@@ -167,10 +167,10 @@ public:
     {}
 
     // clang-format off
-    ShaderVariableD3D12Impl            (const ShaderVariableD3D12Impl&) = delete;
-    ShaderVariableD3D12Impl            (ShaderVariableD3D12Impl&&)      = delete;
-    ShaderVariableD3D12Impl& operator= (const ShaderVariableD3D12Impl&) = delete;
-    ShaderVariableD3D12Impl& operator= (ShaderVariableD3D12Impl&&)      = delete;
+    ShaderVariableD3D12Impl            (const ShaderVariableD3D12Impl&)  = delete;
+    ShaderVariableD3D12Impl            (      ShaderVariableD3D12Impl&&) = delete;
+    ShaderVariableD3D12Impl& operator= (const ShaderVariableD3D12Impl&)  = delete;
+    ShaderVariableD3D12Impl& operator= (      ShaderVariableD3D12Impl&&) = delete;
     // clang-format on
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final

@@ -101,6 +101,8 @@ private:
         SHADER_TYPE                    Type = SHADER_TYPE_UNKNOWN;
         std::vector<ShaderD3D12Impl*>  Shaders;
         std::vector<CComPtr<ID3DBlob>> ByteCodes;
+
+        friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
     };
     using TShaderStages = std::vector<ShaderStageInfo>;
 

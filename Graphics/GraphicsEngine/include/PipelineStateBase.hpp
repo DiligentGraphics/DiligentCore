@@ -471,7 +471,7 @@ protected:
                 m_ActiveShaderStages |= ShaderType;
 #ifdef DILIGENT_DEBUG
                 for (Uint32 i = 0; i + 1 < ShaderStages.size(); ++i)
-                    VERIFY_EXPR(ShaderStages[i].Type != ShaderType);
+                    VERIFY_EXPR(GetShaderStageType(ShaderStages[i]) != ShaderType);
 #endif
             }
         };

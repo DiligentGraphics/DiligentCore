@@ -106,6 +106,8 @@ public:
 
         std::vector<const ShaderVkImpl*>   Shaders;
         std::vector<std::vector<uint32_t>> SPIRVs;
+
+        friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
     };
     using TShaderStages = std::vector<ShaderStageInfo>;
 

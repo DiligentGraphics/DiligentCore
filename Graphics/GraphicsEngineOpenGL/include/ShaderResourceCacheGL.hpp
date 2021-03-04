@@ -119,11 +119,10 @@ public:
         RefCntAutoPtr<BufferViewGLImpl> pBufferView;
     };
 
+    using TResourceCount = std::array<Uint32, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
+    static size_t GetRequriedMemorySize(const TResourceCount& ResCount);
 
-    static size_t GetRequriedMemorySize(Uint32 UBCount, Uint32 TextureCount, Uint32 ImageCount, Uint32 SSBOCount);
-
-    void Initialize(Uint32 UBCount, Uint32 TextureCount, Uint32 ImageCount, Uint32 SSBOCount, IMemoryAllocator& MemAllocator);
-    void Destroy(IMemoryAllocator& MemAllocator);
+    void Initialize(const TResourceCount& Count, IMemoryAllocator& MemAllocator);
 
     void SetUniformBuffer(Uint32 CacheOffset, RefCntAutoPtr<BufferGLImpl>&& pBuff)
     {
@@ -275,6 +274,7 @@ private:
         return const_cast<CachedSSBO&>(const_cast<const ShaderResourceCacheGL*>(this)->GetConstSSBO(CacheOffset));
     }
 
+private:
     static constexpr const Uint16 InvalidResourceOffset = 0xFFFF;
     static constexpr const Uint16 m_UBsOffset           = 0;
 
@@ -283,14 +283,12 @@ private:
     Uint16 m_SSBOsOffset     = InvalidResourceOffset;
     Uint16 m_MemoryEndOffset = InvalidResourceOffset;
 
-    Uint8* m_pResourceData = nullptr;
+    Uint8*            m_pResourceData = nullptr;
+    IMemoryAllocator* m_pAllocator    = nullptr;
 
     // Indicates what types of resources are stored in the cache
     const CacheContentType m_ContentType;
 
-#ifdef DILIGENT_DEBUG
-    IMemoryAllocator* m_pdbgMemoryAllocator = nullptr;
-#endif
 #ifdef DILIGENT_DEVELOPMENT
     bool m_bStaticResourcesInitialized = false;
 #endif

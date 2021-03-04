@@ -47,7 +47,9 @@ namespace Diligent
 {
 
 /// Validates pipeline resource signature description and throws an exception in case of an error.
-void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc, bool ShaderResourceRuntimeArraySupported) noexcept(false);
+void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
+                                           bool                                 ShaderResourceRuntimeArraySupported,
+                                           bool                                 AccelStructSupported) noexcept(false);
 
 static constexpr Uint32 InvalidImmutableSamplerIndex = ~0u;
 /// Finds an immutable sampler for the resource name 'ResourceName' that is defined in shader stages 'ShaderStages'.
@@ -94,7 +96,9 @@ public:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
-        ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDeviceCaps().Features.ShaderResourceRuntimeArray);
+        ValidatePipelineResourceSignatureDesc(Desc,
+                                              pDevice->GetDeviceCaps().Features.ShaderResourceRuntimeArray,
+                                              pDevice->GetDeviceCaps().Features.RayTracing);
 
         // Determine shader stages that have any resources as well as
         // shader stages that have static resources.
@@ -212,6 +216,19 @@ public:
     {
         VERIFY_EXPR(SampIndex < this->m_Desc.NumImmutableSamplers);
         return this->m_Desc.ImmutableSamplers[SampIndex];
+    }
+
+    static Uint32 CalcMaxSignatureBindIndex(const Uint32                SignatureCount,
+                                            IPipelineResourceSignature* ppResourceSignatures[])
+    {
+        Uint32 MaxSignatureBindingIndex = 0;
+        for (Uint32 i = 0; i < SignatureCount; ++i)
+        {
+            const auto* pSignature = ppResourceSignatures[i];
+            VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
+            MaxSignatureBindingIndex = std::max(MaxSignatureBindingIndex, Uint32{pSignature->GetDesc().BindingIndex});
+        }
+        return MaxSignatureBindingIndex;
     }
 
     template <typename TPipelineResourceSignature>

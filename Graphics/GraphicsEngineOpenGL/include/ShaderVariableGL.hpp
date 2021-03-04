@@ -88,6 +88,8 @@ public:
 
     ~ShaderVariableManagerGL();
 
+    void DestroyVariables(IMemoryAllocator& Allocator);
+
     // No copies, only moves are allowed
     // clang-format off
     ShaderVariableManagerGL             (const ShaderVariableManagerGL&)  = delete;
@@ -97,6 +99,7 @@ public:
     // clang-format on
 
     void Initialize(const PipelineResourceSignatureGLImpl& Signature,
+                    IMemoryAllocator&                      Allocator,
                     const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
                     Uint32                                 NumAllowedTypes,
                     SHADER_TYPE                            ShaderType);
@@ -122,6 +125,7 @@ public:
 
     struct GLVariableBase : public ShaderVariableBase<ShaderVariableManagerGL>
     {
+    public:
         using TBase = ShaderVariableBase<ShaderVariableManagerGL>;
         GLVariableBase(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
             TBase{ParentLayout},
@@ -149,6 +153,7 @@ public:
             return m_ParentManager.GetVariableIndex(*this);
         }
 
+    private:
         const Uint32 m_ResIndex;
     };
 
@@ -185,9 +190,9 @@ public:
     };
 
 
-    struct SamplerBindInfo final : GLVariableBase
+    struct TextureBindInfo final : GLVariableBase
     {
-        SamplerBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
+        TextureBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
             GLVariableBase{ParentLayout, ResIndex}
         {}
 
@@ -211,8 +216,10 @@ public:
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsTextureBound(GetAttribs().CacheOffset + ArrayIndex, GetDesc().ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
+            const auto& Desc = GetDesc();
+            VERIFY_EXPR(ArrayIndex < Desc.ArraySize);
+            const bool IsTexView = (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
+            return m_ParentManager.m_ResourceCache.IsTextureBound(GetAttribs().CacheOffset + ArrayIndex, IsTexView);
         }
     };
 
@@ -243,8 +250,10 @@ public:
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsImageBound(GetAttribs().CacheOffset + ArrayIndex, GetDesc().ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+            const auto& Desc = GetDesc();
+            VERIFY_EXPR(ArrayIndex < Desc.ArraySize);
+            const bool IsImgView = (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+            return m_ParentManager.m_ResourceCache.IsImageBound(GetAttribs().CacheOffset + ArrayIndex, IsImgView);
         }
     };
 
@@ -298,7 +307,7 @@ public:
 
     // clang-format off
     Uint32 GetNumUBs()            const { return (m_TextureOffset       - m_UBOffset)            / sizeof(UniformBuffBindInfo);    }
-    Uint32 GetNumTextures()       const { return (m_ImageOffset         - m_TextureOffset)       / sizeof(SamplerBindInfo);        }
+    Uint32 GetNumTextures()       const { return (m_ImageOffset         - m_TextureOffset)       / sizeof(TextureBindInfo);        }
     Uint32 GetNumImages()         const { return (m_StorageBufferOffset - m_ImageOffset)         / sizeof(ImageBindInfo) ;         }
     Uint32 GetNumStorageBuffers() const { return (m_VariableEndOffset   - m_StorageBufferOffset) / sizeof(StorageBufferBindInfo);  }
     // clang-format on
@@ -310,7 +319,7 @@ public:
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>(), ")");
         auto Offset = GetResourceOffset<ResourceType>();
-        return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + Offset)[ResIndex];
+        return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
     }
 
     Uint32 GetVariableIndex(const GLVariableBase& Var) const;
@@ -346,26 +355,26 @@ private:
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>() - 1, ")");
         auto Offset = GetResourceOffset<ResourceType>();
-        return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + Offset)[ResIndex];
+        return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
     }
 
     template <typename ResourceType>
     IShaderResourceVariable* GetResourceByName(const Char* Name) const;
 
     template <typename THandleUB,
-              typename THandleSampler,
+              typename THandleTexture,
               typename THandleImage,
               typename THandleStorageBuffer>
     void HandleResources(THandleUB            HandleUB,
-                         THandleSampler       HandleSampler,
+                         THandleTexture       HandleTexture,
                          THandleImage         HandleImage,
                          THandleStorageBuffer HandleStorageBuffer)
     {
         for (Uint32 ub = 0; ub < GetNumResources<UniformBuffBindInfo>(); ++ub)
             HandleUB(GetResource<UniformBuffBindInfo>(ub));
 
-        for (Uint32 s = 0; s < GetNumResources<SamplerBindInfo>(); ++s)
-            HandleSampler(GetResource<SamplerBindInfo>(s));
+        for (Uint32 s = 0; s < GetNumResources<TextureBindInfo>(); ++s)
+            HandleTexture(GetResource<TextureBindInfo>(s));
 
         for (Uint32 i = 0; i < GetNumResources<ImageBindInfo>(); ++i)
             HandleImage(GetResource<ImageBindInfo>(i));
@@ -375,19 +384,19 @@ private:
     }
 
     template <typename THandleUB,
-              typename THandleSampler,
+              typename THandleTexture,
               typename THandleImage,
               typename THandleStorageBuffer>
     void HandleConstResources(THandleUB            HandleUB,
-                              THandleSampler       HandleSampler,
+                              THandleTexture       HandleTexture,
                               THandleImage         HandleImage,
                               THandleStorageBuffer HandleStorageBuffer) const
     {
         for (Uint32 ub = 0; ub < GetNumResources<UniformBuffBindInfo>(); ++ub)
             HandleUB(GetConstResource<UniformBuffBindInfo>(ub));
 
-        for (Uint32 s = 0; s < GetNumResources<SamplerBindInfo>(); ++s)
-            HandleSampler(GetConstResource<SamplerBindInfo>(s));
+        for (Uint32 s = 0; s < GetNumResources<TextureBindInfo>(); ++s)
+            HandleTexture(GetConstResource<TextureBindInfo>(s));
 
         for (Uint32 i = 0; i < GetNumResources<ImageBindInfo>(); ++i)
             HandleImage(GetConstResource<ImageBindInfo>(i));
@@ -405,14 +414,18 @@ private:
     IObject& m_Owner;
     // No need to use shared pointer, as the resource cache is either part of the same
     // ShaderGLImpl object, or ShaderResourceBindingGLImpl object
-    ShaderResourceCacheGL&                        m_ResourceCache;
-    std::unique_ptr<void, STDDeleterRawMem<void>> m_ResourceBuffer;
+    ShaderResourceCacheGL& m_ResourceCache;
+    void*                  m_ResourceBuffer = nullptr;
 
     static constexpr OffsetType m_UBOffset            = 0;
     OffsetType                  m_TextureOffset       = 0;
     OffsetType                  m_ImageOffset         = 0;
     OffsetType                  m_StorageBufferOffset = 0;
     OffsetType                  m_VariableEndOffset   = 0;
+
+#ifdef DILIGENT_DEBUG
+    IMemoryAllocator* m_pDbgAllocator = nullptr;
+#endif
 };
 
 
@@ -423,7 +436,7 @@ inline Uint32 ShaderVariableManagerGL::GetNumResources<ShaderVariableManagerGL::
 }
 
 template <>
-inline Uint32 ShaderVariableManagerGL::GetNumResources<ShaderVariableManagerGL::SamplerBindInfo>() const
+inline Uint32 ShaderVariableManagerGL::GetNumResources<ShaderVariableManagerGL::TextureBindInfo>() const
 {
     return GetNumTextures();
 }
@@ -451,7 +464,7 @@ inline ShaderVariableManagerGL::OffsetType ShaderVariableManagerGL::
 
 template <>
 inline ShaderVariableManagerGL::OffsetType ShaderVariableManagerGL::
-    GetResourceOffset<ShaderVariableManagerGL::SamplerBindInfo>() const
+    GetResourceOffset<ShaderVariableManagerGL::TextureBindInfo>() const
 {
     return m_TextureOffset;
 }

@@ -27,44 +27,48 @@
 
 #include "pch.h"
 #include "ShaderResourceCacheGL.hpp"
+#include "PipelineResourceSignatureGLImpl.hpp"
 
 namespace Diligent
 {
 
-size_t ShaderResourceCacheGL::GetRequriedMemorySize(Uint32 UBCount, Uint32 TextureCount, Uint32 ImageCount, Uint32 SSBOCount)
+size_t ShaderResourceCacheGL::GetRequriedMemorySize(const TResourceCount& ResCount)
 {
+    static_assert(std::is_same<TResourceCount, PipelineResourceSignatureGLImpl::TBindings>::value,
+                  "ShaderResourceCacheGL::TResourceCount must be the same type as PipelineResourceSignatureGLImpl::TBindings");
     // clang-format off
     auto MemSize = 
-                sizeof(CachedUB)           * UBCount + 
-                sizeof(CachedResourceView) * TextureCount + 
-                sizeof(CachedResourceView) * ImageCount + 
-                sizeof(CachedSSBO)         * SSBOCount;
+                sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER] + 
+                sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]        + 
+                sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]          + 
+                sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER];
     // clang-format on
+    VERIFY(MemSize < InvalidResourceOffset, "Memory size exeed the maximum allowed size.");
     return MemSize;
 }
 
-void ShaderResourceCacheGL::Initialize(Uint32 UBCount, Uint32 TextureCount, Uint32 ImageCount, Uint32 SSBOCount, IMemoryAllocator& MemAllocator)
+void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAllocator& MemAllocator)
 {
-    // clang-format off
-    m_TexturesOffset  = static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * UBCount);
-    m_ImagesOffset    = static_cast<Uint16>(m_TexturesOffset + sizeof(CachedResourceView) * TextureCount);
-    m_SSBOsOffset     = static_cast<Uint16>(m_ImagesOffset   + sizeof(CachedResourceView) * ImageCount);
-    m_MemoryEndOffset = static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * SSBOCount);
+    VERIFY(m_pAllocator == nullptr && m_pResourceData == nullptr, "Cache already initialized");
+    m_pAllocator = &MemAllocator;
 
-    VERIFY_EXPR(GetUBCount()      == static_cast<Uint32>(UBCount));
-    VERIFY_EXPR(GetTextureCount() == static_cast<Uint32>(TextureCount));
-    VERIFY_EXPR(GetImageCount()   == static_cast<Uint32>(ImageCount));
-    VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(SSBOCount));
+    // clang-format off
+    m_TexturesOffset  = static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER]);
+    m_ImagesOffset    = static_cast<Uint16>(m_TexturesOffset + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]);
+    m_SSBOsOffset     = static_cast<Uint16>(m_ImagesOffset   + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]);
+    m_MemoryEndOffset = static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER]);
+
+    VERIFY_EXPR(GetUBCount()      == static_cast<Uint32>(ResCount[BINDING_RANGE_UNIFORM_BUFFER]));
+    VERIFY_EXPR(GetTextureCount() == static_cast<Uint32>(ResCount[BINDING_RANGE_TEXTURE]));
+    VERIFY_EXPR(GetImageCount()   == static_cast<Uint32>(ResCount[BINDING_RANGE_IMAGE]));
+    VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(ResCount[BINDING_RANGE_STORAGE_BUFFER]));
     // clang-format on
 
     VERIFY_EXPR(m_pResourceData == nullptr);
     size_t BufferSize = m_MemoryEndOffset;
 
-    VERIFY_EXPR(BufferSize == GetRequriedMemorySize(UBCount, TextureCount, ImageCount, SSBOCount));
+    VERIFY_EXPR(BufferSize == GetRequriedMemorySize(ResCount));
 
-#ifdef DILIGENT_DEBUG
-    m_pdbgMemoryAllocator = &MemAllocator;
-#endif
     if (BufferSize > 0)
     {
         m_pResourceData = ALLOCATE(MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize);
@@ -72,51 +76,44 @@ void ShaderResourceCacheGL::Initialize(Uint32 UBCount, Uint32 TextureCount, Uint
     }
 
     // Explicitly construct all objects
-    for (Uint32 cb = 0; cb < UBCount; ++cb)
+    for (Uint32 cb = 0; cb < GetUBCount(); ++cb)
         new (&GetUB(cb)) CachedUB;
 
-    for (Uint32 s = 0; s < TextureCount; ++s)
+    for (Uint32 s = 0; s < GetTextureCount(); ++s)
         new (&GetTexture(s)) CachedResourceView;
 
-    for (Uint32 i = 0; i < ImageCount; ++i)
+    for (Uint32 i = 0; i < GetImageCount(); ++i)
         new (&GetImage(i)) CachedResourceView;
 
-    for (Uint32 s = 0; s < SSBOCount; ++s)
+    for (Uint32 s = 0; s < GetSSBOCount(); ++s)
         new (&GetSSBO(s)) CachedSSBO;
 }
 
 ShaderResourceCacheGL::~ShaderResourceCacheGL()
 {
-    VERIFY(!IsInitialized(), "Shader resource cache memory must be released with ShaderResourceCacheGL::Destroy()");
-}
+    if (IsInitialized())
+    {
+        for (Uint32 cb = 0; cb < GetUBCount(); ++cb)
+            GetUB(cb).~CachedUB();
 
-void ShaderResourceCacheGL::Destroy(IMemoryAllocator& MemAllocator)
-{
-    if (!IsInitialized())
-        return;
+        for (Uint32 s = 0; s < GetTextureCount(); ++s)
+            GetTexture(s).~CachedResourceView();
 
-    VERIFY(m_pdbgMemoryAllocator == &MemAllocator, "The allocator does not match the one used to create resources");
+        for (Uint32 i = 0; i < GetImageCount(); ++i)
+            GetImage(i).~CachedResourceView();
 
-    for (Uint32 cb = 0; cb < GetUBCount(); ++cb)
-        GetUB(cb).~CachedUB();
+        for (Uint32 s = 0; s < GetSSBOCount(); ++s)
+            GetSSBO(s).~CachedSSBO();
 
-    for (Uint32 s = 0; s < GetTextureCount(); ++s)
-        GetTexture(s).~CachedResourceView();
+        if (m_pResourceData != nullptr)
+            m_pAllocator->Free(m_pResourceData);
 
-    for (Uint32 i = 0; i < GetImageCount(); ++i)
-        GetImage(i).~CachedResourceView();
-
-    for (Uint32 s = 0; s < GetSSBOCount(); ++s)
-        GetSSBO(s).~CachedSSBO();
-
-    if (m_pResourceData != nullptr)
-        MemAllocator.Free(m_pResourceData);
-
-    m_pResourceData   = nullptr;
-    m_TexturesOffset  = InvalidResourceOffset;
-    m_ImagesOffset    = InvalidResourceOffset;
-    m_SSBOsOffset     = InvalidResourceOffset;
-    m_MemoryEndOffset = InvalidResourceOffset;
+        m_pResourceData   = nullptr;
+        m_TexturesOffset  = InvalidResourceOffset;
+        m_ImagesOffset    = InvalidResourceOffset;
+        m_SSBOsOffset     = InvalidResourceOffset;
+        m_MemoryEndOffset = InvalidResourceOffset;
+    }
 }
 
 } // namespace Diligent

@@ -553,14 +553,8 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
     }
     else
     {
-        Uint32 MaxSignatureBindingIndex = 0;
-        for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
-        {
-            const auto* pSignature = ValidatedCast<const PipelineResourceSignatureD3D12Impl>(CreateInfo.ppResourceSignatures[i]);
-            VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
-            MaxSignatureBindingIndex = std::max(MaxSignatureBindingIndex, Uint32{pSignature->GetDesc().BindingIndex});
-        }
-        SignatureCount = MaxSignatureBindingIndex + 1;
+        Uint32 MaxSignatureBindingIndex = PipelineResourceSignatureD3D12Impl::CalcMaxSignatureBindIndex(CreateInfo.ResourceSignaturesCount, CreateInfo.ppResourceSignatures);
+        SignatureCount                  = MaxSignatureBindingIndex + 1;
         m_ResourceSignatures.reset(new RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[SignatureCount]);
 
         auto DbgMaxSignatureBindingIndex =

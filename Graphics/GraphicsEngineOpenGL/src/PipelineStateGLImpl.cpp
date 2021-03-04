@@ -133,7 +133,7 @@ void PipelineStateGLImpl::CreateDefaultSignature(const PipelineStateCreateInfo& 
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
-            auto* pShaderGL = ShaderStages[i].pShader;
+            auto* pShaderGL = ShaderStages[i];
             pShaderGL->GetShaderResources()->ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);
         }
     }
@@ -234,7 +234,7 @@ void PipelineStateGLImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
-            auto* pShaderGL = ShaderStages[i].pShader;
+            auto* pShaderGL = ShaderStages[i];
             DvpValidateShaderResources(pShaderGL->GetShaderResources(), pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
         }
     }
@@ -272,9 +272,9 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
 
     // Get active shader stages.
     SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
-    for (auto& Stage : ShaderStages)
+    for (auto* pShaderGL : ShaderStages)
     {
-        const auto ShaderType = Stage.pShader->GetDesc().ShaderType;
+        const auto ShaderType = pShaderGL->GetDesc().ShaderType;
         VERIFY((ActiveStages & ShaderType) == 0, "Shader stage ", GetShaderTypeLiteralName(ShaderType), " is already active");
         ActiveStages |= ShaderType;
     }
@@ -282,10 +282,11 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
     // Create programs.
     if (m_IsProgramPipelineSupported)
     {
+        VERIFY_EXPR(m_ShaderTypes.size() >= ShaderStages.size());
         m_GLPrograms = MemPool.ConstructArray<GLProgramObj>(ShaderStages.size(), false);
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
-            auto* pShaderGL  = ShaderStages[i].pShader;
+            auto* pShaderGL  = ShaderStages[i];
             m_GLPrograms[i]  = GLProgramObj{ShaderGLImpl::LinkProgram(&ShaderStages[i], 1, true)};
             m_ShaderTypes[i] = pShaderGL->GetDesc().ShaderType;
         }
@@ -417,10 +418,10 @@ bool PipelineStateGLImpl::IsCompatibleWith(const IPipelineState* pPSO) const
     const auto& lhs = *this;
     const auto& rhs = *ValidatedCast<const PipelineStateGLImpl>(pPSO);
 
-    if (lhs.GetSignatureCount() != rhs.GetSignatureCount())
+    if (lhs.GetResourceSignatureCount() != rhs.GetResourceSignatureCount())
         return false;
 
-    for (Uint32 s = 0, SigCount = lhs.GetSignatureCount(); s < SigCount; ++s)
+    for (Uint32 s = 0, SigCount = lhs.GetResourceSignatureCount(); s < SigCount; ++s)
     {
         if (!lhs.GetSignature(s)->IsCompatibleWith(*rhs.GetSignature(s)))
             return false;
@@ -475,7 +476,7 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
 #ifdef DILIGENT_DEVELOPMENT
 PipelineStateGLImpl::ResourceAttribution PipelineStateGLImpl::GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
 {
-    const auto SignCount = GetSignatureCount();
+    const auto SignCount = GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
         const auto* const pSignature = GetSignature(sign);
@@ -500,7 +501,7 @@ void PipelineStateGLImpl::DvpValidateShaderResources(const std::shared_ptr<const
     m_ShaderResources.emplace_back(pShaderResources);
     m_ShaderNames.emplace_back(ShaderName);
 
-    const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, SHADER_RESOURCE_TYPE ReadOnlyResourceType, PIPELINE_RESOURCE_FLAGS Flags) //
+    const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, SHADER_RESOURCE_TYPE AltResourceType, PIPELINE_RESOURCE_FLAGS Flags) //
     {
         m_ResourceAttibutions.emplace_back();
         auto& ResAttribution = m_ResourceAttibutions.back();
@@ -521,22 +522,14 @@ void PipelineStateGLImpl::DvpValidateShaderResources(const std::shared_ptr<const
             const auto& ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
 
             // Shader reflection does not contain read-only flag, so image and storage buffer can be UAV or SRV.
-            if (Attribs.ResourceType != ResDesc.ResourceType &&
-                ReadOnlyResourceType != ResDesc.ResourceType)
-            {
-                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource with name '", Attribs.Name,
-                                    "' and type '", GetShaderResourceTypeLiteralName(Attribs.ResourceType), "' that is not compatible with type '",
-                                    GetShaderResourceTypeLiteralName(ResDesc.ResourceType), "' in pipeline resource signature '", pSignature->GetDesc().Name, "'.");
-            }
+            // Texture SRV is same as input attachment.
+            const auto Type = (AltResourceType == ResDesc.ResourceType ? AltResourceType : Attribs.ResourceType);
 
-            if ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER))
-            {
-                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", Attribs.Name,
-                                    "' that is", ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
-                                    " labeled as formatted buffer, while the same resource specified by the pipeline resource signature '",
-                                    pSignature->GetDesc().Name, "' is", ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
-                                    " labeled as such.");
-            }
+            ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, Attribs.ArraySize, ShaderName, pSignature->GetDesc().Name);
+        }
+        else
+        {
+            UNEXPECTED("Resource index should be valid");
         }
     };
 
@@ -547,7 +540,7 @@ void PipelineStateGLImpl::DvpValidateShaderResources(const std::shared_ptr<const
     const auto HandleTexture = [&](const ShaderResourcesGL::TextureInfo& Attribs) {
         const bool IsTexelBuffer = (Attribs.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV);
         HandleResource(Attribs,
-                       Attribs.ResourceType,
+                       IsTexelBuffer ? Attribs.ResourceType : SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT,
                        IsTexelBuffer ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER);
     };
 

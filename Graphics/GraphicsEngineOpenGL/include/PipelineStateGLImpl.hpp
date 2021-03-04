@@ -77,8 +77,6 @@ public:
 
     void CommitProgram(GLContextState& State);
 
-    Uint32 GetSignatureCount() const { return m_SignatureCount; }
-
     PipelineResourceSignatureGLImpl* GetSignature(Uint32 index) const
     {
         VERIFY_EXPR(index < m_SignatureCount);
@@ -91,8 +89,7 @@ public:
 #endif
 
 private:
-    using ShaderStageInfo = ShaderGLImpl::ShaderStageInfo;
-    using TShaderStages   = std::vector<ShaderStageInfo>;
+    using TShaderStages = std::vector<ShaderGLImpl*>;
 
     GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 
@@ -183,5 +180,10 @@ private:
     std::vector<ResourceAttribution> m_ResourceAttibutions;
 #endif
 };
+
+__forceinline SHADER_TYPE GetShaderStageType(const ShaderGLImpl* pShader)
+{
+    return pShader->GetDesc().ShaderType;
+}
 
 } // namespace Diligent

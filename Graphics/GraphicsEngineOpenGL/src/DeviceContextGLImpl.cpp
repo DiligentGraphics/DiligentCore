@@ -156,7 +156,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     // the draw command.
     m_pPipelineState->CommitProgram(m_ContextState);
 
-    const auto SignCount = m_pPipelineState->GetSignatureCount();
+    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
 
     m_BindInfo.ActiveSRBMask = 0;
     for (Uint32 s = 0; s < SignCount; ++s)
@@ -708,14 +708,14 @@ void DeviceContextGLImpl::BindProgramResources()
     {
         Uint32 sign   = PlatformMisc::GetLSB(ActiveSRBMask);
         Uint32 SigBit = (1u << sign);
-        VERIFY_EXPR(sign < m_pPipelineState->GetSignatureCount());
+        VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
 
         ActiveSRBMask &= ~SigBit;
 
         const auto* pSRB = m_BindInfo.SRBs[sign];
         VERIFY_EXPR(pSRB);
 
-        //if (m_BindInfo.StaleSRBMask & SigBit)
+        if (m_BindInfo.StaleSRBMask & SigBit)
         {
             BindProgramResources(m_CommitedResourcesTentativeBarriers, pSRB, Bindings);
 

@@ -41,11 +41,6 @@ using namespace Diligent;
 namespace Diligent
 {
 
-ShaderGLImpl::ShaderStageInfo::ShaderStageInfo(const ShaderGLImpl* _pShader) :
-    Type{_pShader->GetDesc().ShaderType},
-    pShader{_pShader}
-{}
-
 ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceGLImpl*     pDeviceGL,
                            const ShaderCreateInfo& ShaderCI,
@@ -163,7 +158,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 
     if (deviceCaps.Features.SeparablePrograms)
     {
-        ShaderStageInfo                ThisShader[]  = {ShaderStageInfo{this}};
+        ShaderGLImpl* const            ThisShader[]  = {this};
         GLObjectWrappers::GLProgramObj Program       = LinkProgram(ThisShader, 1, true);
         auto                           pImmediateCtx = m_pDevice->GetImmediateContext();
         VERIFY_EXPR(pImmediateCtx);
@@ -182,7 +177,7 @@ ShaderGLImpl::~ShaderGLImpl()
 IMPLEMENT_QUERY_INTERFACE(ShaderGLImpl, IID_ShaderGL, TShaderBase)
 
 
-GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(const ShaderStageInfo* pShaderStagess, Uint32 NumShaders, bool IsSeparableProgram)
+GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram)
 {
     VERIFY(!IsSeparableProgram || NumShaders == 1, "Number of shaders must be 1 when separable program is created");
 
@@ -194,7 +189,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(const ShaderStageInfo* 
 
     for (Uint32 i = 0; i < NumShaders; ++i)
     {
-        auto* pCurrShader = pShaderStagess[i].pShader;
+        auto* pCurrShader = ppShaders[i];
         glAttachShader(GLProg, pCurrShader->m_GLShaderObj);
         CHECK_GL_ERROR("glAttachShader() failed");
     }
@@ -233,7 +228,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(const ShaderStageInfo* 
 
     for (Uint32 i = 0; i < NumShaders; ++i)
     {
-        auto* pCurrShader = ValidatedCast<const ShaderGLImpl>(pShaderStagess[i].pShader);
+        auto* pCurrShader = ValidatedCast<const ShaderGLImpl>(ppShaders[i]);
         glDetachShader(GLProg, pCurrShader->m_GLShaderObj);
         CHECK_GL_ERROR("glDetachShader() failed");
     }

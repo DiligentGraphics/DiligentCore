@@ -233,11 +233,6 @@ public:
 
     bool IsCompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const;
 
-    bool IsIncompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const
-    {
-        return GetHash() != Other.GetHash();
-    }
-
     SRBMemoryAllocator& GetSRBMemoryAllocator()
     {
         return m_SRBMemAllocator;

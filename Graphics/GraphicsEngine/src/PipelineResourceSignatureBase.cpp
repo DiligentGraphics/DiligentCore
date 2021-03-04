@@ -37,7 +37,9 @@ namespace Diligent
 
 #define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
-void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc, bool ShaderResourceRuntimeArraySupported) noexcept(false)
+void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
+                                           bool                                 ShaderResourceRuntimeArraySupported,
+                                           bool                                 AccelStructSupported) noexcept(false)
 {
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
         LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Uint32{Desc.BindingIndex}, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
@@ -85,9 +87,13 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && !ShaderResourceRuntimeArraySupported)
         {
-            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags: RUNTIME_ARRAY can only be used if ShaderResourceRuntimeArray device feature is enabled.");
+            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (RUNTIME_ARRAY) can only be used if ShaderResourceRuntimeArray device feature is enabled.");
         }
 
+        if (Res.ResourceType == SHADER_RESOURCE_TYPE_ACCEL_STRUCT && !AccelStructSupported)
+        {
+            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].ResourceType (ACCEL_STRUCT): acceleration structure is not supported by device.");
+        }
         static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please add the new resource type to the switch below");
 
         auto AllowedResourceFlags = GetValidPipelineResourceFlags(Res.ResourceType);

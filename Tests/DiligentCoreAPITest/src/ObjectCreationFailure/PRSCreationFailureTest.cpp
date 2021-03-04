@@ -238,7 +238,13 @@ TEST(PRSCreationFailureTest, InvalidInputAttachmentFlag)
         {SHADER_TYPE_PIXEL, "g_InputAttachment", 1, SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY}};
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
-    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). Only the following flags are valid for a input attachment: UNKNOWN");
+    const char* ExpectedErrorSubstring;
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.ShaderResourceRuntimeArray)
+        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). Only the following flags are valid for a input attachment: UNKNOWN";
+    else
+        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY) can only be used if ShaderResourceRuntimeArray device feature is enabled";
+
+    TestCreatePRSFailure(PRSDesc, ExpectedErrorSubstring);
 }
 
 TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
@@ -250,7 +256,13 @@ TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
         {SHADER_TYPE_PIXEL, "g_AS", 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS}};
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
-    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (NO_DYNAMIC_BUFFERS). Only the following flags are valid for a acceleration structure: RUNTIME_ARRAY");
+    const char* ExpectedErrorSubstring;
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.RayTracing)
+        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (NO_DYNAMIC_BUFFERS). Only the following flags are valid for a acceleration structure: RUNTIME_ARRAY";
+    else
+        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].ResourceType (ACCEL_STRUCT): acceleration structure is not supported by device";
+
+    TestCreatePRSFailure(PRSDesc, ExpectedErrorSubstring);
 }
 
 TEST(PRSCreationFailureTest, InvalidAssignedSamplerResourceType)
