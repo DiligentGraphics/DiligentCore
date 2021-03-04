@@ -48,8 +48,7 @@ namespace Diligent
 
 /// Validates pipeline resource signature description and throws an exception in case of an error.
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,
-                                           bool                                 ShaderResourceRuntimeArraySupported,
-                                           bool                                 AccelStructSupported) noexcept(false);
+                                           const DeviceFeatures&                Features) noexcept(false);
 
 static constexpr Uint32 InvalidImmutableSamplerIndex = ~0u;
 /// Finds an immutable sampler for the resource name 'ResourceName' that is defined in shader stages 'ShaderStages'.
@@ -96,9 +95,7 @@ public:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
-        ValidatePipelineResourceSignatureDesc(Desc,
-                                              pDevice->GetDeviceCaps().Features.ShaderResourceRuntimeArray,
-                                              pDevice->GetDeviceCaps().Features.RayTracing);
+        ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDeviceCaps().Features);
 
         // Determine shader stages that have any resources as well as
         // shader stages that have static resources.
