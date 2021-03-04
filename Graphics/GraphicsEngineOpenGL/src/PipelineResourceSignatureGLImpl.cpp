@@ -93,7 +93,7 @@ const char* GetBindingRangeName(BINDING_RANGE Range)
 
 BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc)
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
     switch (Desc.ResourceType)
     {
         // clang-format off
@@ -102,7 +102,7 @@ BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc)
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:      return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_TEXTURE : BINDING_RANGE_STORAGE_BUFFER;
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:     return BINDING_RANGE_IMAGE;
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:      return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_IMAGE : BINDING_RANGE_STORAGE_BUFFER;
-            // clang-format on
+        // clang-format on
         case SHADER_RESOURCE_TYPE_SAMPLER:
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
@@ -140,7 +140,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
         if (NumStaticResStages > 0)
         {
             MemPool.AddSpace<ShaderResourceCacheGL>(1);
-            MemPool.AddSpace<ShaderVariableGL>(NumStaticResStages);
+            MemPool.AddSpace<ShaderVariableManagerGL>(NumStaticResStages);
         }
 
         MemPool.Reserve();
@@ -158,7 +158,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
         if (NumStaticResStages > 0)
         {
             m_pStaticResCache = MemPool.Construct<ShaderResourceCacheGL>(ShaderResourceCacheGL::CacheContentType::Signature);
-            m_StaticVarsMgrs  = MemPool.ConstructArray<ShaderVariableGL>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
+            m_StaticVarsMgrs  = MemPool.ConstructArray<ShaderVariableManagerGL>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
         }
 
         CreateLayouts();
@@ -326,7 +326,7 @@ void PipelineResourceSignatureGLImpl::Destruct()
         for (auto Idx : m_StaticResStageIndex)
         {
             if (Idx >= 0)
-                m_StaticVarsMgrs[Idx].~ShaderVariableGL();
+                m_StaticVarsMgrs[Idx].~ShaderVariableManagerGL();
         }
         m_StaticVarsMgrs = nullptr;
     }
@@ -375,7 +375,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             {
                 auto UniformBlockIndex = glGetUniformBlockIndex(GLProgram, ResDesc.Name);
                 if (UniformBlockIndex == GL_INVALID_INDEX)
-                    break; // Uniform block defined in resource signature, but not presented in shader program.
+                    break; // Uniform block is defined in resource signature, but not presented in shader program.
 
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
@@ -388,7 +388,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             {
                 auto UniformLocation = glGetUniformLocation(GLProgram, ResDesc.Name);
                 if (UniformLocation < 0)
-                    break; // Uniform defined in resource signature, but not presented in shader program.
+                    break; // Uniform is defined in resource signature, but not presented in shader program.
 
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {

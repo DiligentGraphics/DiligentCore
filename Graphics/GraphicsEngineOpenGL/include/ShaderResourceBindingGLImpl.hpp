@@ -77,7 +77,7 @@ private:
     ShaderResourceCacheGL m_ShaderResourceCache;
 
     // The resource layout only references mutable and dynamic variables
-    ShaderVariableGL* m_pShaderVarMgrs = nullptr; // [GetNumShaders()]
+    ShaderVariableManagerGL* m_pShaderVarMgrs = nullptr; // [GetNumShaders()]
 };
 
 } // namespace Diligent

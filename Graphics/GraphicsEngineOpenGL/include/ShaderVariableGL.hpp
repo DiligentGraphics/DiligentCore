@@ -27,7 +27,7 @@
 
 #pragma once
 
-// ShaderVariableGL class manages resource bindings for all stages in a pipeline
+// ShaderVariableManagerGL class manages resource bindings for all stages in a pipeline
 
 //
 //
@@ -45,7 +45,7 @@
 //                                               Ref                                  Ref                      Ref                          Ref
 //    .-==========================-.         _____|____________________________________|________________________|____________________________|______________
 //    ||                          ||        |           |           |       |            |            |       |            |         |           |          |
-//  __||     ShaderVariableGL     ||------->| UBInfo[0] | UBInfo[1] |  ...  | SamInfo[0] | SamInfo[1] |  ...  | ImgInfo[0] |   ...   |  SSBO[0]  |   ...    |
+//  __|| ShaderVariableManagerGL  ||------->| UBInfo[0] | UBInfo[1] |  ...  | SamInfo[0] | SamInfo[1] |  ...  | ImgInfo[0] |   ...   |  SSBO[0]  |   ...    |
 // |  ||                          ||        |___________|___________|_______|____________|____________|_______|____________|_________|___________|__________|
 // |  '-==========================-'                     /                                         \
 // |                                                   Ref                                         Ref
@@ -63,7 +63,7 @@
 //     |_______________________|            |___________________________|___________________________|___________________________|___________________________|
 //
 //
-// Note that ShaderResourcesGL are kept by PipelineStateGLImpl. ShaderVariableGL class is either part of the same PSO class,
+// Note that ShaderResourcesGL are kept by PipelineStateGLImpl. ShaderVariableManagerGL class is either part of the same PSO class,
 // or part of ShaderResourceBindingGLImpl object that keeps a strong reference to the pipeline. So all references from GLVariableBase
 // are always valid.
 
@@ -77,23 +77,23 @@
 namespace Diligent
 {
 
-// sizeof(ShaderVariableGL) == 48 (x64, msvc, Release)
-class ShaderVariableGL
+// sizeof(ShaderVariableManagerGL) == 48 (x64, msvc, Release)
+class ShaderVariableManagerGL
 {
 public:
-    ShaderVariableGL(IObject& Owner, ShaderResourceCacheGL& ResourceCache) noexcept :
+    ShaderVariableManagerGL(IObject& Owner, ShaderResourceCacheGL& ResourceCache) noexcept :
         m_Owner(Owner),
         m_ResourceCache{ResourceCache}
     {}
 
-    ~ShaderVariableGL();
+    ~ShaderVariableManagerGL();
 
     // No copies, only moves are allowed
     // clang-format off
-    ShaderVariableGL             (const ShaderVariableGL&)  = delete;
-    ShaderVariableGL& operator = (const ShaderVariableGL&)  = delete;
-    ShaderVariableGL             (      ShaderVariableGL&&) = default;
-    ShaderVariableGL& operator = (      ShaderVariableGL&&) = delete;
+    ShaderVariableManagerGL             (const ShaderVariableManagerGL&)  = delete;
+    ShaderVariableManagerGL& operator = (const ShaderVariableManagerGL&)  = delete;
+    ShaderVariableManagerGL             (      ShaderVariableManagerGL&&) = default;
+    ShaderVariableManagerGL& operator = (      ShaderVariableManagerGL&&) = delete;
     // clang-format on
 
     void Initialize(const PipelineResourceSignatureGLImpl& Signature,
@@ -120,10 +120,10 @@ public:
     }
 
 
-    struct GLVariableBase : public ShaderVariableBase<ShaderVariableGL>
+    struct GLVariableBase : public ShaderVariableBase<ShaderVariableManagerGL>
     {
-        using TBase = ShaderVariableBase<ShaderVariableGL>;
-        GLVariableBase(ShaderVariableGL& ParentLayout, Uint32 ResIndex) :
+        using TBase = ShaderVariableBase<ShaderVariableManagerGL>;
+        GLVariableBase(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
             TBase{ParentLayout},
             m_ResIndex{ResIndex}
         {}
@@ -155,7 +155,7 @@ public:
 
     struct UniformBuffBindInfo final : GLVariableBase
     {
-        UniformBuffBindInfo(ShaderVariableGL& ParentLayout, Uint32 ResIndex) :
+        UniformBuffBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
             GLVariableBase{ParentLayout, ResIndex}
         {}
 
@@ -187,7 +187,7 @@ public:
 
     struct SamplerBindInfo final : GLVariableBase
     {
-        SamplerBindInfo(ShaderVariableGL& ParentLayout, Uint32 ResIndex) :
+        SamplerBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
             GLVariableBase{ParentLayout, ResIndex}
         {}
 
@@ -219,7 +219,7 @@ public:
 
     struct ImageBindInfo final : GLVariableBase
     {
-        ImageBindInfo(ShaderVariableGL& ParentLayout, Uint32 ResIndex) :
+        ImageBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
             GLVariableBase{ParentLayout, ResIndex}
         {}
 
@@ -251,7 +251,7 @@ public:
 
     struct StorageBufferBindInfo final : GLVariableBase
     {
-        StorageBufferBindInfo(ShaderVariableGL& ParentLayout, Uint32 ResIndex) :
+        StorageBufferBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
             GLVariableBase{ParentLayout, ResIndex}
         {}
 
@@ -417,25 +417,25 @@ private:
 
 
 template <>
-inline Uint32 ShaderVariableGL::GetNumResources<ShaderVariableGL::UniformBuffBindInfo>() const
+inline Uint32 ShaderVariableManagerGL::GetNumResources<ShaderVariableManagerGL::UniformBuffBindInfo>() const
 {
     return GetNumUBs();
 }
 
 template <>
-inline Uint32 ShaderVariableGL::GetNumResources<ShaderVariableGL::SamplerBindInfo>() const
+inline Uint32 ShaderVariableManagerGL::GetNumResources<ShaderVariableManagerGL::SamplerBindInfo>() const
 {
     return GetNumTextures();
 }
 
 template <>
-inline Uint32 ShaderVariableGL::GetNumResources<ShaderVariableGL::ImageBindInfo>() const
+inline Uint32 ShaderVariableManagerGL::GetNumResources<ShaderVariableManagerGL::ImageBindInfo>() const
 {
     return GetNumImages();
 }
 
 template <>
-inline Uint32 ShaderVariableGL::GetNumResources<ShaderVariableGL::StorageBufferBindInfo>() const
+inline Uint32 ShaderVariableManagerGL::GetNumResources<ShaderVariableManagerGL::StorageBufferBindInfo>() const
 {
     return GetNumStorageBuffers();
 }
@@ -443,29 +443,29 @@ inline Uint32 ShaderVariableGL::GetNumResources<ShaderVariableGL::StorageBufferB
 
 
 template <>
-inline ShaderVariableGL::OffsetType ShaderVariableGL::
-    GetResourceOffset<ShaderVariableGL::UniformBuffBindInfo>() const
+inline ShaderVariableManagerGL::OffsetType ShaderVariableManagerGL::
+    GetResourceOffset<ShaderVariableManagerGL::UniformBuffBindInfo>() const
 {
     return m_UBOffset;
 }
 
 template <>
-inline ShaderVariableGL::OffsetType ShaderVariableGL::
-    GetResourceOffset<ShaderVariableGL::SamplerBindInfo>() const
+inline ShaderVariableManagerGL::OffsetType ShaderVariableManagerGL::
+    GetResourceOffset<ShaderVariableManagerGL::SamplerBindInfo>() const
 {
     return m_TextureOffset;
 }
 
 template <>
-inline ShaderVariableGL::OffsetType ShaderVariableGL::
-    GetResourceOffset<ShaderVariableGL::ImageBindInfo>() const
+inline ShaderVariableManagerGL::OffsetType ShaderVariableManagerGL::
+    GetResourceOffset<ShaderVariableManagerGL::ImageBindInfo>() const
 {
     return m_ImageOffset;
 }
 
 template <>
-inline ShaderVariableGL::OffsetType ShaderVariableGL::
-    GetResourceOffset<ShaderVariableGL::StorageBufferBindInfo>() const
+inline ShaderVariableManagerGL::OffsetType ShaderVariableManagerGL::
+    GetResourceOffset<ShaderVariableManagerGL::StorageBufferBindInfo>() const
 {
     return m_StorageBufferOffset;
 }

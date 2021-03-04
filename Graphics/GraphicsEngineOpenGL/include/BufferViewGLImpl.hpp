@@ -30,7 +30,6 @@
 #include "BufferViewGL.h"
 #include "BaseInterfacesGL.h"
 #include "BufferViewBase.hpp"
-#include "RenderDevice.h"
 #include "GLObjectWrapper.hpp"
 #include "RenderDeviceGLImpl.hpp"
 

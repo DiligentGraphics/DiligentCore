@@ -50,9 +50,9 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters*    
         const auto NumShaders = GetNumShaders();
 
         FixedLinearAllocator MemPool{GetRawAllocator()};
-        MemPool.AddSpace<ShaderVariableGL>(NumShaders);
+        MemPool.AddSpace<ShaderVariableManagerGL>(NumShaders);
         MemPool.Reserve();
-        m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableGL>(NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
+        m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerGL>(NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
 
         // The memory is now owned by ShaderResourceBindingVkImpl and will be freed by Destruct().
         auto* Ptr = MemPool.ReleaseOwnership();
@@ -98,7 +98,7 @@ void ShaderResourceBindingGLImpl::Destruct()
     {
         const auto NumShaders = GetNumShaders();
         for (Uint32 s = 0; s < NumShaders; ++s)
-            m_pShaderVarMgrs[s].~ShaderVariableGL();
+            m_pShaderVarMgrs[s].~ShaderVariableManagerGL();
 
         RawAllocator.Free(m_pShaderVarMgrs);
         m_pShaderVarMgrs = nullptr;

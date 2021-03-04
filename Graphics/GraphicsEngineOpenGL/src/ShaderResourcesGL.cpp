@@ -36,8 +36,10 @@
 
 namespace Diligent
 {
+
 namespace
 {
+
 void GLTextureTypeToResourceDim(GLenum TextureType, RESOURCE_DIMENSION& ResDim, bool& IsMS)
 {
     IsMS   = false;
@@ -181,6 +183,7 @@ void GLTextureTypeToResourceDim(GLenum TextureType, RESOURCE_DIMENSION& ResDim, 
 #endif
     }
 }
+
 } // namespace
 
 ShaderResourcesGL::ShaderResourcesGL(ShaderResourcesGL&& Program) noexcept :

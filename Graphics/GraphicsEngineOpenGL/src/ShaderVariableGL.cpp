@@ -36,11 +36,11 @@
 namespace Diligent
 {
 
-void ShaderVariableGL::CountResources(const PipelineResourceSignatureGLImpl& Signature,
-                                      const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                      Uint32                                 NumAllowedTypes,
-                                      const SHADER_TYPE                      ShaderType,
-                                      ResourceCounters&                      Counters)
+void ShaderVariableManagerGL::CountResources(const PipelineResourceSignatureGLImpl& Signature,
+                                             const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                             Uint32                                 NumAllowedTypes,
+                                             const SHADER_TYPE                      ShaderType,
+                                             ResourceCounters&                      Counters)
 {
     ProcessSignatureResources(
         Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
@@ -62,11 +62,11 @@ void ShaderVariableGL::CountResources(const PipelineResourceSignatureGLImpl& Sig
 }
 
 template <typename HandlerType>
-void ShaderVariableGL::ProcessSignatureResources(const PipelineResourceSignatureGLImpl& Signature,
-                                                 const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                                 Uint32                                 NumAllowedTypes,
-                                                 SHADER_TYPE                            ShaderType,
-                                                 HandlerType                            Handler)
+void ShaderVariableManagerGL::ProcessSignatureResources(const PipelineResourceSignatureGLImpl& Signature,
+                                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                                        Uint32                                 NumAllowedTypes,
+                                                        SHADER_TYPE                            ShaderType,
+                                                        HandlerType                            Handler)
 {
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
@@ -93,10 +93,10 @@ void ShaderVariableGL::ProcessSignatureResources(const PipelineResourceSignature
     }
 }
 
-size_t ShaderVariableGL::GetRequiredMemorySize(const PipelineResourceSignatureGLImpl& Signature,
-                                               const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                               Uint32                                 NumAllowedTypes,
-                                               SHADER_TYPE                            ShaderType)
+size_t ShaderVariableManagerGL::GetRequiredMemorySize(const PipelineResourceSignatureGLImpl& Signature,
+                                                      const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                                      Uint32                                 NumAllowedTypes,
+                                                      SHADER_TYPE                            ShaderType)
 {
     ResourceCounters Counters;
     CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, Counters);
@@ -110,10 +110,10 @@ size_t ShaderVariableGL::GetRequiredMemorySize(const PipelineResourceSignatureGL
     return RequiredSize;
 }
 
-void ShaderVariableGL::Initialize(const PipelineResourceSignatureGLImpl& Signature,
-                                  const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                  Uint32                                 NumAllowedTypes,
-                                  SHADER_TYPE                            ShaderType)
+void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& Signature,
+                                         const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                         Uint32                                 NumAllowedTypes,
+                                         SHADER_TYPE                            ShaderType)
 {
     ResourceCounters Counters;
     CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, Counters);
@@ -192,7 +192,7 @@ void ShaderVariableGL::Initialize(const PipelineResourceSignatureGLImpl& Signatu
     // clang-format on
 }
 
-ShaderVariableGL::~ShaderVariableGL()
+ShaderVariableManagerGL::~ShaderVariableManagerGL()
 {
     // clang-format off
     HandleResources(
@@ -219,8 +219,8 @@ ShaderVariableGL::~ShaderVariableGL()
     // clang-format on
 }
 
-void ShaderVariableGL::UniformBuffBindInfo::BindResource(IDeviceObject* pBuffer,
-                                                         Uint32         ArrayIndex)
+void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(IDeviceObject* pBuffer,
+                                                                Uint32         ArrayIndex)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
@@ -245,8 +245,8 @@ void ShaderVariableGL::UniformBuffBindInfo::BindResource(IDeviceObject* pBuffer,
 
 
 
-void ShaderVariableGL::SamplerBindInfo::BindResource(IDeviceObject* pView,
-                                                     Uint32         ArrayIndex)
+void ShaderVariableManagerGL::SamplerBindInfo::BindResource(IDeviceObject* pView,
+                                                            Uint32         ArrayIndex)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
@@ -309,8 +309,8 @@ void ShaderVariableGL::SamplerBindInfo::BindResource(IDeviceObject* pView,
 }
 
 
-void ShaderVariableGL::ImageBindInfo::BindResource(IDeviceObject* pView,
-                                                   Uint32         ArrayIndex)
+void ShaderVariableManagerGL::ImageBindInfo::BindResource(IDeviceObject* pView,
+                                                          Uint32         ArrayIndex)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
@@ -367,8 +367,8 @@ void ShaderVariableGL::ImageBindInfo::BindResource(IDeviceObject* pView,
 
 
 
-void ShaderVariableGL::StorageBufferBindInfo::BindResource(IDeviceObject* pView,
-                                                           Uint32         ArrayIndex)
+void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(IDeviceObject* pView,
+                                                                  Uint32         ArrayIndex)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
@@ -453,7 +453,7 @@ private:
 };
 
 
-void ShaderVariableGL::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+void ShaderVariableManagerGL::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
 {
     if (pResourceMapping == nullptr)
     {
@@ -493,7 +493,7 @@ void ShaderVariableGL::BindResources(IResourceMapping* pResourceMapping, Uint32 
 
 
 template <typename ResourceType>
-IShaderResourceVariable* ShaderVariableGL::GetResourceByName(const Char* Name) const
+IShaderResourceVariable* ShaderVariableManagerGL::GetResourceByName(const Char* Name) const
 {
     auto NumResources = GetNumResources<ResourceType>();
     for (Uint32 res = 0; res < NumResources; ++res)
@@ -508,7 +508,7 @@ IShaderResourceVariable* ShaderVariableGL::GetResourceByName(const Char* Name) c
 }
 
 
-IShaderResourceVariable* ShaderVariableGL::GetVariable(const Char* Name) const
+IShaderResourceVariable* ShaderVariableManagerGL::GetVariable(const Char* Name) const
 {
     if (auto* pUB = GetResourceByName<UniformBuffBindInfo>(Name))
         return pUB;
@@ -525,7 +525,7 @@ IShaderResourceVariable* ShaderVariableGL::GetVariable(const Char* Name) const
     return nullptr;
 }
 
-Uint32 ShaderVariableGL::GetVariableCount() const
+Uint32 ShaderVariableManagerGL::GetVariableCount() const
 {
     return GetNumUBs() + GetNumTextures() + GetNumImages() + GetNumStorageBuffers();
 }
@@ -533,8 +533,8 @@ Uint32 ShaderVariableGL::GetVariableCount() const
 class ShaderVariableLocator
 {
 public:
-    ShaderVariableLocator(const ShaderVariableGL& _Layout,
-                          Uint32                  _Index) :
+    ShaderVariableLocator(const ShaderVariableManagerGL& _Layout,
+                          Uint32                         _Index) :
         // clang-format off
         Layout {_Layout},
         Index  {_Index}
@@ -555,12 +555,12 @@ public:
     }
 
 private:
-    ShaderVariableGL const& Layout;
-    Uint32                  Index;
+    ShaderVariableManagerGL const& Layout;
+    Uint32                         Index;
 };
 
 
-IShaderResourceVariable* ShaderVariableGL::GetVariable(Uint32 Index) const
+IShaderResourceVariable* ShaderVariableManagerGL::GetVariable(Uint32 Index) const
 {
     ShaderVariableLocator VarLocator(*this, Index);
 
@@ -585,7 +585,7 @@ IShaderResourceVariable* ShaderVariableGL::GetVariable(Uint32 Index) const
 class ShaderVariableIndexLocator
 {
 public:
-    ShaderVariableIndexLocator(const ShaderVariableGL& _Layout, const ShaderVariableGL::GLVariableBase& Variable) :
+    ShaderVariableIndexLocator(const ShaderVariableManagerGL& _Layout, const ShaderVariableManagerGL::GLVariableBase& Variable) :
         // clang-format off
         Layout   {_Layout},
         VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Layout.m_ResourceBuffer.get()))
@@ -616,13 +616,13 @@ public:
     Uint32 GetIndex() const { return Index; }
 
 private:
-    const ShaderVariableGL& Layout;
-    const size_t            VarOffset;
-    Uint32                  Index = 0;
+    const ShaderVariableManagerGL& Layout;
+    const size_t                   VarOffset;
+    Uint32                         Index = 0;
 };
 
 
-Uint32 ShaderVariableGL::GetVariableIndex(const GLVariableBase& Var) const
+Uint32 ShaderVariableManagerGL::GetVariableIndex(const GLVariableBase& Var) const
 {
     if (!m_ResourceBuffer)
     {
@@ -649,7 +649,7 @@ Uint32 ShaderVariableGL::GetVariableIndex(const GLVariableBase& Var) const
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-bool ShaderVariableGL::dvpVerifyBindings(const ShaderResourceCacheGL& ResourceCache) const
+bool ShaderVariableManagerGL::dvpVerifyBindings(const ShaderResourceCacheGL& ResourceCache) const
 {
 #    define LOG_MISSING_BINDING(VarType, BindInfo, ArrIndex) LOG_ERROR_MESSAGE("No resource is bound to ", VarType, " variable '", GetShaderResourcePrintName(Desc, ArrIndex), "'")
 

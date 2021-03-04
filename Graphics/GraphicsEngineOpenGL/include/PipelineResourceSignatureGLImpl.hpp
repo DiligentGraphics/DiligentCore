@@ -38,8 +38,9 @@
 
 namespace Diligent
 {
+
 class RenderDeviceGLImpl;
-class ShaderVariableGL;
+class ShaderVariableManagerGL;
 
 enum BINDING_RANGE : Uint32
 {
@@ -78,7 +79,7 @@ public:
         static constexpr Uint32 InvalidSamplerInd  = (1u << _SamplerIndBits) - 1;
 
         // clang-format off
-        const Uint32  CacheOffset;                                 // SRB and Signature has the same cache offsets for static resources.
+        const Uint32  CacheOffset;                                 // SRB and Signature use the same cache offsets for static resources.
                                                                    // Binding = m_FirstBinding[Range] + CacheOffset
         const Uint32  SamplerInd           : _SamplerIndBits;      // ImtblSamplerAssigned == true:  index of the immutable sampler in m_ImmutableSamplers.
                                                                    // ImtblSamplerAssigned == false: index of the assigned sampler in m_Desc.Resources.
@@ -95,7 +96,7 @@ public:
         // clang-format on
         {
             VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
-            VERIFY(!_ImtblSamplerAssigned || SamplerInd != InvalidSamplerInd, "Immutable sampler assigned, but sampler index is not valid");
+            VERIFY(!_ImtblSamplerAssigned || SamplerInd != InvalidSamplerInd, "Immutable sampler is assigned, but sampler index is not valid");
         }
 
         bool IsSamplerAssigned() const { return SamplerInd != InvalidSamplerInd; }
@@ -116,7 +117,7 @@ public:
 
     bool HasDynamicResources() const
     {
-        auto IndexRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        const auto IndexRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
         return IndexRange.second > IndexRange.first;
     }
 
@@ -127,7 +128,13 @@ public:
                        SHADER_TYPE                     Stages,
                        const TBindings&                Bindings) const;
 
-    void AddBindings(TBindings& Bindings) const;
+    __forceinline void AddBindings(TBindings& Bindings) const
+    {
+        for (Uint32 i = 0; i < Bindings.size(); ++i)
+        {
+            Bindings[i] += m_BindingCount[i];
+        }
+    }
 
     /// Implementation of IPipelineResourceSignature::CreateShaderResourceBinding.
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
@@ -204,19 +211,10 @@ private:
     // Resource cache for static resource variables only
     ShaderResourceCacheGL* m_pStaticResCache = nullptr;
 
-    ShaderVariableGL* m_StaticVarsMgrs = nullptr; // [GetNumStaticResStages()]
+    ShaderVariableManagerGL* m_StaticVarsMgrs = nullptr; // [GetNumStaticResStages()]
 
     using SamplerPtr                = RefCntAutoPtr<ISampler>;
     SamplerPtr* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 };
-
-
-__forceinline void PipelineResourceSignatureGLImpl::AddBindings(TBindings& Bindings) const
-{
-    for (Uint32 i = 0; i < Bindings.size(); ++i)
-    {
-        Bindings[i] += m_BindingCount[i];
-    }
-}
 
 } // namespace Diligent

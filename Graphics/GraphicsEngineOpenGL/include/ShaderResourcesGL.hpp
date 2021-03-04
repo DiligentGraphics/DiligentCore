@@ -74,7 +74,8 @@ public:
 /*  8 */    const SHADER_TYPE                       ShaderStages;
 /* 12 */    const SHADER_RESOURCE_TYPE              ResourceType;
 /* 16 */          Uint32                            ArraySize;
-/* 20 */    // End of data
+/* 20 */
+/* 24 */    // End of data
         // clang-format on
 
         GLResourceAttribs(const Char*          _Name,

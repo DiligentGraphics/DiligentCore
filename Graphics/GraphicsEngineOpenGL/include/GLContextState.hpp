@@ -58,7 +58,7 @@ public:
 
     void EnsureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, class AsyncWritableResource *pRes = nullptr);
     void SetPendingMemoryBarriers(MEMORY_BARRIER PendingBarriers);
-    
+
     void EnableDepthTest        (bool bEnable);
     void EnableDepthWrites      (bool bEnable);
     void SetDepthFunc           (COMPARISON_FUNCTION CmpFunc);
