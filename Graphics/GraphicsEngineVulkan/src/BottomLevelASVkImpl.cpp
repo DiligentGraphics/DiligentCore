@@ -75,6 +75,15 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                 MaxPrimitiveCounts[i]           = src.MaxPrimitiveCount;
 
                 MaxPrimitiveCount += src.MaxPrimitiveCount;
+
+#ifdef DILIGENT_DEVELOPMENT
+                VkFormatProperties2 vkProps = {VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
+                vkGetPhysicalDeviceFormatProperties2KHR(PhysicalDevice.GetVkDeviceHandle(), tri.vertexFormat, &vkProps);
+
+                DEV_CHECK_ERR((vkProps.formatProperties.bufferFeatures & VK_FORMAT_FEATURE_ACCELERATION_STRUCTURE_VERTEX_BUFFER_BIT_KHR) != 0,
+                              "combination of pTriangles[", i, "].VertexValueType (", GetValueTypeString(src.VertexValueType),
+                              ") and pTriangles[", i, "].VertexComponentCount (", src.VertexComponentCount, ") is not supported by this device.");
+#endif
             }
             DEV_CHECK_ERR(MaxPrimitiveCount <= Limits.maxPrimitiveCount,
                           "Max primitives count (", MaxPrimitiveCount, ") exceeds device limit (", Limits.maxPrimitiveCount, ")");

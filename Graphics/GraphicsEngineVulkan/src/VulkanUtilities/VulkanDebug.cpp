@@ -52,31 +52,13 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
         }
     }
 
-    // Temporarily disable false warnings from validation layers.
+    // Temporarily disable false warnings from validation layers (1.2.170).
     // TODO: check in next Vulkan SDK
 #if 1
-    if (std::string{"VUID-vkCmdPipelineBarrier-srcAccessMask-02815"} == callbackData->pMessageIdName)
-    {
-        std::string msg{callbackData->pMessage};
-        if (msg.find("srcAccessMask (0x20) is not supported by srcStageMask (0x2000000)") != std::string::npos)
-            return VK_FALSE;
-    }
     if (std::string{"VUID-vkCmdPipelineBarrier-dstAccessMask-02816"} == callbackData->pMessageIdName)
     {
         std::string msg{callbackData->pMessage};
-        if (msg.find("dstAccessMask (0x20) is not supported by dstStageMask (0x2000000)") != std::string::npos)
-            return VK_FALSE;
-    }
-    if (std::string{"VUID-VkShaderModuleCreateInfo-pCode-01091"} == callbackData->pMessageIdName)
-    {
-        std::string msg{callbackData->pMessage};
-        if (msg.find("The SPIR-V Capability (RayTracingNV) was declared, but none of the requirements were met to use it.") != std::string::npos)
-            return VK_FALSE;
-    }
-    if (std::string{"VUID-VkShaderModuleCreateInfo-pCode-04147"} == callbackData->pMessageIdName)
-    {
-        std::string msg{callbackData->pMessage};
-        if (msg.find("The SPIR-V Extension (SPV_NV_ray_tracing) was declared, but none of the requirements were met to use it.") != std::string::npos)
+        if (msg.find("dstAccessMask bit VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR is not supported by stage mask (VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR)") != std::string::npos)
             return VK_FALSE;
     }
 #endif

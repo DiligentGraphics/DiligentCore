@@ -738,12 +738,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 
         if (ShaderCI.Desc.ShaderType & RayTracingStages)
         {
-            // add default extensions because we override them
-            DxilArgs.push_back(L"-fspv-extension=SPV_GOOGLE_hlsl_functionality1");
-            DxilArgs.push_back(L"-fspv-extension=SPV_GOOGLE_user_type");
-
-            DxilArgs.push_back(L"-fspv-extension=SPV_NV_ray_tracing"); // TODO: should be SPV_KHR_ray_tracing, current version may not work on AMD
-            //DxilArgs.push_back(L"-fspv-target-env=vulkan1.2"); // required for SPV_KHR_ray_tracing
+            DxilArgs.push_back(L"-fspv-target-env=vulkan1.2"); // required for SPV_KHR_ray_tracing
         }
     }
     else

@@ -3376,9 +3376,9 @@ void DeviceContextVkImpl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAtt
     TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
     TransitionOrVerifyBufferState(*pDestBuffVk, Attribs.BufferTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
 
+    m_CommandBuffer.ResetQueryPool(m_ASQueryPool, QueryIndex, 1);
     m_CommandBuffer.WriteAccelerationStructuresProperties(pBLASVk->GetVkBLAS(), VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, m_ASQueryPool, QueryIndex);
     m_CommandBuffer.CopyQueryPoolResults(m_ASQueryPool, QueryIndex, 1, pDestBuffVk->GetVkBuffer(), Attribs.DestBufferOffset, sizeof(Uint64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-    m_CommandBuffer.ResetQueryPool(m_ASQueryPool, QueryIndex, 1);
     ++m_State.NumCommands;
 }
 
@@ -3397,9 +3397,9 @@ void DeviceContextVkImpl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAtt
     TransitionOrVerifyTLASState(*pTLASVk, Attribs.TLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
     TransitionOrVerifyBufferState(*pDestBuffVk, Attribs.BufferTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
 
+    m_CommandBuffer.ResetQueryPool(m_ASQueryPool, QueryIndex, 1);
     m_CommandBuffer.WriteAccelerationStructuresProperties(pTLASVk->GetVkTLAS(), VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, m_ASQueryPool, QueryIndex);
     m_CommandBuffer.CopyQueryPoolResults(m_ASQueryPool, QueryIndex, 1, pDestBuffVk->GetVkBuffer(), Attribs.DestBufferOffset, sizeof(Uint64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-    m_CommandBuffer.ResetQueryPool(m_ASQueryPool, QueryIndex, 1);
     ++m_State.NumCommands;
 }
 
@@ -3414,7 +3414,7 @@ void DeviceContextVkImpl::CreateASCompactedSizeQueryPool()
         Info.queryCount = 1;
         Info.queryType  = VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR;
 
-        m_ASQueryPool = LogicalDevice.CreateQueryPool(Info);
+        m_ASQueryPool = LogicalDevice.CreateQueryPool(Info, "AS Compacted Size Query");
     }
 }
 
