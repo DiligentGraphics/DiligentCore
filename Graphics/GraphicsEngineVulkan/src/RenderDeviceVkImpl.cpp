@@ -65,26 +65,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         pEngineFactory,
         CommandQueueCount,
         CmdQueues,
-        EngineCI.NumDeferredContexts,
-        DeviceObjectSizes
-        {
-            sizeof(TextureVkImpl),
-            sizeof(TextureViewVkImpl),
-            sizeof(BufferVkImpl),
-            sizeof(BufferViewVkImpl),
-            sizeof(ShaderVkImpl),
-            sizeof(SamplerVkImpl),
-            sizeof(PipelineStateVkImpl),
-            sizeof(ShaderResourceBindingVkImpl),
-            sizeof(FenceVkImpl),
-            sizeof(QueryVkImpl),
-            sizeof(RenderPassVkImpl),
-            sizeof(FramebufferVkImpl),
-            sizeof(BottomLevelASVkImpl),
-            sizeof(TopLevelASVkImpl),
-            sizeof(ShaderBindingTableVkImpl),
-            sizeof(PipelineResourceSignatureVkImpl),
-        }
+        EngineCI.NumDeferredContexts
     },
     m_VulkanInstance         {Instance                 },
     m_PhysicalDevice         {std::move(PhysicalDevice)},
@@ -174,7 +155,6 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 // clang-format on
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
-    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 16, "Please add new objects to DeviceObjectSizes constructor");
 
     // set device properties
     {
@@ -567,94 +547,41 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 }
 
-template <typename PSOCreateInfoType>
-void RenderDeviceVkImpl::CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState)
-{
-    CreateDeviceObject(
-        "Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,
-        [&]() //
-        {
-            PipelineStateVkImpl* pPipelineStateVk(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateVkImpl instance", PipelineStateVkImpl)(this, PSOCreateInfo));
-            pPipelineStateVk->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
-            OnCreateDeviceObject(pPipelineStateVk);
-        } //
-    );
-}
-
 void RenderDeviceVkImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo);
 }
-
 
 void RenderDeviceVkImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo);
 }
 
 void RenderDeviceVkImpl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo);
 }
 
 void RenderDeviceVkImpl::CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
-    CreateDeviceObject(
-        "buffer", BuffDesc, ppBuffer,
-        [&]() //
-        {
-            BufferVkImpl* pBufferVk(NEW_RC_OBJ(m_BufObjAllocator, "BufferVkImpl instance", BufferVkImpl)(m_BuffViewObjAllocator, this, BuffDesc, InitialState, vkBuffer));
-            pBufferVk->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
-            pBufferVk->CreateDefaultViews();
-            OnCreateDeviceObject(pBufferVk);
-        } //
-    );
+    CreateBufferImpl(ppBuffer, BuffDesc, InitialState, vkBuffer);
 }
-
 
 void RenderDeviceVkImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
 {
-    CreateDeviceObject(
-        "buffer", BuffDesc, ppBuffer,
-        [&]() //
-        {
-            BufferVkImpl* pBufferVk(NEW_RC_OBJ(m_BufObjAllocator, "BufferVkImpl instance", BufferVkImpl)(m_BuffViewObjAllocator, this, BuffDesc, pBuffData));
-            pBufferVk->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
-            pBufferVk->CreateDefaultViews();
-            OnCreateDeviceObject(pBufferVk);
-        } //
-    );
+    CreateBufferImpl(ppBuffer, BuffDesc, pBuffData);
 }
 
 
 void RenderDeviceVkImpl::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
-    CreateDeviceObject(
-        "shader", ShaderCI.Desc, ppShader,
-        [&]() //
-        {
-            ShaderVkImpl* pShaderVk(NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderVkImpl instance", ShaderVkImpl)(this, ShaderCI));
-            pShaderVk->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
-
-            OnCreateDeviceObject(pShaderVk);
-        } //
-    );
+    CreateShaderImpl(ppShader, ShaderCI);
 }
 
 
 void RenderDeviceVkImpl::CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
-    CreateDeviceObject(
-        "texture", TexDesc, ppTexture,
-        [&]() //
-        {
-            TextureVkImpl* pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, InitialState, vkImage);
-
-            pTextureVk->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
-            pTextureVk->CreateDefaultViews();
-            OnCreateDeviceObject(pTextureVk);
-        } //
-    );
+    CreateTextureImpl(ppTexture, TexDesc, InitialState, vkImage);
 }
 
 
@@ -673,76 +600,29 @@ void RenderDeviceVkImpl::CreateTexture(const TextureDesc& TexDesc, VkImage vkImg
 
 void RenderDeviceVkImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)
 {
-    CreateDeviceObject(
-        "texture", TexDesc, ppTexture,
-        [&]() //
-        {
-            TextureVkImpl* pTextureVk = NEW_RC_OBJ(m_TexObjAllocator, "TextureVkImpl instance", TextureVkImpl)(m_TexViewObjAllocator, this, TexDesc, pData);
-
-            pTextureVk->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
-            pTextureVk->CreateDefaultViews();
-            OnCreateDeviceObject(pTextureVk);
-        } //
-    );
+    CreateTextureImpl(ppTexture, TexDesc, pData);
 }
 
 void RenderDeviceVkImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
 {
-    CreateDeviceObject(
-        "sampler", SamplerDesc, ppSampler,
-        [&]() //
-        {
-            m_SamplersRegistry.Find(SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler));
-            if (*ppSampler == nullptr)
-            {
-                SamplerVkImpl* pSamplerVk(NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerVkImpl instance", SamplerVkImpl)(this, SamplerDesc));
-                pSamplerVk->QueryInterface(IID_Sampler, reinterpret_cast<IObject**>(ppSampler));
-                OnCreateDeviceObject(pSamplerVk);
-                m_SamplersRegistry.Add(SamplerDesc, *ppSampler);
-            }
-        } //
-    );
+    CreateSamplerImpl(ppSampler, SamplerDesc);
 }
 
 void RenderDeviceVkImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
 {
-    CreateDeviceObject(
-        "Fence", Desc, ppFence,
-        [&]() //
-        {
-            FenceVkImpl* pFenceVk(NEW_RC_OBJ(m_FenceAllocator, "FenceVkImpl instance", FenceVkImpl)(this, Desc));
-            pFenceVk->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
-            OnCreateDeviceObject(pFenceVk);
-        } //
-    );
+    CreateFenceImpl(ppFence, Desc);
 }
 
 void RenderDeviceVkImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
 {
-    CreateDeviceObject(
-        "Query", Desc, ppQuery,
-        [&]() //
-        {
-            QueryVkImpl* pQueryVk(NEW_RC_OBJ(m_QueryAllocator, "QueryVkImpl instance", QueryVkImpl)(this, Desc));
-            pQueryVk->QueryInterface(IID_Query, reinterpret_cast<IObject**>(ppQuery));
-            OnCreateDeviceObject(pQueryVk);
-        } //
-    );
+    CreateQueryImpl(ppQuery, Desc);
 }
 
 void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc,
                                           IRenderPass**         ppRenderPass,
                                           bool                  IsDeviceInternal)
 {
-    CreateDeviceObject(
-        "RenderPass", Desc, ppRenderPass,
-        [&]() //
-        {
-            RenderPassVkImpl* pRenderPassVk(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassVkImpl instance", RenderPassVkImpl)(this, Desc, IsDeviceInternal));
-            pRenderPassVk->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
-            OnCreateDeviceObject(pRenderPassVk);
-        } //
-    );
+    CreateRenderPassImpl(ppRenderPass, Desc, IsDeviceInternal);
 }
 
 void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
@@ -752,14 +632,7 @@ void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPas
 
 void RenderDeviceVkImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
 {
-    CreateDeviceObject(
-        "Framebuffer", Desc, ppFramebuffer,
-        [&]() //
-        {
-            FramebufferVkImpl* pFramebufferVk(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferVkImpl instance", FramebufferVkImpl)(this, Desc));
-            pFramebufferVk->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
-            OnCreateDeviceObject(pFramebufferVk);
-        });
+    CreateFramebufferImpl(ppFramebuffer, Desc);
 }
 
 void RenderDeviceVkImpl::CreateBLASFromVulkanResource(VkAccelerationStructureKHR vkBLAS,
@@ -767,28 +640,13 @@ void RenderDeviceVkImpl::CreateBLASFromVulkanResource(VkAccelerationStructureKHR
                                                       RESOURCE_STATE             InitialState,
                                                       IBottomLevelAS**           ppBLAS)
 {
-    CreateDeviceObject(
-        "BottomLevelAS", Desc, ppBLAS,
-        [&]() //
-        {
-            BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc, InitialState, vkBLAS));
-            pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
-            OnCreateDeviceObject(pBottomLevelASVk);
-        } //
-    );
+    CreateBLASImpl(ppBLAS, Desc, InitialState, vkBLAS);
 }
 
 void RenderDeviceVkImpl::CreateBLAS(const BottomLevelASDesc& Desc,
                                     IBottomLevelAS**         ppBLAS)
 {
-    CreateDeviceObject(
-        "BottomLevelAS", Desc, ppBLAS,
-        [&]() //
-        {
-            BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc));
-            pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
-            OnCreateDeviceObject(pBottomLevelASVk);
-        });
+    CreateBLASImpl(ppBLAS, Desc);
 }
 
 void RenderDeviceVkImpl::CreateTLASFromVulkanResource(VkAccelerationStructureKHR vkTLAS,
@@ -796,41 +654,19 @@ void RenderDeviceVkImpl::CreateTLASFromVulkanResource(VkAccelerationStructureKHR
                                                       RESOURCE_STATE             InitialState,
                                                       ITopLevelAS**              ppTLAS)
 {
-    CreateDeviceObject(
-        "TopLevelAS", Desc, ppTLAS,
-        [&]() //
-        {
-            TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc, InitialState, vkTLAS));
-            pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
-            OnCreateDeviceObject(pTopLevelASVk);
-        } //
-    );
+    CreateTLASImpl(ppTLAS, Desc, InitialState, vkTLAS);
 }
 
 void RenderDeviceVkImpl::CreateTLAS(const TopLevelASDesc& Desc,
                                     ITopLevelAS**         ppTLAS)
 {
-    CreateDeviceObject(
-        "TopLevelAS", Desc, ppTLAS,
-        [&]() //
-        {
-            TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc));
-            pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
-            OnCreateDeviceObject(pTopLevelASVk);
-        });
+    CreateTLASImpl(ppTLAS, Desc);
 }
 
 void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
                                    IShaderBindingTable**         ppSBT)
 {
-    CreateDeviceObject(
-        "ShaderBindingTable", Desc, ppSBT,
-        [&]() //
-        {
-            ShaderBindingTableVkImpl* pSBTVk(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableVkImpl instance", ShaderBindingTableVkImpl)(this, Desc));
-            pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
-            OnCreateDeviceObject(pSBTVk);
-        });
+    CreateSBTImpl(ppSBT, Desc);
 }
 
 void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
@@ -843,14 +679,7 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
                                                          IPipelineResourceSignature**         ppSignature,
                                                          bool                                 IsDeviceInternal)
 {
-    CreateDeviceObject(
-        "PipelineResourceSignature", Desc, ppSignature,
-        [&]() //
-        {
-            PipelineResourceSignatureVkImpl* pPRSVk(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignatureVkImpl instance", PipelineResourceSignatureVkImpl)(this, Desc, IsDeviceInternal));
-            pPRSVk->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
-            OnCreateDeviceObject(pPRSVk);
-        });
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, IsDeviceInternal);
 }
 
 } // namespace Diligent

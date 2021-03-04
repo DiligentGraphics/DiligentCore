@@ -50,16 +50,16 @@ public:
     BufferGLImpl(IReferenceCounters*        pRefCounters,
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                  RenderDeviceGLImpl*        pDeviceGL,
-                 GLContextState&            CtxState,
                  const BufferDesc&          BuffDesc,
+                 GLContextState&            CtxState,
                  const BufferData*          pBuffData,
                  bool                       bIsDeviceInternal);
 
     BufferGLImpl(IReferenceCounters*        pRefCounters,
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                  class RenderDeviceGLImpl*  pDeviceGL,
-                 GLContextState&            CtxState,
                  const BufferDesc&          BuffDesc,
+                 GLContextState&            CtxState,
                  GLuint                     GLHandle,
                  bool                       bIsDeviceInternal);
 

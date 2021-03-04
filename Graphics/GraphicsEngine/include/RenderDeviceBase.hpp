@@ -175,84 +175,48 @@ namespace Diligent
 
 /// Base implementation of a render device
 
-/// \tparam BaseInterface - base interface that this class will inheret.
-/// \warning
-/// Render device must *NOT* hold strong references to any
-/// object it creates to avoid circular dependencies.
-/// Device context, swap chain and all object the device creates
-/// keep strong reference to the device.
-/// Device only holds weak reference to the immediate context.
-template <typename BaseInterface>
-class RenderDeviceBase : public ObjectBase<BaseInterface>
+/// \tparam RenderDeviceImplTraits - Render device implementation type traits.
+///
+/// \warning    Render device must *NOT* hold strong references to any object it creates
+///             to avoid cyclic dependencies. Device context, swap chain and all object
+///             the device creates keep strong reference to the device.
+///             Device only holds weak reference to the immediate context.
+template <typename RenderDeviceImplTraits>
+class RenderDeviceBase : public ObjectBase<typename RenderDeviceImplTraits::BaseInterface>
 {
 public:
-    using TObjectBase = ObjectBase<BaseInterface>;
+    using BaseInterface = typename RenderDeviceImplTraits::BaseInterface;
+    using TObjectBase   = ObjectBase<BaseInterface>;
 
-    /// Describes the sizes of device objects
-    struct DeviceObjectSizes
-    {
-        /// Size of the texture object (TextureD3D12Impl, TextureVkImpl, etc.), in bytes
-        const size_t TextureObjSize;
-
-        /// Size of the texture view object (TextureViewD3D12Impl, TextureViewVkImpl, etc.), in bytes
-        const size_t TexViewObjSize;
-
-        /// Size of the buffer object (BufferD3D12Impl, BufferVkImpl, etc.), in bytes
-        const size_t BufferObjSize;
-
-        /// Size of the buffer view object (BufferViewD3D12Impl, BufferViewVkImpl, etc.), in bytes
-        const size_t BuffViewObjSize;
-
-        /// Size of the shader object (ShaderD3D12Impl, ShaderVkImpl, etc.), in bytes
-        const size_t ShaderObjSize;
-
-        /// Size of the sampler object (SamplerD3D12Impl, SamplerVkImpl, etc.), in bytes
-        const size_t SamplerObjSize;
-
-        /// Size of the pipeline state object (PipelineStateD3D12Impl, PipelineStateVkImpl, etc.), in bytes
-        const size_t PSOSize;
-
-        /// Size of the shader resource binding object (ShaderResourceBindingD3D12Impl, ShaderResourceBindingVkImpl, etc.), in bytes
-        const size_t SRBSize;
-
-        /// Size of the fence object (FenceD3D12Impl, FenceVkImpl, etc.), in bytes
-        const size_t FenceSize;
-
-        /// Size of the query object (QueryD3D12Impl, QueryVkImpl, etc.), in bytes
-        const size_t QuerySize;
-
-        /// Size of the render pass object (RenderPassD3D12Impl, RenderPassVkImpl, etc.), in bytes
-        const size_t RenderPassObjSize;
-
-        /// Size of the framebuffer object (FramebufferD3D12Impl, FramebufferVkImpl, etc.), in bytes
-        const size_t FramebufferObjSize;
-
-        /// Size of the BLAS object (BottomLevelASD3D12Impl, BottomLevelASVkImpl, etc.), in bytes
-        const size_t BLASObjSize;
-
-        /// Size of the TLAS object (TopLevelASD3D12Impl, TopLevelASVkImpl, etc.), in bytes
-        const size_t TLASObjSize;
-
-        /// Size of the SBT object (ShaderBindingTableD3D12Impl, ShaderBindingtableVkImpl, etc.), in bytes
-        const size_t SBTObjSize;
-
-        /// Size of the pipeline resource signature object (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.), in bytes
-        const size_t PipeResSignObjSize;
-    };
+    using RenderDeviceImplType              = typename RenderDeviceImplTraits::RenderDeviceImplType;
+    using PipelineStateImplType             = typename RenderDeviceImplTraits::PipelineStateImplType;
+    using ShaderResourceBindingImplType     = typename RenderDeviceImplTraits::ShaderResourceBindingImplType;
+    using BufferImplType                    = typename RenderDeviceImplTraits::BufferImplType;
+    using BufferViewImplType                = typename RenderDeviceImplTraits::BufferViewImplType;
+    using TextureImplType                   = typename RenderDeviceImplTraits::TextureImplType;
+    using TextureViewImplType               = typename RenderDeviceImplTraits::TextureViewImplType;
+    using ShaderImplType                    = typename RenderDeviceImplTraits::ShaderImplType;
+    using SamplerImplType                   = typename RenderDeviceImplTraits::SamplerImplType;
+    using FenceImplType                     = typename RenderDeviceImplTraits::FenceImplType;
+    using QueryImplType                     = typename RenderDeviceImplTraits::QueryImplType;
+    using RenderPassImplType                = typename RenderDeviceImplTraits::RenderPassImplType;
+    using FramebufferImplType               = typename RenderDeviceImplTraits::FramebufferImplType;
+    using BottomLevelASImplType             = typename RenderDeviceImplTraits::BottomLevelASImplType;
+    using TopLevelASImplType                = typename RenderDeviceImplTraits::TopLevelASImplType;
+    using ShaderBindingTableImplType        = typename RenderDeviceImplTraits::ShaderBindingTableImplType;
+    using PipelineResourceSignatureImplType = typename RenderDeviceImplTraits::PipelineResourceSignatureImplType;
 
     /// \param pRefCounters        - Reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator     - Allocator that will be used to allocate memory for all device objects (including render device itself)
     /// \param pEngineFactory      - Engine factory that was used to create this device
     /// \param NumDeferredContexts - The number of deferred device contexts
-    /// \param ObjectSizes         - Device object sizes
     ///
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
     ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
-    RenderDeviceBase(IReferenceCounters*      pRefCounters,
-                     IMemoryAllocator&        RawMemAllocator,
-                     IEngineFactory*          pEngineFactory,
-                     Uint32                   NumDeferredContexts,
-                     const DeviceObjectSizes& ObjectSizes) :
+    RenderDeviceBase(IReferenceCounters* pRefCounters,
+                     IMemoryAllocator&   RawMemAllocator,
+                     IEngineFactory*     pEngineFactory,
+                     Uint32              NumDeferredContexts) :
         // clang-format off
         TObjectBase             {pRefCounters},
         m_pEngineFactory        {pEngineFactory},
@@ -261,23 +225,23 @@ public:
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
         m_wpDeferredContexts    (NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
         m_RawMemAllocator       {RawMemAllocator},
-        m_TexObjAllocator       {RawMemAllocator, ObjectSizes.TextureObjSize,     64  },
-        m_TexViewObjAllocator   {RawMemAllocator, ObjectSizes.TexViewObjSize,     64  },
-        m_BufObjAllocator       {RawMemAllocator, ObjectSizes.BufferObjSize,      128 },
-        m_BuffViewObjAllocator  {RawMemAllocator, ObjectSizes.BuffViewObjSize,    128 },
-        m_ShaderObjAllocator    {RawMemAllocator, ObjectSizes.ShaderObjSize,      32  },
-        m_SamplerObjAllocator   {RawMemAllocator, ObjectSizes.SamplerObjSize,     32  },
-        m_PSOAllocator          {RawMemAllocator, ObjectSizes.PSOSize,            128 },
-        m_SRBAllocator          {RawMemAllocator, ObjectSizes.SRBSize,            1024},
-        m_ResMappingAllocator   {RawMemAllocator, sizeof(ResourceMappingImpl),    16  },
-        m_FenceAllocator        {RawMemAllocator, ObjectSizes.FenceSize,          16  },
-        m_QueryAllocator        {RawMemAllocator, ObjectSizes.QuerySize,          16  },
-        m_RenderPassAllocator   {RawMemAllocator, ObjectSizes.RenderPassObjSize,  16  },
-        m_FramebufferAllocator  {RawMemAllocator, ObjectSizes.FramebufferObjSize, 16  },
-        m_BLASAllocator         {RawMemAllocator, ObjectSizes.BLASObjSize,        16  },
-        m_TLASAllocator         {RawMemAllocator, ObjectSizes.TLASObjSize,        16  },
-        m_SBTAllocator          {RawMemAllocator, ObjectSizes.SBTObjSize,         16  },
-        m_PipeResSignAllocator  {RawMemAllocator, ObjectSizes.PipeResSignObjSize, 128 },
+        m_TexObjAllocator       {RawMemAllocator, sizeof(TextureImplType),                    64},
+        m_TexViewObjAllocator   {RawMemAllocator, sizeof(TextureViewImplType),                64},
+        m_BufObjAllocator       {RawMemAllocator, sizeof(BufferImplType),                    128},
+        m_BuffViewObjAllocator  {RawMemAllocator, sizeof(BufferViewImplType),                128},
+        m_ShaderObjAllocator    {RawMemAllocator, sizeof(ShaderImplType),                     32},
+        m_SamplerObjAllocator   {RawMemAllocator, sizeof(SamplerImplType),                    32},
+        m_PSOAllocator          {RawMemAllocator, sizeof(PipelineStateImplType),             128},
+        m_SRBAllocator          {RawMemAllocator, sizeof(ShaderResourceBindingImplType),    1024},
+        m_ResMappingAllocator   {RawMemAllocator, sizeof(ResourceMappingImpl),                16},
+        m_FenceAllocator        {RawMemAllocator, sizeof(FenceImplType),                      16},
+        m_QueryAllocator        {RawMemAllocator, sizeof(QueryImplType),                      16},
+        m_RenderPassAllocator   {RawMemAllocator, sizeof(RenderPassImplType),                 16},
+        m_FramebufferAllocator  {RawMemAllocator, sizeof(FramebufferImplType),                16},
+        m_BLASAllocator         {RawMemAllocator, sizeof(BottomLevelASImplType),              16},
+        m_TLASAllocator         {RawMemAllocator, sizeof(TopLevelASImplType),                 16},
+        m_SBTAllocator          {RawMemAllocator, sizeof(ShaderBindingTableImplType),         16},
+        m_PipeResSignAllocator  {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128},
         m_DeviceProperties      {}
     // clang-format on
     {
@@ -344,7 +308,24 @@ public:
     }
 
     /// Implementation of IRenderDevice::CreateResourceMapping().
-    virtual void DILIGENT_CALL_TYPE CreateResourceMapping(const ResourceMappingDesc& MappingDesc, IResourceMapping** ppMapping) override final;
+    virtual void DILIGENT_CALL_TYPE CreateResourceMapping(const ResourceMappingDesc& MappingDesc, IResourceMapping** ppMapping) override final
+    {
+        DEV_CHECK_ERR(ppMapping != nullptr, "Null pointer provided");
+        if (ppMapping == nullptr)
+            return;
+        DEV_CHECK_ERR(*ppMapping == nullptr, "Overwriting reference to existing object may cause memory leaks");
+
+        auto* pResourceMapping{NEW_RC_OBJ(m_ResMappingAllocator, "ResourceMappingImpl instance", ResourceMappingImpl)(GetRawAllocator())};
+        pResourceMapping->QueryInterface(IID_ResourceMapping, reinterpret_cast<IObject**>(ppMapping));
+        if (MappingDesc.pEntries)
+        {
+            for (auto* pEntry = MappingDesc.pEntries; pEntry->Name && pEntry->pObject; ++pEntry)
+            {
+                (*ppMapping)->AddResourceArray(pEntry->Name, pEntry->ArrayIndex, &pEntry->pObject, 1, true);
+            }
+        }
+    }
+
 
     /// Implementation of IRenderDevice::GetDeviceCaps().
     virtual const DeviceCaps& DILIGENT_CALL_TYPE GetDeviceCaps() const override final
@@ -387,10 +368,6 @@ public:
         return m_pEngineFactory.RawPtr<IEngineFactory>();
     }
 
-    void OnCreateDeviceObject(IDeviceObject* pNewObject)
-    {
-    }
-
     StateObjectsRegistry<SamplerDesc>& GetSamplerRegistry() { return m_SamplersRegistry; }
 
     /// Set weak reference to the immediate context
@@ -424,9 +401,209 @@ protected:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) = 0;
 
     /// Helper template function to facilitate device object creation
-    template <typename TObjectType, typename TObjectDescType, typename TObjectConstructor>
-    void CreateDeviceObject(const Char* ObjectTypeName, const TObjectDescType& Desc, TObjectType** ppObject, TObjectConstructor ConstructObject);
 
+    /// \tparam ObjectType            - The type of the object being created (IBuffer, ITexture, etc.).
+    /// \tparam ObjectDescType        - The type of the object description structure (BufferDesc, TextureDesc, etc.).
+    /// \tparam ObjectConstructorType - The type of the function that constructs the object.
+    ///
+    /// \param ObjectTypeName      - String name of the object type ("buffer", "texture", etc.).
+    /// \param Desc                - Object description.
+    /// \param ppObject            - Memory address where the pointer to the created object will be stored.
+    /// \param ConstructObject     - Function that constructs the object.
+    template <typename ObjectType, typename ObjectDescType, typename ObjectConstructorType>
+    void CreateDeviceObject(const Char*           ObjectTypeName,
+                            const ObjectDescType& Desc,
+                            ObjectType**          ppObject,
+                            ObjectConstructorType ConstructObject)
+    {
+        DEV_CHECK_ERR(ppObject != nullptr, "Null pointer provided");
+        if (!ppObject)
+            return;
+
+        DEV_CHECK_ERR(*ppObject == nullptr, "Overwriting reference to existing object may cause memory leaks");
+        // Do not release *ppObject here!
+        // Should this happen, RefCntAutoPtr<> will take care of this!
+        //if( *ppObject )
+        //{
+        //    (*ppObject)->Release();
+        //    *ppObject = nullptr;
+        //}
+
+        *ppObject = nullptr;
+
+        try
+        {
+            ConstructObject();
+        }
+        catch (...)
+        {
+            VERIFY(*ppObject == nullptr, "Object was created despite error");
+            if (*ppObject)
+            {
+                (*ppObject)->Release();
+                *ppObject = nullptr;
+            }
+            const auto ObjectDescString = GetObjectDescString(Desc);
+            if (!ObjectDescString.empty())
+            {
+                LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'\n", ObjectDescString);
+            }
+            else
+            {
+                LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'");
+            }
+        }
+    }
+
+    template <typename PSOCreateInfoType, typename... ExtraArgsType>
+    void CreatePipelineStateImpl(IPipelineState** ppPipelineState, const PSOCreateInfoType& PSOCreateInfo, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,
+                           [&]() //
+                           {
+                               auto* pPipelineStateImpl{NEW_RC_OBJ(m_PSOAllocator, "Pipeline State instance", PipelineStateImplType)(static_cast<RenderDeviceImplType*>(this), PSOCreateInfo, ExtraArgs...)};
+                               pPipelineStateImpl->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateBufferImpl(IBuffer** ppBuffer, const BufferDesc& BuffDesc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("Buffer", BuffDesc, ppBuffer,
+                           [&]() //
+                           {
+                               auto* pBufferImpl{NEW_RC_OBJ(m_BufObjAllocator, "Buffer instance", BufferImplType)(m_BuffViewObjAllocator, static_cast<RenderDeviceImplType*>(this), BuffDesc, ExtraArgs...)};
+                               pBufferImpl->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
+                               pBufferImpl->CreateDefaultViews();
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateTextureImpl(ITexture** ppTexture, const TextureDesc& TexDesc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("Texture", TexDesc, ppTexture,
+                           [&]() //
+                           {
+                               auto* pTextureImpl{NEW_RC_OBJ(m_TexObjAllocator, "Texture instance", TextureImplType)(m_TexViewObjAllocator, static_cast<RenderDeviceImplType*>(this), TexDesc, ExtraArgs...)};
+                               pTextureImpl->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
+                               pTextureImpl->CreateDefaultViews();
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateShaderImpl(IShader** ppShader, const ShaderCreateInfo& ShaderCI, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("Shader", ShaderCI.Desc, ppShader,
+                           [&]() //
+                           {
+                               auto* pShaderImpl{NEW_RC_OBJ(m_ShaderObjAllocator, "Shader instance", ShaderImplType)(static_cast<RenderDeviceImplType*>(this), ShaderCI, ExtraArgs...)};
+                               pShaderImpl->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateSamplerImpl(ISampler** ppSampler, const SamplerDesc& SamplerDesc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("Sampler", SamplerDesc, ppSampler,
+                           [&]() //
+                           {
+                               m_SamplersRegistry.Find(SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler));
+                               if (*ppSampler == nullptr)
+                               {
+                                   auto* pSamplerImpl{NEW_RC_OBJ(m_SamplerObjAllocator, "Sampler instance", SamplerImplType)(static_cast<RenderDeviceImplType*>(this), SamplerDesc, ExtraArgs...)};
+                                   pSamplerImpl->QueryInterface(IID_Sampler, reinterpret_cast<IObject**>(ppSampler));
+                                   m_SamplersRegistry.Add(SamplerDesc, *ppSampler);
+                               }
+                           });
+    }
+
+    void CreateFenceImpl(IFence** ppFence, const FenceDesc& Desc)
+    {
+        CreateDeviceObject("Fence", Desc, ppFence,
+                           [&]() //
+                           {
+                               auto* pFenceImpl{NEW_RC_OBJ(m_FenceAllocator, "Fence instance", FenceImplType)(static_cast<RenderDeviceImplType*>(this), Desc)};
+                               pFenceImpl->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
+                           });
+    }
+
+    void CreateQueryImpl(IQuery** ppQuery, const QueryDesc& Desc)
+    {
+        CreateDeviceObject("Query", Desc, ppQuery,
+                           [&]() //
+                           {
+                               auto* pQueryImpl{NEW_RC_OBJ(m_QueryAllocator, "Query instance", QueryImplType)(static_cast<RenderDeviceImplType*>(this), Desc)};
+                               pQueryImpl->QueryInterface(IID_Query, reinterpret_cast<IObject**>(ppQuery));
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateRenderPassImpl(IRenderPass** ppRenderPass, const RenderPassDesc& Desc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("RenderPass", Desc, ppRenderPass,
+                           [&]() //
+                           {
+                               auto* pRenderPassImpl{NEW_RC_OBJ(m_RenderPassAllocator, "Render instance", RenderPassImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...)};
+                               pRenderPassImpl->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateFramebufferImpl(IFramebuffer** ppFramebuffer, const FramebufferDesc& Desc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
+                           [&]() //
+                           {
+                               auto* pFramebufferImpl{NEW_RC_OBJ(m_FramebufferAllocator, "Framebuffer instance", FramebufferImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...)};
+                               pFramebufferImpl->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateBLASImpl(IBottomLevelAS** ppBLAS, const BottomLevelASDesc& Desc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
+                           [&]() //
+                           {
+                               auto* pBottomLevelASImpl(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelAS instance", BottomLevelASImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...));
+                               pBottomLevelASImpl->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateTLASImpl(ITopLevelAS** ppTLAS, const TopLevelASDesc& Desc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+                           [&]() //
+                           {
+                               auto* pTopLevelASImpl(NEW_RC_OBJ(m_TLASAllocator, "TopLevelAS instance", TopLevelASImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...));
+                               pTopLevelASImpl->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           });
+    }
+
+    void CreateSBTImpl(IShaderBindingTable** ppSBT, const ShaderBindingTableDesc& Desc)
+    {
+        CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
+                           [&]() //
+                           {
+                               auto* pSBTImpl(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTable instance", ShaderBindingTableImplType)(static_cast<RenderDeviceImplType*>(this), Desc));
+                               pSBTImpl->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
+                           });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreatePipelineResourceSignatureImpl(IPipelineResourceSignature** ppSignature, const PipelineResourceSignatureDesc& Desc, const ExtraArgsType&... ExtraArgs)
+    {
+        CreateDeviceObject("PipelineResourceSignature", Desc, ppSignature,
+                           [&]() //
+                           {
+                               auto* pPRSImpl(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignature instance", PipelineResourceSignatureImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...));
+                               pPRSImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
+                           });
+    }
+
+
+protected:
     RefCntAutoPtr<IEngineFactory> m_pEngineFactory;
 
     DeviceCaps       m_DeviceCaps;
@@ -465,76 +642,5 @@ protected:
     FixedBlockMemoryAllocator m_SBTAllocator;         ///< Allocator for shader binding table objects
     FixedBlockMemoryAllocator m_PipeResSignAllocator; ///< Allocator for pipeline resource signature objects
 };
-
-
-template <typename BaseInterface>
-void RenderDeviceBase<BaseInterface>::CreateResourceMapping(const ResourceMappingDesc& MappingDesc, IResourceMapping** ppMapping)
-{
-    VERIFY(ppMapping != nullptr, "Null pointer provided");
-    if (ppMapping == nullptr)
-        return;
-    VERIFY(*ppMapping == nullptr, "Overwriting reference to existing object may cause memory leaks");
-
-    auto* pResourceMapping(NEW_RC_OBJ(m_ResMappingAllocator, "ResourceMappingImpl instance", ResourceMappingImpl)(GetRawAllocator()));
-    pResourceMapping->QueryInterface(IID_ResourceMapping, reinterpret_cast<IObject**>(ppMapping));
-    if (MappingDesc.pEntries)
-    {
-        for (auto* pEntry = MappingDesc.pEntries; pEntry->Name && pEntry->pObject; ++pEntry)
-        {
-            (*ppMapping)->AddResourceArray(pEntry->Name, pEntry->ArrayIndex, &pEntry->pObject, 1, true);
-        }
-    }
-}
-
-
-/// \tparam TObjectType        - The type of the object being created (IBuffer, ITexture, etc.).
-/// \tparam TObjectDescType    - The type of the object description structure (BufferDesc, TextureDesc, etc.).
-/// \tparam TObjectConstructor - The type of the function that constructs the object.
-/// \param ObjectTypeName      - String name of the object type ("buffer", "texture", etc.).
-/// \param Desc                - Object description.
-/// \param ppObject            - Memory address where the pointer to the created object will be stored.
-/// \param ConstructObject     - Function that constructs the object.
-template <typename BaseInterface>
-template <typename TObjectType, typename TObjectDescType, typename TObjectConstructor>
-void RenderDeviceBase<BaseInterface>::CreateDeviceObject(const Char* ObjectTypeName, const TObjectDescType& Desc, TObjectType** ppObject, TObjectConstructor ConstructObject)
-{
-    VERIFY(ppObject != nullptr, "Null pointer provided");
-    if (!ppObject)
-        return;
-
-    VERIFY(*ppObject == nullptr, "Overwriting reference to existing object may cause memory leaks");
-    // Do not release *ppObject here!
-    // Should this happen, RefCntAutoPtr<> will take care of this!
-    //if( *ppObject )
-    //{
-    //    (*ppObject)->Release();
-    //    *ppObject = nullptr;
-    //}
-
-    *ppObject = nullptr;
-
-    try
-    {
-        ConstructObject();
-    }
-    catch (const std::runtime_error&)
-    {
-        VERIFY(*ppObject == nullptr, "Object was created despite error");
-        if (*ppObject)
-        {
-            (*ppObject)->Release();
-            *ppObject = nullptr;
-        }
-        auto ObjectDescString = GetObjectDescString(Desc);
-        if (ObjectDescString.length())
-        {
-            LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'\n", ObjectDescString);
-        }
-        else
-        {
-            LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'");
-        }
-    }
-}
 
 } // namespace Diligent

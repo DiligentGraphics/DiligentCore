@@ -49,16 +49,13 @@ template <class TBase, typename CommandQueueType>
 class RenderDeviceNextGenBase : public TBase
 {
 public:
-    using typename TBase::DeviceObjectSizes;
-
-    RenderDeviceNextGenBase(IReferenceCounters*      pRefCounters,
-                            IMemoryAllocator&        RawMemAllocator,
-                            IEngineFactory*          pEngineFactory,
-                            size_t                   CmdQueueCount,
-                            CommandQueueType**       Queues,
-                            Uint32                   NumDeferredContexts,
-                            const DeviceObjectSizes& ObjectSizes) :
-        TBase{pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts, ObjectSizes},
+    RenderDeviceNextGenBase(IReferenceCounters* pRefCounters,
+                            IMemoryAllocator&   RawMemAllocator,
+                            IEngineFactory*     pEngineFactory,
+                            size_t              CmdQueueCount,
+                            CommandQueueType**  Queues,
+                            Uint32              NumDeferredContexts) :
+        TBase{pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts},
         m_CmdQueueCount{CmdQueueCount}
     {
         m_CommandQueues = ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", CommandQueue, m_CmdQueueCount);

@@ -71,8 +71,8 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
 BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
                            FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                            RenderDeviceGLImpl*        pDeviceGL,
-                           GLContextState&            GLState,
                            const BufferDesc&          BuffDesc,
+                           GLContextState&            GLState,
                            const BufferData*          pBuffData /*= nullptr*/,
                            bool                       bIsDeviceInternal) :
     // clang-format off
@@ -189,8 +189,8 @@ static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc 
 BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
                            FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                            RenderDeviceGLImpl*        pDeviceGL,
-                           GLContextState&            CtxState,
                            const BufferDesc&          BuffDesc,
+                           GLContextState&            CtxState,
                            GLuint                     GLHandle,
                            bool                       bIsDeviceInternal) :
     // clang-format off

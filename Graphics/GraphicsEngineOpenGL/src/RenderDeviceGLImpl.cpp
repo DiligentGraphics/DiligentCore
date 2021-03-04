@@ -125,6 +125,13 @@ static void GLAPIENTRY openglCallbackFunction(GLenum        source,
 }
 #endif // GL_KHR_debug
 
+class BottomLevelASGLImpl
+{};
+class TopLevelASGLImpl
+{};
+class ShaderBindingTableGLImpl
+{};
+
 RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                                        IMemoryAllocator&         RawMemAllocator,
                                        IEngineFactory*           pEngineFactory,
@@ -136,33 +143,12 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         pRefCounters,
         RawMemAllocator,
         pEngineFactory,
-        0,
-        DeviceObjectSizes
-        {
-            sizeof(TextureBaseGL),
-            sizeof(TextureViewGLImpl),
-            sizeof(BufferGLImpl),
-            sizeof(BufferViewGLImpl),
-            sizeof(ShaderGLImpl),
-            sizeof(SamplerGLImpl),
-            sizeof(PipelineStateGLImpl),
-            sizeof(ShaderResourceBindingGLImpl),
-            sizeof(FenceGLImpl),
-            sizeof(QueryGLImpl),
-            sizeof(RenderPassGLImpl),
-            sizeof(FramebufferGLImpl),
-            0,
-            0,
-            0,
-            sizeof(PipelineResourceSignatureGLImpl)
-        }
+        0
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext{InitAttribs, m_DeviceCaps, pSCDesc}
 // clang-format on
 {
-    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 16, "Please add new objects to DeviceObjectSizes constructor");
-
     GLint NumExtensions = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &NumExtensions);
     CHECK_GL_ERROR("Failed to get the number of extensions");
@@ -508,20 +494,10 @@ void RenderDeviceGLImpl::InitTexRegionRender()
 
 void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal)
 {
-    CreateDeviceObject(
-        "buffer", BuffDesc, ppBuffer,
-        [&]() //
-        {
-            auto spDeviceContext = GetImmediateContext();
-            VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
-
-            BufferGLImpl* pBufferOGL(NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)(m_BuffViewObjAllocator, this, pDeviceContextGL->GetContextState(), BuffDesc, pBuffData, bIsDeviceInternal));
-            pBufferOGL->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
-            pBufferOGL->CreateDefaultViews();
-            OnCreateDeviceObject(pBufferOGL);
-        } //
-    );
+    auto spDeviceContext = GetImmediateContext();
+    VERIFY(spDeviceContext, "Immediate device context has been destroyed");
+    auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
+    CreateBufferImpl(ppBuffer, BuffDesc, std::ref(pDeviceContextGL->GetContextState()), pBuffData, bIsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBuffer)
@@ -531,35 +507,18 @@ void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferDa
 
 void RenderDeviceGLImpl::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
-    VERIFY(GLHandle, "GL buffer handle must not be null");
-    CreateDeviceObject(
-        "buffer", BuffDesc, ppBuffer,
-        [&]() //
-        {
-            auto spDeviceContext = GetImmediateContext();
-            VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
+    DEV_CHECK_ERR(GLHandle != 0, "GL buffer handle must not be null");
 
-            BufferGLImpl* pBufferOGL(NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)(m_BuffViewObjAllocator, this, pDeviceContextGL->GetContextState(), BuffDesc, GLHandle, false));
-            pBufferOGL->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
-            pBufferOGL->CreateDefaultViews();
-            OnCreateDeviceObject(pBufferOGL);
-        } //
-    );
+    auto spDeviceContext = GetImmediateContext();
+    VERIFY(spDeviceContext, "Immediate device context has been destroyed");
+    auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
+
+    CreateBufferImpl(ppBuffer, BuffDesc, std::ref(pDeviceContextGL->GetContextState()), GLHandle, /*bIsDeviceInternal =*/false);
 }
 
 void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
 {
-    CreateDeviceObject(
-        "shader", ShaderCreateInfo.Desc, ppShader,
-        [&]() //
-        {
-            ShaderGLImpl* pShaderOGL(NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderGLImpl instance", ShaderGLImpl)(this, ShaderCreateInfo, bIsDeviceInternal));
-            pShaderOGL->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
-
-            OnCreateDeviceObject(pShaderOGL);
-        } //
-    );
+    CreateShaderImpl(ppShader, ShaderCreateInfo, bIsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)
@@ -619,7 +578,6 @@ void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const Texture
 
             pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
             pTextureOGL->CreateDefaultViews();
-            OnCreateDeviceObject(pTextureOGL);
         } //
     );
 }
@@ -680,7 +638,6 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32             GLHandle,
 
             pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
             pTextureOGL->CreateDefaultViews();
-            OnCreateDeviceObject(pTextureOGL);
         } //
     );
 }
@@ -703,27 +660,13 @@ void RenderDeviceGLImpl::CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE
 
             pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
             pTextureOGL->CreateDefaultViews();
-            OnCreateDeviceObject(pTextureOGL);
         } //
     );
 }
 
 void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler, bool bIsDeviceInternal)
 {
-    CreateDeviceObject(
-        "sampler", SamplerDesc, ppSampler,
-        [&]() //
-        {
-            m_SamplersRegistry.Find(SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler));
-            if (*ppSampler == nullptr)
-            {
-                SamplerGLImpl* pSamplerOGL(NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerGLImpl instance", SamplerGLImpl)(this, SamplerDesc, bIsDeviceInternal));
-                pSamplerOGL->QueryInterface(IID_Sampler, reinterpret_cast<IObject**>(ppSampler));
-                OnCreateDeviceObject(pSamplerOGL);
-                m_SamplersRegistry.Add(SamplerDesc, *ppSampler);
-            }
-        } //
-    );
+    CreateSamplerImpl(ppSampler, SamplerDesc, bIsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
@@ -731,38 +674,24 @@ void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler*
     CreateSampler(SamplerDesc, ppSampler, false);
 }
 
-template <typename PSOCreateInfoType>
-void RenderDeviceGLImpl::CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
-{
-    CreateDeviceObject(
-        "Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
-        [&]() //
-        {
-            PipelineStateGLImpl* pPipelineStateOGL(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl)(this, PSOCreateInfo, bIsDeviceInternal));
-            pPipelineStateOGL->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
-            OnCreateDeviceObject(pPipelineStateOGL);
-        } //
-    );
-}
-
 void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
 {
-    CreatePipelineState(PSOCreateInfo, ppPipelineState, bIsDeviceInternal);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo, bIsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
 {
-    CreatePipelineState(PSOCreateInfo, ppPipelineState, bIsDeviceInternal);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo, bIsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    return CreateGraphicsPipelineState(PSOCreateInfo, ppPipelineState, false);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo, false);
 }
 
 void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    return CreateComputePipelineState(PSOCreateInfo, ppPipelineState, false);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo, false);
 }
 
 void RenderDeviceGLImpl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
@@ -773,57 +702,26 @@ void RenderDeviceGLImpl::CreateRayTracingPipelineState(const RayTracingPipelineS
 
 void RenderDeviceGLImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
 {
-    CreateDeviceObject(
-        "Fence", Desc, ppFence,
-        [&]() //
-        {
-            FenceGLImpl* pFenceOGL(NEW_RC_OBJ(m_FenceAllocator, "FenceGLImpl instance", FenceGLImpl)(this, Desc));
-            pFenceOGL->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
-            OnCreateDeviceObject(pFenceOGL);
-        } //
-    );
+    CreateFenceImpl(ppFence, Desc);
 }
 
 void RenderDeviceGLImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
 {
-    CreateDeviceObject(
-        "Query", Desc, ppQuery,
-        [&]() //
-        {
-            QueryGLImpl* pQueryOGL(NEW_RC_OBJ(m_QueryAllocator, "QueryGLImpl instance", QueryGLImpl)(this, Desc));
-            pQueryOGL->QueryInterface(IID_Query, reinterpret_cast<IObject**>(ppQuery));
-            OnCreateDeviceObject(pQueryOGL);
-        } //
-    );
+    CreateQueryImpl(ppQuery, Desc);
 }
 
 void RenderDeviceGLImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
 {
-    CreateDeviceObject(
-        "RenderPass", Desc, ppRenderPass,
-        [&]() //
-        {
-            RenderPassGLImpl* pRenderPassOGL(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassGLImpl instance", RenderPassGLImpl)(this, Desc));
-            pRenderPassOGL->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
-            OnCreateDeviceObject(pRenderPassOGL);
-        } //
-    );
+    CreateRenderPassImpl(ppRenderPass, Desc);
 }
 
 void RenderDeviceGLImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
 {
-    CreateDeviceObject(
-        "Framebuffer", Desc, ppFramebuffer,
-        [&]() //
-        {
-            auto spDeviceContext = GetImmediateContext();
-            VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+    auto spDeviceContext = GetImmediateContext();
+    VERIFY(spDeviceContext, "Immediate device context has been destroyed");
+    auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
 
-            FramebufferGLImpl* pFramebufferGL(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferGLImpl instance", FramebufferGLImpl)(this, GLState, Desc));
-            pFramebufferGL->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
-            OnCreateDeviceObject(pFramebufferGL);
-        });
+    CreateFramebufferImpl(ppFramebuffer, Desc, std::ref(GLState));
 }
 
 void RenderDeviceGLImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
@@ -836,14 +734,7 @@ void RenderDeviceGLImpl::CreatePipelineResourceSignature(const PipelineResourceS
                                                          IPipelineResourceSignature**         ppSignature,
                                                          bool                                 IsDeviceInternal)
 {
-    CreateDeviceObject(
-        "PipelineResourceSignature", Desc, ppSignature,
-        [&]() //
-        {
-            PipelineResourceSignatureGLImpl* pPRSGL(NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignatureGLImpl instance", PipelineResourceSignatureGLImpl)(this, Desc, IsDeviceInternal));
-            pPRSGL->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
-            OnCreateDeviceObject(pPRSGL);
-        });
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, IsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateBLAS(const BottomLevelASDesc& Desc,

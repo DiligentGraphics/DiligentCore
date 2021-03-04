@@ -66,11 +66,53 @@
 namespace Diligent
 {
 
+class RenderDeviceD3D12Impl;
+class PipelineStateD3D12Impl;
+class ShaderResourceBindingD3D12Impl;
+class BufferD3D12Impl;
+class BufferViewD3D12Impl;
+class TextureD3D12Impl;
+class TextureViewD3D12Impl;
+class ShaderD3D12Impl;
+class SamplerD3D12Impl;
+class FenceD3D12Impl;
+class QueryD3D12Impl;
+class RenderPassD3D12Impl;
+class FramebufferD3D12Impl;
+class BottomLevelASD3D12Impl;
+class TopLevelASD3D12Impl;
+class ShaderBindingTableD3D12Impl;
+class PipelineResourceSignatureD3D12Impl;
+
+struct RenderDeviceD3D12ImplTraits
+{
+    using BaseInterface = IRenderDeviceD3D12;
+
+    using RenderDeviceImplType              = RenderDeviceD3D12Impl;
+    using PipelineStateImplType             = PipelineStateD3D12Impl;
+    using ShaderResourceBindingImplType     = ShaderResourceBindingD3D12Impl;
+    using BufferImplType                    = BufferD3D12Impl;
+    using BufferViewImplType                = BufferViewD3D12Impl;
+    using TextureImplType                   = TextureD3D12Impl;
+    using TextureViewImplType               = TextureViewD3D12Impl;
+    using ShaderImplType                    = ShaderD3D12Impl;
+    using SamplerImplType                   = SamplerD3D12Impl;
+    using FenceImplType                     = FenceD3D12Impl;
+    using QueryImplType                     = QueryD3D12Impl;
+    using RenderPassImplType                = RenderPassD3D12Impl;
+    using FramebufferImplType               = FramebufferD3D12Impl;
+    using BottomLevelASImplType             = BottomLevelASD3D12Impl;
+    using TopLevelASImplType                = TopLevelASD3D12Impl;
+    using ShaderBindingTableImplType        = ShaderBindingTableD3D12Impl;
+    using PipelineResourceSignatureImplType = PipelineResourceSignatureD3D12Impl;
+};
+
 /// Render device implementation in Direct3D12 backend.
-class RenderDeviceD3D12Impl final : public RenderDeviceNextGenBase<RenderDeviceD3DBase<IRenderDeviceD3D12>, ICommandQueueD3D12>
+class RenderDeviceD3D12Impl final : public RenderDeviceNextGenBase<RenderDeviceD3DBase<RenderDeviceD3D12ImplTraits>, ICommandQueueD3D12>
 {
 public:
-    using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceD3DBase<IRenderDeviceD3D12>, ICommandQueueD3D12>;
+    using BaseInterface     = IRenderDeviceD3D12;
+    using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceD3DBase<RenderDeviceD3D12ImplTraits>, ICommandQueueD3D12>;
 
     RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
                           IMemoryAllocator&            RawMemAllocator,
@@ -254,9 +296,6 @@ public:
     }
 
 private:
-    template <typename PSOCreateInfoType>
-    void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);
-
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     void         FreeCommandContext(PooledCommandContext&& Ctx);
 

@@ -38,12 +38,54 @@
 namespace Diligent
 {
 
+
+class RenderDeviceGLImpl;
+class PipelineStateGLImpl;
+class ShaderResourceBindingGLImpl;
+class BufferGLImpl;
+class BufferViewGLImpl;
+class TextureBaseGL;
+class TextureViewGLImpl;
+class ShaderGLImpl;
+class SamplerGLImpl;
+class FenceGLImpl;
+class QueryGLImpl;
+class RenderPassGLImpl;
+class FramebufferGLImpl;
+class BottomLevelASGLImpl;
+class TopLevelASGLImpl;
+class ShaderBindingTableGLImpl;
+class PipelineResourceSignatureGLImpl;
+
+struct RenderDeviceGLImplTraits
+{
+    using BaseInterface = IGLDeviceBaseInterface;
+
+    using RenderDeviceImplType              = RenderDeviceGLImpl;
+    using PipelineStateImplType             = PipelineStateGLImpl;
+    using ShaderResourceBindingImplType     = ShaderResourceBindingGLImpl;
+    using BufferImplType                    = BufferGLImpl;
+    using BufferViewImplType                = BufferViewGLImpl;
+    using TextureImplType                   = TextureBaseGL;
+    using TextureViewImplType               = TextureViewGLImpl;
+    using ShaderImplType                    = ShaderGLImpl;
+    using SamplerImplType                   = SamplerGLImpl;
+    using FenceImplType                     = FenceGLImpl;
+    using QueryImplType                     = QueryGLImpl;
+    using RenderPassImplType                = RenderPassGLImpl;
+    using FramebufferImplType               = FramebufferGLImpl;
+    using BottomLevelASImplType             = BottomLevelASGLImpl;
+    using TopLevelASImplType                = TopLevelASGLImpl;
+    using ShaderBindingTableImplType        = ShaderBindingTableGLImpl;
+    using PipelineResourceSignatureImplType = PipelineResourceSignatureGLImpl;
+};
+
 /// Render device implementation in OpenGL backend.
 // RenderDeviceGLESImpl is inherited from RenderDeviceGLImpl
-class RenderDeviceGLImpl : public RenderDeviceBase<IGLDeviceBaseInterface>
+class RenderDeviceGLImpl : public RenderDeviceBase<RenderDeviceGLImplTraits>
 {
 public:
-    using TRenderDeviceBase = RenderDeviceBase<IGLDeviceBaseInterface>;
+    using TRenderDeviceBase = RenderDeviceBase<RenderDeviceGLImplTraits>;
 
     RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                        IMemoryAllocator&         RawMemAllocator,
@@ -208,9 +250,6 @@ protected:
     std::unique_ptr<TexRegionRender> m_pTexRegionRender;
 
 private:
-    template <typename PSOCreateInfoType>
-    void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal);
-
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     bool         CheckExtension(const Char* ExtensionString);
     void         FlagSupportedTexFormats();

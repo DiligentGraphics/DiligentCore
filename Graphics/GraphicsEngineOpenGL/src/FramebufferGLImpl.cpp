@@ -80,8 +80,8 @@ static bool UseDefaultFBO(Uint32             NumRenderTargets,
 
 FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                                      RenderDeviceGLImpl*    pDevice,
-                                     GLContextState&        CtxState,
-                                     const FramebufferDesc& Desc) :
+                                     const FramebufferDesc& Desc,
+                                     GLContextState&        CtxState) :
     TFramebufferBase{pRefCounters, pDevice, Desc}
 {
     const auto& RPDesc = m_Desc.pRenderPass->GetDesc();

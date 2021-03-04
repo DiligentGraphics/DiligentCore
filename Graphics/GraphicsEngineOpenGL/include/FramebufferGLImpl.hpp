@@ -50,8 +50,8 @@ public:
 
     FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                       RenderDeviceGLImpl*    pDevice,
-                      GLContextState&        CtxState,
-                      const FramebufferDesc& Desc);
+                      const FramebufferDesc& Desc,
+                      GLContextState&        CtxState);
     ~FramebufferGLImpl();
 
     struct SubpassFramebuffers
