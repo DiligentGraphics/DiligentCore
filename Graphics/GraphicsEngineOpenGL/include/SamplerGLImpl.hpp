@@ -37,13 +37,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Sampler implementation in OpenGL backend.
-class SamplerGLImpl final : public SamplerBase<ISamplerGL, RenderDeviceGLImpl>
+class SamplerGLImpl final : public SamplerBase<EngineGLImplTraits>
 {
 public:
-    using TSamplerBase = SamplerBase<ISamplerGL, RenderDeviceGLImpl>;
+    using TSamplerBase = SamplerBase<EngineGLImplTraits>;
 
     SamplerGLImpl(IReferenceCounters* pRefCounters, RenderDeviceGLImpl* pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false);
     ~SamplerGLImpl();

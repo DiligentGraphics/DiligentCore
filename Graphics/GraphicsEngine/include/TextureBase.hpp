@@ -66,21 +66,24 @@ void ValidateMapTextureParams(const TextureDesc& TexDesc,
 
 /// Base implementation of the ITexture interface
 
-/// \tparam BaseInterface - base interface that this class will inheret
-///                         (Diligent::ITextureD3D11, Diligent::ITextureD3D12,
-///                          Diligent::ITextureGL or Diligent::ITextureVk).
-/// \tparam TRenderDeviceImpl - type of the render device implementation
-///                             (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                              Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-/// \tparam TTextureViewImpl - type of the texture view implementation
-///                            (Diligent::TextureViewD3D11Impl, Diligent::TextureViewD3D12Impl,
-///                             Diligent::TextureViewGLImpl or Diligent::TextureViewVkImpl).
-/// \tparam TTexViewObjAllocator - type of the allocator that is used to allocate memory for the texture view object instances
-template <class BaseInterface, class TRenderDeviceImpl, class TTextureViewImpl, class TTexViewObjAllocator>
-class TextureBase : public DeviceObjectBase<BaseInterface, TRenderDeviceImpl, TextureDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class TextureBase : public DeviceObjectBase<typename EngineImplTraits::TextureInterface, typename EngineImplTraits::RenderDeviceImplType, TextureDesc>
 {
 public:
-    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, TRenderDeviceImpl, TextureDesc>;
+    // Base interface this class inherits (ITextureD3D12, ITextureVk, etc.)
+    using BaseInterface = typename EngineImplTraits::TextureInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
+    // Texture view implementation type (TextureViewD3D12Impl, TextureViewVkImpl, etc.).
+    using TextureViewImplType = typename EngineImplTraits::TextureViewImplType;
+
+    // Type of the texture view object allocator.
+    using TexViewObjAllocatorType = typename EngineImplTraits::TexViewObjAllocatorType;
+
+    using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, TextureDesc>;
 
     /// \param pRefCounters        - Reference counters object that controls the lifetime of this texture.
     /// \param TexViewObjAllocator - Allocator that is used to allocate memory for the instances of the texture view object.
@@ -89,19 +92,19 @@ public:
     /// \param Desc                - Texture description
     /// \param bIsDeviceInternal   - Flag indicating if the texture is an internal device object and
     ///							     must not keep a strong reference to the device
-    TextureBase(IReferenceCounters*   pRefCounters,
-                TTexViewObjAllocator& TexViewObjAllocator,
-                TRenderDeviceImpl*    pDevice,
-                const TextureDesc&    Desc,
-                bool                  bIsDeviceInternal = false) :
+    TextureBase(IReferenceCounters*      pRefCounters,
+                TexViewObjAllocatorType& TexViewObjAllocator,
+                RenderDeviceImplType*    pDevice,
+                const TextureDesc&       Desc,
+                bool                     bIsDeviceInternal = false) :
         TDeviceObjectBase(pRefCounters, pDevice, Desc, bIsDeviceInternal),
 #ifdef DILIGENT_DEBUG
         m_dbgTexViewObjAllocator(TexViewObjAllocator),
 #endif
-        m_pDefaultSRV{nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator)},
-        m_pDefaultRTV{nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator)},
-        m_pDefaultDSV{nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator)},
-        m_pDefaultUAV{nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator)}
+        m_pDefaultSRV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
+        m_pDefaultRTV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
+        m_pDefaultDSV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)},
+        m_pDefaultUAV{nullptr, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>(TexViewObjAllocator)}
     {
         if (this->m_Desc.MipLevels == 0)
         {
@@ -220,7 +223,7 @@ public:
             VERIFY(pView != nullptr, "Failed to create default view for texture '", this->m_Desc.Name, "'.");
             VERIFY(pView->GetDesc().ViewType == ViewType, "Unexpected view type.");
 
-            return static_cast<TTextureViewImpl*>(pView);
+            return static_cast<TextureViewImplType*>(pView);
         };
 
         if (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE)
@@ -292,17 +295,17 @@ protected:
     virtual void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) = 0;
 
 #ifdef DILIGENT_DEBUG
-    TTexViewObjAllocator& m_dbgTexViewObjAllocator;
+    TexViewObjAllocatorType& m_dbgTexViewObjAllocator;
 #endif
     // WARNING! We cannot use ITextureView here, because ITextureView has no virtual dtor!
     /// Default SRV addressing the entire texture
-    std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultSRV;
+    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultSRV;
     /// Default RTV addressing the most detailed mip level
-    std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultRTV;
+    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultRTV;
     /// Default DSV addressing the most detailed mip level
-    std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultDSV;
+    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultDSV;
     /// Default UAV addressing the entire texture
-    std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultUAV;
+    std::unique_ptr<TextureViewImplType, STDDeleter<TextureViewImplType, TexViewObjAllocatorType>> m_pDefaultUAV;
 
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 };

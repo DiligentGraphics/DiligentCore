@@ -31,7 +31,8 @@
 /// Declaration of Diligent::RenderDeviceVkImpl class
 #include <memory>
 
-#include "RenderDeviceVk.h"
+#include "EngineVkImplTraits.hpp"
+
 #include "RenderDeviceBase.hpp"
 #include "RenderDeviceNextGenBase.hpp"
 #include "DescriptorPoolManager.hpp"
@@ -54,52 +55,11 @@
 namespace Diligent
 {
 
-class RenderDeviceVkImpl;
-class PipelineStateVkImpl;
-class ShaderResourceBindingVkImpl;
-class BufferVkImpl;
-class BufferViewVkImpl;
-class TextureVkImpl;
-class TextureViewVkImpl;
-class ShaderVkImpl;
-class SamplerVkImpl;
-class FenceVkImpl;
-class QueryVkImpl;
-class RenderPassVkImpl;
-class FramebufferVkImpl;
-class BottomLevelASVkImpl;
-class TopLevelASVkImpl;
-class ShaderBindingTableVkImpl;
-class PipelineResourceSignatureVkImpl;
-
-struct RenderDeviceVkImplTraits
-{
-    using BaseInterface = IRenderDeviceVk;
-
-    using RenderDeviceImplType              = RenderDeviceVkImpl;
-    using PipelineStateImplType             = PipelineStateVkImpl;
-    using ShaderResourceBindingImplType     = ShaderResourceBindingVkImpl;
-    using BufferImplType                    = BufferVkImpl;
-    using BufferViewImplType                = BufferViewVkImpl;
-    using TextureImplType                   = TextureVkImpl;
-    using TextureViewImplType               = TextureViewVkImpl;
-    using ShaderImplType                    = ShaderVkImpl;
-    using SamplerImplType                   = SamplerVkImpl;
-    using FenceImplType                     = FenceVkImpl;
-    using QueryImplType                     = QueryVkImpl;
-    using RenderPassImplType                = RenderPassVkImpl;
-    using FramebufferImplType               = FramebufferVkImpl;
-    using BottomLevelASImplType             = BottomLevelASVkImpl;
-    using TopLevelASImplType                = TopLevelASVkImpl;
-    using ShaderBindingTableImplType        = ShaderBindingTableVkImpl;
-    using PipelineResourceSignatureImplType = PipelineResourceSignatureVkImpl;
-};
-
 /// Render device implementation in Vulkan backend.
-class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase<RenderDeviceVkImplTraits>, ICommandQueueVk>
+class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase<EngineVkImplTraits>, ICommandQueueVk>
 {
 public:
-    using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceBase<RenderDeviceVkImplTraits>, ICommandQueueVk>;
+    using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceBase<EngineVkImplTraits>, ICommandQueueVk>;
 
     RenderDeviceVkImpl(IReferenceCounters*                                    pRefCounters,
                        IMemoryAllocator&                                      RawMemAllocator,

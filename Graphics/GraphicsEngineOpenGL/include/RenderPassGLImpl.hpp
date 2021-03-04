@@ -40,10 +40,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Render pass implementation in Direct3D11 backend.
-class RenderPassGLImpl final : public RenderPassBase<IRenderPass, RenderDeviceGLImpl>
+class RenderPassGLImpl final : public RenderPassBase<EngineGLImplTraits>
 {
 public:
-    using TRenderPassBase = RenderPassBase<IRenderPass, RenderDeviceGLImpl>;
+    using TRenderPassBase = RenderPassBase<EngineGLImplTraits>;
 
     RenderPassGLImpl(IReferenceCounters*   pRefCounters,
                      RenderDeviceGLImpl*   pDevice,

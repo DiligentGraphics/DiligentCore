@@ -57,10 +57,10 @@ const char*   GetBindingRangeName(BINDING_RANGE Range);
 
 
 /// Implementation of the Diligent::PipelineResourceSignatureGLImpl class
-class PipelineResourceSignatureGLImpl final : public PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceGLImpl>
+class PipelineResourceSignatureGLImpl final : public PipelineResourceSignatureBase<EngineGLImplTraits>
 {
 public:
-    using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceGLImpl>;
+    using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineGLImplTraits>;
 
     PipelineResourceSignatureGLImpl(IReferenceCounters*                  pRefCounters,
                                     RenderDeviceGLImpl*                  pDevice,

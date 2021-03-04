@@ -38,13 +38,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Framebuffer implementation in Vulkan backend.
-class FramebufferVkImpl final : public FramebufferBase<IFramebufferVk, RenderDeviceVkImpl>
+class FramebufferVkImpl final : public FramebufferBase<EngineVkImplTraits>
 {
 public:
-    using TFramebufferBase = FramebufferBase<IFramebufferVk, RenderDeviceVkImpl>;
+    using TFramebufferBase = FramebufferBase<EngineVkImplTraits>;
 
     FramebufferVkImpl(IReferenceCounters*    pRefCounters,
                       RenderDeviceVkImpl*    pDevice,

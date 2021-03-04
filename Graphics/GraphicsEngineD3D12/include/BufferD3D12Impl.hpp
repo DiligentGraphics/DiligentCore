@@ -41,13 +41,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Buffer object implementation in Direct3D12 backend.
-class BufferD3D12Impl final : public BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
+class BufferD3D12Impl final : public BufferBase<EngineD3D12ImplTraits>, public D3D12ResourceBase
 {
 public:
-    using TBufferBase = BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>;
+    using TBufferBase = BufferBase<EngineD3D12ImplTraits>;
 
     BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                     FixedBlockMemoryAllocator& BuffViewObjMemAllocator,

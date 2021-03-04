@@ -48,14 +48,23 @@ void ValidateShaderBindingTableDesc(const ShaderBindingTableDesc& Desc, Uint32 S
 
 /// Template class implementing base functionality of the shader binding table object.
 
-/// \tparam BaseInterface        - Base interface that this class will inheret
-///                                (Diligent::IShaderBindingTableD3D12 or Diligent::IShaderBindingTableVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class PipelineStateImplType, class TopLevelASImplType, class RenderDeviceImplType>
-class ShaderBindingTableBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderBindingTableDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class ShaderBindingTableBase : public DeviceObjectBase<typename EngineImplTraits::ShaderBindingTableInterface, typename EngineImplTraits::RenderDeviceImplType, ShaderBindingTableDesc>
 {
 public:
+    // Base interface this class inherits (IShaderBindingTableD3D12, IShaderBindingTableVk, etc.)
+    using BaseInterface = typename EngineImplTraits::ShaderBindingTableInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
+    // Pipeline state implementation type (PipelineStateD3D12Impl, PipelineStateVkImpl, etc.).
+    using PipelineStateImplType = typename EngineImplTraits::PipelineStateImplType;
+
+    // Top-level AS implementation type (TopLevelASD3D12Impl, TopLevelASVkImpl, etc.).
+    using TopLevelASImplType = typename EngineImplTraits::TopLevelASImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderBindingTableDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this SBT.

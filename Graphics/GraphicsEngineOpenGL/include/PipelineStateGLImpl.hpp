@@ -41,13 +41,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Pipeline state object implementation in OpenGL backend.
-class PipelineStateGLImpl final : public PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>
+class PipelineStateGLImpl final : public PipelineStateBase<EngineGLImplTraits>
 {
 public:
-    using TPipelineStateBase = PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>;
+    using TPipelineStateBase = PipelineStateBase<EngineGLImplTraits>;
 
     PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,
                         RenderDeviceGLImpl*                    pDeviceGL,

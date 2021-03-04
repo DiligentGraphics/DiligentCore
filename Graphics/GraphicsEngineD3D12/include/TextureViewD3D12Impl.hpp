@@ -40,10 +40,10 @@ namespace Diligent
 {
 
 /// Texture view object implementation in Direct3D12 backend.
-class TextureViewD3D12Impl final : public TextureViewBase<ITextureViewD3D12, RenderDeviceD3D12Impl>
+class TextureViewD3D12Impl final : public TextureViewBase<EngineD3D12ImplTraits>
 {
 public:
-    using TTextureViewBase = TextureViewBase<ITextureViewD3D12, RenderDeviceD3D12Impl>;
+    using TTextureViewBase = TextureViewBase<EngineD3D12ImplTraits>;
 
     TextureViewD3D12Impl(IReferenceCounters*        pRefCounters,
                          RenderDeviceD3D12Impl*     pDevice,

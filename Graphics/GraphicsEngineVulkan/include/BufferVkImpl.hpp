@@ -43,14 +43,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-class DeviceContextVkImpl;
-
 /// Buffer object implementation in Vulkan backend.
-class BufferVkImpl final : public BufferBase<IBufferVk, RenderDeviceVkImpl, BufferViewVkImpl, FixedBlockMemoryAllocator>
+class BufferVkImpl final : public BufferBase<EngineVkImplTraits>
 {
 public:
-    using TBufferBase = BufferBase<IBufferVk, RenderDeviceVkImpl, BufferViewVkImpl, FixedBlockMemoryAllocator>;
+    using TBufferBase = BufferBase<EngineVkImplTraits>;
 
     BufferVkImpl(IReferenceCounters*        pRefCounters,
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator,

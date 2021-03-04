@@ -54,10 +54,10 @@ class ShaderVkImpl;
 class ShaderResourceBindingVkImpl;
 
 /// Pipeline state object implementation in Vulkan backend.
-class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>
+class PipelineStateVkImpl final : public PipelineStateBase<EngineVkImplTraits>
 {
 public:
-    using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>;
+    using TPipelineStateBase = PipelineStateBase<EngineVkImplTraits>;
 
     PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const GraphicsPipelineStateCreateInfo& CreateInfo);
     PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const ComputePipelineStateCreateInfo& CreateInfo);

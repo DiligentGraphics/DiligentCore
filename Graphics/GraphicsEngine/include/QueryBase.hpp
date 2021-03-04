@@ -40,14 +40,17 @@ namespace Diligent
 
 /// Template class implementing base functionality of the query object
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::IQueryD3D11, Diligent::IQueryD3D12,
-///                          Diligent::IQueryGL or Diligent::IQueryVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
-template <class BaseInterface, class RenderDeviceImplType>
-class QueryBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, QueryDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class QueryBase : public DeviceObjectBase<typename EngineImplTraits::QueryInterface, typename EngineImplTraits::RenderDeviceImplType, QueryDesc>
 {
 public:
+    // Base interface this class inherits (IQueryD3D12, IQueryVk, etc.)
+    using BaseInterface = typename EngineImplTraits::QueryInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     enum class QueryState
     {
         Inactive,

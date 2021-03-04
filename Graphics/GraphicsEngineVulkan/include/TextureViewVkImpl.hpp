@@ -42,10 +42,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Texture view implementation in Vulkan backend.
-class TextureViewVkImpl final : public TextureViewBase<ITextureViewVk, RenderDeviceVkImpl>
+class TextureViewVkImpl final : public TextureViewBase<EngineVkImplTraits>
 {
 public:
-    using TTextureViewBase = TextureViewBase<ITextureViewVk, RenderDeviceVkImpl>;
+    using TTextureViewBase = TextureViewBase<EngineVkImplTraits>;
 
     TextureViewVkImpl(IReferenceCounters*                 pRefCounters,
                       RenderDeviceVkImpl*                 pDevice,

@@ -59,15 +59,17 @@ inline void _CorrectAttachmentState<class RenderDeviceVkImpl>(RESOURCE_STATE& St
 
 /// Template class implementing base functionality of the render pass object.
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (e.g. Diligent::IRenderPassVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class RenderPassBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, RenderPassDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class RenderPassBase : public DeviceObjectBase<typename EngineImplTraits::RenderPassInterface, typename EngineImplTraits::RenderDeviceImplType, RenderPassDesc>
 {
 public:
+    // Base interface this class inherits (e.g. IRenderPassVk)
+    using BaseInterface = typename EngineImplTraits::RenderPassInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, RenderPassDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this render pass.

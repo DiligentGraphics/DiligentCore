@@ -41,10 +41,10 @@
 namespace Diligent
 {
 
-class ShaderBindingTableVkImpl final : public ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, TopLevelASVkImpl, RenderDeviceVkImpl>
+class ShaderBindingTableVkImpl final : public ShaderBindingTableBase<EngineVkImplTraits>
 {
 public:
-    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, TopLevelASVkImpl, RenderDeviceVkImpl>;
+    using TShaderBindingTableBase = ShaderBindingTableBase<EngineVkImplTraits>;
 
     ShaderBindingTableVkImpl(IReferenceCounters*           pRefCounters,
                              RenderDeviceVkImpl*           pRenderDeviceVk,

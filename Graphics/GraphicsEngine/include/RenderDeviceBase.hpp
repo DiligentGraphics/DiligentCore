@@ -175,36 +175,36 @@ namespace Diligent
 
 /// Base implementation of a render device
 
-/// \tparam RenderDeviceImplTraits - Render device implementation type traits.
+/// \tparam EngineImplTraits - Engine implementation type traits.
 ///
 /// \warning    Render device must *NOT* hold strong references to any object it creates
 ///             to avoid cyclic dependencies. Device context, swap chain and all object
 ///             the device creates keep strong reference to the device.
 ///             Device only holds weak reference to the immediate context.
-template <typename RenderDeviceImplTraits>
-class RenderDeviceBase : public ObjectBase<typename RenderDeviceImplTraits::BaseInterface>
+template <typename EngineImplTraits>
+class RenderDeviceBase : public ObjectBase<typename EngineImplTraits::RenderDeviceInterface>
 {
 public:
-    using BaseInterface = typename RenderDeviceImplTraits::BaseInterface;
+    using BaseInterface = typename EngineImplTraits::RenderDeviceInterface;
     using TObjectBase   = ObjectBase<BaseInterface>;
 
-    using RenderDeviceImplType              = typename RenderDeviceImplTraits::RenderDeviceImplType;
-    using PipelineStateImplType             = typename RenderDeviceImplTraits::PipelineStateImplType;
-    using ShaderResourceBindingImplType     = typename RenderDeviceImplTraits::ShaderResourceBindingImplType;
-    using BufferImplType                    = typename RenderDeviceImplTraits::BufferImplType;
-    using BufferViewImplType                = typename RenderDeviceImplTraits::BufferViewImplType;
-    using TextureImplType                   = typename RenderDeviceImplTraits::TextureImplType;
-    using TextureViewImplType               = typename RenderDeviceImplTraits::TextureViewImplType;
-    using ShaderImplType                    = typename RenderDeviceImplTraits::ShaderImplType;
-    using SamplerImplType                   = typename RenderDeviceImplTraits::SamplerImplType;
-    using FenceImplType                     = typename RenderDeviceImplTraits::FenceImplType;
-    using QueryImplType                     = typename RenderDeviceImplTraits::QueryImplType;
-    using RenderPassImplType                = typename RenderDeviceImplTraits::RenderPassImplType;
-    using FramebufferImplType               = typename RenderDeviceImplTraits::FramebufferImplType;
-    using BottomLevelASImplType             = typename RenderDeviceImplTraits::BottomLevelASImplType;
-    using TopLevelASImplType                = typename RenderDeviceImplTraits::TopLevelASImplType;
-    using ShaderBindingTableImplType        = typename RenderDeviceImplTraits::ShaderBindingTableImplType;
-    using PipelineResourceSignatureImplType = typename RenderDeviceImplTraits::PipelineResourceSignatureImplType;
+    using RenderDeviceImplType              = typename EngineImplTraits::RenderDeviceImplType;
+    using PipelineStateImplType             = typename EngineImplTraits::PipelineStateImplType;
+    using ShaderResourceBindingImplType     = typename EngineImplTraits::ShaderResourceBindingImplType;
+    using BufferImplType                    = typename EngineImplTraits::BufferImplType;
+    using BufferViewImplType                = typename EngineImplTraits::BufferViewImplType;
+    using TextureImplType                   = typename EngineImplTraits::TextureImplType;
+    using TextureViewImplType               = typename EngineImplTraits::TextureViewImplType;
+    using ShaderImplType                    = typename EngineImplTraits::ShaderImplType;
+    using SamplerImplType                   = typename EngineImplTraits::SamplerImplType;
+    using FenceImplType                     = typename EngineImplTraits::FenceImplType;
+    using QueryImplType                     = typename EngineImplTraits::QueryImplType;
+    using RenderPassImplType                = typename EngineImplTraits::RenderPassImplType;
+    using FramebufferImplType               = typename EngineImplTraits::FramebufferImplType;
+    using BottomLevelASImplType             = typename EngineImplTraits::BottomLevelASImplType;
+    using TopLevelASImplType                = typename EngineImplTraits::TopLevelASImplType;
+    using ShaderBindingTableImplType        = typename EngineImplTraits::ShaderBindingTableImplType;
+    using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
 
     /// \param pRefCounters        - Reference counters object that controls the lifetime of this render device
     /// \param RawMemAllocator     - Allocator that will be used to allocate memory for all device objects (including render device itself)

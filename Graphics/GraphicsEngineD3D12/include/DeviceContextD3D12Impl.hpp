@@ -48,25 +48,11 @@
 namespace Diligent
 {
 
-struct DeviceContextD3D12ImplTraits
-{
-    using BufferType        = BufferD3D12Impl;
-    using TextureType       = TextureD3D12Impl;
-    using PipelineStateType = PipelineStateD3D12Impl;
-    using DeviceType        = RenderDeviceD3D12Impl;
-    using ICommandQueueType = ICommandQueueD3D12;
-    using QueryType         = QueryD3D12Impl;
-    using FramebufferType   = FramebufferD3D12Impl;
-    using RenderPassType    = RenderPassD3D12Impl;
-    using BottomLevelASType = BottomLevelASD3D12Impl;
-    using TopLevelASType    = TopLevelASD3D12Impl;
-};
-
 /// Device context implementation in Direct3D12 backend.
-class DeviceContextD3D12Impl final : public DeviceContextNextGenBase<IDeviceContextD3D12, DeviceContextD3D12ImplTraits>
+class DeviceContextD3D12Impl final : public DeviceContextNextGenBase<EngineD3D12ImplTraits>
 {
 public:
-    using TDeviceContextBase = DeviceContextNextGenBase<IDeviceContextD3D12, DeviceContextD3D12ImplTraits>;
+    using TDeviceContextBase = DeviceContextNextGenBase<EngineD3D12ImplTraits>;
 
     DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters,
                            RenderDeviceD3D12Impl*       pDevice,

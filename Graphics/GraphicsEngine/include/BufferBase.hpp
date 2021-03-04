@@ -54,20 +54,23 @@ void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc, BufferViewDesc
 
 /// Template class implementing base functionality of the buffer object
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::IBufferD3D11, Diligent::IBufferD3D12,
-///                          Diligent::IBufferGL or Diligent::IBufferVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-/// \tparam BufferViewImplType - Type of the buffer view implementation
-///                              (Diligent::BufferViewD3D11Impl, Diligent::BufferViewD3D12Impl,
-///                               Diligent::BufferViewGLImpl or Diligent::BufferViewVkImpl)
-/// \tparam TBuffViewObjAllocator - type of the allocator that is used to allocate memory for the buffer view object instances
-template <class BaseInterface, class RenderDeviceImplType, class BufferViewImplType, class TBuffViewObjAllocator>
-class BufferBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class BufferBase : public DeviceObjectBase<typename EngineImplTraits::BufferInterface, typename EngineImplTraits::RenderDeviceImplType, BufferDesc>
 {
 public:
+    // Base interface that this class inherits (IBufferD3D12, IBufferVk, etc.).
+    using BaseInterface = typename EngineImplTraits::BufferInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
+    // Buffer view implementation type (BufferViewD3D12Impl, BufferViewVkImpl, etc.).
+    using BufferViewImplType = typename EngineImplTraits::BufferViewImplType;
+
+    // The type of the allocator that is used to allocate memory for the buffer view object instances.
+    using TBuffViewObjAllocator = typename EngineImplTraits::BuffViewObjAllocatorType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferDesc>;
 
     /// \param pRefCounters         - Reference counters object that controls the lifetime of this buffer.

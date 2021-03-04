@@ -69,14 +69,17 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
 
 /// Template class implementing base functionality of the bottom-level acceleration structure object.
 
-/// \tparam BaseInterface        - Base interface that this class will inheret
-///                                (Diligent::IBottomLevelASD3D12 or Diligent::IBottomLevelASVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class BottomLevelASBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, BottomLevelASDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class BottomLevelASBase : public DeviceObjectBase<typename EngineImplTraits::BottomLevelASInterface, typename EngineImplTraits::RenderDeviceImplType, BottomLevelASDesc>
 {
 public:
+    // Base interface that this class inherits (IBottomLevelASD3D12 or IBottomLevelASVk).
+    using BaseInterface = typename EngineImplTraits::BottomLevelASInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl or RenderDeviceVkImpl).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BottomLevelASDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this BLAS.

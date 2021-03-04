@@ -90,28 +90,28 @@ struct VertexStreamInfo
 
 /// Base implementation of the device context.
 
-/// \tparam BaseInterface         - Base interface that this class will inheret.
-/// \tparam ImplementationTraits  - Implementation traits that define specific implementation details
+/// \tparam EngineImplTraits     - Engine implementation traits that define specific implementation details
 ///                                 (texture implemenation type, buffer implementation type, etc.)
 /// \remarks Device context keeps strong references to all objects currently bound to
 ///          the pipeline: buffers, tetxures, states, SRBs, etc.
 ///          The context also keeps strong references to the device and
 ///          the swap chain.
-template <typename BaseInterface, typename ImplementationTraits>
-class DeviceContextBase : public ObjectBase<BaseInterface>
+template <typename EngineImplTraits>
+class DeviceContextBase : public ObjectBase<typename EngineImplTraits::DeviceContextInterface>
 {
 public:
+    using BaseInterface         = typename EngineImplTraits::DeviceContextInterface;
     using TObjectBase           = ObjectBase<BaseInterface>;
-    using DeviceImplType        = typename ImplementationTraits::DeviceType;
-    using BufferImplType        = typename ImplementationTraits::BufferType;
-    using TextureImplType       = typename ImplementationTraits::TextureType;
-    using PipelineStateImplType = typename ImplementationTraits::PipelineStateType;
-    using TextureViewImplType   = typename TextureImplType::ViewImplType;
-    using QueryImplType         = typename ImplementationTraits::QueryType;
-    using FramebufferImplType   = typename ImplementationTraits::FramebufferType;
-    using RenderPassImplType    = typename ImplementationTraits::RenderPassType;
-    using BottomLevelASType     = typename ImplementationTraits::BottomLevelASType;
-    using TopLevelASType        = typename ImplementationTraits::TopLevelASType;
+    using DeviceImplType        = typename EngineImplTraits::RenderDeviceImplType;
+    using BufferImplType        = typename EngineImplTraits::BufferImplType;
+    using TextureImplType       = typename EngineImplTraits::TextureImplType;
+    using PipelineStateImplType = typename EngineImplTraits::PipelineStateImplType;
+    using TextureViewImplType   = typename EngineImplTraits::TextureViewImplType;
+    using QueryImplType         = typename EngineImplTraits::QueryImplType;
+    using FramebufferImplType   = typename EngineImplTraits::FramebufferImplType;
+    using RenderPassImplType    = typename EngineImplTraits::RenderPassImplType;
+    using BottomLevelASType     = typename EngineImplTraits::BottomLevelASImplType;
+    using TopLevelASType        = typename EngineImplTraits::TopLevelASImplType;
 
     /// \param pRefCounters  - Reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - Render device.
@@ -415,8 +415,8 @@ protected:
 };
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetVertexBuffers(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
     Uint32                         StartSlot,
     Uint32                         NumBuffersSet,
     IBuffer**                      ppBuffers,
@@ -476,16 +476,16 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetVertexBuf
         m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo<BufferImplType>{};
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetPipelineState(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
     PipelineStateImplType* pPipelineState,
     int /*Dummy*/)
 {
     m_pPipelineState = pPipelineState;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::CommitShaderResources(
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::CommitShaderResources(
     IShaderResourceBinding*        pShaderResourceBinding,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
     int)
@@ -505,17 +505,17 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::CommitShader
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::InvalidateState()
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::InvalidateState()
 {
     if (m_pActiveRenderPass != nullptr)
         LOG_ERROR_MESSAGE("Invalidating context inside an active render pass. Call EndRenderPass() to finish the pass.");
 
-    DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCache();
+    DeviceContextBase<ImplementationTraits>::ClearStateCache();
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetIndexBuffer(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
     IBuffer*                       pIndexBuffer,
     Uint32                         ByteOffset,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -539,8 +539,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetIndexBuff
 }
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef)
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef)
 {
     DEV_CHECK_ERR(ppPSO != nullptr, "Null pointer provided null");
     DEV_CHECK_ERR(*ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state");
@@ -558,8 +558,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetPipelineS
     StencilRef = m_StencilRef;
 };
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetBlendFactors(const float* BlendFactors, int)
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::SetBlendFactors(const float* BlendFactors, int)
 {
     bool FactorsDiffer = false;
     for (Uint32 f = 0; f < 4; ++f)
@@ -571,8 +571,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetBlendFact
     return FactorsDiffer;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetStencilRef(Uint32 StencilRef, int)
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::SetStencilRef(Uint32 StencilRef, int)
 {
     if (m_StencilRef != StencilRef)
     {
@@ -582,8 +582,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetStencilRe
     return false;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetViewports(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::SetViewports(
     Uint32          NumViewports,
     const Viewport* pViewports,
     Uint32&         RTWidth,
@@ -614,8 +614,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetViewports
     }
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetViewports(Uint32& NumViewports, Viewport* pViewports)
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::GetViewports(Uint32& NumViewports, Viewport* pViewports)
 {
     NumViewports = m_NumViewports;
     if (pViewports)
@@ -625,8 +625,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetViewports
     }
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetScissorRects(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::SetScissorRects(
     Uint32      NumRects,
     const Rect* pRects,
     Uint32&     RTWidth,
@@ -649,8 +649,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::SetScissorRe
     }
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTargets(
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
     Uint32        NumRenderTargets,
     ITextureView* ppRenderTargets[],
     ITextureView* pDepthStencil)
@@ -768,8 +768,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetRenderTar
     return bBindRenderTargets;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRenderTargets()
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
 {
     VERIFY_EXPR(m_pBoundFramebuffer);
     VERIFY_EXPR(m_pActiveRenderPass);
@@ -828,8 +828,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRe
 }
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetRenderTargets(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::GetRenderTargets(
     Uint32&        NumRenderTargets,
     ITextureView** ppRTVs,
     ITextureView** ppDSV)
@@ -864,8 +864,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GetRenderTar
     }
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCache()
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::ClearStateCache()
 {
     for (Uint32 stream = 0; stream < m_NumVertexStreams; ++stream)
         m_VertexStreams[stream] = VertexStreamInfo<BufferImplType>{};
@@ -903,8 +903,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCa
     m_pBoundFramebuffer = nullptr;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::CheckIfBoundAsRenderTarget(TextureImplType* pTexture)
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::CheckIfBoundAsRenderTarget(TextureImplType* pTexture)
 {
     if (pTexture == nullptr)
         return false;
@@ -920,8 +920,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CheckIfBoundAsRende
     return false;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::CheckIfBoundAsDepthStencil(TextureImplType* pTexture)
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::CheckIfBoundAsDepthStencil(TextureImplType* pTexture)
 {
     if (pTexture == nullptr)
         return false;
@@ -929,8 +929,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CheckIfBoundAsDepth
     return m_pBoundDepthStencil && m_pBoundDepthStencil->GetTexture() == pTexture;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage)
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage)
 {
     VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass.");
 
@@ -983,8 +983,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::UnbindTextureFromFr
     return bResetRenderTargets;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets()
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::ResetRenderTargets()
 {
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         m_pBoundRenderTargets[rt].Release();
@@ -1006,8 +1006,8 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets(
     // be a subpass without any render target attachments.
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
     VERIFY(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
     VERIFY(m_pBoundFramebuffer == nullptr, "Attempting to begin render pass while another framebuffer ('", m_pBoundFramebuffer->GetDesc().Name, "') is bound.");
@@ -1058,8 +1058,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
     SetSubpassRenderTargets();
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::NextSubpass()
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::NextSubpass()
 {
     VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
     VERIFY(m_SubpassIndex + 1 < m_pActiveRenderPass->GetDesc().SubpassCount, "The render pass has reached the final subpass already");
@@ -1068,8 +1068,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::NextSubpass(
     SetSubpassRenderTargets();
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateAttachmentStates(Uint32 SubpassIndex)
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::UpdateAttachmentStates(Uint32 SubpassIndex)
 {
     if (m_RenderPassAttachmentsTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
         return;
@@ -1098,8 +1098,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateAttach
     }
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPass()
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::EndRenderPass()
 {
     VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
     VERIFY(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
@@ -1116,8 +1116,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPas
 }
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearDepthStencil(ITextureView* pView)
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureView* pView)
 {
     if (pView == nullptr)
     {
@@ -1165,8 +1165,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearDepthSt
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderTarget(ITextureView* pView)
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureView* pView)
 {
     if (pView == nullptr)
     {
@@ -1219,8 +1219,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderT
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::BeginQuery(IQuery* pQuery, int)
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, int)
 {
     if (pQuery == nullptr)
     {
@@ -1248,8 +1248,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::BeginQuery(I
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::EndQuery(IQuery* pQuery, int)
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, int)
 {
     if (pQuery == nullptr)
     {
@@ -1271,8 +1271,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::EndQuery(IQu
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateBuffer(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::UpdateBuffer(
     IBuffer*                       pBuffer,
     Uint32                         Offset,
     Uint32                         Size,
@@ -1291,8 +1291,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateBuffer
 #endif
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBuffer(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::CopyBuffer(
     IBuffer*                       pSrcBuffer,
     Uint32                         SrcOffset,
     RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
@@ -1314,8 +1314,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBuffer(
 #endif
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::MapBuffer(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::MapBuffer(
     IBuffer*  pBuffer,
     MAP_TYPE  MapType,
     MAP_FLAGS MapFlags,
@@ -1372,8 +1372,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::MapBuffer(
     }
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     VERIFY(pBuffer, "pBuffer must not be null");
 #ifdef DILIGENT_DEBUG
@@ -1387,8 +1387,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UnmapBuffer(
 }
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateTexture(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::UpdateTexture(
     ITexture*                      pTexture,
     Uint32                         MipLevel,
     Uint32                         Slice,
@@ -1403,8 +1403,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateTextur
     ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTexture(const CopyTextureAttribs& CopyAttribs)
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
     DEV_CHECK_ERR(CopyAttribs.pSrcTexture, "Src texture must not be null");
     DEV_CHECK_ERR(CopyAttribs.pDstTexture, "Dst texture must not be null");
@@ -1413,8 +1413,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTexture(
     ValidateCopyTextureParams(CopyAttribs);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::MapTextureSubresource(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::MapTextureSubresource(
     ITexture*                 pTexture,
     Uint32                    MipLevel,
     Uint32                    ArraySlice,
@@ -1427,8 +1427,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::MapTextureSu
     ValidateMapTextureParams(pTexture->GetDesc(), MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UnmapTextureSubresource(
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::UnmapTextureSubresource(
     ITexture* pTexture,
     Uint32    MipLevel,
     Uint32    ArraySlice)
@@ -1438,8 +1438,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UnmapTexture
     DEV_CHECK_ERR(ArraySlice < pTexture->GetDesc().ArraySize, "Array slice is out of range");
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GenerateMips(ITextureView* pTexView)
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::GenerateMips(ITextureView* pTexView)
 {
     DEV_CHECK_ERR(pTexView != nullptr, "pTexView must not be null");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "GenerateMips command must be used outside of render pass.");
@@ -1455,8 +1455,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::GenerateMips
 }
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-void DeviceContextBase<BaseInterface, ImplementationTraits>::ResolveTextureSubresource(
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::ResolveTextureSubresource(
     ITexture*                               pSrcTexture,
     ITexture*                               pDstTexture,
     const ResolveTextureSubresourceAttribs& ResolveAttribs)
@@ -1473,8 +1473,8 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResolveTextureSubre
 }
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
@@ -1496,8 +1496,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const Bui
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
@@ -1519,8 +1519,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const Bui
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
@@ -1542,8 +1542,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
@@ -1571,8 +1571,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
@@ -1594,8 +1594,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteBLASCompactedS
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
@@ -1617,8 +1617,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteTLASCompactedS
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
@@ -1670,8 +1670,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const Tra
 
 #ifdef DILIGENT_DEVELOPMENT
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawArguments(const DrawAttribs& Attribs) const
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawArguments(const DrawAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1691,8 +1691,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDra
     return VerifyDrawAttribs(Attribs);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawIndexedArguments(const DrawIndexedAttribs& Attribs) const
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedArguments(const DrawIndexedAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1719,8 +1719,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDra
     return VerifyDrawIndexedAttribs(Attribs);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs) const
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1747,8 +1747,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDra
     return VerifyDrawMeshAttribs(m_pDevice->GetProperties().MaxDrawMeshTasksCount, Attribs);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawIndirectArguments(
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArguments(
     const DrawIndirectAttribs& Attribs,
     const IBuffer*             pAttribsBuffer) const
 {
@@ -1779,8 +1779,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDra
     return VerifyDrawIndirectAttribs(Attribs, pAttribsBuffer);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawIndexedIndirectArguments(
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirectArguments(
     const DrawIndexedIndirectAttribs& Attribs,
     const IBuffer*                    pAttribsBuffer) const
 {
@@ -1816,8 +1816,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDra
     return VerifyDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDrawMeshIndirectArguments(
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectArguments(
     const DrawMeshIndirectAttribs& Attribs,
     const IBuffer*                 pAttribsBuffer) const
 {
@@ -1846,8 +1846,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDra
     return VerifyDrawMeshIndirectAttribs(Attribs, pAttribsBuffer);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyRenderTargets() const
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() const
 {
     if (!m_pPipelineState)
     {
@@ -1907,8 +1907,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyRen
 
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDispatchArguments(const DispatchComputeAttribs& Attribs) const
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchArguments(const DispatchComputeAttribs& Attribs) const
 {
     if (!m_pPipelineState)
     {
@@ -1932,8 +1932,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDis
     return VerifyDispatchComputeAttribs(Attribs);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDispatchIndirectArguments(
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectArguments(
     const DispatchComputeIndirectAttribs& Attribs,
     const IBuffer*                        pAttribsBuffer) const
 {
@@ -1960,14 +1960,14 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyDis
 }
 
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
 {
     return VerifyStateTransitionDesc(m_pDevice, Barrier);
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyTextureState(
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::DvpVerifyTextureState(
     const TextureImplType& Texture,
     RESOURCE_STATE         RequiredState,
     const char*            OperationName) const
@@ -1983,8 +1983,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyTextureSta
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyBufferState(
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::DvpVerifyBufferState(
     const BufferImplType& Buffer,
     RESOURCE_STATE        RequiredState,
     const char*           OperationName) const
@@ -2000,8 +2000,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyBufferStat
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyBLASState(
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::DvpVerifyBLASState(
     const BottomLevelASType& BLAS,
     RESOURCE_STATE           RequiredState,
     const char*              OperationName) const
@@ -2017,8 +2017,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyBLASState(
     return true;
 }
 
-template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::DvpVerifyTLASState(
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::DvpVerifyTLASState(
     const TopLevelASType& TLAS,
     RESOURCE_STATE        RequiredState,
     const char*           OperationName) const

@@ -38,10 +38,10 @@ namespace Diligent
 {
 
 /// Render pass implementation in Direct3D12 backend.
-class RenderPassD3D12Impl final : public RenderPassBase<IRenderPass, RenderDeviceD3D12Impl>
+class RenderPassD3D12Impl final : public RenderPassBase<EngineD3D12ImplTraits>
 {
 public:
-    using TRenderPassBase = RenderPassBase<IRenderPass, RenderDeviceD3D12Impl>;
+    using TRenderPassBase = RenderPassBase<EngineD3D12ImplTraits>;
 
     RenderPassD3D12Impl(IReferenceCounters*    pRefCounters,
                         RenderDeviceD3D12Impl* pDevice,

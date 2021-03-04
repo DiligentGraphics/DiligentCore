@@ -32,6 +32,7 @@
 
 #include <array>
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "RootParamsManager.hpp"
@@ -42,16 +43,14 @@ namespace Diligent
 {
 
 class CommandContext;
-class RenderDeviceD3D12Impl;
-class DeviceContextD3D12Impl;
 class ShaderVariableManagerD3D12;
 struct D3DShaderResourceAttribs;
 
 /// Implementation of the Diligent::PipelineResourceSignatureD3D12Impl class
-class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceD3D12Impl>
+class PipelineResourceSignatureD3D12Impl final : public PipelineResourceSignatureBase<EngineD3D12ImplTraits>
 {
 public:
-    using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceD3D12Impl>;
+    using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineD3D12ImplTraits>;
 
     PipelineResourceSignatureD3D12Impl(IReferenceCounters*                  pRefCounters,
                                        RenderDeviceD3D12Impl*               pDevice,

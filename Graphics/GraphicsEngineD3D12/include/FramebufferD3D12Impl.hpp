@@ -38,10 +38,10 @@ namespace Diligent
 {
 
 /// Render pass implementation in Direct3D12 backend.
-class FramebufferD3D12Impl final : public FramebufferBase<IFramebuffer, RenderDeviceD3D12Impl>
+class FramebufferD3D12Impl final : public FramebufferBase<EngineD3D12ImplTraits>
 {
 public:
-    using TFramebufferBase = FramebufferBase<IFramebuffer, RenderDeviceD3D12Impl>;
+    using TFramebufferBase = FramebufferBase<EngineD3D12ImplTraits>;
 
     FramebufferD3D12Impl(IReferenceCounters*    pRefCounters,
                          RenderDeviceD3D12Impl* pDevice,

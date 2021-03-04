@@ -40,10 +40,10 @@
 namespace Diligent
 {
 
-class TopLevelASVkImpl final : public TopLevelASBase<ITopLevelASVk, BottomLevelASVkImpl, RenderDeviceVkImpl>
+class TopLevelASVkImpl final : public TopLevelASBase<EngineVkImplTraits>
 {
 public:
-    using TTopLevelASBase = TopLevelASBase<ITopLevelASVk, BottomLevelASVkImpl, RenderDeviceVkImpl>;
+    using TTopLevelASBase = TopLevelASBase<EngineVkImplTraits>;
 
     TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
                      RenderDeviceVkImpl*   pRenderDeviceVk,

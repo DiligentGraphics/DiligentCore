@@ -32,6 +32,7 @@
 
 #include <array>
 
+#include "EngineVkImplTraits.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "SRBMemoryAllocator.hpp"
@@ -66,10 +67,10 @@ enum class DescriptorType : Uint8
 };
 
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class
-class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceVkImpl>
+class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBase<EngineVkImplTraits>
 {
 public:
-    using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<IPipelineResourceSignature, RenderDeviceVkImpl>;
+    using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineVkImplTraits>;
 
     // Descriptor set identifier (this is not the descriptor set index in the set layout!)
     enum DESCRIPTOR_SET_ID : size_t

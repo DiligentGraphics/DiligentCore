@@ -45,16 +45,18 @@ namespace Diligent
 
 /// Template class implementing base functionality of the shader resource binding
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::IShaderResourceBindingGL, Diligent::IShaderResourceBindingD3D11,
-///                          Diligent::IShaderResourceBindingD3D12 or Diligent::IShaderResourceBindingVk).
-/// \tparam ResourceSignatureType - Type of the pipeline resource signature implementation
-///                                 (Diligent::PipelineResourceSignatureD3D12Impl, Diligent::PipelineResourceSignatureVkImpl, etc.)
-template <class BaseInterface, class ResourceSignatureType>
-class ShaderResourceBindingBase : public ObjectBase<BaseInterface>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class ShaderResourceBindingBase : public ObjectBase<typename EngineImplTraits::ShaderResourceBindingInterface>
 {
 public:
-    typedef ObjectBase<BaseInterface> TObjectBase;
+    // Base interface this class inherits (IShaderResourceBindingD3D12, IShaderResourceBindingVk, etc.)
+    using BaseInterface = typename EngineImplTraits::ShaderResourceBindingInterface;
+
+    // Type of the pipeline resource signature implementation (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.).
+    using ResourceSignatureType = typename EngineImplTraits::PipelineResourceSignatureImplType;
+
+    using TObjectBase = ObjectBase<BaseInterface>;
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this SRB.
     /// \param pPRS         - Pipeline resource signature that this SRB belongs to.

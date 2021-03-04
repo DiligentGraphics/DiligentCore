@@ -10,6 +10,7 @@ set(INCLUDE
     include/CommandQueueVkImpl.hpp
     include/DescriptorPoolManager.hpp
     include/DeviceContextVkImpl.hpp
+    include/EngineVkImplTraits.hpp
     include/FenceVkImpl.hpp
     include/FramebufferVkImpl.hpp
     include/VulkanDynamicHeap.hpp

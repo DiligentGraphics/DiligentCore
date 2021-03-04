@@ -42,10 +42,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Render pass implementation in Vulkan backend.
-class RenderPassVkImpl final : public RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>
+class RenderPassVkImpl final : public RenderPassBase<EngineVkImplTraits>
 {
 public:
-    using TRenderPassBase = RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>;
+    using TRenderPassBase = RenderPassBase<EngineVkImplTraits>;
 
     RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                      RenderDeviceVkImpl*   pDevice,

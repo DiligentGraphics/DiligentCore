@@ -40,13 +40,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Framebuffer implementation in OpenGL backend.
-class FramebufferGLImpl final : public FramebufferBase<IFramebuffer, RenderDeviceGLImpl>
+class FramebufferGLImpl final : public FramebufferBase<EngineGLImplTraits>
 {
 public:
-    using TFramebufferBase = FramebufferBase<IFramebuffer, RenderDeviceGLImpl>;
+    using TFramebufferBase = FramebufferBase<EngineGLImplTraits>;
 
     FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                       RenderDeviceGLImpl*    pDevice,

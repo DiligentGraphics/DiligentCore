@@ -61,25 +61,11 @@
 namespace Diligent
 {
 
-struct DeviceContextVkImplTraits
-{
-    using BufferType        = BufferVkImpl;
-    using TextureType       = TextureVkImpl;
-    using PipelineStateType = PipelineStateVkImpl;
-    using DeviceType        = RenderDeviceVkImpl;
-    using ICommandQueueType = ICommandQueueVk;
-    using QueryType         = QueryVkImpl;
-    using FramebufferType   = FramebufferVkImpl;
-    using RenderPassType    = RenderPassVkImpl;
-    using BottomLevelASType = BottomLevelASVkImpl;
-    using TopLevelASType    = TopLevelASVkImpl;
-};
-
 /// Device context implementation in Vulkan backend.
-class DeviceContextVkImpl final : public DeviceContextNextGenBase<IDeviceContextVk, DeviceContextVkImplTraits>
+class DeviceContextVkImpl final : public DeviceContextNextGenBase<EngineVkImplTraits>
 {
 public:
-    using TDeviceContextBase = DeviceContextNextGenBase<IDeviceContextVk, DeviceContextVkImplTraits>;
+    using TDeviceContextBase = DeviceContextNextGenBase<EngineVkImplTraits>;
 
     DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
                         RenderDeviceVkImpl*                   pDevice,

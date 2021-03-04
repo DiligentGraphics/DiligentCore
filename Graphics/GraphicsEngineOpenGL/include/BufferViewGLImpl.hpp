@@ -37,10 +37,10 @@ namespace Diligent
 {
 
 /// Buffer view implementation in OpenGL backend.
-class BufferViewGLImpl final : public BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>
+class BufferViewGLImpl final : public BufferViewBase<EngineGLImplTraits>
 {
 public:
-    using TBuffViewBase = BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>;
+    using TBuffViewBase = BufferViewBase<EngineGLImplTraits>;
 
     BufferViewGLImpl(IReferenceCounters*   pRefCounters,
                      RenderDeviceGLImpl*   pDevice,

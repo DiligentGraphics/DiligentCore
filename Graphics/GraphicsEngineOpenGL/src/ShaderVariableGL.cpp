@@ -223,6 +223,7 @@ void ShaderVariableManagerGL::DestroyVariables(IMemoryAllocator& Allocator)
             ssbo.~StorageBufferBindInfo();
         });
 
+    Allocator.Free(m_ResourceBuffer);
     m_ResourceBuffer = nullptr;
 }
 

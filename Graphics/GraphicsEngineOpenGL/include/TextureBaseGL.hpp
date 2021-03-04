@@ -39,13 +39,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Base implementation of a texture object in OpenGL backend.
-class TextureBaseGL : public TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
+class TextureBaseGL : public TextureBase<EngineGLImplTraits>, public AsyncWritableResource
 {
 public:
-    using TTextureBase = TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>;
+    using TTextureBase = TextureBase<EngineGLImplTraits>;
     using ViewImplType = TextureViewGLImpl;
 
     TextureBaseGL(IReferenceCounters*        pRefCounters,

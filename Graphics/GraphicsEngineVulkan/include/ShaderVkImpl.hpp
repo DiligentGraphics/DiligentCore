@@ -43,10 +43,10 @@ class ResourceMapping;
 class FixedBlockMemoryAllocator;
 
 /// Shader object object implementation in Vulkan backend.
-class ShaderVkImpl final : public ShaderBase<IShaderVk, RenderDeviceVkImpl>
+class ShaderVkImpl final : public ShaderBase<EngineVkImplTraits>
 {
 public:
-    using TShaderBase = ShaderBase<IShaderVk, RenderDeviceVkImpl>;
+    using TShaderBase = ShaderBase<EngineVkImplTraits>;
 
     ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreateInfo& CreationAttribs);
     ~ShaderVkImpl();

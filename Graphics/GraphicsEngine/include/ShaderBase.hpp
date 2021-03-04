@@ -44,16 +44,17 @@ namespace Diligent
 
 /// Template class implementing base functionality of the shader object
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::IShaderD3D11, Diligent::IShaderD3D12,
-///                          Diligent::IShaderGL or Diligent::IShaderVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class ShaderBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class ShaderBase : public DeviceObjectBase<typename EngineImplTraits::ShaderInterface, typename EngineImplTraits::RenderDeviceImplType, ShaderDesc>
 {
 public:
+    // Base interface this class inherits (IShaderD3D12, IShaderVk, etc.)
+    using BaseInterface = typename EngineImplTraits::ShaderInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this shader.

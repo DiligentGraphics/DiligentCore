@@ -41,13 +41,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Fence implementation in Vulkan backend.
-class FenceVkImpl final : public FenceBase<IFenceVk, RenderDeviceVkImpl>
+class FenceVkImpl final : public FenceBase<EngineVkImplTraits>
 {
 public:
-    using TFenceBase = FenceBase<IFenceVk, RenderDeviceVkImpl>;
+    using TFenceBase = FenceBase<EngineVkImplTraits>;
 
     FenceVkImpl(IReferenceCounters* pRefCounters,
                 RenderDeviceVkImpl* pRendeDeviceVkImpl,

@@ -38,13 +38,13 @@ namespace Diligent
 
 /// Base implementation of the device context for next-generation backends.
 
-template <typename BaseInterface, typename ImplementationTraits>
-class DeviceContextNextGenBase : public DeviceContextBase<BaseInterface, ImplementationTraits>
+template <typename EngineImplTraits>
+class DeviceContextNextGenBase : public DeviceContextBase<EngineImplTraits>
 {
 public:
-    using TBase             = DeviceContextBase<BaseInterface, ImplementationTraits>;
-    using DeviceImplType    = typename ImplementationTraits::DeviceType;
-    using ICommandQueueType = typename ImplementationTraits::ICommandQueueType;
+    using TBase             = DeviceContextBase<EngineImplTraits>;
+    using DeviceImplType    = typename EngineImplTraits::RenderDeviceImplType;
+    using ICommandQueueType = typename EngineImplTraits::CommandQueueInterface;
 
     DeviceContextNextGenBase(IReferenceCounters* pRefCounters,
                              DeviceImplType*     pRenderDevice,

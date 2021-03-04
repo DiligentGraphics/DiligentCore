@@ -47,24 +47,11 @@
 namespace Diligent
 {
 
-struct DeviceContextGLImplTraits
-{
-    using BufferType        = BufferGLImpl;
-    using TextureType       = TextureBaseGL;
-    using PipelineStateType = PipelineStateGLImpl;
-    using DeviceType        = RenderDeviceGLImpl;
-    using QueryType         = QueryGLImpl;
-    using FramebufferType   = FramebufferGLImpl;
-    using RenderPassType    = RenderPassGLImpl;
-    using BottomLevelASType = BottomLevelASBase<IBottomLevelAS, RenderDeviceGLImpl>;
-    using TopLevelASType    = TopLevelASBase<ITopLevelAS, BottomLevelASType, RenderDeviceGLImpl>;
-};
-
 /// Device context implementation in OpenGL backend.
-class DeviceContextGLImpl final : public DeviceContextBase<IDeviceContextGL, DeviceContextGLImplTraits>
+class DeviceContextGLImpl final : public DeviceContextBase<EngineGLImplTraits>
 {
 public:
-    using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, DeviceContextGLImplTraits>;
+    using TDeviceContextBase = DeviceContextBase<EngineGLImplTraits>;
 
     DeviceContextGLImpl(IReferenceCounters* pRefCounters, RenderDeviceGLImpl* pDeviceGL, bool bIsDeferred);
 

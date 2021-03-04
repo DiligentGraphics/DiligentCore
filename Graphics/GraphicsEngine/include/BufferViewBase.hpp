@@ -40,16 +40,20 @@ namespace Diligent
 
 /// Template class implementing base functionality of the buffer view object
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::IBufferViewD3D11, Diligent::IBufferViewD3D12,
-///                          Diligent::IBufferViewGL or Diligent::IBufferViewVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class BufferViewBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferViewDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class BufferViewBase : public DeviceObjectBase<typename EngineImplTraits::BufferViewInterface, typename EngineImplTraits::RenderDeviceImplType, BufferViewDesc>
 {
 public:
+    // Base interface that this class inherits (IBufferViewD3D12, IBufferViewVk, etc.).
+    using BaseInterface = typename EngineImplTraits::BufferViewInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
+    // Buffer implementation type (BufferD3D12Impl, BufferVkImpl, etc.).
+    using BufferImplType = typename EngineImplTraits::BufferImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferViewDesc>;
 
     /// \param pRefCounters   - Reference counters object that controls the lifetime of this buffer view.

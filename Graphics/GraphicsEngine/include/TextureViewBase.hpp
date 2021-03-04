@@ -40,16 +40,17 @@ namespace Diligent
 
 /// Template class implementing base functionality of the texture view interface
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::ITextureViewD3D11, Diligent::ITextureViewD3D12,
-///                          Diligent::ITextureViewGL or Diligent::ITextureViewVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class TextureViewBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, TextureViewDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class TextureViewBase : public DeviceObjectBase<typename EngineImplTraits::TextureViewInterface, typename EngineImplTraits::RenderDeviceImplType, TextureViewDesc>
 {
 public:
+    // Base interface that this class inherits (ITextureViewD3D12, ITextureViewVk, etc.).
+    using BaseInterface = typename EngineImplTraits::TextureViewInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, TextureViewDesc>;
 
 

@@ -38,8 +38,6 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 inline GLenum GetGLShaderType(SHADER_TYPE ShaderType)
 {
     switch (ShaderType)
@@ -73,10 +71,10 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
 }
 
 /// Shader object implementation in OpenGL backend.
-class ShaderGLImpl final : public ShaderBase<IShaderGL, RenderDeviceGLImpl>
+class ShaderGLImpl final : public ShaderBase<EngineGLImplTraits>
 {
 public:
-    using TShaderBase = ShaderBase<IShaderGL, RenderDeviceGLImpl>;
+    using TShaderBase = ShaderBase<EngineGLImplTraits>;
 
     ShaderGLImpl(IReferenceCounters*     pRefCounters,
                  RenderDeviceGLImpl*     pDeviceGL,

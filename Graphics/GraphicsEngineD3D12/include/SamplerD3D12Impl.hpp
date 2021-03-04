@@ -40,10 +40,10 @@ namespace Diligent
 {
 
 /// Sampler object implementation in Direct3D12 backend.
-class SamplerD3D12Impl final : public SamplerBase<ISamplerD3D12, RenderDeviceD3D12Impl>
+class SamplerD3D12Impl final : public SamplerBase<EngineD3D12ImplTraits>
 {
 public:
-    using TSamplerBase = SamplerBase<ISamplerD3D12, RenderDeviceD3D12Impl>;
+    using TSamplerBase = SamplerBase<EngineD3D12ImplTraits>;
 
     SamplerD3D12Impl(IReferenceCounters*    pRefCounters,
                      RenderDeviceD3D12Impl* pRenderDeviceD3D12,

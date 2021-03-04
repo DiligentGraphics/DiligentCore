@@ -39,10 +39,10 @@ namespace Diligent
 {
 
 /// Fence implementation in Direct3D12 backend.
-class FenceD3D12Impl final : public FenceBase<IFenceD3D12, RenderDeviceD3D12Impl>
+class FenceD3D12Impl final : public FenceBase<EngineD3D12ImplTraits>
 {
 public:
-    using TFenceBase = FenceBase<IFenceD3D12, RenderDeviceD3D12Impl>;
+    using TFenceBase = FenceBase<EngineD3D12ImplTraits>;
 
     FenceD3D12Impl(IReferenceCounters*    pRefCounters,
                    RenderDeviceD3D12Impl* pDevice,

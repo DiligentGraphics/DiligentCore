@@ -48,19 +48,25 @@ void ValidateTopLevelASDesc(const TopLevelASDesc& Desc) noexcept(false);
 
 /// Template class implementing base functionality of the top-level acceleration structure object.
 
-/// \tparam BaseInterface        - Base interface that this class will inheret
-///                                (Diligent::ITopLevelASD3D12 or Diligent::ITopLevelASVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class BottomLevelASType, class RenderDeviceImplType>
-class TopLevelASBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, TopLevelASDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class TopLevelASBase : public DeviceObjectBase<typename EngineImplTraits::TopLevelASInterface, typename EngineImplTraits::RenderDeviceImplType, TopLevelASDesc>
 {
 private:
+    // Base interface that this class inherits (ITopLevelASD3D12, ITopLevelASVk, etc.).
+    using BaseInterface = typename EngineImplTraits::TopLevelASInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
+    // Bottom-level AS implementation type (BottomLevelASD3D12Impl, BottomLevelASVkImpl, etc.).
+    using BottomLevelASImplType = typename EngineImplTraits::BottomLevelASImplType;
+
     struct InstanceDesc
     {
-        Uint32                           ContributionToHitGroupIndex = 0;
-        Uint32                           InstanceIndex               = 0;
-        RefCntAutoPtr<BottomLevelASType> pBLAS;
+        Uint32                               ContributionToHitGroupIndex = 0;
+        Uint32                               InstanceIndex               = 0;
+        RefCntAutoPtr<BottomLevelASImplType> pBLAS;
 #ifdef DILIGENT_DEVELOPMENT
         Uint32 Version = 0;
 #endif
@@ -116,7 +122,7 @@ public:
                 const char*  NameCopy = this->m_StringPool.CopyString(Inst.InstanceName);
                 InstanceDesc Desc     = {};
 
-                Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(Inst.pBLAS);
+                Desc.pBLAS                       = ValidatedCast<BottomLevelASImplType>(Inst.pBLAS);
                 Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
                 Desc.InstanceIndex               = i;
                 CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);
@@ -181,7 +187,7 @@ public:
             const auto PrevIndex = Desc.ContributionToHitGroupIndex;
             const auto pPrevBLAS = Desc.pBLAS;
 
-            Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(Inst.pBLAS);
+            Desc.pBLAS                       = ValidatedCast<BottomLevelASImplType>(Inst.pBLAS);
             Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
             //Desc.InstanceIndex             = i; // keep Desc.InstanceIndex unmodified
             CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);

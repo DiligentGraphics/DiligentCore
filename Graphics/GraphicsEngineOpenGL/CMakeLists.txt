@@ -7,6 +7,7 @@ set(INCLUDE
     include/BufferGLImpl.hpp
     include/BufferViewGLImpl.hpp
     include/DeviceContextGLImpl.hpp 
+    include/EngineGLImplTraits.hpp
     include/FBOCache.hpp
     include/FenceGLImpl.hpp
     include/FramebufferGLImpl.hpp

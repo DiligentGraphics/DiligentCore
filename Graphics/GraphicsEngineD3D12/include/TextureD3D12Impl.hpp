@@ -40,13 +40,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Implementation of a texture object in Direct3D12 backend.
-class TextureD3D12Impl final : public TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
+class TextureD3D12Impl final : public TextureBase<EngineD3D12ImplTraits>, public D3D12ResourceBase
 {
 public:
-    using TTextureBase = TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>;
+    using TTextureBase = TextureBase<EngineD3D12ImplTraits>;
     using ViewImplType = TextureViewD3D12Impl;
 
     // Creates a new D3D12 resource

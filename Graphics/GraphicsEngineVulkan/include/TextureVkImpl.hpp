@@ -40,13 +40,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Texture object implementation in Vulkan backend.
-class TextureVkImpl final : public TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>
+class TextureVkImpl final : public TextureBase<EngineVkImplTraits>
 {
 public:
-    using TTextureBase = TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>;
+    using TTextureBase = TextureBase<EngineVkImplTraits>;
     using ViewImplType = TextureViewVkImpl;
 
     // Creates a new Vk resource

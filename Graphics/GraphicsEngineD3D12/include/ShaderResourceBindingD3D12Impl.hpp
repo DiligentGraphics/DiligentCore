@@ -42,10 +42,10 @@ namespace Diligent
 
 /// Implementation of the Diligent::IShaderResourceBindingD3D12 interface
 // sizeof(ShaderResourceBindingD3D12Impl) == 96 (x64, msvc, Release)
-class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineResourceSignatureD3D12Impl>
+class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<EngineD3D12ImplTraits>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineResourceSignatureD3D12Impl>;
+    using TBase = ShaderResourceBindingBase<EngineD3D12ImplTraits>;
 
     ShaderResourceBindingD3D12Impl(IReferenceCounters*                 pRefCounters,
                                    PipelineResourceSignatureD3D12Impl* pPRS);

@@ -43,10 +43,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Query implementation in Vulkan backend.
-class QueryVkImpl final : public QueryBase<IQueryVk, RenderDeviceVkImpl>
+class QueryVkImpl final : public QueryBase<EngineVkImplTraits>
 {
 public:
-    using TQueryBase = QueryBase<IQueryVk, RenderDeviceVkImpl>;
+    using TQueryBase = QueryBase<EngineVkImplTraits>;
 
     QueryVkImpl(IReferenceCounters* pRefCounters,
                 RenderDeviceVkImpl* pRendeDeviceVkImpl,

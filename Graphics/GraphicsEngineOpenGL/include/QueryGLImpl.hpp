@@ -39,13 +39,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Query object implementation in OpenGL backend.
-class QueryGLImpl final : public QueryBase<IQueryGL, RenderDeviceGLImpl>
+class QueryGLImpl final : public QueryBase<EngineGLImplTraits>
 {
 public:
-    using TQueryBase = QueryBase<IQueryGL, RenderDeviceGLImpl>;
+    using TQueryBase = QueryBase<EngineGLImplTraits>;
 
     QueryGLImpl(IReferenceCounters* pRefCounters,
                 RenderDeviceGLImpl* pDevice,

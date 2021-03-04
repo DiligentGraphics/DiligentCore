@@ -39,10 +39,10 @@
 namespace Diligent
 {
 
-class BottomLevelASVkImpl final : public BottomLevelASBase<IBottomLevelASVk, RenderDeviceVkImpl>
+class BottomLevelASVkImpl final : public BottomLevelASBase<EngineVkImplTraits>
 {
 public:
-    using TBottomLevelASBase = BottomLevelASBase<IBottomLevelASVk, RenderDeviceVkImpl>;
+    using TBottomLevelASBase = BottomLevelASBase<EngineVkImplTraits>;
 
     BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                         RenderDeviceVkImpl*      pRenderDeviceVk,

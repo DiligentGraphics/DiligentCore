@@ -39,15 +39,15 @@ namespace Diligent
 
 /// Base implementation of a D3D render device
 
-template <typename RenderDeviceImplTraits>
-class RenderDeviceD3DBase : public RenderDeviceBase<RenderDeviceImplTraits>
+template <typename EngineImplTraits>
+class RenderDeviceD3DBase : public RenderDeviceBase<EngineImplTraits>
 {
 public:
     RenderDeviceD3DBase(IReferenceCounters* pRefCounters,
                         IMemoryAllocator&   RawMemAllocator,
                         IEngineFactory*     pEngineFactory,
                         Uint32              NumDeferredContexts) :
-        RenderDeviceBase<RenderDeviceImplTraits>{pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts}
+        RenderDeviceBase<EngineImplTraits>{pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts}
     {
         // Flag texture formats always supported in D3D11 and D3D12
 

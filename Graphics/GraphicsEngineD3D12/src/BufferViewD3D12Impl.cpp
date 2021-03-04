@@ -27,6 +27,7 @@
 
 #include "pch.h"
 #include "BufferViewD3D12Impl.hpp"
+#include "BufferD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -34,7 +35,7 @@ namespace Diligent
 BufferViewD3D12Impl::BufferViewD3D12Impl(IReferenceCounters*        pRefCounters,
                                          RenderDeviceD3D12Impl*     pDevice,
                                          const BufferViewDesc&      ViewDesc,
-                                         IBuffer*                   pBuffer,
+                                         BufferD3D12Impl*           pBuffer,
                                          DescriptorHeapAllocation&& HandleAlloc,
                                          bool                       bIsDefaultView) :
     // clang-format off

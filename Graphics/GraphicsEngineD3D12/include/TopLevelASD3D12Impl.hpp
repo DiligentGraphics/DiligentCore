@@ -41,10 +41,10 @@ namespace Diligent
 {
 
 /// Top-level acceleration structure object implementation in Direct3D12 backend.
-class TopLevelASD3D12Impl final : public TopLevelASBase<ITopLevelASD3D12, BottomLevelASD3D12Impl, RenderDeviceD3D12Impl>, public D3D12ResourceBase
+class TopLevelASD3D12Impl final : public TopLevelASBase<EngineD3D12ImplTraits>, public D3D12ResourceBase
 {
 public:
-    using TTopLevelASBase = TopLevelASBase<ITopLevelASD3D12, BottomLevelASD3D12Impl, RenderDeviceD3D12Impl>;
+    using TTopLevelASBase = TopLevelASBase<EngineD3D12ImplTraits>;
 
     TopLevelASD3D12Impl(IReferenceCounters*          pRefCounters,
                         class RenderDeviceD3D12Impl* pDeviceD3D12,

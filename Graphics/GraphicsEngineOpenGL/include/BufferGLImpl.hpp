@@ -39,13 +39,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Buffer object implementation in OpenGL backend.
-class BufferGLImpl final : public BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
+class BufferGLImpl final : public BufferBase<EngineGLImplTraits>, public AsyncWritableResource
 {
 public:
-    using TBufferBase = BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>;
+    using TBufferBase = BufferBase<EngineGLImplTraits>;
 
     BufferGLImpl(IReferenceCounters*        pRefCounters,
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator,

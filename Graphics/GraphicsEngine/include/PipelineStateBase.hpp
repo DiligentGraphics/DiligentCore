@@ -83,16 +83,17 @@ Uint32 FindPipelineResourceLayoutVariable(const PipelineResourceLayoutDesc& Layo
 
 /// Template class implementing base functionality of the pipeline state object.
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::IPipelineStateD3D11, Diligent::IPipelineStateD3D12,
-///                          Diligent::IPipelineStateGL or Diligent::IPipelineStateVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class PipelineStateBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class PipelineStateBase : public DeviceObjectBase<typename EngineImplTraits::PipelineStateInterface, typename EngineImplTraits::RenderDeviceImplType, PipelineStateDesc>
 {
 private:
+    // Base interface this class inherits (IPipelineStateD3D12, IPipelineStateVk, etc.)
+    using BaseInterface = typename EngineImplTraits::PipelineStateInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this PSO

@@ -43,15 +43,17 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc) noexcept(false);
 
 /// Template class implementing base functionality of the framebuffer object.
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (e.g. Diligent::IFramebufferVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class FramebufferBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, FramebufferDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class FramebufferBase : public DeviceObjectBase<typename EngineImplTraits::FramebufferInterface, typename EngineImplTraits::RenderDeviceImplType, FramebufferDesc>
 {
 public:
+    // Base interface that this class inherits (e.g. IFramebufferVk).
+    using BaseInterface = typename EngineImplTraits::FramebufferInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, FramebufferDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this framebuffer pass.

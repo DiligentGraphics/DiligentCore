@@ -28,6 +28,8 @@
 #pragma once
 
 #include <memory>
+
+#include "EngineGLImplTraits.hpp"
 #include "RenderDeviceBase.hpp"
 #include "GLContext.hpp"
 #include "VAOCache.hpp"
@@ -38,54 +40,12 @@
 namespace Diligent
 {
 
-
-class RenderDeviceGLImpl;
-class PipelineStateGLImpl;
-class ShaderResourceBindingGLImpl;
-class BufferGLImpl;
-class BufferViewGLImpl;
-class TextureBaseGL;
-class TextureViewGLImpl;
-class ShaderGLImpl;
-class SamplerGLImpl;
-class FenceGLImpl;
-class QueryGLImpl;
-class RenderPassGLImpl;
-class FramebufferGLImpl;
-class BottomLevelASGLImpl;
-class TopLevelASGLImpl;
-class ShaderBindingTableGLImpl;
-class PipelineResourceSignatureGLImpl;
-
-struct RenderDeviceGLImplTraits
-{
-    using BaseInterface = IGLDeviceBaseInterface;
-
-    using RenderDeviceImplType              = RenderDeviceGLImpl;
-    using PipelineStateImplType             = PipelineStateGLImpl;
-    using ShaderResourceBindingImplType     = ShaderResourceBindingGLImpl;
-    using BufferImplType                    = BufferGLImpl;
-    using BufferViewImplType                = BufferViewGLImpl;
-    using TextureImplType                   = TextureBaseGL;
-    using TextureViewImplType               = TextureViewGLImpl;
-    using ShaderImplType                    = ShaderGLImpl;
-    using SamplerImplType                   = SamplerGLImpl;
-    using FenceImplType                     = FenceGLImpl;
-    using QueryImplType                     = QueryGLImpl;
-    using RenderPassImplType                = RenderPassGLImpl;
-    using FramebufferImplType               = FramebufferGLImpl;
-    using BottomLevelASImplType             = BottomLevelASGLImpl;
-    using TopLevelASImplType                = TopLevelASGLImpl;
-    using ShaderBindingTableImplType        = ShaderBindingTableGLImpl;
-    using PipelineResourceSignatureImplType = PipelineResourceSignatureGLImpl;
-};
-
 /// Render device implementation in OpenGL backend.
 // RenderDeviceGLESImpl is inherited from RenderDeviceGLImpl
-class RenderDeviceGLImpl : public RenderDeviceBase<RenderDeviceGLImplTraits>
+class RenderDeviceGLImpl : public RenderDeviceBase<EngineGLImplTraits>
 {
 public:
-    using TRenderDeviceBase = RenderDeviceBase<RenderDeviceGLImplTraits>;
+    using TRenderDeviceBase = RenderDeviceBase<EngineGLImplTraits>;
 
     RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                        IMemoryAllocator&         RawMemAllocator,

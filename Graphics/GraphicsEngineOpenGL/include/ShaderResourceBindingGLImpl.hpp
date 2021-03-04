@@ -42,10 +42,10 @@ namespace Diligent
 {
 
 /// Shader resource binding object implementation in OpenGL backend.
-class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<IShaderResourceBindingGL, PipelineResourceSignatureGLImpl>
+class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<EngineGLImplTraits>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL, PipelineResourceSignatureGLImpl>;
+    using TBase = ShaderResourceBindingBase<EngineGLImplTraits>;
 
     ShaderResourceBindingGLImpl(IReferenceCounters*              pRefCounters,
                                 PipelineResourceSignatureGLImpl* pPRS);

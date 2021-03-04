@@ -16,6 +16,7 @@ set(INCLUDE
     include/d3dx12_win.h
     include/DescriptorHeap.hpp
     include/DeviceContextD3D12Impl.hpp
+    include/EngineD3D12ImplTraits.hpp
     include/D3D12DynamicHeap.hpp
     include/FenceD3D12Impl.hpp
     include/FramebufferD3D12Impl.hpp

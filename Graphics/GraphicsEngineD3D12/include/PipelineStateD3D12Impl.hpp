@@ -42,15 +42,13 @@
 namespace Diligent
 {
 
-class ShaderD3D12Impl;
 class ShaderResourcesD3D12;
-class ShaderResourceBindingD3D12Impl;
 
 /// Pipeline state object implementation in Direct3D12 backend.
-class PipelineStateD3D12Impl final : public PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>
+class PipelineStateD3D12Impl final : public PipelineStateBase<EngineD3D12ImplTraits>
 {
 public:
-    using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>;
+    using TPipelineStateBase = PipelineStateBase<EngineD3D12ImplTraits>;
 
     PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const GraphicsPipelineStateCreateInfo& CreateInfo);
     PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const ComputePipelineStateCreateInfo& CreateInfo);

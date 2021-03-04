@@ -40,13 +40,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Fence object implementation in OpenGL backend.
-class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
+class FenceGLImpl final : public FenceBase<EngineGLImplTraits>
 {
 public:
-    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
+    using TFenceBase = FenceBase<EngineGLImplTraits>;
 
     FenceGLImpl(IReferenceCounters* pRefCounters,
                 RenderDeviceGLImpl* pDevice,

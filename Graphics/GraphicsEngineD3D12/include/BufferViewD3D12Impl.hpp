@@ -40,15 +40,15 @@ namespace Diligent
 {
 
 /// Buffer view implementation in Direct3D12 backend.
-class BufferViewD3D12Impl final : public BufferViewBase<IBufferViewD3D12, RenderDeviceD3D12Impl>
+class BufferViewD3D12Impl final : public BufferViewBase<EngineD3D12ImplTraits>
 {
 public:
-    using TBufferViewBase = BufferViewBase<IBufferViewD3D12, RenderDeviceD3D12Impl>;
+    using TBufferViewBase = BufferViewBase<EngineD3D12ImplTraits>;
 
     BufferViewD3D12Impl(IReferenceCounters*        pRefCounters,
                         RenderDeviceD3D12Impl*     pDevice,
                         const BufferViewDesc&      ViewDesc,
-                        IBuffer*                   pBuffer,
+                        BufferD3D12Impl*           pBuffer,
                         DescriptorHeapAllocation&& HandleAlloc,
                         bool                       bIsDefaultView);
 

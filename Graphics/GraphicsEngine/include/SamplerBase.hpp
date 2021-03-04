@@ -39,16 +39,17 @@ namespace Diligent
 
 /// Template class implementing base functionality of the sampler object.
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                          (Diligent::ISamplerD3D11, Diligent::ISamplerD3D12,
-///                           Diligent::ISamplerGL or Diligent::ISamplerVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class SamplerBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, SamplerDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class SamplerBase : public DeviceObjectBase<typename EngineImplTraits::SamplerInterface, typename EngineImplTraits::RenderDeviceImplType, SamplerDesc>
 {
 public:
+    // Base interface this class inherits (ISamplerD3D12, ISamplerVk, etc.)
+    using BaseInterface = typename EngineImplTraits::SamplerInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, SamplerDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this sampler.

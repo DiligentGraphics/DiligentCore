@@ -45,10 +45,10 @@ class PipelineResourceSignatureVkImpl;
 
 /// Implementation of the Diligent::IShaderResourceBindingVk interface
 // sizeof(ShaderResourceBindingVkImpl) == 64 (x64, msvc, Release)
-class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineResourceSignatureVkImpl>
+class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<EngineVkImplTraits>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineResourceSignatureVkImpl>;
+    using TBase = ShaderResourceBindingBase<EngineVkImplTraits>;
 
     ShaderResourceBindingVkImpl(IReferenceCounters*              pRefCounters,
                                 PipelineResourceSignatureVkImpl* pPRS);

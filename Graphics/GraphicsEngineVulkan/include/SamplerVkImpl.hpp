@@ -42,10 +42,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Sampler object object implementation in Vulkan backend.
-class SamplerVkImpl final : public SamplerBase<ISamplerVk, RenderDeviceVkImpl>
+class SamplerVkImpl final : public SamplerBase<EngineVkImplTraits>
 {
 public:
-    using TSamplerBase = SamplerBase<ISamplerVk, RenderDeviceVkImpl>;
+    using TSamplerBase = SamplerBase<EngineVkImplTraits>;
 
     SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
     ~SamplerVkImpl();

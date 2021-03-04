@@ -69,14 +69,17 @@ size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatur
 
 /// Template class implementing base functionality of the pipeline resource signature object.
 
-/// \tparam BaseInterface        - Base interface that this class will inheret
-///                                (Diligent::IPipelineResourceSignatureD3D12, Diligent::PipelineResourceSignatureVk, ...).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class PipelineResourceSignatureBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineResourceSignatureDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class PipelineResourceSignatureBase : public DeviceObjectBase<typename EngineImplTraits::PipelineResourceSignatureInterface, typename EngineImplTraits::RenderDeviceImplType, PipelineResourceSignatureDesc>
 {
 public:
+    // Base interface this class inherits (IPipelineResourceSignatureD3D12, PipelineResourceSignatureVk, etc.)
+    using BaseInterface = typename EngineImplTraits::PipelineResourceSignatureInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineResourceSignatureDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this resource signature.

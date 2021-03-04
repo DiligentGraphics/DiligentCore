@@ -42,10 +42,10 @@ namespace Diligent
 {
 
 /// Shader binding table object implementation in Direct3D12 backend.
-class ShaderBindingTableD3D12Impl final : public ShaderBindingTableBase<IShaderBindingTableD3D12, PipelineStateD3D12Impl, TopLevelASD3D12Impl, RenderDeviceD3D12Impl>, public D3D12ResourceBase
+class ShaderBindingTableD3D12Impl final : public ShaderBindingTableBase<EngineD3D12ImplTraits>, public D3D12ResourceBase
 {
 public:
-    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableD3D12, PipelineStateD3D12Impl, TopLevelASD3D12Impl, RenderDeviceD3D12Impl>;
+    using TShaderBindingTableBase = ShaderBindingTableBase<EngineD3D12ImplTraits>;
 
     ShaderBindingTableD3D12Impl(IReferenceCounters*           pRefCounters,
                                 class RenderDeviceD3D12Impl*  pDeviceD3D12,

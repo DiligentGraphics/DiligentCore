@@ -43,10 +43,10 @@ namespace Diligent
 class ResourceMapping;
 
 /// Implementation of a shader object in Direct3D12 backend.
-class ShaderD3D12Impl final : public ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>, public ShaderD3DBase
+class ShaderD3D12Impl final : public ShaderBase<EngineD3D12ImplTraits>, public ShaderD3DBase
 {
 public:
-    using TShaderBase = ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>;
+    using TShaderBase = ShaderBase<EngineD3D12ImplTraits>;
 
     ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
                     RenderDeviceD3D12Impl*  pRenderDeviceD3D12,

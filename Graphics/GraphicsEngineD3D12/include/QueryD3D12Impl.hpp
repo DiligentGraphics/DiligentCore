@@ -42,10 +42,10 @@ namespace Diligent
 // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#queries
 
 /// Query implementation in Direct3D12 backend.
-class QueryD3D12Impl final : public QueryBase<IQueryD3D12, RenderDeviceD3D12Impl>
+class QueryD3D12Impl final : public QueryBase<EngineD3D12ImplTraits>
 {
 public:
-    using TQueryBase = QueryBase<IQueryD3D12, RenderDeviceD3D12Impl>;
+    using TQueryBase = QueryBase<EngineD3D12ImplTraits>;
 
     QueryD3D12Impl(IReferenceCounters*    pRefCounters,
                    RenderDeviceD3D12Impl* pDevice,

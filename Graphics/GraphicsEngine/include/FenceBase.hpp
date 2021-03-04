@@ -39,14 +39,17 @@ namespace Diligent
 
 /// Template class implementing base functionality of the fence object
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::IFenceD3D11, Diligent::IFenceD3D12,
-///                          Diligent::IFenceGL or Diligent::IFenceVk).
-/// \tparam RenderDeviceImplType - type of the render device implementation
-template <class BaseInterface, class RenderDeviceImplType>
-class FenceBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, FenceDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class FenceBase : public DeviceObjectBase<typename EngineImplTraits::FenceInterface, typename EngineImplTraits::RenderDeviceImplType, FenceDesc>
 {
 public:
+    // Base interface that this class inherits (IFenceD3D12, IFenceVk, etc.).
+    using BaseInterface = typename EngineImplTraits::FenceInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     typedef DeviceObjectBase<BaseInterface, RenderDeviceImplType, FenceDesc> TDeviceObjectBase;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this command list.
