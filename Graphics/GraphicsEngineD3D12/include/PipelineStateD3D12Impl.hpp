@@ -121,7 +121,6 @@ private:
 
     void Destruct();
 
-#ifdef DILIGENT_DEVELOPMENT
     struct ResourceAttribution
     {
         static constexpr Uint32 InvalidSignatureIndex = ~0u;
@@ -160,8 +159,7 @@ private:
     };
     ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const;
 
-    void DvpValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig);
-#endif
+    void ValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig);
 
 private:
     CComPtr<ID3D12DeviceChild>        m_pd3d12PSO;

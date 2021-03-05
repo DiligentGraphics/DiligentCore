@@ -635,10 +635,8 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                                     "Compile the shader using SM5.1+ or change the resource layout to use only one space.");
             }
 
-#ifdef DILIGENT_DEVELOPMENT
             // Validate resources before remapping
-            DvpValidateShaderResources(pShader, pLocalRootSig);
-#endif
+            ValidateShaderResources(pShader, pLocalRootSig);
 
             CComPtr<ID3DBlob> pBlob;
             if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
@@ -663,7 +661,6 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 }
 
 
-#ifdef DILIGENT_DEVELOPMENT
 PipelineStateD3D12Impl::ResourceAttribution PipelineStateD3D12Impl::GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
 {
     const auto SignCount = GetResourceSignatureCount();
@@ -686,18 +683,25 @@ PipelineStateD3D12Impl::ResourceAttribution PipelineStateD3D12Impl::GetResourceA
     return ResourceAttribution{};
 }
 
-void PipelineStateD3D12Impl::DvpValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig)
+void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig)
 {
     const auto& pShaderResources = pShader->GetShaderResources();
     const auto  ShaderType       = pShader->GetDesc().ShaderType;
 
+#ifdef DILIGENT_DEVELOPMENT
     m_ShaderResources.emplace_back(pShaderResources);
+#endif
 
     // Check compatibility between shader resources and resource signature.
     pShaderResources->ProcessResources(
         [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
         {
+#ifdef DILIGENT_DEVELOPMENT
             m_ResourceAttibutions.emplace_back();
+            auto& ResAttribution = m_ResourceAttibutions.back();
+#else
+            ResourceAttribution ResAttribution;
+#endif
 
             if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Attribs))
                 return;
@@ -705,8 +709,6 @@ void PipelineStateD3D12Impl::DvpValidateShaderResources(const ShaderD3D12Impl* p
             const auto IsSampler = Attribs.GetInputType() == D3D_SIT_SAMPLER;
             if (IsSampler && pShaderResources->IsUsingCombinedTextureSamplers())
                 return;
-
-            auto& ResAttribution = m_ResourceAttibutions.back();
 
             ResAttribution = GetResourceAttribution(Attribs.Name, ShaderType);
             if (!ResAttribution)
@@ -749,6 +751,7 @@ void PipelineStateD3D12Impl::DvpValidateShaderResources(const ShaderD3D12Impl* p
     );
 }
 
+#ifdef DILIGENT_DEVELOPMENT
 void PipelineStateD3D12Impl::DvpVerifySRBResources(ShaderResourceBindingD3D12Impl* pSRBs[], Uint32 NumSRBs) const
 {
     // Verify SRB compatibility with this pipeline

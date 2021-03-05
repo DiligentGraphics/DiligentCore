@@ -260,7 +260,7 @@ TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
     if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.RayTracing)
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (NO_DYNAMIC_BUFFERS). Only the following flags are valid for a acceleration structure: RUNTIME_ARRAY";
     else
-        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].ResourceType (ACCEL_STRUCT): acceleration structure is not supported by device";
+        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].ResourceType (ACCEL_STRUCT): ray tracing is not supported by device";
 
     TestCreatePRSFailure(PRSDesc, ExpectedErrorSubstring);
 }

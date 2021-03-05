@@ -108,7 +108,7 @@ private:
     SHADER_TYPE GetShaderStageType(Uint32 Index) const;
     Uint32      GetNumShaderStages() const { return m_NumPrograms; }
 
-#ifdef DILIGENT_DEVELOPMENT
+
     struct ResourceAttribution
     {
         static constexpr Uint32 InvalidSignatureIndex = ~0u;
@@ -147,8 +147,7 @@ private:
     };
     ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const;
 
-    void DvpValidateShaderResources(const std::shared_ptr<const ShaderResourcesGL>& pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages);
-#endif
+    void ValidateShaderResources(std::shared_ptr<const ShaderResourcesGL> pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages);
 
 private:
     // Linked GL programs for every shader stage. Every pipeline needs to have its own programs

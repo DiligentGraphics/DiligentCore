@@ -218,39 +218,35 @@ void PipelineStateGLImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
         pSignature->AddBindings(Bindings);
     }
 
-#ifdef DILIGENT_DEVELOPMENT
     const auto& Limits = GetDevice()->GetDeviceLimits();
 
-    DEV_CHECK_ERR(Bindings[BINDING_RANGE_UNIFORM_BUFFER] <= static_cast<Uint32>(Limits.MaxUniformBlocks),
-                  "Number of bindings in range '", GetBindingRangeName(BINDING_RANGE_UNIFORM_BUFFER), "' is greater than maximum allowed (", Limits.MaxUniformBlocks, ").");
-    DEV_CHECK_ERR(Bindings[BINDING_RANGE_TEXTURE] <= static_cast<Uint32>(Limits.MaxTextureUnits),
-                  "Number of bindings in range '", GetBindingRangeName(BINDING_RANGE_TEXTURE), "' is greater than maximum allowed (", Limits.MaxTextureUnits, ").");
-    DEV_CHECK_ERR(Bindings[BINDING_RANGE_STORAGE_BUFFER] <= static_cast<Uint32>(Limits.MaxStorageBlock),
-                  "Number of bindings in range '", GetBindingRangeName(BINDING_RANGE_STORAGE_BUFFER), "' is greater than maximum allowed (", Limits.MaxStorageBlock, ").");
-    DEV_CHECK_ERR(Bindings[BINDING_RANGE_IMAGE] <= static_cast<Uint32>(Limits.MaxImagesUnits),
-                  "Number of bindings in range '", GetBindingRangeName(BINDING_RANGE_IMAGE), "' is greater than maximum allowed (", Limits.MaxImagesUnits, ").");
+    if (Bindings[BINDING_RANGE_UNIFORM_BUFFER] > static_cast<Uint32>(Limits.MaxUniformBlocks))
+        LOG_ERROR_AND_THROW("The number of bindings in range '", GetBindingRangeName(BINDING_RANGE_UNIFORM_BUFFER), "' is greater than the maximum allowed (", Limits.MaxUniformBlocks, ").");
+    if (Bindings[BINDING_RANGE_TEXTURE] > static_cast<Uint32>(Limits.MaxTextureUnits))
+        LOG_ERROR_AND_THROW("The number of bindings in range '", GetBindingRangeName(BINDING_RANGE_TEXTURE), "' is greater than the maximum allowed (", Limits.MaxTextureUnits, ").");
+    if (Bindings[BINDING_RANGE_STORAGE_BUFFER] > static_cast<Uint32>(Limits.MaxStorageBlock))
+        LOG_ERROR_AND_THROW("The number of bindings in range '", GetBindingRangeName(BINDING_RANGE_STORAGE_BUFFER), "' is greater than the maximum allowed (", Limits.MaxStorageBlock, ").");
+    if (Bindings[BINDING_RANGE_IMAGE] > static_cast<Uint32>(Limits.MaxImagesUnits))
+        LOG_ERROR_AND_THROW("The number of bindings in range '", GetBindingRangeName(BINDING_RANGE_IMAGE), "' is greater than the maximum allowed (", Limits.MaxImagesUnits, ").");
 
     if (m_IsProgramPipelineSupported)
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
             auto* pShaderGL = ShaderStages[i];
-            DvpValidateShaderResources(pShaderGL->GetShaderResources(), pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
+            ValidateShaderResources(pShaderGL->GetShaderResources(), pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
         }
     }
     else
     {
-        auto pImmediateCtx = m_pDevice->GetImmediateContext();
-        VERIFY_EXPR(pImmediateCtx);
+        auto* pImmediateCtx = m_pDevice->GetImmediateContext().RawPtr<DeviceContextGLImpl>();
+        VERIFY_EXPR(pImmediateCtx != nullptr);
         VERIFY_EXPR(m_GLPrograms[0] != 0);
 
-        std::unique_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
-        pResources->LoadUniforms(ActiveStages, m_GLPrograms[0], pImmediateCtx.RawPtr<DeviceContextGLImpl>()->GetContextState());
-
-        std::shared_ptr<const ShaderResourcesGL> pShaderResources{pResources.release()};
-        DvpValidateShaderResources(pShaderResources, m_Desc.Name, ActiveStages);
+        std::shared_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
+        pResources->LoadUniforms(ActiveStages, m_GLPrograms[0], pImmediateCtx->GetContextState());
+        ValidateShaderResources(std::move(pResources), m_Desc.Name, ActiveStages);
     }
-#endif
 }
 
 template <typename PSOCreateInfoType>
@@ -473,7 +469,6 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
     return ctx_pipeline.second;
 }
 
-#ifdef DILIGENT_DEVELOPMENT
 PipelineStateGLImpl::ResourceAttribution PipelineStateGLImpl::GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
 {
     const auto SignCount = GetResourceSignatureCount();
@@ -496,17 +491,16 @@ PipelineStateGLImpl::ResourceAttribution PipelineStateGLImpl::GetResourceAttribu
     return ResourceAttribution{};
 }
 
-void PipelineStateGLImpl::DvpValidateShaderResources(const std::shared_ptr<const ShaderResourcesGL>& pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages)
+void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderResourcesGL> pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages)
 {
-    m_ShaderResources.emplace_back(pShaderResources);
-    m_ShaderNames.emplace_back(ShaderName);
-
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, SHADER_RESOURCE_TYPE AltResourceType, PIPELINE_RESOURCE_FLAGS Flags) //
     {
-        m_ResourceAttibutions.emplace_back();
-        auto& ResAttribution = m_ResourceAttibutions.back();
+        const auto ResAttribution = GetResourceAttribution(Attribs.Name, ShaderStages);
 
-        ResAttribution = GetResourceAttribution(Attribs.Name, ShaderStages);
+#ifdef DILIGENT_DEVELOPMENT
+        m_ResourceAttibutions.emplace_back(ResAttribution);
+#endif
+
         if (!ResAttribution)
         {
             LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", Attribs.Name,
@@ -556,8 +550,14 @@ void PipelineStateGLImpl::DvpValidateShaderResources(const std::shared_ptr<const
     };
 
     pShaderResources->ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);
+
+#ifdef DILIGENT_DEVELOPMENT
+    m_ShaderResources.emplace_back(std::move(pShaderResources));
+    m_ShaderNames.emplace_back(ShaderName);
+#endif
 }
 
+#ifdef DILIGENT_DEVELOPMENT
 void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSRBs[],
                                                 const TBindings              BoundResOffsets[],
                                                 Uint32                       NumSRBs) const
