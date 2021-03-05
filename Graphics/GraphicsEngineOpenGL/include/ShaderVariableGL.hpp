@@ -88,7 +88,7 @@ public:
 
     ~ShaderVariableManagerGL();
 
-    void DestroyVariables(IMemoryAllocator& Allocator);
+    void Destroy(IMemoryAllocator& Allocator);
 
     // No copies, only moves are allowed
     // clang-format off

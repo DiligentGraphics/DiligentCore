@@ -139,38 +139,23 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
 
     try
     {
-        FixedLinearAllocator MemPool{GetRawAllocator()};
-
-        // Reserve at least 1 element because m_pResourceAttribs must hold a pointer to memory
-        MemPool.AddSpace<ResourceAttribs>(std::max(1u, Desc.NumResources));
-        MemPool.AddSpace<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
-
-        ReserveSpaceForDescription(MemPool, Desc);
-
-        const auto NumStaticResStages = GetNumStaticResStages();
-        if (NumStaticResStages > 0)
-        {
-            MemPool.AddSpace<ShaderResourceCacheD3D12>(1);
-            MemPool.AddSpace<ShaderVariableManagerD3D12>(NumStaticResStages);
-        }
-
-        MemPool.Reserve();
+        auto& RawAllocator{GetRawAllocator()};
+        auto  MemPool = ReserveSpace(RawAllocator, Desc,
+                                    [&Desc](FixedLinearAllocator& MemPool) //
+                                    {
+                                        MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
+                                        MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
+                                    });
 
         static_assert(std::is_trivially_destructible<ResourceAttribs>::value,
                       "ResourceAttribs objects must be constructed to be properly destructed in case an excpetion is thrown");
-        m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(std::max(1u, m_Desc.NumResources));
+        m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(m_Desc.NumResources);
         m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
-
-        // The memory is now owned by PipelineResourceSignatureD3D12Impl and will be freed by Destruct().
-        auto* Ptr = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_pResourceAttribs);
-        (void)Ptr;
-
-        CopyDescription(MemPool, Desc);
 
         StaticResCacheTblSizesArrayType StaticResCacheTblSizes = {};
         AllocateRootParameters(StaticResCacheTblSizes);
 
+        const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
             m_pStaticResCache = MemPool.Construct<ShaderResourceCacheD3D12>(CacheContentType::Signature);
@@ -178,7 +163,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             // Moreover, all objects must be constructed if an exception is thrown for Destruct() method to work properly.
             m_StaticVarsMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
 
-            m_pStaticResCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
+            m_pStaticResCache->Initialize(RawAllocator, static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
 
             constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
             for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
@@ -188,7 +173,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
                 {
                     VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
                     const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
+                    m_StaticVarsMgrs[Idx].Initialize(*this, RawAllocator, AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
                 }
             }
         }
@@ -398,27 +383,6 @@ PipelineResourceSignatureD3D12Impl::~PipelineResourceSignatureD3D12Impl()
 
 void PipelineResourceSignatureD3D12Impl::Destruct()
 {
-    auto& RawAllocator = GetRawAllocator();
-
-    if (m_StaticVarsMgrs != nullptr)
-    {
-        for (auto Idx : m_StaticResStageIndex)
-        {
-            if (Idx >= 0)
-            {
-                m_StaticVarsMgrs[Idx].Destroy(RawAllocator);
-                m_StaticVarsMgrs[Idx].~ShaderVariableManagerD3D12();
-            }
-        }
-        m_StaticVarsMgrs = nullptr;
-    }
-
-    if (m_pStaticResCache != nullptr)
-    {
-        m_pStaticResCache->~ShaderResourceCacheD3D12();
-        m_pStaticResCache = nullptr;
-    }
-
     if (m_ImmutableSamplers != nullptr)
     {
         for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
@@ -428,11 +392,7 @@ void PipelineResourceSignatureD3D12Impl::Destruct()
         m_ImmutableSamplers = nullptr;
     }
 
-    if (void* pRawMem = m_pResourceAttribs)
-    {
-        RawAllocator.Free(pRawMem);
-        m_pResourceAttribs = nullptr;
-    }
+    m_pResourceAttribs = nullptr;
 
     TPipelineResourceSignatureBase::Destruct();
 }
@@ -471,24 +431,24 @@ void PipelineResourceSignatureD3D12Impl::CreateShaderResourceBinding(IShaderReso
 
 Uint32 PipelineResourceSignatureD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
-    return GetStaticVariableCountImpl(ShaderType, m_StaticVarsMgrs);
+    return GetStaticVariableCountImpl(ShaderType);
 }
 
 IShaderResourceVariable* PipelineResourceSignatureD3D12Impl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
-    return GetStaticVariableByNameImpl(ShaderType, Name, m_StaticVarsMgrs);
+    return GetStaticVariableByNameImpl(ShaderType, Name);
 }
 
 IShaderResourceVariable* PipelineResourceSignatureD3D12Impl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    return GetStaticVariableByIndexImpl(ShaderType, Index, m_StaticVarsMgrs);
+    return GetStaticVariableByIndexImpl(ShaderType, Index);
 }
 
 void PipelineResourceSignatureD3D12Impl::BindStaticResources(Uint32            ShaderFlags,
                                                              IResourceMapping* pResMapping,
                                                              Uint32            Flags)
 {
-    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags, m_StaticVarsMgrs);
+    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags);
 }
 
 size_t PipelineResourceSignatureD3D12Impl::CalculateHash() const

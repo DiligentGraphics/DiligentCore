@@ -33,6 +33,7 @@
 #include <array>
 #include <limits>
 #include <algorithm>
+#include <memory>
 
 #include "PrivateConstants.h"
 #include "PipelineResourceSignature.h"
@@ -79,6 +80,12 @@ public:
 
     // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
     using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
+    // Shader resource cache implementation type (ShaderResourceCacheD3D12, ShaderResourceCacheVk, etc.)
+    using ShaderResourceCacheImplType = typename EngineImplTraits::ShaderResourceCacheImplType;
+
+    // Shader variable manager implementation type (ShaderVariableManagerD3D12, ShaderVariableManagerVk, etc.)
+    using ShaderVariableManagerImplType = typename EngineImplTraits::ShaderVariableManagerImplType;
 
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineResourceSignatureDesc>;
 
@@ -273,8 +280,13 @@ public:
     }
 
 protected:
-    void ReserveSpaceForDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) const noexcept(false)
+    template <typename TReserveCustomData>
+    FixedLinearAllocator ReserveSpace(IMemoryAllocator&                    RawAllocator,
+                                      const PipelineResourceSignatureDesc& Desc,
+                                      TReserveCustomData                   ReserveCustomData) noexcept(false)
     {
+        FixedLinearAllocator Allocator{RawAllocator};
+
         Allocator.AddSpace<PipelineResourceDesc>(Desc.NumResources);
         Allocator.AddSpace<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
 
@@ -300,8 +312,26 @@ protected:
 
         if (Desc.UseCombinedTextureSamplers)
             Allocator.AddSpaceForString(Desc.CombinedSamplerSuffix);
+
+        ReserveCustomData(Allocator);
+
+        const auto NumStaticResStages = GetNumStaticResStages();
+        if (NumStaticResStages > 0)
+        {
+            Allocator.AddSpace<ShaderResourceCacheImplType>(1);
+            Allocator.AddSpace<ShaderVariableManagerImplType>(NumStaticResStages);
+        }
+
+        Allocator.Reserve();
+        // The memory is now owned by PipelineResourceSignatureBase and will be freed by Destruct().
+        m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
+
+        CopyDescription(Allocator, Desc);
+
+        return Allocator;
     }
 
+private:
     void CopyDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) noexcept(false)
     {
         PipelineResourceDesc* pResources = Allocator.ConstructArray<PipelineResourceDesc>(Desc.NumResources);
@@ -355,6 +385,7 @@ protected:
             this->m_Desc.CombinedSamplerSuffix = Allocator.CopyString(Desc.CombinedSamplerSuffix);
     }
 
+protected:
     void Destruct()
     {
         VERIFY(!m_IsDestructed, "This object has already been destructed");
@@ -363,15 +394,37 @@ protected:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
+        auto& RawAllocator = GetRawAllocator();
+
+        if (m_StaticVarsMgrs != nullptr)
+        {
+            for (auto Idx : m_StaticResStageIndex)
+            {
+                if (Idx >= 0)
+                {
+                    m_StaticVarsMgrs[Idx].Destroy(RawAllocator);
+                    m_StaticVarsMgrs[Idx].~ShaderVariableManagerImplType();
+                }
+            }
+            m_StaticVarsMgrs = nullptr;
+        }
+
+        if (m_pStaticResCache != nullptr)
+        {
+            m_pStaticResCache->~ShaderResourceCacheImplType();
+            m_pStaticResCache = nullptr;
+        }
+
         m_StaticResStageIndex.fill(-1);
+
+        m_pRawMemory.reset();
 
 #if DILIGENT_DEBUG
         m_IsDestructed = true;
 #endif
     }
 
-    template <typename ShaderVarManagerType>
-    Uint32 GetStaticVariableCountImpl(SHADER_TYPE ShaderType, const ShaderVarManagerType StaticVarMgrs[]) const
+    Uint32 GetStaticVariableCountImpl(SHADER_TYPE ShaderType) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
@@ -386,11 +439,10 @@ protected:
             return 0;
 
         VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return StaticVarMgrs[VarMngrInd].GetVariableCount();
+        return m_StaticVarsMgrs[VarMngrInd].GetVariableCount();
     }
 
-    template <typename ShaderVarManagerType>
-    IShaderResourceVariable* GetStaticVariableByNameImpl(SHADER_TYPE ShaderType, const Char* Name, const ShaderVarManagerType StaticVarMgrs[]) const
+    IShaderResourceVariable* GetStaticVariableByNameImpl(SHADER_TYPE ShaderType, const Char* Name) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
@@ -405,11 +457,10 @@ protected:
             return nullptr;
 
         VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return StaticVarMgrs[VarMngrInd].GetVariable(Name);
+        return m_StaticVarsMgrs[VarMngrInd].GetVariable(Name);
     }
 
-    template <typename ShaderVarManagerType>
-    IShaderResourceVariable* GetStaticVariableByIndexImpl(SHADER_TYPE ShaderType, Uint32 Index, const ShaderVarManagerType StaticVarMgrs[]) const
+    IShaderResourceVariable* GetStaticVariableByIndexImpl(SHADER_TYPE ShaderType, Uint32 Index) const
     {
         if (!IsConsistentShaderType(ShaderType, m_PipelineType))
         {
@@ -424,14 +475,12 @@ protected:
             return nullptr;
 
         VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return StaticVarMgrs[VarMngrInd].GetVariable(Index);
+        return m_StaticVarsMgrs[VarMngrInd].GetVariable(Index);
     }
 
-    template <typename ShaderVarManagerType>
-    void BindStaticResourcesImpl(Uint32               ShaderFlags,
-                                 IResourceMapping*    pResMapping,
-                                 Uint32               Flags,
-                                 ShaderVarManagerType StaticVarMgrs[])
+    void BindStaticResourcesImpl(Uint32            ShaderFlags,
+                                 IResourceMapping* pResMapping,
+                                 Uint32            Flags)
     {
         const auto PipelineType = GetPipelineType();
         for (Uint32 ShaderInd = 0; ShaderInd < m_StaticResStageIndex.size(); ++ShaderInd)
@@ -444,7 +493,7 @@ protected:
                 const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
                 if (ShaderFlags & ShaderType)
                 {
-                    StaticVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
+                    m_StaticVarsMgrs[VarMngrInd].BindResources(pResMapping, Flags);
                 }
             }
         }
@@ -503,6 +552,14 @@ protected:
     }
 
 protected:
+    std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
+
+    // Static resource cache for all static resources
+    ShaderResourceCacheImplType* m_pStaticResCache = nullptr;
+
+    // Static variables manager for every shader stage
+    ShaderVariableManagerImplType* m_StaticVarsMgrs = nullptr; // [GetNumStaticResStages()]
+
     size_t m_Hash = 0;
 
     // Resource offsets (e.g. index of the first resource), for each variable type.

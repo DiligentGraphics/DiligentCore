@@ -104,7 +104,7 @@ void ShaderResourceBindingGLImpl::Destruct()
         for (Uint32 s = 0; s < GetNumShaders(); ++s)
         {
             auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
-            m_pShaderVarMgrs[s].DestroyVariables(VarDataAllocator);
+            m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
             m_pShaderVarMgrs[s].~ShaderVariableManagerGL();
         }
 

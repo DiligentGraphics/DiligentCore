@@ -124,10 +124,10 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
 
 ShaderVariableManagerVk::~ShaderVariableManagerVk()
 {
-    VERIFY(m_pVariables == nullptr, "DestroyVariables() has not been called");
+    VERIFY(m_pVariables == nullptr, "Destroy() has not been called");
 }
 
-void ShaderVariableManagerVk::DestroyVariables(IMemoryAllocator& Allocator)
+void ShaderVariableManagerVk::Destroy(IMemoryAllocator& Allocator)
 {
     if (m_pVariables != nullptr)
     {

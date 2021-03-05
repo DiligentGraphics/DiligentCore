@@ -74,6 +74,9 @@ class PipelineResourceSignatureVkImpl;
 
 class FixedBlockMemoryAllocator;
 
+class ShaderResourceCacheVk;
+class ShaderVariableManagerVk;
+
 struct EngineVkImplTraits
 {
     using RenderDeviceInterface              = IRenderDeviceVk;
@@ -117,6 +120,9 @@ struct EngineVkImplTraits
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;
+
+    using ShaderResourceCacheImplType   = ShaderResourceCacheVk;
+    using ShaderVariableManagerImplType = ShaderVariableManagerVk;
 };
 
 } // namespace Diligent

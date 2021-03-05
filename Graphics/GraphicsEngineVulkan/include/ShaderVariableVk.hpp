@@ -88,7 +88,7 @@ public:
 
     ~ShaderVariableManagerVk();
 
-    void DestroyVariables(IMemoryAllocator& Allocator);
+    void Destroy(IMemoryAllocator& Allocator);
 
     ShaderVariableVkImpl* GetVariable(const Char* Name) const;
     ShaderVariableVkImpl* GetVariable(Uint32 Index) const;

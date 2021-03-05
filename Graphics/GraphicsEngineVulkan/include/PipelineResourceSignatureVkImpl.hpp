@@ -304,8 +304,7 @@ private:
 
     void Destruct();
 
-    void CreateSetLayouts(const CacheOffsetsType& CacheSizes,
-                          const BindingCountType& BindingCount);
+    void CreateSetLayouts();
 
     size_t CalculateHash() const;
 
@@ -326,11 +325,6 @@ private:
     // The total number storage buffers with dynamic offsets in both descriptor sets,
     // accounting for array size.
     Uint16 m_DynamicStorageBufferCount = 0;
-
-    // Static resource cache for all static resources
-    ShaderResourceCacheVk* m_pStaticResCache = nullptr;
-    // Static variables manager for every shader stage
-    ShaderVariableManagerVk* m_StaticVarsMgrs = nullptr; // [GetNumStaticResStages()]
 
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 

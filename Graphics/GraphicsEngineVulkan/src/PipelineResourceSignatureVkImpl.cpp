@@ -76,7 +76,7 @@ inline VkDescriptorType GetVkDescriptorType(DescriptorType Type)
         case DescriptorType::StorageBufferDynamic_ReadOnly: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         case DescriptorType::InputAttachment:               return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
         case DescriptorType::AccelerationStructure:         return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-            // clang-format on
+        // clang-format on
         default:
             UNEXPECTED("Unknown descriptor type");
             return VK_DESCRIPTOR_TYPE_MAX_ENUM;
@@ -227,61 +227,35 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 {
     try
     {
-        FixedLinearAllocator MemPool{GetRawAllocator()};
+        auto& RawAllocator{GetRawAllocator()};
+        auto  MemPool = ReserveSpace(RawAllocator, Desc,
+                                    [&Desc](FixedLinearAllocator& MemPool) //
+                                    {
+                                        MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
+                                        MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
+                                    });
 
-        // Reserve at least 1 element because m_pResourceAttribs must hold a pointer to memory
-        MemPool.AddSpace<ResourceAttribs>(std::max(1u, Desc.NumResources));
-        MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
-
-        ReserveSpaceForDescription(MemPool, Desc);
-
-        Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
-                                        // accounting for array sizes.
-
-        CacheOffsetsType CacheGroupSizes = {}; // Required cache size for each cache group
-        BindingCountType BindingCount    = {}; // Binding count in each cache group
-
-        for (Uint32 i = 0; i < Desc.NumResources; ++i)
-        {
-            const auto& ResDesc    = Desc.Resources[i];
-            const auto  CacheGroup = GetResourceCacheGroup(ResDesc);
-
-            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                StaticResourceCount += ResDesc.ArraySize;
-
-            BindingCount[CacheGroup] += 1;
-            // Note that we may reserve space for separate immutable samplers, which will never be used, but this is OK.
-            CacheGroupSizes[CacheGroup] += ResDesc.ArraySize;
-        }
-
-        const auto NumStaticResStages = GetNumStaticResStages();
-        if (NumStaticResStages > 0)
-        {
-            MemPool.AddSpace<ShaderResourceCacheVk>(1);
-            MemPool.AddSpace<ShaderVariableManagerVk>(NumStaticResStages);
-        }
-
-        MemPool.Reserve();
-
-        m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(std::max(1u, m_Desc.NumResources));
+        m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(m_Desc.NumResources);
         m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
 
-        // The memory is now owned by PipelineResourceSignatureVkImpl and will be freed by Destruct().
-        auto* Ptr = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_pResourceAttribs);
-        (void)Ptr;
-
-        CopyDescription(MemPool, Desc);
-
+        const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
             m_pStaticResCache = MemPool.Construct<ShaderResourceCacheVk>(CacheContentType::Signature);
             m_StaticVarsMgrs  = MemPool.ConstructArray<ShaderVariableManagerVk>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
 
-            m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount);
+            Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
+                                            // accounting for array sizes.
+            for (Uint32 i = 0; i < Desc.NumResources; ++i)
+            {
+                const auto& ResDesc = Desc.Resources[i];
+                if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                    StaticResourceCount += ResDesc.ArraySize;
+            }
+            m_pStaticResCache->InitializeSets(RawAllocator, 1, &StaticResourceCount);
         }
 
-        CreateSetLayouts(CacheGroupSizes, BindingCount);
+        CreateSetLayouts();
 
         if (NumStaticResStages > 0)
         {
@@ -293,7 +267,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
                 {
                     VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
                     const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
+                    m_StaticVarsMgrs[Idx].Initialize(*this, RawAllocator, AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
                 }
             }
         }
@@ -307,9 +281,20 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     }
 }
 
-void PipelineResourceSignatureVkImpl::CreateSetLayouts(const CacheOffsetsType& CacheGroupSizes,
-                                                       const BindingCountType& BindingCount)
+void PipelineResourceSignatureVkImpl::CreateSetLayouts()
 {
+    CacheOffsetsType CacheGroupSizes = {}; // Required cache size for each cache group
+    BindingCountType BindingCount    = {}; // Binding count in each cache group
+    for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
+    {
+        const auto& ResDesc    = m_Desc.Resources[i];
+        const auto  CacheGroup = GetResourceCacheGroup(ResDesc);
+
+        BindingCount[CacheGroup] += 1;
+        // Note that we may reserve space for separate immutable samplers, which will never be used, but this is OK.
+        CacheGroupSizes[CacheGroup] += ResDesc.ArraySize;
+    }
+
     // Descriptor set mapping (static/mutable (0) or dynamic (1) -> set index)
     std::array<Uint32, DESCRIPTOR_SET_ID_NUM_SETS> DSMapping = {};
     {
@@ -598,27 +583,6 @@ void PipelineResourceSignatureVkImpl::Destruct()
             m_pDevice->SafeReleaseDeviceObject(std::move(Layout), ~0ull);
     }
 
-    auto& RawAllocator = GetRawAllocator();
-
-    if (m_StaticVarsMgrs != nullptr)
-    {
-        for (auto Idx : m_StaticResStageIndex)
-        {
-            if (Idx >= 0)
-            {
-                m_StaticVarsMgrs[Idx].DestroyVariables(RawAllocator);
-                m_StaticVarsMgrs[Idx].~ShaderVariableManagerVk();
-            }
-        }
-        m_StaticVarsMgrs = nullptr;
-    }
-
-    if (m_pStaticResCache != nullptr)
-    {
-        m_pStaticResCache->~ShaderResourceCacheVk();
-        m_pStaticResCache = nullptr;
-    }
-
     if (m_ImmutableSamplers != nullptr)
     {
         for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
@@ -628,11 +592,7 @@ void PipelineResourceSignatureVkImpl::Destruct()
         m_ImmutableSamplers = nullptr;
     }
 
-    if (void* pRawMem = m_pResourceAttribs)
-    {
-        RawAllocator.Free(pRawMem);
-        m_pResourceAttribs = nullptr;
-    }
+    m_pResourceAttribs = nullptr;
 
     TPipelineResourceSignatureBase::Destruct();
 }
@@ -671,24 +631,24 @@ void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourc
 
 Uint32 PipelineResourceSignatureVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
-    return GetStaticVariableCountImpl(ShaderType, m_StaticVarsMgrs);
+    return GetStaticVariableCountImpl(ShaderType);
 }
 
 IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
-    return GetStaticVariableByNameImpl(ShaderType, Name, m_StaticVarsMgrs);
+    return GetStaticVariableByNameImpl(ShaderType, Name);
 }
 
 IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    return GetStaticVariableByIndexImpl(ShaderType, Index, m_StaticVarsMgrs);
+    return GetStaticVariableByIndexImpl(ShaderType, Index);
 }
 
 void PipelineResourceSignatureVkImpl::BindStaticResources(Uint32            ShaderFlags,
                                                           IResourceMapping* pResMapping,
                                                           Uint32            Flags)
 {
-    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags, m_StaticVarsMgrs);
+    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags);
 }
 
 void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache,

@@ -130,35 +130,20 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
 {
     try
     {
-        FixedLinearAllocator MemPool{GetRawAllocator()};
-
-        // Reserve at least 1 element because m_pResourceAttribs must hold a pointer to memory
-        MemPool.AddSpace<ResourceAttribs>(std::max(1u, Desc.NumResources));
-        MemPool.AddSpace<SamplerPtr>(Desc.NumImmutableSamplers);
-
-        ReserveSpaceForDescription(MemPool, Desc);
-
-        const auto NumStaticResStages = GetNumStaticResStages();
-        if (NumStaticResStages > 0)
-        {
-            MemPool.AddSpace<ShaderResourceCacheGL>(1);
-            MemPool.AddSpace<ShaderVariableManagerGL>(NumStaticResStages);
-        }
-
-        MemPool.Reserve();
+        auto& RawAllocator{GetRawAllocator()};
+        auto  MemPool = ReserveSpace(RawAllocator, Desc,
+                                    [&](FixedLinearAllocator& MemPool) //
+                                    {
+                                        MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
+                                        MemPool.AddSpace<SamplerPtr>(Desc.NumImmutableSamplers);
+                                    });
 
         static_assert(std::is_trivially_destructible<ResourceAttribs>::value,
                       "ResourceAttribs objects must be constructed to be properly destructed in case an excpetion is thrown");
-        m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(std::max(1u, m_Desc.NumResources));
+        m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(m_Desc.NumResources);
         m_ImmutableSamplers = MemPool.ConstructArray<SamplerPtr>(m_Desc.NumImmutableSamplers);
 
-        // The memory is now owned by PipelineResourceSignatureGLImpl and will be freed by Destruct().
-        auto* Ptr = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_pResourceAttribs);
-        (void)Ptr;
-
-        CopyDescription(MemPool, Desc);
-
+        const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
             m_pStaticResCache = MemPool.Construct<ShaderResourceCacheGL>(ShaderResourceCacheGL::CacheContentType::Signature);
@@ -177,7 +162,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
                 {
                     VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
                     const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
+                    m_StaticVarsMgrs[Idx].Initialize(*this, RawAllocator, AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
                 }
             }
         }
@@ -325,8 +310,6 @@ PipelineResourceSignatureGLImpl::~PipelineResourceSignatureGLImpl()
 
 void PipelineResourceSignatureGLImpl::Destruct()
 {
-    auto& RawAllocator = GetRawAllocator();
-
     if (m_ImmutableSamplers != nullptr)
     {
         for (Uint32 s = 0; s < m_Desc.NumImmutableSamplers; ++s)
@@ -335,30 +318,7 @@ void PipelineResourceSignatureGLImpl::Destruct()
         m_ImmutableSamplers = nullptr;
     }
 
-    if (m_StaticVarsMgrs)
-    {
-        for (auto Idx : m_StaticResStageIndex)
-        {
-            if (Idx >= 0)
-            {
-                m_StaticVarsMgrs[Idx].DestroyVariables(RawAllocator);
-                m_StaticVarsMgrs[Idx].~ShaderVariableManagerGL();
-            }
-        }
-        m_StaticVarsMgrs = nullptr;
-    }
-
-    if (m_pStaticResCache)
-    {
-        m_pStaticResCache->~ShaderResourceCacheGL();
-        m_pStaticResCache = nullptr;
-    }
-
-    if (void* pRawMem = m_pResourceAttribs)
-    {
-        RawAllocator.Free(pRawMem);
-        m_pResourceAttribs = nullptr;
-    }
+    m_pResourceAttribs = nullptr;
 
     TPipelineResourceSignatureBase::Destruct();
 }
@@ -519,24 +479,24 @@ void PipelineResourceSignatureGLImpl::InitializeStaticSRBResources(IShaderResour
 
 Uint32 PipelineResourceSignatureGLImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
-    return GetStaticVariableCountImpl(ShaderType, m_StaticVarsMgrs);
+    return GetStaticVariableCountImpl(ShaderType);
 }
 
 IShaderResourceVariable* PipelineResourceSignatureGLImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
-    return GetStaticVariableByNameImpl(ShaderType, Name, m_StaticVarsMgrs);
+    return GetStaticVariableByNameImpl(ShaderType, Name);
 }
 
 IShaderResourceVariable* PipelineResourceSignatureGLImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    return GetStaticVariableByIndexImpl(ShaderType, Index, m_StaticVarsMgrs);
+    return GetStaticVariableByIndexImpl(ShaderType, Index);
 }
 
 void PipelineResourceSignatureGLImpl::BindStaticResources(Uint32            ShaderFlags,
                                                           IResourceMapping* pResMapping,
                                                           Uint32            Flags)
 {
-    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags, m_StaticVarsMgrs);
+    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags);
 }
 
 void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL& DstResourceCache) const

@@ -62,6 +62,10 @@ public:
         m_ReservedSize {Other.m_ReservedSize },
         m_CurrAlignment{Other.m_CurrAlignment},
         m_pAllocator   {Other.m_pAllocator   }
+#if DILIGENT_DEBUG
+        , m_DbgCurrAllocation{Other.m_DbgCurrAllocation}
+        , m_DbgAllocations{std::move(Other.m_DbgAllocations)}
+#endif
     // clang-format on
     {
         Other.Reset();

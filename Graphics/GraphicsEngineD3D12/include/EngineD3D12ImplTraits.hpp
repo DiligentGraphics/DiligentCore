@@ -74,6 +74,9 @@ class PipelineResourceSignatureD3D12Impl;
 
 class FixedBlockMemoryAllocator;
 
+class ShaderResourceCacheD3D12;
+class ShaderVariableManagerD3D12;
+
 struct EngineD3D12ImplTraits
 {
     using RenderDeviceInterface              = IRenderDeviceD3D12;
@@ -117,6 +120,9 @@ struct EngineD3D12ImplTraits
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;
+
+    using ShaderResourceCacheImplType   = ShaderResourceCacheD3D12;
+    using ShaderVariableManagerImplType = ShaderVariableManagerD3D12;
 };
 
 } // namespace Diligent

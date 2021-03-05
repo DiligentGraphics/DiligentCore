@@ -199,10 +199,10 @@ void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& 
 
 ShaderVariableManagerGL::~ShaderVariableManagerGL()
 {
-    VERIFY(m_ResourceBuffer == nullptr, "DestroyVariables() has not been called");
+    VERIFY(m_ResourceBuffer == nullptr, "Destroy() has not been called");
 }
 
-void ShaderVariableManagerGL::DestroyVariables(IMemoryAllocator& Allocator)
+void ShaderVariableManagerGL::Destroy(IMemoryAllocator& Allocator)
 {
     if (m_ResourceBuffer == nullptr)
         return;

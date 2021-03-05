@@ -214,11 +214,6 @@ private:
 
     ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
-    // Resource cache for static resource variables only
-    ShaderResourceCacheGL* m_pStaticResCache = nullptr;
-
-    ShaderVariableManagerGL* m_StaticVarsMgrs = nullptr; // [GetNumStaticResStages()]
-
     using SamplerPtr                = RefCntAutoPtr<ISampler>;
     SamplerPtr* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 
