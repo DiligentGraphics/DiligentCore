@@ -25,6 +25,8 @@ layout(std140) buffer g_RWStructBuffers
 }g_RWStructBuffersInst[];
 
 
+layout(rgba32f) uniform imageBuffer g_RWFormattedBuffers[];
+
 vec4 CheckValue(vec4 Val, vec4 Expected)
 {
     return vec4(Val.x == Expected.x ? 1.0 : 0.0,
@@ -72,11 +74,15 @@ vec4 VerifyResources(uint index, vec2 coord)
     RWTexRefValues[1] = RWTex2D_Ref1;
     RWTexRefValues[2] = RWTex2D_Ref2;
 
-    float4 RWStructBuffRefValues[NUM_RWSTRUCT_BUFFERS];
+    vec4 RWStructBuffRefValues[NUM_RWSTRUCT_BUFFERS];
     RWStructBuffRefValues[0] = RWStructBuff_Ref0;
     RWStructBuffRefValues[1] = RWStructBuff_Ref1;
     RWStructBuffRefValues[2] = RWStructBuff_Ref2;
     RWStructBuffRefValues[3] = RWStructBuff_Ref3;
+
+    vec4 RWFmtBuffRefValues[NUM_RWFMT_BUFFERS];
+    RWFmtBuffRefValues[0] = RWFmtBuff_Ref0;
+    RWFmtBuffRefValues[1] = RWFmtBuff_Ref1;
 
     uint TexIdx          = index % NUM_TEXTURES;
     uint SamIdx          = index % NUM_SAMPLERS;
@@ -85,6 +91,7 @@ vec4 VerifyResources(uint index, vec2 coord)
     uint StructBuffIdx   = index % NUM_STRUCT_BUFFERS;
     uint RWTexIdx        = index % NUM_RWTEXTURES;
     uint RWStructBuffIdx = index % NUM_RWSTRUCT_BUFFERS;
+    uint RWFmtBuffIdx    = index % NUM_RWFMT_BUFFERS;
 
     vec4 AllCorrect = vec4(1.0, 1.0, 1.0, 1.0);
     AllCorrect *= CheckValue(textureLod(sampler2D(g_Textures[nonuniformEXT(TexIdx)], g_Samplers[nonuniformEXT(SamIdx)]), coord, 0.0), TexRefValues[TexIdx]);
@@ -93,6 +100,7 @@ vec4 VerifyResources(uint index, vec2 coord)
     AllCorrect *= CheckValue(g_StructuredBufferInst[nonuniformEXT(StructBuffIdx)].Data, StructBuffRefValues[StructBuffIdx]);
     AllCorrect *= CheckValue(imageLoad(g_RWTextures[nonuniformEXT(RWTexIdx)], ivec2(coord * 10)), RWTexRefValues[RWTexIdx]);
     AllCorrect *= CheckValue(g_RWStructBuffersInst[nonuniformEXT(RWStructBuffIdx)].Data, RWStructBuffRefValues[RWStructBuffIdx]);
+    AllCorrect *= CheckValue(imageLoad(g_RWFormattedBuffers[nonuniformEXT(RWFmtBuffIdx)], 0), RWFmtBuffRefValues[RWFmtBuffIdx]);
 
     return AllCorrect;
 }
