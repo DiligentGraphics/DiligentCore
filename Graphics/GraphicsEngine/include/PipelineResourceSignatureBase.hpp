@@ -87,6 +87,12 @@ public:
     // Shader variable manager implementation type (ShaderVariableManagerD3D12, ShaderVariableManagerVk, etc.)
     using ShaderVariableManagerImplType = typename EngineImplTraits::ShaderVariableManagerImplType;
 
+    // Shader resource binding implementation type (ShaderResourceBindingD3D12Impl, ShaderResourceBindingVkImpl, etc.)
+    using ShaderResourceBindingImplType = typename EngineImplTraits::ShaderResourceBindingImplType;
+
+    // Pipeline resource signature implementation type (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.)
+    using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineResourceSignatureDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this resource signature.
@@ -520,6 +526,17 @@ protected:
         Handler(pSRB);
 
         pSRB->SetStaticResourcesInitialized();
+    }
+
+    void CreateShaderResourceBindingImpl(IShaderResourceBinding** ppShaderResourceBinding,
+                                         bool                     InitStaticResources)
+    {
+        auto* pThisImpl{static_cast<PipelineResourceSignatureImplType*>(this)};
+        auto& SRBAllocator{pThisImpl->m_pDevice->GetSRBAllocator()};
+        auto* pResBindingImpl{NEW_RC_OBJ(SRBAllocator, "ShaderResourceBinding instance", ShaderResourceBindingImplType)(pThisImpl)};
+        if (InitStaticResources)
+            pThisImpl->InitializeStaticSRBResources(pResBindingImpl);
+        pResBindingImpl->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
     }
 
     // Finds a sampler that is assigned to texture Tex, when combined texture samplers are used.

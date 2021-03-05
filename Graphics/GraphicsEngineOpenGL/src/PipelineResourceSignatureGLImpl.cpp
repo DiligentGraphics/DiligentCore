@@ -459,12 +459,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
 void PipelineResourceSignatureGLImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                   bool                     InitStaticResources)
 {
-    auto* pRenderDeviceGL = GetDevice();
-    auto& SRBAllocator    = pRenderDeviceGL->GetSRBAllocator();
-    auto  pResBinding     = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingGLImpl instance", ShaderResourceBindingGLImpl)(this);
-    if (InitStaticResources)
-        InitializeStaticSRBResources(pResBinding);
-    pResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
+    CreateShaderResourceBindingImpl(ppShaderResourceBinding, InitStaticResources);
 }
 
 void PipelineResourceSignatureGLImpl::InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const

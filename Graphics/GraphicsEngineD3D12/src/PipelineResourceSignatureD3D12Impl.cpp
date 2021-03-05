@@ -422,11 +422,7 @@ bool PipelineResourceSignatureD3D12Impl::IsCompatibleWith(const PipelineResource
 void PipelineResourceSignatureD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                      bool                     InitStaticResources)
 {
-    auto& SRBAllocator     = m_pDevice->GetSRBAllocator();
-    auto* pResBindingD3D12 = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D12Impl instance", ShaderResourceBindingD3D12Impl)(this);
-    if (InitStaticResources)
-        InitializeStaticSRBResources(pResBindingD3D12);
-    pResBindingD3D12->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
+    CreateShaderResourceBindingImpl(ppShaderResourceBinding, InitStaticResources);
 }
 
 Uint32 PipelineResourceSignatureD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const

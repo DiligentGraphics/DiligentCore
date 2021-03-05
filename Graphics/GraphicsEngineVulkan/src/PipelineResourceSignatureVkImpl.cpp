@@ -622,11 +622,7 @@ bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSig
 void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                   bool                     InitStaticResources)
 {
-    auto& SRBAllocator  = m_pDevice->GetSRBAllocator();
-    auto* pResBindingVk = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingVkImpl instance", ShaderResourceBindingVkImpl)(this);
-    if (InitStaticResources)
-        InitializeStaticSRBResources(pResBindingVk);
-    pResBindingVk->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
+    CreateShaderResourceBindingImpl(ppShaderResourceBinding, InitStaticResources);
 }
 
 Uint32 PipelineResourceSignatureVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
