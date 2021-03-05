@@ -1668,12 +1668,6 @@ bool DXBCUtils::RemapResourceBindings(const TResourceBindingMap& ResourceMap,
         return false;
     }
 
-    CComPtr<ID3DBlob> DisasmBlob;
-    D3DDisassemble(pBytecode, Size, D3D_DISASM_ENABLE_INSTRUCTION_OFFSET, nullptr, &DisasmBlob);
-
-    const auto* DisasmStr = (char*)DisasmBlob->GetBufferPointer();
-    (void)(DisasmStr);
-
     auto* const       Ptr    = static_cast<char*>(pBytecode);
     const void* const EndPtr = Ptr + Size;
 
@@ -1786,12 +1780,6 @@ bool DXBCUtils::RemapResourceBindings(const TResourceBindingMap& ResourceMap,
 
     static_assert(sizeof(Header.Checksum) == sizeof(Checksum), "Unexpected checksum size");
     memcpy(Header.Checksum, Checksum, sizeof(Header.Checksum));
-
-    CComPtr<ID3DBlob> DisasmBlob2;
-    D3DDisassemble(pBytecode, Size, D3D_DISASM_ENABLE_INSTRUCTION_OFFSET, nullptr, &DisasmBlob2);
-
-    const auto* DisasmStr2 = (char*)DisasmBlob2->GetBufferPointer();
-    (void)(DisasmStr2);
 
     return true;
 }

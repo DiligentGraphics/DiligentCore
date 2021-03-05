@@ -159,8 +159,9 @@ private:
     };
     using TExtendedResourceMap = std::unordered_map<TResourceBindingMap::value_type const*, ResourceExtendedInfo>;
 
-    static bool PatchDXIL(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL);
+    static bool PatchDXIL(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, SHADER_TYPE ShaderType, String& DXIL);
     static void PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL);
+    static void PatchResourceDeclarationRT(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL);
     static void PatchResourceHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL);
 
 private:
@@ -839,6 +840,35 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
         return false;
     }
 
+    SHADER_TYPE ShaderType = SHADER_TYPE_UNKNOWN;
+    {
+        D3D12_SHADER_DESC ShDesc = {};
+        pShaderReflection->GetDesc(&ShDesc);
+
+        const Uint32 ShType = D3D12_SHVER_GET_TYPE(ShDesc.Version);
+        switch (ShType)
+        {
+            // clang-format off
+            case D3D12_SHVER_PIXEL_SHADER:    ShaderType = SHADER_TYPE_PIXEL;            break;
+            case D3D12_SHVER_VERTEX_SHADER:   ShaderType = SHADER_TYPE_VERTEX;           break;
+            case D3D12_SHVER_GEOMETRY_SHADER: ShaderType = SHADER_TYPE_GEOMETRY;         break;
+            case D3D12_SHVER_HULL_SHADER:     ShaderType = SHADER_TYPE_HULL;             break;
+            case D3D12_SHVER_DOMAIN_SHADER:   ShaderType = SHADER_TYPE_DOMAIN;           break;
+            case D3D12_SHVER_COMPUTE_SHADER:  ShaderType = SHADER_TYPE_COMPUTE;          break;
+            case 7:                           ShaderType = SHADER_TYPE_RAY_GEN;          break;
+            case 8:                           ShaderType = SHADER_TYPE_RAY_INTERSECTION; break;
+            case 9:                           ShaderType = SHADER_TYPE_RAY_ANY_HIT;      break;
+            case 10:                          ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;  break;
+            case 11:                          ShaderType = SHADER_TYPE_RAY_MISS;         break;
+            case 12:                          ShaderType = SHADER_TYPE_CALLABLE;         break;
+            case 13:                          ShaderType = SHADER_TYPE_MESH;             break;
+            case 14:                          ShaderType = SHADER_TYPE_AMPLIFICATION;    break;
+                // clang-format on
+            default:
+                UNEXPECTED("Unknown shader type");
+        }
+    }
+
     TExtendedResourceMap ExtResourceMap;
 
     for (auto& NameAndBinding : ResourceMap)
@@ -880,7 +910,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
             }
 
 #    ifdef DILIGENT_DEBUG
-            static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
+            static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
             switch (NameAndBinding.second.ResType)
             {
                 // clang-format off
@@ -911,7 +941,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
     String dxilAsm;
     dxilAsm.assign(static_cast<const char*>(disasm->GetBufferPointer()), disasm->GetBufferSize());
 
-    if (!PatchDXIL(ResourceMap, ExtResourceMap, dxilAsm))
+    if (!PatchDXIL(ResourceMap, ExtResourceMap, ShaderType, dxilAsm))
     {
         LOG_ERROR("Failed to patch resource bindings");
         return false;
@@ -964,11 +994,15 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
 #endif // D3D12_SUPPORTED
 }
 
-bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL)
+bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, SHADER_TYPE ShaderType, String& DXIL)
 {
     try
     {
-        PatchResourceDeclaration(ResourceMap, ExtResMap, DXIL);
+        if (ShaderType < SHADER_TYPE_RAY_GEN)
+            PatchResourceDeclaration(ResourceMap, ExtResMap, DXIL);
+        else
+            PatchResourceDeclarationRT(ResourceMap, ExtResMap, DXIL);
+
         PatchResourceHandle(ResourceMap, ExtResMap, DXIL);
         return true;
     }
@@ -978,7 +1012,66 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, TExtended
     }
 }
 
-void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL)
+namespace
+{
+void ReplaceRecord(String& DXIL, size_t& pos, const String& NewValue, const char* Name, const char* RecordName, const Uint32 ExpectedPrevValue)
+{
+#define CHECK_PATCHING_ERROR(Cond, ...)                                                         \
+    if (!(Cond))                                                                                \
+    {                                                                                           \
+        LOG_ERROR_AND_THROW("Unable to patch DXIL for resource '", Name, "': ", ##__VA_ARGS__); \
+    }
+
+    static const String i32           = "i32 ";
+    static const String NumberSymbols = "+-0123456789";
+
+    // , i32 -1
+    // ^
+    CHECK_PATCHING_ERROR(DXIL[pos] == ',' && DXIL[pos + 1] == ' ', RecordName, " record is not found")
+
+    pos += 2;
+    // , i32 -1
+    //   ^
+
+    CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "unexpected ", RecordName, " record type")
+    pos += i32.length();
+    // , i32 -1
+    //       ^
+
+    auto RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
+    CHECK_PATCHING_ERROR(pos != String::npos, "unable to find the end of the ", RecordName, " record data")
+    // , i32 -1
+    //         ^
+    //    RecordEndPos
+
+    Uint32 PrevValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
+    CHECK_PATCHING_ERROR(PrevValue == ExpectedPrevValue, "previous value does not match with expected");
+
+    DXIL.replace(pos, RecordEndPos - pos, NewValue);
+    // , i32 1
+    //         ^
+    //    RecordEndPos
+
+    pos += NewValue.length();
+    // , i32 1
+    //        ^
+
+#undef CHECK_PATCHING_ERROR
+}
+
+bool IsWordSymbol(char c)
+{
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+}
+
+bool IsNumberSymbol(char c)
+{
+    return (c >= '0' && c <= '9');
+}
+
+} // namespace
+
+void DXCompilerImpl::PatchResourceDeclarationRT(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL)
 {
 #define CHECK_PATCHING_ERROR(Cond, ...)                                                         \
     if (!(Cond))                                                                                \
@@ -989,69 +1082,6 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
     static const String i32              = "i32 ";
     static const String NumberSymbols    = "+-0123456789";
     static const String ResourceRecStart = "= !{";
-
-    const auto ReplaceRecord = [&DXIL](size_t& pos, const String& NewValue, const char* Name, const char* RecordName, const Uint32 ExpectedPrevValue) //
-    {
-        // , i32 -1
-        // ^
-        CHECK_PATCHING_ERROR(DXIL[pos] == ',' && DXIL[pos + 1] == ' ', RecordName, " record is not found")
-
-        pos += 2;
-        // , i32 -1
-        //   ^
-
-        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "unexpected ", RecordName, " record type")
-        pos += i32.length();
-        // , i32 -1
-        //       ^
-
-        auto RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
-        CHECK_PATCHING_ERROR(pos != String::npos, "unable to find the end of the ", RecordName, " record data")
-        // , i32 -1
-        //         ^
-        //    RecordEndPos
-
-        Uint32 PrevValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
-        CHECK_PATCHING_ERROR(PrevValue == ExpectedPrevValue, "previous value does not match with expected");
-
-        DXIL.replace(pos, RecordEndPos - pos, NewValue);
-        // , i32 1
-        //         ^
-        //    RecordEndPos
-
-        pos += NewValue.length();
-        // , i32 1
-        //        ^
-    };
-
-    const auto ReadRecord = [&DXIL](size_t& pos, Uint32& CurValue) //
-    {
-        // , i32 -1
-        // ^
-        if (DXIL[pos] != ',' || DXIL[pos + 1] != ' ')
-            return false;
-
-        pos += 2;
-        // , i32 -1
-        //   ^
-
-        if (std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) != 0)
-            return false;
-        pos += i32.length();
-        // , i32 -1
-        //       ^
-
-        auto RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
-        if (pos == String::npos)
-            return false;
-        // , i32 -1
-        //         ^
-        //    RecordEndPos
-
-        CurValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
-        pos      = RecordEndPos;
-        return true;
-    };
 
     // This resource patching method is valid for ray tracing shaders and non-optimized shaders with metadata.
     for (auto& ResPair : ResourceMap)
@@ -1112,35 +1142,98 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
         // !"g_ColorBuffer", i32 -1, i32 -1,
         //                 ^
         pos = EndOfResTypeRecord + DxilName.length();
-        ReplaceRecord(pos, std::to_string(Space), Name, "space", Ext.SrcSpace);
+        ReplaceRecord(DXIL, pos, std::to_string(Space), Name, "space", Ext.SrcSpace);
 
         // !"g_ColorBuffer", i32 0, i32 -1,
         //                        ^
-        ReplaceRecord(pos, std::to_string(BindPoint), Name, "binding", Ext.SrcBindPoint);
+        ReplaceRecord(DXIL, pos, std::to_string(BindPoint), Name, "binding", Ext.SrcBindPoint);
 
         // !"g_ColorBuffer", i32 0, i32 1,
         //                               ^
     }
 #undef CHECK_PATCHING_ERROR
+}
+
+void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL)
+{
+    static const String i32              = "i32 ";
+    static const String NumberSymbols    = "+-0123456789";
+    static const String ResourceRecStart = "= !{";
+
+    // This resource patching method is valid for optimized shaders without metadata.
+    static const String ResNameDecl        = ", !\"";
+    static const String SamplerPart        = "%struct.SamplerState";
+    static const String TexturePart        = "%\"class.Texture";
+    static const String RWTexturePart      = "%\"class.RWTexture";
+    static const String AccelStructPart    = "%struct.RaytracingAccelerationStructure";
+    static const String StructBufferPart   = "%\"class.StructuredBuffer";
+    static const String RWStructBufferPart = "%\"class.RWStructuredBuffer";
+    static const String ByteAddrBufPart    = "%struct.ByteAddressBuffer";
+    static const String RWByteAddrBufPart  = "%struct.RWByteAddressBuffer";
+    static const String TexBufferPart      = "%\"class.Buffer<";
+    static const String RWTexBufferPart    = "%\"class.RWBuffer<";
+
+    const auto ReadRecord = [&DXIL](size_t& pos, Uint32& CurValue) //
+    {
+        // , i32 -1
+        // ^
+        if (DXIL[pos] != ',' || DXIL[pos + 1] != ' ')
+            return false;
+
+        pos += 2;
+        // , i32 -1
+        //   ^
+
+        if (std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) != 0)
+            return false;
+        pos += i32.length();
+        // , i32 -1
+        //       ^
+
+        auto RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
+        if (pos == String::npos)
+            return false;
+        // , i32 -1
+        //         ^
+        //    RecordEndPos
+
+        CurValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
+        pos      = RecordEndPos;
+        return true;
+    };
+
+    const auto ReadResName = [&DXIL](size_t& pos, String& name) //
+    {
+        VERIFY_EXPR(pos > 0 && DXIL[pos - 1] == '"');
+        const size_t startPos = pos;
+        for (; pos < DXIL.size(); ++pos)
+        {
+            const char c = DXIL[pos];
+            if (IsWordSymbol(c))
+                continue;
+
+            if (c == '"')
+            {
+                name = DXIL.substr(startPos, pos - startPos);
+                return true;
+            }
+            break;
+        }
+        return false;
+    };
 
 #define CHECK_PATCHING_ERROR(Cond, ...)                               \
     if (!(Cond))                                                      \
     {                                                                 \
         LOG_ERROR_AND_THROW("Unable to patch DXIL: ", ##__VA_ARGS__); \
     }
-
-    // This resource patching method is valid for optimized shaders without metadata.
-    static const String EmptyResDecl = ", !\"\",";
-    static const String SamplerPart  = "%struct.SamplerState* undef";
-    static const String TexturePart  = "%\"class.Texture";
-
     for (size_t pos = 0; pos < DXIL.size();)
     {
         // Example:
         //
         // !5 = !{i32 0, %"class.Texture2D<vector<float, 4> >"* undef, !"", i32 -1, i32 -1, i32 1, i32 2, i32 0, !6}
 
-        pos = DXIL.find(EmptyResDecl, pos);
+        pos = DXIL.find(ResNameDecl, pos);
         if (pos == String::npos)
             break;
 
@@ -1148,9 +1241,22 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
         //      ^
         const size_t EndOfResTypeRecord = pos;
 
+        // undef, !"", i32 -1,...  or  undef, !"g_Tex2D", i32 -1,...
+        //         ^                            ^
+        pos += ResNameDecl.length();
+        const size_t BeginOfResName = pos;
+
+        String ResName;
+        if (!ReadResName(pos, ResName))
+        {
+            // This is not a resource declaration record, continue searching.
+            continue;
+        }
+
         // undef, !"", i32 -1,
         //           ^
-        const size_t BindingRecordStart = pos + EmptyResDecl.size() - 1;
+        const size_t BindingRecordStart = pos + 1;
+        VERIFY_EXPR(DXIL[BindingRecordStart] == ',');
 
         // Parse resource class.
         pos = DXIL.rfind(ResourceRecStart, EndOfResTypeRecord);
@@ -1179,14 +1285,51 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 
         CHECK_PATCHING_ERROR(DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "failed to find end of the Record ID record data");
         pos += 2;
-        // !{i32 0, %"class.Texture2D<...
-        //          ^
+        // !{i32 0, %"class.Texture2D<...  or  !{i32 0, [4 x %"class.Texture2D<...
+        //          ^                                   ^
 
+        // skip array declaration
+        if (DXIL[pos] == '[')
+        {
+            ++pos;
+            for (; pos < EndOfResTypeRecord; ++pos)
+            {
+                const char c = DXIL[pos];
+                if (!(IsNumberSymbol(c) || (c == ' ') || (c == 'x')))
+                    break;
+            }
+        }
+
+        if (DXIL[pos] != '%')
+        {
+            // This is not a resource declaration record, continue searching.
+            pos = BindingRecordStart;
+            continue;
+        }
+
+        // !{i32 0, %"class.Texture2D<...  or  !{i32 0, [4 x %"class.Texture2D<...
+        //          ^                                        ^
         RES_TYPE ResType = RES_TYPE_COUNT;
-        if (std::strncmp(&DXIL[pos], TexturePart.c_str(), TexturePart.length()) == 0)
-            ResType = RES_TYPE_SRV;
-        else if (std::strncmp(&DXIL[pos], SamplerPart.c_str(), SamplerPart.length()) == 0)
+        if (std::strncmp(&DXIL[pos], SamplerPart.c_str(), SamplerPart.length()) == 0)
             ResType = RES_TYPE_SAMPLER;
+        else if (std::strncmp(&DXIL[pos], TexturePart.c_str(), TexturePart.length()) == 0)
+            ResType = RES_TYPE_SRV;
+        else if (std::strncmp(&DXIL[pos], StructBufferPart.c_str(), StructBufferPart.length()) == 0)
+            ResType = RES_TYPE_SRV;
+        else if (std::strncmp(&DXIL[pos], ByteAddrBufPart.c_str(), ByteAddrBufPart.length()) == 0)
+            ResType = RES_TYPE_SRV;
+        else if (std::strncmp(&DXIL[pos], TexBufferPart.c_str(), TexBufferPart.length()) == 0)
+            ResType = RES_TYPE_SRV;
+        else if (std::strncmp(&DXIL[pos], AccelStructPart.c_str(), AccelStructPart.length()) == 0)
+            ResType = RES_TYPE_SRV;
+        else if (std::strncmp(&DXIL[pos], RWTexturePart.c_str(), RWTexturePart.length()) == 0)
+            ResType = RES_TYPE_UAV;
+        else if (std::strncmp(&DXIL[pos], RWStructBufferPart.c_str(), RWStructBufferPart.length()) == 0)
+            ResType = RES_TYPE_UAV;
+        else if (std::strncmp(&DXIL[pos], RWByteAddrBufPart.c_str(), RWByteAddrBufPart.length()) == 0)
+            ResType = RES_TYPE_UAV;
+        else if (std::strncmp(&DXIL[pos], RWTexBufferPart.c_str(), RWTexBufferPart.length()) == 0)
+            ResType = RES_TYPE_UAV;
         else
         {
             // Try to find constant buffer.
@@ -1198,9 +1341,16 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
                 if (Type != RES_TYPE_CBV)
                     continue;
 
-                const String CBName = String{"%"} + Name + "* undef";
+                const String CBName = String{"%"} + Name;
                 if (std::strncmp(&DXIL[pos], CBName.c_str(), CBName.length()) == 0)
                 {
+                    const char c = DXIL[pos + CBName.length()];
+
+                    if (IsWordSymbol(c))
+                        continue; // name partially equals
+
+                    VERIFY_EXPR((c == '*' && ResInfo.first->second.ArraySize == 1) || (c == ']' && ResInfo.first->second.ArraySize > 1));
+
                     ResType = RES_TYPE_CBV;
                     break;
                 }
@@ -1249,6 +1399,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
         }
         CHECK_PATCHING_ERROR(pResPair != nullptr && pExt != nullptr, "failed to find resource in ResourceMap");
 
+        VERIFY_EXPR(ResName.empty() || ResName == pResPair->first.GetStr());
         VERIFY_EXPR(pExt->RecordId == ~0u || pExt->RecordId == RecordId);
         pExt->RecordId = RecordId;
 
@@ -1257,14 +1408,20 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 
         // !"", i32 -1, i32 -1,
         //    ^
-        ReplaceRecord(pos, std::to_string(pResPair->second.Space), pResPair->first.GetStr(), "space", pExt->SrcSpace);
+        ReplaceRecord(DXIL, pos, std::to_string(pResPair->second.Space), pResPair->first.GetStr(), "space", pExt->SrcSpace);
 
         // !"", i32 0, i32 -1,
         //           ^
-        ReplaceRecord(pos, std::to_string(pResPair->second.BindPoint), pResPair->first.GetStr(), "binding", pExt->SrcBindPoint);
+        ReplaceRecord(DXIL, pos, std::to_string(pResPair->second.BindPoint), pResPair->first.GetStr(), "binding", pExt->SrcBindPoint);
 
         // !"", i32 0, i32 1,
         //                  ^
+
+        // Add resource name
+        if (ResName.empty())
+        {
+            DXIL.insert(BeginOfResName, pResPair->first.GetStr());
+        }
     }
 #undef CHECK_PATCHING_ERROR
 }
@@ -1294,7 +1451,7 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
     const auto ReplaceBindPoint = [&](Uint32 ResClass, Uint32 RangeId, size_t IndexStartPos, size_t IndexEndPos) //
     {
         const String SrcIndexStr = DXIL.substr(IndexStartPos, IndexEndPos - IndexStartPos);
-        VERIFY_EXPR(SrcIndexStr.front() >= '0' && SrcIndexStr.front() <= '9');
+        VERIFY_EXPR(IsNumberSymbol(SrcIndexStr.front()));
 
         const Uint32 SrcIndex = static_cast<Uint32>(std::stoi(SrcIndexStr));
         const auto   ResType  = ResClassToType[ResClass];
@@ -1449,11 +1606,16 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
                 pos += 2; // skip ', '
 
                 // second arg must be a constant
-                CHECK_PATCHING_ERROR(DXIL[pos] >= '0' && DXIL[pos] <= '9', "second argument expected to be a integer constant");
+                CHECK_PATCHING_ERROR(IsNumberSymbol(DXIL[pos]), "second argument expected to be a integer constant");
 
                 const size_t ArgStart = pos;
-                CHECK_PATCHING_ERROR(NextArg(pos), "");
-                VERIFY_EXPR(DXIL[pos] == ',' || DXIL[pos] == '\n');
+                for (; pos < DXIL.size(); ++pos)
+                {
+                    const char c = DXIL[pos];
+                    if (!IsNumberSymbol(c))
+                        break;
+                }
+                CHECK_PATCHING_ERROR(DXIL[pos] == ',' || DXIL[pos] == '\n', "failed to parse second argument");
 
                 //   %22 = add i32 %17, 7
                 //                       ^
@@ -1464,11 +1626,16 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
             else
             {
                 // first arg is a constant
-                VERIFY_EXPR(DXIL[pos] >= '0' && DXIL[pos] <= '9');
+                VERIFY_EXPR(IsNumberSymbol(DXIL[pos]));
 
                 const size_t ArgStart = pos;
-
-                CHECK_PATCHING_ERROR(NextArg(pos), "");
+                for (; pos < DXIL.size(); ++pos)
+                {
+                    const char c = DXIL[pos];
+                    if (!IsNumberSymbol(c))
+                        break;
+                }
+                CHECK_PATCHING_ERROR(DXIL[pos] == ',' || DXIL[pos] == '\n', "failed to parse second argument");
                 //   %22 = add i32 7, %17
                 //                  ^
 

@@ -107,8 +107,7 @@ const wchar_t* DXCArgs[] = {
 // no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
 // L"-Qembed_debug", // Requires DXC1.5+
 #else
-    L"-Zi", // Debug info
-    L"-O3"  // Optimization level 3
+    L"-O3" // Optimization level 3
 #endif
 };
 
