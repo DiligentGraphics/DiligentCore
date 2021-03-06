@@ -60,16 +60,6 @@ public:
     /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D12 backend.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
-    /// Implementation of IPipelineState::GetResourceSignatureCount() in Direct3D12 backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_RootSig->GetSignatureCount(); }
-
-    /// Implementation of IPipelineState::GetResourceSignature() in Direct3D12 backend.
-    virtual PipelineResourceSignatureD3D12Impl* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
-    {
-        VERIFY_EXPR(Index < GetResourceSignatureCount());
-        return m_ResourceSignatures[Index];
-    }
-
     /// Implementation of IPipelineStateD3D12::GetD3D12PipelineState().
     virtual ID3D12PipelineState* DILIGENT_CALL_TYPE GetD3D12PipelineState() const override final { return static_cast<ID3D12PipelineState*>(m_pd3d12PSO.p); }
 
@@ -111,7 +101,7 @@ private:
                            TShaderStages&                 ShaderStages,
                            LocalRootSignatureD3D12*       pLocalRootSig);
 
-    static RefCntAutoPtr<IPipelineResourceSignature> CreateDefaultResourceSignature(
+    static RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> CreateDefaultResourceSignature(
         RenderDeviceD3D12Impl*         pDevice,
         const PipelineStateCreateInfo& CreateInfo,
         TShaderStages&                 ShaderStages,
@@ -128,7 +118,6 @@ private:
     // NB:  Pipeline resource signatures used to create the PSO may NOT be the same as
     //      pipeline resource signatures in m_RootSig, because the latter may be used from the
     //      cache. While the two signatures may be compatible, they resource names may not be identical.
-    std::unique_ptr<RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[]> m_ResourceSignatures;
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages in the pipeline.

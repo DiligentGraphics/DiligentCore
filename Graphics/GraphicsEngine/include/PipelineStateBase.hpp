@@ -231,6 +231,13 @@ public:
             m_pRayTracingPipelineData->~RayTracingPipelineData();
         }
 
+        if (m_Signatures != nullptr)
+        {
+            for (Uint32 i = 0; i < m_SignatureCount; ++i)
+                m_Signatures[i].~SignatureAutoPtrType();
+            m_Signatures = nullptr;
+        }
+
         if (m_pPipelineDataRawMem)
         {
             GetRawAllocator().Free(m_pPipelineDataRawMem);
@@ -404,6 +411,45 @@ public:
         return this->GetResourceSignature(0)->InitializeStaticSRBResources(pSRB);
     }
 
+    /// Implementation of IPipelineState::GetResourceSignatureCount().
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final
+    {
+        return m_SignatureCount;
+    }
+
+    /// Implementation of IPipelineState::GetResourceSignature().
+    virtual PipelineResourceSignatureImplType* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
+    {
+        VERIFY_EXPR(Index < m_SignatureCount);
+        return m_Signatures[Index];
+    }
+
+    /// Implementation of IPipelineState::IsCompatibleWith().
+    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override // May be overriden
+    {
+        DEV_CHECK_ERR(pPSO != nullptr, "pPSO must not be null");
+
+        if (pPSO == this)
+            return true;
+
+        const auto& lhs = *static_cast<const PipelineStateImplType*>(this);
+        const auto& rhs = *ValidatedCast<const PipelineStateImplType>(pPSO);
+
+        const auto SignCount = lhs.GetResourceSignatureCount();
+        if (SignCount != rhs.GetResourceSignatureCount())
+            return false;
+
+        for (Uint32 s = 0; s < SignCount; ++s)
+        {
+            const auto* pLhsSign = GetResourceSignature(s);
+            const auto* pRhsSign = rhs.GetResourceSignature(s);
+            if (!PipelineResourceSignatureImplType::SignaturesCompatible(pLhsSign, pRhsSign))
+                return false;
+        }
+
+        return true;
+    }
+
 protected:
     using TNameToGroupIndexMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
 
@@ -412,6 +458,7 @@ protected:
     {
         MemPool.AddSpace<GraphicsPipelineData>();
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
+        ReserveResourceSignatures(CreateInfo, MemPool);
 
         const auto& InputLayout     = CreateInfo.GraphicsPipeline.InputLayout;
         Uint32      BufferSlotsUsed = 0;
@@ -429,13 +476,14 @@ protected:
     }
 
     void ReserveSpaceForPipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
-                                     FixedLinearAllocator&                 MemPool) const noexcept
+                                     FixedLinearAllocator&                 MemPool) noexcept
     {
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
+        ReserveResourceSignatures(CreateInfo, MemPool);
     }
 
     void ReserveSpaceForPipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
-                                     FixedLinearAllocator&                    MemPool) const noexcept
+                                     FixedLinearAllocator&                    MemPool) noexcept
     {
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // Reserve space for shader handles
@@ -459,6 +507,7 @@ protected:
         }
 
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
+        ReserveResourceSignatures(CreateInfo, MemPool);
     }
 
 
@@ -604,6 +653,7 @@ protected:
         CorrectGraphicsPipelineDesc(GraphicsPipeline);
 
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
+        CopyResourceSignatures(CreateInfo, MemPool);
 
         pRenderPass = GraphicsPipeline.pRenderPass;
         if (pRenderPass)
@@ -730,6 +780,7 @@ protected:
         m_pPipelineDataRawMem = MemPool.ReleaseOwnership();
 
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
+        CopyResourceSignatures(CreateInfo, MemPool);
     }
 
     void InitializePipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
@@ -756,6 +807,7 @@ protected:
         CopyRTShaderGroupNames(NameToGroupIndex, CreateInfo, MemPool);
 
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
+        CopyResourceSignatures(CreateInfo, MemPool);
     }
 
 
@@ -890,12 +942,89 @@ private:
         }
     }
 
+    void ReserveResourceSignatures(const PipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool)
+    {
+        if (m_UsingImplicitSignature)
+        {
+            VERIFY_EXPR(CreateInfo.ResourceSignaturesCount == 0 || CreateInfo.ppResourceSignatures == nullptr);
+            m_SignatureCount = 1;
+        }
+        else
+        {
+            VERIFY_EXPR(CreateInfo.ResourceSignaturesCount > 0 && CreateInfo.ppResourceSignatures != nullptr);
+            Uint32 MaxSignatureBindingIndex = 0;
+            for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+            {
+                const auto* pSignature = ValidatedCast<PipelineResourceSignatureImplType>(CreateInfo.ppResourceSignatures[i]);
+                VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
+
+                Uint32 Index = pSignature->GetDesc().BindingIndex;
+                VERIFY(Index < MAX_RESOURCE_SIGNATURES,
+                       "Pipeline resource signature specifies binding index ", Uint32{Index}, " that exceeds the limit (", MAX_RESOURCE_SIGNATURES - 1,
+                       "). This error should've been caught by ValidatePipelineResourceSignatureDesc.");
+
+                MaxSignatureBindingIndex = std::max(MaxSignatureBindingIndex, Uint32{Index});
+            }
+            VERIFY_EXPR(MaxSignatureBindingIndex < MAX_RESOURCE_SIGNATURES);
+            m_SignatureCount = static_cast<decltype(m_SignatureCount)>(MaxSignatureBindingIndex + 1);
+            VERIFY_EXPR(m_SignatureCount == MaxSignatureBindingIndex + 1);
+        }
+
+        MemPool.AddSpace<SignatureAutoPtrType>(m_SignatureCount);
+    }
+
+    void CopyResourceSignatures(const PipelineStateCreateInfo& CreateInfo, FixedLinearAllocator& MemPool)
+    {
+        m_Signatures = MemPool.ConstructArray<SignatureAutoPtrType>(m_SignatureCount);
+        if (!m_UsingImplicitSignature)
+        {
+            VERIFY_EXPR(CreateInfo.ResourceSignaturesCount != 0 && CreateInfo.ppResourceSignatures != nullptr);
+            for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
+            {
+                auto* pSignature = ValidatedCast<PipelineResourceSignatureImplType>(CreateInfo.ppResourceSignatures[i]);
+                VERIFY_EXPR(pSignature != nullptr);
+
+                const Uint32 Index = pSignature->GetDesc().BindingIndex;
+
+#ifdef DILIGENT_DEBUG
+                VERIFY_EXPR(Index < m_SignatureCount);
+
+                VERIFY(m_Signatures[Index] == nullptr,
+                       "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
+                       " conflicts with another resource signature '", m_Signatures[Index]->GetDesc().Name,
+                       "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
+
+                for (Uint32 s = 0, StageCount = pSignature->GetNumActiveShaderStages(); s < StageCount; ++s)
+                {
+                    const auto ShaderType = pSignature->GetActiveShaderStageType(s);
+                    VERIFY(IsConsistentShaderType(ShaderType, CreateInfo.PSODesc.PipelineType),
+                           "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
+                           " has shader stage '", GetShaderTypeLiteralName(ShaderType), "' that is not compatible with pipeline type '",
+                           GetPipelineTypeString(CreateInfo.PSODesc.PipelineType), "'.");
+                }
+#endif
+
+                m_Signatures[Index] = pSignature;
+            }
+        }
+    }
+
 protected:
     /// Shader stages that are active in this PSO.
     SHADER_TYPE m_ActiveShaderStages = SHADER_TYPE_UNKNOWN;
 
     /// True if the pipeline was created using implicit root signature.
     const bool m_UsingImplicitSignature;
+
+    /// The number of signatures in m_Signatures array.
+    /// Note that this is not necessarily the same as the number of signatures
+    /// that were used to create the pipeline, because signatures are arranged
+    /// by their binding index.
+    Uint8 m_SignatureCount = 0;
+
+    /// Resource signatures arranged by their binding indices
+    using SignatureAutoPtrType         = RefCntAutoPtr<PipelineResourceSignatureImplType>;
+    SignatureAutoPtrType* m_Signatures = nullptr; // [m_SignatureCount]
 
     struct GraphicsPipelineData
     {

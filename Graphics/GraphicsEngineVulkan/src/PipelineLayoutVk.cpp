@@ -34,6 +34,7 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "StringTools.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
@@ -56,16 +57,9 @@ void PipelineLayoutVk::Release(RenderDeviceVkImpl* pDeviceVk, Uint64 CommandQueu
     }
 }
 
-void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE PipelineType, IPipelineResourceSignature** ppSignatures, Uint32 SignatureCount)
+void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount)
 {
-    VERIFY(m_SignatureCount == 0 && m_DescrSetCount == 0 && !m_VkPipelineLayout,
-           "This pipeline layout is already initialized");
-
-    auto MaxSignatureBindIndex =
-        PipelineResourceSignatureVkImpl::CopyResourceSignatures(PipelineType, SignatureCount, ppSignatures,
-                                                                m_Signatures.data(), m_Signatures.size());
-    m_SignatureCount = static_cast<Uint8>(MaxSignatureBindIndex + 1);
-    VERIFY_EXPR(m_SignatureCount == MaxSignatureBindIndex + 1);
+    VERIFY(m_DescrSetCount == 0 && !m_VkPipelineLayout, "This pipeline layout is already initialized");
 
     std::array<VkDescriptorSetLayout, MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureVkImpl::MAX_DESCRIPTOR_SETS> DescSetLayouts;
 
@@ -73,9 +67,9 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
     Uint32 DynamicUniformBufferCount = 0;
     Uint32 DynamicStorageBufferCount = 0;
 
-    for (Uint32 i = 0; i < m_SignatureCount; ++i)
+    for (Uint32 i = 0; i < SignatureCount; ++i)
     {
-        const auto& pSignature = m_Signatures[i];
+        const auto& pSignature = ppSignatures[i];
         if (pSignature == nullptr)
             continue;
 
@@ -91,6 +85,9 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
 
         DynamicUniformBufferCount += pSignature->GetDynamicUniformBufferCount();
         DynamicStorageBufferCount += pSignature->GetDynamicStorageBufferCount();
+#ifdef DILIGENT_DEBUG
+        m_DbgMaxBindIndex = std::max(m_DbgMaxBindIndex, Uint32{pSignature->GetDesc().BindingIndex});
+#endif
     }
     VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
 
@@ -128,78 +125,6 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, PIPELINE_TYPE Pipel
     m_VkPipelineLayout                      = pDeviceVk->GetLogicalDevice().CreatePipelineLayout(PipelineLayoutCI);
 
     m_DescrSetCount = static_cast<Uint8>(DescSetLayoutCount);
-}
-
-size_t PipelineLayoutVk::GetHash() const
-{
-    if (m_SignatureCount == 0)
-        return 0;
-
-    size_t hash = 0;
-    HashCombine(hash, m_SignatureCount);
-    for (Uint32 i = 0; i < m_SignatureCount; ++i)
-    {
-        if (m_Signatures[i] != nullptr)
-            HashCombine(hash, m_Signatures[i]->GetHash());
-        else
-            HashCombine(hash, 0);
-    }
-    return hash;
-}
-
-PipelineLayoutVk::ResourceInfo PipelineLayoutVk::GetResourceInfo(const char* Name, SHADER_TYPE Stage) const
-{
-    ResourceInfo Info;
-    for (Uint32 sign = 0, SignCount = GetSignatureCount(); sign < SignCount && !Info; ++sign)
-    {
-        auto* const pSignature = GetSignature(sign);
-        if (pSignature == nullptr)
-            continue;
-
-        for (Uint32 r = 0, ResCount = pSignature->GetTotalResourceCount(); r < ResCount; ++r)
-        {
-            const auto& ResDesc = pSignature->GetResourceDesc(r);
-            const auto& Attr    = pSignature->GetResourceAttribs(r);
-
-            if ((ResDesc.ShaderStages & Stage) != 0 && strcmp(ResDesc.Name, Name) == 0)
-            {
-                Info.Signature     = pSignature;
-                Info.Type          = ResDesc.ResourceType;
-                Info.ResIndex      = r;
-                Info.BindingIndex  = Attr.BindingIndex;
-                Info.DescrSetIndex = m_FirstDescrSetIndex[sign] + Attr.DescrSet;
-                break;
-            }
-        }
-    }
-    return Info;
-}
-
-PipelineLayoutVk::ResourceInfo PipelineLayoutVk::GetImmutableSamplerInfo(const char* Name, SHADER_TYPE Stage) const
-{
-    ResourceInfo Info;
-    for (Uint32 sign = 0, SignCount = GetSignatureCount(); sign < SignCount && !Info; ++sign)
-    {
-        auto* const pSignature = GetSignature(sign);
-        if (pSignature == nullptr)
-            continue;
-
-        for (Uint32 s = 0, SampCount = pSignature->GetImmutableSamplerCount(); s < SampCount; ++s)
-        {
-            const auto& Desc = pSignature->GetImmutableSamplerDesc(s);
-            const auto& Attr = pSignature->GetImmutableSamplerAttribs(s);
-
-            if (Attr.Ptr && (Desc.ShaderStages & Stage) != 0 && StreqSuff(Name, Desc.SamplerOrTextureName, pSignature->GetCombinedSamplerSuffix()))
-            {
-                Info.Signature     = pSignature;
-                Info.Type          = SHADER_RESOURCE_TYPE_SAMPLER;
-                Info.BindingIndex  = Attr.BindingIndex;
-                Info.DescrSetIndex = m_FirstDescrSetIndex[sign] + Attr.DescrSet;
-                break;
-            }
-        }
-    }
-    return Info;
 }
 
 } // namespace Diligent

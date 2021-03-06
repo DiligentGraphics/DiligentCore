@@ -318,14 +318,14 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     const auto& Layout    = pPipelineStateVk->GetPipelineLayout();
     auto&       BindInfo  = GetDescriptorSetBindInfo(PSODesc.PipelineType);
-    const auto  SignCount = Layout.GetSignatureCount();
+    const auto  SignCount = pPipelineStateVk->GetResourceSignatureCount();
 
     BindInfo.vkPipelineLayout = Layout.GetVkPipelineLayout();
 
     BindInfo.ActiveSRBMask = 0;
     for (Uint32 i = 0; i < SignCount; ++i)
     {
-        auto* pSignature = Layout.GetSignature(i);
+        auto* pSignature = pPipelineStateVk->GetResourceSignature(i);
         if (pSignature == nullptr || pSignature->GetNumDescriptorSets() == 0)
             continue;
 
@@ -333,7 +333,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
         auto& ResInfo = BindInfo.Resources[i];
 
-        ResInfo.DescriptorSetBaseInd = Layout.GetFirstDescrSetIndex(pSignature);
+        ResInfo.DescriptorSetBaseInd = Layout.GetFirstDescrSetIndex(pSignature->GetDesc().BindingIndex);
         ResInfo.DynamicOffsetCount   = pSignature->GetDynamicOffsetCount();
     }
 
@@ -349,7 +349,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     Uint32 sign = 0;
     for (; sign < SignCount; ++sign)
     {
-        const auto* pLayoutSign = Layout.GetSignature(sign);
+        const auto* pLayoutSign = pPipelineStateVk->GetResourceSignature(sign);
         const auto* pSRBSign    = BindInfo.SRBs[sign] != nullptr ? BindInfo.SRBs[sign]->GetSignature() : nullptr;
 
         if ((pLayoutSign == nullptr || pLayoutSign->GetNumDescriptorSets() == 0) != (pSRBSign == nullptr || pSRBSign->GetNumDescriptorSets() == 0))
@@ -414,7 +414,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
     while (StaleSRBFlags != 0)
     {
         Uint32 sign = PlatformMisc::GetLSB(StaleSRBFlags);
-        VERIFY_EXPR(sign < m_pPipelineState->GetPipelineLayout().GetSignatureCount());
+        VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
         StaleSRBFlags &= ~(Uint32{1} << sign);
 
         auto& ResInfo = BindInfo.Resources[sign];
@@ -461,17 +461,16 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
     if (m_State.CommittedResourcesValidated)
         return;
 
-    const auto& Layout    = m_pPipelineState->GetPipelineLayout();
-    auto&       BindInfo  = GetDescriptorSetBindInfo(m_pPipelineState->GetDesc().PipelineType);
-    const auto  SignCount = Layout.GetSignatureCount();
+    const auto& BindInfo  = GetDescriptorSetBindInfo(m_pPipelineState->GetDesc().PipelineType);
+    const auto  SignCount = m_pPipelineState->GetResourceSignatureCount();
 
     for (Uint32 i = 0; i < SignCount; ++i)
     {
-        auto* pLayoutSign = Layout.GetSignature(i);
-        if (pLayoutSign == nullptr)
+        const auto* pSign = m_pPipelineState->GetResourceSignature(i);
+        if (pSign == nullptr)
             continue;
 
-        if (pLayoutSign->GetNumDescriptorSets() == 0)
+        if (pSign->GetNumDescriptorSets() == 0)
         {
             // Skip signatures without any resources
             continue;
@@ -487,7 +486,7 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
         const auto* pSRBSign = pSRB->GetSignature();
         DEV_CHECK_ERR(pSRBSign != nullptr, "SRB must not be null");
 
-        if (!pLayoutSign->IsCompatibleWith(*pSRBSign))
+        if (!pSign->IsCompatibleWith(*pSRBSign))
         {
             LOG_ERROR_MESSAGE("Shader resource binding at index ", i, " with signature '", pSRBSign->GetDesc().Name,
                               "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");
@@ -496,12 +495,12 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
         DEV_CHECK_ERR((BindInfo.StaleSRBMask & BindInfo.ActiveSRBMask) == 0, "CommitDescriptorSets() must be called before validation.");
 
         const auto& ResInfo = BindInfo.Resources[i];
-        const auto  DSCount = pLayoutSign->GetNumDescriptorSets();
+        const auto  DSCount = pSign->GetNumDescriptorSets();
         for (Uint32 s = 0; s < DSCount; ++s)
         {
             DEV_CHECK_ERR(ResInfo.vkSets[s] != VK_NULL_HANDLE,
                           "descriptor set with index ", s, " is not bound for resource signature '",
-                          pLayoutSign->GetDesc().Name, "', binding index ", i, ".");
+                          pSign->GetDesc().Name, "', binding index ", i, ".");
         }
 
         DEV_CHECK_ERR(ResInfo.LastBoundDSBaseInd == ResInfo.DescriptorSetBaseInd,

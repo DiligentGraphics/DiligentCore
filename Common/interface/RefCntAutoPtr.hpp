@@ -228,11 +228,12 @@ private:
     // Note that the DoublePtrHelper is a private class, and can be created only by RefCntWeakPtr
     // Thus if no special effort is made, the lifetime of the instances of this class cannot be
     // longer than the lifetime of the creating object
+    template <typename DstType>
     class DoublePtrHelper
     {
     public:
         DoublePtrHelper(RefCntAutoPtr& AutoPtr) noexcept :
-            NewRawPtr{static_cast<T*>(AutoPtr)},
+            NewRawPtr{static_cast<DstType*>(AutoPtr)},
             m_pAutoPtr{std::addressof(AutoPtr)}
         {
         }
@@ -247,22 +248,22 @@ private:
 
         ~DoublePtrHelper()
         {
-            if (m_pAutoPtr && static_cast<T*>(*m_pAutoPtr) != NewRawPtr)
+            if (m_pAutoPtr && *m_pAutoPtr != static_cast<T*>(NewRawPtr))
             {
-                m_pAutoPtr->Attach(NewRawPtr);
+                m_pAutoPtr->Attach(static_cast<T*>(NewRawPtr));
             }
         }
 
-        T*&      operator*() noexcept { return NewRawPtr; }
-        const T* operator*() const noexcept { return NewRawPtr; }
+        DstType*&      operator*() noexcept { return NewRawPtr; }
+        const DstType* operator*() const noexcept { return NewRawPtr; }
 
         // clang-format off
-        operator T**() noexcept { return &NewRawPtr; }
-        operator const T**() const noexcept { return &NewRawPtr; }
+        operator DstType**() noexcept { return &NewRawPtr; }
+        operator const DstType**() const noexcept { return &NewRawPtr; }
         // clang-format on
 
     private:
-        T*             NewRawPtr;
+        DstType*       NewRawPtr;
         RefCntAutoPtr* m_pAutoPtr;
 
         // clang-format off
@@ -273,23 +274,28 @@ private:
     };
 
 public:
-    DoublePtrHelper operator&()
+    template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
+    DoublePtrHelper<DstType> DblPtr() noexcept { return DoublePtrHelper<DstType>(*this); }
+    template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
+    DoublePtrHelper<DstType> DblPtr() const noexcept { return DoublePtrHelper<DstType>(*this); }
+
+    DoublePtrHelper<T> operator&()
     {
-        return DoublePtrHelper(*this);
+        return DblPtr<T>();
     }
 
-    const DoublePtrHelper operator&() const
+    const DoublePtrHelper<T> operator&() const
     {
-        return DoublePtrHelper(*this);
+        return DblPtr<T>();
     }
 
-    T**       GetRawDblPtr() noexcept { return &m_pObject; }
-    const T** GetRawDblPtr() const noexcept { return &m_pObject; }
+    T**       RawDblPtr() noexcept { return &m_pObject; }
+    const T** RawDblPtr() const noexcept { return &m_pObject; }
 
     template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
-    DstType** GetRawDblPtr() noexcept { return reinterpret_cast<DstType**>(&m_pObject); }
+    DstType** RawDblPtr() noexcept { return reinterpret_cast<DstType**>(&m_pObject); }
     template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
-    DstType** GetRawDblPtr() const noexcept { return reinterpret_cast<DstType**>(&m_pObject); }
+    DstType** RawDblPtr() const noexcept { return reinterpret_cast<DstType**>(&m_pObject); }
 
 private:
     template <typename OtherType>

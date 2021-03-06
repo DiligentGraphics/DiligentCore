@@ -735,9 +735,9 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
     return RPDesc;
 }
 
-void PipelineStateVkImpl::CreateDefaultSignature(const PipelineStateCreateInfo& CreateInfo,
-                                                 const TShaderStages&           ShaderStages,
-                                                 IPipelineResourceSignature**   ppSignature)
+RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(
+    const PipelineStateCreateInfo& CreateInfo,
+    const TShaderStages&           ShaderStages)
 {
     struct UniqueResource
     {
@@ -837,6 +837,7 @@ void PipelineStateVkImpl::CreateDefaultSignature(const PipelineStateCreateInfo& 
         }
     }
 
+    RefCntAutoPtr<PipelineResourceSignatureVkImpl> pSignature;
     if (Resources.size())
     {
         String SignName = String{"Implicit signature for PSO '"} + m_Desc.Name + '\'';
@@ -852,38 +853,30 @@ void PipelineStateVkImpl::CreateDefaultSignature(const PipelineStateCreateInfo& 
         ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
         ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
 
-        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, ppSignature, true);
+        // Always initialize default resource signature as internal device object.
+        // This is necessary to avoud cyclic references.
+        // This may never be a problem as the PSO keeps the reference to the device if necessary.
+        constexpr bool bIsDeviceInternal = true;
+        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, pSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
 
-        if (*ppSignature == nullptr)
+        if (pSignature == nullptr)
             LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
     }
+
+    return pSignature;
 }
 
 void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
                                              TShaderStages&                 ShaderStages)
 {
-    std::array<IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> Signatures = {};
-    RefCntAutoPtr<IPipelineResourceSignature>                        pImplicitSignature;
-
-    Uint32 SignatureCount = CreateInfo.ResourceSignaturesCount;
-
-    for (Uint32 i = 0; i < SignatureCount; ++i)
+    if (m_UsingImplicitSignature)
     {
-        Signatures[i] = CreateInfo.ppResourceSignatures[i];
+        VERIFY_EXPR(m_SignatureCount == 1);
+        m_Signatures[0] = CreateDefaultSignature(CreateInfo, ShaderStages);
+        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
-    if (SignatureCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
-    {
-        CreateDefaultSignature(CreateInfo, ShaderStages, &pImplicitSignature);
-        if (pImplicitSignature != nullptr)
-        {
-            VERIFY_EXPR(pImplicitSignature->GetDesc().BindingIndex == 0);
-            Signatures[0]  = pImplicitSignature;
-            SignatureCount = 1;
-        }
-    }
-
-    m_PipelineLayout.Create(GetDevice(), CreateInfo.PSODesc.PipelineType, Signatures.data(), SignatureCount);
+    m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 
     // Verify that pipeline layout is compatible with shader resources and
     // remap resource bindings.
@@ -908,46 +901,56 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
             pShaderResources->ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& SPIRVAttribs, Uint32) //
                 {
-                    auto Info = m_PipelineLayout.GetResourceInfo(SPIRVAttribs.Name, ShaderType);
-                    if (!Info && SPIRVAttribs.Type == SPIRVShaderResourceAttribs::SeparateSampler)
-                    {
-                        DEV_CHECK_ERR(SPIRVAttribs.ArraySize == 1, "Immutable sampler arrays must also be added to resource list");
-                        Info = m_PipelineLayout.GetImmutableSamplerInfo(SPIRVAttribs.Name, ShaderType);
-                        if (Info)
-                        {
-                            VERIFY(Info.BindingIndex != ~0u && Info.DescrSetIndex != ~0u,
-                                   "Binding index and/or descriptor set index are not initialized. This indicates that the immutable sampler "
-                                   "is also present in the list of resources, so it should've been found by GetResourceInfo().");
-                        }
-                    }
-                    if (!Info)
+                    auto ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType);
+                    if (!ResAttribution)
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
                                             "' that is not present in any pipeline resource signature used to create pipeline state '",
                                             m_Desc.Name, "'.");
                     }
 
+                    const auto& SignDesc = ResAttribution.pSignature->GetDesc();
+
                     SHADER_RESOURCE_TYPE    Type;
                     PIPELINE_RESOURCE_FLAGS Flags;
                     GetShaderResourceTypeAndFlags(SPIRVAttribs.Type, Type, Flags);
-                    if (Type != Info.Type)
+
+                    Uint32 ResourceBinding = ~0u;
+                    Uint32 DescriptorSet   = ~0u;
+                    if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
                     {
-                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", SPIRVAttribs.Name,
-                                            "' and type '", GetShaderResourceTypeLiteralName(Type), "' that is not compatible with type '",
-                                            GetShaderResourceTypeLiteralName(Info.Type), "' specified in pipeline resource signature '", Info.Signature->GetDesc().Name, "'.");
+                        const auto& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                        ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, SPIRVAttribs.ArraySize,
+                                                              pShader->GetDesc().Name, SignDesc.Name);
+
+                        const auto& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
+                        ResourceBinding = ResAttribs.BindingIndex;
+                        DescriptorSet   = ResAttribs.DescrSet;
+                    }
+                    else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
+                    {
+                        if (Type != SHADER_RESOURCE_TYPE_SAMPLER)
+                        {
+                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", SPIRVAttribs.Name,
+                                                "' and type '", GetShaderResourceTypeLiteralName(Type),
+                                                "' that is not compatible with immutable sampler defined in pipeline resource signature '",
+                                                SignDesc.Name, "'.");
+                        }
+                        const auto& SamAttribs{ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
+                        ResourceBinding = SamAttribs.BindingIndex;
+                        DescriptorSet   = SamAttribs.DescrSet;
+                    }
+                    else
+                    {
+                        UNEXPECTED("Either immutable sampler or resource index should be valid");
                     }
 
-                    if (Info.ResIndex != ~0u)
-                    {
-                        const auto& ResDesc = Info.Signature->GetResourceDesc(Info.ResIndex);
-                        ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, SPIRVAttribs.ArraySize,
-                                                              pShader->GetDesc().Name, Info.Signature->GetDesc().Name);
-                    }
-                    SPIRV[SPIRVAttribs.BindingDecorationOffset]       = Info.BindingIndex;
-                    SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = Info.DescrSetIndex;
+                    VERIFY_EXPR(ResourceBinding != ~0u && DescriptorSet != ~0u);
+                    SPIRV[SPIRVAttribs.BindingDecorationOffset]       = ResourceBinding;
+                    SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = m_PipelineLayout.GetFirstDescrSetIndex(SignDesc.BindingIndex) + DescriptorSet;
 
 #ifdef DILIGENT_DEVELOPMENT
-                    m_ResInfo.emplace_back(Info);
+                    m_ResourceAttibutions.emplace_back(ResAttribution);
 #endif
                 });
         }
@@ -963,8 +966,6 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
     TShaderStages ShaderStages;
     ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
 
-    InitPipelineLayout(CreateInfo, ShaderStages);
-
     FixedLinearAllocator MemPool{GetRawAllocator()};
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
@@ -974,6 +975,8 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
 
     InitializePipelineDesc(CreateInfo, MemPool);
+
+    InitPipelineLayout(CreateInfo, ShaderStages);
 
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);
@@ -1062,45 +1065,24 @@ void PipelineStateVkImpl::Destruct()
     TPipelineStateBase::Destruct();
 }
 
-bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
-{
-    VERIFY_EXPR(pPSO != nullptr);
-
-    if (pPSO == this)
-        return true;
-
-    const auto& lhs = m_PipelineLayout;
-    const auto& rhs = ValidatedCast<const PipelineStateVkImpl>(pPSO)->m_PipelineLayout;
-
-    if (lhs.GetSignatureCount() != rhs.GetSignatureCount())
-        return false;
-
-    for (Uint32 s = 0, SigCount = lhs.GetSignatureCount(); s < SigCount; ++s)
-    {
-        if (!lhs.GetSignature(s)->IsCompatibleWith(*rhs.GetSignature(s)))
-            return false;
-    }
-    return true;
-}
-
 #ifdef DILIGENT_DEVELOPMENT
-void PipelineStateVkImpl::DvpVerifySRBResources(SRBArray& SRBs) const
+void PipelineStateVkImpl::DvpVerifySRBResources(const SRBArray& SRBs) const
 {
-    auto res_info = m_ResInfo.begin();
+    auto res_info = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)
     {
         pResources->ProcessResources(
             [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32) //
             {
-                if (res_info->ResIndex != ~0u) // There are also immutable samplers in the list
+                if (!res_info->IsImmutableSampler()) // There are also immutable samplers in the list
                 {
-                    VERIFY_EXPR(res_info->Signature != nullptr);
-                    const auto& SignDesc      = res_info->Signature->GetDesc();
+                    VERIFY_EXPR(res_info->pSignature != nullptr);
+                    const auto& SignDesc      = res_info->pSignature->GetDesc();
                     const auto  SignBindIndex = SignDesc.BindingIndex;
                     if (auto* pSRB = SRBs[SignBindIndex])
                     {
-                        res_info->Signature->DvpValidateCommittedResource(ResAttribs, res_info->ResIndex, pSRB->GetResourceCache(),
-                                                                          pResources->GetShaderName(), m_Desc.Name);
+                        res_info->pSignature->DvpValidateCommittedResource(ResAttribs, res_info->ResourceIndex, pSRB->GetResourceCache(),
+                                                                           pResources->GetShaderName(), m_Desc.Name);
                     }
                     else
                     {
@@ -1111,7 +1093,7 @@ void PipelineStateVkImpl::DvpVerifySRBResources(SRBArray& SRBs) const
             } //
         );
     }
-    VERIFY_EXPR(res_info == m_ResInfo.end());
+    VERIFY_EXPR(res_info == m_ResourceAttibutions.end());
 }
 #endif
 

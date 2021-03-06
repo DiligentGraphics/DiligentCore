@@ -414,7 +414,7 @@ size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 }
 
 
-RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultResourceSignature(
+RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::CreateDefaultResourceSignature(
     RenderDeviceD3D12Impl*         pDevice,
     const PipelineStateCreateInfo& CreateInfo,
     TShaderStages&                 ShaderStages,
@@ -513,7 +513,7 @@ RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultR
         }
     }
 
-    RefCntAutoPtr<IPipelineResourceSignature> pImplicitSignature;
+    RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> pImplicitSignature;
     if (Resources.size())
     {
         PipelineResourceSignatureDesc ResSignDesc;
@@ -526,7 +526,11 @@ RefCntAutoPtr<IPipelineResourceSignature> PipelineStateD3D12Impl::CreateDefaultR
         ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
         ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
 
-        pDevice->CreatePipelineResourceSignature(ResSignDesc, &pImplicitSignature, true);
+        // Always initialize default resource signature as internal device object.
+        // This is necessary to avoud cyclic references from GenerateMips.
+        // This may never be a problem as the PSO keeps the reference to the device if necessary.
+        constexpr bool bIsDeviceInternal = true;
+        pDevice->CreatePipelineResourceSignature(ResSignDesc, pImplicitSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
 
         if (!pImplicitSignature)
             LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "'.");
@@ -539,31 +543,14 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                                                TShaderStages&                 ShaderStages,
                                                LocalRootSignatureD3D12*       pLocalRootSig)
 {
-    Uint32 SignatureCount = 0;
-    if (CreateInfo.ResourceSignaturesCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
+    if (m_UsingImplicitSignature)
     {
-        auto pImplicitSignature = CreateDefaultResourceSignature(GetDevice(), CreateInfo, ShaderStages, pLocalRootSig);
-        if (pImplicitSignature)
-        {
-            VERIFY_EXPR(pImplicitSignature->GetDesc().BindingIndex == 0);
-            SignatureCount = 1;
-            m_ResourceSignatures.reset(new RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[SignatureCount]);
-            m_ResourceSignatures[0] = pImplicitSignature.RawPtr<PipelineResourceSignatureD3D12Impl>();
-        }
-    }
-    else
-    {
-        Uint32 MaxSignatureBindingIndex = PipelineResourceSignatureD3D12Impl::CalcMaxSignatureBindIndex(CreateInfo.ResourceSignaturesCount, CreateInfo.ppResourceSignatures);
-        SignatureCount                  = MaxSignatureBindingIndex + 1;
-        m_ResourceSignatures.reset(new RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>[SignatureCount]);
-
-        auto DbgMaxSignatureBindingIndex =
-            PipelineResourceSignatureD3D12Impl::CopyResourceSignatures(CreateInfo.PSODesc.PipelineType, CreateInfo.ResourceSignaturesCount,
-                                                                       CreateInfo.ppResourceSignatures, m_ResourceSignatures.get(), SignatureCount);
-        VERIFY_EXPR(DbgMaxSignatureBindingIndex == MaxSignatureBindingIndex);
+        VERIFY_EXPR(m_SignatureCount == 1);
+        m_Signatures[0] = CreateDefaultResourceSignature(GetDevice(), CreateInfo, ShaderStages, pLocalRootSig);
+        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
-    m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_ResourceSignatures.get(), SignatureCount);
+    m_RootSig = GetDevice()->GetRootSignatureCache().GetRootSig(m_Signatures, m_SignatureCount);
     if (!m_RootSig)
         LOG_ERROR_AND_THROW("Failed to create root signature for pipeline '", m_Desc.Name, "'.");
 
@@ -587,9 +574,9 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
         ResourceBinding::TMap ResourceMap;
         // Note that we must use signatures from m_ResourceSignatures for resource binding map,
         // because signatures from m_RootSig may have resources with different names.
-        for (Uint32 sign = 0; sign < SignatureCount; ++sign)
+        for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
         {
-            const PipelineResourceSignatureD3D12Impl* const pSignature = m_ResourceSignatures[sign];
+            const PipelineResourceSignatureD3D12Impl* const pSignature = m_Signatures[sign];
             if (pSignature == nullptr)
                 continue;
 
@@ -1118,12 +1105,14 @@ void PipelineStateD3D12Impl::Destruct()
 
 bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
 {
-    VERIFY_EXPR(pPSO != nullptr);
+    DEV_CHECK_ERR(pPSO != nullptr, "pPSO must not be null");
 
     if (pPSO == this)
         return true;
 
-    return (m_RootSig == ValidatedCast<const PipelineStateD3D12Impl>(pPSO)->m_RootSig);
+    bool IsCompatible = (m_RootSig == ValidatedCast<const PipelineStateD3D12Impl>(pPSO)->m_RootSig);
+    VERIFY_EXPR(IsCompatible == TPipelineStateBase::IsCompatibleWith(pPSO));
+    return IsCompatible;
 }
 
 } // namespace Diligent

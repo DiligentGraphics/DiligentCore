@@ -41,10 +41,10 @@
 namespace Diligent
 {
 
-void PipelineStateGLImpl::CreateDefaultSignature(const PipelineStateCreateInfo& CreateInfo,
-                                                 const TShaderStages&           ShaderStages,
-                                                 SHADER_TYPE                    ActiveStages,
-                                                 IPipelineResourceSignature**   ppSignature)
+RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaultSignature(
+    const PipelineStateCreateInfo& CreateInfo,
+    const TShaderStages&           ShaderStages,
+    SHADER_TYPE                    ActiveStages)
 {
     std::vector<PipelineResourceDesc> Resources;
 
@@ -152,6 +152,7 @@ void PipelineStateGLImpl::CreateDefaultSignature(const PipelineStateCreateInfo& 
         ProgramResources.ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);
     }
 
+    RefCntAutoPtr<PipelineResourceSignatureGLImpl> pSignature;
     if (Resources.size())
     {
         String SignName = String{"Implicit signature for PSO '"} + m_Desc.Name + '\'';
@@ -167,37 +168,28 @@ void PipelineStateGLImpl::CreateDefaultSignature(const PipelineStateCreateInfo& 
         ResSignDesc.SRBAllocationGranularity   = CreateInfo.PSODesc.SRBAllocationGranularity;
         ResSignDesc.UseCombinedTextureSamplers = true;
 
-        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, ppSignature, true);
+        // Always initialize default resource signature as internal device object.
+        // This is necessary to avoud cyclic references from TexRegionRenderer.
+        // This may never be a problem as the PSO keeps the reference to the device if necessary.
+        constexpr bool bIsDeviceInternal = true;
+        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, pSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
 
-        if (*ppSignature == nullptr)
+        if (!pSignature)
             LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
     }
+
+    return pSignature;
 }
 
 void PipelineStateGLImpl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
                                               const TShaderStages&           ShaderStages,
                                               SHADER_TYPE                    ActiveStages)
 {
-    const Uint32                              SignatureCount = CreateInfo.ResourceSignaturesCount;
-    RefCntAutoPtr<IPipelineResourceSignature> pImplicitSignature;
-
-    if (SignatureCount == 0 || CreateInfo.ppResourceSignatures == nullptr)
+    if (m_UsingImplicitSignature)
     {
-        CreateDefaultSignature(CreateInfo, ShaderStages, ActiveStages, &pImplicitSignature);
-        if (pImplicitSignature != nullptr)
-        {
-            VERIFY_EXPR(pImplicitSignature->GetDesc().BindingIndex == 0);
-            m_Signatures[0]  = ValidatedCast<PipelineResourceSignatureGLImpl>(pImplicitSignature.RawPtr());
-            m_SignatureCount = 1;
-        }
-    }
-    else
-    {
-        const auto MaxBindingIndex =
-            PipelineResourceSignatureGLImpl::CopyResourceSignatures(CreateInfo.PSODesc.PipelineType, SignatureCount, CreateInfo.ppResourceSignatures,
-                                                                    m_Signatures.data(), m_Signatures.size());
-        m_SignatureCount = static_cast<decltype(m_SignatureCount)>(MaxBindingIndex + 1);
-        VERIFY_EXPR(m_SignatureCount == MaxBindingIndex + 1);
+        VERIFY_EXPR(m_SignatureCount == 1);
+        m_Signatures[0] = CreateDefaultSignature(CreateInfo, ShaderStages, ActiveStages);
+        VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
     // Apply resource bindings to programs.
@@ -393,10 +385,7 @@ void PipelineStateGLImpl::Destruct()
         m_GLPrograms = nullptr;
     }
 
-    m_Signatures.fill({});
-
-    m_SignatureCount = 0;
-    m_NumPrograms    = 0;
+    m_NumPrograms = 0;
 
     TPipelineStateBase::Destruct();
 }
@@ -409,26 +398,6 @@ SHADER_TYPE PipelineStateGLImpl::GetShaderStageType(Uint32 Index) const
     return m_ShaderTypes[Index];
 }
 
-bool PipelineStateGLImpl::IsCompatibleWith(const IPipelineState* pPSO) const
-{
-    VERIFY_EXPR(pPSO != nullptr);
-
-    if (pPSO == this)
-        return true;
-
-    const auto& lhs = *this;
-    const auto& rhs = *ValidatedCast<const PipelineStateGLImpl>(pPSO);
-
-    if (lhs.GetResourceSignatureCount() != rhs.GetResourceSignatureCount())
-        return false;
-
-    for (Uint32 s = 0, SigCount = lhs.GetResourceSignatureCount(); s < SigCount; ++s)
-    {
-        if (!lhs.GetResourceSignature(s)->IsCompatibleWith(*rhs.GetResourceSignature(s)))
-            return false;
-    }
-    return true;
-}
 
 void PipelineStateGLImpl::CommitProgram(GLContextState& State)
 {

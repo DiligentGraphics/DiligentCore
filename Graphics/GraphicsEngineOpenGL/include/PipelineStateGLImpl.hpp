@@ -60,19 +60,6 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
-    /// Implementation of IPipelineState::GetResourceSignatureCount() in OpenGL backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_SignatureCount; }
-
-    /// Implementation of IPipelineState::GetResourceSignature() in OpenGL backend.
-    virtual PipelineResourceSignatureGLImpl* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
-    {
-        VERIFY_EXPR(Index < m_SignatureCount);
-        return m_Signatures[Index].RawPtr<PipelineResourceSignatureGLImpl>();
-    }
-
-    /// Implementation of IPipelineState::IsCompatibleWith() in OpenGL backend.
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
-
     void CommitProgram(GLContextState& State);
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -92,10 +79,10 @@ private:
                              const TShaderStages&           ShaderStages,
                              SHADER_TYPE                    ActiveStages);
 
-    void CreateDefaultSignature(const PipelineStateCreateInfo& CreateInfo,
-                                const TShaderStages&           ShaderStages,
-                                SHADER_TYPE                    ActiveStages,
-                                IPipelineResourceSignature**   ppSignature);
+    RefCntAutoPtr<PipelineResourceSignatureGLImpl> CreateDefaultSignature(
+        const PipelineStateCreateInfo& CreateInfo,
+        const TShaderStages&           ShaderStages,
+        SHADER_TYPE                    ActiveStages);
 
     void Destruct();
 
@@ -114,10 +101,6 @@ private:
     ThreadingTools::LockFlag m_ProgPipelineLockFlag;
 
     std::vector<std::pair<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj>> m_GLProgPipelines;
-
-    using SignatureArrayType            = std::array<RefCntAutoPtr<PipelineResourceSignatureGLImpl>, MAX_RESOURCE_SIGNATURES>;
-    SignatureArrayType m_Signatures     = {};
-    Uint8              m_SignatureCount = 0;
 
     Uint8                      m_NumPrograms                = 0;
     bool                       m_IsProgramPipelineSupported = false;

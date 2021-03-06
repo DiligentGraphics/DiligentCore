@@ -231,58 +231,22 @@ public:
         return this->m_Desc.ImmutableSamplers[SampIndex];
     }
 
-    static Uint32 CalcMaxSignatureBindIndex(const Uint32                SignatureCount,
-                                            IPipelineResourceSignature* ppResourceSignatures[])
+    static bool SignaturesCompatible(const PipelineResourceSignatureImplType* pSign0,
+                                     const PipelineResourceSignatureImplType* pSign1)
     {
-        Uint32 MaxSignatureBindingIndex = 0;
-        for (Uint32 i = 0; i < SignatureCount; ++i)
-        {
-            const auto* pSignature = ppResourceSignatures[i];
-            VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
-            MaxSignatureBindingIndex = std::max(MaxSignatureBindingIndex, Uint32{pSignature->GetDesc().BindingIndex});
-        }
-        return MaxSignatureBindingIndex;
-    }
+        if (pSign0 == pSign1)
+            return true;
 
-    template <typename TPipelineResourceSignature>
-    static Uint32 CopyResourceSignatures(PIPELINE_TYPE                             PipelineType,
-                                         const Uint32                              SignatureCount,
-                                         IPipelineResourceSignature*               ppResourceSignatures[],
-                                         RefCntAutoPtr<TPipelineResourceSignature> DstSignatures[],
-                                         const size_t                              MaxDstSignatureCount)
-    {
-        Uint32 MaxSignatureBindIndex = 0;
-        for (Uint32 i = 0; i < SignatureCount; ++i)
-        {
-            auto* pSignature = ValidatedCast<TPipelineResourceSignature>(ppResourceSignatures[i]);
-            VERIFY(pSignature != nullptr, "Pipeline resource signature at index ", i, " is null. This error should've been caught by ValidatePipelineResourceSignatures.");
+        bool IsNull0 = pSign0 == nullptr || (pSign0->GetTotalResourceCount() == 0 && pSign0->GetImmutableSamplerCount() == 0);
+        bool IsNull1 = pSign1 == nullptr || (pSign1->GetTotalResourceCount() == 0 && pSign1->GetImmutableSamplerCount() == 0);
+        if (IsNull0 && IsNull1)
+            return true;
 
-            const Uint8 Index = pSignature->GetDesc().BindingIndex;
+        if (IsNull0 != IsNull1)
+            return false;
 
-#ifdef DILIGENT_DEBUG
-            VERIFY(Index < MaxDstSignatureCount,
-                   "Pipeline resource signature specifies binding index ", Uint32{Index}, " that exceeds the limit (", MaxDstSignatureCount - 1,
-                   "). This error should've been caught by ValidatePipelineResourceSignatureDesc.");
-
-            VERIFY(DstSignatures[Index] == nullptr,
-                   "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
-                   " conflicts with another resource signature '", DstSignatures[Index]->GetDesc().Name,
-                   "' that uses the same index. This error should've been caught by ValidatePipelineResourceSignatures.");
-
-            for (Uint32 s = 0, StageCount = pSignature->GetNumActiveShaderStages(); s < StageCount; ++s)
-            {
-                const auto ShaderType = pSignature->GetActiveShaderStageType(s);
-                VERIFY(IsConsistentShaderType(ShaderType, PipelineType),
-                       "Pipeline resource signature '", pSignature->GetDesc().Name, "' at index ", Uint32{Index},
-                       " has shader stage '", GetShaderTypeLiteralName(ShaderType), "' that is not compatible with pipeline type '",
-                       GetPipelineTypeString(PipelineType), "'.");
-            }
-#endif
-
-            MaxSignatureBindIndex = std::max<Uint32>(MaxSignatureBindIndex, Index);
-            DstSignatures[Index]  = pSignature;
-        }
-        return MaxSignatureBindIndex;
+        VERIFY_EXPR(pSign0 != nullptr && pSign1 != nullptr);
+        return pSign0->IsCompatibleWith(pSign1);
     }
 
 protected:

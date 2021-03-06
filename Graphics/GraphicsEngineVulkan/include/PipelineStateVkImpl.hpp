@@ -44,6 +44,7 @@
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "PipelineLayoutVk.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {
@@ -66,20 +67,11 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateVk, TPipelineStateBase)
 
-    /// Implementation of IPipelineState::IsCompatibleWith() in Vulkan backend.
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
-
     /// Implementation of IPipelineStateVk::GetRenderPass().
     virtual IRenderPassVk* DILIGENT_CALL_TYPE GetRenderPass() const override final { return GetRenderPassPtr().RawPtr<IRenderPassVk>(); }
 
     /// Implementation of IPipelineStateVk::GetVkPipeline().
     virtual VkPipeline DILIGENT_CALL_TYPE GetVkPipeline() const override final { return m_Pipeline; }
-
-    /// Implementation of IPipelineState::GetResourceSignatureCount() in Vulkan backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_PipelineLayout.GetSignatureCount(); }
-
-    /// Implementation of IPipelineState::GetResourceSignature() in Vulkan backend.
-    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final { return m_PipelineLayout.GetSignature(Index); }
 
     const PipelineLayoutVk& GetPipelineLayout() const { return m_PipelineLayout; }
 
@@ -115,7 +107,7 @@ public:
     // Performs validation of SRB resource parameters that are not possible to validate
     // when resource is bound.
     using SRBArray = std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES>;
-    void DvpVerifySRBResources(SRBArray& SRBs) const;
+    void DvpVerifySRBResources(const SRBArray& SRBs) const;
 #endif
 
 private:
@@ -127,9 +119,9 @@ private:
     void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
                             TShaderStages&                 ShaderStages);
 
-    void CreateDefaultSignature(const PipelineStateCreateInfo& CreateInfo,
-                                const TShaderStages&           ShaderStages,
-                                IPipelineResourceSignature**   ppSignature);
+    RefCntAutoPtr<PipelineResourceSignatureVkImpl> CreateDefaultSignature(
+        const PipelineStateCreateInfo& CreateInfo,
+        const TShaderStages&           ShaderStages);
 
     void Destruct();
 
@@ -139,8 +131,8 @@ private:
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages
     std::vector<std::shared_ptr<const SPIRVShaderResources>> m_ShaderResources;
-    // Resource info for every resource in m_ShaderResources, in the same order
-    std::vector<PipelineLayoutVk::ResourceInfo> m_ResInfo;
+    // Resource attributions for every resource in m_ShaderResources, in the same order
+    std::vector<ResourceAttribution> m_ResourceAttibutions;
 #endif
 };
 
