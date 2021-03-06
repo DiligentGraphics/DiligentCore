@@ -27,8 +27,6 @@
 
 #pragma once
 
-#include <d3dcommon.h>
-
 #include "Constants.h"
 #include "Shader.h"
 #include "ResourceBindingMap.hpp"
@@ -36,20 +34,21 @@
 namespace Diligent
 {
 
-struct DXBCUtils
+namespace DXBCUtils
 {
-    using BindInfo            = ResourceBinding::BindInfo;
-    using TResourceBindingMap = ResourceBinding::TMap;
+
+using BindInfo            = ResourceBinding::BindInfo;
+using TResourceBindingMap = ResourceBinding::TMap;
 
 
-    /// Remaps resource bindings in the given DXBC byte code.
+/// Remaps resource bindings in the given DXBC byte code.
 
-    /// \param [in]    ResourceMap - Resource binding map. For every resource in the
-    ///                              byte code it must define the binding (shader register).
-    /// \param [inout] pBytecode   - Byte code that will be patched.
-    static bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
-                                      void*                      pBytecode,
-                                      size_t                     Size);
-};
+/// \param [in]    ResourceMap - Resource binding map. For every resource in the
+///                              byte code it must define the binding (shader register).
+/// \param [inout] pBytecode   - Byte code that will be patched.
+bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
+                           void*                      pBytecode,
+                           size_t                     Size);
+}; // namespace DXBCUtils
 
 } // namespace Diligent

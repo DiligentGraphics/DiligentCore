@@ -48,10 +48,10 @@ struct ResourceBinding
         SHADER_RESOURCE_TYPE ResType = SHADER_RESOURCE_TYPE_UNKNOWN;
 #endif
 
-        BindInfo()
+        BindInfo() noexcept
         {}
 
-        BindInfo(Uint32 _BindPoint, Uint32 _Space, Uint32 _ArraySize, SHADER_RESOURCE_TYPE _ResType) :
+        BindInfo(Uint32 _BindPoint, Uint32 _Space, Uint32 _ArraySize, SHADER_RESOURCE_TYPE _ResType) noexcept :
             // clang-format off
             BindPoint{_BindPoint},
             Space    {_Space    },
@@ -63,7 +63,7 @@ struct ResourceBinding
         {}
     };
 
-    /// A mapping from the resource name to the binding (shader register).
+    /// A mapping from the resource name to the binding (shader register, space, array size).
     using TMap = std::unordered_map<HashMapStringKey, BindInfo, HashMapStringKey::Hasher>;
 };
 

@@ -983,15 +983,21 @@ private:
 void ShaderBytecodeRemapper::RemapResourceOperand(const OperandToken& Operand, Uint32* Token, const void* Finish)
 {
     if (IsSM51())
-        return RemapResourceOperandSM51(Operand, Token, Finish);
+    {
+        RemapResourceOperandSM51(Operand, Token, Finish);
+    }
     else
-        return RemapResourceOperandSM50(Operand, Token, Finish);
+    {
+        RemapResourceOperandSM50(Operand, Token, Finish);
+    }
 }
 
 void ShaderBytecodeRemapper::RemapResourceBinding(const OpcodeToken& Opcode, Uint32* Token, const void* Finish)
 {
     if (IsSM51())
-        return RemapResourceBindingSM51(Opcode, Token, Finish);
+    {
+        RemapResourceBindingSM51(Opcode, Token, Finish);
+    }
 }
 
 void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operand, Uint32* Token, const void* Finish)
@@ -1085,7 +1091,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(const OperandToken& Oper
         case D3D10_SB_OPERAND_INDEX_IMMEDIATE32_PLUS_RELATIVE:
         {
             if (Token[1] < Ext.SrcBindPoint || Token[1] >= Ext.SrcBindPoint + Info.ArraySize)
-                LOG_ERROR_AND_THROW("Invalid bind point (", Token[1], "), expected be in range (", Ext.SrcBindPoint, "..", Ext.SrcBindPoint + Info.ArraySize - 1, ").");
+                LOG_ERROR_AND_THROW("Invalid bind point (", Token[1], "), expected to be in the range (", Ext.SrcBindPoint, "..", Ext.SrcBindPoint + Info.ArraySize - 1, ").");
 
             Token[1] = Info.BindPoint + (Token[1] - Ext.SrcBindPoint);
             break;
@@ -1098,7 +1104,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(const OperandToken& Oper
             VERIFY_EXPR(Operand2.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
             if (Token[2] < Ext.SrcBindPoint || Token[2] >= Ext.SrcBindPoint + Info.ArraySize)
-                LOG_ERROR_AND_THROW("Invalid bind point (", Token[2], "), expected be in range (", Ext.SrcBindPoint, "..", Ext.SrcBindPoint + Info.ArraySize - 1, ").");
+                LOG_ERROR_AND_THROW("Invalid bind point (", Token[2], "), expected to be in the range (", Ext.SrcBindPoint, "..", Ext.SrcBindPoint + Info.ArraySize - 1, ").");
 
             Token[2] = Info.BindPoint + (Token[2] - Ext.SrcBindPoint);
             break;
@@ -1655,12 +1661,16 @@ void ShaderBytecodeRemapper::PatchBytecode(Uint32* Token, const void* EndPtr) no
         ParseOpcode(Token, Finish);
     }
 }
+
 } // namespace
 
 
-bool DXBCUtils::RemapResourceBindings(const TResourceBindingMap& ResourceMap,
-                                      void*                      pBytecode,
-                                      size_t                     Size)
+namespace DXBCUtils
+{
+
+bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
+                           void*                      pBytecode,
+                           size_t                     Size)
 {
     if (pBytecode == nullptr)
     {
@@ -1783,5 +1793,7 @@ bool DXBCUtils::RemapResourceBindings(const TResourceBindingMap& ResourceMap,
 
     return true;
 }
+
+} // namespace DXBCUtils
 
 } // namespace Diligent

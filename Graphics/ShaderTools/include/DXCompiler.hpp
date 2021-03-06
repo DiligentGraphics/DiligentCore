@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include <array>
 #include <vector>
 #include <memory>
 
@@ -86,19 +85,18 @@ public:
                          IDataBlob**             ppCompilerOutput) noexcept(false) = 0;
 
 
-
     using BindInfo            = ResourceBinding::BindInfo;
     using TResourceBindingMap = ResourceBinding::TMap;
 
-    /// Remaps resource bindings (shader registers) in the source byte code using the
+    /// Remaps resource bindings (shader registers and spaces) in the source byte code using the
     /// resource binding map.
 
     /// \param [in]  ResourceMap   - Resource binding map. For every resource in the
     ///                              source byte code it must define the binding
-    ///                              (shader register).
+    ///                              (shader register and space).
     /// \param [in]  pSrcBytecode  - Source byte code.
-    /// \param [out] ppDstByteCode - Memory location where pointer to the byte code
-    ///                              with remapped bindigs will be written.
+    /// \param [out] ppDstByteCode - Memory location where the pointer to the byte code
+    ///                              with the remapped bindigs will be written.
     ///
     /// \return     true if the remapping was successfull, and false otherwise.
     virtual bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
