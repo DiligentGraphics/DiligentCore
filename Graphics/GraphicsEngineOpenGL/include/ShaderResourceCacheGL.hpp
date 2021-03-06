@@ -27,6 +27,9 @@
 
 #pragma once
 
+#include <array>
+#include <vector>
+
 #include "BufferGLImpl.hpp"
 #include "TextureBaseGL.hpp"
 #include "SamplerGLImpl.hpp"
@@ -252,6 +255,11 @@ public:
     }
     bool StaticResourcesInitialized() const { return m_bStaticResourcesInitialized; }
 #endif
+
+    void BindResources(GLContextState&              GLState,
+                       const std::array<Uint32, 4>& BaseBindings,
+                       std::vector<TextureBaseGL*>& WritableTextures,
+                       std::vector<BufferGLImpl*>&  WritableBuffers) const;
 
 private:
     CachedUB& GetUB(Uint32 CacheOffset)

@@ -346,21 +346,6 @@ void BufferGLImpl::Unmap(GLContextState& CtxState)
     (void)Result;
 }
 
-void BufferGLImpl::BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState)
-{
-#if GL_ARB_shader_image_load_store
-#    ifdef DILIGENT_DEBUG
-    {
-        constexpr auto BufferBarriers = MEMORY_BARRIER_ALL_BUFFER_BARRIERS;
-        VERIFY((RequiredBarriers & BufferBarriers) != 0, "At least one buffer memory barrier flag should be set");
-        VERIFY((RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag");
-    }
-#    endif
-
-    GLContextState.EnsureMemoryBarrier(RequiredBarriers, this);
-#endif
-}
-
 void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView)
 {
     VERIFY(ppView != nullptr, "Buffer view pointer address is null");

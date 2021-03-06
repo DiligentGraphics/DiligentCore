@@ -129,7 +129,7 @@ public:
                        SHADER_TYPE                     Stages,
                        const TBindings&                Bindings) const;
 
-    __forceinline void AddBindings(TBindings& Bindings) const
+    __forceinline void ShiftBindings(TBindings& Bindings) const
     {
         for (Uint32 i = 0; i < Bindings.size(); ++i)
         {

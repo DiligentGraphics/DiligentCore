@@ -72,7 +72,7 @@ public:
     void MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint32 Offset, Uint32 Length, PVoid& pMappedData);
     void Unmap(GLContextState& CtxState);
 
-    void BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, class GLContextState& GLContextState);
+    __forceinline void BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState);
 
     const GLObjectWrappers::GLBufferObj& GetGLHandle() { return m_GlBuffer; }
 
@@ -95,5 +95,20 @@ private:
     const Uint32                  m_BindTarget;
     const GLenum                  m_GLUsageHint;
 };
+
+void BufferGLImpl::BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState)
+{
+#if GL_ARB_shader_image_load_store
+#    ifdef DILIGENT_DEBUG
+    {
+        constexpr auto BufferBarriers = MEMORY_BARRIER_ALL_BUFFER_BARRIERS;
+        VERIFY((RequiredBarriers & BufferBarriers) != 0, "At least one buffer memory barrier flag should be set");
+        VERIFY((RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag");
+    }
+#    endif
+
+    GLContextState.EnsureMemoryBarrier(RequiredBarriers, this);
+#endif
+}
 
 } // namespace Diligent

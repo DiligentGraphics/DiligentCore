@@ -283,7 +283,6 @@ private:
     __forceinline void PostDraw();
 
     using TBindings = PipelineResourceSignatureGLImpl::TBindings;
-    void BindProgramResources(MEMORY_BARRIER& NewMemoryBarriers, const ShaderResourceBindingGLImpl* pShaderResBindingGL, TBindings& Bindings);
     void BindProgramResources();
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -307,8 +306,8 @@ private:
 #ifdef DILIGENT_DEVELOPMENT
         bool CommittedResourcesValidated = false;
 
-        // Binding offsets that was used at last BindProgramResources() call.
-        std::array<TBindings, MAX_RESOURCE_SIGNATURES> BoundResOffsets = {};
+        // Binding offsets that was used in the last BindProgramResources() call.
+        std::array<TBindings, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
 #endif
 
         SRBState()

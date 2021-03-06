@@ -35,6 +35,7 @@
 #include "TextureViewGLImpl.hpp"
 #include "AsyncWritableResource.hpp"
 #include "RenderDeviceGLImpl.hpp"
+#include "GLContextState.hpp"
 
 namespace Diligent
 {
@@ -82,7 +83,7 @@ public:
 
     GLenum GetGLTexFormat() const { return m_GLTexFormat; }
 
-    void TextureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, class GLContextState& GLContextState);
+    __forceinline void TextureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, class GLContextState& GLContextState);
 
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint) = 0;
 
@@ -132,5 +133,20 @@ protected:
     const GLenum                   m_GLTexFormat;
     //Uint32 m_uiMapTarget;
 };
+
+void TextureBaseGL::TextureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState)
+{
+#if GL_ARB_shader_image_load_store
+#    ifdef DILIGENT_DEBUG
+    {
+        constexpr Uint32 TextureBarriers = MEMORY_BARRIER_ALL_TEXTURE_BARRIERS;
+        VERIFY((RequiredBarriers & TextureBarriers) != 0, "At least one texture memory barrier flag should be set");
+        VERIFY((RequiredBarriers & ~TextureBarriers) == 0, "Inappropriate texture memory barrier flag");
+    }
+#    endif
+
+    GLContextState.EnsureMemoryBarrier(RequiredBarriers, this);
+#endif
+}
 
 } // namespace Diligent

@@ -215,7 +215,7 @@ void PipelineStateGLImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
         {
             pSignature->ApplyBindings(m_GLPrograms[0], CtxState, ActiveStages, Bindings);
         }
-        pSignature->AddBindings(Bindings);
+        pSignature->ShiftBindings(Bindings);
     }
 
     const auto& Limits = GetDevice()->GetDeviceLimits();
@@ -590,7 +590,7 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
         DEV_CHECK_ERR(Bindings == BoundResOffsets[sign],
                       "Bound resources has incorrect base binding indices, this may indicate a bug in resource signature compatibility comparison.");
 
-        pSignature->AddBindings(Bindings);
+        pSignature->ShiftBindings(Bindings);
     }
 
 
