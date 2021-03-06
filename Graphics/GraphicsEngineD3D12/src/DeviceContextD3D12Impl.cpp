@@ -240,7 +240,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 
         for (Uint32 i = 0, SignCount = pPipelineStateD3D12->GetResourceSignatureCount(); i < SignCount; ++i)
         {
-            const auto* pSignature = pPipelineStateD3D12->GetSignature(i);
+            const auto* pSignature = pPipelineStateD3D12->GetResourceSignature(i);
             if (pSignature != nullptr)
                 RootInfo.ActiveSRBMask |= 1u << i;
         }

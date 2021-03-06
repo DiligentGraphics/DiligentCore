@@ -81,7 +81,7 @@ public:
 
         // clang-format off
         const Uint32  CacheOffset;                                 // SRB and Signature use the same cache offsets for static resources.
-                                                                   // Binding = m_FirstBinding[Range] + CacheOffset
+                                                                   // Binding == BaseBinding[Range] + CacheOffset
         const Uint32  SamplerInd           : _SamplerIndBits;      // ImtblSamplerAssigned == true:  index of the immutable sampler in m_ImmutableSamplers.
                                                                    // ImtblSamplerAssigned == false: index of the assigned sampler in m_Desc.Resources.
         const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
@@ -110,12 +110,6 @@ public:
         return m_pResourceAttribs[ResIndex];
     }
 
-    const PipelineResourceDesc& GetResourceDesc(Uint32 ResIndex) const
-    {
-        VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-        return m_Desc.Resources[ResIndex];
-    }
-
     bool HasDynamicResources() const
     {
         const auto IndexRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
@@ -124,10 +118,12 @@ public:
 
     using TBindings = std::array<Uint32, BINDING_RANGE_COUNT>;
 
+    // Applies bindings for resources in this signature to GLProgram.
+    // The bindings are biased by BaseBindings.
     void ApplyBindings(GLObjectWrappers::GLProgramObj& GLProgram,
                        class GLContextState&           State,
                        SHADER_TYPE                     Stages,
-                       const TBindings&                Bindings) const;
+                       const TBindings&                BaseBindings) const;
 
     __forceinline void ShiftBindings(TBindings& Bindings) const
     {

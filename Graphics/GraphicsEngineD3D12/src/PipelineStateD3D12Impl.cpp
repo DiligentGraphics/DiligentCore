@@ -660,29 +660,6 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
     }
 }
 
-
-PipelineStateD3D12Impl::ResourceAttribution PipelineStateD3D12Impl::GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
-{
-    const auto SignCount = GetResourceSignatureCount();
-    for (Uint32 sign = 0; sign < SignCount; ++sign)
-    {
-        const auto* const pSignature = GetSignature(sign);
-        if (pSignature == nullptr)
-            continue;
-
-        const auto ResIndex = pSignature->FindResource(Stage, Name);
-        if (ResIndex != ResourceAttribution::InvalidResourceIndex)
-            return ResourceAttribution{pSignature, sign, ResIndex};
-        else
-        {
-            const auto ImtblSamIndex = pSignature->FindImmutableSampler(Stage, Name);
-            if (ImtblSamIndex != ResourceAttribution::InvalidSamplerIndex)
-                return ResourceAttribution{pSignature, sign, ResourceAttribution::InvalidResourceIndex, ImtblSamIndex};
-        }
-    }
-    return ResourceAttribution{};
-}
-
 void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig)
 {
     const auto& pShaderResources = pShader->GetShaderResources();

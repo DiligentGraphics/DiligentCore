@@ -26,6 +26,11 @@
  */
 
 #include "pch.h"
+
+#ifdef FindResource
+#    undef FindResource
+#endif
+
 #include "PipelineStateGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
@@ -419,7 +424,7 @@ bool PipelineStateGLImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 
     for (Uint32 s = 0, SigCount = lhs.GetResourceSignatureCount(); s < SigCount; ++s)
     {
-        if (!lhs.GetSignature(s)->IsCompatibleWith(*rhs.GetSignature(s)))
+        if (!lhs.GetResourceSignature(s)->IsCompatibleWith(*rhs.GetResourceSignature(s)))
             return false;
     }
     return true;
@@ -469,27 +474,6 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
     return ctx_pipeline.second;
 }
 
-PipelineStateGLImpl::ResourceAttribution PipelineStateGLImpl::GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
-{
-    const auto SignCount = GetResourceSignatureCount();
-    for (Uint32 sign = 0; sign < SignCount; ++sign)
-    {
-        const auto* const pSignature = GetSignature(sign);
-        if (pSignature == nullptr)
-            continue;
-
-        const auto ResIndex = pSignature->FindResource(Stage, Name);
-        if (ResIndex != ResourceAttribution::InvalidResourceIndex)
-            return ResourceAttribution{pSignature, sign, ResIndex};
-        else
-        {
-            const auto ImtblSamIndex = pSignature->FindImmutableSampler(Stage, Name);
-            if (ImtblSamIndex != ResourceAttribution::InvalidSamplerIndex)
-                return ResourceAttribution{pSignature, sign, ResourceAttribution::InvalidResourceIndex, ImtblSamIndex};
-        }
-    }
-    return ResourceAttribution{};
-}
 
 void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderResourcesGL> pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages)
 {
@@ -559,7 +543,7 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
 
 #ifdef DILIGENT_DEVELOPMENT
 void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSRBs[],
-                                                const TBindings              BoundResOffsets[],
+                                                const TBindings              BaseBindings[],
                                                 Uint32                       NumSRBs) const
 {
     // Verify SRB compatibility with this pipeline
@@ -568,7 +552,7 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
         // Get resource signature from the root signature
-        const auto& pSignature = GetSignature(sign);
+        const auto& pSignature = GetResourceSignature(sign);
         if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue; // Skip null and empty signatures
 
@@ -587,7 +571,7 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
                               "' is not compatible with pipeline layout in current pipeline '", m_Desc.Name, "'.");
         }
 
-        DEV_CHECK_ERR(Bindings == BoundResOffsets[sign],
+        DEV_CHECK_ERR(Bindings == BaseBindings[sign],
                       "Bound resources has incorrect base binding indices, this may indicate a bug in resource signature compatibility comparison.");
 
         pSignature->ShiftBindings(Bindings);

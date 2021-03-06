@@ -103,7 +103,7 @@ BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc)
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return BINDING_RANGE_IMAGE;
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_IMAGE : BINDING_RANGE_STORAGE_BUFFER;
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return BINDING_RANGE_TEXTURE;
-            // clang-format on
+        // clang-format on
         case SHADER_RESOURCE_TYPE_SAMPLER:
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
         default:
@@ -205,11 +205,6 @@ void PipelineResourceSignatureGLImpl::CreateLayouts()
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
         {
             Int32 ImtblSamplerIdx = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
-            if (ImtblSamplerIdx < 0)
-            {
-                LOG_WARNING_MESSAGE("Pipeline resource signature '", m_Desc.Name, "' has separate sampler with name '", ResDesc.Name, "' that is not supported in OpenGL.");
-            }
-
             new (m_pResourceAttribs + i) ResourceAttribs //
                 {
                     ResourceAttribs::InvalidCacheOffset,
@@ -222,27 +217,27 @@ void PipelineResourceSignatureGLImpl::CreateLayouts()
             const auto Range = PipelineResourceToBindingRange(ResDesc);
             VERIFY_EXPR(Range != BINDING_RANGE_UNKNOWN);
 
-            const Uint32 CacheOffset     = m_BindingCount[Range];
-            Uint32       SamplerIdx      = ResourceAttribs::InvalidSamplerInd;
-            Int32        ImtblSamplerIdx = -1;
+            Uint32& CacheOffset     = m_BindingCount[Range];
+            Uint32  SamplerIdx      = ResourceAttribs::InvalidSamplerInd;
+            Int32   ImtblSamplerIdx = -1;
 
             if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
             {
                 ImtblSamplerIdx = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
-                if (ImtblSamplerIdx < 0)
-                    SamplerIdx = FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd);
-                else
+                if (ImtblSamplerIdx >= 0)
                     SamplerIdx = static_cast<Uint32>(ImtblSamplerIdx);
+                else
+                    SamplerIdx = FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd);
             }
 
             new (m_pResourceAttribs + i) ResourceAttribs //
                 {
                     CacheOffset,
                     SamplerIdx,
-                    ImtblSamplerIdx >= 0 //
+                    ImtblSamplerIdx >= 0 // _ImtblSamplerAssigned
                 };
 
-            m_BindingCount[Range] += ResDesc.ArraySize;
+            CacheOffset += ResDesc.ArraySize;
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
                 StaticCounter[Range] += ResDesc.ArraySize;
@@ -263,12 +258,12 @@ void PipelineResourceSignatureGLImpl::CreateLayouts()
             if (ResDesc.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV || !ResAttr.IsSamplerAssigned())
                 continue;
 
-            ISampler* Sampler = nullptr;
+            ISampler* pSampler = nullptr;
             if (ResAttr.IsImmutableSamplerAssigned())
             {
                 VERIFY_EXPR(ResAttr.SamplerInd < GetImmutableSamplerCount());
 
-                Sampler = m_ImmutableSamplers[ResAttr.SamplerInd].RawPtr();
+                pSampler = m_ImmutableSamplers[ResAttr.SamplerInd].RawPtr();
             }
             else
             {
@@ -276,11 +271,14 @@ void PipelineResourceSignatureGLImpl::CreateLayouts()
                 if (!SampAttr.IsImmutableSamplerAssigned())
                     continue;
 
-                Sampler = m_ImmutableSamplers[SampAttr.SamplerInd].RawPtr();
+                pSampler = m_ImmutableSamplers[SampAttr.SamplerInd].RawPtr();
             }
 
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
-                m_pStaticResCache->SetSampler(ResAttr.CacheOffset + ArrInd, Sampler);
+            if (pSampler != nullptr)
+            {
+                for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                    m_pStaticResCache->SetSampler(ResAttr.CacheOffset + ArrInd, pSampler);
+            }
         }
 #ifdef DILIGENT_DEVELOPMENT
         m_pStaticResCache->SetStaticResourcesInitialized();
@@ -326,7 +324,7 @@ void PipelineResourceSignatureGLImpl::Destruct()
 void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramObj& GLProgram,
                                                     GLContextState&                 State,
                                                     SHADER_TYPE                     Stages,
-                                                    const TBindings&                Bindings) const
+                                                    const TBindings&                BaseBindings) const
 {
     VERIFY(GLProgram != 0, "Null GL program");
     State.SetProgram(GLProgram);
@@ -343,7 +341,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             continue;
 
         const auto   Range        = PipelineResourceToBindingRange(ResDesc);
-        const Uint32 BindingIndex = Bindings[Range] + ResAttr.CacheOffset;
+        const Uint32 BindingIndex = BaseBindings[Range] + ResAttr.CacheOffset;
 
         static_assert(BINDING_RANGE_COUNT == 4, "Please update the switch below to handle the new shader resource range");
         switch (Range)
@@ -577,12 +575,12 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
         if (!ResAttr.IsSamplerAssigned())
             continue;
 
-        ISampler* Sampler = nullptr;
+        ISampler* pSampler = nullptr;
         if (ResAttr.IsImmutableSamplerAssigned())
         {
             VERIFY_EXPR(ResAttr.SamplerInd < GetImmutableSamplerCount());
 
-            Sampler = m_ImmutableSamplers[ResAttr.SamplerInd].RawPtr();
+            pSampler = m_ImmutableSamplers[ResAttr.SamplerInd].RawPtr();
         }
         else
         {
@@ -590,11 +588,14 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
             if (!SampAttr.IsImmutableSamplerAssigned())
                 continue;
 
-            Sampler = m_ImmutableSamplers[SampAttr.SamplerInd].RawPtr();
+            pSampler = m_ImmutableSamplers[SampAttr.SamplerInd].RawPtr();
         }
 
-        for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
-            DstResourceCache.SetSampler(ResAttr.CacheOffset + ArrInd, Sampler);
+        if (pSampler != nullptr)
+        {
+            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                DstResourceCache.SetSampler(ResAttr.CacheOffset + ArrInd, pSampler);
+        }
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -664,10 +665,10 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(GLAttribs, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
                     BindingsOK = false;
-                    continue;
                 }
             }
             break;
+
         case BINDING_RANGE_STORAGE_BUFFER:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
@@ -676,10 +677,10 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(GLAttribs, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
                     BindingsOK = false;
-                    continue;
                 }
             }
             break;
+
         case BINDING_RANGE_TEXTURE:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
@@ -699,6 +700,7 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
                     ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, Tex.pView.RawPtr<IBufferView>(), ResourceDim, IsMultisample);
             }
             break;
+
         case BINDING_RANGE_IMAGE:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
@@ -718,9 +720,11 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
                     ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, Img.pView.RawPtr<IBufferView>(), ResourceDim, IsMultisample);
             }
             break;
+
         default:
             UNEXPECTED("Unsupported shader resource range type.");
     }
+
     return BindingsOK;
 }
 #endif // DILIGENT_DEVELOPMENT

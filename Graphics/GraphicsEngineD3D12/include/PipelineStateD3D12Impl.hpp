@@ -64,7 +64,11 @@ public:
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_RootSig->GetSignatureCount(); }
 
     /// Implementation of IPipelineState::GetResourceSignature() in Direct3D12 backend.
-    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final { return GetSignature(Index); }
+    virtual PipelineResourceSignatureD3D12Impl* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
+    {
+        VERIFY_EXPR(Index < GetResourceSignatureCount());
+        return m_ResourceSignatures[Index];
+    }
 
     /// Implementation of IPipelineStateD3D12::GetD3D12PipelineState().
     virtual ID3D12PipelineState* DILIGENT_CALL_TYPE GetD3D12PipelineState() const override final { return static_cast<ID3D12PipelineState*>(m_pd3d12PSO.p); }
@@ -76,12 +80,6 @@ public:
     virtual ID3D12RootSignature* DILIGENT_CALL_TYPE GetD3D12RootSignature() const override final { return m_RootSig->GetD3D12RootSignature(); }
 
     const RootSignatureD3D12& GetRootSignature() const { return *m_RootSig; }
-
-    PipelineResourceSignatureD3D12Impl* GetSignature(Uint32 index) const
-    {
-        VERIFY_EXPR(index < GetResourceSignatureCount());
-        return m_ResourceSignatures[index];
-    }
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpVerifySRBResources(ShaderResourceBindingD3D12Impl* pSRBs[], Uint32 NumSRBs) const;
@@ -120,44 +118,6 @@ private:
         LocalRootSignatureD3D12*       pLocalRootSig);
 
     void Destruct();
-
-    struct ResourceAttribution
-    {
-        static constexpr Uint32 InvalidSignatureIndex = ~0u;
-        static constexpr Uint32 InvalidResourceIndex  = PipelineResourceSignatureD3D12Impl::InvalidResourceIndex;
-        static constexpr Uint32 InvalidSamplerIndex   = InvalidImmutableSamplerIndex;
-
-        const PipelineResourceSignatureD3D12Impl* pSignature = nullptr;
-
-        Uint32 SignatureIndex        = InvalidSignatureIndex;
-        Uint32 ResourceIndex         = InvalidResourceIndex;
-        Uint32 ImmutableSamplerIndex = InvalidSamplerIndex;
-
-        ResourceAttribution() noexcept {}
-        ResourceAttribution(const PipelineResourceSignatureD3D12Impl* _pSignature,
-                            Uint32                                    _SignatureIndex,
-                            Uint32                                    _ResourceIndex,
-                            Uint32                                    _ImmutableSamplerIndex = InvalidResourceIndex) noexcept :
-            pSignature{_pSignature},
-            SignatureIndex{_SignatureIndex},
-            ResourceIndex{_ResourceIndex},
-            ImmutableSamplerIndex{_ImmutableSamplerIndex}
-        {
-            VERIFY_EXPR(pSignature == nullptr || pSignature->GetDesc().BindingIndex == SignatureIndex);
-            VERIFY_EXPR((ResourceIndex == InvalidResourceIndex) || (ImmutableSamplerIndex == InvalidSamplerIndex));
-        }
-
-        explicit operator bool() const
-        {
-            return SignatureIndex != InvalidSignatureIndex && (ResourceIndex != InvalidResourceIndex || ImmutableSamplerIndex != InvalidSamplerIndex);
-        }
-
-        bool IsImmutableSampler() const
-        {
-            return operator bool() && ImmutableSamplerIndex != InvalidSamplerIndex;
-        }
-    };
-    ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const;
 
     void ValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig);
 

@@ -43,6 +43,7 @@
 #include "GraphicsAccessories.hpp"
 #include "FixedLinearAllocator.hpp"
 #include "HashUtils.hpp"
+#include "PipelineResourceSignatureBase.hpp"
 
 namespace Diligent
 {
@@ -93,6 +94,12 @@ private:
 
     // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
     using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
+    // Pipeline state implementation type (PipelineStateD3D12Impl, PipelineStateVkImpl, etc.).
+    using PipelineStateImplType = typename EngineImplTraits::PipelineStateImplType;
+
+    // Pipeline resource signature implementation type (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.).
+    using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
 
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>;
 
@@ -749,6 +756,70 @@ protected:
         CopyRTShaderGroupNames(NameToGroupIndex, CreateInfo, MemPool);
 
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
+    }
+
+
+    // Resource attribution properties
+    struct ResourceAttribution
+    {
+        static constexpr Uint32 InvalidSignatureIndex = ~0u;
+        static constexpr Uint32 InvalidResourceIndex  = PipelineResourceSignatureImplType::InvalidResourceIndex;
+        static constexpr Uint32 InvalidSamplerIndex   = InvalidImmutableSamplerIndex;
+
+        const PipelineResourceSignatureImplType* pSignature = nullptr;
+
+        Uint32 SignatureIndex        = InvalidSignatureIndex;
+        Uint32 ResourceIndex         = InvalidResourceIndex;
+        Uint32 ImmutableSamplerIndex = InvalidSamplerIndex;
+
+        ResourceAttribution() noexcept {}
+        ResourceAttribution(const PipelineResourceSignatureImplType* _pSignature,
+                            Uint32                                   _SignatureIndex,
+                            Uint32                                   _ResourceIndex,
+                            Uint32                                   _ImmutableSamplerIndex = InvalidResourceIndex) noexcept :
+            pSignature{_pSignature},
+            SignatureIndex{_SignatureIndex},
+            ResourceIndex{_ResourceIndex},
+            ImmutableSamplerIndex{_ImmutableSamplerIndex}
+        {
+            VERIFY_EXPR(pSignature == nullptr || pSignature->GetDesc().BindingIndex == SignatureIndex);
+            VERIFY_EXPR((ResourceIndex == InvalidResourceIndex) || (ImmutableSamplerIndex == InvalidSamplerIndex));
+        }
+
+        explicit operator bool() const
+        {
+            return ((SignatureIndex != InvalidSignatureIndex) &&
+                    (ResourceIndex != InvalidResourceIndex || ImmutableSamplerIndex != InvalidSamplerIndex));
+        }
+
+        bool IsImmutableSampler() const
+        {
+            return operator bool() && ImmutableSamplerIndex != InvalidSamplerIndex;
+        }
+    };
+
+    ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const
+    {
+        const auto* const pThis = static_cast<const PipelineStateImplType*>(this);
+
+        const auto SignCount = pThis->GetResourceSignatureCount();
+        for (Uint32 sign = 0; sign < SignCount; ++sign)
+        {
+            const PipelineResourceSignatureImplType* const pSignature = pThis->GetResourceSignature(sign);
+            if (pSignature == nullptr)
+                continue;
+
+            const auto ResIndex = pSignature->FindResource(Stage, Name);
+            if (ResIndex != ResourceAttribution::InvalidResourceIndex)
+                return ResourceAttribution{pSignature, sign, ResIndex};
+            else
+            {
+                const auto ImtblSamIndex = pSignature->FindImmutableSampler(Stage, Name);
+                if (ImtblSamIndex != ResourceAttribution::InvalidSamplerIndex)
+                    return ResourceAttribution{pSignature, sign, ResourceAttribution::InvalidResourceIndex, ImtblSamIndex};
+            }
+        }
+        return ResourceAttribution{};
     }
 
 private:

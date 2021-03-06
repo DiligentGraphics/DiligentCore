@@ -159,7 +159,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     m_BindInfo.ActiveSRBMask = 0;
     for (Uint32 s = 0; s < SignCount; ++s)
     {
-        const auto* pLayoutSign = m_pPipelineState->GetSignature(s);
+        const auto* pLayoutSign = m_pPipelineState->GetResourceSignature(s);
         if (pLayoutSign == nullptr || pLayoutSign->GetTotalResourceCount() == 0)
             continue;
 
@@ -171,7 +171,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     Uint32 sign = 0;
     for (; sign < SignCount; ++sign)
     {
-        const auto* pLayoutSign = m_pPipelineState->GetSignature(sign);
+        const auto* pLayoutSign = m_pPipelineState->GetResourceSignature(sign);
         const auto* pSRBSign    = m_BindInfo.SRBs[sign] != nullptr ? m_BindInfo.SRBs[sign]->GetSignature() : nullptr;
 
         if ((pLayoutSign == nullptr || pLayoutSign->GetTotalResourceCount() == 0) != (pSRBSign == nullptr || pSRBSign->GetTotalResourceCount() == 0))

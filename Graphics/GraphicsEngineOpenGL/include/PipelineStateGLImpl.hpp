@@ -64,10 +64,10 @@ public:
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final { return m_SignatureCount; }
 
     /// Implementation of IPipelineState::GetResourceSignature() in OpenGL backend.
-    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
+    virtual PipelineResourceSignatureGLImpl* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
     {
         VERIFY_EXPR(Index < m_SignatureCount);
-        return m_Signatures[Index].RawPtr<IPipelineResourceSignature>();
+        return m_Signatures[Index].RawPtr<PipelineResourceSignatureGLImpl>();
     }
 
     /// Implementation of IPipelineState::IsCompatibleWith() in OpenGL backend.
@@ -75,15 +75,9 @@ public:
 
     void CommitProgram(GLContextState& State);
 
-    PipelineResourceSignatureGLImpl* GetSignature(Uint32 index) const
-    {
-        VERIFY_EXPR(index < m_SignatureCount);
-        return m_Signatures[index].RawPtr<PipelineResourceSignatureGLImpl>();
-    }
-
 #ifdef DILIGENT_DEVELOPMENT
     using TBindings = PipelineResourceSignatureGLImpl::TBindings;
-    void DvpVerifySRBResources(class ShaderResourceBindingGLImpl* pSRBs[], const TBindings BoundResOffsets[], Uint32 NumSRBs) const;
+    void DvpVerifySRBResources(class ShaderResourceBindingGLImpl* pSRBs[], const TBindings BaseBindings[], Uint32 NumSRBs) const;
 #endif
 
 private:
@@ -107,45 +101,6 @@ private:
 
     SHADER_TYPE GetShaderStageType(Uint32 Index) const;
     Uint32      GetNumShaderStages() const { return m_NumPrograms; }
-
-
-    struct ResourceAttribution
-    {
-        static constexpr Uint32 InvalidSignatureIndex = ~0u;
-        static constexpr Uint32 InvalidResourceIndex  = PipelineResourceSignatureGLImpl::InvalidResourceIndex;
-        static constexpr Uint32 InvalidSamplerIndex   = InvalidImmutableSamplerIndex;
-
-        const PipelineResourceSignatureGLImpl* pSignature = nullptr;
-
-        Uint32 SignatureIndex        = InvalidSignatureIndex;
-        Uint32 ResourceIndex         = InvalidResourceIndex;
-        Uint32 ImmutableSamplerIndex = InvalidSamplerIndex;
-
-        ResourceAttribution() noexcept {}
-        ResourceAttribution(const PipelineResourceSignatureGLImpl* _pSignature,
-                            Uint32                                 _SignatureIndex,
-                            Uint32                                 _ResourceIndex,
-                            Uint32                                 _ImmutableSamplerIndex = InvalidResourceIndex) noexcept :
-            pSignature{_pSignature},
-            SignatureIndex{_SignatureIndex},
-            ResourceIndex{_ResourceIndex},
-            ImmutableSamplerIndex{_ImmutableSamplerIndex}
-        {
-            VERIFY_EXPR(pSignature == nullptr || pSignature->GetDesc().BindingIndex == SignatureIndex);
-            VERIFY_EXPR((ResourceIndex == InvalidResourceIndex) || (ImmutableSamplerIndex == InvalidSamplerIndex));
-        }
-
-        explicit operator bool() const
-        {
-            return SignatureIndex != InvalidSignatureIndex && (ResourceIndex != InvalidResourceIndex || ImmutableSamplerIndex != InvalidSamplerIndex);
-        }
-
-        bool IsImmutableSampler() const
-        {
-            return operator bool() && ImmutableSamplerIndex != InvalidSamplerIndex;
-        }
-    };
-    ResourceAttribution GetResourceAttribution(const char* Name, SHADER_TYPE Stage) const;
 
     void ValidateShaderResources(std::shared_ptr<const ShaderResourcesGL> pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages);
 
