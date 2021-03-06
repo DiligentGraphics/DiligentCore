@@ -31,6 +31,8 @@
 /// Declaration of Diligent::FenceGLImpl class
 
 #include <deque>
+#include <atomic>
+
 #include "FenceGL.h"
 #include "RenderDeviceGL.h"
 #include "FenceBase.hpp"
@@ -67,8 +69,12 @@ public:
     void Wait(Uint64 Value, bool FlushCommands);
 
 private:
+    void UpdateFenceValue(Uint64 NewValue);
+
+private:
     std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
-    volatile Uint64                                            m_LastCompletedFenceValue = 0;
+
+    std::atomic_uint64_t m_LastCompletedFenceValue{0};
 };
 
 } // namespace Diligent
