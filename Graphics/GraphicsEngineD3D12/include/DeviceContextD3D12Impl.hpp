@@ -45,8 +45,13 @@
 #include "BottomLevelASD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
 
+
 namespace Diligent
 {
+
+class CommandContext;
+class GraphicsContext;
+class ComputeContext;
 
 /// Device context implementation in Direct3D12 backend.
 class DeviceContextD3D12Impl final : public DeviceContextNextGenBase<EngineD3D12ImplTraits>
@@ -326,10 +331,10 @@ public:
 
 private:
     void CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, VALUE_TYPE IndexType);
-    void CommitD3D12VertexBuffers(class GraphicsContext& GraphCtx);
+    void CommitD3D12VertexBuffers(GraphicsContext& GraphCtx);
     void CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
     void CommitViewports();
-    void CommitScissorRects(class GraphicsContext& GraphCtx, bool ScissorEnable);
+    void CommitScissorRects(GraphicsContext& GraphCtx, bool ScissorEnable);
     void TransitionSubpassAttachments(Uint32 NextSubpass);
     void CommitSubpassRenderTargets();
     void Flush(bool                 RequestNewCmdCtx,
@@ -417,7 +422,7 @@ private:
 
 
     friend class SwapChainD3D12Impl;
-    inline class CommandContext& GetCmdContext()
+    inline CommandContext& GetCmdContext()
     {
         // Make sure that the number of commands in the context is at least one,
         // so that the context cannot be disposed by Flush()

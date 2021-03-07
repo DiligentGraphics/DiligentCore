@@ -28,6 +28,7 @@
 #include "pch.h"
 
 #include "FramebufferD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {

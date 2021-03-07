@@ -194,4 +194,11 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     }
 }
 
+ID3D12QueryHeap* QueryD3D12Impl::GetD3D12QueryHeap()
+{
+    // This implementation can't be in the header because it requires
+    // definition of RenderDeviceD3D12Impl
+    return m_pDevice->GetQueryManager().GetQueryHeap(m_Desc.Type);
+}
+
 } // namespace Diligent

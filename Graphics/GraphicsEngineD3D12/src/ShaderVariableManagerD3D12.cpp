@@ -27,8 +27,10 @@
 
 #include "pch.h"
 
-#include "ShaderVariableD3D12.hpp"
+#include "ShaderVariableManagerD3D12.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
+#include "ShaderResourceCacheD3D12.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -137,6 +139,19 @@ void ShaderVariableManagerD3D12::Destroy(IMemoryAllocator& Allocator)
     }
 }
 
+const PipelineResourceDesc& ShaderVariableManagerD3D12::GetResourceDesc(Uint32 Index) const
+{
+    VERIFY_EXPR(m_pSignature != nullptr);
+    return m_pSignature->GetResourceDesc(Index);
+}
+
+const ShaderVariableManagerD3D12::ResourceAttribs& ShaderVariableManagerD3D12::GetResourceAttribs(Uint32 Index) const
+{
+    VERIFY_EXPR(m_pSignature != nullptr);
+    return m_pSignature->GetResourceAttribs(Index);
+}
+
+
 ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(const Char* Name) const
 {
     for (Uint32 v = 0; v < m_NumVariables; ++v)
@@ -200,6 +215,16 @@ void ShaderVariableD3D12Impl::SetArray(IDeviceObject* const* ppObjects, Uint32 F
 
     for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
         BindResource(ppObjects[Elem], FirstElement + Elem);
+}
+
+bool ShaderVariableD3D12Impl::IsBound(Uint32 ArrayIndex) const
+{
+    return m_ParentManager.m_pSignature->IsBound(ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
+}
+
+void ShaderVariableD3D12Impl::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+{
+    m_ParentManager.m_pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
 }
 
 } // namespace Diligent

@@ -32,9 +32,10 @@
 
 #include <array>
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "QueryD3D12.h"
 #include "QueryBase.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
+#include "QueryManagerD3D12.hpp"
 
 namespace Diligent
 {
@@ -58,10 +59,7 @@ public:
     virtual bool DILIGENT_CALL_TYPE GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
 
     /// Implementation of IQueryD3D12::GetD3D12QueryHeap().
-    virtual ID3D12QueryHeap* DILIGENT_CALL_TYPE GetD3D12QueryHeap() override final
-    {
-        return m_pDevice->GetQueryManager().GetQueryHeap(m_Desc.Type);
-    }
+    virtual ID3D12QueryHeap* DILIGENT_CALL_TYPE GetD3D12QueryHeap() override final;
 
     /// Implementation of IQueryD3D12::GetQueryHeapIndex().
     virtual Uint32 DILIGENT_CALL_TYPE GetQueryHeapIndex(Uint32 QueryId) const override final

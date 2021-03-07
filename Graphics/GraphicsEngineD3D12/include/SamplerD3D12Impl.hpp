@@ -30,11 +30,11 @@
 /// \file
 /// Declaration of Diligent::SamplerD3D12Impl class
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "SamplerD3D12.h"
 #include "RenderDeviceD3D12.h"
 #include "SamplerBase.hpp"
 #include "DescriptorHeap.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {

@@ -30,12 +30,11 @@
 /// \file
 /// Declaration of Diligent::TextureD3D12Impl class
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "TextureD3D12.h"
-#include "RenderDeviceD3D12.h"
 #include "TextureBase.hpp"
 #include "TextureViewD3D12Impl.hpp"
 #include "D3D12ResourceBase.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {

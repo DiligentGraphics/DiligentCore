@@ -33,17 +33,22 @@
 #include <array>
 
 #include "EngineD3D12ImplTraits.hpp"
+#include "PipelineResourceAttribsD3D12.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "RootParamsManager.hpp"
-#include "ShaderResourceCacheD3D12.hpp"
 #include "ResourceBindingMap.hpp"
+
+// ShaderVariableManagerD3D12, ShaderResourceCacheD3D12, and ShaderResourceBindingD3D12Impl
+// are required by PipelineResourceSignatureBase
+#include "ShaderResourceCacheD3D12.hpp"
+#include "ShaderVariableManagerD3D12.hpp"
+#include "ShaderResourceBindingD3D12Impl.hpp"
 
 namespace Diligent
 {
 
 class CommandContext;
-class ShaderVariableManagerD3D12;
 struct D3DShaderResourceAttribs;
 
 /// Implementation of the Diligent::PipelineResourceSignatureD3D12Impl class
@@ -58,92 +63,7 @@ public:
                                        bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureD3D12Impl();
 
-    // sizeof(ResourceAttribs) == 16, x64
-    struct ResourceAttribs
-    {
-    private:
-        static constexpr Uint32 _RegisterBits        = 16;
-        static constexpr Uint32 _SRBRootIndexBits    = 16;
-        static constexpr Uint32 _SamplerIndBits      = 16;
-        static constexpr Uint32 _SpaceBits           = 8;
-        static constexpr Uint32 _SigRootIndexBits    = 3;
-        static constexpr Uint32 _SamplerAssignedBits = 1;
-        static constexpr Uint32 _RootParamTypeBits   = 3;
-
-        static_assert((1u << _RegisterBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store shader register");
-        static_assert((1u << _SamplerIndBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sampler resource index");
-        static_assert((1u << _RootParamTypeBits) > D3D12_ROOT_PARAMETER_TYPE_UAV + 1, "Not enough bits to store D3D12_ROOT_PARAMETER_TYPE");
-
-    public:
-        static constexpr Uint32 InvalidSamplerInd   = (1u << _SamplerIndBits) - 1;
-        static constexpr Uint32 InvalidSRBRootIndex = (1u << _SRBRootIndexBits) - 1;
-        static constexpr Uint32 InvalidSigRootIndex = (1u << _SigRootIndexBits) - 1;
-        static constexpr Uint32 InvalidRegister     = (1u << _RegisterBits) - 1;
-        static constexpr Uint32 InvalidOffset       = ~0u;
-
-        // clang-format off
-/* 0  */const Uint32  Register             : _RegisterBits;        // Shader register
-/* 2  */const Uint32  SRBRootIndex         : _SRBRootIndexBits;    // Root view/table index in the SRB
-/* 4  */const Uint32  SamplerInd           : _SamplerIndBits;      // Assigned sampler index in m_Desc.Resources and m_pResourceAttribs
-/* 6  */const Uint32  Space                : _SpaceBits;           // Shader register space
-/* 7.0*/const Uint32  SigRootIndex         : _SigRootIndexBits;    // Root table index for signature (static resources only)
-/* 7.3*/const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
-/* 7.4*/const Uint32  RootParamType        : _RootParamTypeBits;   // Root parameter type (D3D12_ROOT_PARAMETER_TYPE)
-/* 8  */const Uint32  SigOffsetFromTableStart;                     // Offset in the root table for signature (static only)
-/* 12 */const Uint32  SRBOffsetFromTableStart;                     // Offset in the root table for SRB
-/* 16 */
-        // clang-format on
-
-        ResourceAttribs(Uint32                    _Register,
-                        Uint32                    _Space,
-                        Uint32                    _SamplerInd,
-                        Uint32                    _SRBRootIndex,
-                        Uint32                    _SRBOffsetFromTableStart,
-                        Uint32                    _SigRootIndex,
-                        Uint32                    _SigOffsetFromTableStart,
-                        bool                      _ImtblSamplerAssigned,
-                        D3D12_ROOT_PARAMETER_TYPE _RootParamType) noexcept :
-            // clang-format off
-            Register               {_Register                          },
-            SRBRootIndex           {_SRBRootIndex                      },
-            SamplerInd             {_SamplerInd                        },
-            SigRootIndex           {_SigRootIndex                      },
-            Space                  {_Space                             },
-            ImtblSamplerAssigned   {_ImtblSamplerAssigned ? 1u : 0u    },
-            RootParamType          {static_cast<Uint32>(_RootParamType)},
-            SigOffsetFromTableStart{_SigOffsetFromTableStart           },
-            SRBOffsetFromTableStart{_SRBOffsetFromTableStart           }
-        // clang-format on
-        {
-            VERIFY(Register == _Register, "Shader register (", _Register, ") exceeds maximum representable value");
-            VERIFY(SRBRootIndex == _SRBRootIndex, "SRB Root index (", _SRBRootIndex, ") exceeds maximum representable value");
-            VERIFY(SigRootIndex == _SigRootIndex, "Signature Root index (", _SigRootIndex, ") exceeds maximum representable value");
-            VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
-            VERIFY(Space == _Space, "Space (", _Space, ") exceeds maximum representable value");
-            VERIFY(GetD3D12RootParamType() == _RootParamType, "Not enough bits to represent root parameter type");
-        }
-
-        bool IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
-        bool IsCombinedWithSampler() const { return SamplerInd != InvalidSamplerInd; }
-
-        Uint32 RootIndex(ResourceCacheContentType Type) const
-        {
-            return Type == ResourceCacheContentType::SRB ? SRBRootIndex : SigRootIndex;
-        }
-        Uint32 OffsetFromTableStart(ResourceCacheContentType Type) const
-        {
-            return Type == ResourceCacheContentType::SRB ? SRBOffsetFromTableStart : SigOffsetFromTableStart;
-        }
-
-        D3D12_ROOT_PARAMETER_TYPE GetD3D12RootParamType() const { return static_cast<D3D12_ROOT_PARAMETER_TYPE>(RootParamType); }
-
-        bool IsRootView() const
-        {
-            return (GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_CBV ||
-                    GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_SRV ||
-                    GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_UAV);
-        }
-    };
+    using ResourceAttribs = PipelineResourceAttribsD3D12;
 
     const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
     {
@@ -209,19 +129,6 @@ public:
     {
         return m_RootParams.GetNumRootViews();
     }
-
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
-                                                                bool                     InitStaticResources) override final;
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
-
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32            ShaderFlags,
-                                                        IResourceMapping* pResourceMapping,
-                                                        Uint32            Flags) override final;
 
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
     {

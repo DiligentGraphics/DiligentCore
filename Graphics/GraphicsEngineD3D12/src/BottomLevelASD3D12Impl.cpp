@@ -26,6 +26,7 @@
  */
 
 #include "pch.h"
+
 #include "BottomLevelASD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "D3D12TypeConversions.hpp"

@@ -28,6 +28,7 @@
 #include "pch.h"
 
 #include "RenderPassD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {

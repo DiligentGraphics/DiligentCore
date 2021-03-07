@@ -30,11 +30,11 @@
 /// \file
 /// Declaration of Diligent::ShaderD3D12Impl class
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "RenderDeviceD3D12.h"
 #include "ShaderD3D12.h"
 #include "ShaderBase.hpp"
 #include "ShaderD3DBase.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
 #include "ShaderResourcesD3D12.hpp"
 
 namespace Diligent

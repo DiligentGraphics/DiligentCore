@@ -60,13 +60,14 @@
 
 #include "ShaderResourceVariableD3D.h"
 #include "ShaderResourceVariableBase.hpp"
-#include "ShaderResourceCacheD3D12.hpp"
-#include "PipelineResourceSignatureD3D12Impl.hpp"
+#include "PipelineResourceAttribsD3D12.hpp"
 
 namespace Diligent
 {
 
 class ShaderVariableD3D12Impl;
+class ShaderResourceCacheD3D12;
+class PipelineResourceSignatureD3D12Impl;
 
 // sizeof(ShaderVariableManagerD3D12) == 40 (x64, msvc, Release)
 class ShaderVariableManagerD3D12
@@ -111,20 +112,13 @@ public:
 
 private:
     friend ShaderVariableD3D12Impl;
-    using ResourceAttribs = PipelineResourceSignatureD3D12Impl::ResourceAttribs;
+    using ResourceAttribs = PipelineResourceAttribsD3D12;
 
     Uint32 GetVariableIndex(const ShaderVariableD3D12Impl& Variable);
 
-    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const
-    {
-        VERIFY_EXPR(m_pSignature != nullptr);
-        return m_pSignature->GetResourceDesc(Index);
-    }
-    const ResourceAttribs& GetResourceAttribs(Uint32 Index) const
-    {
-        VERIFY_EXPR(m_pSignature != nullptr);
-        return m_pSignature->GetResourceAttribs(Index);
-    }
+    // These methods can't be defined in the header due to dependency on PipelineResourceSignatureD3D12Impl
+    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
+    const ResourceAttribs&      GetResourceAttribs(Uint32 Index) const;
 
     template <typename HandlerType>
     static void ProcessSignatureResources(const PipelineResourceSignatureD3D12Impl& Signature,
@@ -211,10 +205,8 @@ public:
         return m_ParentManager.GetVariableIndex(*this);
     }
 
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-    {
-        return m_ParentManager.m_pSignature->IsBound(ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
-    }
+    // This method can't be defined in the header due to dependency on PipelineResourceSignatureD3D12Impl
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final;
 
     virtual void DILIGENT_CALL_TYPE GetHLSLResourceDesc(HLSLShaderResourceDesc& HLSLResDesc) const override final
     {
@@ -224,13 +216,11 @@ public:
 
     const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
 
-    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
-    {
-        m_ParentManager.m_pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
-    }
+    // This method can't be defined in the header due to dependency on PipelineResourceSignatureD3D12Impl
+    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const;
 
 private:
-    using ResourceAttribs = PipelineResourceSignatureD3D12Impl::ResourceAttribs;
+    using ResourceAttribs = PipelineResourceAttribsD3D12;
     const ResourceAttribs& GetAttribs() const { return m_ParentManager.GetResourceAttribs(m_ResIndex); }
 
 private:

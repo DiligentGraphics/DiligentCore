@@ -32,12 +32,12 @@
 
 #include <vector>
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "RenderDeviceD3D12.h"
 #include "PipelineStateD3D12.h"
-#include "PipelineResourceSignatureD3D12Impl.hpp"
 #include "PipelineStateBase.hpp"
 #include "RootSignature.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp" // Requiured by PipelineStateBase
 
 namespace Diligent
 {

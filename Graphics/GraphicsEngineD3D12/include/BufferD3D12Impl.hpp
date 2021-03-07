@@ -30,13 +30,13 @@
 /// \file
 /// Declaration of Diligent::BufferD3D12Impl class
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "BufferD3D12.h"
 #include "RenderDeviceD3D12.h"
 #include "BufferBase.hpp"
-#include "BufferViewD3D12Impl.hpp"
 #include "D3D12ResourceBase.hpp"
 #include "D3D12DynamicHeap.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
+#include "BufferViewD3D12Impl.hpp"
 
 namespace Diligent
 {

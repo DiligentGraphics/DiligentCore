@@ -34,7 +34,7 @@ set(INCLUDE
     include/ShaderResourceBindingD3D12Impl.hpp
     include/ShaderResourceCacheD3D12.hpp
     include/ShaderResourcesD3D12.hpp
-    include/ShaderVariableD3D12.hpp
+    include/ShaderVariableManagerD3D12.hpp
     include/SwapChainD3D12Impl.hpp
     include/TextureD3D12Impl.hpp
     include/TextureViewD3D12Impl.hpp
@@ -42,6 +42,7 @@ set(INCLUDE
     include/TopLevelASD3D12Impl.hpp
     include/ShaderBindingTableD3D12Impl.hpp
     include/PipelineResourceSignatureD3D12Impl.hpp
+    include/PipelineResourceAttribsD3D12.hpp
 )
 
 set(INTERFACE 
@@ -93,7 +94,7 @@ set(SRC
     src/ShaderResourceBindingD3D12Impl.cpp
     src/ShaderResourceCacheD3D12.cpp
     src/ShaderResourcesD3D12.cpp
-    src/ShaderVariableD3D12.cpp
+    src/ShaderVariableManagerD3D12.cpp
     src/SwapChainD3D12Impl.cpp
     src/TextureD3D12Impl.cpp
     src/TextureViewD3D12Impl.cpp

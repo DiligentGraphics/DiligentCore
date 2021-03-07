@@ -26,6 +26,7 @@
  */
 
 #include "pch.h"
+
 #include "ShaderBindingTableD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceContextD3D12Impl.hpp"

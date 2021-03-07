@@ -28,6 +28,7 @@
 #include "pch.h"
 #include "BufferViewD3D12Impl.hpp"
 #include "BufferD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -49,6 +50,10 @@ BufferViewD3D12Impl::BufferViewD3D12Impl(IReferenceCounters*        pRefCounters
     },
     m_DescriptorHandle{std::move(HandleAlloc)}
 // clang-format on
+{
+}
+
+BufferViewD3D12Impl::~BufferViewD3D12Impl()
 {
 }
 

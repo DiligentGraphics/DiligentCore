@@ -30,15 +30,18 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceBindingD3D12Impl class
 
-#include "ShaderResourceBindingD3D12.h"
-#include "RenderDeviceD3D12.h"
+#include "EngineD3D12ImplTraits.hpp"
 #include "ShaderResourceBindingBase.hpp"
+#include "ShaderResourceBindingD3D12.h"
+
+// ShaderVariableManagerD3D12 and ShaderResourceCacheD3D12 are required by ShaderResourceBindingBase
+#include "ShaderVariableManagerD3D12.hpp"
 #include "ShaderResourceCacheD3D12.hpp"
-#include "ShaderVariableD3D12.hpp"
-#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {
+
+class PipelineResourceSignatureD3D12Impl;
 
 /// Implementation of the Diligent::IShaderResourceBindingD3D12 interface
 // sizeof(ShaderResourceBindingD3D12Impl) == 96 (x64, msvc, Release)

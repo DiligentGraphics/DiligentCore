@@ -105,8 +105,8 @@
 #include <array>
 #include <memory>
 
-#include "DescriptorHeap.hpp"
 #include "Shader.h"
+#include "DescriptorHeap.hpp"
 #include "RootParamsManager.hpp"
 #include "ShaderResourceCacheCommon.hpp"
 

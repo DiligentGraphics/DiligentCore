@@ -30,11 +30,11 @@
 /// \file
 /// Declaration of Diligent::BufferViewD3D12Impl class
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "BufferViewD3D12.h"
 #include "RenderDeviceD3D12.h"
 #include "BufferViewBase.hpp"
 #include "DescriptorHeap.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -51,6 +51,8 @@ public:
                         BufferD3D12Impl*           pBuffer,
                         DescriptorHeapAllocation&& HandleAlloc,
                         bool                       bIsDefaultView);
+
+    ~BufferViewD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferViewD3D12, TBufferViewBase)
 

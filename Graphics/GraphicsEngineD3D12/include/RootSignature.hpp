@@ -51,9 +51,9 @@
 #include <unordered_map>
 #include <memory>
 
-#include "PipelineResourceSignatureD3D12Impl.hpp"
 #include "PrivateConstants.h"
 #include "ShaderResources.hpp"
+#include "ObjectBase.hpp"
 #include "ResourceBindingMap.hpp"
 
 namespace Diligent
@@ -61,6 +61,7 @@ namespace Diligent
 
 class RenderDeviceD3D12Impl;
 class RootSignatureCacheD3D12;
+class PipelineResourceSignatureD3D12Impl;
 
 /// Implementation of the Diligent::RootSignature class
 class RootSignatureD3D12 final : public ObjectBase<IObject>

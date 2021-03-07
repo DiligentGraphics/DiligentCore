@@ -31,7 +31,6 @@
 
 #include "PipelineResourceSignatureD3D12Impl.hpp"
 #include "ShaderResourceCacheD3D12.hpp"
-#include "ShaderVariableD3D12.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "ShaderResourceBindingD3D12Impl.hpp"
 #include "BufferD3D12Impl.hpp"
@@ -417,34 +416,6 @@ bool PipelineResourceSignatureD3D12Impl::IsCompatibleWith(const PipelineResource
     }
 
     return true;
-}
-
-void PipelineResourceSignatureD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
-                                                                     bool                     InitStaticResources)
-{
-    CreateShaderResourceBindingImpl(ppShaderResourceBinding, InitStaticResources);
-}
-
-Uint32 PipelineResourceSignatureD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
-{
-    return GetStaticVariableCountImpl(ShaderType);
-}
-
-IShaderResourceVariable* PipelineResourceSignatureD3D12Impl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
-{
-    return GetStaticVariableByNameImpl(ShaderType, Name);
-}
-
-IShaderResourceVariable* PipelineResourceSignatureD3D12Impl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
-{
-    return GetStaticVariableByIndexImpl(ShaderType, Index);
-}
-
-void PipelineResourceSignatureD3D12Impl::BindStaticResources(Uint32            ShaderFlags,
-                                                             IResourceMapping* pResMapping,
-                                                             Uint32            Flags)
-{
-    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags);
 }
 
 size_t PipelineResourceSignatureD3D12Impl::CalculateHash() const

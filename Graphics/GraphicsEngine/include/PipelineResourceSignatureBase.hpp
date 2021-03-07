@@ -149,6 +149,100 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineResourceSignature, TDeviceObjectBase)
 
+    /// Implementation of IPipelineResourceSignature::GetStaticVariableCount.
+    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
+    {
+        if (!IsConsistentShaderType(ShaderType, m_PipelineType))
+        {
+            LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
+            return 0;
+        }
+
+        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
+        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
+        if (VarMngrInd < 0)
+            return 0;
+
+        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
+        return m_StaticVarsMgrs[VarMngrInd].GetVariableCount();
+    }
+
+    /// Implementation of IPipelineResourceSignature::GetStaticVariableByName.
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
+                                                                                const Char* Name) override final
+    {
+        if (!IsConsistentShaderType(ShaderType, m_PipelineType))
+        {
+            LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
+            return nullptr;
+        }
+
+        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
+        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
+        if (VarMngrInd < 0)
+            return nullptr;
+
+        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
+        return m_StaticVarsMgrs[VarMngrInd].GetVariable(Name);
+    }
+
+    /// Implementation of IPipelineResourceSignature::GetStaticVariableByIndex.
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
+                                                                                 Uint32      Index) override final
+    {
+        if (!IsConsistentShaderType(ShaderType, m_PipelineType))
+        {
+            LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
+            return nullptr;
+        }
+
+        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
+        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
+        if (VarMngrInd < 0)
+            return nullptr;
+
+        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
+        return m_StaticVarsMgrs[VarMngrInd].GetVariable(Index);
+    }
+
+    /// Implementation of IPipelineResourceSignature::BindStaticResources.
+    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32            ShaderFlags,
+                                                        IResourceMapping* pResourceMapping,
+                                                        Uint32            Flags) override final
+    {
+        const auto PipelineType = GetPipelineType();
+        for (Uint32 ShaderInd = 0; ShaderInd < m_StaticResStageIndex.size(); ++ShaderInd)
+        {
+            const auto VarMngrInd = m_StaticResStageIndex[ShaderInd];
+            if (VarMngrInd >= 0)
+            {
+                VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
+                // ShaderInd is the shader type pipeline index here
+                const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
+                if (ShaderFlags & ShaderType)
+                {
+                    m_StaticVarsMgrs[VarMngrInd].BindResources(pResourceMapping, Flags);
+                }
+            }
+        }
+    }
+
+    /// Implementation of IPipelineResourceSignature::CreateShaderResourceBinding.
+    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
+                                                                bool                     InitStaticResources) override final
+    {
+        auto* pThisImpl{static_cast<PipelineResourceSignatureImplType*>(this)};
+        auto& SRBAllocator{pThisImpl->m_pDevice->GetSRBAllocator()};
+        auto* pResBindingImpl{NEW_RC_OBJ(SRBAllocator, "ShaderResourceBinding instance", ShaderResourceBindingImplType)(pThisImpl)};
+        if (InitStaticResources)
+            pThisImpl->InitializeStaticSRBResources(pResBindingImpl);
+        pResBindingImpl->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
+    }
+
+
     size_t GetHash() const { return m_Hash; }
 
     PIPELINE_TYPE GetPipelineType() const { return m_PipelineType; }
@@ -394,81 +488,6 @@ protected:
 #endif
     }
 
-    Uint32 GetStaticVariableCountImpl(SHADER_TYPE ShaderType) const
-    {
-        if (!IsConsistentShaderType(ShaderType, m_PipelineType))
-        {
-            LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
-            return 0;
-        }
-
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
-        if (VarMngrInd < 0)
-            return 0;
-
-        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return m_StaticVarsMgrs[VarMngrInd].GetVariableCount();
-    }
-
-    IShaderResourceVariable* GetStaticVariableByNameImpl(SHADER_TYPE ShaderType, const Char* Name) const
-    {
-        if (!IsConsistentShaderType(ShaderType, m_PipelineType))
-        {
-            LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
-            return nullptr;
-        }
-
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
-        if (VarMngrInd < 0)
-            return nullptr;
-
-        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return m_StaticVarsMgrs[VarMngrInd].GetVariable(Name);
-    }
-
-    IShaderResourceVariable* GetStaticVariableByIndexImpl(SHADER_TYPE ShaderType, Uint32 Index) const
-    {
-        if (!IsConsistentShaderType(ShaderType, m_PipelineType))
-        {
-            LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_PipelineType), " pipeline resource signature '", this->m_Desc.Name, "'.");
-            return nullptr;
-        }
-
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
-        if (VarMngrInd < 0)
-            return nullptr;
-
-        VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-        return m_StaticVarsMgrs[VarMngrInd].GetVariable(Index);
-    }
-
-    void BindStaticResourcesImpl(Uint32            ShaderFlags,
-                                 IResourceMapping* pResMapping,
-                                 Uint32            Flags)
-    {
-        const auto PipelineType = GetPipelineType();
-        for (Uint32 ShaderInd = 0; ShaderInd < m_StaticResStageIndex.size(); ++ShaderInd)
-        {
-            const auto VarMngrInd = m_StaticResStageIndex[ShaderInd];
-            if (VarMngrInd >= 0)
-            {
-                VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
-                // ShaderInd is the shader type pipeline index here
-                const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
-                if (ShaderFlags & ShaderType)
-                {
-                    m_StaticVarsMgrs[VarMngrInd].BindResources(pResMapping, Flags);
-                }
-            }
-        }
-    }
-
     template <typename SRBImplType, typename InitResourcesHandler>
     void InitializeStaticSRBResourcesImpl(SRBImplType* pSRB, InitResourcesHandler Handler) const
     {
@@ -490,17 +509,6 @@ protected:
         Handler(pSRB);
 
         pSRB->SetStaticResourcesInitialized();
-    }
-
-    void CreateShaderResourceBindingImpl(IShaderResourceBinding** ppShaderResourceBinding,
-                                         bool                     InitStaticResources)
-    {
-        auto* pThisImpl{static_cast<PipelineResourceSignatureImplType*>(this)};
-        auto& SRBAllocator{pThisImpl->m_pDevice->GetSRBAllocator()};
-        auto* pResBindingImpl{NEW_RC_OBJ(SRBAllocator, "ShaderResourceBinding instance", ShaderResourceBindingImplType)(pThisImpl)};
-        if (InitStaticResources)
-            pThisImpl->InitializeStaticSRBResources(pResBindingImpl);
-        pResBindingImpl->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
     }
 
     // Finds a sampler that is assigned to texture Tex, when combined texture samplers are used.

@@ -36,7 +36,7 @@
 #include <string>
 #include <unordered_set>
 #include <atomic>
-#include "ObjectBase.hpp"
+
 #include "VariableSizeAllocationsManager.hpp"
 
 namespace Diligent
