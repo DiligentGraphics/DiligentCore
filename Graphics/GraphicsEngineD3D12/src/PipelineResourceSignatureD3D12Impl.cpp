@@ -63,7 +63,7 @@ inline bool ResourcesCompatible(const PipelineResourceSignatureD3D12Impl::Resour
     // clang-format on
 }
 
-void ValidateD3D12PipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc) noexcept(false)
+void ValidatePipelineResourceSignatureDescD3D12(const PipelineResourceSignatureDesc& Desc) noexcept(false)
 {
     {
         std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResNameToShaderStages;
@@ -113,7 +113,7 @@ void ValidateD3D12PipelineResourceSignatureDesc(const PipelineResourceSignatureD
                     else
                     {
                         LOG_ERROR_AND_THROW("Pipeline resource signature '", (Desc.Name != nullptr ? Desc.Name : ""),
-                                            "' defines immutable sampler with the name '", Name, "' in shader stages ",
+                                            "' defines separate immutable samplers with the name '", Name, "' in shader stages ",
                                             GetShaderStagesString(multi_stage_it->second), " and ",
                                             GetShaderStagesString(it->second),
                                             ". In Direct3D12 backend, only one immutable sampler in the group of samplers with the same name can be shared between more than "
@@ -135,10 +135,10 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
     m_SRBMemAllocator{GetRawAllocator()}
 {
-    ValidateD3D12PipelineResourceSignatureDesc(Desc);
-
     try
     {
+        ValidatePipelineResourceSignatureDescD3D12(Desc);
+
         auto& RawAllocator{GetRawAllocator()};
         auto  MemPool = ReserveSpace(RawAllocator, Desc,
                                     [&Desc](FixedLinearAllocator& MemPool) //

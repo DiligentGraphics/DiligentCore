@@ -773,6 +773,49 @@ TEST_F(PSOCreationFailureTest, InvalidBlendOpAlpha)
     TestCreatePSOFailure(PsoCI, "BlendDesc.RenderTargets[0].BlendOpAlpha must not be BLEND_OPERATION_UNDEFINED");
 }
 
+TEST_F(PSOCreationFailureTest, NullVariableName)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - null variable name")};
+
+    ShaderResourceVariableDesc Variables[] //
+        {
+            ShaderResourceVariableDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            ShaderResourceVariableDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, nullptr, SHADER_RESOURCE_VARIABLE_TYPE_STATIC} //
+        };
+    PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
+    PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+    TestCreatePSOFailure(PsoCI, "ResourceLayout.Variables[1].Name must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, EmptyVariableName)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - empty variable name")};
+
+    ShaderResourceVariableDesc Variables[] //
+        {
+            ShaderResourceVariableDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            ShaderResourceVariableDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "", SHADER_RESOURCE_VARIABLE_TYPE_STATIC} //
+        };
+    PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
+    PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+    TestCreatePSOFailure(PsoCI, "ResourceLayout.Variables[1].Name must not be empty");
+}
+
+TEST_F(PSOCreationFailureTest, UnknownVariableShaderStage)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - unknown variable shader stage")};
+
+    ShaderResourceVariableDesc Variables[] //
+        {
+            ShaderResourceVariableDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            ShaderResourceVariableDesc{SHADER_TYPE_UNKNOWN, "g_Texture2", SHADER_RESOURCE_VARIABLE_TYPE_STATIC} //
+        };
+    PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
+    PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+    TestCreatePSOFailure(PsoCI, "ResourceLayout.Variables[1].ShaderStages must not be SHADER_TYPE_UNKNOWN");
+}
+
+
 TEST_F(PSOCreationFailureTest, OverlappingVariableStages)
 {
     auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Overlapping Variable Stages")};
@@ -785,6 +828,49 @@ TEST_F(PSOCreationFailureTest, OverlappingVariableStages)
     PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
     PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
     TestCreatePSOFailure(PsoCI, "'g_Texture' is defined in overlapping shader stages (SHADER_TYPE_VERTEX, SHADER_TYPE_GEOMETRY and SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL)");
+}
+
+
+TEST_F(PSOCreationFailureTest, NullImmutableSamplerName)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - null immutable sampler name")};
+
+    ImmutableSamplerDesc ImtblSamplers[] //
+        {
+            ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture_sampler", SamplerDesc{}},
+            ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, nullptr, SamplerDesc{}} //
+        };
+    PsoCI.PSODesc.ResourceLayout.ImmutableSamplers    = ImtblSamplers;
+    PsoCI.PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
+    TestCreatePSOFailure(PsoCI, "ResourceLayout.ImmutableSamplers[1].SamplerOrTextureName must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, EmptyImmutableSamplerName)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - empty immutable sampler name")};
+
+    ImmutableSamplerDesc ImtblSamplers[] //
+        {
+            ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture_sampler", SamplerDesc{}},
+            ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "", SamplerDesc{}} //
+        };
+    PsoCI.PSODesc.ResourceLayout.ImmutableSamplers    = ImtblSamplers;
+    PsoCI.PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
+    TestCreatePSOFailure(PsoCI, "ResourceLayout.ImmutableSamplers[1].SamplerOrTextureName must not be empty");
+}
+
+TEST_F(PSOCreationFailureTest, UndefinedImmutableSamplerShaderStages)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - undefined immutable sampler shader stages")};
+
+    ImmutableSamplerDesc ImtblSamplers[] //
+        {
+            ImmutableSamplerDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture_sampler", SamplerDesc{}},
+            ImmutableSamplerDesc{SHADER_TYPE_UNKNOWN, "g_Texture_sampler2", SamplerDesc{}} //
+        };
+    PsoCI.PSODesc.ResourceLayout.ImmutableSamplers    = ImtblSamplers;
+    PsoCI.PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
+    TestCreatePSOFailure(PsoCI, "ResourceLayout.ImmutableSamplers[1].ShaderStages must not be SHADER_TYPE_UNKNOWN");
 }
 
 TEST_F(PSOCreationFailureTest, OverlappingImmutableSamplerStages)
@@ -906,7 +992,12 @@ TEST_F(PSOCreationFailureTest, ConflictingImmutableSamplerStages)
     IPipelineResourceSignature* pSignatures[] = {sm_pSignature0, sm_pSignature1A};
     PsoCI.ppResourceSignatures                = pSignatures;
     PsoCI.ResourceSignaturesCount             = _countof(pSignatures);
-    TestCreatePSOFailure(PsoCI, "Immutable sampler 'g_Texture_sampler' is found in more than one resource signature ('PRS1A' and 'PRS0')");
+
+    // In case of non-separable programs, there is another error - a resource ("g_Texture") is found in different signatures
+    const auto* ExpectedError = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.SeparablePrograms ?
+        "Immutable sampler 'g_Texture_sampler' is found in more than one resource signature ('PRS1A' and 'PRS0')" :
+        "shader resource 'g_Texture' is found in more than one resource signature ('PRS1A' and 'PRS0')";
+    TestCreatePSOFailure(PsoCI, ExpectedError);
 }
 
 TEST_F(PSOCreationFailureTest, InvalidComputePipelineType)
@@ -1195,7 +1286,12 @@ TEST_F(PSOCreationFailureTest, MissingResource)
 
     PsoCI.pPS = GetTexturePS();
 
-    TestCreatePSOFailure(PsoCI, "Shader 'TexturePS (PSOCreationFailureTest)' contains resource 'g_Texture' that is not present in any pipeline resource signature");
+    std::string ExpectedErrorString = "contains resource 'g_Texture' that is not present in any pipeline resource signature";
+    if (pDevice->GetDeviceCaps().Features.SeparablePrograms)
+        ExpectedErrorString = std::string{"Shader 'TexturePS (PSOCreationFailureTest)' "} + ExpectedErrorString;
+    // In non-separable programs case, PSO name is used instead of the shader name
+
+    TestCreatePSOFailure(PsoCI, ExpectedErrorString.c_str());
 }
 
 TEST_F(PSOCreationFailureTest, InvalidResourceType)
@@ -1222,7 +1318,12 @@ TEST_F(PSOCreationFailureTest, InvalidResourceType)
 
     PsoCI.pPS = GetTexturePS();
 
-    TestCreatePSOFailure(PsoCI, "Shader 'TexturePS (PSOCreationFailureTest)' contains resource with name 'g_Texture' and type 'texture SRV' that is not compatible with type 'buffer SRV'");
+    std::string ExpectedErrorString = "contains resource with name 'g_Texture' and type 'texture SRV' that is not compatible with type 'buffer SRV'";
+    if (pDevice->GetDeviceCaps().Features.SeparablePrograms)
+        ExpectedErrorString = std::string{"Shader 'TexturePS (PSOCreationFailureTest)' "} + ExpectedErrorString;
+    // In non-separable programs case, PSO name is used of the shader name
+
+    TestCreatePSOFailure(PsoCI, ExpectedErrorString.c_str());
 }
 
 TEST_F(PSOCreationFailureTest, InvalidArraySize)
@@ -1269,7 +1370,12 @@ TEST_F(PSOCreationFailureTest, InvalidArraySize)
 
     PsoCI.pPS = pPS;
 
-    TestCreatePSOFailure(PsoCI, "Shader 'Invalid Array Size (PSOCreationFailureTest)' contains resource 'g_Texture' whose array size (3) is greater than the array size (2)");
+    std::string ExpectedErrorString = "contains resource 'g_Texture' whose array size (3) is greater than the array size (2)";
+    if (pDevice->GetDeviceCaps().Features.SeparablePrograms)
+        ExpectedErrorString = std::string{"Shader 'Invalid Array Size (PSOCreationFailureTest)' "} + ExpectedErrorString;
+    // In non-separable programs case, PSO name is used
+
+    TestCreatePSOFailure(PsoCI, ExpectedErrorString.c_str());
 }
 
 
@@ -1335,5 +1441,45 @@ TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
     TestCreatePSOFailure(PsoCI, "Shader 'Invalid Run-Time Array (PSOCreationFailureTest)' contains resource 'g_Texture' that is a runtime-sized array, "
                                 "but in the resource signature 'PSO Create Failure - Invalid Run-Time Array' the resource is defined without the PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
 }
+
+TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateResources)
+{
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.SeparablePrograms)
+    {
+        GTEST_SKIP();
+    }
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Non Separable Programs - Separate Resources")};
+
+    ShaderResourceVariableDesc Variables[] //
+        {
+            ShaderResourceVariableDesc{SHADER_TYPE_VERTEX, "g_Texture", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            ShaderResourceVariableDesc{SHADER_TYPE_PIXEL, "g_Texture", SHADER_RESOURCE_VARIABLE_TYPE_STATIC} //
+        };
+    PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
+    PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+    TestCreatePSOFailure(PsoCI, "there are separate resources with the name 'g_Texture' in shader stages SHADER_TYPE_PIXEL and SHADER_TYPE_VERTEX");
+}
+
+TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateImmutableSamplers)
+{
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.SeparablePrograms)
+    {
+        GTEST_SKIP();
+    }
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Non Separable Programs - Separate Immutable Samplers")};
+
+    ImmutableSamplerDesc ImtblSamplers[] //
+        {
+            ImmutableSamplerDesc{SHADER_TYPE_VERTEX, "g_Texture_sampler", SamplerDesc{}},
+            ImmutableSamplerDesc{SHADER_TYPE_PIXEL, "g_Texture_sampler", SamplerDesc{}} //
+        };
+    PsoCI.PSODesc.ResourceLayout.ImmutableSamplers    = ImtblSamplers;
+    PsoCI.PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
+
+    TestCreatePSOFailure(PsoCI, "there are separate immutable samplers with the name 'g_Texture_sampler' in shader stages SHADER_TYPE_PIXEL and SHADER_TYPE_VERTEX");
+}
+
 
 } // namespace

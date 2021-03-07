@@ -48,9 +48,19 @@
 namespace Diligent
 {
 
-void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false);
-void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false);
-void ValidateRayTracingPipelineCreateInfo(IRenderDevice* pDevice, Uint32 MaxRecursion, const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
+// Validates graphics pipeline create attributes and throws an exception in case of an error.
+void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo,
+                                        const DeviceFeatures&                  Features) noexcept(false);
+
+// Validates compute pipeline create attributes and throws an exception in case of an error.
+void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo,
+                                       const DeviceFeatures&                 Features) noexcept(false);
+
+// Validates ray-tracing pipeline create attributes and throws an exception in case of an error.
+void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                           pDevice,
+                                          Uint32                                   MaxRecursion,
+                                          const RayTracingPipelineStateCreateInfo& CreateInfo,
+                                          const DeviceFeatures&                    Features) noexcept(false);
 
 /// Validates that pipeline resource description 'ResDesc' is compatible with the actual resource
 /// attributes and throws an exception in case of an error.
@@ -138,7 +148,7 @@ public:
     {
         try
         {
-            ValidateGraphicsPipelineCreateInfo(GraphicsPipelineCI);
+            ValidateGraphicsPipelineCreateInfo(GraphicsPipelineCI, pDevice->GetDeviceCaps().Features);
         }
         catch (...)
         {
@@ -162,7 +172,7 @@ public:
     {
         try
         {
-            ValidateComputePipelineCreateInfo(ComputePipelineCI);
+            ValidateComputePipelineCreateInfo(ComputePipelineCI, pDevice->GetDeviceCaps().Features);
         }
         catch (...)
         {
@@ -186,7 +196,8 @@ public:
     {
         try
         {
-            ValidateRayTracingPipelineCreateInfo(pDevice, pDevice->GetProperties().MaxRayTracingRecursionDepth, RayTracingPipelineCI);
+            ValidateRayTracingPipelineCreateInfo(pDevice, pDevice->GetProperties().MaxRayTracingRecursionDepth,
+                                                 RayTracingPipelineCI, pDevice->GetDeviceCaps().Features);
         }
         catch (...)
         {

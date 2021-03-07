@@ -121,10 +121,10 @@ TEST(PRSCreationFailureTest, NullResourceName)
     TestCreatePRSFailure(PRSDesc, "Desc.Resources[1].Name must not be empty");
 }
 
-TEST(PRSCreationFailureTest, UnknownShaderStages)
+TEST(PRSCreationFailureTest, UnknownResourceShaderStages)
 {
     PipelineResourceSignatureDesc PRSDesc;
-    PRSDesc.Name = "Unknown ShaderStages";
+    PRSDesc.Name = "Unknown resource ShaderStages";
     PipelineResourceDesc Resources[]{
         {SHADER_TYPE_PIXEL, "g_Buffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
         {SHADER_TYPE_UNKNOWN, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
@@ -343,7 +343,101 @@ TEST(PRSCreationFailureTest, OverlappingImmutableSamplerStages)
         {SHADER_TYPE_PIXEL | SHADER_TYPE_HULL, "g_ImmutableSampler", SamplerDesc{}}};
     PRSDesc.ImmutableSamplers    = ImmutableSamplers;
     PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
-    TestCreatePRSFailure(PRSDesc, "ultiple immutable samplers with name 'g_ImmutableSampler' specify overlapping shader stages.");
+    TestCreatePRSFailure(PRSDesc, "Multiple immutable samplers with name 'g_ImmutableSampler' specify overlapping shader stages.");
+}
+
+TEST(PRSCreationFailureTest, UnknownImmutableSamplerShareStages)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Unknown Immutable Sampler ShaderStages";
+    ImmutableSamplerDesc ImmutableSamplers[]{
+        {SHADER_TYPE_PIXEL, "g_ImmutableSampler", SamplerDesc{}},
+        {SHADER_TYPE_UNKNOWN, "g_ImmutableSampler2", SamplerDesc{}}};
+    PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+    PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+    TestCreatePRSFailure(PRSDesc, "Desc.ImmutableSamplers[1].ShaderStages must not be SHADER_TYPE_UNKNOWN");
+}
+
+
+
+TEST(PRSCreationFailureTest, NonSeparableProgs_ResourceStages)
+{
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.SeparablePrograms)
+    {
+        GTEST_SKIP() << "This test is specific for non-separable programs";
+    }
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Non-separable progs - resource stages";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_VERTEX, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "there are separate resources with the name 'g_Texture' in shader stages SHADER_TYPE_PIXEL and SHADER_TYPE_VERTEX");
+}
+
+TEST(PRSCreationFailureTest, NonSeparableProgs_ImtblSamplerStages)
+{
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.SeparablePrograms)
+    {
+        GTEST_SKIP() << "This test is specific for non-separable programs";
+    }
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Non-separable progs - immutable sampler stages";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+
+    ImmutableSamplerDesc ImmutableSamplers[]{
+        {SHADER_TYPE_VERTEX, "g_Texture", SamplerDesc{}},
+        {SHADER_TYPE_PIXEL, "g_Texture", SamplerDesc{}}};
+    PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+    PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+    TestCreatePRSFailure(PRSDesc, "there are separate immutable samplers with the name 'g_Texture' in shader stages SHADER_TYPE_PIXEL and SHADER_TYPE_VERTEX");
+}
+
+
+TEST(PRSCreationFailureTest, D3D12_MultiStageResources)
+{
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().DevType != RENDER_DEVICE_TYPE_D3D12)
+    {
+        GTEST_SKIP() << "This test is specific for Direct3D12";
+    }
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "D3D12 - multi stage resources";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_HULL | SHADER_TYPE_DOMAIN, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "separate resources with the name 'g_Texture' in shader stages SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL and SHADER_TYPE_HULL, SHADER_TYPE_DOMAIN");
+}
+
+TEST(PRSCreationFailureTest, D3D12_MultiStageImtblSamplers)
+{
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().DevType != RENDER_DEVICE_TYPE_D3D12)
+    {
+        GTEST_SKIP() << "This test is specific for Direct3D12";
+    }
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "D3D12 - multi stage immutable samplers";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+
+    ImmutableSamplerDesc ImmutableSamplers[]{
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture_sampler", SamplerDesc{}},
+        {SHADER_TYPE_HULL | SHADER_TYPE_DOMAIN, "g_Texture_sampler", SamplerDesc{}}};
+    PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+    PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+
+    TestCreatePRSFailure(PRSDesc, "separate immutable samplers with the name 'g_Texture_sampler' in shader stages SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL and SHADER_TYPE_HULL, SHADER_TYPE_DOMAIN");
 }
 
 } // namespace

@@ -58,7 +58,8 @@ D3D12DynamicPage::D3D12DynamicPage(ID3D12Device* pd3d12Device, Uint64 Size)
     ResourceDesc.Width                 = Size;
 
     auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &ResourceDesc,
-                                                    DefaultUsage, nullptr, __uuidof(m_pd3d12Buffer), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Buffer)));
+                                                    DefaultUsage, nullptr, __uuidof(m_pd3d12Buffer),
+                                                    reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Buffer)));
     if (FAILED(hr))
     {
         LOG_D3D_ERROR(hr, "Failed to create dynamic page");

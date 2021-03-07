@@ -229,7 +229,8 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             CComPtr<ID3D12Resource> UploadBuffer;
             hr = pd3d12Device->CreateCommittedResource(&UploadHeapProps, D3D12_HEAP_FLAG_NONE,
                                                        &BufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                       nullptr, __uuidof(UploadBuffer), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
+                                                       nullptr, __uuidof(UploadBuffer),
+                                                       reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&UploadBuffer)));
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap");
 
@@ -333,7 +334,8 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         // on some ARM systems, to marshal data between the CPU and GPU through memory addresses with write-back behavior.
         // https://docs.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12resource-map
         auto hr = pd3d12Device->CreateCommittedResource(&StaginHeapProps, D3D12_HEAP_FLAG_NONE, &BufferDesc, D3D12State,
-                                                        nullptr, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+                                                        nullptr, __uuidof(m_pd3d12Resource),
+                                                        reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create staging buffer");
 

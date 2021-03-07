@@ -64,16 +64,16 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         const auto& Res = Desc.Resources[i];
 
         if (Res.Name == nullptr)
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Name must not be null");
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Name must not be null.");
 
         if (Res.Name[0] == '\0')
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Name must not be empty");
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Name must not be empty.");
 
         if (Res.ShaderStages == SHADER_TYPE_UNKNOWN)
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN");
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN.");
 
         if (Res.ArraySize == 0)
-            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must not be 0");
+            LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must not be 0.");
 
         auto& UsedStages = ResourceShaderStages[Res.Name];
         if ((UsedStages & Res.ShaderStages) != 0)
@@ -81,6 +81,15 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             LOG_PRS_ERROR_AND_THROW("Multiple resources with name '", Res.Name,
                                     "' specify overlapping shader stages. There may be multiple resources with the same name in different shader stages, "
                                     "but the stages must not overlap.");
+        }
+        if (Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED && UsedStages != SHADER_TYPE_UNKNOWN)
+        {
+            LOG_PRS_ERROR_AND_THROW("This device does not support separable programs, but there are separate resources with the name '",
+                                    Res.Name, "' in shader stages ",
+                                    GetShaderStagesString(Res.ShaderStages), " and ",
+                                    GetShaderStagesString(UsedStages),
+                                    ". When separable programs are not supported, every resource is always shared between all stages. "
+                                    "Use distinct resource names for each stage or define a single resource for all stages.");
         }
         UsedStages |= Res.ShaderStages;
 
@@ -174,10 +183,13 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
     {
         const auto& SamDesc = Desc.ImmutableSamplers[i];
         if (SamDesc.SamplerOrTextureName == nullptr)
-            LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be null");
+            LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be null.");
 
         if (SamDesc.SamplerOrTextureName[0] == '\0')
-            LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be empty");
+            LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be empty.");
+
+        if (SamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
+            LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN.");
 
         auto& UsedStages = ImtblSamShaderStages[SamDesc.SamplerOrTextureName];
         if ((UsedStages & SamDesc.ShaderStages) != 0)
@@ -185,6 +197,15 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             LOG_PRS_ERROR_AND_THROW("Multiple immutable samplers with name '", SamDesc.SamplerOrTextureName,
                                     "' specify overlapping shader stages. There may be multiple immutable samplers with the same name in different shader stages, "
                                     "but the stages must not overlap.");
+        }
+        if (Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED && UsedStages != SHADER_TYPE_UNKNOWN)
+        {
+            LOG_PRS_ERROR_AND_THROW("This device does not support separable programs, but there are separate immutable samplers with the name '",
+                                    SamDesc.SamplerOrTextureName, "' in shader stages ",
+                                    GetShaderStagesString(SamDesc.ShaderStages), " and ",
+                                    GetShaderStagesString(UsedStages),
+                                    ". When separable programs are not supported, every resource is always shared between all stages. "
+                                    "Use distinct immutable sampler names for each stage or define a single sampler for all stages.");
         }
         UsedStages |= SamDesc.ShaderStages;
     }

@@ -48,9 +48,8 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
 {
     std::vector<PipelineResourceDesc> Resources;
 
-    const auto&       LayoutDesc     = CreateInfo.PSODesc.ResourceLayout;
-    const auto        DefaultVarType = LayoutDesc.DefaultVariableType;
-    ShaderResourcesGL ProgramResources;
+    const auto& LayoutDesc     = CreateInfo.PSODesc.ResourceLayout;
+    const auto  DefaultVarType = LayoutDesc.DefaultVariableType;
 
     struct UniqueResource
     {
@@ -83,42 +82,25 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         ResDesc.VarType      = DefaultVarType;
         ResDesc.Flags        = Flags;
 
-        if (m_IsProgramPipelineSupported)
+        const auto VarIndex = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ResDesc.ShaderStages, nullptr);
+        if (VarIndex != InvalidPipelineResourceLayoutVariableIndex)
         {
-            const auto VarIndex = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ResDesc.ShaderStages, nullptr);
-            if (VarIndex != InvalidPipelineResourceLayoutVariableIndex)
-            {
-                const auto& Var      = LayoutDesc.Variables[VarIndex];
-                ResDesc.ShaderStages = Var.ShaderStages;
-                ResDesc.VarType      = Var.Type;
-            }
+            const auto& Var      = LayoutDesc.Variables[VarIndex];
+            ResDesc.ShaderStages = Var.ShaderStages;
+            ResDesc.VarType      = Var.Type;
+        }
 
-            auto IterAndAssigned = UniqueResources.emplace(UniqueResource{Attribs, ResDesc.ShaderStages});
-            if (IterAndAssigned.second)
-            {
-                Resources.push_back(ResDesc);
-            }
-            else
-            {
-                DEV_CHECK_ERR(IterAndAssigned.first->Attribs.ResourceType == Attribs.ResourceType,
-                              "Shader variable '", Attribs.Name,
-                              "' exists in multiple shaders from the same shader stage, but its type is not consistent between "
-                              "shaders. All variables with the same name from the same shader stage must have the same type.");
-            }
+        auto IterAndAssigned = UniqueResources.emplace(UniqueResource{Attribs, ResDesc.ShaderStages});
+        if (IterAndAssigned.second)
+        {
+            Resources.push_back(ResDesc);
         }
         else
         {
-            for (Uint32 i = 0; i < LayoutDesc.NumVariables; ++i)
-            {
-                const auto& Var = LayoutDesc.Variables[i];
-                if ((Var.ShaderStages & Attribs.ShaderStages) != 0 &&
-                    std::strcmp(Attribs.Name, Var.Name) == 0)
-                {
-                    ResDesc.VarType = Var.Type;
-                    break;
-                }
-            }
-            Resources.push_back(ResDesc);
+            DEV_CHECK_ERR(IterAndAssigned.first->Attribs.ResourceType == Attribs.ResourceType,
+                          "Shader variable '", Attribs.Name,
+                          "' exists in multiple shaders from the same shader stage, but its type is not consistent between "
+                          "shaders. All variables with the same name from the same shader stage must have the same type.");
         }
     };
     const auto HandleUB = [&](const ShaderResourcesGL::UniformBufferInfo& Attribs) {
@@ -134,6 +116,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         HandleResource(Attribs, PIPELINE_RESOURCE_FLAG_UNKNOWN);
     };
 
+    ShaderResourcesGL ProgramResources;
     if (m_IsProgramPipelineSupported)
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
@@ -325,7 +308,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
             ShaderCI.Source          = "void main(){}";
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.Desc.Name       = "Dummy fragment shader";
-            pDeviceGL->CreateShader(ShaderCI, reinterpret_cast<IShader**>(static_cast<ShaderGLImpl**>(&pTempPS)));
+            pDeviceGL->CreateShader(ShaderCI, pTempPS.DblPtr<IShader>());
 
             Shaders.emplace_back(pTempPS);
         }

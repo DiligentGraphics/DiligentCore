@@ -33,6 +33,7 @@
 
 namespace Diligent
 {
+
 namespace
 {
 
@@ -45,32 +46,6 @@ inline bool ResourcesCompatible(const PipelineResourceSignatureGLImpl::ResourceA
            lhs.ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
     // clang-format on
 }
-
-struct PatchedPipelineResourceSignatureDesc : PipelineResourceSignatureDesc
-{
-    std::vector<ImmutableSamplerDesc> m_ImmutableSamplers;
-
-    PatchedPipelineResourceSignatureDesc(RenderDeviceGLImpl* pDeviceGL, const PipelineResourceSignatureDesc& Desc) :
-        PipelineResourceSignatureDesc{Desc}
-    {
-        if (NumImmutableSamplers > 0 && ImmutableSamplers != nullptr && !pDeviceGL->GetDeviceCaps().Features.SeparablePrograms)
-        {
-            m_ImmutableSamplers.resize(NumImmutableSamplers);
-
-            SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
-            for (Uint32 r = 0; r < NumResources; ++r)
-                ActiveStages |= Resources[r].ShaderStages;
-
-            for (Uint32 s = 0; s < NumImmutableSamplers; ++s)
-            {
-                m_ImmutableSamplers[s] = ImmutableSamplers[s];
-                m_ImmutableSamplers[s].ShaderStages |= ActiveStages;
-            }
-
-            ImmutableSamplers = m_ImmutableSamplers.data();
-        }
-    }
-};
 
 } // namespace
 
@@ -117,14 +92,6 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
                                                                  RenderDeviceGLImpl*                  pDeviceGL,
                                                                  const PipelineResourceSignatureDesc& Desc,
                                                                  bool                                 bIsDeviceInternal) :
-    PipelineResourceSignatureGLImpl{pRefCounters, pDeviceGL, PatchedPipelineResourceSignatureDesc{pDeviceGL, Desc}, bIsDeviceInternal, 0}
-{}
-
-PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCounters*                  pRefCounters,
-                                                                 RenderDeviceGLImpl*                  pDeviceGL,
-                                                                 const PipelineResourceSignatureDesc& Desc,
-                                                                 bool                                 bIsDeviceInternal,
-                                                                 int) :
     TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, bIsDeviceInternal},
     m_SRBMemAllocator{GetRawAllocator()}
 {

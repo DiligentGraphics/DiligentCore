@@ -190,12 +190,6 @@ public:
 #endif
 
 private:
-    PipelineResourceSignatureGLImpl(IReferenceCounters*                  pRefCounters,
-                                    RenderDeviceGLImpl*                  pDevice,
-                                    const PipelineResourceSignatureDesc& Desc,
-                                    bool                                 bIsDeviceInternal,
-                                    int                                  Internal);
-
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheGL& ResourceCache) const;
 
