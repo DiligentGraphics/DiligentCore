@@ -43,7 +43,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*    
         pRefCounters,
         pPRS
     },
-    m_ShaderResourceCache{ShaderResourceCacheVk::CacheContentType::SRB}
+    m_ShaderResourceCache{ResourceCacheContentType::SRB}
 // clang-format on
 {
     try

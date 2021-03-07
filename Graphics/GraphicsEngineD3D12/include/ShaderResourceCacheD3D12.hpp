@@ -108,6 +108,7 @@
 #include "DescriptorHeap.hpp"
 #include "Shader.h"
 #include "RootParamsManager.hpp"
+#include "ShaderResourceCacheCommon.hpp"
 
 namespace Diligent
 {
@@ -118,13 +119,7 @@ class RenderDeviceD3D12Impl;
 class ShaderResourceCacheD3D12
 {
 public:
-    enum class CacheContentType : Uint8
-    {
-        Signature = 0, // The cache is used by the pipeline resource signature to hold static resources.
-        SRB       = 1  // The cache is used by SRB to hold resources of all types (static, mutable, dynamic).
-    };
-
-    explicit ShaderResourceCacheD3D12(CacheContentType ContentType) noexcept :
+    explicit ShaderResourceCacheD3D12(ResourceCacheContentType ContentType) noexcept :
         m_ContentType{ContentType}
     {
         for (auto& HeapIndex : m_AllocationIndex)
@@ -305,7 +300,7 @@ public:
     // Transitions all resources in the cache
     void TransitionResourceStates(CommandContext& Ctx, StateTransitionMode Mode);
 
-    CacheContentType GetContentType() const { return m_ContentType; }
+    ResourceCacheContentType GetContentType() const { return m_ContentType; }
 
     // Returns the bitmask indicating root views with bound dynamic buffers
     Uint64 GetDynamicRootBuffersMask() const { return m_DynamicRootBuffersMask; }
@@ -350,7 +345,7 @@ private:
     Uint8 m_NumDescriptorAllocations = 0;
 
     // Indicates what types of resources are stored in the cache
-    const CacheContentType m_ContentType;
+    const ResourceCacheContentType m_ContentType;
 
     // Descriptor allocation index in m_DescriptorAllocations array for every descriptor heap type
     // (CBV_SRV_UAV, SAMPLER) and GPU visibility (false, true).

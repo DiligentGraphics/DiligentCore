@@ -113,7 +113,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
         const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
-            m_pStaticResCache = MemPool.Construct<ShaderResourceCacheGL>(ShaderResourceCacheGL::CacheContentType::Signature);
+            m_pStaticResCache = MemPool.Construct<ShaderResourceCacheGL>(ResourceCacheContentType::Signature);
             m_StaticVarsMgrs  = MemPool.ConstructArray<ShaderVariableManagerGL>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
         }
 
@@ -469,8 +469,8 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
     const auto& SrcResourceCache = *m_pStaticResCache;
     const auto  ResIdxRange      = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
-    VERIFY_EXPR(SrcResourceCache.GetContentType() == ShaderResourceCacheGL::CacheContentType::Signature);
-    VERIFY_EXPR(DstResourceCache.GetContentType() == ShaderResourceCacheGL::CacheContentType::SRB);
+    VERIFY_EXPR(SrcResourceCache.GetContentType() == ResourceCacheContentType::Signature);
+    VERIFY_EXPR(DstResourceCache.GetContentType() == ResourceCacheContentType::SRB);
 
     for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
     {

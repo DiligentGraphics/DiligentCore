@@ -41,7 +41,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         pRefCounters,
         pPRS
     },
-    m_ShaderResourceCache{ShaderResourceCacheD3D12::CacheContentType::SRB}
+    m_ShaderResourceCache{ResourceCacheContentType::SRB}
 // clang-format on
 {
     try

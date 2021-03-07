@@ -23,6 +23,7 @@ set(INCLUDE
     include/SamplerBase.hpp
     include/ShaderBase.hpp
     include/ShaderResourceBindingBase.hpp
+    include/ShaderResourceCacheCommon.hpp
     include/ShaderResourceVariableBase.hpp
     include/StateObjectsRegistry.hpp
     include/SwapChainBase.hpp

@@ -33,6 +33,7 @@
 #include "BufferGLImpl.hpp"
 #include "TextureBaseGL.hpp"
 #include "SamplerGLImpl.hpp"
+#include "ShaderResourceCacheCommon.hpp"
 
 namespace Diligent
 {
@@ -48,13 +49,7 @@ namespace Diligent
 class ShaderResourceCacheGL
 {
 public:
-    enum class CacheContentType : Uint8
-    {
-        Signature = 0, // The cache is used by the pipeline resource signature to hold static resources.
-        SRB       = 1  // The cache is used by SRB to hold resources of all types (static, mutable, dynamic).
-    };
-
-    explicit ShaderResourceCacheGL(CacheContentType ContentType) noexcept :
+    explicit ShaderResourceCacheGL(ResourceCacheContentType ContentType) noexcept :
         m_ContentType{ContentType}
     {}
 
@@ -246,7 +241,7 @@ public:
         return m_MemoryEndOffset != InvalidResourceOffset;
     }
 
-    CacheContentType GetContentType() const { return m_ContentType; }
+    ResourceCacheContentType GetContentType() const { return m_ContentType; }
 
 #ifdef DILIGENT_DEVELOPMENT
     void SetStaticResourcesInitialized()
@@ -295,7 +290,7 @@ private:
     IMemoryAllocator* m_pAllocator    = nullptr;
 
     // Indicates what types of resources are stored in the cache
-    const CacheContentType m_ContentType;
+    const ResourceCacheContentType m_ContentType;
 
 #ifdef DILIGENT_DEVELOPMENT
     bool m_bStaticResourcesInitialized = false;

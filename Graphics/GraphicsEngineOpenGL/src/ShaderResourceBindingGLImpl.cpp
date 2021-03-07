@@ -42,7 +42,7 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters*    
         pRefCounters,
         pPRS
     },
-    m_ShaderResourceCache{ShaderResourceCacheGL::CacheContentType::SRB}
+    m_ShaderResourceCache{ResourceCacheContentType::SRB}
 // clang-format on
 {
     try

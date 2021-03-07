@@ -60,6 +60,7 @@
 #include "SPIRVShaderResources.hpp"
 #include "BufferVkImpl.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
+#include "ShaderResourceCacheCommon.hpp"
 
 namespace Diligent
 {
@@ -70,9 +71,7 @@ class DeviceContextVkImpl;
 class ShaderResourceCacheVk
 {
 public:
-    using CacheContentType = PipelineResourceSignatureVkImpl::CacheContentType;
-
-    explicit ShaderResourceCacheVk(CacheContentType ContentType) noexcept :
+    explicit ShaderResourceCacheVk(ResourceCacheContentType ContentType) noexcept :
         m_TotalResources{0},
         m_ContentType{static_cast<Uint32>(ContentType)}
     {
@@ -186,7 +185,7 @@ public:
 
     Uint16& GetDynamicBuffersCounter() { return m_NumDynamicBuffers; }
 
-    CacheContentType GetContentType() const { return static_cast<CacheContentType>(m_ContentType); }
+    ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
 #ifdef DILIGENT_DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache

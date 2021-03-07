@@ -58,8 +58,6 @@ public:
                                        bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureD3D12Impl();
 
-    using CacheContentType = ShaderResourceCacheD3D12::CacheContentType;
-
     // sizeof(ResourceAttribs) == 16, x64
     struct ResourceAttribs
     {
@@ -128,8 +126,14 @@ public:
         bool IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
         bool IsCombinedWithSampler() const { return SamplerInd != InvalidSamplerInd; }
 
-        Uint32 RootIndex(CacheContentType Type) const { return Type == CacheContentType::SRB ? SRBRootIndex : SigRootIndex; }
-        Uint32 OffsetFromTableStart(CacheContentType Type) const { return Type == CacheContentType::SRB ? SRBOffsetFromTableStart : SigOffsetFromTableStart; }
+        Uint32 RootIndex(ResourceCacheContentType Type) const
+        {
+            return Type == ResourceCacheContentType::SRB ? SRBRootIndex : SigRootIndex;
+        }
+        Uint32 OffsetFromTableStart(ResourceCacheContentType Type) const
+        {
+            return Type == ResourceCacheContentType::SRB ? SRBOffsetFromTableStart : SigOffsetFromTableStart;
+        }
 
         D3D12_ROOT_PARAMETER_TYPE GetD3D12RootParamType() const { return static_cast<D3D12_ROOT_PARAMETER_TYPE>(RootParamType); }
 

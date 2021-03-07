@@ -36,6 +36,7 @@
 #include "PipelineResourceSignatureBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "SRBMemoryAllocator.hpp"
+#include "ShaderResourceCacheCommon.hpp"
 
 namespace Diligent
 {
@@ -102,12 +103,6 @@ public:
         return (HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) ? 1 : 0) + (HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC) ? 1 : 0);
     }
 
-    enum class CacheContentType
-    {
-        Signature = 0, // only static resources
-        SRB       = 1  // in SRB
-    };
-
     // sizeof(ResourceAttribs) == 16, x64
     struct ResourceAttribs
     {
@@ -167,9 +162,9 @@ public:
             VERIFY(DescrSet == _DescrSet, "Descriptor set (", _DescrSet, ") exceeds maximum representable value");
         }
 
-        Uint32 CacheOffset(CacheContentType CacheType) const
+        Uint32 CacheOffset(ResourceCacheContentType CacheType) const
         {
-            return CacheType == CacheContentType::SRB ? SRBCacheOffset : StaticCacheOffset;
+            return CacheType == ResourceCacheContentType::SRB ? SRBCacheOffset : StaticCacheOffset;
         }
 
         DescriptorType GetDescriptorType() const { return static_cast<DescriptorType>(DescrType); }

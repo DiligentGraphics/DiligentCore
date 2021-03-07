@@ -121,7 +121,7 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator& MemAllocator,
                                           Uint32            NumTables,
                                           const Uint32      TableSizes[])
 {
-    VERIFY(GetContentType() == CacheContentType::Signature,
+    VERIFY(GetContentType() == ResourceCacheContentType::Signature,
            "This method should be called to initialize the cache to store resources of a pipeline resource signature");
 
     DEV_CHECK_ERR(NumTables <= MaxRootTables, "The number of root tables (", NumTables, ") exceeds maximum allowed value (", MaxRootTables, ").");
@@ -151,7 +151,7 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
                                           RenderDeviceD3D12Impl*   pDevice,
                                           const RootParamsManager& RootParams)
 {
-    VERIFY(GetContentType() == CacheContentType::SRB,
+    VERIFY(GetContentType() == ResourceCacheContentType::SRB,
            "This method should be called to initialize the cache to store resources of an SRB");
 
     const auto MemReq = GetMemoryRequirements(RootParams);
@@ -332,7 +332,7 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
     else
     {
 #ifdef DILIGENT_DEVELOPMENT
-        if (GetContentType() == CacheContentType::SRB)
+        if (GetContentType() == ResourceCacheContentType::SRB)
         {
             const BufferD3D12Impl* pBuffer = nullptr;
             switch (Type)

@@ -158,7 +158,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
         const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
-            m_pStaticResCache = MemPool.Construct<ShaderResourceCacheD3D12>(CacheContentType::Signature);
+            m_pStaticResCache = MemPool.Construct<ShaderResourceCacheD3D12>(ResourceCacheContentType::Signature);
             // Constructor of ShaderVariableManagerD3D12 is noexcept, so we can safely construct all manager objects.
             // Moreover, all objects must be constructed if an exception is thrown for Destruct() method to work properly.
             m_StaticVarsMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
@@ -492,8 +492,8 @@ void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCache
     auto* const d3d12Device      = GetDevice()->GetD3D12Device();
     const auto  SrcCacheType     = SrcResourceCache.GetContentType();
     const auto  DstCacheType     = DstResourceCache.GetContentType();
-    VERIFY_EXPR(SrcCacheType == ShaderResourceCacheD3D12::CacheContentType::Signature);
-    VERIFY_EXPR(DstCacheType == ShaderResourceCacheD3D12::CacheContentType::SRB);
+    VERIFY_EXPR(SrcCacheType == ResourceCacheContentType::Signature);
+    VERIFY_EXPR(DstCacheType == ResourceCacheContentType::SRB);
 
     for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
     {
@@ -505,8 +505,8 @@ void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCache
         if (IsSampler && Attr.IsImmutableSamplerAssigned())
         {
             // Immutable samplers should not be assigned cache space
-            VERIFY_EXPR(Attr.RootIndex(CacheContentType::Signature) == ResourceAttribs::InvalidSigRootIndex);
-            VERIFY_EXPR(Attr.RootIndex(CacheContentType::SRB) == ResourceAttribs::InvalidSRBRootIndex);
+            VERIFY_EXPR(Attr.RootIndex(ResourceCacheContentType::Signature) == ResourceAttribs::InvalidSigRootIndex);
+            VERIFY_EXPR(Attr.RootIndex(ResourceCacheContentType::SRB) == ResourceAttribs::InvalidSRBRootIndex);
             VERIFY_EXPR(Attr.SigOffsetFromTableStart == ResourceAttribs::InvalidOffset);
             VERIFY_EXPR(Attr.SRBOffsetFromTableStart == ResourceAttribs::InvalidOffset);
             continue;
@@ -852,7 +852,6 @@ private:
 
 private:
     using ResourceAttribs = PipelineResourceSignatureD3D12Impl::ResourceAttribs;
-    using ContentType     = PipelineResourceSignatureD3D12Impl::CacheContentType;
 
     const PipelineResourceSignatureD3D12Impl& m_Signature;
     ShaderResourceCacheD3D12&                 m_ResourceCache;
@@ -860,10 +859,10 @@ private:
     const PipelineResourceDesc& m_ResDesc;
     const ResourceAttribs&      m_Attribs; // Must go before m_RootIndex, m_OffsetFromTableStart
 
-    const ContentType m_CacheType; // Must go before m_RootIndex, m_OffsetFromTableStart
-    const Uint32      m_RootIndex; // Must go before m_DstRes
-    const Uint32      m_ArrayIndex;
-    const Uint32      m_OffsetFromTableStart; // Must go before m_DstRes
+    const ResourceCacheContentType m_CacheType; // Must go before m_RootIndex, m_OffsetFromTableStart
+    const Uint32                   m_RootIndex; // Must go before m_DstRes
+    const Uint32                   m_ArrayIndex;
+    const Uint32                   m_OffsetFromTableStart; // Must go before m_DstRes
 
     const ShaderResourceCacheD3D12::Resource& m_DstRes;
 
@@ -888,7 +887,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureD3D12Impl&
 {
     VERIFY(ArrayIndex < m_ResDesc.ArraySize, "Array index is out of range");
 
-    if (m_CacheType != ShaderResourceCacheD3D12::CacheContentType::Signature && !m_Attribs.IsRootView())
+    if (m_CacheType != ResourceCacheContentType::Signature && !m_Attribs.IsRootView())
     {
         const auto IsSampler      = (m_ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
         const auto RootParamGroup = VariableTypeToRootParameterGroup(m_ResDesc.VarType);
@@ -900,11 +899,11 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureD3D12Impl&
     }
 
 #ifdef DILIGENT_DEBUG
-    if (m_CacheType == ContentType::Signature)
+    if (m_CacheType == ResourceCacheContentType::Signature)
     {
         VERIFY(m_DstTableCPUDescriptorHandle.ptr == 0, "Static shader resource cache should never be assigned descriptor space.");
     }
-    else if (m_CacheType == ContentType::SRB)
+    else if (m_CacheType == ResourceCacheContentType::SRB)
     {
         if (m_Attribs.GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
         {
@@ -981,7 +980,7 @@ void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
 
         const auto CPUDescriptorHandle = pSamplerD3D12->GetCPUDescriptorHandle();
         VERIFY(CPUDescriptorHandle.ptr != 0, "Samplers must always have valid CPU descriptors");
-        VERIFY(m_CacheType == ShaderResourceCacheD3D12::CacheContentType::Signature || m_DstTableCPUDescriptorHandle.ptr != 0,
+        VERIFY(m_CacheType == ResourceCacheContentType::Signature || m_DstTableCPUDescriptorHandle.ptr != 0,
                "Samplers in SRB cache must always be allocated in root tables and thus assigned descriptor in the table");
 
         SetResource(CPUDescriptorHandle, std::move(pSamplerD3D12));
@@ -1008,7 +1007,7 @@ void BindResourceHelper::CacheAccelStruct(IDeviceObject* pTLAS) const
 
         const auto CPUDescriptorHandle = pTLASD3D12->GetCPUDescriptorHandle();
         VERIFY(CPUDescriptorHandle.ptr != 0, "Acceleration structures must always have valid CPU descriptor handles");
-        VERIFY(m_CacheType == ShaderResourceCacheD3D12::CacheContentType::Signature || m_DstTableCPUDescriptorHandle.ptr != 0,
+        VERIFY(m_CacheType == ResourceCacheContentType::Signature || m_DstTableCPUDescriptorHandle.ptr != 0,
                "Acceleration structures in SRB cache are always allocated in root tables and thus must have a descriptor");
 
         SetResource(CPUDescriptorHandle, std::move(pTLASD3D12));
@@ -1110,8 +1109,8 @@ void BindResourceHelper::BindCombinedSampler(TextureViewD3D12Impl* pTexView) con
     if (SamplerAttribs.IsImmutableSamplerAssigned())
     {
         // Immutable samplers should not be assigned cache space
-        VERIFY_EXPR(SamplerAttribs.RootIndex(ContentType::Signature) == ResourceAttribs::InvalidSigRootIndex);
-        VERIFY_EXPR(SamplerAttribs.RootIndex(ContentType::SRB) == ResourceAttribs::InvalidSRBRootIndex);
+        VERIFY_EXPR(SamplerAttribs.RootIndex(ResourceCacheContentType::Signature) == ResourceAttribs::InvalidSigRootIndex);
+        VERIFY_EXPR(SamplerAttribs.RootIndex(ResourceCacheContentType::SRB) == ResourceAttribs::InvalidSRBRootIndex);
         VERIFY_EXPR(SamplerAttribs.SigOffsetFromTableStart == ResourceAttribs::InvalidOffset);
         VERIFY_EXPR(SamplerAttribs.SRBOffsetFromTableStart == ResourceAttribs::InvalidOffset);
         return;
@@ -1260,7 +1259,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DS
         return true;
 
     const auto CacheType = ResourceCache.GetContentType();
-    VERIFY(CacheType == CacheContentType::SRB, "Only SRB resource cache can be committed");
+    VERIFY(CacheType == ResourceCacheContentType::SRB, "Only SRB resource cache can be committed");
     const auto  RootIndex            = ResAttribs.RootIndex(CacheType);
     const auto  OffsetFromTableStart = ResAttribs.OffsetFromTableStart(CacheType);
     const auto& RootTable            = ResourceCache.GetRootTable(RootIndex);

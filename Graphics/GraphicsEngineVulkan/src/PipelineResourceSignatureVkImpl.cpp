@@ -241,7 +241,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
         const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
-            m_pStaticResCache = MemPool.Construct<ShaderResourceCacheVk>(CacheContentType::Signature);
+            m_pStaticResCache = MemPool.Construct<ShaderResourceCacheVk>(ResourceCacheContentType::Signature);
             m_StaticVarsMgrs  = MemPool.ConstructArray<ShaderVariableManagerVk>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
 
             Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
@@ -764,7 +764,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
 {
     VERIFY(HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC), "This signature does not contain dynamic resources");
     VERIFY_EXPR(vkDynamicDescriptorSet != VK_NULL_HANDLE);
-    VERIFY_EXPR(ResourceCache.GetContentType() == CacheContentType::SRB);
+    VERIFY_EXPR(ResourceCache.GetContentType() == ResourceCacheContentType::SRB);
 
 #ifdef DILIGENT_DEBUG
     static constexpr size_t ImgUpdateBatchSize          = 4;
@@ -798,7 +798,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
     const auto& LogicalDevice  = GetDevice()->GetLogicalDevice();
     const auto  DynResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
-    constexpr auto CacheType = CacheContentType::SRB;
+    constexpr auto CacheType = ResourceCacheContentType::SRB;
 
     for (Uint32 ResIdx = DynResIdxRange.first, ArrElem = 0; ResIdx < DynResIdxRange.second;)
     {
@@ -993,14 +993,13 @@ private:
                                        const VkWriteDescriptorSetAccelerationStructureKHR* pAccelStructInfo = nullptr) const;
 
 private:
-    using CacheContentType = ShaderResourceCacheVk::CacheContentType;
-    using ResourceAttribs  = PipelineResourceSignatureVkImpl::ResourceAttribs;
-    using CachedSet        = ShaderResourceCacheVk::DescriptorSet;
+    using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
+    using CachedSet       = ShaderResourceCacheVk::DescriptorSet;
 
     const PipelineResourceSignatureVkImpl& m_Signature;
     ShaderResourceCacheVk&                 m_ResourceCache;
     const Uint32                           m_ArrayIndex;
-    const CacheContentType                 m_CacheType;
+    const ResourceCacheContentType         m_CacheType;
     const PipelineResourceDesc&            m_ResDesc;
     const ResourceAttribs&                 m_Attribs;
     CachedSet&                             m_CachedSet;
@@ -1026,7 +1025,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureVkImpl& Si
     VERIFY(m_DstRes.Type == m_Attribs.GetDescriptorType(), "Inconsistent types");
 
 #ifdef DILIGENT_DEBUG
-    if (m_CacheType == CacheContentType::SRB)
+    if (m_CacheType == ResourceCacheContentType::SRB)
     {
         if (m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC || m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
         {
@@ -1034,7 +1033,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureVkImpl& Si
             // Dynamic variables do not have vulkan descriptor set only until they are assigned one the first time
         }
     }
-    else if (m_CacheType == CacheContentType::Signature)
+    else if (m_CacheType == ResourceCacheContentType::Signature)
     {
         VERIFY(m_vkDescrSet == VK_NULL_HANDLE, "Static shader resource cache should not have vulkan descriptor set allocation");
     }
