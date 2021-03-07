@@ -369,23 +369,31 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     ASSERT_NE(pPS, nullptr);
 
 
-    // clang-format off
-    ShaderResourceVariableDesc Vars[] =
-    {
-        {SHADER_TYPE_VERTEX, "g_Tex2D_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_PIXEL,  "g_Tex2D_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_VERTEX, "g_Tex2D_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_PIXEL,  "g_Tex2D_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_VERTEX, "g_Tex2D_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
-        {SHADER_TYPE_PIXEL,  "g_Tex2D_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+    std::vector<ShaderResourceVariableDesc> Vars;
 
-        {SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_PIXEL,  "g_Tex2DArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_VERTEX, "g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_PIXEL,  "g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_VERTEX, "g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
-        {SHADER_TYPE_PIXEL,  "g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+    auto AddVar = [&](const char* Name, SHADER_RESOURCE_VARIABLE_TYPE VarType) //
+    {
+        if (deviceCaps.Features.SeparablePrograms)
+        {
+            // Use separate variables for each stage
+            Vars.emplace_back(SHADER_TYPE_VERTEX, Name, VarType);
+            Vars.emplace_back(SHADER_TYPE_PIXEL, Name, VarType);
+        }
+        else
+        {
+            // Use one shared variable
+            Vars.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, Name, VarType);
+        }
     };
+    // clang-format off
+    AddVar("g_Tex2D_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    AddVar("g_Tex2D_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+    AddVar("g_Tex2D_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
+    AddVar("g_Tex2DArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    AddVar("g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+    AddVar("g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
     std::vector<ImmutableSamplerDesc> ImtblSamplers;
     if (TestImtblSamplers)
     {
@@ -403,8 +411,8 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     // clang-format on
 
     PipelineResourceLayoutDesc ResourceLayout;
-    ResourceLayout.Variables            = Vars;
-    ResourceLayout.NumVariables         = _countof(Vars);
+    ResourceLayout.Variables            = Vars.data();
+    ResourceLayout.NumVariables         = static_cast<Uint32>(Vars.size());
     ResourceLayout.ImmutableSamplers    = ImtblSamplers.data();
     ResourceLayout.NumImmutableSamplers = static_cast<Uint32>(ImtblSamplers.size());
 
@@ -607,28 +615,35 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     ASSERT_NE(pPS, nullptr);
 
 
-    // clang-format off
-    ShaderResourceVariableDesc Vars[] =
-    {
-        {SHADER_TYPE_VERTEX, "g_Buff_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_PIXEL,  "g_Buff_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_VERTEX, "g_Buff_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_PIXEL,  "g_Buff_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_VERTEX, "g_Buff_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
-        {SHADER_TYPE_PIXEL,  "g_Buff_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+    std::vector<ShaderResourceVariableDesc> Vars;
 
-        {SHADER_TYPE_VERTEX, "g_BuffArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_PIXEL,  "g_BuffArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_VERTEX, "g_BuffArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_PIXEL,  "g_BuffArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_VERTEX, "g_BuffArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
-        {SHADER_TYPE_PIXEL,  "g_BuffArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+    auto AddVar = [&](const char* Name, SHADER_RESOURCE_VARIABLE_TYPE VarType) //
+    {
+        if (deviceCaps.Features.SeparablePrograms)
+        {
+            // Use separate variables for each stage
+            Vars.emplace_back(SHADER_TYPE_VERTEX, Name, VarType);
+            Vars.emplace_back(SHADER_TYPE_PIXEL, Name, VarType);
+        }
+        else
+        {
+            // Use one shared variable
+            Vars.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, Name, VarType);
+        }
     };
+    // clang-format off
+    AddVar("g_Buff_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    AddVar("g_Buff_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+    AddVar("g_Buff_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
+    AddVar("g_BuffArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    AddVar("g_BuffArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+    AddVar("g_BuffArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
     // clang-format on
 
     PipelineResourceLayoutDesc ResourceLayout;
-    ResourceLayout.Variables    = Vars;
-    ResourceLayout.NumVariables = _countof(Vars);
+    ResourceLayout.Variables    = Vars.data();
+    ResourceLayout.NumVariables = static_cast<Uint32>(Vars.size());
 
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -1139,26 +1154,33 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     ASSERT_NE(pVS, nullptr);
     ASSERT_NE(pPS, nullptr);
 
+    std::vector<ShaderResourceVariableDesc> Vars;
+
+    auto AddVar = [&](const char* Name, SHADER_RESOURCE_VARIABLE_TYPE VarType) //
+    {
+        if (deviceCaps.Features.SeparablePrograms)
+        {
+            // Use separate variables for each stage
+            Vars.emplace_back(SHADER_TYPE_VERTEX, Name, VarType);
+            Vars.emplace_back(SHADER_TYPE_PIXEL, Name, VarType);
+        }
+        else
+        {
+            // Use one shared variable
+            Vars.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, Name, VarType);
+        }
+    };
 
     // clang-format off
-    std::vector<ShaderResourceVariableDesc> Vars =
-    {
-        {SHADER_TYPE_VERTEX, "UniformBuff_Stat", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_PIXEL,  "UniformBuff_Stat", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_VERTEX, "UniformBuff_Mut",  SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_PIXEL,  "UniformBuff_Mut",  SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-        {SHADER_TYPE_VERTEX, "UniformBuff_Dyn",  SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
-        {SHADER_TYPE_PIXEL,  "UniformBuff_Dyn",  SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
-    };
+    AddVar("UniformBuff_Stat", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    AddVar("UniformBuff_Mut",  SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+    AddVar("UniformBuff_Dyn",  SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
     if (CBArraysSupported)
     {
-        Vars.emplace_back(SHADER_TYPE_VERTEX, "UniformBuffArr_Stat", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-        Vars.emplace_back(SHADER_TYPE_PIXEL,  "UniformBuffArr_Stat", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-        Vars.emplace_back(SHADER_TYPE_VERTEX, "UniformBuffArr_Mut",  SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        Vars.emplace_back(SHADER_TYPE_PIXEL,  "UniformBuffArr_Mut",  SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        Vars.emplace_back(SHADER_TYPE_VERTEX, "UniformBuffArr_Dyn",  SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-        Vars.emplace_back(SHADER_TYPE_PIXEL,  "UniformBuffArr_Dyn",  SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        AddVar("UniformBuffArr_Stat", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        AddVar("UniformBuffArr_Mut",  SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        AddVar("UniformBuffArr_Dyn",  SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
     };
     // clang-format on
 
