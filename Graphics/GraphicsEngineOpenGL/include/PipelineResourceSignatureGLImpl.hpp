@@ -36,7 +36,6 @@
 #include "PipelineResourceAttribsGL.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 #include "ShaderResourcesGL.hpp"
-#include "SRBMemoryAllocator.hpp"
 
 // ShaderVariableManagerGL, ShaderResourceCacheGL, and ShaderResourceBindingGLImpl
 // are required by PipelineResourceSignatureBase
@@ -116,11 +115,6 @@ public:
         return GetHash() != Other.GetHash() || m_BindingCount != Other.m_BindingCount;
     }
 
-    SRBMemoryAllocator& GetSRBMemoryAllocator()
-    {
-        return m_SRBMemAllocator;
-    }
-
     void InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache, IMemoryAllocator& CacheMemAllocator) const;
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -151,8 +145,6 @@ private:
 
     using SamplerPtr                = RefCntAutoPtr<ISampler>;
     SamplerPtr* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
-
-    SRBMemoryAllocator m_SRBMemAllocator;
 };
 
 } // namespace Diligent

@@ -130,8 +130,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
                                                                        RenderDeviceD3D12Impl*               pDevice,
                                                                        const PipelineResourceSignatureDesc& Desc,
                                                                        bool                                 bIsDeviceInternal) :
-    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
-    m_SRBMemAllocator{GetRawAllocator()}
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
 {
     try
     {

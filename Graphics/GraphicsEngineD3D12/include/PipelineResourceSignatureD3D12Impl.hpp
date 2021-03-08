@@ -141,11 +141,6 @@ public:
 
     bool IsCompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const;
 
-    SRBMemoryAllocator& GetSRBMemoryAllocator()
-    {
-        return m_SRBMemAllocator;
-    }
-
     void InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache,
                               IMemoryAllocator&         CacheMemAllocator,
                               const char*               DbgPipelineName) const;
@@ -208,8 +203,6 @@ private:
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 
     RootParamsManager m_RootParams;
-
-    SRBMemoryAllocator m_SRBMemAllocator;
 };
 
 } // namespace Diligent

@@ -126,11 +126,6 @@ public:
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureVkImpl>(pPRS));
     }
 
-    SRBMemoryAllocator& GetSRBMemoryAllocator()
-    {
-        return m_SRBMemAllocator;
-    }
-
     void InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache,
                               IMemoryAllocator&      CacheMemAllocator,
                               const char*            DbgPipelineName) const;
@@ -222,8 +217,6 @@ private:
     Uint16 m_DynamicStorageBufferCount = 0;
 
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
-
-    SRBMemoryAllocator m_SRBMemAllocator;
 };
 
 template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;

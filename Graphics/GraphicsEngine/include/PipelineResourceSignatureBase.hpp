@@ -43,6 +43,7 @@
 #include "BasicMath.hpp"
 #include "StringTools.hpp"
 #include "PlatformMisc.hpp"
+#include "SRBMemoryAllocator.hpp"
 
 namespace Diligent
 {
@@ -104,7 +105,8 @@ public:
                                   RenderDeviceImplType*                pDevice,
                                   const PipelineResourceSignatureDesc& Desc,
                                   bool                                 bIsDeviceInternal = false) :
-        TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
+        TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
+        m_SRBMemAllocator{GetRawAllocator()}
     {
         // Don't read from m_Desc until it was allocated and copied in CopyDescription()
         this->m_Desc.Resources             = nullptr;
@@ -368,6 +370,11 @@ public:
         return pSign0->IsCompatibleWith(pSign1);
     }
 
+    SRBMemoryAllocator& GetSRBMemoryAllocator()
+    {
+        return m_SRBMemAllocator;
+    }
+
 protected:
     template <typename TReserveCustomData>
     FixedLinearAllocator ReserveSpace(IMemoryAllocator&                    RawAllocator,
@@ -568,6 +575,9 @@ protected:
     // type in the pipeline (given by GetShaderTypePipelineIndex(ShaderType, m_PipelineType)).
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_StaticResStageIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
+
+    // Allocator for shader resource binding object instances.
+    SRBMemoryAllocator m_SRBMemAllocator;
 
 #ifdef DILIGENT_DEBUG
     bool m_IsDestructed = false;

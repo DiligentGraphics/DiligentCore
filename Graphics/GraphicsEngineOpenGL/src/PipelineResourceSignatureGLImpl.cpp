@@ -90,8 +90,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
                                                                  RenderDeviceGLImpl*                  pDeviceGL,
                                                                  const PipelineResourceSignatureDesc& Desc,
                                                                  bool                                 bIsDeviceInternal) :
-    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, bIsDeviceInternal},
-    m_SRBMemAllocator{GetRawAllocator()}
+    TPipelineResourceSignatureBase{pRefCounters, pDeviceGL, Desc, bIsDeviceInternal}
 {
     try
     {

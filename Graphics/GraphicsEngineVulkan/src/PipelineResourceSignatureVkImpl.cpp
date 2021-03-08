@@ -224,8 +224,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
                                                                  RenderDeviceVkImpl*                  pDevice,
                                                                  const PipelineResourceSignatureDesc& Desc,
                                                                  bool                                 bIsDeviceInternal) :
-    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
-    m_SRBMemAllocator{GetRawAllocator()}
+    TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
 {
     try
     {
