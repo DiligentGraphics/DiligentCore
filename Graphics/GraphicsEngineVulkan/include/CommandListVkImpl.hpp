@@ -30,6 +30,7 @@
 /// \file
 /// Declaration of Diligent::CommandListVkImpl class
 
+#include "EngineVkImplTraits.hpp"
 #include "VulkanUtilities/VulkanHeaders.h"
 #include "CommandListBase.hpp"
 #include "RenderDeviceVkImpl.hpp"

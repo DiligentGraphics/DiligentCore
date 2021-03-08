@@ -34,6 +34,7 @@
 #include <deque>
 #include <mutex>
 #include <atomic>
+
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent

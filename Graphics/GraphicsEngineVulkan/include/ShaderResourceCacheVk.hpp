@@ -59,8 +59,8 @@
 #include "DescriptorPoolManager.hpp"
 #include "SPIRVShaderResources.hpp"
 #include "BufferVkImpl.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
 #include "ShaderResourceCacheCommon.hpp"
+#include "PipelineResourceAttribsVk.hpp"
 
 namespace Diligent
 {

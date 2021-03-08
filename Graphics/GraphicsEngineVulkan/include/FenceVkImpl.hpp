@@ -33,10 +33,10 @@
 #include <deque>
 #include <atomic>
 
+#include "EngineVkImplTraits.hpp"
 #include "FenceVk.h"
 #include "FenceBase.hpp"
 #include "VulkanUtilities/VulkanFencePool.hpp"
-#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

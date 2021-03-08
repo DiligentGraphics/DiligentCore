@@ -30,6 +30,7 @@
 /// \file
 /// Declaration of Diligent::SwapChainVkImpl class
 
+#include "EngineVkImplTraits.hpp"
 #include "SwapChainVk.h"
 #include "SwapChainBase.hpp"
 #include "VulkanUtilities/VulkanInstance.hpp"

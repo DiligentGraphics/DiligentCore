@@ -32,6 +32,7 @@
 
 #include <unordered_map>
 #include <mutex>
+
 #include "GraphicsTypes.h"
 #include "Constants.h"
 #include "HashUtils.hpp"

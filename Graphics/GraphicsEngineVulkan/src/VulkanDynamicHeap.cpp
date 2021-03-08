@@ -26,9 +26,12 @@
  */
 
 #include "pch.h"
+
+#include "VulkanDynamicHeap.hpp"
+
 #include <chrono>
 #include <thread>
-#include "VulkanDynamicHeap.hpp"
+
 #include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent

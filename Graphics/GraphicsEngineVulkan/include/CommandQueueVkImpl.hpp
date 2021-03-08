@@ -34,11 +34,14 @@
 #include <deque>
 #include <atomic>
 
-#include "VulkanUtilities/VulkanHeaders.h"
+#include "EngineVkImplTraits.hpp"
 #include "CommandQueueVk.h"
 #include "ObjectBase.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
 #include "FenceVkImpl.hpp"
+
+#include "VulkanUtilities/VulkanHeaders.h"
+#include "VulkanUtilities/VulkanLogicalDevice.hpp"
+
 
 namespace Diligent
 {

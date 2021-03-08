@@ -34,44 +34,31 @@
 
 #include "EngineVkImplTraits.hpp"
 #include "PipelineResourceSignatureBase.hpp"
+
+// ShaderVariableManagerVk, ShaderResourceCacheVk, and ShaderResourceBindingVkImpl
+// are required by PipelineResourceSignatureBase
+#include "ShaderResourceCacheVk.hpp"
+#include "ShaderVariableManagerVk.hpp"
+#include "ShaderResourceBindingVkImpl.hpp"
+
+#include "PipelineResourceAttribsVk.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "SRBMemoryAllocator.hpp"
-#include "ShaderResourceCacheCommon.hpp"
 
 namespace Diligent
 {
 
 class RenderDeviceVkImpl;
-class ShaderResourceCacheVk;
 class ShaderVariableManagerVk;
 struct SPIRVShaderResourceAttribs;
-
-enum class DescriptorType : Uint8
-{
-    Sampler,
-    CombinedImageSampler,
-    SeparateImage,
-    StorageImage,
-    UniformTexelBuffer,
-    StorageTexelBuffer,
-    StorageTexelBuffer_ReadOnly,
-    UniformBuffer,
-    UniformBufferDynamic,
-    StorageBuffer,
-    StorageBuffer_ReadOnly,
-    StorageBufferDynamic,
-    StorageBufferDynamic_ReadOnly,
-    InputAttachment,
-    AccelerationStructure,
-    Count,
-    Unknown = 0xFF,
-};
 
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class
 class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBase<EngineVkImplTraits>
 {
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineVkImplTraits>;
+
+    using ResourceAttribs = PipelineResourceAttribsVk;
 
     // Descriptor set identifier (this is not the descriptor set index in the set layout!)
     enum DESCRIPTOR_SET_ID : size_t
@@ -88,6 +75,8 @@ public:
     // Static/mutable and dynamic descriptor sets
     static constexpr Uint32 MAX_DESCRIPTOR_SETS = DESCRIPTOR_SET_ID_NUM_SETS;
 
+    static_assert(ResourceAttribs::MaxDescriptorSets >= MAX_DESCRIPTOR_SETS, "Not enough bits to store descriptor set index");
+
     PipelineResourceSignatureVkImpl(IReferenceCounters*                  pRefCounters,
                                     RenderDeviceVkImpl*                  pDevice,
                                     const PipelineResourceSignatureDesc& Desc,
@@ -102,75 +91,6 @@ public:
         static_assert(DESCRIPTOR_SET_ID_NUM_SETS == 2, "Please update this method with new descriptor set id");
         return (HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) ? 1 : 0) + (HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC) ? 1 : 0);
     }
-
-    // sizeof(ResourceAttribs) == 16, x64
-    struct ResourceAttribs
-    {
-    private:
-        static constexpr Uint32 _BindingIndexBits    = 16;
-        static constexpr Uint32 _SamplerIndBits      = 16;
-        static constexpr Uint32 _ArraySizeBits       = 26;
-        static constexpr Uint32 _DescrTypeBits       = 4;
-        static constexpr Uint32 _DescrSetBits        = 1;
-        static constexpr Uint32 _SamplerAssignedBits = 1;
-
-        static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _DescrTypeBits + _DescrSetBits + _SamplerAssignedBits) % 32 == 0, "Bits are not optimally packed");
-
-        static_assert((1u << _DescrTypeBits) >= static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
-        static_assert((1u << _DescrSetBits) >= MAX_DESCRIPTOR_SETS, "Not enough bits to store descriptor set index");
-        static_assert((1u << _BindingIndexBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store resource binding index");
-        static_assert((1u << _SamplerIndBits) >= MAX_RESOURCES_IN_SIGNATURE, "Not enough bits to store sampler resource index");
-
-    public:
-        static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
-
-        // clang-format off
-        const Uint32  BindingIndex         : _BindingIndexBits;    // Binding in the descriptor set
-        const Uint32  SamplerInd           : _SamplerIndBits;      // Index of the assigned sampler in m_Desc.Resources and m_pResourceAttribs
-        const Uint32  ArraySize            : _ArraySizeBits;       // Array size
-        const Uint32  DescrType            : _DescrTypeBits;       // Descriptor type (DescriptorType)
-        const Uint32  DescrSet             : _DescrSetBits;        // Descriptor set (0 or 1)
-        const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
-
-        const Uint32  SRBCacheOffset;                              // Offset in the SRB resource cache
-        const Uint32  StaticCacheOffset;                           // Offset in the static resource cache
-        // clang-format on
-
-        ResourceAttribs(Uint32         _BindingIndex,
-                        Uint32         _SamplerInd,
-                        Uint32         _ArraySize,
-                        DescriptorType _DescrType,
-                        Uint32         _DescrSet,
-                        bool           _ImtblSamplerAssigned,
-                        Uint32         _SRBCacheOffset,
-                        Uint32         _StaticCacheOffset) noexcept :
-            // clang-format off
-            BindingIndex         {_BindingIndex                  },  
-            SamplerInd           {_SamplerInd                    },
-            ArraySize            {_ArraySize                     },
-            DescrType            {static_cast<Uint32>(_DescrType)},
-            DescrSet             {_DescrSet                      },
-            ImtblSamplerAssigned {_ImtblSamplerAssigned ? 1u : 0u},
-            SRBCacheOffset       {_SRBCacheOffset                },
-            StaticCacheOffset    {_StaticCacheOffset             }
-        // clang-format on
-        {
-            VERIFY(BindingIndex == _BindingIndex, "Binding index (", _BindingIndex, ") exceeds maximum representable value");
-            VERIFY(ArraySize == _ArraySize, "Array size (", _ArraySize, ") exceeds maximum representable value");
-            VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
-            VERIFY(GetDescriptorType() == _DescrType, "Descriptor type (", static_cast<Uint32>(_DescrType), ") exceeds maximum representable value");
-            VERIFY(DescrSet == _DescrSet, "Descriptor set (", _DescrSet, ") exceeds maximum representable value");
-        }
-
-        Uint32 CacheOffset(ResourceCacheContentType CacheType) const
-        {
-            return CacheType == ResourceCacheContentType::SRB ? SRBCacheOffset : StaticCacheOffset;
-        }
-
-        DescriptorType GetDescriptorType() const { return static_cast<DescriptorType>(DescrType); }
-        bool           IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
-        bool           IsCombinedWithSampler() const { return SamplerInd != InvalidSamplerInd; }
-    };
 
     const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
     {
@@ -195,24 +115,6 @@ public:
     VkDescriptorSetLayout GetVkDescriptorSetLayout(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId]; }
 
     bool HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
-
-    /// Implementation of IPipelineResourceSignature::CreateShaderResourceBinding.
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
-                                                                bool                     InitStaticResources) override final;
-
-    /// Implementation of IPipelineResourceSignature::GetStaticVariableByName.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
-
-    /// Implementation of IPipelineResourceSignature::GetStaticVariableByIndex.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
-
-    /// Implementation of IPipelineResourceSignature::GetStaticVariableCount.
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
-
-    /// Implementation of IPipelineResourceSignature::BindStaticResources.
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32            ShaderFlags,
-                                                        IResourceMapping* pResourceMapping,
-                                                        Uint32            Flags) override final;
 
     /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final

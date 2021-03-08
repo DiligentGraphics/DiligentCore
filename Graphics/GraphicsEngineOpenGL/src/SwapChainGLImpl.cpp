@@ -34,6 +34,7 @@
 
 namespace Diligent
 {
+
 SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
                                  const EngineGLCreateInfo& InitAttribs,
                                  const SwapChainDesc&      SCDesc,

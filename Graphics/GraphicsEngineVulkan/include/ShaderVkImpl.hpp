@@ -30,11 +30,10 @@
 /// \file
 /// Declaration of Diligent::ShaderVkImpl class
 
-#include "RenderDeviceVk.h"
+#include "EngineVkImplTraits.hpp"
 #include "ShaderVk.h"
 #include "ShaderBase.hpp"
 #include "SPIRVShaderResources.hpp"
-#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

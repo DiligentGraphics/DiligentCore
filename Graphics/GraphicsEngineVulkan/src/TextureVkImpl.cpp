@@ -29,7 +29,6 @@
 #include "TextureVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceContextVkImpl.hpp"
-#include "VulkanTypeConversions.hpp"
 #include "TextureViewVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"

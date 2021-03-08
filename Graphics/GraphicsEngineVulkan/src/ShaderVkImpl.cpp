@@ -25,11 +25,13 @@
  *  of the possibility of such damages.
  */
 
-#include <array>
-#include <cctype>
 #include "pch.h"
 
 #include "ShaderVkImpl.hpp"
+
+#include <array>
+#include <cctype>
+
 #include "RenderDeviceVkImpl.hpp"
 #include "DataBlobImpl.hpp"
 #include "GLSLUtils.hpp"

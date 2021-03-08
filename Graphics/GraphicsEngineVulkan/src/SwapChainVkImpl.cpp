@@ -29,8 +29,8 @@
 #include "SwapChainVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceContextVkImpl.hpp"
-#include "VulkanTypeConversions.hpp"
 #include "TextureVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

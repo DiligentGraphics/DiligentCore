@@ -33,24 +33,25 @@
 
 #include "EngineVkImplTraits.hpp"
 
+#include "CommandQueueVk.h"
+
 #include "RenderDeviceBase.hpp"
 #include "RenderDeviceNextGenBase.hpp"
-#include "DescriptorPoolManager.hpp"
-#include "VulkanDynamicHeap.hpp"
-#include "Atomics.hpp"
-#include "CommandQueueVk.h"
+
 #include "VulkanUtilities/VulkanInstance.hpp"
 #include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 #include "VulkanUtilities/VulkanCommandBufferPool.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "VulkanUtilities/VulkanMemoryManager.hpp"
+
+#include "DescriptorPoolManager.hpp"
+#include "VulkanDynamicHeap.hpp"
 #include "VulkanUploadHeap.hpp"
 #include "FramebufferCache.hpp"
 #include "RenderPassCache.hpp"
 #include "CommandPoolManager.hpp"
 #include "DXCompiler.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {

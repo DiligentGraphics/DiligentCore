@@ -30,11 +30,10 @@
 /// \file
 /// Declaration of Diligent::SamplerVkImpl class
 
+#include "EngineVkImplTraits.hpp"
 #include "SamplerVk.h"
-#include "RenderDeviceVk.h"
 #include "SamplerBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

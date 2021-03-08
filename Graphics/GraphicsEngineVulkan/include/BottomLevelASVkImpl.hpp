@@ -30,11 +30,11 @@
 /// \file
 /// Definition of the Diligent::BottomLevelASVkImpl class
 
-#include "RenderDeviceVk.h"
-#include "RenderDeviceVkImpl.hpp"
+#include "EngineVkImplTraits.hpp"
 #include "BottomLevelASVk.h"
 #include "BottomLevelASBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/VulkanMemoryManager.hpp"
 
 namespace Diligent
 {

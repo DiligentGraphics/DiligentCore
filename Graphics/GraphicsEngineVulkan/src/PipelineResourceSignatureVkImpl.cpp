@@ -26,13 +26,15 @@
  */
 
 #include "pch.h"
+
 #include "PipelineResourceSignatureVkImpl.hpp"
-#include "ShaderResourceBindingVkImpl.hpp"
+
 #include "RenderDeviceVkImpl.hpp"
-#include "VulkanTypeConversions.hpp"
 #include "SamplerVkImpl.hpp"
 #include "TextureViewVkImpl.hpp"
 #include "TopLevelASVkImpl.hpp"
+
+#include "VulkanTypeConversions.hpp"
 #include "DynamicLinearAllocator.hpp"
 #include "SPIRVShaderResources.hpp"
 
@@ -617,34 +619,6 @@ bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSig
     }
 
     return true;
-}
-
-void PipelineResourceSignatureVkImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
-                                                                  bool                     InitStaticResources)
-{
-    CreateShaderResourceBindingImpl(ppShaderResourceBinding, InitStaticResources);
-}
-
-Uint32 PipelineResourceSignatureVkImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
-{
-    return GetStaticVariableCountImpl(ShaderType);
-}
-
-IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
-{
-    return GetStaticVariableByNameImpl(ShaderType, Name);
-}
-
-IShaderResourceVariable* PipelineResourceSignatureVkImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
-{
-    return GetStaticVariableByIndexImpl(ShaderType, Index);
-}
-
-void PipelineResourceSignatureVkImpl::BindStaticResources(Uint32            ShaderFlags,
-                                                          IResourceMapping* pResMapping,
-                                                          Uint32            Flags)
-{
-    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags);
 }
 
 void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache,

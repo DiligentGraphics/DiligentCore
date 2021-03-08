@@ -28,8 +28,8 @@
 #include "pch.h"
 
 #include "FenceVkImpl.hpp"
-#include "EngineMemory.h"
 #include "RenderDeviceVkImpl.hpp"
+#include "EngineMemory.h"
 
 namespace Diligent
 {

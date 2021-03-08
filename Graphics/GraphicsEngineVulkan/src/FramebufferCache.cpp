@@ -27,8 +27,8 @@
 
 #include "pch.h"
 #include "FramebufferCache.hpp"
-#include "HashUtils.hpp"
 #include "RenderDeviceVkImpl.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {

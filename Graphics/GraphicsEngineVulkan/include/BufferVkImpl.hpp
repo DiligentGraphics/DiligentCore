@@ -30,15 +30,15 @@
 /// \file
 /// Declaration of Diligent::BufferVkImpl class
 
+#include "EngineVkImplTraits.hpp"
 #include "BufferVk.h"
-#include "RenderDeviceVk.h"
 #include "BufferBase.hpp"
-#include "BufferViewVkImpl.hpp"
+#include "BufferViewVkImpl.hpp" // Required by BufferBase
+
 #include "VulkanDynamicHeap.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "VulkanUtilities/VulkanMemoryManager.hpp"
 #include "STDAllocator.hpp"
-#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

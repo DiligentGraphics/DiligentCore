@@ -26,8 +26,11 @@
  */
 
 #include "pch.h"
-#include <sstream>
+
 #include "RenderPassCache.hpp"
+
+#include <sstream>
+
 #include "RenderDeviceVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"

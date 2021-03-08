@@ -30,13 +30,14 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceBindingVkImpl class
 
+#include "EngineVkImplTraits.hpp"
 #include "ShaderResourceBindingVk.h"
-#include "RenderDeviceVk.h"
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderBase.hpp"
+
+// ShaderVariableManagerVk and ShaderResourceCacheVk are required by ShaderResourceBindingBase
 #include "ShaderResourceCacheVk.hpp"
-#include "ShaderVariableVk.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
+#include "ShaderVariableManagerVk.hpp"
 
 namespace Diligent
 {

@@ -30,9 +30,9 @@
 /// \file
 /// Declaration of Diligent::FramebufferVkImpl class
 
+#include "EngineVkImplTraits.hpp"
 #include "FramebufferVk.h"
 #include "FramebufferBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent

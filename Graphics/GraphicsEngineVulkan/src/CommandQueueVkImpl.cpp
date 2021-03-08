@@ -25,9 +25,13 @@
  *  of the possibility of such damages.
  */
 
-#include <thread>
 #include "pch.h"
+
 #include "CommandQueueVkImpl.hpp"
+
+#include <thread>
+
+#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

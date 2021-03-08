@@ -28,12 +28,14 @@
 #include "pch.h"
 
 #include "ShaderResourceCacheVk.hpp"
+
 #include "DeviceContextVkImpl.hpp"
 #include "BufferViewVkImpl.hpp"
 #include "TextureViewVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "SamplerVkImpl.hpp"
 #include "TopLevelASVkImpl.hpp"
+
 #include "VulkanTypeConversions.hpp"
 
 namespace Diligent

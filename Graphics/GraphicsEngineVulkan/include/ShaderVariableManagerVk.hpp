@@ -63,7 +63,7 @@
 
 #include "ShaderResourceVariableBase.hpp"
 #include "ShaderResourceCacheVk.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
+#include "PipelineResourceAttribsVk.hpp"
 
 namespace Diligent
 {
@@ -107,20 +107,13 @@ public:
 
 private:
     friend ShaderVariableVkImpl;
-    using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
+    using ResourceAttribs = PipelineResourceAttribsVk;
 
     Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
 
-    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const
-    {
-        VERIFY_EXPR(m_pSignature);
-        return m_pSignature->GetResourceDesc(Index);
-    }
-    const ResourceAttribs& GetAttribs(Uint32 Index) const
-    {
-        VERIFY_EXPR(m_pSignature);
-        return m_pSignature->GetResourceAttribs(Index);
-    }
+    // These two methods can't be implemented in the header because they depend on PipelineResourceSignatureVkImpl
+    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
+    const ResourceAttribs&      GetAttribs(Uint32 Index) const;
 
     template <typename HandlerType>
     static void ProcessSignatureResources(const PipelineResourceSignatureVkImpl& Signature,
@@ -197,20 +190,16 @@ public:
         return m_ParentManager.GetVariableIndex(*this);
     }
 
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-    {
-        return m_ParentManager.m_pSignature->IsBound(ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
-    }
+    // This method can't be implemented in the header because it depends on PipelineResourceSignatureVkImpl
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final;
 
     const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
 
-    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
-    {
-        m_ParentManager.m_pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
-    }
+    // This method can't be implemented in the header because it depends on PipelineResourceSignatureVkImpl
+    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const;
 
 private:
-    using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
+    using ResourceAttribs = PipelineResourceAttribsVk;
 
     const ResourceAttribs& GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
 

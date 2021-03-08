@@ -27,19 +27,20 @@
 
 #include "pch.h"
 
+#include "PipelineStateVkImpl.hpp"
+
 #include <array>
 #include <unordered_set>
 
-#include "PipelineStateVkImpl.hpp"
-#include "ShaderVkImpl.hpp"
-#include "VulkanTypeConversions.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceContextVkImpl.hpp"
+#include "ShaderVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
 #include "ShaderResourceBindingVkImpl.hpp"
+
+#include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
-#include "ShaderResourceBindingVkImpl.hpp"
 
 
 #if !DILIGENT_NO_HLSL

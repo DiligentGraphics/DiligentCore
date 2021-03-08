@@ -32,9 +32,9 @@
 
 #include <array>
 
+#include "EngineVkImplTraits.hpp"
 #include "QueryVk.h"
 #include "QueryBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
 #include "QueryManagerVk.hpp"
 
 namespace Diligent

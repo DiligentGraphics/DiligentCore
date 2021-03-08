@@ -33,18 +33,17 @@
 #include <array>
 #include <memory>
 
-#include "RenderDeviceVk.h"
+#include "EngineVkImplTraits.hpp"
 #include "PipelineStateVk.h"
 #include "PipelineStateBase.hpp"
-#include "ShaderVariableVk.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp" // Required by PipelineStateBase
+
+#include "ShaderVariableManagerVk.hpp"
 #include "FixedBlockMemoryAllocator.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "PipelineLayoutVk.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
-#include "RenderDeviceVkImpl.hpp"
-#include "PipelineLayoutVk.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {

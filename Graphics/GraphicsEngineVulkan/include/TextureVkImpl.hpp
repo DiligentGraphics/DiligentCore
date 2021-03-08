@@ -30,12 +30,11 @@
 /// \file
 /// Declaration of Diligent::TextureVkImpl class
 
+#include "EngineVkImplTraits.hpp"
 #include "TextureVk.h"
-#include "RenderDeviceVk.h"
 #include "TextureBase.hpp"
 #include "TextureViewVkImpl.hpp"
 #include "VulkanUtilities/VulkanMemoryManager.hpp"
-#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

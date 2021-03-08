@@ -28,11 +28,13 @@
 #pragma once
 
 #include "DeviceObjectBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "RenderDeviceVkImpl.hpp" // Required by by ~ManagedVulkanObject()
 
 namespace Diligent
 {
+
+class RenderDeviceVkImpl;
 
 template <typename VulkanObjectWrapperType>
 class ManagedVulkanObject : public DeviceObjectBase<IDeviceObject, RenderDeviceVkImpl, DeviceObjectAttribs>

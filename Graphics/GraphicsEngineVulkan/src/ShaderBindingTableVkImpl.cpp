@@ -26,7 +26,9 @@
  */
 
 #include "pch.h"
+
 #include "ShaderBindingTableVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
 #include "BufferVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 

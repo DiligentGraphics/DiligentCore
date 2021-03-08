@@ -27,18 +27,20 @@
 
 #include "pch.h"
 
+#include "DeviceContextVkImpl.hpp"
+
 #include <sstream>
 #include <vector>
 
 #include "RenderDeviceVkImpl.hpp"
-#include "DeviceContextVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "BufferVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
+#include "FenceVkImpl.hpp"
+
 #include "VulkanTypeConversions.hpp"
 #include "CommandListVkImpl.hpp"
-#include "FenceVkImpl.hpp"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent

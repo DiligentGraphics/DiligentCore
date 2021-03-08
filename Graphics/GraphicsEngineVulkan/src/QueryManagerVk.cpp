@@ -26,8 +26,11 @@
  */
 
 #include "pch.h"
-#include <algorithm>
+
 #include "QueryManagerVk.hpp"
+
+#include <algorithm>
+
 #include "RenderDeviceVkImpl.hpp"
 #include "GraphicsAccessories.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"

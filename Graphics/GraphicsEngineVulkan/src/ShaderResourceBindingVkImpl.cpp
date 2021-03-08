@@ -27,9 +27,9 @@
 
 #include "pch.h"
 #include "ShaderResourceBindingVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "ShaderVkImpl.hpp"
-#include "RenderDeviceVkImpl.hpp"
 #include "FixedLinearAllocator.hpp"
 
 namespace Diligent

@@ -27,12 +27,15 @@
 
 #include "pch.h"
 
+#include "FramebufferVkImpl.hpp"
+
 #include <vector>
 
-#include "FramebufferVkImpl.hpp"
-#include "EngineMemory.h"
+#include "RenderDeviceVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
 #include "TextureViewVkImpl.hpp"
+
+#include "EngineMemory.h"
 
 namespace Diligent
 {

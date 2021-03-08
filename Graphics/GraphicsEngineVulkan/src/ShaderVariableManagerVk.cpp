@@ -27,8 +27,8 @@
 
 #include "pch.h"
 
-#include "ShaderVariableVk.hpp"
-#include "ShaderResourceVariableBase.hpp"
+#include "ShaderVariableManagerVk.hpp"
+#include "RenderDeviceVkImpl.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
@@ -183,6 +183,19 @@ Uint32 ShaderVariableManagerVk::GetVariableIndex(const ShaderVariableVkImpl& Var
     }
 }
 
+const PipelineResourceDesc& ShaderVariableManagerVk::GetResourceDesc(Uint32 Index) const
+{
+    VERIFY_EXPR(m_pSignature);
+    return m_pSignature->GetResourceDesc(Index);
+}
+
+const ShaderVariableManagerVk::ResourceAttribs& ShaderVariableManagerVk::GetAttribs(Uint32 Index) const
+{
+    VERIFY_EXPR(m_pSignature);
+    return m_pSignature->GetResourceAttribs(Index);
+}
+
+
 void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const
 {
     if (!pResourceMapping)
@@ -209,6 +222,16 @@ void ShaderVariableVkImpl::SetArray(IDeviceObject* const* ppObjects,
 
     for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
         BindResource(ppObjects[Elem], FirstElement + Elem);
+}
+
+bool ShaderVariableVkImpl::IsBound(Uint32 ArrayIndex) const
+{
+    return m_ParentManager.m_pSignature->IsBound(ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
+}
+
+void ShaderVariableVkImpl::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+{
+    m_ParentManager.m_pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
 }
 
 } // namespace Diligent

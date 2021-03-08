@@ -33,30 +33,34 @@
 #include <unordered_map>
 #include <bitset>
 
+#include "EngineVkImplTraits.hpp"
+
 #include "DeviceContextVk.h"
 #include "DeviceContextNextGenBase.hpp"
-#include "VulkanUtilities/VulkanCommandBufferPool.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
-#include "VulkanUploadHeap.hpp"
-#include "VulkanDynamicHeap.hpp"
-#include "ResourceReleaseQueue.hpp"
-#include "DescriptorPoolManager.hpp"
-#include "PipelineLayoutVk.hpp"
-#include "GenerateMipsVkHelper.hpp"
+
+// Vk object implementations are required by DeviceContextBase
 #include "BufferVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "QueryVkImpl.hpp"
 #include "FramebufferVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
-#include "HashUtils.hpp"
-#include "ManagedVulkanObject.hpp"
-#include "QueryManagerVk.hpp"
 #include "BottomLevelASVkImpl.hpp"
 #include "TopLevelASVkImpl.hpp"
 #include "ShaderBindingTableVkImpl.hpp"
 #include "ShaderResourceBindingVkImpl.hpp"
 
+#include "GenerateMipsVkHelper.hpp"
+#include "PipelineLayoutVk.hpp"
+#include "VulkanUtilities/VulkanCommandBufferPool.hpp"
+#include "VulkanUtilities/VulkanCommandBuffer.hpp"
+#include "VulkanUploadHeap.hpp"
+#include "VulkanDynamicHeap.hpp"
+#include "ResourceReleaseQueue.hpp"
+#include "DescriptorPoolManager.hpp"
+#include "HashUtils.hpp"
+#include "ManagedVulkanObject.hpp"
+#include "QueryManagerVk.hpp"
 
 namespace Diligent
 {

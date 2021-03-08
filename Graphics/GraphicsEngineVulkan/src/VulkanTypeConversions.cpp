@@ -26,10 +26,12 @@
  */
 
 #include "pch.h"
+
+#include "VulkanTypeConversions.hpp"
+
 #include <unordered_map>
 #include <array>
 
-#include "VulkanTypeConversions.hpp"
 #include "PlatformMisc.hpp"
 #include "Align.hpp"
 #include "BasicMath.hpp"

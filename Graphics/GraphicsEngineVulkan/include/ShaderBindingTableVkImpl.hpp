@@ -30,8 +30,7 @@
 /// \file
 /// Definition of the Diligent::ShaderBindingTableVkImpl class
 
-#include "RenderDeviceVk.h"
-#include "RenderDeviceVkImpl.hpp"
+#include "EngineVkImplTraits.hpp"
 #include "ShaderBindingTableVk.h"
 #include "ShaderBindingTableBase.hpp"
 #include "TopLevelASVkImpl.hpp"

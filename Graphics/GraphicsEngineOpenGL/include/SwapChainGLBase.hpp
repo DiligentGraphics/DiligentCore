@@ -29,6 +29,7 @@
 
 #include "SwapChainBase.hpp"
 #include "TextureViewGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {

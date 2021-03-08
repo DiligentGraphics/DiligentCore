@@ -26,12 +26,16 @@
  */
 
 #include "pch.h"
-#include <sstream>
+
 #include "GenerateMipsVkHelper.hpp"
+
+#include <sstream>
+
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceContextVkImpl.hpp"
 #include "TextureViewVkImpl.hpp"
 #include "TextureVkImpl.hpp"
+
 #include "PlatformMisc.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "../../GraphicsTools/interface/ShaderMacroHelper.hpp"

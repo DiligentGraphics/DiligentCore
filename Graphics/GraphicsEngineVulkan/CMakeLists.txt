@@ -29,7 +29,7 @@ set(INCLUDE
     include/ManagedVulkanObject.hpp
     include/ShaderResourceBindingVkImpl.hpp
     include/ShaderResourceCacheVk.hpp
-    include/ShaderVariableVk.hpp
+    include/ShaderVariableManagerVk.hpp
     include/SwapChainVkImpl.hpp
     include/TextureVkImpl.hpp
     include/TextureViewVkImpl.hpp
@@ -40,6 +40,7 @@ set(INCLUDE
     include/TopLevelASVkImpl.hpp
     include/ShaderBindingTableVkImpl.hpp
     include/PipelineResourceSignatureVkImpl.hpp
+    include/PipelineResourceAttribsVk.hpp
 )
 
 set(VULKAN_UTILS_INCLUDE 
@@ -104,7 +105,7 @@ set(SRC
     src/ShaderVkImpl.cpp
     src/ShaderResourceBindingVkImpl.cpp
     src/ShaderResourceCacheVk.cpp
-    src/ShaderVariableVk.cpp
+    src/ShaderVariableManagerVk.cpp
     src/SwapChainVkImpl.cpp
     src/TextureVkImpl.cpp
     src/TextureViewVkImpl.cpp

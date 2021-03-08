@@ -27,14 +27,16 @@
 
 #include "pch.h"
 
+#include "PipelineLayoutVk.hpp"
+
 #include <algorithm>
 #include <limits>
 
-#include "PipelineLayoutVk.hpp"
 #include "RenderDeviceVkImpl.hpp"
+#include "PipelineResourceSignatureVkImpl.hpp"
+
 #include "VulkanTypeConversions.hpp"
 #include "StringTools.hpp"
-#include "PipelineResourceSignatureVkImpl.hpp"
 
 namespace Diligent
 {

@@ -32,6 +32,7 @@
 
 #include <unordered_map>
 #include <mutex>
+
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent

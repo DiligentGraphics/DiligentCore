@@ -27,6 +27,7 @@
 
 #include "pch.h"
 #include "BottomLevelASVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 
 namespace Diligent

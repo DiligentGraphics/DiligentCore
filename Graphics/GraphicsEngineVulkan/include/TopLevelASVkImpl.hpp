@@ -30,8 +30,7 @@
 /// \file
 /// Definition of the Diligent::TopLevelASVkImpl class
 
-#include "RenderDeviceVk.h"
-#include "RenderDeviceVkImpl.hpp"
+#include "EngineVkImplTraits.hpp"
 #include "TopLevelASVk.h"
 #include "TopLevelASBase.hpp"
 #include "BottomLevelASVkImpl.hpp"
