@@ -139,8 +139,6 @@ public:
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureD3D12Impl>(pPRS));
     }
 
-    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final;
-
     bool IsCompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const;
 
     SRBMemoryAllocator& GetSRBMemoryAllocator()

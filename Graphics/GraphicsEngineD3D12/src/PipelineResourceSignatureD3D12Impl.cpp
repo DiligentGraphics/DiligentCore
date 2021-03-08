@@ -440,16 +440,6 @@ void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCach
     ResourceCache.Initialize(CacheMemAllocator, m_pDevice, m_RootParams);
 }
 
-void PipelineResourceSignatureD3D12Impl::InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const
-{
-    InitializeStaticSRBResourcesImpl(ValidatedCast<ShaderResourceBindingD3D12Impl>(pSRB),
-                                     [&](ShaderResourceBindingD3D12Impl* pSRBD3D12) //
-                                     {
-                                         CopyStaticResources(pSRBD3D12->GetResourceCache());
-                                     } //
-    );
-}
-
 void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCacheD3D12& DstResourceCache) const
 {
     if (m_pStaticResCache == nullptr)

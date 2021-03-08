@@ -126,8 +126,6 @@ public:
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureVkImpl>(pPRS));
     }
 
-    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final;
-
     SRBMemoryAllocator& GetSRBMemoryAllocator()
     {
         return m_SRBMemAllocator;

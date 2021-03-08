@@ -242,6 +242,31 @@ public:
         pResBindingImpl->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
     }
 
+    /// Implementation of IPipelineResourceSignature::InitializeStaticSRBResources.
+    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final
+    {
+        DEV_CHECK_ERR(pSRB != nullptr, "SRB must not be null");
+
+        auto* const pSRBImpl = ValidatedCast<ShaderResourceBindingImplType>(pSRB);
+        if (pSRBImpl->StaticResourcesInitialized())
+        {
+            LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object.");
+            return;
+        }
+
+        const auto* const pThisImpl = static_cast<const PipelineResourceSignatureImplType*>(this);
+#ifdef DILIGENT_DEVELOPMENT
+        {
+            const auto* pSRBSignature = pSRBImpl->GetPipelineResourceSignature();
+            DEV_CHECK_ERR(pSRBSignature->IsCompatibleWith(pThisImpl), "Shader resource binding is not compatible with resource signature '", pThisImpl->m_Desc.Name, "'.");
+        }
+#endif
+
+        auto& ResourceCache = pSRBImpl->GetResourceCache();
+        pThisImpl->CopyStaticResources(ResourceCache);
+
+        pSRBImpl->SetStaticResourcesInitialized();
+    }
 
     size_t GetHash() const { return m_Hash; }
 
@@ -486,29 +511,6 @@ protected:
 #if DILIGENT_DEBUG
         m_IsDestructed = true;
 #endif
-    }
-
-    template <typename SRBImplType, typename InitResourcesHandler>
-    void InitializeStaticSRBResourcesImpl(SRBImplType* pSRB, InitResourcesHandler Handler) const
-    {
-        DEV_CHECK_ERR(pSRB != nullptr, "SRB must not be null");
-        if (pSRB->StaticResourcesInitialized())
-        {
-            LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object.");
-            return;
-        }
-
-        const auto* const pSRBSignature = pSRB->GetPipelineResourceSignature();
-#ifdef DILIGENT_DEVELOPMENT
-        if (!pSRBSignature->IsCompatibleWith(this))
-        {
-            LOG_ERROR_MESSAGE("Shader resource binding is not compatible with resource signature '", this->m_Desc.Name, "'.");
-        }
-#endif
-
-        Handler(pSRB);
-
-        pSRB->SetStaticResourcesInitialized();
     }
 
     // Finds a sampler that is assigned to texture Tex, when combined texture samplers are used.

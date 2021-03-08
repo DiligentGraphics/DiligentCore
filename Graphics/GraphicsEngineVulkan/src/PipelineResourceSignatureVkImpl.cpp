@@ -659,16 +659,6 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
     }
 }
 
-void PipelineResourceSignatureVkImpl::InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const
-{
-    InitializeStaticSRBResourcesImpl(ValidatedCast<ShaderResourceBindingVkImpl>(pSRB),
-                                     [&](ShaderResourceBindingVkImpl* pSRBVk) //
-                                     {
-                                         CopyStaticResources(pSRBVk->GetResourceCache());
-                                     } //
-    );
-}
-
 void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk& DstResourceCache) const
 {
     if (!HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) || m_pStaticResCache == nullptr)

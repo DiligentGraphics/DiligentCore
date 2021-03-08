@@ -419,16 +419,6 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
     State.SetProgram(GLObjectWrappers::GLProgramObj::Null());
 }
 
-void PipelineResourceSignatureGLImpl::InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const
-{
-    InitializeStaticSRBResourcesImpl(ValidatedCast<ShaderResourceBindingGLImpl>(pSRB),
-                                     [&](ShaderResourceBindingGLImpl* pSRBGL) //
-                                     {
-                                         CopyStaticResources(pSRBGL->GetResourceCache());
-                                     } //
-    );
-}
-
 void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL& DstResourceCache) const
 {
     if (m_pStaticResCache == nullptr)

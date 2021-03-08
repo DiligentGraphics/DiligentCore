@@ -109,9 +109,6 @@ public:
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureGLImpl>(pPRS));
     }
 
-    /// Implementation of IPipelineResourceSignature::InitializeStaticSRBResources.
-    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final;
-
     bool IsCompatibleWith(const PipelineResourceSignatureGLImpl& Other) const;
 
     bool IsIncompatibleWith(const PipelineResourceSignatureGLImpl& Other) const
@@ -137,10 +134,10 @@ public:
                                       const char*                                 PSOName) const;
 #endif
 
-private:
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheGL& ResourceCache) const;
 
+private:
     void CreateLayouts();
 
     void Destruct();
