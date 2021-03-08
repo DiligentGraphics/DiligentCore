@@ -28,15 +28,16 @@
 #pragma once
 
 #include <vector>
+
+#include "EngineGLImplTraits.hpp"
 #include "PipelineStateGL.h"
 #include "PipelineStateBase.hpp"
-#include "RenderDevice.h"
+
+#include "PipelineResourceSignatureGLImpl.hpp" // Requiured by PipelineStateBase
+#include "ShaderGLImpl.hpp"
+
 #include "GLObjectWrapper.hpp"
 #include "GLContext.hpp"
-#include "RenderDeviceGLImpl.hpp"
-#include "ShaderVariableGL.hpp"
-#include "ShaderGLImpl.hpp"
-#include "PipelineResourceSignatureGLImpl.hpp"
 
 namespace Diligent
 {

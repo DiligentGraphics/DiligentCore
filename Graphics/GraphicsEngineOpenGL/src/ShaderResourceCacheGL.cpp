@@ -27,6 +27,7 @@
 
 #include "pch.h"
 #include "ShaderResourceCacheGL.hpp"
+#include "RenderDeviceGLImpl.hpp"
 #include "PipelineResourceSignatureGLImpl.hpp"
 #include "GLTypeConversions.hpp"
 

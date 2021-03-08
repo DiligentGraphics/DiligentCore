@@ -26,9 +26,10 @@
  */
 
 #include "pch.h"
-#include "DeviceContextGLImpl.hpp"
-#include "RenderDeviceGLImpl.hpp"
+
 #include "SwapChainGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "DeviceContextGLImpl.hpp"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent

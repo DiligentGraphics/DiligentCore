@@ -32,13 +32,14 @@
 
 #include <vector>
 
-#include "RenderDeviceGL.h"
+#include "EngineGLImplTraits.hpp"
 #include "FramebufferBase.hpp"
-#include "RenderDeviceGLImpl.hpp"
 #include "GLObjectWrapper.hpp"
 
 namespace Diligent
 {
+
+class GLContextState;
 
 /// Framebuffer implementation in OpenGL backend.
 class FramebufferGLImpl final : public FramebufferBase<EngineGLImplTraits>

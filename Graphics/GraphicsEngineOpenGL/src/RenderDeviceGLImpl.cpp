@@ -31,7 +31,6 @@
 
 #include "BufferGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
-#include "VAOCache.hpp"
 #include "Texture1D_OGL.hpp"
 #include "Texture1DArray_OGL.hpp"
 #include "Texture2D_OGL.hpp"
@@ -41,7 +40,6 @@
 #include "TextureCubeArray_OGL.hpp"
 #include "SamplerGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
-#include "GLTypeConversions.hpp"
 #include "PipelineStateGLImpl.hpp"
 #include "ShaderResourceBindingGLImpl.hpp"
 #include "FenceGLImpl.hpp"
@@ -49,6 +47,9 @@
 #include "RenderPassGLImpl.hpp"
 #include "FramebufferGLImpl.hpp"
 #include "PipelineResourceSignatureGLImpl.hpp"
+
+#include "GLTypeConversions.hpp"
+#include "VAOCache.hpp"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 

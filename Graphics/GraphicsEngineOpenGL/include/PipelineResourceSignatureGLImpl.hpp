@@ -32,16 +32,22 @@
 
 #include <array>
 
+#include "EngineGLImplTraits.hpp"
+#include "PipelineResourceAttribsGL.hpp"
 #include "PipelineResourceSignatureBase.hpp"
-#include "ShaderResourceCacheGL.hpp"
 #include "ShaderResourcesGL.hpp"
 #include "SRBMemoryAllocator.hpp"
+
+// ShaderVariableManagerGL, ShaderResourceCacheGL, and ShaderResourceBindingGLImpl
+// are required by PipelineResourceSignatureBase
+#include "ShaderResourceCacheGL.hpp"
+#include "ShaderVariableManagerGL.hpp"
+#include "ShaderResourceBindingGLImpl.hpp"
 
 namespace Diligent
 {
 
 class RenderDeviceGLImpl;
-class ShaderVariableManagerGL;
 
 enum BINDING_RANGE : Uint32
 {
@@ -68,52 +74,12 @@ public:
                                     bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureGLImpl();
 
-    // sizeof(ResourceAttribs) == 8, x64
-    struct ResourceAttribs
-    {
-    private:
-        static constexpr Uint32 _SamplerIndBits      = 31;
-        static constexpr Uint32 _SamplerAssignedBits = 1;
-
-    public:
-        static constexpr Uint32 InvalidCacheOffset = ~0u;
-        static constexpr Uint32 InvalidSamplerInd  = (1u << _SamplerIndBits) - 1;
-
-        // clang-format off
-        const Uint32  CacheOffset;                                 // SRB and Signature use the same cache offsets for static resources.
-                                                                   // Binding == BaseBinding[Range] + CacheOffset
-        const Uint32  SamplerInd           : _SamplerIndBits;      // ImtblSamplerAssigned == true:  index of the immutable sampler in m_ImmutableSamplers.
-                                                                   // ImtblSamplerAssigned == false: index of the assigned sampler in m_Desc.Resources.
-        const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
-        // clang-format on
-
-        ResourceAttribs(Uint32 _CacheOffset,
-                        Uint32 _SamplerInd,
-                        bool   _ImtblSamplerAssigned) noexcept :
-            // clang-format off
-            CacheOffset         {_CacheOffset                   },
-            SamplerInd          {_SamplerInd                    },
-            ImtblSamplerAssigned{_ImtblSamplerAssigned ? 1u : 0u}
-        // clang-format on
-        {
-            VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
-            VERIFY(!_ImtblSamplerAssigned || SamplerInd != InvalidSamplerInd, "Immutable sampler is assigned, but sampler index is not valid");
-        }
-
-        bool IsSamplerAssigned() const { return SamplerInd != InvalidSamplerInd; }
-        bool IsImmutableSamplerAssigned() const { return ImtblSamplerAssigned != 0; }
-    };
+    using ResourceAttribs = PipelineResourceAttribsGL;
 
     const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
     {
         VERIFY_EXPR(ResIndex < m_Desc.NumResources);
         return m_pResourceAttribs[ResIndex];
-    }
-
-    bool HasDynamicResources() const
-    {
-        const auto IndexRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-        return IndexRange.second > IndexRange.first;
     }
 
     using TBindings = std::array<Uint32, BINDING_RANGE_COUNT>;
@@ -132,24 +98,6 @@ public:
             Bindings[i] += m_BindingCount[i];
         }
     }
-
-    /// Implementation of IPipelineResourceSignature::CreateShaderResourceBinding.
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
-                                                                bool                     InitStaticResources) override final;
-
-    /// Implementation of IPipelineResourceSignature::GetStaticVariableByName.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
-
-    /// Implementation of IPipelineResourceSignature::GetStaticVariableByIndex.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
-
-    /// Implementation of IPipelineResourceSignature::GetStaticVariableCount.
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
-
-    /// Implementation of IPipelineResourceSignature::BindStaticResources.
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32            ShaderFlags,
-                                                        IResourceMapping* pResourceMapping,
-                                                        Uint32            Flags) override final;
 
     /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final

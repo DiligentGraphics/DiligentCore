@@ -29,23 +29,27 @@
 
 #include <vector>
 
+#include "EngineGLImplTraits.hpp"
 #include "DeviceContextGL.h"
 #include "DeviceContextBase.hpp"
-#include "BaseInterfacesGL.h"
-#include "GLContextState.hpp"
-#include "GLObjectWrapper.hpp"
+
+// GL object implementations are required by DeviceContextBase
 #include "BufferGLImpl.hpp"
 #include "TextureBaseGL.hpp"
 #include "QueryGLImpl.hpp"
 #include "FramebufferGLImpl.hpp"
 #include "RenderPassGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
-#include "BottomLevelASBase.hpp"
-#include "TopLevelASBase.hpp"
 #include "ShaderResourceBindingGLImpl.hpp"
+
+#include "GLContextState.hpp"
+#include "GLObjectWrapper.hpp"
 
 namespace Diligent
 {
+
+class TextureBaseGL;
+class ShaderResourceBindingGLImpl;
 
 /// Device context implementation in OpenGL backend.
 class DeviceContextGLImpl final : public DeviceContextBase<EngineGLImplTraits>

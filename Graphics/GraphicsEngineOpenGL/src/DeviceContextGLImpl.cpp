@@ -26,32 +26,34 @@
  */
 
 #include "pch.h"
+
+#include "DeviceContextGLImpl.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <array>
 
 #include "SwapChainGL.h"
-#include "DeviceContextGLImpl.hpp"
-#include "RenderDeviceGLImpl.hpp"
-#include "GLTypeConversions.hpp"
 
+#include "RenderDeviceGLImpl.hpp"
 #include "BufferGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
-#include "VAOCache.hpp"
 #include "Texture1D_OGL.hpp"
 #include "Texture1DArray_OGL.hpp"
 #include "Texture2D_OGL.hpp"
 #include "Texture2DArray_OGL.hpp"
 #include "Texture3D_OGL.hpp"
 #include "SamplerGLImpl.hpp"
-#include "GraphicsAccessories.hpp"
 #include "BufferViewGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
 #include "FenceGLImpl.hpp"
 #include "ShaderResourceBindingGLImpl.hpp"
 
-using namespace std;
+#include "GLTypeConversions.hpp"
+#include "VAOCache.hpp"
+#include "GraphicsAccessories.hpp"
+
 
 namespace Diligent
 {

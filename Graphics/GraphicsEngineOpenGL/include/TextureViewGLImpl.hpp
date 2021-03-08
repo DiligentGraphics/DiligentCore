@@ -27,17 +27,13 @@
 
 #pragma once
 
-#include "BaseInterfacesGL.h"
+#include "EngineGLImplTraits.hpp"
 #include "TextureViewGL.h"
 #include "TextureViewBase.hpp"
-#include "RenderDevice.h"
 #include "GLObjectWrapper.hpp"
-#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Texture view implementation in OpenGL backend.
 class TextureViewGLImpl final : public TextureViewBase<EngineGLImplTraits>

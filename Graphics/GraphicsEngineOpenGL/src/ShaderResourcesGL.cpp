@@ -26,11 +26,13 @@
  */
 
 #include "pch.h"
-#include <unordered_set>
-#include "GLContextState.hpp"
+
 #include "ShaderResourcesGL.hpp"
+
+#include <unordered_set>
+
 #include "RenderDeviceGLImpl.hpp"
-#include "ShaderResourceBindingBase.hpp"
+#include "GLContextState.hpp"
 #include "ShaderResourceVariableBase.hpp"
 #include "Align.hpp"
 

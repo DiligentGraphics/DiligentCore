@@ -28,8 +28,6 @@
 #include "pch.h"
 #include "PipelineResourceSignatureGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
-#include "ShaderResourceBindingGLImpl.hpp"
-#include "ShaderVariableGL.hpp"
 
 namespace Diligent
 {
@@ -421,12 +419,6 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
     State.SetProgram(GLObjectWrappers::GLProgramObj::Null());
 }
 
-void PipelineResourceSignatureGLImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
-                                                                  bool                     InitStaticResources)
-{
-    CreateShaderResourceBindingImpl(ppShaderResourceBinding, InitStaticResources);
-}
-
 void PipelineResourceSignatureGLImpl::InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const
 {
     InitializeStaticSRBResourcesImpl(ValidatedCast<ShaderResourceBindingGLImpl>(pSRB),
@@ -435,28 +427,6 @@ void PipelineResourceSignatureGLImpl::InitializeStaticSRBResources(IShaderResour
                                          CopyStaticResources(pSRBGL->GetResourceCache());
                                      } //
     );
-}
-
-Uint32 PipelineResourceSignatureGLImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
-{
-    return GetStaticVariableCountImpl(ShaderType);
-}
-
-IShaderResourceVariable* PipelineResourceSignatureGLImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
-{
-    return GetStaticVariableByNameImpl(ShaderType, Name);
-}
-
-IShaderResourceVariable* PipelineResourceSignatureGLImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
-{
-    return GetStaticVariableByIndexImpl(ShaderType, Index);
-}
-
-void PipelineResourceSignatureGLImpl::BindStaticResources(Uint32            ShaderFlags,
-                                                          IResourceMapping* pResMapping,
-                                                          Uint32            Flags)
-{
-    BindStaticResourcesImpl(ShaderFlags, pResMapping, Flags);
 }
 
 void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL& DstResourceCache) const

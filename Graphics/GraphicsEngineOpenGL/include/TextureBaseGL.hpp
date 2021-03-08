@@ -27,14 +27,12 @@
 
 #pragma once
 
-#include "BaseInterfacesGL.h"
+#include "EngineGLImplTraits.hpp"
 #include "TextureGL.h"
 #include "TextureBase.hpp"
-#include "RenderDevice.h"
+#include "TextureViewGLImpl.hpp" // Required by TextureBase
 #include "GLObjectWrapper.hpp"
-#include "TextureViewGLImpl.hpp"
 #include "AsyncWritableResource.hpp"
-#include "RenderDeviceGLImpl.hpp"
 #include "GLContextState.hpp"
 
 namespace Diligent

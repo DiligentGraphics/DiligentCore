@@ -28,12 +28,14 @@
 #include "pch.h"
 
 #include "VAOCache.hpp"
+
 #include "RenderDeviceGLImpl.hpp"
-#include "GLObjectWrapper.hpp"
 #include "BufferGLImpl.hpp"
+#include "PipelineStateGLImpl.hpp"
+
+#include "GLObjectWrapper.hpp"
 #include "GLTypeConversions.hpp"
 #include "GLContextState.hpp"
-#include "PipelineStateGLImpl.hpp"
 
 namespace Diligent
 {

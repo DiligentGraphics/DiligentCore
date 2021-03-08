@@ -27,10 +27,12 @@
 
 #include "pch.h"
 
+#include "BufferViewGLImpl.hpp"
+
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
-#include "BufferViewGLImpl.hpp"
 #include "BufferGLImpl.hpp"
+
 #include "GLTypeConversions.hpp"
 
 namespace Diligent
@@ -102,5 +104,9 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
 }
 
 IMPLEMENT_QUERY_INTERFACE(BufferViewGLImpl, IID_BufferViewGL, TBuffViewBase)
+
+BufferViewGLImpl::~BufferViewGLImpl()
+{
+}
 
 } // namespace Diligent

@@ -70,7 +70,7 @@ Example:
 #include "DeviceContextD3D12.hpp"
 
 // 5 - Headers of the object implementations
-#include "RenderDeviceD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp" // Render device always goes first, if any
 #include "PipelineStateD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
 #include "BufferD3D12Impl.hpp"

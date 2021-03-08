@@ -27,11 +27,10 @@
 
 #pragma once
 
+#include "EngineGLImplTraits.hpp"
 #include "BufferViewGL.h"
-#include "BaseInterfacesGL.h"
 #include "BufferViewBase.hpp"
 #include "GLObjectWrapper.hpp"
-#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {
@@ -48,6 +47,8 @@ public:
                      const BufferViewDesc& ViewDesc,
                      BufferGLImpl*         pBuffer,
                      bool                  bIsDefaultView);
+
+    ~BufferViewGLImpl();
 
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

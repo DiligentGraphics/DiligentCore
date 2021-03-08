@@ -27,9 +27,10 @@
 
 #include "pch.h"
 
+#include "ShaderGLImpl.hpp"
+
 #include <array>
 
-#include "ShaderGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "DataBlobImpl.hpp"

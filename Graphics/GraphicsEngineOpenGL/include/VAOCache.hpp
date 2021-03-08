@@ -28,13 +28,13 @@
 #pragma once
 
 #include <cstring>
+
 #include "GraphicsTypes.h"
 #include "Buffer.h"
 #include "InputLayout.h"
 #include "LockHelper.hpp"
 #include "HashUtils.hpp"
 #include "DeviceContextBase.hpp"
-#include "BaseInterfacesGL.h"
 
 namespace Diligent
 {

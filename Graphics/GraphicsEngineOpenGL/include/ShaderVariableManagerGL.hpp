@@ -70,12 +70,14 @@
 #include <array>
 
 #include "Object.h"
+#include "PipelineResourceAttribsGL.hpp"
 #include "ShaderResourceVariableBase.hpp"
 #include "ShaderResourceCacheGL.hpp"
-#include "PipelineResourceSignatureGLImpl.hpp"
 
 namespace Diligent
 {
+
+class PipelineResourceSignatureGLImpl;
 
 // sizeof(ShaderVariableManagerGL) == 48 (x64, msvc, Release)
 class ShaderVariableManagerGL
@@ -109,18 +111,11 @@ public:
                                         Uint32                                 NumAllowedTypes,
                                         SHADER_TYPE                            ShaderType);
 
-    using ResourceAttribs = PipelineResourceSignatureGLImpl::ResourceAttribs;
+    using ResourceAttribs = PipelineResourceAttribsGL;
 
-    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const
-    {
-        VERIFY_EXPR(m_pSignature);
-        return m_pSignature->GetResourceDesc(Index);
-    }
-    const ResourceAttribs& GetAttribs(Uint32 Index) const
-    {
-        VERIFY_EXPR(m_pSignature);
-        return m_pSignature->GetResourceAttribs(Index);
-    }
+    // These two methods can't be implemented in the header because they depend on PipelineResourceSignatureGLImpl
+    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
+    const ResourceAttribs&      GetAttribs(Uint32 Index) const;
 
 
     struct GLVariableBase : public ShaderVariableBase<ShaderVariableManagerGL>

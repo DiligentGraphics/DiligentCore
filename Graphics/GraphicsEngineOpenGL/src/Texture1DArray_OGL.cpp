@@ -30,8 +30,8 @@
 #include "Texture1DArray_OGL.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
-#include "GLTypeConversions.hpp"
 #include "BufferGLImpl.hpp"
+#include "GLTypeConversions.hpp"
 
 namespace Diligent
 {

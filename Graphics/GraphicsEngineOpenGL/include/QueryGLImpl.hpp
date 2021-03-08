@@ -30,11 +30,10 @@
 /// \file
 /// Declaration of Diligent::QueryGLImpl class
 
+#include "EngineGLImplTraits.hpp"
 #include "QueryGL.h"
-#include "RenderDeviceGL.h"
 #include "QueryBase.hpp"
 #include "GLObjectWrapper.hpp"
-#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {

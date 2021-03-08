@@ -32,11 +32,12 @@
 #endif
 
 #include "PipelineStateGLImpl.hpp"
+
 #include "RenderDeviceGLImpl.hpp"
-#include "ShaderGLImpl.hpp"
-#include "ShaderResourceBindingGLImpl.hpp"
-#include "EngineMemory.h"
 #include "DeviceContextGLImpl.hpp"
+#include "ShaderResourceBindingGLImpl.hpp"
+
+#include "EngineMemory.h"
 
 namespace Diligent
 {

@@ -26,12 +26,15 @@
  */
 
 #include "pch.h"
+
+#include "ShaderVariableManagerGL.hpp"
+
 #include <array>
-#include "ShaderVariableGL.hpp"
+
+#include "RenderDeviceGLImpl.hpp"
 #include "PipelineResourceSignatureGLImpl.hpp"
 #include "Align.hpp"
 #include "PlatformMisc.hpp"
-#include "ShaderBase.hpp"
 
 namespace Diligent
 {
@@ -593,6 +596,19 @@ Uint32 ShaderVariableManagerGL::GetVariableIndex(const GLVariableBase& Var) cons
     LOG_ERROR("Failed to get variable index. The variable ", &Var, " does not belong to this shader resource layout");
     return ~0u;
 }
+
+const PipelineResourceDesc& ShaderVariableManagerGL::GetResourceDesc(Uint32 Index) const
+{
+    VERIFY_EXPR(m_pSignature);
+    return m_pSignature->GetResourceDesc(Index);
+}
+
+const ShaderVariableManagerGL::ResourceAttribs& ShaderVariableManagerGL::GetAttribs(Uint32 Index) const
+{
+    VERIFY_EXPR(m_pSignature);
+    return m_pSignature->GetResourceAttribs(Index);
+}
+
 
 #ifdef DILIGENT_DEVELOPMENT
 bool ShaderVariableManagerGL::dvpVerifyBindings(const ShaderResourceCacheGL& ResourceCache) const

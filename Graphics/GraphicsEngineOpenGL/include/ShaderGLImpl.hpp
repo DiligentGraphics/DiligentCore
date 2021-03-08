@@ -27,12 +27,10 @@
 
 #pragma once
 
-#include "BaseInterfacesGL.h"
+#include "EngineGLImplTraits.hpp"
 #include "ShaderGL.h"
 #include "ShaderBase.hpp"
-#include "RenderDevice.h"
 #include "GLObjectWrapper.hpp"
-#include "RenderDeviceGLImpl.hpp"
 #include "ShaderResourcesGL.hpp"
 
 namespace Diligent

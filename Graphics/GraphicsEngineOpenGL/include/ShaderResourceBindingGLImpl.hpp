@@ -30,16 +30,19 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceBindingGLImpl class
 
+#include "EngineGLImplTraits.hpp"
 #include "ShaderResourceBindingGL.h"
-#include "RenderDeviceGL.h"
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderResourcesGL.hpp"
+
+// ShaderResourceCacheGL and ShaderVariableManagerGL are required by ShaderResourceBindingBase
 #include "ShaderResourceCacheGL.hpp"
-#include "ShaderVariableGL.hpp"
-#include "PipelineResourceSignatureGLImpl.hpp"
+#include "ShaderVariableManagerGL.hpp"
 
 namespace Diligent
 {
+
+class PipelineResourceSignatureGLImpl;
 
 /// Shader resource binding object implementation in OpenGL backend.
 class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<EngineGLImplTraits>

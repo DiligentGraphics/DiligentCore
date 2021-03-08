@@ -30,9 +30,8 @@
 /// \file
 /// Declaration of Diligent::RenderPassGLImpl class
 
-#include "RenderDeviceGL.h"
+#include "EngineGLImplTraits.hpp"
 #include "RenderPassBase.hpp"
-#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {

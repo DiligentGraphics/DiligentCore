@@ -33,11 +33,10 @@
 #include <deque>
 #include <atomic>
 
+#include "EngineGLImplTraits.hpp"
 #include "FenceGL.h"
-#include "RenderDeviceGL.h"
 #include "FenceBase.hpp"
 #include "GLObjectWrapper.hpp"
-#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {

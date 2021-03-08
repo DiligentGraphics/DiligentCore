@@ -27,13 +27,12 @@
 
 #pragma once
 
+#include "EngineGLImplTraits.hpp"
 #include "BufferGL.h"
 #include "BufferBase.hpp"
+#include "BufferViewGLImpl.hpp" // Required by BufferBase
 #include "GLObjectWrapper.hpp"
 #include "AsyncWritableResource.hpp"
-#include "BaseInterfacesGL.h"
-#include "BufferViewGLImpl.hpp"
-#include "RenderDeviceGLImpl.hpp"
 #include "GLContextState.hpp"
 
 namespace Diligent
@@ -96,7 +95,7 @@ private:
     const GLenum                  m_GLUsageHint;
 };
 
-void BufferGLImpl::BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState)
+void BufferGLImpl::BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLState)
 {
 #if GL_ARB_shader_image_load_store
 #    ifdef DILIGENT_DEBUG
@@ -107,7 +106,7 @@ void BufferGLImpl::BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContex
     }
 #    endif
 
-    GLContextState.EnsureMemoryBarrier(RequiredBarriers, this);
+    GLState.EnsureMemoryBarrier(RequiredBarriers, this);
 #endif
 }
 

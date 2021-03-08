@@ -28,6 +28,7 @@
 #include "pch.h"
 
 #include "RenderPassGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
