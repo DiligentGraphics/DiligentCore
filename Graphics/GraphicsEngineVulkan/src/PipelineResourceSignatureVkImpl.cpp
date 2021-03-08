@@ -620,9 +620,7 @@ bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSig
     return true;
 }
 
-void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache,
-                                                           IMemoryAllocator&      CacheMemAllocator,
-                                                           const char*            DbgPipelineName) const
+void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache)
 {
     const auto NumSets = GetNumDescriptorSets();
 #ifdef DILIGENT_DEBUG
@@ -630,6 +628,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
         VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U);
 #endif
 
+    auto& CacheMemAllocator = m_SRBMemAllocator.GetResourceCacheDataAllocator(0);
     ResourceCache.InitializeSets(CacheMemAllocator, NumSets, m_DescriptorSetSizes.data());
 
     const auto TotalResources = GetTotalResourceCount();
@@ -649,7 +648,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
     {
         const char* DescrSetName = "Static/Mutable Descriptor Set";
 #ifdef DILIGENT_DEVELOPMENT
-        std::string _DescrSetName(DbgPipelineName);
+        std::string _DescrSetName{m_Desc.Name};
         _DescrSetName.append(" - static/mutable set");
         DescrSetName = _DescrSetName.c_str();
 #endif

@@ -29,8 +29,6 @@
 #include "ShaderResourceBindingVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
-#include "ShaderVkImpl.hpp"
-#include "FixedLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -39,29 +37,6 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*    
                                                          PipelineResourceSignatureVkImpl* pPRS) :
     TBase{pRefCounters, pPRS}
 {
-    const auto NumShaders = GetNumShaders();
-
-    // This will only allocate memory and initialize descriptor sets in the resource cache
-    // Resources will be initialized by InitializeResourceMemoryInCache()
-    auto& SRBMemAllocator            = pPRS->GetSRBMemoryAllocator();
-    auto& ResourceCacheDataAllocator = SRBMemAllocator.GetResourceCacheDataAllocator(0);
-    pPRS->InitSRBResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
-
-    for (Uint32 s = 0; s < NumShaders; ++s)
-    {
-        const auto ShaderType = pPRS->GetActiveShaderStageType(s);
-        const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
-        const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
-        VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
-
-        auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
-
-        // Create shader variable manager in place
-        // Initialize vars manager to reference mutable and dynamic variables
-        // Note that the cache has space for all variable types
-        const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-        m_pShaderVarMgrs[MgrInd].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes), ShaderType);
-    }
 }
 
 ShaderResourceBindingVkImpl::~ShaderResourceBindingVkImpl()

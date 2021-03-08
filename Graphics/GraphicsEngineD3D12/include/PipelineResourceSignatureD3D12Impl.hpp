@@ -141,9 +141,7 @@ public:
 
     bool IsCompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const;
 
-    void InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache,
-                              IMemoryAllocator&         CacheMemAllocator,
-                              const char*               DbgPipelineName) const;
+    void InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache);
 
     void CopyStaticResources(ShaderResourceCacheD3D12& ResourceCache) const;
 

@@ -126,9 +126,7 @@ public:
         return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureVkImpl>(pPRS));
     }
 
-    void InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache,
-                              IMemoryAllocator&      CacheMemAllocator,
-                              const char*            DbgPipelineName) const;
+    void InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache);
 
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheVk& ResourceCache) const;

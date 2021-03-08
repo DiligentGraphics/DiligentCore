@@ -31,7 +31,6 @@
 
 #include "RenderDeviceD3D12Impl.hpp"
 #include "PipelineResourceSignatureD3D12Impl.hpp"
-#include "FixedLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -40,30 +39,6 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
                                                                PipelineResourceSignatureD3D12Impl* pPRS) :
     TBase{pRefCounters, pPRS}
 {
-    auto& SRBMemAllocator            = pPRS->GetSRBMemoryAllocator();
-    auto& ResourceCacheDataAllocator = SRBMemAllocator.GetResourceCacheDataAllocator(0);
-    pPRS->InitSRBResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
-
-    const auto NumShaders = GetNumShaders();
-    for (Uint32 s = 0; s < NumShaders; ++s)
-    {
-        const auto ShaderType = pPRS->GetActiveShaderStageType(s);
-        const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
-        const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
-        VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
-
-        auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
-
-        // It is important that initialization is separated from construction because it provides exception safety.
-        constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-        m_pShaderVarMgrs[MgrInd].Initialize(
-            *pPRS,
-            VarDataAllocator,
-            AllowedVarTypes,
-            _countof(AllowedVarTypes),
-            ShaderType //
-        );
-    }
 }
 
 ShaderResourceBindingD3D12Impl::~ShaderResourceBindingD3D12Impl()

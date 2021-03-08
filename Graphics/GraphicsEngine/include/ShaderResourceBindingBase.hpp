@@ -31,6 +31,7 @@
 /// Implementation of the Diligent::ShaderResourceBindingBase template class
 
 #include <array>
+#include <functional>
 
 #include "PrivateConstants.h"
 #include "ShaderResourceBinding.h"
@@ -103,6 +104,25 @@ public:
 
         // It is important to construct all objects before initializing them because if an exception is thrown,
         // destructors will be called for all objects
+
+        pPRS->InitSRBResourceCache(m_ShaderResourceCache);
+
+        auto& SRBMemAllocator = pPRS->GetSRBMemoryAllocator();
+        for (Uint32 s = 0; s < NumShaders; ++s)
+        {
+            const auto ShaderType = pPRS->GetActiveShaderStageType(s);
+            const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
+            const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
+            VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
+
+            auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+
+            // Create shader variable manager in place
+            // Initialize vars manager to reference mutable and dynamic variables
+            // Note that the cache has space for all variable types
+            const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+            m_pShaderVarMgrs[MgrInd].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes), ShaderType);
+        }
     }
 
     ~ShaderResourceBindingBase()

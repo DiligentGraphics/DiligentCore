@@ -432,11 +432,9 @@ size_t PipelineResourceSignatureD3D12Impl::CalculateHash() const
     return Hash;
 }
 
-void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache,
-                                                              IMemoryAllocator&         CacheMemAllocator,
-                                                              const char*               DbgPipelineName) const
+void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache)
 {
-    ResourceCache.Initialize(CacheMemAllocator, m_pDevice, m_RootParams);
+    ResourceCache.Initialize(m_SRBMemAllocator.GetResourceCacheDataAllocator(0), m_pDevice, m_RootParams);
 }
 
 void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCacheD3D12& DstResourceCache) const

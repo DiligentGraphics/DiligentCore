@@ -115,7 +115,7 @@ public:
         return GetHash() != Other.GetHash() || m_BindingCount != Other.m_BindingCount;
     }
 
-    void InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache, IMemoryAllocator& CacheMemAllocator) const;
+    void InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache);
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource attribs using the SPIRV resource attributes from the PSO.
