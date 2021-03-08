@@ -55,22 +55,6 @@ public:
     ~ShaderResourceBindingD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingD3D12, TBase)
-
-    virtual void DILIGENT_CALL_TYPE BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override;
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override;
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetVariableCount(SHADER_TYPE ShaderType) const override final;
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
-
-    ShaderResourceCacheD3D12& GetResourceCache() { return m_ShaderResourceCache; }
-
-private:
-    void Destruct();
-
-    ShaderResourceCacheD3D12    m_ShaderResourceCache;
-    ShaderVariableManagerD3D12* m_pShaderVarMgrs = nullptr; // [GetNumShaders()]
 };
 
 } // namespace Diligent

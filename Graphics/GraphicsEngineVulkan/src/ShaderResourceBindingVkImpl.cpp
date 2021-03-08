@@ -37,101 +37,35 @@ namespace Diligent
 
 ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*              pRefCounters,
                                                          PipelineResourceSignatureVkImpl* pPRS) :
-    // clang-format off
-    TBase
-    {
-        pRefCounters,
-        pPRS
-    },
-    m_ShaderResourceCache{ResourceCacheContentType::SRB}
-// clang-format on
+    TBase{pRefCounters, pPRS}
 {
-    try
+    const auto NumShaders = GetNumShaders();
+
+    // This will only allocate memory and initialize descriptor sets in the resource cache
+    // Resources will be initialized by InitializeResourceMemoryInCache()
+    auto& SRBMemAllocator            = pPRS->GetSRBMemoryAllocator();
+    auto& ResourceCacheDataAllocator = SRBMemAllocator.GetResourceCacheDataAllocator(0);
+    pPRS->InitSRBResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
+
+    for (Uint32 s = 0; s < NumShaders; ++s)
     {
-        const auto NumShaders = GetNumShaders();
+        const auto ShaderType = pPRS->GetActiveShaderStageType(s);
+        const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
+        const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
+        VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
 
-        FixedLinearAllocator MemPool{GetRawAllocator()};
-        MemPool.AddSpace<ShaderVariableManagerVk>(NumShaders);
-        MemPool.Reserve();
-        m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerVk>(NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
+        auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
 
-        // The memory is now owned by ShaderResourceBindingVkImpl and will be freed by Destruct().
-        auto* Ptr = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_pShaderVarMgrs);
-        (void)Ptr;
-
-        // It is important to construct all objects before initializing them because if an exception is thrown,
-        // destructors will be called for all objects
-
-        // This will only allocate memory and initialize descriptor sets in the resource cache
-        // Resources will be initialized by InitializeResourceMemoryInCache()
-        auto& SRBMemAllocator            = pPRS->GetSRBMemoryAllocator();
-        auto& ResourceCacheDataAllocator = SRBMemAllocator.GetResourceCacheDataAllocator(0);
-        pPRS->InitSRBResourceCache(m_ShaderResourceCache, ResourceCacheDataAllocator, pPRS->GetDesc().Name);
-
-        for (Uint32 s = 0; s < NumShaders; ++s)
-        {
-            const auto ShaderType = pPRS->GetActiveShaderStageType(s);
-            const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
-            const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
-            VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
-
-            auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
-
-            // Create shader variable manager in place
-            // Initialize vars manager to reference mutable and dynamic variables
-            // Note that the cache has space for all variable types
-            const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-            m_pShaderVarMgrs[MgrInd].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes), ShaderType);
-        }
-    }
-    catch (...)
-    {
-        Destruct();
-        throw;
+        // Create shader variable manager in place
+        // Initialize vars manager to reference mutable and dynamic variables
+        // Note that the cache has space for all variable types
+        const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+        m_pShaderVarMgrs[MgrInd].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes), ShaderType);
     }
 }
 
 ShaderResourceBindingVkImpl::~ShaderResourceBindingVkImpl()
 {
-    Destruct();
-}
-
-void ShaderResourceBindingVkImpl::Destruct()
-{
-    if (m_pShaderVarMgrs != nullptr)
-    {
-        auto& SRBMemAllocator = GetSignature()->GetSRBMemoryAllocator();
-        for (Uint32 s = 0; s < GetNumShaders(); ++s)
-        {
-            auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
-            m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
-            m_pShaderVarMgrs[s].~ShaderVariableManagerVk();
-        }
-
-        GetRawAllocator().Free(m_pShaderVarMgrs);
-        m_pShaderVarMgrs = nullptr;
-    }
-}
-
-void ShaderResourceBindingVkImpl::BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)
-{
-    BindResourcesImpl(ShaderFlags, pResMapping, Flags, m_pShaderVarMgrs);
-}
-
-Uint32 ShaderResourceBindingVkImpl::GetVariableCount(SHADER_TYPE ShaderType) const
-{
-    return GetVariableCountImpl(ShaderType, m_pShaderVarMgrs);
-}
-
-IShaderResourceVariable* ShaderResourceBindingVkImpl::GetVariableByName(SHADER_TYPE ShaderType, const Char* Name)
-{
-    return GetVariableByNameImpl(ShaderType, Name, m_pShaderVarMgrs);
-}
-
-IShaderResourceVariable* ShaderResourceBindingVkImpl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
-{
-    return GetVariableByIndexImpl(ShaderType, Index, m_pShaderVarMgrs);
 }
 
 } // namespace Diligent

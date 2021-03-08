@@ -55,32 +55,6 @@ public:
     ~ShaderResourceBindingGLImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
-
-    /// Implementation of IShaderResourceBinding::BindResources() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE BindResources(Uint32            ShaderFlags,
-                                                  IResourceMapping* pResMapping,
-                                                  Uint32            Flags) override final;
-
-    /// Implementation of IShaderResourceBinding::GetVariableByName() in OpenGL backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
-
-    /// Implementation of IShaderResourceBinding::GetVariableCount() in OpenGL backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetVariableCount(SHADER_TYPE ShaderType) const override final;
-
-    /// Implementation of IShaderResourceBinding::GetVariableByIndex() in OpenGL backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
-
-    ShaderResourceCacheGL&       GetResourceCache() { return m_ShaderResourceCache; }
-    ShaderResourceCacheGL const& GetResourceCache() const { return m_ShaderResourceCache; }
-
-private:
-    void Destruct();
-
-    // The resource cache holds resource bindings for all variables
-    ShaderResourceCacheGL m_ShaderResourceCache;
-
-    // The resource layout only references mutable and dynamic variables
-    ShaderVariableManagerGL* m_pShaderVarMgrs = nullptr; // [GetNumShaders()]
 };
 
 } // namespace Diligent

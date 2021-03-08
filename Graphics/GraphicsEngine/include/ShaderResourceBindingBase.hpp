@@ -39,6 +39,9 @@
 #include "Constants.h"
 #include "RefCntAutoPtr.hpp"
 #include "GraphicsAccessories.hpp"
+#include "ShaderResourceCacheCommon.hpp"
+#include "FixedLinearAllocator.hpp"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
@@ -53,8 +56,14 @@ public:
     // Base interface this class inherits (IShaderResourceBindingD3D12, IShaderResourceBindingVk, etc.)
     using BaseInterface = typename EngineImplTraits::ShaderResourceBindingInterface;
 
-    // Type of the pipeline resource signature implementation (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.).
+    // The type of the pipeline resource signature implementation (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.).
     using ResourceSignatureType = typename EngineImplTraits::PipelineResourceSignatureImplType;
+
+    // The type of the shader resource cache implementation (ShaderResourceCacheD3D12Impl, ShaderResourceCacheVkImpl, etc.)
+    using ShaderResourceCacheImplType = typename EngineImplTraits::ShaderResourceCacheImplType;
+
+    // The type of the shader resource variable manager (ShaderVariableManagerD3D12Impl, ShaderVariableManagerVkImpl, etc.)
+    using ShaderVariableManagerImplType = typename EngineImplTraits::ShaderVariableManagerImplType;
 
     using TObjectBase = ObjectBase<BaseInterface>;
 
@@ -64,7 +73,8 @@ public:
     ///                       must not keep a strong reference to the pipeline resource signature.
     ShaderResourceBindingBase(IReferenceCounters* pRefCounters, ResourceSignatureType* pPRS) :
         TObjectBase{pRefCounters},
-        m_pPRS{pPRS}
+        m_pPRS{pPRS},
+        m_ShaderResourceCache{ResourceCacheContentType::SRB}
     {
         m_ActiveShaderStageIndex.fill(-1);
 
@@ -77,7 +87,39 @@ public:
 
             m_ActiveShaderStageIndex[ShaderInd] = static_cast<Int8>(s);
         }
+
+
+        FixedLinearAllocator MemPool{GetRawAllocator()};
+        MemPool.AddSpace<ShaderVariableManagerImplType>(NumShaders);
+        MemPool.Reserve();
+        static_assert(std::is_nothrow_constructible<ShaderVariableManagerImplType, decltype(*this), ShaderResourceCacheImplType&>::value,
+                      "Constructor of ShaderVariableManagerImplType must be noexcept, so we can safely construct all managers");
+        m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerImplType>(NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
+
+        // The memory is now owned by ShaderResourceBindingBase and will be freed by destructor.
+        auto* Ptr = MemPool.ReleaseOwnership();
+        VERIFY_EXPR(Ptr == m_pShaderVarMgrs);
+        (void)Ptr;
+
+        // It is important to construct all objects before initializing them because if an exception is thrown,
+        // destructors will be called for all objects
     }
+
+    ~ShaderResourceBindingBase()
+    {
+        if (m_pShaderVarMgrs != nullptr)
+        {
+            auto& SRBMemAllocator = GetSignature()->GetSRBMemoryAllocator();
+            for (Uint32 s = 0; s < GetNumShaders(); ++s)
+            {
+                auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+                m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
+                m_pShaderVarMgrs[s].~ShaderVariableManagerImplType();
+            }
+            GetRawAllocator().Free(m_pShaderVarMgrs);
+        }
+    }
+
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBinding, TObjectBase)
 
@@ -118,11 +160,8 @@ public:
         m_bStaticResourcesInitialized = true;
     }
 
-protected:
-    template <typename ShaderVarManagerType>
-    IShaderResourceVariable* GetVariableByNameImpl(SHADER_TYPE                ShaderType,
-                                                   const char*                Name,
-                                                   const ShaderVarManagerType ShaderVarMgrs[]) const
+    /// Implementation of IShaderResourceBinding::GetVariableByName().
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final
     {
         const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
@@ -138,11 +177,11 @@ protected:
             return nullptr;
 
         VERIFY_EXPR(static_cast<Uint32>(MgrInd) < GetNumShaders());
-        return ShaderVarMgrs[MgrInd].GetVariable(Name);
+        return m_pShaderVarMgrs[MgrInd].GetVariable(Name);
     }
 
-    template <typename ShaderVarManagerType>
-    Uint32 GetVariableCountImpl(SHADER_TYPE ShaderType, const ShaderVarManagerType ShaderVarMgrs[]) const
+    /// Implementation of IShaderResourceBinding::GetVariableCount().
+    virtual Uint32 DILIGENT_CALL_TYPE GetVariableCount(SHADER_TYPE ShaderType) const override final
     {
         const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
@@ -158,14 +197,11 @@ protected:
             return 0;
 
         VERIFY_EXPR(static_cast<Uint32>(MgrInd) < GetNumShaders());
-        return ShaderVarMgrs[MgrInd].GetVariableCount();
+        return m_pShaderVarMgrs[MgrInd].GetVariableCount();
     }
 
-    template <typename ShaderVarManagerType>
-    IShaderResourceVariable* GetVariableByIndexImpl(SHADER_TYPE                ShaderType,
-                                                    Uint32                     Index,
-                                                    const ShaderVarManagerType ShaderVarMgrs[]) const
-
+    /// Implementation of IShaderResourceBinding::GetVariableByIndex().
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final
     {
         const auto PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
@@ -181,14 +217,13 @@ protected:
             return nullptr;
 
         VERIFY_EXPR(static_cast<Uint32>(MgrInd) < GetNumShaders());
-        return ShaderVarMgrs[MgrInd].GetVariable(Index);
+        return m_pShaderVarMgrs[MgrInd].GetVariable(Index);
     }
 
-    template <typename ShaderVarManagerType>
-    void BindResourcesImpl(Uint32               ShaderFlags,
-                           IResourceMapping*    pResMapping,
-                           Uint32               Flags,
-                           ShaderVarManagerType ShaderVarMgrs[]) const
+    /// Implementation of IShaderResourceBinding::BindResources().
+    virtual void DILIGENT_CALL_TYPE BindResources(Uint32            ShaderFlags,
+                                                  IResourceMapping* pResMapping,
+                                                  Uint32            Flags) override final
     {
         const auto PipelineType = GetPipelineType();
         for (Int32 ShaderInd = 0; ShaderInd < static_cast<Int32>(m_ActiveShaderStageIndex.size()); ++ShaderInd)
@@ -200,11 +235,14 @@ protected:
                 const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
                 if ((ShaderFlags & ShaderType) != 0)
                 {
-                    ShaderVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
+                    m_pShaderVarMgrs[VarMngrInd].BindResources(pResMapping, Flags);
                 }
             }
         }
     }
+
+    ShaderResourceCacheImplType&       GetResourceCache() { return m_ShaderResourceCache; }
+    const ShaderResourceCacheImplType& GetResourceCache() const { return m_ShaderResourceCache; }
 
 protected:
     /// Strong reference to pipeline resource signature. We must use strong reference, because
@@ -216,6 +254,9 @@ protected:
     // type in the pipeline (given by GetShaderTypePipelineIndex(ShaderType, m_PipelineType)).
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ActiveShaderStageIndex = {-1, -1, -1, -1, -1, -1};
     static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
+
+    ShaderResourceCacheImplType    m_ShaderResourceCache;
+    ShaderVariableManagerImplType* m_pShaderVarMgrs = nullptr; // [GetNumShaders()]
 
     bool m_bStaticResourcesInitialized = false;
 };
