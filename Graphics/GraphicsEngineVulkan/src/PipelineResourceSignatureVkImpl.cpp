@@ -229,12 +229,12 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
     try
     {
         auto& RawAllocator{GetRawAllocator()};
-        auto  MemPool = ReserveSpace(RawAllocator, Desc,
-                                    [&Desc](FixedLinearAllocator& MemPool) //
-                                    {
-                                        MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
-                                        MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
-                                    });
+        auto  MemPool = AllocateInternalObjects(RawAllocator, Desc,
+                                               [&Desc](FixedLinearAllocator& MemPool) //
+                                               {
+                                                   MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
+                                                   MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
+                                               });
 
         m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(m_Desc.NumResources);
         m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
@@ -242,9 +242,6 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
         const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
-            m_pStaticResCache = MemPool.Construct<ShaderResourceCacheVk>(ResourceCacheContentType::Signature);
-            m_StaticVarsMgrs  = MemPool.ConstructArray<ShaderVariableManagerVk>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
-
             Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
                                             // accounting for array sizes.
             for (Uint32 i = 0; i < Desc.NumResources; ++i)

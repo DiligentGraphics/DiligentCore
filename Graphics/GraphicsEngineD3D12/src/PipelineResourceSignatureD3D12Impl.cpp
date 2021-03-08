@@ -137,12 +137,12 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
         ValidatePipelineResourceSignatureDescD3D12(Desc);
 
         auto& RawAllocator{GetRawAllocator()};
-        auto  MemPool = ReserveSpace(RawAllocator, Desc,
-                                    [&Desc](FixedLinearAllocator& MemPool) //
-                                    {
-                                        MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
-                                        MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
-                                    });
+        auto  MemPool = AllocateInternalObjects(RawAllocator, Desc,
+                                               [&Desc](FixedLinearAllocator& MemPool) //
+                                               {
+                                                   MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
+                                                   MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
+                                               });
 
         static_assert(std::is_trivially_destructible<ResourceAttribs>::value,
                       "ResourceAttribs objects must be constructed to be properly destructed in case an excpetion is thrown");
@@ -155,11 +155,6 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
         const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
-            m_pStaticResCache = MemPool.Construct<ShaderResourceCacheD3D12>(ResourceCacheContentType::Signature);
-            // Constructor of ShaderVariableManagerD3D12 is noexcept, so we can safely construct all manager objects.
-            // Moreover, all objects must be constructed if an exception is thrown for Destruct() method to work properly.
-            m_StaticVarsMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
-
             m_pStaticResCache->Initialize(RawAllocator, static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
 
             constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};

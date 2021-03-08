@@ -44,6 +44,7 @@
 #include "StringTools.hpp"
 #include "PlatformMisc.hpp"
 #include "SRBMemoryAllocator.hpp"
+#include "ShaderResourceCacheCommon.hpp"
 
 namespace Diligent
 {
@@ -377,12 +378,44 @@ public:
 
 protected:
     template <typename TReserveCustomData>
-    FixedLinearAllocator ReserveSpace(IMemoryAllocator&                    RawAllocator,
-                                      const PipelineResourceSignatureDesc& Desc,
-                                      TReserveCustomData                   ReserveCustomData) noexcept(false)
+    FixedLinearAllocator AllocateInternalObjects(IMemoryAllocator&                    RawAllocator,
+                                                 const PipelineResourceSignatureDesc& Desc,
+                                                 TReserveCustomData                   ReserveCustomData) noexcept(false)
     {
         FixedLinearAllocator Allocator{RawAllocator};
 
+        ReserveSpaceForDescription(Allocator, Desc);
+
+        const auto NumStaticResStages = GetNumStaticResStages();
+        if (NumStaticResStages > 0)
+        {
+            Allocator.AddSpace<ShaderResourceCacheImplType>(1);
+            Allocator.AddSpace<ShaderVariableManagerImplType>(NumStaticResStages);
+        }
+
+        ReserveCustomData(Allocator);
+
+        Allocator.Reserve();
+        // The memory is now owned by PipelineResourceSignatureBase and will be freed by Destruct().
+        m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
+
+        CopyDescription(Allocator, Desc);
+
+        if (NumStaticResStages > 0)
+        {
+            m_pStaticResCache = Allocator.Construct<ShaderResourceCacheImplType>(ResourceCacheContentType::Signature);
+
+            static_assert(std::is_nothrow_constructible<ShaderVariableManagerImplType, decltype(*this), ShaderResourceCacheImplType&>::value,
+                          "Constructor of ShaderVariableManagerImplType must be noexcept, so we can safely construct all manager objects");
+            m_StaticVarsMgrs = Allocator.ConstructArray<ShaderVariableManagerImplType>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
+        }
+
+        return Allocator;
+    }
+
+private:
+    static void ReserveSpaceForDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc)
+    {
         Allocator.AddSpace<PipelineResourceDesc>(Desc.NumResources);
         Allocator.AddSpace<ImmutableSamplerDesc>(Desc.NumImmutableSamplers);
 
@@ -408,26 +441,8 @@ protected:
 
         if (Desc.UseCombinedTextureSamplers)
             Allocator.AddSpaceForString(Desc.CombinedSamplerSuffix);
-
-        ReserveCustomData(Allocator);
-
-        const auto NumStaticResStages = GetNumStaticResStages();
-        if (NumStaticResStages > 0)
-        {
-            Allocator.AddSpace<ShaderResourceCacheImplType>(1);
-            Allocator.AddSpace<ShaderVariableManagerImplType>(NumStaticResStages);
-        }
-
-        Allocator.Reserve();
-        // The memory is now owned by PipelineResourceSignatureBase and will be freed by Destruct().
-        m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
-
-        CopyDescription(Allocator, Desc);
-
-        return Allocator;
     }
 
-private:
     void CopyDescription(FixedLinearAllocator& Allocator, const PipelineResourceSignatureDesc& Desc) noexcept(false)
     {
         PipelineResourceDesc* pResources = Allocator.ConstructArray<PipelineResourceDesc>(Desc.NumResources);

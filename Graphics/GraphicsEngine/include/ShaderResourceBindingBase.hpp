@@ -70,8 +70,6 @@ public:
 
     /// \param pRefCounters - Reference counters object that controls the lifetime of this SRB.
     /// \param pPRS         - Pipeline resource signature that this SRB belongs to.
-    /// \param IsInternal   - Flag indicating if the shader resource binding is an internal object and
-    ///                       must not keep a strong reference to the pipeline resource signature.
     ShaderResourceBindingBase(IReferenceCounters* pRefCounters, ResourceSignatureType* pPRS) :
         TObjectBase{pRefCounters},
         m_pPRS{pPRS},
@@ -117,7 +115,6 @@ public:
 
             auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
 
-            // Create shader variable manager in place
             // Initialize vars manager to reference mutable and dynamic variables
             // Note that the cache has space for all variable types
             const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
