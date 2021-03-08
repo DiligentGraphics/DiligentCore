@@ -28,10 +28,12 @@
 #include "pch.h"
 
 #include "TextureD3D12Impl.hpp"
+
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceContextD3D12Impl.hpp"
-#include "D3D12TypeConversions.hpp"
 #include "TextureViewD3D12Impl.hpp"
+
+#include "D3D12TypeConversions.hpp"
 #include "DXGITypeConversions.hpp"
 #include "d3dx12_win.h"
 #include "EngineMemory.h"

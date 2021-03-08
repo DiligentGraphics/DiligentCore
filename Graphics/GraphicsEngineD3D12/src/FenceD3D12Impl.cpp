@@ -26,10 +26,12 @@
  */
 
 #include "pch.h"
+
+#include "FenceD3D12Impl.hpp"
+
 #include <thread>
 #include <atlbase.h>
 
-#include "FenceD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent

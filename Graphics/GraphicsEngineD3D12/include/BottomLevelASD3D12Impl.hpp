@@ -32,7 +32,6 @@
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "BottomLevelASD3D12.h"
-#include "RenderDeviceD3D12.h"
 #include "BottomLevelASBase.hpp"
 #include "D3D12ResourceBase.hpp"
 

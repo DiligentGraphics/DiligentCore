@@ -31,7 +31,6 @@
 /// Declaration of Diligent::FramebufferD3D12Impl class
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "RenderDeviceD3D12.h"
 #include "FramebufferBase.hpp"
 
 namespace Diligent

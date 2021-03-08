@@ -35,16 +35,18 @@
 
 #include "DeviceContextD3D12.h"
 #include "DeviceContextNextGenBase.hpp"
+
+// D3D12 object implementations are required by DeviceContextBase
 #include "BufferD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
 #include "QueryD3D12Impl.hpp"
 #include "FramebufferD3D12Impl.hpp"
 #include "RenderPassD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
-#include "D3D12DynamicHeap.hpp"
 #include "BottomLevelASD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
 
+#include "D3D12DynamicHeap.hpp"
 
 namespace Diligent
 {

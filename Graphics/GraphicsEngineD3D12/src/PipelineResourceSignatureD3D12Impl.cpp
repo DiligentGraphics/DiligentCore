@@ -27,12 +27,11 @@
 
 #include "pch.h"
 
+#include "PipelineResourceSignatureD3D12Impl.hpp"
+
 #include <unordered_map>
 
-#include "PipelineResourceSignatureD3D12Impl.hpp"
-#include "ShaderResourceCacheD3D12.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "ShaderResourceBindingD3D12Impl.hpp"
 #include "BufferD3D12Impl.hpp"
 #include "BufferViewD3D12Impl.hpp"
 #include "SamplerD3D12Impl.hpp"

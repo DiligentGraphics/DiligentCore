@@ -27,11 +27,11 @@
 
 #include "pch.h"
 
+#include "D3D12TypeConversions.hpp"
+
 #include <array>
 
-#include "D3D12TypeConversions.hpp"
 #include "DXGITypeConversions.hpp"
-
 #include "D3D12TypeDefinitions.h"
 #include "D3DTypeConversionImpl.hpp"
 #include "D3DViewDescConversionImpl.hpp"

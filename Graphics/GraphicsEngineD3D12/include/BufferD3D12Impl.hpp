@@ -32,11 +32,11 @@
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "BufferD3D12.h"
-#include "RenderDeviceD3D12.h"
 #include "BufferBase.hpp"
+#include "BufferViewD3D12Impl.hpp" // Required by BufferBase
 #include "D3D12ResourceBase.hpp"
 #include "D3D12DynamicHeap.hpp"
-#include "BufferViewD3D12Impl.hpp"
+#include "DescriptorHeap.hpp"
 
 namespace Diligent
 {

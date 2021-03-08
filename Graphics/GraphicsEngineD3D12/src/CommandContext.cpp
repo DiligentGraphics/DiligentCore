@@ -27,14 +27,16 @@
 
 #include "pch.h"
 
+#include "CommandContext.hpp"
+
 #include "d3dx12_win.h"
 
-#include "CommandContext.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
 #include "BufferD3D12Impl.hpp"
 #include "BottomLevelASD3D12Impl.hpp"
 #include "TopLevelASD3D12Impl.hpp"
+
 #include "CommandListManager.hpp"
 #include "D3D12TypeConversions.hpp"
 

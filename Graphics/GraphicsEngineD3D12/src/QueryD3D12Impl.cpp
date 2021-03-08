@@ -26,9 +26,11 @@
  */
 
 #include "pch.h"
-#include <atlbase.h>
 
 #include "QueryD3D12Impl.hpp"
+
+#include <atlbase.h>
+
 #include "RenderDeviceD3D12Impl.hpp"
 #include "GraphicsAccessories.hpp"
 #include "DeviceContextD3D12Impl.hpp"

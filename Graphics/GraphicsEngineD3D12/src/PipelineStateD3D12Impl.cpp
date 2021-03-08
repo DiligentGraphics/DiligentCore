@@ -27,6 +27,8 @@
 
 #include "pch.h"
 
+#include "PipelineStateD3D12Impl.hpp"
+
 #include <array>
 #include <sstream>
 #include <unordered_map>
@@ -37,10 +39,10 @@
 #    undef FindResource
 #endif
 
-#include "PipelineStateD3D12Impl.hpp"
-#include "ShaderD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
+#include "ShaderD3D12Impl.hpp"
 #include "ShaderResourceBindingD3D12Impl.hpp"
+
 #include "D3D12TypeConversions.hpp"
 #include "DXGITypeConversions.hpp"
 #include "CommandContext.hpp"

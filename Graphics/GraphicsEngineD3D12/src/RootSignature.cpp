@@ -28,11 +28,12 @@
 #include "pch.h"
 
 #include "RootSignature.hpp"
-#include "CommandContext.hpp"
+
 #include "RenderDeviceD3D12Impl.hpp"
+#include "PipelineResourceSignatureD3D12Impl.hpp"
+#include "CommandContext.hpp"
 #include "D3D12TypeConversions.hpp"
 #include "HashUtils.hpp"
-#include "PipelineResourceSignatureD3D12Impl.hpp"
 
 namespace Diligent
 {

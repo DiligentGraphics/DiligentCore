@@ -28,9 +28,10 @@
 #include "pch.h"
 
 #include "ShaderVariableManagerD3D12.hpp"
+
 #include "RenderDeviceD3D12Impl.hpp"
-#include "ShaderResourceCacheD3D12.hpp"
 #include "PipelineResourceSignatureD3D12Impl.hpp"
+#include "ShaderResourceCacheD3D12.hpp"
 
 namespace Diligent
 {

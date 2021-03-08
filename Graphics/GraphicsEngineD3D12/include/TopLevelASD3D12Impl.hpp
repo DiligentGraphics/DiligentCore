@@ -34,8 +34,8 @@
 #include "TopLevelASD3D12.h"
 #include "TopLevelASBase.hpp"
 #include "D3D12ResourceBase.hpp"
-#include "DescriptorHeap.hpp"
 #include "BottomLevelASD3D12Impl.hpp" // Required by TopLevelASBase
+#include "DescriptorHeap.hpp"
 
 namespace Diligent
 {

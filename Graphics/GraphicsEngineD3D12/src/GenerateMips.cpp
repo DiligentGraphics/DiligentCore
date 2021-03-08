@@ -43,10 +43,12 @@
 
 
 #include "pch.h"
+
+#include "GenerateMips.hpp"
+
 #include "d3dx12_win.h"
 
 #include "RenderDeviceD3D12Impl.hpp"
-#include "GenerateMips.hpp"
 #include "CommandContext.hpp"
 #include "TextureViewD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"

@@ -27,8 +27,10 @@
 
 #include "pch.h"
 
-#include <d3dcompiler.h>
 #include "ShaderResourcesD3D12.hpp"
+
+#include <d3dcompiler.h>
+
 #include "ShaderD3DBase.hpp"
 #include "ShaderBase.hpp"
 #include "DXCompiler.hpp"

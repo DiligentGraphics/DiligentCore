@@ -32,7 +32,6 @@
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "FenceD3D12.h"
-#include "RenderDeviceD3D12.h"
 #include "FenceBase.hpp"
 
 namespace Diligent

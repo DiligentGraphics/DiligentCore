@@ -26,9 +26,11 @@
  */
 
 #include "pch.h"
-#include <algorithm>
 
 #include "QueryManagerD3D12.hpp"
+
+#include <algorithm>
+
 #include "D3D12TypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 #include "CommandContext.hpp"
