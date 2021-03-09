@@ -246,6 +246,8 @@ public:
     /// resets render targets if it is.
     bool UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage);
 
+    bool HasActiveRenderPass() const { return m_pActiveRenderPass != nullptr; }
+
 protected:
     /// Caches the render target and depth stencil views. Returns true if any view is different
     /// from the cached value and false otherwise.

@@ -43,10 +43,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Query implementation in Direct3D11 backend.
-class QueryD3D11Impl final : public QueryBase<IQueryD3D11, RenderDeviceD3D11Impl>
+class QueryD3D11Impl final : public QueryBase<EngineD3D11ImplTraits>
 {
 public:
-    using TQueryBase = QueryBase<IQueryD3D11, RenderDeviceD3D11Impl>;
+    using TQueryBase = QueryBase<EngineD3D11ImplTraits>;
 
     QueryD3D11Impl(IReferenceCounters*    pRefCounters,
                    RenderDeviceD3D11Impl* pDevice,

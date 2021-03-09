@@ -39,13 +39,11 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Fence implementation in Direct3D11 backend.
-class FenceD3D11Impl final : public FenceBase<IFenceD3D11, RenderDeviceD3D11Impl>
+class FenceD3D11Impl final : public FenceBase<EngineD3D11ImplTraits>
 {
 public:
-    using TFenceBase = FenceBase<IFenceD3D11, RenderDeviceD3D11Impl>;
+    using TFenceBase = FenceBase<EngineD3D11ImplTraits>;
 
     FenceD3D11Impl(IReferenceCounters*    pRefCounters,
                    RenderDeviceD3D11Impl* pDevice,

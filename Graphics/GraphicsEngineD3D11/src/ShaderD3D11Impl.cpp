@@ -140,10 +140,6 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
     auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
     auto* pResources = new (pRawMem) ShaderResourcesD3D11(pRenderDeviceD3D11, m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
-
-    // Byte code is only required for the vertex shader to create input layout
-    if (ShaderCI.Desc.ShaderType != SHADER_TYPE_VERTEX)
-        m_pShaderByteCode.Release();
 }
 
 ShaderD3D11Impl::~ShaderD3D11Impl()

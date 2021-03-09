@@ -461,6 +461,11 @@ public:
         return true;
     }
 
+    SHADER_TYPE GetActiveShaderStages() const
+    {
+        return m_ActiveShaderStages;
+    }
+
 protected:
     using TNameToGroupIndexMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
 

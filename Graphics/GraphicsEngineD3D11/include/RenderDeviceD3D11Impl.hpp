@@ -30,7 +30,7 @@
 /// \file
 /// Declaration of Diligent::RenderDeviceD3D11Impl class
 
-#include "RenderDeviceD3D11.h"
+#include "EngineD3D11ImplTraits.hpp"
 #include "RenderDeviceD3DBase.hpp"
 #include "DeviceContextD3D11.h"
 
@@ -38,10 +38,10 @@ namespace Diligent
 {
 
 /// Render device implementation in Direct3D11 backend.
-class RenderDeviceD3D11Impl final : public RenderDeviceD3DBase<IRenderDeviceD3D11>
+class RenderDeviceD3D11Impl final : public RenderDeviceD3DBase<EngineD3D11ImplTraits>
 {
 public:
-    using TRenderDeviceBase = RenderDeviceD3DBase<IRenderDeviceD3D11>;
+    using TRenderDeviceBase = RenderDeviceD3DBase<EngineD3D11ImplTraits>;
 
     RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
                           IMemoryAllocator&            RawMemAllocator,
@@ -108,6 +108,14 @@ public:
     /// Implementation of IRenderDevice::CreateSBT() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
                                               IShaderBindingTable**         ppSBT) override final;
+
+    /// Implementation of IRenderDevice::CreatePipelineResourceSignature() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                                    IPipelineResourceSignature**         ppSignature) override final;
+
+    void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                         IPipelineResourceSignature**         ppSignature,
+                                         bool                                 IsDeviceInternal);
 
     /// Implementation of IRenderDeviceD3D11::GetD3D11Device() in Direct3D11 backend.
     ID3D11Device* DILIGENT_CALL_TYPE GetD3D11Device() override final { return m_pd3d11Device; }

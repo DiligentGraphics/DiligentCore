@@ -27,6 +27,7 @@
 
 #include "pch.h"
 #include "BufferViewD3D11Impl.hpp"
+#include "BufferD3D11Impl.hpp"
 
 namespace Diligent
 {
@@ -34,7 +35,7 @@ namespace Diligent
 BufferViewD3D11Impl::BufferViewD3D11Impl(IReferenceCounters*    pRefCounters,
                                          RenderDeviceD3D11Impl* pDevice,
                                          const BufferViewDesc&  ViewDesc,
-                                         IBuffer*               pBuffer,
+                                         BufferD3D11Impl*       pBuffer,
                                          ID3D11View*            pD3D11View,
                                          bool                   bIsDefaultView) :
     // clang-format off

@@ -28,261 +28,319 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::ShaderResourceLayoutD3D11 class
+/// Declaration of Diligent::ShaderVariableManagerD3D11 class
 
 #include "ShaderResources.hpp"
 #include "ShaderBase.hpp"
-#include "ShaderResourceCacheD3D11.hpp"
-#include "EngineD3D11Defines.h"
-#include "STDAllocator.hpp"
-#include "ShaderVariableD3DBase.hpp"
+#include "ShaderResourceVariableBase.hpp"
+#include "ShaderVariableD3D.hpp"
 #include "ShaderResourcesD3D11.hpp"
+#include "ShaderResourceVariableD3D.h"
+#include "PipelineResourceAttribsD3D11.hpp"
+#include "ShaderResourceCacheD3D11.hpp"
 
 namespace Diligent
 {
 
-/// Diligent::ShaderResourceLayoutD3D11 class
-/// http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout/
-// sizeof(ShaderResourceLayoutD3D11) == 64 (x64)
-class ShaderResourceLayoutD3D11
+/// Diligent::ShaderVariableManagerD3D11 class
+// sizeof(ShaderVariableManagerD3D11) == AZ TODO (Release, x64)
+class ShaderVariableManagerD3D11
 {
 public:
-    ShaderResourceLayoutD3D11(IObject&                  Owner,
-                              ShaderResourceCacheD3D11& ResourceCache) noexcept :
+    ShaderVariableManagerD3D11(IObject&                  Owner,
+                               ShaderResourceCacheD3D11& ResourceCache) noexcept :
         m_Owner{Owner},
         m_ResourceCache{ResourceCache}
     {
     }
 
-    void Initialize(std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
-                    const PipelineResourceLayoutDesc&           ResourceLayout,
-                    const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes,
-                    Uint32                                      NumVarTypes,
-                    IMemoryAllocator&                           ResCacheDataAllocator,
-                    IMemoryAllocator&                           ResLayoutDataAllocator);
-    ~ShaderResourceLayoutD3D11();
+    ~ShaderVariableManagerD3D11();
+
+    void Destroy(IMemoryAllocator& Allocator);
 
     // clang-format off
     // No copies, only moves are allowed
-    ShaderResourceLayoutD3D11             (const ShaderResourceLayoutD3D11&)  = delete;
-    ShaderResourceLayoutD3D11& operator = (const ShaderResourceLayoutD3D11&)  = delete;
-    ShaderResourceLayoutD3D11             (      ShaderResourceLayoutD3D11&&) = default;
-    ShaderResourceLayoutD3D11& operator = (      ShaderResourceLayoutD3D11&&) = delete;
+    ShaderVariableManagerD3D11             (const ShaderVariableManagerD3D11&)  = delete;
+    ShaderVariableManagerD3D11& operator = (const ShaderVariableManagerD3D11&)  = delete;
+    ShaderVariableManagerD3D11             (      ShaderVariableManagerD3D11&&) = default;
+    ShaderVariableManagerD3D11& operator = (      ShaderVariableManagerD3D11&&) = delete;
     // clang-format on
 
-    static size_t GetRequiredMemorySize(const ShaderResourcesD3D11&          SrcResources,
-                                        const PipelineResourceLayoutDesc&    ResourceLayout,
-                                        const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                        Uint32                               NumAllowedTypes) noexcept;
+    void Initialize(const PipelineResourceSignatureD3D11Impl& Signature,
+                    IMemoryAllocator&                         Allocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                    Uint32                                    NumAllowedTypes,
+                    SHADER_TYPE                               ShaderType);
 
-    void CopyResources(ShaderResourceCacheD3D11& DstCache) const;
+    static size_t GetRequiredMemorySize(const PipelineResourceSignatureD3D11Impl& Signature,
+                                        const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                                        Uint32                                    NumAllowedTypes,
+                                        SHADER_TYPE                               ShaderType);
 
-    using ShaderVariableD3D11Base = ShaderVariableD3DBase<ShaderResourceLayoutD3D11>;
+    using ResourceAttribs = PipelineResourceAttribsD3D11;
+
+    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
+    const ResourceAttribs&      GetAttribs(Uint32 Index) const;
+
+
+    struct ShaderVariableD3D11Base : ShaderVariableBase<ShaderVariableManagerD3D11, IShaderResourceVariableD3D>
+    {
+    public:
+        ShaderVariableD3D11Base(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
+            ShaderVariableBase<ShaderVariableManagerD3D11, IShaderResourceVariableD3D>{ParentLayout},
+            m_ResIndex{ResIndex}
+        {}
+
+        // clang-format off
+        ShaderVariableD3D11Base            (const ShaderVariableD3D11Base&)  = delete;
+        ShaderVariableD3D11Base            (      ShaderVariableD3D11Base&&) = delete;
+        ShaderVariableD3D11Base& operator= (const ShaderVariableD3D11Base&)  = delete;
+        ShaderVariableD3D11Base& operator= (      ShaderVariableD3D11Base&&) = delete;
+        // clang-format on
+
+        const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
+        const ResourceAttribs&      GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
+
+        virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+        {
+            if (ppInterface == nullptr)
+                return;
+
+            *ppInterface = nullptr;
+            if (IID == IID_ShaderResourceVariableD3D || IID == IID_ShaderResourceVariable || IID == IID_Unknown)
+            {
+                *ppInterface = this;
+                (*ppInterface)->AddRef();
+            }
+        }
+
+        virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
+        {
+            return GetDesc().VarType;
+        }
+
+        virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
+        {
+            const auto& Desc       = GetDesc();
+            ResourceDesc.Name      = Desc.Name;
+            ResourceDesc.Type      = Desc.ResourceType;
+            ResourceDesc.ArraySize = Desc.ArraySize;
+        }
+
+        virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
+        {
+            return m_ParentManager.GetVariableIndex(*this);
+        }
+
+        virtual void DILIGENT_CALL_TYPE GetHLSLResourceDesc(HLSLShaderResourceDesc& HLSLResDesc) const override final
+        {
+            // AZ TODO
+        }
+
+    private:
+        const Uint32 m_ResIndex;
+    };
 
     struct ConstBuffBindInfo final : ShaderVariableD3D11Base
     {
-        ConstBuffBindInfo(const D3DShaderResourceAttribs& ResourceAttribs,
-                          ShaderResourceLayoutD3D11&      ParentResLayout,
-                          SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
-            ShaderVariableD3D11Base{ParentResLayout, ResourceAttribs, VariableType}
+        ConstBuffBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
+            ShaderVariableD3D11Base{ParentLayout, ResIndex}
         {}
-        // Non-virtual function
-        __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        // Non-virtual function
+        __forceinline void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex);
+
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+        {
+            BindResource(pObject, 0);
+        }
 
         virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
                                                  Uint32                FirstElement,
                                                  Uint32                NumElements) override final
         {
-            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
+            const auto& Desc = GetDesc();
+            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-            return m_ParentResLayout.m_ResourceCache.IsCBBound(m_Attribs.BindPoint + ArrayIndex);
+            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
+            return m_ParentManager.m_ResourceCache.IsCBBound(GetAttribs().CacheOffset + ArrayIndex);
         }
     };
 
     struct TexSRVBindInfo final : ShaderVariableD3D11Base
     {
-        TexSRVBindInfo(const D3DShaderResourceAttribs& _TextureAttribs,
-                       Uint32                          _SamplerIndex,
-                       ShaderResourceLayoutD3D11&      ParentResLayout,
-                       SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
-            ShaderVariableD3D11Base{ParentResLayout, _TextureAttribs, VariableType},
-            SamplerIndex{_SamplerIndex}
+        TexSRVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
+            ShaderVariableD3D11Base{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+        {
+            BindResource(pObject, 0);
+        }
 
         virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
                                                  Uint32                FirstElement,
                                                  Uint32                NumElements) override final
         {
-            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
+            const auto& Desc = GetDesc();
+            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-            return m_ParentResLayout.m_ResourceCache.IsSRVBound(m_Attribs.BindPoint + ArrayIndex, true);
+            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
+            return m_ParentManager.m_ResourceCache.IsSRVBound(GetAttribs().CacheOffset + ArrayIndex, true);
         }
-
-
-        bool ValidSamplerAssigned() const { return SamplerIndex != InvalidSamplerIndex; }
-
-        static constexpr Uint32 InvalidSamplerIndex = static_cast<Uint32>(-1);
-        const Uint32            SamplerIndex;
     };
 
     struct TexUAVBindInfo final : ShaderVariableD3D11Base
     {
-        TexUAVBindInfo(const D3DShaderResourceAttribs& ResourceAttribs,
-                       ShaderResourceLayoutD3D11&      ParentResLayout,
-                       SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
-            ShaderVariableD3D11Base(ParentResLayout, ResourceAttribs, VariableType)
+        TexUAVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
+            ShaderVariableD3D11Base{ParentLayout, ResIndex}
         {}
 
         // Provide non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+        {
+            BindResource(pObject, 0);
+        }
 
         virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
                                                  Uint32                FirstElement,
                                                  Uint32                NumElements) override final
         {
-            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
+            const auto& Desc = GetDesc();
+            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
         __forceinline virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-            return m_ParentResLayout.m_ResourceCache.IsUAVBound(m_Attribs.BindPoint + ArrayIndex, true);
+            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
+            return m_ParentManager.m_ResourceCache.IsUAVBound(GetAttribs().CacheOffset + ArrayIndex, true);
         }
     };
 
     struct BuffUAVBindInfo final : ShaderVariableD3D11Base
     {
-        BuffUAVBindInfo(const D3DShaderResourceAttribs& ResourceAttribs,
-                        ShaderResourceLayoutD3D11&      ParentResLayout,
-                        SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
-            ShaderVariableD3D11Base{ParentResLayout, ResourceAttribs, VariableType}
+        BuffUAVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
+            ShaderVariableD3D11Base{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+        {
+            BindResource(pObject, 0);
+        }
 
         virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
                                                  Uint32                FirstElement,
                                                  Uint32                NumElements) override final
         {
-            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
+            const auto& Desc = GetDesc();
+            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-            return m_ParentResLayout.m_ResourceCache.IsUAVBound(m_Attribs.BindPoint + ArrayIndex, false);
+            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
+            return m_ParentManager.m_ResourceCache.IsUAVBound(GetAttribs().CacheOffset + ArrayIndex, false);
         }
     };
 
     struct BuffSRVBindInfo final : ShaderVariableD3D11Base
     {
-        BuffSRVBindInfo(const D3DShaderResourceAttribs& ResourceAttribs,
-                        ShaderResourceLayoutD3D11&      ParentResLayout,
-                        SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
-            ShaderVariableD3D11Base{ParentResLayout, ResourceAttribs, VariableType}
+        BuffSRVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
+            ShaderVariableD3D11Base{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+        {
+            BindResource(pObject, 0);
+        }
 
         virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
                                                  Uint32                FirstElement,
                                                  Uint32                NumElements) override final
         {
-            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
+            const auto& Desc = GetDesc();
+            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-            return m_ParentResLayout.m_ResourceCache.IsSRVBound(m_Attribs.BindPoint + ArrayIndex, false);
+            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
+            return m_ParentManager.m_ResourceCache.IsSRVBound(GetAttribs().CacheOffset + ArrayIndex, false);
         }
     };
 
     struct SamplerBindInfo final : ShaderVariableD3D11Base
     {
-        SamplerBindInfo(const D3DShaderResourceAttribs& ResourceAttribs,
-                        ShaderResourceLayoutD3D11&      ParentResLayout,
-                        SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
-            ShaderVariableD3D11Base{ParentResLayout, ResourceAttribs, VariableType}
+        SamplerBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
+            ShaderVariableD3D11Base{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+        {
+            BindResource(pObject, 0);
+        }
 
         virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
                                                  Uint32                FirstElement,
                                                  Uint32                NumElements) override final
         {
-            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
+            const auto& Desc = GetDesc();
+            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-            return m_ParentResLayout.m_ResourceCache.IsSamplerBound(m_Attribs.BindPoint + ArrayIndex);
+            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
+            return m_ParentManager.m_ResourceCache.IsSamplerBound(GetAttribs().CacheOffset + ArrayIndex);
         }
     };
 
-    // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
-    // while Layout is alive
-    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11& dbgResourceCache);
+    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
 #ifdef DILIGENT_DEVELOPMENT
     bool dvpVerifyBindings() const;
 #endif
 
-    IShaderResourceVariable*  GetShaderVariable(const Char* Name);
-    IShaderResourceVariable*  GetShaderVariable(Uint32 Index);
-    __forceinline SHADER_TYPE GetShaderType() const { return m_pResources->GetShaderType(); }
+    IShaderResourceVariable* GetVariable(const Char* Name) const;
+    IShaderResourceVariable* GetVariable(Uint32 Index) const;
 
     IObject& GetOwner() { return m_Owner; }
 
+    Uint32 GetVariableCount() const;
+
     Uint32 GetVariableIndex(const ShaderVariableD3D11Base& Variable) const;
-    Uint32 GetTotalResourceCount() const
-    {
-        auto ResourceCount = GetNumCBs() + GetNumTexSRVs() + GetNumTexUAVs() + GetNumBufUAVs() + GetNumBufSRVs();
-        // Do not expose sampler variables when using combined texture samplers
-        if (!m_pResources->IsUsingCombinedTextureSamplers())
-            ResourceCount += GetNumSamplers();
-        return ResourceCount;
-    }
 
     // clang-format off
     Uint32 GetNumCBs()      const { return (m_TexSRVsOffset  - 0               ) / sizeof(ConstBuffBindInfo);}
@@ -301,35 +359,22 @@ public:
     template<> Uint32 GetNumResources<SamplerBindInfo>  () const { return GetNumSamplers(); }
     // clang-format on
 
-    const Char* GetShaderName() const
-    {
-        return m_pResources->GetShaderName();
-    }
-
 private:
+    static void CountResources(const PipelineResourceSignatureD3D11Impl& Signature,
+                               const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                               Uint32                                    NumAllowedTypes,
+                               SHADER_TYPE                               ShaderType,
+                               D3DShaderResourceCounters&                Counters);
+
+    template <typename HandlerType>
+    static void ProcessSignatureResources(const PipelineResourceSignatureD3D11Impl& Signature,
+                                          const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                                          Uint32                                    NumAllowedTypes,
+                                          SHADER_TYPE                               ShaderType,
+                                          HandlerType                               Handler);
+
     // clang-format off
-
-/* 0 */ IObject&                                       m_Owner;
-/* 8 */ std::shared_ptr<const ShaderResourcesD3D11>    m_pResources;
-
-       // No need to use shared pointer, as the resource cache is either part of the same
-       // ShaderD3D11Impl object, or ShaderResourceBindingD3D11Impl object
-/*24*/ ShaderResourceCacheD3D11&                      m_ResourceCache;
-
-/*32*/ std::unique_ptr<void, STDDeleterRawMem<void> > m_ResourceBuffer;
-    
-       // Offsets in bytes
-       using OffsetType = Uint16;
-/*48*/ OffsetType m_TexSRVsOffset  = 0;
-/*50*/ OffsetType m_TexUAVsOffset  = 0;
-/*52*/ OffsetType m_BuffSRVsOffset = 0;
-/*54*/ OffsetType m_BuffUAVsOffset = 0;
-/*56*/ OffsetType m_SamplerOffset  = 0;
-/*58*/ OffsetType m_MemorySize     = 0;
-/*60 - 64*/    
-/*64*/ // End of data
-
-
+    using OffsetType = Uint16;
     template<typename ResourceType> OffsetType GetResourceOffset()const;
     template<> OffsetType GetResourceOffset<ConstBuffBindInfo>() const { return 0;                }
     template<> OffsetType GetResourceOffset<TexSRVBindInfo>   () const { return m_TexSRVsOffset;  }
@@ -337,27 +382,26 @@ private:
     template<> OffsetType GetResourceOffset<BuffSRVBindInfo>  () const { return m_BuffSRVsOffset; }
     template<> OffsetType GetResourceOffset<BuffUAVBindInfo>  () const { return m_BuffUAVsOffset; }
     template<> OffsetType GetResourceOffset<SamplerBindInfo>  () const { return m_SamplerOffset;  }
-
     // clang-format on
 
     template <typename ResourceType>
-    ResourceType& GetResource(Uint32 ResIndex)
+    ResourceType& GetResource(Uint32 ResIndex) const
     {
-        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>() - 1, ")");
+        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") must be less than (", GetNumResources<ResourceType>(), ")");
         auto Offset = GetResourceOffset<ResourceType>();
-        return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + Offset)[ResIndex];
+        return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
     }
 
     template <typename ResourceType>
     const ResourceType& GetConstResource(Uint32 ResIndex) const
     {
-        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>() - 1, ")");
+        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") must be less than (", GetNumResources<ResourceType>(), ")");
         auto Offset = GetResourceOffset<ResourceType>();
-        return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + Offset)[ResIndex];
+        return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
     }
 
     template <typename ResourceType>
-    IShaderResourceVariable* GetResourceByName(const Char* Name);
+    IShaderResourceVariable* GetResourceByName(const Char* Name) const;
 
     template <typename THandleCB,
               typename THandleTexSRV,
@@ -425,6 +469,28 @@ private:
 
     friend class ShaderVariableIndexLocator;
     friend class ShaderVariableLocator;
+
+private:
+    PipelineResourceSignatureD3D11Impl const* m_pSignature = nullptr;
+
+    IObject& m_Owner;
+
+    // No need to use shared pointer, as the resource cache is either part of the same
+    // ShaderD3D11Impl object, or ShaderResourceBindingD3D11Impl object
+    ShaderResourceCacheD3D11& m_ResourceCache;
+    void*                     m_ResourceBuffer = nullptr;
+
+    // Offsets in bytes
+    OffsetType m_TexSRVsOffset  = 0;
+    OffsetType m_TexUAVsOffset  = 0;
+    OffsetType m_BuffSRVsOffset = 0;
+    OffsetType m_BuffUAVsOffset = 0;
+    OffsetType m_SamplerOffset  = 0;
+    OffsetType m_MemorySize     = 0;
+
+#ifdef DILIGENT_DEBUG
+    IMemoryAllocator* m_pDbgAllocator = nullptr;
+#endif
 };
 
 } // namespace Diligent

@@ -40,10 +40,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Render pass implementation in Direct3D11 backend.
-class FramebufferD3D11Impl final : public FramebufferBase<IFramebuffer, RenderDeviceD3D11Impl>
+class FramebufferD3D11Impl final : public FramebufferBase<EngineD3D11ImplTraits>
 {
 public:
-    using TFramebufferBase = FramebufferBase<IFramebuffer, RenderDeviceD3D11Impl>;
+    using TFramebufferBase = FramebufferBase<EngineD3D11ImplTraits>;
 
     FramebufferD3D11Impl(IReferenceCounters*    pRefCounters,
                          RenderDeviceD3D11Impl* pDevice,

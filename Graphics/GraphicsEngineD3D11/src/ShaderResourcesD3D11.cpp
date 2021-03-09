@@ -146,19 +146,23 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
                                                        ID3D11Resource*            CommittedD3D11UAVResources[],
                                                        ShaderResourceCacheD3D11&  ResourceCache) const
 {
-    ShaderResourceCacheD3D11::CachedCB*       CachedCBs          = nullptr;
-    ID3D11Buffer**                            d3d11CBs           = nullptr;
-    ShaderResourceCacheD3D11::CachedResource* CachedSRVResources = nullptr;
-    ID3D11ShaderResourceView**                d3d11SRVs          = nullptr;
-    ShaderResourceCacheD3D11::CachedSampler*  CachedSamplers     = nullptr;
-    ID3D11SamplerState**                      d3d11Samplers      = nullptr;
-    ShaderResourceCacheD3D11::CachedResource* CachedUAVResources = nullptr;
-    ID3D11UnorderedAccessView**               d3d11UAVs          = nullptr;
+    ShaderResourceCacheD3D11::CachedCB*                 CachedCBs          = nullptr;
+    ID3D11Buffer**                                      d3d11CBs           = nullptr;
+    ShaderResourceCacheD3D11::CachedResource*           CachedSRVResources = nullptr;
+    ID3D11ShaderResourceView**                          d3d11SRVs          = nullptr;
+    ShaderResourceCacheD3D11::CachedSampler*            CachedSamplers     = nullptr;
+    ID3D11SamplerState**                                d3d11Samplers      = nullptr;
+    ShaderResourceCacheD3D11::CachedResource*           CachedUAVResources = nullptr;
+    ID3D11UnorderedAccessView**                         d3d11UAVs          = nullptr;
+    ShaderResourceCacheD3D11::TBindPointsAndActiveBits* CBBindPoints       = nullptr;
+    ShaderResourceCacheD3D11::TBindPointsAndActiveBits* SRVBindPoints      = nullptr;
+    ShaderResourceCacheD3D11::TBindPointsAndActiveBits* SampBindPoints     = nullptr;
+    ShaderResourceCacheD3D11::TBindPointsAndActiveBits* UAVBindPoints      = nullptr;
     // clang-format off
-    ResourceCache.GetCBArrays     (CachedCBs,          d3d11CBs);
-    ResourceCache.GetSRVArrays    (CachedSRVResources, d3d11SRVs);
-    ResourceCache.GetSamplerArrays(CachedSamplers,     d3d11Samplers);
-    ResourceCache.GetUAVArrays    (CachedUAVResources, d3d11UAVs);
+    ResourceCache.GetCBArrays     (CachedCBs,          d3d11CBs,      CBBindPoints);
+    ResourceCache.GetSRVArrays    (CachedSRVResources, d3d11SRVs,     SRVBindPoints);
+    ResourceCache.GetSamplerArrays(CachedSamplers,     d3d11Samplers, SampBindPoints);
+    ResourceCache.GetUAVArrays    (CachedUAVResources, d3d11UAVs,     UAVBindPoints);
     // clang-format on
 
     ProcessResources(

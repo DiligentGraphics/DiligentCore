@@ -1160,7 +1160,7 @@ void DeviceContextGLImpl::Flush()
 
     glFlush();
 
-    m_BindInfo.SRBs.fill(nullptr);
+    m_BindInfo = {};
 }
 
 void DeviceContextGLImpl::FinishFrame()

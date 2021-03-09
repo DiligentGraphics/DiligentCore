@@ -1007,12 +1007,14 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, TExtended
     try
     {
         if ((ShaderType & SHADER_TYPE_ALL_RAY_TRACING) != 0)
+        {
             PatchResourceDeclarationRT(ResourceMap, ExtResMap, DXIL);
+        }
         else
+        {
             PatchResourceDeclaration(ResourceMap, ExtResMap, DXIL);
-
-        PatchResourceHandle(ResourceMap, ExtResMap, DXIL);
-
+            PatchResourceHandle(ResourceMap, ExtResMap, DXIL);
+        }
         return true;
     }
     catch (...)

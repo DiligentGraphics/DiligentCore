@@ -598,6 +598,22 @@ RES_TYPE ToResType(D3D_SHADER_INPUT_TYPE InputType)
     }
 }
 
+const char* ResTypeToString(RES_TYPE Type)
+{
+    switch (Type)
+    {
+        // clang-format off
+        case RES_TYPE_CBV:     return "CBV";
+        case RES_TYPE_SRV:     return "SRV";
+        case RES_TYPE_SAMPLER: return "Sampler";
+        case RES_TYPE_UAV:     return "UAV";
+            // clang-format on
+        default:
+            UNEXPECTED("Unknown resource type");
+            return "";
+    }
+}
+
 Uint32 GetNumOperands(D3D10_SB_OPCODE_TYPE Opcode)
 {
     switch (Opcode)
@@ -920,7 +936,7 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
                     Iter->second.ArraySize >= Res.BindCount);
 
 #ifdef DILIGENT_DEBUG
-        static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
+        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
         switch (Iter->second.ResType)
         {
             // clang-format off
@@ -1061,7 +1077,6 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operan
             break;
         }
 
-        case D3D10_SB_OPERAND_TYPE_IMMEDIATE_CONSTANT_BUFFER:
         case D3D11_SB_OPERAND_TYPE_UNORDERED_ACCESS_VIEW:
         {
             // 0 - UAV bind point
@@ -1074,6 +1089,9 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operan
                 LOG_ERROR_AND_THROW("Failed to find UAV with bind point (", Token[0], ").");
             break;
         }
+
+        case D3D10_SB_OPERAND_TYPE_IMMEDIATE_CONSTANT_BUFFER:
+            break; // ignore
     }
 }
 
@@ -1081,7 +1099,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(const OperandToken& Oper
 {
     const auto& Bindings = BindingsPerType[Type];
     if (Token[0] >= Bindings.size())
-        LOG_ERROR_AND_THROW("Invalid resource index (", Token[0], "), the number of resources is (", Bindings.size(), ").");
+        LOG_ERROR_AND_THROW("Invalid ", ResTypeToString(Type), " index (", Token[0], "), the number of resources is (", Bindings.size(), ").");
 
     const auto& Info = *Bindings[Token[0]];
     const auto& Ext  = ExtResourceMap[&Info];
@@ -1109,6 +1127,8 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(const OperandToken& Oper
             Token[2] = Info.BindPoint + (Token[2] - Ext.SrcBindPoint);
             break;
         }
+        default:
+            LOG_ERROR_AND_THROW("Unknown OperandIndex (", Uint32{Operand.OperandIndex2D}, ").");
     }
 }
 

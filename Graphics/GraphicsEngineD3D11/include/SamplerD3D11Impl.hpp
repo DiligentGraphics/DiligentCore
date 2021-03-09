@@ -41,10 +41,10 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Sampler implementation in Direct3D11 backend.
-class SamplerD3D11Impl final : public SamplerBase<ISamplerD3D11, RenderDeviceD3D11Impl>
+class SamplerD3D11Impl final : public SamplerBase<EngineD3D11ImplTraits>
 {
 public:
-    using TSamplerBase = SamplerBase<ISamplerD3D11, RenderDeviceD3D11Impl>;
+    using TSamplerBase = SamplerBase<EngineD3D11ImplTraits>;
 
     SamplerD3D11Impl(IReferenceCounters*          pRefCounters,
                      class RenderDeviceD3D11Impl* pRenderDeviceD3D11,

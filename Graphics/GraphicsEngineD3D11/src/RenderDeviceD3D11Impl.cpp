@@ -38,6 +38,7 @@
 #include "TextureViewD3D11Impl.hpp"
 #include "PipelineStateD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
+#include "PipelineResourceSignatureD3D11Impl.hpp"
 #include "FenceD3D11Impl.hpp"
 #include "QueryD3D11Impl.hpp"
 #include "RenderPassD3D11Impl.hpp"
@@ -46,6 +47,13 @@
 
 namespace Diligent
 {
+
+class BottomLevelASD3D11Impl
+{};
+class TopLevelASD3D11Impl
+{};
+class ShaderBindingTableD3D11Impl
+{};
 
 static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D11Device(ID3D11Device* pd3d11Device)
 {
@@ -87,32 +95,12 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
         pRefCounters,
         RawMemAllocator,
         pEngineFactory,
-        NumDeferredContexts,
-        DeviceObjectSizes
-        {
-            sizeof(TextureBaseD3D11),
-            sizeof(TextureViewD3D11Impl),
-            sizeof(BufferD3D11Impl),
-            sizeof(BufferViewD3D11Impl),
-            sizeof(ShaderD3D11Impl),
-            sizeof(SamplerD3D11Impl),
-            sizeof(PipelineStateD3D11Impl),
-            sizeof(ShaderResourceBindingD3D11Impl),
-            sizeof(FenceD3D11Impl),
-            sizeof(QueryD3D11Impl),
-            sizeof(RenderPassD3D11Impl),
-            sizeof(FramebufferD3D11Impl),
-            0,
-            0,
-            0
-        }
+        NumDeferredContexts
     },
     m_EngineAttribs{EngineAttribs},
     m_pd3d11Device {pd3d11Device }
 // clang-format on
 {
-    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
-
     m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D11;
     auto FeatureLevel    = m_pd3d11Device->GetFeatureLevel();
     switch (FeatureLevel)
@@ -149,10 +137,13 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     // Direct3D11 only supports shader model 5.0 even if the device feature level is
     // above 11.0 (for example, 11.1 or 12.0), so bindless resources are never available.
     // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
-    UNSUPPORTED_FEATURE(BindlessResources, "Bindless resources are");
+    // clang-format off
+    UNSUPPORTED_FEATURE(BindlessResources,                 "Bindless resources are");
     UNSUPPORTED_FEATURE(VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
-    UNSUPPORTED_FEATURE(MeshShaders, "Mesh shaders are");
-    UNSUPPORTED_FEATURE(RayTracing, "Ray tracing is");
+    UNSUPPORTED_FEATURE(MeshShaders,                       "Mesh shaders are");
+    UNSUPPORTED_FEATURE(RayTracing,                        "Ray tracing is");
+    UNSUPPORTED_FEATURE(ShaderResourceRuntimeArray,        "Runtime-sized array is");
+    // clang-format on
 
     {
         bool ShaderFloat16Supported = false;
@@ -182,7 +173,7 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
 #undef UNSUPPORTED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 33, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     auto& TexCaps = m_DeviceCaps.TexCaps;
@@ -257,38 +248,17 @@ IMPLEMENT_QUERY_INTERFACE(RenderDeviceD3D11Impl, IID_RenderDeviceD3D11, TRenderD
 
 void RenderDeviceD3D11Impl::CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
-    CreateDeviceObject("buffer", BuffDesc, ppBuffer,
-                       [&]() //
-                       {
-                           BufferD3D11Impl* pBufferD3D11{NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)(m_BuffViewObjAllocator, this, BuffDesc, InitialState, pd3d11Buffer)};
-                           pBufferD3D11->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
-                           pBufferD3D11->CreateDefaultViews();
-                           OnCreateDeviceObject(pBufferD3D11);
-                       });
+    CreateBufferImpl(ppBuffer, BuffDesc, InitialState, pd3d11Buffer);
 }
 
 void RenderDeviceD3D11Impl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
 {
-    CreateDeviceObject("buffer", BuffDesc, ppBuffer,
-                       [&]() //
-                       {
-                           BufferD3D11Impl* pBufferD3D11{NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)(m_BuffViewObjAllocator, this, BuffDesc, pBuffData)};
-                           pBufferD3D11->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
-                           pBufferD3D11->CreateDefaultViews();
-                           OnCreateDeviceObject(pBufferD3D11);
-                       });
+    CreateBufferImpl(ppBuffer, BuffDesc, pBuffData);
 }
 
 void RenderDeviceD3D11Impl::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
-    CreateDeviceObject("shader", ShaderCI.Desc, ppShader,
-                       [&]() //
-                       {
-                           ShaderD3D11Impl* pShaderD3D11{NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderD3D11Impl instance", ShaderD3D11Impl)(this, ShaderCI)};
-                           pShaderD3D11->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
-
-                           OnCreateDeviceObject(pShaderD3D11);
-                       });
+    CreateShaderImpl(ppShader, ShaderCI);
 }
 
 void RenderDeviceD3D11Impl::CreateTexture1DFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
@@ -304,7 +274,6 @@ void RenderDeviceD3D11Impl::CreateTexture1DFromD3DResource(ID3D11Texture1D* pd3d
                            TextureBaseD3D11* pTextureD3D11{NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_D3D11 instance", Texture1D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture)};
                            pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
                            pTextureD3D11->CreateDefaultViews();
-                           OnCreateDeviceObject(pTextureD3D11);
                        });
 }
 
@@ -321,7 +290,6 @@ void RenderDeviceD3D11Impl::CreateTexture2DFromD3DResource(ID3D11Texture2D* pd3d
                            TextureBaseD3D11* pTextureD3D11{NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_D3D11 instance", Texture2D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture)};
                            pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
                            pTextureD3D11->CreateDefaultViews();
-                           OnCreateDeviceObject(pTextureD3D11);
                        });
 }
 
@@ -338,7 +306,6 @@ void RenderDeviceD3D11Impl::CreateTexture3DFromD3DResource(ID3D11Texture3D* pd3d
                            TextureBaseD3D11* pTextureD3D11{NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_D3D11 instance", Texture3D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture)};
                            pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
                            pTextureD3D11->CreateDefaultViews();
-                           OnCreateDeviceObject(pTextureD3D11);
                        });
 }
 
@@ -371,47 +338,22 @@ void RenderDeviceD3D11Impl::CreateTexture(const TextureDesc& TexDesc, const Text
                            }
                            pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
                            pTextureD3D11->CreateDefaultViews();
-                           OnCreateDeviceObject(pTextureD3D11);
                        });
 }
 
 void RenderDeviceD3D11Impl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
 {
-    CreateDeviceObject("sampler", SamplerDesc, ppSampler,
-                       [&]() //
-                       {
-                           m_SamplersRegistry.Find(SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler));
-                           if (*ppSampler == nullptr)
-                           {
-                               SamplerD3D11Impl* pSamplerD3D11{NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerD3D11Impl instance", SamplerD3D11Impl)(this, SamplerDesc)};
-                               pSamplerD3D11->QueryInterface(IID_Sampler, reinterpret_cast<IObject**>(ppSampler));
-                               OnCreateDeviceObject(pSamplerD3D11);
-                               m_SamplersRegistry.Add(SamplerDesc, *ppSampler);
-                           }
-                       });
+    CreateSamplerImpl(ppSampler, SamplerDesc);
 }
-
-template <typename PSOCreateInfoType>
-void RenderDeviceD3D11Impl::CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState)
-{
-    CreateDeviceObject("Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
-                       [&]() //
-                       {
-                           PipelineStateD3D11Impl* pPipelineStateD3D11{NEW_RC_OBJ(m_PSOAllocator, "PipelineStateD3D11Impl instance", PipelineStateD3D11Impl)(this, PSOCreateInfo)};
-                           pPipelineStateD3D11->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
-                           OnCreateDeviceObject(pPipelineStateD3D11);
-                       });
-}
-
 
 void RenderDeviceD3D11Impl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo);
 }
 
 void RenderDeviceD3D11Impl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+    CreatePipelineStateImpl(ppPipelineState, PSOCreateInfo);
 }
 
 void RenderDeviceD3D11Impl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
@@ -422,46 +364,22 @@ void RenderDeviceD3D11Impl::CreateRayTracingPipelineState(const RayTracingPipeli
 
 void RenderDeviceD3D11Impl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
 {
-    CreateDeviceObject("Fence", Desc, ppFence,
-                       [&]() //
-                       {
-                           FenceD3D11Impl* pFenceD3D11{NEW_RC_OBJ(m_FenceAllocator, "FenceD3D11Impl instance", FenceD3D11Impl)(this, Desc)};
-                           pFenceD3D11->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
-                           OnCreateDeviceObject(pFenceD3D11);
-                       });
+    CreateFenceImpl(ppFence, Desc);
 }
 
 void RenderDeviceD3D11Impl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
 {
-    CreateDeviceObject("Query", Desc, ppQuery,
-                       [&]() //
-                       {
-                           QueryD3D11Impl* pQueryD3D11{NEW_RC_OBJ(m_QueryAllocator, "QueryD3D11Impl instance", QueryD3D11Impl)(this, Desc)};
-                           pQueryD3D11->QueryInterface(IID_Query, reinterpret_cast<IObject**>(ppQuery));
-                           OnCreateDeviceObject(pQueryD3D11);
-                       });
+    CreateQueryImpl(ppQuery, Desc);
 }
 
 void RenderDeviceD3D11Impl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
 {
-    CreateDeviceObject("RenderPass", Desc, ppRenderPass,
-                       [&]() //
-                       {
-                           RenderPassD3D11Impl* pRenderPassD3D11{NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassD3D11Impl instance", RenderPassD3D11Impl)(this, Desc)};
-                           pRenderPassD3D11->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
-                           OnCreateDeviceObject(pRenderPassD3D11);
-                       });
+    CreateRenderPassImpl(ppRenderPass, Desc);
 }
 
 void RenderDeviceD3D11Impl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
 {
-    CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
-                       [&]() //
-                       {
-                           FramebufferD3D11Impl* pFramebufferD3D11{NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferD3D11Impl instance", FramebufferD3D11Impl)(this, Desc)};
-                           pFramebufferD3D11->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
-                           OnCreateDeviceObject(pFramebufferD3D11);
-                       });
+    CreateFramebufferImpl(ppFramebuffer, Desc);
 }
 
 void RenderDeviceD3D11Impl::CreateBLAS(const BottomLevelASDesc& Desc,
@@ -483,6 +401,19 @@ void RenderDeviceD3D11Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
 {
     UNSUPPORTED("CreateSBT is not supported in DirectX 11");
     *ppSBT = nullptr;
+}
+
+void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                            IPipelineResourceSignature**         ppSignature)
+{
+    CreatePipelineResourceSignature(Desc, ppSignature, false);
+}
+
+void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
+                                                            IPipelineResourceSignature**         ppSignature,
+                                                            bool                                 IsDeviceInternal)
+{
+    CreatePipelineResourceSignatureImpl(ppSignature, Desc, IsDeviceInternal);
 }
 
 void RenderDeviceD3D11Impl::IdleGPU()

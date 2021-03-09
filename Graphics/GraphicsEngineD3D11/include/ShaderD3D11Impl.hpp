@@ -34,7 +34,6 @@
 #include "RenderDeviceD3D11.h"
 #include "ShaderBase.hpp"
 #include "ShaderD3DBase.hpp"
-#include "ShaderResourceLayoutD3D11.hpp"
 #include "ShaderResourceCacheD3D11.hpp"
 #include "EngineD3D11Defines.h"
 #include "ShaderResourcesD3D11.hpp"
@@ -47,10 +46,10 @@ class FixedBlockMemoryAllocator;
 class ResourceMapping;
 
 /// Shader implementation in Direct3D11 backend.
-class ShaderD3D11Impl final : public ShaderBase<IShaderD3D11, RenderDeviceD3D11Impl>, public ShaderD3DBase
+class ShaderD3D11Impl final : public ShaderBase<EngineD3D11ImplTraits>, public ShaderD3DBase
 {
 public:
-    using TShaderBase = ShaderBase<IShaderD3D11, RenderDeviceD3D11Impl>;
+    using TShaderBase = ShaderBase<EngineD3D11ImplTraits>;
 
     ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                     class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
@@ -85,7 +84,7 @@ public:
 
     ID3DBlob* GetBytecode() { return m_pShaderByteCode; }
 
-    const std::shared_ptr<const ShaderResourcesD3D11>& GetD3D11Resources() const { return m_pShaderResources; }
+    const std::shared_ptr<const ShaderResourcesD3D11>& GetShaderResources() const { return m_pShaderResources; }
 
 private:
     /// D3D11 shader

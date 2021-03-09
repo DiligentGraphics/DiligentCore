@@ -41,15 +41,15 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 
 /// Buffer view implementation in Direct3D11 backend.
-class BufferViewD3D11Impl final : public BufferViewBase<IBufferViewD3D11, RenderDeviceD3D11Impl>
+class BufferViewD3D11Impl final : public BufferViewBase<EngineD3D11ImplTraits>
 {
 public:
-    using TBufferViewBase = BufferViewBase<IBufferViewD3D11, RenderDeviceD3D11Impl>;
+    using TBufferViewBase = BufferViewBase<EngineD3D11ImplTraits>;
 
     BufferViewD3D11Impl(IReferenceCounters*    pRefCounters,
                         RenderDeviceD3D11Impl* pDevice,
                         const BufferViewDesc&  ViewDesc,
-                        IBuffer*               pBuffer,
+                        BufferD3D11Impl*       pBuffer,
                         ID3D11View*            pD3D11View,
                         bool                   bIsDefaultView);
 

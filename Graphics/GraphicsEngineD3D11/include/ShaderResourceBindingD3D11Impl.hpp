@@ -35,87 +35,25 @@
 #include "ShaderResourceBindingD3D11.h"
 #include "RenderDeviceD3D11.h"
 #include "ShaderResourceBindingBase.hpp"
+
+// ShaderResourceCacheD3D11 and ShaderVariableManagerD3D11 are required by ShaderResourceBindingBase
 #include "ShaderResourceCacheD3D11.hpp"
-#include "ShaderResourceLayoutD3D11.hpp"
-#include "STDAllocator.hpp"
+#include "ShaderVariableManagerD3D11.hpp"
 
 namespace Diligent
 {
 
-class PipelineStateD3D11Impl;
-
 /// Implementation of shader resource binding object in Direct3D11 backend.
-class ShaderResourceBindingD3D11Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D11, PipelineStateD3D11Impl>
+class ShaderResourceBindingD3D11Impl final : public ShaderResourceBindingBase<EngineD3D11ImplTraits>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D11, PipelineStateD3D11Impl>;
+    using TBase = ShaderResourceBindingBase<EngineD3D11ImplTraits>;
 
-    ShaderResourceBindingD3D11Impl(IReferenceCounters*     pRefCounters,
-                                   PipelineStateD3D11Impl* pPSO,
-                                   bool                    IsInternal);
+    ShaderResourceBindingD3D11Impl(IReferenceCounters*                 pRefCounters,
+                                   PipelineResourceSignatureD3D11Impl* pPRS);
     ~ShaderResourceBindingD3D11Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
-
-    /// Implementation of IShaderResourceBinding::BindResources() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE BindResources(Uint32            ShaderFlags,
-                                                  IResourceMapping* pResMapping,
-                                                  Uint32            Flags) override final;
-
-    /// Implementation of IShaderResourceBinding::GetVariableByName() in Direct3D11 backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
-
-    /// Implementation of IShaderResourceBinding::GetVariableCount() in Direct3D11 backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetVariableCount(SHADER_TYPE ShaderType) const override final;
-
-    /// Implementation of IShaderResourceBinding::GetVariableByIndex() in Direct3D11 backend.
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
-
-    /// Implementation of IShaderResourceBinding::InitializeStaticResources() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override final;
-
-    ShaderResourceCacheD3D11& GetResourceCache(Uint32 Ind)
-    {
-        VERIFY_EXPR(Ind < m_NumActiveShaders);
-        return m_pBoundResourceCaches[Ind];
-    }
-
-    ShaderResourceLayoutD3D11& GetResourceLayout(Uint32 Ind)
-    {
-        VERIFY_EXPR(Ind < m_NumActiveShaders);
-        return m_pResourceLayouts[Ind];
-    }
-
-    inline bool IsStaticResourcesBound() const { return m_bIsStaticResourcesBound; }
-
-    Uint32 GetNumActiveShaders() const
-    {
-        return Uint32{m_NumActiveShaders};
-    }
-
-    SHADER_TYPE GetActiveShaderType(Uint32 s) const
-    {
-        VERIFY_EXPR(s < m_NumActiveShaders);
-        return m_ShaderTypes[s];
-    }
-
-private:
-    void Destruct();
-
-    // The caches are indexed by the shader order in the PSO, not shader index
-    ShaderResourceCacheD3D11*  m_pBoundResourceCaches = nullptr;
-    ShaderResourceLayoutD3D11* m_pResourceLayouts     = nullptr;
-
-    std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_ShaderTypes = {};
-
-    // Resource layout index in m_pResourceLayouts array for every shader stage,
-    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
-    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
-
-    Uint8 m_NumActiveShaders = 0;
-
-    bool m_bIsStaticResourcesBound = false;
 };
 
 } // namespace Diligent

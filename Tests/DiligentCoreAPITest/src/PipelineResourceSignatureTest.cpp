@@ -598,8 +598,9 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
             {SHADER_TYPE_VERTEX, "g_Sampler", SamplerDesc{}},
             {SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{}} //
         };
-    PRSDesc.ImmutableSamplers    = ImmutableSamplers;
-    PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+    PRSDesc.ImmutableSamplers          = ImmutableSamplers;
+    PRSDesc.NumImmutableSamplers       = _countof(ImmutableSamplers);
+    PRSDesc.UseCombinedTextureSamplers = false;
 
     RefCntAutoPtr<IPipelineResourceSignature> pPRS;
     pDevice->CreatePipelineResourceSignature(PRSDesc, &pPRS);

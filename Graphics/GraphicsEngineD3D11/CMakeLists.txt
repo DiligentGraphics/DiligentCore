@@ -16,6 +16,8 @@ set(INCLUDE
 	include/FenceD3D11Impl.hpp
     include/FramebufferD3D11Impl.hpp
     include/PipelineStateD3D11Impl.hpp
+    include/PipelineResourceAttribsD3D11.hpp
+    include/PipelineResourceSignatureD3D11Impl.hpp
     include/QueryD3D11Impl.hpp
     include/RenderDeviceD3D11Impl.hpp
     include/RenderPassD3D11Impl.hpp
@@ -23,7 +25,7 @@ set(INCLUDE
     include/ShaderD3D11Impl.hpp
     include/ShaderResourceBindingD3D11Impl.hpp
     include/ShaderResourceCacheD3D11.hpp
-    include/ShaderResourceLayoutD3D11.hpp
+    include/ShaderVariableManagerD3D11.hpp
     include/ShaderResourcesD3D11.hpp
     include/SwapChainD3D11Impl.hpp
     include/targetver.h
@@ -63,6 +65,7 @@ set(SRC
     src/FramebufferD3D11Impl.cpp
     src/GUIDDef.cpp
     src/PipelineStateD3D11Impl.cpp
+    src/PipelineResourceSignatureD3D11Impl.cpp
     src/QueryD3D11Impl.cpp
     src/RenderDeviceD3D11Impl.cpp
     src/RenderPassD3D11Impl.cpp
@@ -70,7 +73,7 @@ set(SRC
     src/ShaderD3D11Impl.cpp
     src/ShaderResourceBindingD3D11Impl.cpp
     src/ShaderResourceCacheD3D11.cpp
-    src/ShaderResourceLayoutD3D11.cpp
+    src/ShaderVariableManagerD3D11.cpp
     src/ShaderResourcesD3D11.cpp
     src/SwapChainD3D11Impl.cpp
     src/Texture1D_D3D11.cpp
