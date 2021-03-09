@@ -453,7 +453,7 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
             const auto& ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
 
             // Shader reflection does not contain read-only flag, so image and storage buffer can be UAV or SRV.
-            // Texture SRV is same as input attachment.
+            // Texture SRV is the same as input attachment.
             const auto Type = (AltResourceType == ResDesc.ResourceType ? AltResourceType : Attribs.ResourceType);
 
             ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, Attribs.ArraySize, ShaderName, pSignature->GetDesc().Name);

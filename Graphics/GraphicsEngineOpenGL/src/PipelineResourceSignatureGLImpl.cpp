@@ -614,8 +614,8 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
         case BINDING_RANGE_IMAGE:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
-                const bool IsImgView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-                if (!ResourceCache.IsImageBound(ResAttr.CacheOffset + ArrInd, IsImgView))
+                const bool IsTexView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+                if (!ResourceCache.IsImageBound(ResAttr.CacheOffset + ArrInd, IsTexView))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(GLAttribs, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");

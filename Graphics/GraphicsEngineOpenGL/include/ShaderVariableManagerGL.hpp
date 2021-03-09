@@ -289,10 +289,6 @@ public:
     // while Layout is alive
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
-#ifdef DILIGENT_DEVELOPMENT
-    bool dvpVerifyBindings(const ShaderResourceCacheGL& ResourceCache) const;
-#endif
-
     IShaderResourceVariable* GetVariable(const Char* Name) const;
     IShaderResourceVariable* GetVariable(Uint32 Index) const;
 
