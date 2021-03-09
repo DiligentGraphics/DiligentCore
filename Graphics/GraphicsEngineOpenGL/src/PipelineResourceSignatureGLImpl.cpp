@@ -107,7 +107,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
         m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(m_Desc.NumResources);
         m_ImmutableSamplers = MemPool.ConstructArray<SamplerPtr>(m_Desc.NumImmutableSamplers);
 
-        CreateLayouts();
+        CreateLayout();
 
         const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
@@ -148,9 +148,9 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
     }
 }
 
-void PipelineResourceSignatureGLImpl::CreateLayouts()
+void PipelineResourceSignatureGLImpl::CreateLayout()
 {
-    TBindings StaticCounter = {};
+    TBindings StaticResCounter = {};
 
     for (Uint32 s = 0; s < m_Desc.NumImmutableSamplers; ++s)
         GetDevice()->CreateSampler(m_Desc.ImmutableSamplers[s].Desc, &m_ImmutableSamplers[s]);
@@ -162,12 +162,13 @@ void PipelineResourceSignatureGLImpl::CreateLayouts()
 
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
         {
-            Int32 ImtblSamplerIdx = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
+            const auto ImtblSamplerIdx = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
+            // Create sampler resource without cache space
             new (m_pResourceAttribs + i) ResourceAttribs //
                 {
                     ResourceAttribs::InvalidCacheOffset,
-                    ImtblSamplerIdx < 0 ? ResourceAttribs::InvalidSamplerInd : static_cast<Uint32>(ImtblSamplerIdx),
-                    ImtblSamplerIdx >= 0 //
+                    ImtblSamplerIdx == InvalidImmutableSamplerIndex ? ResourceAttribs::InvalidSamplerInd : ImtblSamplerIdx,
+                    ImtblSamplerIdx != InvalidImmutableSamplerIndex //
                 };
         }
         else
@@ -175,72 +176,36 @@ void PipelineResourceSignatureGLImpl::CreateLayouts()
             const auto Range = PipelineResourceToBindingRange(ResDesc);
             VERIFY_EXPR(Range != BINDING_RANGE_UNKNOWN);
 
-            Uint32& CacheOffset     = m_BindingCount[Range];
-            Uint32  SamplerIdx      = ResourceAttribs::InvalidSamplerInd;
-            Int32   ImtblSamplerIdx = -1;
-
+            auto ImtblSamplerIdx = InvalidImmutableSamplerIndex;
+            auto SamplerIdx      = ResourceAttribs::InvalidSamplerInd;
             if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
             {
-                ImtblSamplerIdx = FindImmutableSampler(ResDesc.ShaderStages, ResDesc.Name);
-                if (ImtblSamplerIdx >= 0)
-                    SamplerIdx = static_cast<Uint32>(ImtblSamplerIdx);
+                // Do not use combined sampler suffix - in OpenGL immutable samplers should be defined defined for textures directly
+                ImtblSamplerIdx = Diligent::FindImmutableSampler(m_Desc.ImmutableSamplers, m_Desc.NumImmutableSamplers,
+                                                                 ResDesc.ShaderStages, ResDesc.Name, nullptr);
+                if (ImtblSamplerIdx != InvalidImmutableSamplerIndex)
+                    SamplerIdx = ImtblSamplerIdx;
                 else
                     SamplerIdx = FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd);
             }
 
+            Uint32& CacheOffset = m_BindingCount[Range];
             new (m_pResourceAttribs + i) ResourceAttribs //
                 {
                     CacheOffset,
                     SamplerIdx,
-                    ImtblSamplerIdx >= 0 // _ImtblSamplerAssigned
+                    ImtblSamplerIdx != InvalidImmutableSamplerIndex // _ImtblSamplerAssigned
                 };
-
             CacheOffset += ResDesc.ArraySize;
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                StaticCounter[Range] += ResDesc.ArraySize;
+                StaticResCounter[Range] += ResDesc.ArraySize;
         }
     }
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Initialize(StaticCounter, GetRawAllocator());
-        // Set immutable samplers for static resources.
-        const auto ResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-
-        for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
-        {
-            const auto& ResDesc = GetResourceDesc(r);
-            const auto& ResAttr = GetResourceAttribs(r);
-
-            if (ResDesc.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV || !ResAttr.IsSamplerAssigned())
-                continue;
-
-            ISampler* pSampler = nullptr;
-            if (ResAttr.IsImmutableSamplerAssigned())
-            {
-                VERIFY_EXPR(ResAttr.SamplerInd < GetImmutableSamplerCount());
-
-                pSampler = m_ImmutableSamplers[ResAttr.SamplerInd].RawPtr();
-            }
-            else
-            {
-                const auto& SampAttr = GetResourceAttribs(ResAttr.SamplerInd);
-                if (!SampAttr.IsImmutableSamplerAssigned())
-                    continue;
-
-                pSampler = m_ImmutableSamplers[SampAttr.SamplerInd].RawPtr();
-            }
-
-            if (pSampler != nullptr)
-            {
-                for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
-                    m_pStaticResCache->SetSampler(ResAttr.CacheOffset + ArrInd, pSampler);
-            }
-        }
-#ifdef DILIGENT_DEVELOPMENT
-        m_pStaticResCache->SetStaticResourcesInitialized();
-#endif
+        m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator());
     }
 }
 
@@ -419,13 +384,13 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
 
     // SrcResourceCache contains only static resources.
     // DstResourceCache contains static, mutable and dynamic resources.
-    const auto& SrcResourceCache = *m_pStaticResCache;
-    const auto  ResIdxRange      = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    const auto& SrcResourceCache  = *m_pStaticResCache;
+    const auto  StaticResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
     VERIFY_EXPR(SrcResourceCache.GetContentType() == ResourceCacheContentType::Signature);
     VERIFY_EXPR(DstResourceCache.GetContentType() == ResourceCacheContentType::SRB);
 
-    for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
+    for (Uint32 r = StaticResIdxRange.first; r < StaticResIdxRange.second; ++r)
     {
         const auto& ResDesc = GetResourceDesc(r);
         const auto& ResAttr = GetResourceAttribs(r);
@@ -464,7 +429,27 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
                     if (!SrcCachedRes.pView)
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-                    DstResourceCache.CopyTexture(ResAttr.CacheOffset + ArrInd, SrcCachedRes);
+                    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
+                        ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
+                    {
+                        const auto HasImmutableSampler = GetImmutableSamplerIdx(ResAttr) != InvalidImmutableSamplerIndex;
+
+                        auto* const pTexViewGl = SrcCachedRes.pView.RawPtr<TextureViewGLImpl>();
+                        DstResourceCache.SetTexture(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<TextureViewGLImpl>{pTexViewGl}, !HasImmutableSampler);
+                        if (HasImmutableSampler)
+                        {
+                            VERIFY(DstResourceCache.GetConstTexture(ResAttr.CacheOffset + ArrInd).pSampler, "Immutable sampler is not initialized in the cache");
+                        }
+                    }
+                    else if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
+                    {
+                        auto* const pViewGl = SrcCachedRes.pView.RawPtr<BufferViewGLImpl>();
+                        DstResourceCache.SetTexelBuffer(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<BufferViewGLImpl>{pViewGl});
+                    }
+                    else
+                    {
+                        UNEXPECTED("Unexpected resource type");
+                    }
                 }
                 break;
             case BINDING_RANGE_IMAGE:
@@ -474,47 +459,25 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
                     if (!SrcCachedRes.pView)
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-                    DstResourceCache.CopyImage(ResAttr.CacheOffset + ArrInd, SrcCachedRes);
+                    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV)
+                    {
+                        auto* const pTexViewGl = SrcCachedRes.pView.RawPtr<TextureViewGLImpl>();
+                        DstResourceCache.SetTexImage(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<TextureViewGLImpl>{pTexViewGl});
+                    }
+                    else if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV ||
+                             ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
+                    {
+                        auto* const pViewGl = SrcCachedRes.pView.RawPtr<BufferViewGLImpl>();
+                        DstResourceCache.SetBufImage(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<BufferViewGLImpl>{pViewGl});
+                    }
+                    else
+                    {
+                        UNEXPECTED("Unexpected resource type");
+                    }
                 }
                 break;
             default:
                 UNEXPECTED("Unsupported shader resource range type.");
-        }
-    }
-
-    // Copy immutable samplers.
-    for (Uint32 r = 0; r < m_Desc.NumResources; ++r)
-    {
-        const auto& ResDesc = GetResourceDesc(r);
-        const auto& ResAttr = GetResourceAttribs(r);
-
-        if (ResDesc.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
-            ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-            continue;
-
-        if (!ResAttr.IsSamplerAssigned())
-            continue;
-
-        ISampler* pSampler = nullptr;
-        if (ResAttr.IsImmutableSamplerAssigned())
-        {
-            VERIFY_EXPR(ResAttr.SamplerInd < GetImmutableSamplerCount());
-
-            pSampler = m_ImmutableSamplers[ResAttr.SamplerInd].RawPtr();
-        }
-        else
-        {
-            const auto& SampAttr = GetResourceAttribs(ResAttr.SamplerInd);
-            if (!SampAttr.IsImmutableSamplerAssigned())
-                continue;
-
-            pSampler = m_ImmutableSamplers[SampAttr.SamplerInd].RawPtr();
-        }
-
-        if (pSampler != nullptr)
-        {
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
-                DstResourceCache.SetSampler(ResAttr.CacheOffset + ArrInd, pSampler);
         }
     }
 
@@ -526,6 +489,26 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
 void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache)
 {
     ResourceCache.Initialize(m_BindingCount, m_SRBMemAllocator.GetResourceCacheDataAllocator(0));
+
+    // Initialize immutable samplers
+    for (Uint32 r = 0; r < m_Desc.NumResources; ++r)
+    {
+        const auto& ResDesc = GetResourceDesc(r);
+        const auto& ResAttr = GetResourceAttribs(r);
+
+        if (ResDesc.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+            continue;
+
+        const auto ImtblSamplerIdx = GetImmutableSamplerIdx(ResAttr);
+        if (ImtblSamplerIdx != InvalidImmutableSamplerIndex)
+        {
+            ISampler* pSampler = m_ImmutableSamplers[ImtblSamplerIdx];
+            VERIFY(pSampler != nullptr, "Immutable sampler is not initialized - this is a bug");
+
+            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                ResourceCache.SetSampler(ResAttr.CacheOffset + ArrInd, pSampler);
+        }
+    }
 }
 
 bool PipelineResourceSignatureGLImpl::IsCompatibleWith(const PipelineResourceSignatureGLImpl& Other) const
@@ -618,6 +601,13 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
                     ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, Tex.pView.RawPtr<ITextureView>(), ResourceDim, IsMultisample);
                 else
                     ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, Tex.pView.RawPtr<IBufferView>(), ResourceDim, IsMultisample);
+
+                const auto ImmutableSamplerIdx = GetImmutableSamplerIdx(ResAttr);
+                if (ImmutableSamplerIdx != InvalidImmutableSamplerIndex)
+                {
+                    VERIFY(Tex.pSampler != nullptr, "Immutable sampler is not initialized in the cache - this is a bug");
+                    VERIFY(Tex.pSampler == m_ImmutableSamplers[ImmutableSamplerIdx], "Immutable sampler initialized in the cache is not valid");
+                }
             }
             break;
 

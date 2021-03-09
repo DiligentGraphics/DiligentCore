@@ -157,16 +157,6 @@ public:
         GetSSBO(CacheOffset).pBufferView = std::move(pBuffView);
     }
 
-    void CopyTexture(Uint32 Binding, const CachedResourceView& SrcSam)
-    {
-        GetTexture(Binding) = SrcSam;
-    }
-
-    void CopyImage(Uint32 CacheOffset, const CachedResourceView& SrcImg)
-    {
-        GetImage(CacheOffset) = SrcImg;
-    }
-
     bool IsUBBound(Uint32 CacheOffset) const
     {
         if (CacheOffset >= GetUBCount())

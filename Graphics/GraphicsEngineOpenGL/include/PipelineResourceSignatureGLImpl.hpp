@@ -131,8 +131,24 @@ public:
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheGL& ResourceCache) const;
 
+    Uint32 GetImmutableSamplerIdx(const ResourceAttribs& Res) const
+    {
+        auto ImtblSamIdx = InvalidImmutableSamplerIndex;
+        if (Res.IsImmutableSamplerAssigned())
+            ImtblSamIdx = Res.SamplerInd;
+        else if (Res.IsSamplerAssigned())
+        {
+            VERIFY_EXPR(GetResourceDesc(Res.SamplerInd).ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+            const auto& SamAttribs = GetResourceAttribs(Res.SamplerInd);
+            if (SamAttribs.IsImmutableSamplerAssigned())
+                ImtblSamIdx = SamAttribs.SamplerInd;
+        }
+        VERIFY_EXPR(ImtblSamIdx == InvalidImmutableSamplerIndex || ImtblSamIdx < GetImmutableSamplerCount());
+        return ImtblSamIdx;
+    }
+
 private:
-    void CreateLayouts();
+    void CreateLayout();
 
     void Destruct();
 

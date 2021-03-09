@@ -269,24 +269,26 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView
     {
         // We cannot use ValidatedCast<> here as the resource retrieved from the
         // resource mapping can be of wrong type
-        RefCntAutoPtr<TextureViewGLImpl> pViewGL(pView, IID_TextureViewGL);
+        RefCntAutoPtr<TextureViewGLImpl> pViewGL{pView, IID_TextureViewGL};
+
+        const auto ImmutableSamplerAssigned = m_ParentManager.m_pSignature->GetImmutableSamplerIdx(Attr) != InvalidImmutableSamplerIndex;
 #ifdef DILIGENT_DEVELOPMENT
         {
             auto& CachedTexSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
             VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
                                       pView, pViewGL.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
                                       RESOURCE_DIM_UNDEFINED, false, CachedTexSampler.pView.RawPtr());
-            if (Attr.IsImmutableSamplerAssigned() && ResourceCache.StaticResourcesInitialized())
+            if (ImmutableSamplerAssigned && ResourceCache.GetContentType() == ResourceCacheContentType::SRB)
             {
                 VERIFY(CachedTexSampler.pSampler != nullptr, "Immutable samplers must be initialized by PipelineResourceSignatureGLImpl::InitializeSRBResourceCache!");
             }
             if (Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
             {
-                DEV_CHECK_ERR(!Attr.IsSamplerAssigned(), "Input attachment must not have assigned sampler.");
+                DEV_CHECK_ERR(!ImmutableSamplerAssigned, "Input attachment must not have assigned sampler.");
             }
         }
 #endif
-        ResourceCache.SetTexture(Attr.CacheOffset + ArrayIndex, std::move(pViewGL), !Attr.IsImmutableSamplerAssigned());
+        ResourceCache.SetTexture(Attr.CacheOffset + ArrayIndex, std::move(pViewGL), !ImmutableSamplerAssigned);
     }
     else if (Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
     {
@@ -611,6 +613,7 @@ const ShaderVariableManagerGL::ResourceAttribs& ShaderVariableManagerGL::GetAttr
 
 
 #ifdef DILIGENT_DEVELOPMENT
+// TODO: remove
 bool ShaderVariableManagerGL::dvpVerifyBindings(const ShaderResourceCacheGL& ResourceCache) const
 {
 #    define LOG_MISSING_BINDING(VarType, BindInfo, ArrIndex) LOG_ERROR_MESSAGE("No resource is bound to ", VarType, " variable '", GetShaderResourcePrintName(Desc, ArrIndex), "'")
