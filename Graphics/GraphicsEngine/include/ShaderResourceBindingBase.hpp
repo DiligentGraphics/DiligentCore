@@ -75,68 +75,66 @@ public:
         m_pPRS{pPRS},
         m_ShaderResourceCache{ResourceCacheContentType::SRB}
     {
-        m_ActiveShaderStageIndex.fill(-1);
-
-        const auto NumShaders   = GetNumShaders();
-        const auto PipelineType = GetPipelineType();
-        for (Uint32 s = 0; s < NumShaders; ++s)
+        try
         {
-            const auto ShaderType = pPRS->GetActiveShaderStageType(s);
-            const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+            m_ActiveShaderStageIndex.fill(-1);
 
-            m_ActiveShaderStageIndex[ShaderInd] = static_cast<Int8>(s);
+            const auto NumShaders   = GetNumShaders();
+            const auto PipelineType = GetPipelineType();
+            for (Uint32 s = 0; s < NumShaders; ++s)
+            {
+                const auto ShaderType = pPRS->GetActiveShaderStageType(s);
+                const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+
+                m_ActiveShaderStageIndex[ShaderInd] = static_cast<Int8>(s);
+            }
+
+
+            FixedLinearAllocator MemPool{GetRawAllocator()};
+            MemPool.AddSpace<ShaderVariableManagerImplType>(NumShaders);
+            MemPool.Reserve();
+            static_assert(std::is_nothrow_constructible<ShaderVariableManagerImplType, decltype(*this), ShaderResourceCacheImplType&>::value,
+                          "Constructor of ShaderVariableManagerImplType must be noexcept, so we can safely construct all managers");
+            m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerImplType>(NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
+
+            // The memory is now owned by ShaderResourceBindingBase and will be freed by Destruct().
+            auto* Ptr = MemPool.ReleaseOwnership();
+            VERIFY_EXPR(Ptr == m_pShaderVarMgrs);
+            (void)Ptr;
+
+            // It is important to construct all objects before initializing them because if an exception is thrown,
+            // Destruct() will call destructors for all non-null objects.
+
+            pPRS->InitSRBResourceCache(m_ShaderResourceCache);
+
+            auto& SRBMemAllocator = pPRS->GetSRBMemoryAllocator();
+            for (Uint32 s = 0; s < NumShaders; ++s)
+            {
+                const auto ShaderType = pPRS->GetActiveShaderStageType(s);
+                const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
+                const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
+                VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
+
+                auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+
+                // Initialize vars manager to reference mutable and dynamic variables
+                // Note that the cache has space for all variable types
+                const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+                m_pShaderVarMgrs[MgrInd].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes), ShaderType);
+            }
         }
-
-
-        FixedLinearAllocator MemPool{GetRawAllocator()};
-        MemPool.AddSpace<ShaderVariableManagerImplType>(NumShaders);
-        MemPool.Reserve();
-        static_assert(std::is_nothrow_constructible<ShaderVariableManagerImplType, decltype(*this), ShaderResourceCacheImplType&>::value,
-                      "Constructor of ShaderVariableManagerImplType must be noexcept, so we can safely construct all managers");
-        m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerImplType>(NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
-
-        // The memory is now owned by ShaderResourceBindingBase and will be freed by destructor.
-        auto* Ptr = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_pShaderVarMgrs);
-        (void)Ptr;
-
-        // It is important to construct all objects before initializing them because if an exception is thrown,
-        // destructors will be called for all objects
-
-        pPRS->InitSRBResourceCache(m_ShaderResourceCache);
-
-        auto& SRBMemAllocator = pPRS->GetSRBMemoryAllocator();
-        for (Uint32 s = 0; s < NumShaders; ++s)
+        catch (...)
         {
-            const auto ShaderType = pPRS->GetActiveShaderStageType(s);
-            const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
-            const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
-            VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
-
-            auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
-
-            // Initialize vars manager to reference mutable and dynamic variables
-            // Note that the cache has space for all variable types
-            const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-            m_pShaderVarMgrs[MgrInd].Initialize(*pPRS, VarDataAllocator, VarTypes, _countof(VarTypes), ShaderType);
+            // We must release objects manually as destructor will not be called.
+            Destruct();
+            throw;
         }
     }
 
     ~ShaderResourceBindingBase()
     {
-        if (m_pShaderVarMgrs != nullptr)
-        {
-            auto& SRBMemAllocator = GetSignature()->GetSRBMemoryAllocator();
-            for (Uint32 s = 0; s < GetNumShaders(); ++s)
-            {
-                auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
-                m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
-                m_pShaderVarMgrs[s].~ShaderVariableManagerImplType();
-            }
-            GetRawAllocator().Free(m_pShaderVarMgrs);
-        }
+        Destruct();
     }
-
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBinding, TObjectBase)
 
@@ -260,6 +258,22 @@ public:
 
     ShaderResourceCacheImplType&       GetResourceCache() { return m_ShaderResourceCache; }
     const ShaderResourceCacheImplType& GetResourceCache() const { return m_ShaderResourceCache; }
+
+private:
+    void Destruct()
+    {
+        if (m_pShaderVarMgrs != nullptr)
+        {
+            auto& SRBMemAllocator = GetSignature()->GetSRBMemoryAllocator();
+            for (Uint32 s = 0; s < GetNumShaders(); ++s)
+            {
+                auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+                m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
+                m_pShaderVarMgrs[s].~ShaderVariableManagerImplType();
+            }
+            GetRawAllocator().Free(m_pShaderVarMgrs);
+        }
+    }
 
 protected:
     /// Strong reference to pipeline resource signature. We must use strong reference, because
