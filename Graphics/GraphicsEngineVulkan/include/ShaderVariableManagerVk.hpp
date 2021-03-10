@@ -93,6 +93,14 @@ public:
     ShaderVariableVkImpl* GetVariable(const Char* Name) const;
     ShaderVariableVkImpl* GetVariable(Uint32 Index) const;
 
+    // Binds object pObj to resource with index ResIndex and array index ArrayIndex.
+    void BindResource(IDeviceObject* pObj,
+                      Uint32         ArrayIndex,
+                      Uint32         ResIndex);
+
+    bool IsBound(Uint32 ArrayIndex,
+                 Uint32 ResIndex) const;
+
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const;
 
     static size_t GetRequiredMemorySize(const PipelineResourceSignatureVkImpl& Signature,
@@ -183,13 +191,20 @@ public:
         return m_ParentManager.GetVariableIndex(*this);
     }
 
-    // This method can't be implemented in the header because it depends on PipelineResourceSignatureVkImpl
-    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final;
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+    {
+        return m_ParentManager.IsBound(ArrayIndex, m_ResIndex);
+    }
 
-    const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
+    const PipelineResourceDesc& GetDesc() const
+    {
+        return m_ParentManager.GetResourceDesc(m_ResIndex);
+    }
 
-    // This method can't be implemented in the header because it depends on PipelineResourceSignatureVkImpl
-    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const;
+    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+    {
+        return m_ParentManager.BindResource(pObj, ArrayIndex, m_ResIndex);
+    }
 
 private:
     using ResourceAttribs = PipelineResourceAttribsVk;

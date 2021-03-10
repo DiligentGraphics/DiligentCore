@@ -100,12 +100,12 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
     }
 }
 
-void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type)
+void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler)
 {
     auto& DescrSet = GetDescriptorSet(Set);
     for (Uint32 res = 0; res < ArraySize; ++res)
     {
-        new (&DescrSet.GetResource(Offset + res)) Resource{Type};
+        new (&DescrSet.GetResource(Offset + res)) Resource{Type, HasImmutableSampler};
 #ifdef DILIGENT_DEBUG
         m_DbgInitializedResources[Set][Offset + res] = true;
 #endif
@@ -172,6 +172,140 @@ ShaderResourceCacheVk::~ShaderResourceCacheVk()
         for (Uint32 t = 0; t < m_NumSets; ++t)
             GetDescriptorSet(t).~DescriptorSet();
     }
+}
+
+const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(const VulkanUtilities::VulkanLogicalDevice* pLogicalDevice,
+                                                                          Uint32                                      SetIndex,
+                                                                          Uint32                                      Offset,
+                                                                          Uint32                                      BindingIndex,
+                                                                          Uint32                                      ArrayIndex,
+                                                                          RefCntAutoPtr<IDeviceObject>&&              pObject)
+{
+    auto& DescrSet = GetDescriptorSet(SetIndex);
+    auto& Res      = DescrSet.GetResource(Offset);
+
+    const BufferVkImpl* pOldBuffer = nullptr;
+    const BufferVkImpl* pNewBuffer = nullptr;
+    switch (Res.Type)
+    {
+        case DescriptorType::UniformBuffer:
+            VERIFY(!pObject || pObject.RawPtr<const BufferVkImpl>()->GetDesc().Usage != USAGE_DYNAMIC,
+                   "Dynamic uniform buffer is being bound to a non-dynamic descriptor. The buffer's dynamic offset will not be properly handled.");
+            break;
+
+        case DescriptorType::UniformBufferDynamic:
+            pOldBuffer = Res.pObject.RawPtr<const BufferVkImpl>();
+            pNewBuffer = pObject.RawPtr<const BufferVkImpl>();
+            break;
+
+        case DescriptorType::StorageBuffer:
+        case DescriptorType::StorageBuffer_ReadOnly:
+            VERIFY(!pObject || pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage != USAGE_DYNAMIC,
+                   "Dynamic storage buffer is being bound to a non-dynamic descriptor. The buffer's dynamic offset will not be properly handled.");
+            break;
+
+        case DescriptorType::StorageBufferDynamic:
+        case DescriptorType::StorageBufferDynamic_ReadOnly:
+            pOldBuffer = Res.pObject ? Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>() : nullptr;
+            pNewBuffer = pObject ? pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>() : nullptr;
+            break;
+
+        default:
+            // Do nothing
+            break;
+    }
+
+    if (pOldBuffer != nullptr && pOldBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+    {
+        VERIFY(m_NumDynamicBuffers > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
+        --m_NumDynamicBuffers;
+    }
+    if (pNewBuffer != nullptr && pNewBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+    {
+        ++m_NumDynamicBuffers;
+    }
+
+    Res.pObject = std::move(pObject);
+
+    auto vkSet = DescrSet.GetVkDescriptorSet();
+    if (vkSet != VK_NULL_HANDLE && Res.pObject)
+    {
+        VERIFY(pLogicalDevice != nullptr, "Logical device must not be null to write descriptor to a non-null set");
+
+        VkWriteDescriptorSet WriteDescrSet;
+        WriteDescrSet.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        WriteDescrSet.pNext           = nullptr;
+        WriteDescrSet.dstSet          = vkSet;
+        WriteDescrSet.dstBinding      = BindingIndex;
+        WriteDescrSet.dstArrayElement = ArrayIndex;
+        WriteDescrSet.descriptorCount = 1;
+        // descriptorType must be the same type as that specified in VkDescriptorSetLayoutBinding for dstSet at dstBinding.
+        // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
+        WriteDescrSet.descriptorType   = DescriptorTypeToVkDescriptorType(Res.Type);
+        WriteDescrSet.pImageInfo       = nullptr;
+        WriteDescrSet.pBufferInfo      = nullptr;
+        WriteDescrSet.pTexelBufferView = nullptr;
+
+        // Do not zero-initialize!
+        VkDescriptorImageInfo                        vkDescrImageInfo;
+        VkDescriptorBufferInfo                       vkDescrBufferInfo;
+        VkBufferView                                 vkDescrBufferView;
+        VkWriteDescriptorSetAccelerationStructureKHR vkDescrAccelStructInfo;
+
+        static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+        switch (Res.Type)
+        {
+            case DescriptorType::Sampler:
+                vkDescrImageInfo         = Res.GetSamplerDescriptorWriteInfo();
+                WriteDescrSet.pImageInfo = &vkDescrImageInfo;
+                break;
+
+            case DescriptorType::CombinedImageSampler:
+            case DescriptorType::SeparateImage:
+            case DescriptorType::StorageImage:
+                vkDescrImageInfo         = Res.GetImageDescriptorWriteInfo();
+                WriteDescrSet.pImageInfo = &vkDescrImageInfo;
+                break;
+
+            case DescriptorType::UniformTexelBuffer:
+            case DescriptorType::StorageTexelBuffer:
+            case DescriptorType::StorageTexelBuffer_ReadOnly:
+                vkDescrBufferView              = Res.GetBufferViewWriteInfo();
+                WriteDescrSet.pTexelBufferView = &vkDescrBufferView;
+                break;
+
+            case DescriptorType::UniformBuffer:
+            case DescriptorType::UniformBufferDynamic:
+                vkDescrBufferInfo         = Res.GetUniformBufferDescriptorWriteInfo();
+                WriteDescrSet.pBufferInfo = &vkDescrBufferInfo;
+                break;
+
+            case DescriptorType::StorageBuffer:
+            case DescriptorType::StorageBuffer_ReadOnly:
+            case DescriptorType::StorageBufferDynamic:
+            case DescriptorType::StorageBufferDynamic_ReadOnly:
+                vkDescrBufferInfo         = Res.GetStorageBufferDescriptorWriteInfo();
+                WriteDescrSet.pBufferInfo = &vkDescrBufferInfo;
+                break;
+
+            case DescriptorType::InputAttachment:
+                vkDescrImageInfo         = Res.GetInputAttachmentDescriptorWriteInfo();
+                WriteDescrSet.pImageInfo = &vkDescrImageInfo;
+                break;
+
+            case DescriptorType::AccelerationStructure:
+                vkDescrAccelStructInfo = Res.GetAccelerationStructureWriteInfo();
+                WriteDescrSet.pNext    = &vkDescrAccelStructInfo;
+                break;
+
+            default:
+                UNEXPECTED("Unexpected descriptor type");
+        }
+
+        pLogicalDevice->UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
+    }
+
+    return Res;
 }
 
 static RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
@@ -486,7 +620,7 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
     return DescrBuffInfo;
 }
 
-VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteInfo(bool IsImmutableSampler) const
+VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteInfo() const
 {
     // clang-format off
     VERIFY(Type == DescriptorType::StorageImage ||
@@ -503,9 +637,9 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
 
     VkDescriptorImageInfo DescrImgInfo;
     DescrImgInfo.sampler = VK_NULL_HANDLE;
-    VERIFY(Type == DescriptorType::CombinedImageSampler || !IsImmutableSampler,
+    VERIFY(Type == DescriptorType::CombinedImageSampler || !HasImmutableSampler,
            "Immutable sampler can't be assigned to separarate image or storage image");
-    if (Type == DescriptorType::CombinedImageSampler && !IsImmutableSampler)
+    if (Type == DescriptorType::CombinedImageSampler && !HasImmutableSampler)
     {
         // Immutable samplers are permanently bound into the set layout; later binding a sampler
         // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
@@ -563,6 +697,7 @@ VkBufferView ShaderResourceCacheVk::Resource::GetBufferViewWriteInfo() const
 VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWriteInfo() const
 {
     VERIFY(Type == DescriptorType::Sampler, "Separate sampler resource is expected");
+    VERIFY(!HasImmutableSampler, "Separate immutable samplers can't be updated");
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get separate sampler descriptor write info: cached object is null");
 
     const auto* pSamplerVk = pObject.RawPtr<const SamplerVkImpl>();

@@ -584,15 +584,16 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     if (pSignature->HasDescriptorSet(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE))
     {
         VERIFY_EXPR(DSIndex == pSignature->GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>());
-        VERIFY_EXPR(ResourceCache.GetDescriptorSet(DSIndex).GetVkDescriptorSet() != VK_NULL_HANDLE);
-        ResInfo.vkSets[DSIndex] = ResourceCache.GetDescriptorSet(DSIndex).GetVkDescriptorSet();
+        const auto& CahedDescrSet = const_cast<const ShaderResourceCacheVk&>(ResourceCache).GetDescriptorSet(DSIndex);
+        VERIFY_EXPR(CahedDescrSet.GetVkDescriptorSet() != VK_NULL_HANDLE);
+        ResInfo.vkSets[DSIndex] = CahedDescrSet.GetVkDescriptorSet();
         ++DSIndex;
     }
 
     if (pSignature->HasDescriptorSet(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC))
     {
         VERIFY_EXPR(DSIndex == pSignature->GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC>());
-        VERIFY_EXPR(ResourceCache.GetDescriptorSet(DSIndex).GetVkDescriptorSet() == VK_NULL_HANDLE);
+        VERIFY_EXPR(const_cast<const ShaderResourceCacheVk&>(ResourceCache).GetDescriptorSet(DSIndex).GetVkDescriptorSet() == VK_NULL_HANDLE);
 
         const auto vkLayout = pSignature->GetVkDescriptorSetLayout(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC);
 

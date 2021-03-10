@@ -121,17 +121,6 @@ public:
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheVk& ResourceCache) const;
 
-    // Binds object pObj to resource with index ResIndex in m_Desc.Resources and
-    // array index ArrayIndex.
-    void BindResource(IDeviceObject*         pObj,
-                      Uint32                 ArrayIndex,
-                      Uint32                 ResIndex,
-                      ShaderResourceCacheVk& ResourceCache) const;
-
-    bool IsBound(Uint32                       ArrayIndex,
-                 Uint32                       ResIndex,
-                 const ShaderResourceCacheVk& ResourceCache) const;
-
     // Commits dynamic resources from ResourceCache to vkDynamicDescriptorSet
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;

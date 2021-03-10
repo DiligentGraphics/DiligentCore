@@ -30,6 +30,9 @@
 #include "ShaderVariableManagerVk.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
+#include "SamplerVkImpl.hpp"
+#include "TextureViewVkImpl.hpp"
+#include "TopLevelASVkImpl.hpp"
 
 namespace Diligent
 {
@@ -210,14 +213,479 @@ void ShaderVariableVkImpl::SetArray(IDeviceObject* const* ppObjects,
         BindResource(ppObjects[Elem], FirstElement + Elem);
 }
 
-bool ShaderVariableVkImpl::IsBound(Uint32 ArrayIndex) const
+
+namespace
 {
-    return m_ParentManager.m_pSignature->IsBound(ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
+
+inline BUFFER_VIEW_TYPE DescriptorTypeToBufferView(DescriptorType Type)
+{
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+    switch (Type)
+    {
+        case DescriptorType::UniformTexelBuffer:
+        case DescriptorType::StorageTexelBuffer_ReadOnly:
+        case DescriptorType::StorageBuffer_ReadOnly:
+        case DescriptorType::StorageBufferDynamic_ReadOnly:
+            return BUFFER_VIEW_SHADER_RESOURCE;
+
+        case DescriptorType::StorageTexelBuffer:
+        case DescriptorType::StorageBuffer:
+        case DescriptorType::StorageBufferDynamic:
+            return BUFFER_VIEW_UNORDERED_ACCESS;
+
+        default:
+            UNEXPECTED("Unsupported descriptor type for buffer view");
+            return BUFFER_VIEW_UNDEFINED;
+    }
 }
 
-void ShaderVariableVkImpl::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+inline TEXTURE_VIEW_TYPE DescriptorTypeToTextureView(DescriptorType Type)
 {
-    m_ParentManager.m_pSignature->BindResource(pObj, ArrayIndex, m_ResIndex, m_ParentManager.m_ResourceCache);
+    static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+    switch (Type)
+    {
+        case DescriptorType::StorageImage:
+            return TEXTURE_VIEW_UNORDERED_ACCESS;
+
+        case DescriptorType::CombinedImageSampler:
+        case DescriptorType::SeparateImage:
+        case DescriptorType::InputAttachment:
+            return TEXTURE_VIEW_SHADER_RESOURCE;
+
+        default:
+            UNEXPECTED("Unsupported descriptor type for texture view");
+            return TEXTURE_VIEW_UNDEFINED;
+    }
+}
+
+
+struct BindResourceHelper
+{
+    BindResourceHelper(const PipelineResourceSignatureVkImpl& Signature,
+                       ShaderResourceCacheVk&                 ResourceCache,
+                       Uint32                                 ResIndex,
+                       Uint32                                 ArrayIndex);
+
+    void operator()(IDeviceObject* pObj) const;
+
+private:
+    void CacheUniformBuffer(IDeviceObject* pBuffer) const;
+
+    void CacheStorageBuffer(IDeviceObject* pBufferView) const;
+
+    void CacheTexelBuffer(IDeviceObject* pBufferView) const;
+
+    void CacheImage(IDeviceObject* pTexView) const;
+
+    void CacheSeparateSampler(IDeviceObject* pSampler) const;
+
+    void CacheInputAttachment(IDeviceObject* pTexView) const;
+
+    void CacheAccelerationStructure(IDeviceObject* pTLAS) const;
+
+    template <typename ObjectType>
+    bool UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject) const;
+
+    // Updates resource descriptor in the descriptor set
+    inline void UpdateDescriptorHandle(const VkDescriptorImageInfo*                        pImageInfo,
+                                       const VkDescriptorBufferInfo*                       pBufferInfo,
+                                       const VkBufferView*                                 pTexelBufferView,
+                                       const VkWriteDescriptorSetAccelerationStructureKHR* pAccelStructInfo = nullptr) const;
+
+private:
+    using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
+    using CachedSet       = ShaderResourceCacheVk::DescriptorSet;
+
+    const PipelineResourceSignatureVkImpl& m_Signature;
+    ShaderResourceCacheVk&                 m_ResourceCache;
+    const Uint32                           m_ArrayIndex;
+    const ResourceCacheContentType         m_CacheType;
+    const PipelineResourceDesc&            m_ResDesc;
+    const ResourceAttribs&                 m_Attribs;
+    const Uint32                           m_DstResCacheOffset;
+    const CachedSet&                       m_CachedSet;
+    const ShaderResourceCacheVk::Resource& m_DstRes;
+};
+
+BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureVkImpl& Signature,
+                                       ShaderResourceCacheVk&                 ResourceCache,
+                                       Uint32                                 ResIndex,
+                                       Uint32                                 ArrayIndex) :
+    // clang-format off
+    m_Signature         {Signature},
+    m_ResourceCache     {ResourceCache},
+    m_ArrayIndex        {ArrayIndex},
+    m_CacheType         {ResourceCache.GetContentType()},
+    m_ResDesc           {Signature.GetResourceDesc(ResIndex)},
+    m_Attribs           {Signature.GetResourceAttribs(ResIndex)},
+    m_DstResCacheOffset {m_Attribs.CacheOffset(m_CacheType) + ArrayIndex},
+    m_CachedSet         {const_cast<const ShaderResourceCacheVk&>(ResourceCache).GetDescriptorSet(m_Attribs.DescrSet)},
+    m_DstRes            {m_CachedSet.GetResource(m_DstResCacheOffset)}
+// clang-format on
+{
+    VERIFY_EXPR(ArrayIndex < m_ResDesc.ArraySize);
+    VERIFY(m_DstRes.Type == m_Attribs.GetDescriptorType(), "Inconsistent types");
+
+#ifdef DILIGENT_DEBUG
+    {
+        auto vkDescrSet = m_CachedSet.GetVkDescriptorSet();
+        if (m_CacheType == ResourceCacheContentType::SRB)
+        {
+            if (m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ||
+                m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+            {
+                VERIFY(vkDescrSet != VK_NULL_HANDLE, "Static and mutable variables must have a valid Vulkan descriptor set assigned");
+            }
+            else
+            {
+                VERIFY(vkDescrSet == VK_NULL_HANDLE, "Dynamic variables must never have valid Vulkan descriptor set assigned");
+            }
+        }
+        else if (m_CacheType == ResourceCacheContentType::Signature)
+        {
+            VERIFY(vkDescrSet == VK_NULL_HANDLE, "Static shader resource cache should not have Vulkan descriptor set allocation");
+        }
+        else
+        {
+            UNEXPECTED("Unexpected shader resource cache content type");
+        }
+    }
+#endif
+}
+
+void BindResourceHelper::operator()(IDeviceObject* pObj) const
+{
+    if (pObj)
+    {
+        static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
+        switch (m_DstRes.Type)
+        {
+            case DescriptorType::UniformBuffer:
+            case DescriptorType::UniformBufferDynamic:
+                CacheUniformBuffer(pObj);
+                break;
+
+            case DescriptorType::StorageBuffer:
+            case DescriptorType::StorageBuffer_ReadOnly:
+            case DescriptorType::StorageBufferDynamic:
+            case DescriptorType::StorageBufferDynamic_ReadOnly:
+                CacheStorageBuffer(pObj);
+                break;
+
+            case DescriptorType::UniformTexelBuffer:
+            case DescriptorType::StorageTexelBuffer:
+            case DescriptorType::StorageTexelBuffer_ReadOnly:
+                CacheTexelBuffer(pObj);
+                break;
+
+            case DescriptorType::StorageImage:
+            case DescriptorType::SeparateImage:
+            case DescriptorType::CombinedImageSampler:
+                CacheImage(pObj);
+                break;
+
+            case DescriptorType::Sampler:
+                if (!m_Attribs.IsImmutableSamplerAssigned())
+                {
+                    CacheSeparateSampler(pObj);
+                }
+                else
+                {
+                    // Immutable samplers are permanently bound into the set layout; later binding a sampler
+                    // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
+                    UNEXPECTED("Attempting to assign a sampler to an immutable sampler '", m_ResDesc.Name, '\'');
+                }
+                break;
+
+            case DescriptorType::InputAttachment:
+                CacheInputAttachment(pObj);
+                break;
+
+            case DescriptorType::AccelerationStructure:
+                CacheAccelerationStructure(pObj);
+                break;
+
+            default: UNEXPECTED("Unknown resource type ", static_cast<Uint32>(m_DstRes.Type));
+        }
+    }
+    else
+    {
+        if (m_DstRes.pObject && m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            LOG_ERROR_MESSAGE("Shader variable '", m_ResDesc.Name, "' is not dynamic but being unbound. This is an error and may cause unpredicted behavior. ",
+                              "Use another shader resource binding instance or label shader variable as dynamic if you need to bind another resource.");
+        }
+
+        m_ResourceCache.ResetResource(m_Attribs.DescrSet, m_DstResCacheOffset);
+    }
+}
+
+template <typename ObjectType>
+bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject) const
+{
+    if (pObject)
+    {
+        if (m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && m_DstRes.pObject != nullptr)
+        {
+            // Do not update resource if one is already bound unless it is dynamic. This may be
+            // dangerous as writing descriptors while they are used by the GPU is an undefined behavior
+            return false;
+        }
+
+        m_ResourceCache.SetResource(&m_Signature.GetDevice()->GetLogicalDevice(),
+                                    m_Attribs.DescrSet, m_DstResCacheOffset,
+                                    m_Attribs.BindingIndex, m_ArrayIndex,
+                                    std::move(pObject));
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer) const
+{
+    VERIFY((m_DstRes.Type == DescriptorType::UniformBuffer ||
+            m_DstRes.Type == DescriptorType::UniformBufferDynamic),
+           "Uniform buffer resource is expected");
+
+    // We cannot use ValidatedCast<> here as the resource can have wrong type
+    RefCntAutoPtr<BufferVkImpl> pBufferVk{pBuffer, IID_BufferVk};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyConstantBufferBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ResDesc.Flags, m_ArrayIndex,
+                                pBuffer, pBufferVk.RawPtr(), m_DstRes.pObject.RawPtr());
+#endif
+
+    UpdateCachedResource(std::move(pBufferVk));
+}
+
+void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView) const
+{
+    VERIFY((m_DstRes.Type == DescriptorType::StorageBuffer ||
+            m_DstRes.Type == DescriptorType::StorageBuffer_ReadOnly ||
+            m_DstRes.Type == DescriptorType::StorageBufferDynamic ||
+            m_DstRes.Type == DescriptorType::StorageBufferDynamic_ReadOnly),
+           "Storage buffer resource is expected");
+
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{pBufferView, IID_BufferViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        const auto RequiredViewType = DescriptorTypeToBufferView(m_DstRes.Type);
+        VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+                                  pBufferView, pBufferViewVk.RawPtr(),
+                                  {RequiredViewType}, RESOURCE_DIM_BUFFER,
+                                  false, // IsMultisample
+                                  m_DstRes.pObject.RawPtr());
+        if (pBufferViewVk != nullptr)
+        {
+            const auto& ViewDesc = pBufferViewVk->GetDesc();
+            const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
+            if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED && BuffDesc.Mode != BUFFER_MODE_RAW)
+            {
+                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                  m_ResDesc.Name, "': structured buffer view is expected.");
+            }
+        }
+    }
+#endif
+
+    UpdateCachedResource(std::move(pBufferViewVk));
+}
+
+void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView) const
+{
+    VERIFY((m_DstRes.Type == DescriptorType::UniformTexelBuffer ||
+            m_DstRes.Type == DescriptorType::StorageTexelBuffer ||
+            m_DstRes.Type == DescriptorType::StorageTexelBuffer_ReadOnly),
+           "Uniform or storage buffer resource is expected");
+
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{pBufferView, IID_BufferViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        const auto RequiredViewType = DescriptorTypeToBufferView(m_DstRes.Type);
+        VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+                                  pBufferView, pBufferViewVk.RawPtr(),
+                                  {RequiredViewType}, RESOURCE_DIM_BUFFER,
+                                  false, // IsMultisample
+                                  m_DstRes.pObject.RawPtr());
+        if (pBufferViewVk != nullptr)
+        {
+            const auto& ViewDesc = pBufferViewVk->GetDesc();
+            const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
+            if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED))
+            {
+                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                  m_ResDesc.Name, "': formatted buffer view is expected.");
+            }
+        }
+    }
+#endif
+
+    UpdateCachedResource(std::move(pBufferViewVk));
+}
+
+void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
+{
+    VERIFY((m_DstRes.Type == DescriptorType::StorageImage ||
+            m_DstRes.Type == DescriptorType::SeparateImage ||
+            m_DstRes.Type == DescriptorType::CombinedImageSampler),
+           "Storage image, separate image or sampled image resource is expected");
+
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{pTexView, IID_TextureViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        auto RequiredViewType = DescriptorTypeToTextureView(m_DstRes.Type);
+        VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+                                  pTexView, pTexViewVk0.RawPtr(),
+                                  {RequiredViewType},
+                                  RESOURCE_DIM_UNDEFINED, // Required resource dimension is not known
+                                  false,                  // IsMultisample
+                                  m_DstRes.pObject.RawPtr());
+    }
+#endif
+
+    TextureViewVkImpl* pTexViewVk = pTexViewVk0;
+    if (UpdateCachedResource(std::move(pTexViewVk0)))
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        if (m_DstRes.Type == DescriptorType::CombinedImageSampler && !m_Attribs.IsImmutableSamplerAssigned())
+        {
+            if (pTexViewVk->GetSampler() == nullptr)
+            {
+                LOG_ERROR_MESSAGE("Error binding texture view '", pTexViewVk->GetDesc().Name, "' to variable '",
+                                  GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex), "'. No sampler is assigned to the view");
+            }
+        }
+#endif
+
+        if (m_Attribs.IsCombinedWithSampler())
+        {
+            VERIFY(m_DstRes.Type == DescriptorType::SeparateImage,
+                   "Only separate images can be assigned separate samplers when using HLSL-style combined samplers.");
+            VERIFY(!m_Attribs.IsImmutableSamplerAssigned(), "Separate image can't be assigned an immutable sampler.");
+
+            const auto& SamplerResDesc = m_Signature.GetResourceDesc(m_Attribs.SamplerInd);
+            const auto& SamplerAttribs = m_Signature.GetResourceAttribs(m_Attribs.SamplerInd);
+            VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+
+            if (!SamplerAttribs.IsImmutableSamplerAssigned())
+            {
+                auto* pSampler = pTexViewVk->GetSampler();
+                if (pSampler != nullptr)
+                {
+                    DEV_CHECK_ERR(SamplerResDesc.ArraySize == 1 || SamplerResDesc.ArraySize == m_ResDesc.ArraySize,
+                                  "Array size (", SamplerResDesc.ArraySize,
+                                  ") of separate sampler variable '",
+                                  SamplerResDesc.Name,
+                                  "' must be one or the same as the array size (", m_ResDesc.ArraySize,
+                                  ") of separate image variable '", m_ResDesc.Name, "' it is assigned to");
+
+                    BindResourceHelper BindSeparateSamler{
+                        m_Signature,
+                        m_ResourceCache,
+                        m_Attribs.SamplerInd,
+                        SamplerResDesc.ArraySize == 1 ? 0 : m_ArrayIndex};
+                    BindSeparateSamler(pSampler);
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE("Failed to bind sampler to sampler variable '", SamplerResDesc.Name,
+                                      "' assigned to separate image '", GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex),
+                                      "': no sampler is set in texture view '", pTexViewVk->GetDesc().Name, '\'');
+                }
+            }
+        }
+    }
+}
+
+void BindResourceHelper::CacheSeparateSampler(IDeviceObject* pSampler) const
+{
+    VERIFY(m_DstRes.Type == DescriptorType::Sampler, "Separate sampler resource is expected");
+    VERIFY(!m_Attribs.IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler");
+
+    RefCntAutoPtr<SamplerVkImpl> pSamplerVk{pSampler, IID_Sampler};
+#ifdef DILIGENT_DEVELOPMENT
+    if (pSampler != nullptr && pSamplerVk == nullptr)
+    {
+        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '",
+                          GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex), "'. Unexpected object type: sampler is expected");
+    }
+    if (m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && m_DstRes.pObject != nullptr && m_DstRes.pObject != pSamplerVk)
+    {
+        auto VarTypeStr = GetShaderVariableTypeLiteralName(m_ResDesc.VarType);
+        LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex),
+                          "'. Attempting to bind another sampler or null is an error and may "
+                          "cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.");
+    }
+#endif
+
+    UpdateCachedResource(std::move(pSamplerVk));
+}
+
+void BindResourceHelper::CacheInputAttachment(IDeviceObject* pTexView) const
+{
+    VERIFY(m_DstRes.Type == DescriptorType::InputAttachment, "Input attachment resource is expected");
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk{pTexView, IID_TextureViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+                              pTexView, pTexViewVk.RawPtr(),
+                              {TEXTURE_VIEW_SHADER_RESOURCE},
+                              RESOURCE_DIM_UNDEFINED,
+                              false, // IsMultisample
+                              m_DstRes.pObject.RawPtr());
+#endif
+
+    UpdateCachedResource(std::move(pTexViewVk));
+}
+
+void BindResourceHelper::CacheAccelerationStructure(IDeviceObject* pTLAS) const
+{
+    VERIFY(m_DstRes.Type == DescriptorType::AccelerationStructure, "Acceleration Structure resource is expected");
+    RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyTLASResourceBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex, pTLAS, pTLASVk.RawPtr(), m_DstRes.pObject.RawPtr());
+#endif
+
+    UpdateCachedResource(std::move(pTLASVk));
+}
+
+} // namespace
+
+
+void ShaderVariableManagerVk::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex, Uint32 ResIndex)
+{
+    BindResourceHelper BindHelper{
+        *m_pSignature,
+        m_ResourceCache,
+        ResIndex,
+        ArrayIndex};
+
+    BindHelper(pObj);
+}
+
+bool ShaderVariableManagerVk::IsBound(Uint32 ArrayIndex, Uint32 ResIndex) const
+{
+    const auto&  ResDesc     = GetResourceDesc(ResIndex);
+    const auto&  Attribs     = GetAttribs(ResIndex);
+    const Uint32 CacheOffset = Attribs.CacheOffset(m_ResourceCache.GetContentType());
+
+    VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
+
+    if (Attribs.DescrSet < m_ResourceCache.GetNumDescriptorSets())
+    {
+        const auto& Set = const_cast<const ShaderResourceCacheVk&>(m_ResourceCache).GetDescriptorSet(Attribs.DescrSet);
+        if (CacheOffset + ArrayIndex < Set.GetSize())
+        {
+            const auto& CachedRes = Set.GetResource(CacheOffset + ArrayIndex);
+            return !CachedRes.IsNull();
+        }
+    }
+
+    return false;
 }
 
 } // namespace Diligent
