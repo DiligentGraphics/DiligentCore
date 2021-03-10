@@ -32,36 +32,36 @@
 namespace Diligent
 {
 
-/// Cube array texture implementation in OpenGL backend.
-class TextureCubeArray_OGL final : public TextureBaseGL
+/// 2D texture array implementation in OpenGL backend.
+class Texture2DArray_GL final : public TextureBaseGL
 {
 public:
-    TextureCubeArray_OGL(IReferenceCounters*        pRefCounters,
-                         FixedBlockMemoryAllocator& TexViewObjAllocator,
-                         class RenderDeviceGLImpl*  pDeviceGL,
-                         class GLContextState&      GLState,
-                         const TextureDesc&         TexDesc,
-                         const TextureData*         pInitData         = nullptr,
-                         bool                       bIsDeviceInternal = false);
+    Texture2DArray_GL(IReferenceCounters*        pRefCounters,
+                      FixedBlockMemoryAllocator& TexViewObjAllocator,
+                      class RenderDeviceGLImpl*  pDeviceGL,
+                      class GLContextState&      GLState,
+                      const TextureDesc&         TexDesc,
+                      const TextureData*         pInitData         = nullptr,
+                      bool                       bIsDeviceInternal = false);
 
-    TextureCubeArray_OGL(IReferenceCounters*        pRefCounters,
-                         FixedBlockMemoryAllocator& TexViewObjAllocator,
-                         class RenderDeviceGLImpl*  pDeviceGL,
-                         class GLContextState&      GLState,
-                         const TextureDesc&         TexDesc,
-                         GLuint                     GLTextureHandle,
-                         GLuint                     GLBindTarget,
-                         bool                       bIsDeviceInternal = false);
-    ~TextureCubeArray_OGL();
+    Texture2DArray_GL(IReferenceCounters*        pRefCounters,
+                      FixedBlockMemoryAllocator& TexViewObjAllocator,
+                      class RenderDeviceGLImpl*  pDeviceGL,
+                      class GLContextState&      GLState,
+                      const TextureDesc&         TexDesc,
+                      GLuint                     GLTextureHandle,
+                      GLuint                     GLBindTarget,
+                      bool                       bIsDeviceInternal = false);
+    ~Texture2DArray_GL();
 
-    /// Implementation of TextureBaseGL::UpdateData() for cube texture array.
+    /// Implementation of TextureBaseGL::UpdateData() for 2D texture array.
     virtual void UpdateData(class GLContextState&    CtxState,
                             Uint32                   MipLevel,
                             Uint32                   Slice,
                             const Box&               DstBox,
                             const TextureSubResData& SubresData) override final;
 
-    /// Implementation of TextureBaseGL::AttachToFramebuffer() for cube texture array.
+    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 2D texture array.
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
                                      GLenum                        AttachmentPoint) override final;
 };

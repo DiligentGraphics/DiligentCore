@@ -27,7 +27,7 @@
 
 #include "pch.h"
 
-#include "Texture1DArray_OGL.hpp"
+#include "Texture1DArray_GL.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "BufferGLImpl.hpp"
@@ -36,13 +36,13 @@
 namespace Diligent
 {
 
-Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*        pRefCounters,
-                                       FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                       RenderDeviceGLImpl*        pDeviceGL,
-                                       GLContextState&            GLState,
-                                       const TextureDesc&         TexDesc,
-                                       const TextureData*         pInitData /*= nullptr*/,
-                                       bool                       bIsDeviceInternal /*= false*/) :
+Texture1DArray_GL::Texture1DArray_GL(IReferenceCounters*        pRefCounters,
+                                     FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                     RenderDeviceGLImpl*        pDeviceGL,
+                                     GLContextState&            GLState,
+                                     const TextureDesc&         TexDesc,
+                                     const TextureData*         pInitData /*= nullptr*/,
+                                     bool                       bIsDeviceInternal /*= false*/) :
     // clang-format off
     TextureBaseGL
     {
@@ -87,10 +87,10 @@ Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*        pRefCounters,
                     Box DstBox{0, std::max(m_Desc.Width >> Mip, 1U),
                                0, 1};
                     // UpdateData() is a virtual function. If we try to call it through vtbl from here,
-                    // we will get into TextureBaseGL::UpdateData(), because instance of Texture1DArray_OGL
+                    // we will get into TextureBaseGL::UpdateData(), because instance of Texture1DArray_GL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class:
-                    Texture1DArray_OGL::UpdateData(GLState, Mip, Slice, DstBox, pInitData->pSubResources[Slice * m_Desc.MipLevels + Mip]);
+                    Texture1DArray_GL::UpdateData(GLState, Mip, Slice, DstBox, pInitData->pSubResources[Slice * m_Desc.MipLevels + Mip]);
                 }
             }
         }
@@ -103,14 +103,14 @@ Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*        pRefCounters,
     GLState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*        pRefCounters,
-                                       FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                       RenderDeviceGLImpl*        pDeviceGL,
-                                       GLContextState&            GLState,
-                                       const TextureDesc&         TexDesc,
-                                       GLuint                     GLTextureHandle,
-                                       GLuint                     GLBindTarget,
-                                       bool                       bIsDeviceInternal) :
+Texture1DArray_GL::Texture1DArray_GL(IReferenceCounters*        pRefCounters,
+                                     FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                     RenderDeviceGLImpl*        pDeviceGL,
+                                     GLContextState&            GLState,
+                                     const TextureDesc&         TexDesc,
+                                     GLuint                     GLTextureHandle,
+                                     GLuint                     GLBindTarget,
+                                     bool                       bIsDeviceInternal) :
     // clang-format off
     TextureBaseGL
     {
@@ -127,15 +127,15 @@ Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*        pRefCounters,
 {
 }
 
-Texture1DArray_OGL::~Texture1DArray_OGL()
+Texture1DArray_GL::~Texture1DArray_GL()
 {
 }
 
-void Texture1DArray_OGL::UpdateData(GLContextState&          ContextState,
-                                    Uint32                   MipLevel,
-                                    Uint32                   Slice,
-                                    const Box&               DstBox,
-                                    const TextureSubResData& SubresData)
+void Texture1DArray_GL::UpdateData(GLContextState&          ContextState,
+                                   Uint32                   MipLevel,
+                                   Uint32                   Slice,
+                                   const Box&               DstBox,
+                                   const TextureSubResData& SubresData)
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 
@@ -180,7 +180,7 @@ void Texture1DArray_OGL::UpdateData(GLContextState&          ContextState,
     ContextState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-void Texture1DArray_OGL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
+void Texture1DArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
 {
     if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
     {

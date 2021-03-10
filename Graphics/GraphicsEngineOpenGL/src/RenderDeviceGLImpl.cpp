@@ -31,13 +31,13 @@
 
 #include "BufferGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
-#include "Texture1D_OGL.hpp"
-#include "Texture1DArray_OGL.hpp"
-#include "Texture2D_OGL.hpp"
-#include "Texture2DArray_OGL.hpp"
-#include "Texture3D_OGL.hpp"
-#include "TextureCube_OGL.hpp"
-#include "TextureCubeArray_OGL.hpp"
+#include "Texture1D_GL.hpp"
+#include "Texture1DArray_GL.hpp"
+#include "Texture2D_GL.hpp"
+#include "Texture2DArray_GL.hpp"
+#include "Texture3D_GL.hpp"
+#include "TextureCube_GL.hpp"
+#include "TextureCubeArray_GL.hpp"
 #include "SamplerGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
@@ -547,31 +547,31 @@ void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const Texture
             switch (TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_1D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_GL instance", Texture1D_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_1D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_GL instance", Texture1DArray_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_GL instance", Texture2D_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_2D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_GL instance", Texture2DArray_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_GL instance", Texture3D_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_GL instance", TextureCube_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_GL instance", TextureCubeArray_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 default: LOG_ERROR_AND_THROW("Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)");
@@ -607,31 +607,31 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32             GLHandle,
             switch (TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_1D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_GL instance", Texture1D_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_1D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_GL instance", Texture1DArray_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_GL instance", Texture2D_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_2D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_GL instance", Texture2DArray_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_GL instance", Texture3D_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_GL instance", TextureCube_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_GL instance", TextureCubeArray_GL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 default: LOG_ERROR_AND_THROW("Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)");
@@ -653,7 +653,7 @@ void RenderDeviceGLImpl::CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE
             switch (TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_2D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Dummy Texture2D_OGL instance", Texture2D_OGL)(m_TexViewObjAllocator, this, TexDesc);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Dummy Texture2D_GL instance", Texture2D_GL)(m_TexViewObjAllocator, this, TexDesc);
                     break;
 
                 default: LOG_ERROR_AND_THROW("Unsupported texture type.");

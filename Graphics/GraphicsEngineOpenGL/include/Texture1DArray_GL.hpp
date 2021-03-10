@@ -32,44 +32,36 @@
 namespace Diligent
 {
 
-/// 2D texture implementation in OpenGL backend.
-class Texture2D_OGL final : public TextureBaseGL
+/// 1D texture array implementation in OpenGL backend.
+class Texture1DArray_GL final : public TextureBaseGL
 {
 public:
-    Texture2D_OGL(IReferenceCounters*        pRefCounters,
-                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                  class RenderDeviceGLImpl*  pDeviceGL,
-                  class GLContextState&      GLState,
-                  const TextureDesc&         TexDesc,
-                  const TextureData*         pInitData         = nullptr,
-                  bool                       bIsDeviceInternal = false);
+    Texture1DArray_GL(IReferenceCounters*        pRefCounters,
+                      FixedBlockMemoryAllocator& TexViewObjAllocator,
+                      class RenderDeviceGLImpl*  pDeviceGL,
+                      class GLContextState&      GLState,
+                      const TextureDesc&         TexDesc,
+                      const TextureData*         pInitData         = nullptr,
+                      bool                       bIsDeviceInternal = false);
 
-    Texture2D_OGL(IReferenceCounters*        pRefCounters,
-                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                  class RenderDeviceGLImpl*  pDeviceGL,
-                  class GLContextState&      GLState,
-                  const TextureDesc&         TexDesc,
-                  GLuint                     GLTextureHandle,
-                  GLuint                     GLBindTarget,
-                  bool                       bIsDeviceInternal = false);
+    Texture1DArray_GL(IReferenceCounters*        pRefCounters,
+                      FixedBlockMemoryAllocator& TexViewObjAllocator,
+                      class RenderDeviceGLImpl*  pDeviceGL,
+                      class GLContextState&      GLState,
+                      const TextureDesc&         TexDesc,
+                      GLuint                     GLTextureHandle,
+                      GLuint                     GLBindTarget,
+                      bool                       bIsDeviceInternal = false);
+    ~Texture1DArray_GL();
 
-    /// This constructor is used to create a dummy texture object for the default framebuffer.
-    Texture2D_OGL(IReferenceCounters*        pRefCounters,
-                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                  class RenderDeviceGLImpl*  pDeviceGL,
-                  const TextureDesc&         TexDesc,
-                  bool                       bIsDeviceInternal = false);
-
-    ~Texture2D_OGL();
-
-    /// Implementation of TextureBaseGL::UpdateData() for 2D texture.
+    /// Implementation of TextureBaseGL::UpdateData() for 1D texture array.
     virtual void UpdateData(class GLContextState&    CtxState,
                             Uint32                   MipLevel,
                             Uint32                   Slice,
                             const Box&               DstBox,
                             const TextureSubResData& SubresData) override final;
 
-    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 2D texture.
+    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 1D texture array.
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
                                      GLenum                        AttachmentPoint) override final;
 };

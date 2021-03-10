@@ -27,7 +27,7 @@
 
 #include "pch.h"
 
-#include "Texture1D_OGL.hpp"
+#include "Texture1D_GL.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "BufferGLImpl.hpp"
@@ -36,13 +36,13 @@
 namespace Diligent
 {
 
-Texture1D_OGL::Texture1D_OGL(IReferenceCounters*        pRefCounters,
-                             FixedBlockMemoryAllocator& TexViewObjAllocator,
-                             RenderDeviceGLImpl*        pDeviceGL,
-                             GLContextState&            GLState,
-                             const TextureDesc&         TexDesc,
-                             const TextureData*         pInitData /*= nullptr*/,
-                             bool                       bIsDeviceInternal /*= false*/) :
+Texture1D_GL::Texture1D_GL(IReferenceCounters*        pRefCounters,
+                           FixedBlockMemoryAllocator& TexViewObjAllocator,
+                           RenderDeviceGLImpl*        pDeviceGL,
+                           GLContextState&            GLState,
+                           const TextureDesc&         TexDesc,
+                           const TextureData*         pInitData /*= nullptr*/,
+                           bool                       bIsDeviceInternal /*= false*/) :
     // clang-format off
     TextureBaseGL
     {
@@ -85,10 +85,10 @@ Texture1D_OGL::Texture1D_OGL(IReferenceCounters*        pRefCounters,
                 Box DstBox{0, std::max(m_Desc.Width >> Mip, 1U),
                            0, 1};
                 // UpdateData() is a virtual function. If we try to call it through vtbl from here,
-                // we will get into TextureBaseGL::UpdateData(), because instance of Texture1D_OGL
+                // we will get into TextureBaseGL::UpdateData(), because instance of Texture1D_GL
                 // is not fully constructed yet.
                 // To call the required function, we need to explicitly specify the class:
-                Texture1D_OGL::UpdateData(GLState, Mip, 0, DstBox, pInitData->pSubResources[Mip]);
+                Texture1D_GL::UpdateData(GLState, Mip, 0, DstBox, pInitData->pSubResources[Mip]);
             }
         }
         else
@@ -100,14 +100,14 @@ Texture1D_OGL::Texture1D_OGL(IReferenceCounters*        pRefCounters,
     GLState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-Texture1D_OGL::Texture1D_OGL(IReferenceCounters*        pRefCounters,
-                             FixedBlockMemoryAllocator& TexViewObjAllocator,
-                             RenderDeviceGLImpl*        pDeviceGL,
-                             GLContextState&            GLState,
-                             const TextureDesc&         TexDesc,
-                             GLuint                     GLTextureHandle,
-                             GLuint                     GLBindTarget,
-                             bool                       bIsDeviceInternal) :
+Texture1D_GL::Texture1D_GL(IReferenceCounters*        pRefCounters,
+                           FixedBlockMemoryAllocator& TexViewObjAllocator,
+                           RenderDeviceGLImpl*        pDeviceGL,
+                           GLContextState&            GLState,
+                           const TextureDesc&         TexDesc,
+                           GLuint                     GLTextureHandle,
+                           GLuint                     GLBindTarget,
+                           bool                       bIsDeviceInternal) :
     // clang-format off
     TextureBaseGL
     {
@@ -124,15 +124,15 @@ Texture1D_OGL::Texture1D_OGL(IReferenceCounters*        pRefCounters,
 {
 }
 
-Texture1D_OGL::~Texture1D_OGL()
+Texture1D_GL::~Texture1D_GL()
 {
 }
 
-void Texture1D_OGL::UpdateData(GLContextState&          ContextState,
-                               Uint32                   MipLevel,
-                               Uint32                   Slice,
-                               const Box&               DstBox,
-                               const TextureSubResData& SubresData)
+void Texture1D_GL::UpdateData(GLContextState&          ContextState,
+                              Uint32                   MipLevel,
+                              Uint32                   Slice,
+                              const Box&               DstBox,
+                              const TextureSubResData& SubresData)
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 
@@ -174,7 +174,7 @@ void Texture1D_OGL::UpdateData(GLContextState&          ContextState,
     ContextState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-void Texture1D_OGL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
+void Texture1D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
 {
     // For glFramebufferTexture1D(), if texture name is not zero, then texture target must be GL_TEXTURE_1D
     glFramebufferTexture1D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);

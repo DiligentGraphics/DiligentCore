@@ -27,7 +27,7 @@
 
 #include "pch.h"
 
-#include "Texture3D_OGL.hpp"
+#include "Texture3D_GL.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "BufferGLImpl.hpp"
@@ -37,13 +37,13 @@
 namespace Diligent
 {
 
-Texture3D_OGL::Texture3D_OGL(IReferenceCounters*        pRefCounters,
-                             FixedBlockMemoryAllocator& TexViewObjAllocator,
-                             RenderDeviceGLImpl*        pDeviceGL,
-                             GLContextState&            GLState,
-                             const TextureDesc&         TexDesc,
-                             const TextureData*         pInitData /*= TextureData()*/,
-                             bool                       bIsDeviceInternal /*= false*/) :
+Texture3D_GL::Texture3D_GL(IReferenceCounters*        pRefCounters,
+                           FixedBlockMemoryAllocator& TexViewObjAllocator,
+                           RenderDeviceGLImpl*        pDeviceGL,
+                           GLContextState&            GLState,
+                           const TextureDesc&         TexDesc,
+                           const TextureData*         pInitData /*= TextureData()*/,
+                           bool                       bIsDeviceInternal /*= false*/) :
     // clang-format off
     TextureBaseGL
     {
@@ -89,10 +89,10 @@ Texture3D_OGL::Texture3D_OGL(IReferenceCounters*        pRefCounters,
                            0, std::max(m_Desc.Height >> Mip, 1U),
                            0, std::max(m_Desc.Depth >> Mip, 1U)};
                 // UpdateData() is a virtual function. If we try to call it through vtbl from here,
-                // we will get into TextureBaseGL::UpdateData(), because instance of Texture3D_OGL
+                // we will get into TextureBaseGL::UpdateData(), because instance of Texture3D_GL
                 // is not fully constructed yet.
                 // To call the required function, we need to explicitly specify the class:
-                Texture3D_OGL::UpdateData(GLState, Mip, 0, DstBox, pInitData->pSubResources[Mip]);
+                Texture3D_GL::UpdateData(GLState, Mip, 0, DstBox, pInitData->pSubResources[Mip]);
             }
         }
         else
@@ -104,14 +104,14 @@ Texture3D_OGL::Texture3D_OGL(IReferenceCounters*        pRefCounters,
     GLState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-Texture3D_OGL::Texture3D_OGL(IReferenceCounters*        pRefCounters,
-                             FixedBlockMemoryAllocator& TexViewObjAllocator,
-                             RenderDeviceGLImpl*        pDeviceGL,
-                             GLContextState&            GLState,
-                             const TextureDesc&         TexDesc,
-                             GLuint                     GLTextureHandle,
-                             GLuint                     GLBindTarget,
-                             bool                       bIsDeviceInternal) :
+Texture3D_GL::Texture3D_GL(IReferenceCounters*        pRefCounters,
+                           FixedBlockMemoryAllocator& TexViewObjAllocator,
+                           RenderDeviceGLImpl*        pDeviceGL,
+                           GLContextState&            GLState,
+                           const TextureDesc&         TexDesc,
+                           GLuint                     GLTextureHandle,
+                           GLuint                     GLBindTarget,
+                           bool                       bIsDeviceInternal) :
     // clang-format off
     TextureBaseGL
     {
@@ -128,16 +128,16 @@ Texture3D_OGL::Texture3D_OGL(IReferenceCounters*        pRefCounters,
 {
 }
 
-Texture3D_OGL::~Texture3D_OGL()
+Texture3D_GL::~Texture3D_GL()
 {
 }
 
 
-void Texture3D_OGL::UpdateData(GLContextState&          ContextState,
-                               Uint32                   MipLevel,
-                               Uint32                   Slice,
-                               const Box&               DstBox,
-                               const TextureSubResData& SubresData)
+void Texture3D_GL::UpdateData(GLContextState&          ContextState,
+                              Uint32                   MipLevel,
+                              Uint32                   Slice,
+                              const Box&               DstBox,
+                              const TextureSubResData& SubresData)
 {
     TextureBaseGL::UpdateData(ContextState, MipLevel, Slice, DstBox, SubresData);
 
@@ -192,7 +192,7 @@ void Texture3D_OGL::UpdateData(GLContextState&          ContextState,
     ContextState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-void Texture3D_OGL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
+void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
 {
     auto NumDepthSlicesInMip = m_Desc.Depth >> ViewDesc.MostDetailedMip;
     if (ViewDesc.NumDepthSlices == NumDepthSlicesInMip)

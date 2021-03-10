@@ -30,14 +30,14 @@ set(INCLUDE
     include/ShaderResourceBindingGLImpl.hpp
     include/SwapChainGLBase.hpp
     include/TexRegionRender.hpp
-    include/Texture1D_OGL.hpp
-    include/Texture1DArray_OGL.hpp
-    include/Texture2D_OGL.hpp
-    include/Texture2DArray_OGL.hpp
-    include/Texture3D_OGL.hpp
+    include/Texture1D_GL.hpp
+    include/Texture1DArray_GL.hpp
+    include/Texture2D_GL.hpp
+    include/Texture2DArray_GL.hpp
+    include/Texture3D_GL.hpp
     include/TextureBaseGL.hpp
-    include/TextureCube_OGL.hpp
-    include/TextureCubeArray_OGL.hpp
+    include/TextureCube_GL.hpp
+    include/TextureCubeArray_GL.hpp
     include/TextureViewGLImpl.hpp
     include/VAOCache.hpp
 )
@@ -83,14 +83,14 @@ set(SOURCE
     src/ShaderGLImpl.cpp
     src/ShaderResourceBindingGLImpl.cpp
     src/TexRegionRender.cpp
-    src/Texture1D_OGL.cpp
-    src/Texture1DArray_OGL.cpp
-    src/Texture2D_OGL.cpp
-    src/Texture2DArray_OGL.cpp
-    src/Texture3D_OGL.cpp
+    src/Texture1D_GL.cpp
+    src/Texture1DArray_GL.cpp
+    src/Texture2D_GL.cpp
+    src/Texture2DArray_GL.cpp
+    src/Texture3D_GL.cpp
     src/TextureBaseGL.cpp
-    src/TextureCube_OGL.cpp
-    src/TextureCubeArray_OGL.cpp
+    src/TextureCube_GL.cpp
+    src/TextureCubeArray_GL.cpp
     src/TextureViewGLImpl.cpp
     src/VAOCache.cpp
 )
@@ -219,7 +219,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
             src/DeviceContextGLImpl.cpp
             src/GLContextState.cpp
             src/RenderDeviceGLImpl.cpp
-            src/Texture1D_OGL.cpp
+            src/Texture1D_GL.cpp
         PROPERTIES
             COMPILE_FLAGS -Wno-unused-variable
         )
