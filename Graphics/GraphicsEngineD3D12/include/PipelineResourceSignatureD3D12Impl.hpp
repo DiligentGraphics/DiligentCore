@@ -134,17 +134,6 @@ public:
 
     void CopyStaticResources(ShaderResourceCacheD3D12& ResourceCache) const;
 
-    // Binds object pObj to resource with index ResIndex in m_Desc.Resources and
-    // array index ArrayIndex.
-    void BindResource(IDeviceObject*            pObj,
-                      Uint32                    ArrayIndex,
-                      Uint32                    ResIndex,
-                      ShaderResourceCacheD3D12& ResourceCache) const;
-
-    bool IsBound(Uint32                          ArrayIndex,
-                 Uint32                          ResIndex,
-                 const ShaderResourceCacheD3D12& ResourceCache) const;
-
     struct CommitCacheResourcesAttribs
     {
         const ShaderResourceCacheD3D12& ResourceCache;

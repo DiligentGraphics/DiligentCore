@@ -403,6 +403,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(tex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_Static->Set(pSRVs[0]);
+            EXPECT_TRUE(tex2D_Static->IsBound(0));
         }
 
         {
@@ -418,6 +419,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 2u);
             EXPECT_EQ(tex2D_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_StaticArr->SetArray(pSRVs, 0, 2);
+            EXPECT_TRUE(tex2D_StaticArr->IsBound(0));
+            EXPECT_TRUE(tex2D_StaticArr->IsBound(1));
         }
 
         {
@@ -433,6 +436,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(UniformBuff_Stat, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             UniformBuff_Stat->Set(pUBs[0]);
+            EXPECT_TRUE(UniformBuff_Stat->IsBound(0));
         }
 
         {
@@ -443,6 +447,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(UniformBuff_Stat2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             UniformBuff_Stat2->Set(pUBs[0]);
+            EXPECT_TRUE(UniformBuff_Stat2->IsBound(0));
         }
 
         {
@@ -453,6 +458,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(Buffer_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_Static->Set(pFormattedBuffSRV);
+            EXPECT_TRUE(Buffer_Static->IsBound(0));
         }
 
         {
@@ -464,6 +470,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_StaticArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_StaticArr->SetArray(&pFormattedBuffSRV, 1, 1);
+            EXPECT_TRUE(Buffer_StaticArr->IsBound(0));
+            EXPECT_TRUE(Buffer_StaticArr->IsBound(1));
         }
 
 
@@ -511,6 +519,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(tex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_Static->Set(pSRVs[0]);
+            EXPECT_TRUE(tex2D_Static->IsBound(0));
         }
 
         {
@@ -526,6 +535,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 2u);
             EXPECT_EQ(tex2D_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_StaticArr->SetArray(pSRVs, 0, 2);
+            EXPECT_TRUE(tex2D_StaticArr->IsBound(0));
+            EXPECT_TRUE(tex2D_StaticArr->IsBound(1));
         }
         {
             auto tex2D_StaticArr_sampler = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_StaticArr_sampler");
@@ -540,6 +551,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(UniformBuff_Stat, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             UniformBuff_Stat->Set(pUBs[0]);
+            EXPECT_TRUE(UniformBuff_Stat->IsBound(0));
         }
 
         {
@@ -550,6 +562,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(UniformBuff_Stat2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             UniformBuff_Stat2->Set(pUBs[0]);
+            EXPECT_TRUE(UniformBuff_Stat2->IsBound(0));
         }
 
         {
@@ -560,6 +573,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(Buffer_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_Static->Set(pFormattedBuffSRV);
+            EXPECT_TRUE(Buffer_Static->IsBound(0));
         }
 
         {
@@ -571,6 +585,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_StaticArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_StaticArr->SetArray(&pFormattedBuffSRV, 1, 1);
+            EXPECT_TRUE(Buffer_StaticArr->IsBound(0));
+            EXPECT_TRUE(Buffer_StaticArr->IsBound(1));
         }
 
 
@@ -582,6 +598,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(rwtex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwtex2D_Static->Set(pTexUAVs[0]);
+            EXPECT_TRUE(rwtex2D_Static->IsBound(0));
         }
 
 
@@ -593,6 +610,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(rwtex2D_Static2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwtex2D_Static2->Set(pTexUAVs[1]);
+            EXPECT_TRUE(rwtex2D_Static2->IsBound(0));
         }
 
         {
@@ -603,6 +621,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(rwBuff_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwBuff_Static->Set(spRawBuffUAV[0]);
+            EXPECT_TRUE(rwBuff_Static->IsBound(0));
         }
 
 
@@ -672,6 +691,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(tex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_Mut->Set(pSRVs[0]);
+            EXPECT_TRUE(tex2D_Mut->IsBound(0));
         }
 
         {
@@ -687,6 +707,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 2u);
             EXPECT_EQ(tex2D_MutArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_MutArr->SetArray(pSRVs, 0, 2);
+            EXPECT_TRUE(tex2D_MutArr->IsBound(0));
+            EXPECT_TRUE(tex2D_MutArr->IsBound(1));
         }
 
         {
@@ -718,6 +740,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 2u);
             EXPECT_EQ(tex2D_DynArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_DynArr->SetArray(pSRVs, 0, 2);
+            EXPECT_TRUE(tex2D_DynArr->IsBound(0));
+            EXPECT_TRUE(tex2D_DynArr->IsBound(1));
         }
 
         {
@@ -733,6 +757,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(UniformBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             UniformBuff_Mut->Set(pUBs[0]);
+            EXPECT_TRUE(UniformBuff_Mut->IsBound(0));
         }
 
         {
@@ -743,8 +768,11 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(UniformBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             UniformBuff_Dyn->Set(pUBs[1]);
+            EXPECT_TRUE(UniformBuff_Dyn->IsBound(0));
             UniformBuff_Dyn->Set(nullptr);
+            EXPECT_FALSE(UniformBuff_Dyn->IsBound(0));
             UniformBuff_Dyn->Set(pUBs[0]);
+            EXPECT_TRUE(UniformBuff_Dyn->IsBound(0));
         }
 
         {
@@ -755,6 +783,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(Buffer_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_Mut->Set(pFormattedBuffSRV);
+            EXPECT_TRUE(Buffer_Mut->IsBound(0));
         }
 
         {
@@ -766,6 +795,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_MutArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_MutArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_MutArr->SetArray(&pFormattedBuffSRV, 1, 1);
+            EXPECT_TRUE(Buffer_MutArr->IsBound(0));
+            EXPECT_TRUE(Buffer_MutArr->IsBound(1));
         }
 
         {
@@ -776,8 +807,11 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(Buffer_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_Dyn->Set(pFormattedBuffSRV);
+            EXPECT_TRUE(Buffer_Dyn->IsBound(0));
             Buffer_Dyn->Set(nullptr);
+            EXPECT_FALSE(Buffer_Dyn->IsBound(0));
             Buffer_Dyn->Set(pFormattedBuffSRV);
+            EXPECT_TRUE(Buffer_Dyn->IsBound(0));
         }
 
         {
@@ -789,6 +823,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_DynArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_DynArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_DynArr->SetArray(&pFormattedBuffSRV, 1, 1);
+            EXPECT_TRUE(Buffer_DynArr->IsBound(0));
+            EXPECT_TRUE(Buffer_DynArr->IsBound(1));
         }
 
         {
@@ -811,6 +847,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(tex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_Mut->Set(pRWTexSRVs[4]);
+            EXPECT_TRUE(tex2D_Mut->IsBound(0));
         }
 
         {
@@ -826,6 +863,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 2u);
             EXPECT_EQ(tex2D_MutArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_MutArr->SetArray(pRWTexSRVs + 5, 0, 2);
+            EXPECT_TRUE(tex2D_MutArr->IsBound(0));
         }
 
         {
@@ -841,8 +879,11 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(tex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_Dyn->Set(pRWTexSRVs[6]);
+            EXPECT_TRUE(tex2D_Dyn->IsBound(0));
             tex2D_Dyn->Set(nullptr);
+            EXPECT_FALSE(tex2D_Dyn->IsBound(0));
             tex2D_Dyn->Set(pRWTexSRVs[7]);
+            EXPECT_TRUE(tex2D_Dyn->IsBound(0));
         }
 
         {
@@ -858,6 +899,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 2u);
             EXPECT_EQ(tex2D_DynArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_DynArr->SetArray(pSRVs, 0, 2);
+            EXPECT_TRUE(tex2D_DynArr->IsBound(0));
+            EXPECT_TRUE(tex2D_DynArr->IsBound(1));
         }
 
         {
@@ -874,6 +917,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(UniformBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             UniformBuff_Mut->Set(pUBs[0]);
+            EXPECT_TRUE(UniformBuff_Mut->IsBound(0));
         }
 
         {
@@ -884,8 +928,11 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(UniformBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             UniformBuff_Dyn->Set(pUBs[1]);
+            EXPECT_TRUE(UniformBuff_Dyn->IsBound(0));
             UniformBuff_Dyn->Set(nullptr);
+            EXPECT_FALSE(UniformBuff_Dyn->IsBound(0));
             UniformBuff_Dyn->Set(pUBs[0]);
+            EXPECT_TRUE(UniformBuff_Dyn->IsBound(0));
         }
 
         {
@@ -896,6 +943,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(Buffer_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_Mut->Set(spRawBuffSRVs[1]);
+            EXPECT_TRUE(Buffer_Mut->IsBound(0));
         }
 
         {
@@ -907,6 +955,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_MutArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_MutArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_MutArr->SetArray(&pFormattedBuffSRV, 1, 1);
+            EXPECT_TRUE(Buffer_MutArr->IsBound(0));
+            EXPECT_TRUE(Buffer_MutArr->IsBound(1));
         }
 
         {
@@ -917,8 +967,11 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(Buffer_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_Dyn->Set(pFormattedBuffSRVs[2]);
+            EXPECT_TRUE(Buffer_Dyn->IsBound(0));
             Buffer_Dyn->Set(nullptr);
+            EXPECT_FALSE(Buffer_Dyn->IsBound(0));
             Buffer_Dyn->Set(pFormattedBuffSRVs[3]);
+            EXPECT_TRUE(Buffer_Dyn->IsBound(0));
         }
 
         {
@@ -930,6 +983,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_DynArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_DynArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_DynArr->SetArray(&pFormattedBuffSRV, 1, 1);
+            EXPECT_TRUE(Buffer_DynArr->IsBound(0));
+            EXPECT_TRUE(Buffer_DynArr->IsBound(1));
         }
 
         {
@@ -940,6 +995,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(rwtex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwtex2D_Mut->Set(pTexUAVs[2]);
+            EXPECT_TRUE(rwtex2D_Mut->IsBound(0));
         }
 
         {
@@ -950,8 +1006,11 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(rwtex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwtex2D_Dyn->Set(pTexUAVs[2]);
+            EXPECT_TRUE(rwtex2D_Dyn->IsBound(0));
             rwtex2D_Dyn->Set(nullptr);
+            EXPECT_FALSE(rwtex2D_Dyn->IsBound(0));
             rwtex2D_Dyn->Set(pTexUAVs[3]);
+            EXPECT_TRUE(rwtex2D_Dyn->IsBound(0));
         }
 
         {
@@ -962,6 +1021,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(rwBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwBuff_Mut->Set(pFormattedBuffUAV[1]);
+            EXPECT_TRUE(rwBuff_Mut->IsBound(0));
         }
 
         {
@@ -972,8 +1032,11 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(rwBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwBuff_Dyn->Set(pFormattedBuffUAV[1]);
+            EXPECT_TRUE(rwBuff_Dyn->IsBound(0));
             rwBuff_Dyn->Set(nullptr);
+            EXPECT_FALSE(rwBuff_Dyn->IsBound(0));
             rwBuff_Dyn->Set(pFormattedBuffUAV[2]);
+            EXPECT_TRUE(rwBuff_Dyn->IsBound(0));
         }
 
         {
