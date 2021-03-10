@@ -98,23 +98,6 @@ public:
         }
     }
 
-    /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
-    {
-        if (pPRS == nullptr)
-        {
-            return GetHash() == 0;
-        }
-        return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureGLImpl>(pPRS));
-    }
-
-    bool IsCompatibleWith(const PipelineResourceSignatureGLImpl& Other) const;
-
-    bool IsIncompatibleWith(const PipelineResourceSignatureGLImpl& Other) const
-    {
-        return GetHash() != Other.GetHash() || m_BindingCount != Other.m_BindingCount;
-    }
-
     void InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache);
 
 #ifdef DILIGENT_DEVELOPMENT

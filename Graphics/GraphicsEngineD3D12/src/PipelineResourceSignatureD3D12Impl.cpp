@@ -375,30 +375,6 @@ void PipelineResourceSignatureD3D12Impl::Destruct()
     TPipelineResourceSignatureBase::Destruct();
 }
 
-bool PipelineResourceSignatureD3D12Impl::IsCompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const
-{
-    if (this == &Other)
-        return true;
-
-    if (GetHash() != Other.GetHash())
-        return false;
-
-    if (!PipelineResourceSignaturesCompatible(GetDesc(), Other.GetDesc()))
-        return false;
-
-    const auto ResCount = GetTotalResourceCount();
-    VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
-    for (Uint32 r = 0; r < ResCount; ++r)
-    {
-        const auto& Res      = GetResourceAttribs(r);
-        const auto& OtherRes = Other.GetResourceAttribs(r);
-        if (!Res.IsCompatibleWith(OtherRes))
-            return false;
-    }
-
-    return true;
-}
-
 void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache)
 {
     ResourceCache.Initialize(m_SRBMemAllocator.GetResourceCacheDataAllocator(0), m_pDevice, m_RootParams);

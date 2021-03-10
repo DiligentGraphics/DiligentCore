@@ -488,7 +488,7 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
         const auto* pSRBSign = pSRB->GetSignature();
         DEV_CHECK_ERR(pSRBSign != nullptr, "SRB must not be null");
 
-        if (!pSign->IsCompatibleWith(*pSRBSign))
+        if (!pSign->IsCompatibleWith(pSRBSign))
         {
             LOG_ERROR_MESSAGE("Shader resource binding at index ", i, " with signature '", pSRBSign->GetDesc().Name,
                               "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");

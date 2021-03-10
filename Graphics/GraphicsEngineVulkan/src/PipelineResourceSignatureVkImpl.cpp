@@ -566,30 +566,6 @@ void PipelineResourceSignatureVkImpl::Destruct()
     TPipelineResourceSignatureBase::Destruct();
 }
 
-bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSignatureVkImpl& Other) const
-{
-    if (this == &Other)
-        return true;
-
-    if (GetHash() != Other.GetHash())
-        return false;
-
-    if (!PipelineResourceSignaturesCompatible(GetDesc(), Other.GetDesc()))
-        return false;
-
-    const auto ResCount = GetTotalResourceCount();
-    VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
-    for (Uint32 r = 0; r < ResCount; ++r)
-    {
-        const auto& Res      = GetResourceAttribs(r);
-        const auto& OtherRes = Other.GetResourceAttribs(r);
-        if (!Res.IsCompatibleWith(OtherRes))
-            return false;
-    }
-
-    return true;
-}
-
 void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache)
 {
     const auto NumSets = GetNumDescriptorSets();

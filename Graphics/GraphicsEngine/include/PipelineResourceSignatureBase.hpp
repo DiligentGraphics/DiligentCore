@@ -272,6 +272,42 @@ public:
         pSRBImpl->SetStaticResourcesInitialized();
     }
 
+    /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
+    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
+    {
+        if (pPRS == nullptr)
+            return IsEmpty();
+
+        if (this == pPRS)
+            return true;
+
+        const auto& This  = *static_cast<const PipelineResourceSignatureImplType*>(this);
+        const auto& Other = *ValidatedCast<const PipelineResourceSignatureImplType>(pPRS);
+
+        if (This.GetHash() != Other.GetHash())
+            return false;
+
+        if (!PipelineResourceSignaturesCompatible(This.GetDesc(), Other.GetDesc()))
+            return false;
+
+        const auto ResCount = This.GetTotalResourceCount();
+        VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
+        for (Uint32 r = 0; r < ResCount; ++r)
+        {
+            const auto& Res      = This.GetResourceAttribs(r);
+            const auto& OtherRes = Other.GetResourceAttribs(r);
+            if (!Res.IsCompatibleWith(OtherRes))
+                return false;
+        }
+
+        return true;
+    }
+
+    bool IsIncompatibleWith(const PipelineResourceSignatureImplType& Other) const
+    {
+        return GetHash() != Other.GetHash();
+    }
+
     size_t GetHash() const { return m_Hash; }
 
     PIPELINE_TYPE GetPipelineType() const { return m_PipelineType; }
@@ -360,8 +396,8 @@ public:
         if (pSign0 == pSign1)
             return true;
 
-        bool IsNull0 = pSign0 == nullptr || (pSign0->GetTotalResourceCount() == 0 && pSign0->GetImmutableSamplerCount() == 0);
-        bool IsNull1 = pSign1 == nullptr || (pSign1->GetTotalResourceCount() == 0 && pSign1->GetImmutableSamplerCount() == 0);
+        bool IsNull0 = pSign0 == nullptr || pSign0->IsEmpty();
+        bool IsNull1 = pSign1 == nullptr || pSign1->IsEmpty();
         if (IsNull0 && IsNull1)
             return true;
 
@@ -404,6 +440,11 @@ public:
                 }
             }
         }
+    }
+
+    bool IsEmpty() const
+    {
+        return GetTotalResourceCount() == 0 && GetImmutableSamplerCount() == 0;
     }
 
 protected:

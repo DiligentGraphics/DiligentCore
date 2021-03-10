@@ -130,17 +130,6 @@ public:
         return m_RootParams.GetNumRootViews();
     }
 
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
-    {
-        if (pPRS == nullptr)
-        {
-            return GetHash() == 0;
-        }
-        return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureD3D12Impl>(pPRS));
-    }
-
-    bool IsCompatibleWith(const PipelineResourceSignatureD3D12Impl& Other) const;
-
     void InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache);
 
     void CopyStaticResources(ShaderResourceCacheD3D12& ResourceCache) const;

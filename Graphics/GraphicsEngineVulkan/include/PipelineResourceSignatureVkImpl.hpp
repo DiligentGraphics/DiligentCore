@@ -116,16 +116,6 @@ public:
 
     bool HasDescriptorSet(DESCRIPTOR_SET_ID SetId) const { return m_VkDescrSetLayouts[SetId] != VK_NULL_HANDLE; }
 
-    /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
-    {
-        if (pPRS == nullptr)
-        {
-            return GetHash() == 0;
-        }
-        return IsCompatibleWith(*ValidatedCast<const PipelineResourceSignatureVkImpl>(pPRS));
-    }
-
     void InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache);
 
     // Copies static resources from the static resource cache to the destination cache
@@ -145,13 +135,6 @@ public:
     // Commits dynamic resources from ResourceCache to vkDynamicDescriptorSet
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
-
-    bool IsCompatibleWith(const PipelineResourceSignatureVkImpl& Other) const;
-
-    bool IsIncompatibleWith(const PipelineResourceSignatureVkImpl& Other) const
-    {
-        return GetHash() != Other.GetHash();
-    }
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource attribs using the SPIRV resource attributes from the PSO.

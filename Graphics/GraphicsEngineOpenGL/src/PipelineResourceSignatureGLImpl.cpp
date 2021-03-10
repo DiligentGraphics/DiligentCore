@@ -480,33 +480,6 @@ void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL
     }
 }
 
-bool PipelineResourceSignatureGLImpl::IsCompatibleWith(const PipelineResourceSignatureGLImpl& Other) const
-{
-    if (this == &Other)
-        return true;
-
-    if (GetHash() != Other.GetHash())
-        return false;
-
-    if (m_BindingCount != Other.m_BindingCount)
-        return false;
-
-    if (!PipelineResourceSignaturesCompatible(GetDesc(), Other.GetDesc()))
-        return false;
-
-    const auto ResCount = GetTotalResourceCount();
-    VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
-    for (Uint32 r = 0; r < ResCount; ++r)
-    {
-        const auto& Res      = GetResourceAttribs(r);
-        const auto& OtherRes = Other.GetResourceAttribs(r);
-        if (!Res.IsCompatibleWith(OtherRes))
-            return false;
-    }
-
-    return true;
-}
-
 #ifdef DILIGENT_DEVELOPMENT
 bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderResourcesGL::GLResourceAttribs& GLAttribs,
                                                                    RESOURCE_DIMENSION                          ResourceDim,

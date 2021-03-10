@@ -310,7 +310,7 @@ bool RootSignatureD3D12::IsCompatibleWith(const RefCntAutoPtr<PipelineResourceSi
         if (pLSig == nullptr || pRSig == nullptr)
             continue;
 
-        if (!pLSig->IsCompatibleWith(*pRSig))
+        if (!pLSig->IsCompatibleWith(pRSig))
             return false;
     }
     return true;
