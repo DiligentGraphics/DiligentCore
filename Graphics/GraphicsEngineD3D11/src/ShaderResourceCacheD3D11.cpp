@@ -45,10 +45,10 @@ size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const TResourceCount& Res
     auto   SamplerCount = ResCount[DESCRIPTOR_RANGE_SAMPLER];
     auto   UAVCount     = ResCount[DESCRIPTOR_RANGE_UAV];
     size_t MemSize      = 0;
-    MemSize = Align(MemSize + (sizeof(CachedCB)       + sizeof(TBindPointsAndActiveBits) + sizeof(ID3D11Buffer*))              * CBCount,      MaxAlignment);
-    MemSize = Align(MemSize + (sizeof(CachedResource) + sizeof(TBindPointsAndActiveBits) + sizeof(ID3D11ShaderResourceView*))  * SRVCount,     MaxAlignment);
-    MemSize = Align(MemSize + (sizeof(CachedSampler)  + sizeof(TBindPointsAndActiveBits) + sizeof(ID3D11SamplerState*))        * SamplerCount, MaxAlignment);
-    MemSize = Align(MemSize + (sizeof(CachedResource) + sizeof(TBindPointsAndActiveBits) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount,     MaxAlignment);
+    MemSize = Align(MemSize + (sizeof(CachedCB)       + sizeof(BindPointsD3D11) + sizeof(ID3D11Buffer*))              * CBCount,      MaxAlignment);
+    MemSize = Align(MemSize + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11ShaderResourceView*))  * SRVCount,     MaxAlignment);
+    MemSize = Align(MemSize + (sizeof(CachedSampler)  + sizeof(BindPointsD3D11) + sizeof(ID3D11SamplerState*))        * SamplerCount, MaxAlignment);
+    MemSize = Align(MemSize + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount,     MaxAlignment);
     // clang-format on
     VERIFY(MemSize < InvalidResourceOffset, "Memory size exeed the maximum allowed size.");
     return MemSize;
@@ -80,10 +80,10 @@ void ShaderResourceCacheD3D11::Initialize(const TResourceCount& ResCount, IMemor
     VERIFY(UAVCount     == m_UAVCount,     "UAVs count (", UAVCount, ") exceeds maximum representable value");
 
     // m_CBOffset  = 0
-    m_SRVOffset       = static_cast<OffsetType>(Align(m_CBOffset      + (sizeof(CachedCB)       + sizeof(TBindPointsAndActiveBits) + sizeof(ID3D11Buffer*))              * CBCount,      MaxAlignment));
-    m_SamplerOffset   = static_cast<OffsetType>(Align(m_SRVOffset     + (sizeof(CachedResource) + sizeof(TBindPointsAndActiveBits) + sizeof(ID3D11ShaderResourceView*))  * SRVCount,     MaxAlignment));
-    m_UAVOffset       = static_cast<OffsetType>(Align(m_SamplerOffset + (sizeof(CachedSampler)  + sizeof(TBindPointsAndActiveBits) + sizeof(ID3D11SamplerState*))        * SamplerCount, MaxAlignment));
-    size_t BufferSize = static_cast<OffsetType>(Align(m_UAVOffset     + (sizeof(CachedResource) + sizeof(TBindPointsAndActiveBits) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount,     MaxAlignment));
+    m_SRVOffset       = static_cast<OffsetType>(Align(m_CBOffset      + (sizeof(CachedCB)       + sizeof(BindPointsD3D11) + sizeof(ID3D11Buffer*))              * CBCount,      MaxAlignment));
+    m_SamplerOffset   = static_cast<OffsetType>(Align(m_SRVOffset     + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11ShaderResourceView*))  * SRVCount,     MaxAlignment));
+    m_UAVOffset       = static_cast<OffsetType>(Align(m_SamplerOffset + (sizeof(CachedSampler)  + sizeof(BindPointsD3D11) + sizeof(ID3D11SamplerState*))        * SamplerCount, MaxAlignment));
+    size_t BufferSize = static_cast<OffsetType>(Align(m_UAVOffset     + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount,     MaxAlignment));
     // clang-format on
 
     VERIFY_EXPR(m_pResourceData == nullptr);
@@ -96,19 +96,17 @@ void ShaderResourceCacheD3D11::Initialize(const TResourceCount& ResCount, IMemor
         m_pAllocator = &MemAllocator;
     }
 
-    const TBindPointsAndActiveBits InvalidBindPoints = {0, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint};
-
     // Explicitly construct all objects
     if (CBCount != 0)
     {
-        CachedCB*                 CBs        = nullptr;
-        ID3D11Buffer**            d3d11CBs   = nullptr;
-        TBindPointsAndActiveBits* bindPoints = nullptr;
+        CachedCB*        CBs        = nullptr;
+        ID3D11Buffer**   d3d11CBs   = nullptr;
+        BindPointsD3D11* bindPoints = nullptr;
         GetCBArrays(CBs, d3d11CBs, bindPoints);
         for (Uint32 cb = 0; cb < CBCount; ++cb)
         {
             new (CBs + cb) CachedCB{};
-            bindPoints[cb] = InvalidBindPoints;
+            new (bindPoints + cb) BindPointsD3D11{};
         }
     }
 
@@ -116,25 +114,25 @@ void ShaderResourceCacheD3D11::Initialize(const TResourceCount& ResCount, IMemor
     {
         CachedResource*            SRVResources = nullptr;
         ID3D11ShaderResourceView** d3d11SRVs    = nullptr;
-        TBindPointsAndActiveBits*  bindPoints   = nullptr;
+        BindPointsD3D11*           bindPoints   = nullptr;
         GetSRVArrays(SRVResources, d3d11SRVs, bindPoints);
         for (Uint32 srv = 0; srv < SRVCount; ++srv)
         {
             new (SRVResources + srv) CachedResource{};
-            bindPoints[srv] = InvalidBindPoints;
+            new (bindPoints + srv) BindPointsD3D11{};
         }
     }
 
     if (SamplerCount != 0)
     {
-        CachedSampler*            Samplers      = nullptr;
-        ID3D11SamplerState**      d3d11Samplers = nullptr;
-        TBindPointsAndActiveBits* bindPoints    = nullptr;
+        CachedSampler*       Samplers      = nullptr;
+        ID3D11SamplerState** d3d11Samplers = nullptr;
+        BindPointsD3D11*     bindPoints    = nullptr;
         GetSamplerArrays(Samplers, d3d11Samplers, bindPoints);
         for (Uint32 sam = 0; sam < SamplerCount; ++sam)
         {
             new (Samplers + sam) CachedSampler{};
-            bindPoints[sam] = InvalidBindPoints;
+            new (bindPoints + sam) BindPointsD3D11{};
         }
     }
 
@@ -142,12 +140,12 @@ void ShaderResourceCacheD3D11::Initialize(const TResourceCount& ResCount, IMemor
     {
         CachedResource*             UAVResources = nullptr;
         ID3D11UnorderedAccessView** d3d11UAVs    = nullptr;
-        TBindPointsAndActiveBits*   bindPoints   = nullptr;
+        BindPointsD3D11*            bindPoints   = nullptr;
         GetUAVArrays(UAVResources, d3d11UAVs, bindPoints);
         for (Uint32 uav = 0; uav < UAVCount; ++uav)
         {
             new (UAVResources + uav) CachedResource{};
-            bindPoints[uav] = InvalidBindPoints;
+            new (bindPoints + uav) BindPointsD3D11{};
         }
     }
 }
@@ -160,9 +158,9 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
         auto CBCount = GetCBCount();
         if (CBCount != 0)
         {
-            CachedCB*                 CBs        = nullptr;
-            ID3D11Buffer**            d3d11CBs   = nullptr;
-            TBindPointsAndActiveBits* bindPoints = nullptr;
+            CachedCB*        CBs        = nullptr;
+            ID3D11Buffer**   d3d11CBs   = nullptr;
+            BindPointsD3D11* bindPoints = nullptr;
             GetCBArrays(CBs, d3d11CBs, bindPoints);
             for (size_t cb = 0; cb < CBCount; ++cb)
                 CBs[cb].~CachedCB();
@@ -173,7 +171,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
         {
             CachedResource*            SRVResources = nullptr;
             ID3D11ShaderResourceView** d3d11SRVs    = nullptr;
-            TBindPointsAndActiveBits*  bindPoints   = nullptr;
+            BindPointsD3D11*           bindPoints   = nullptr;
             GetSRVArrays(SRVResources, d3d11SRVs, bindPoints);
             for (size_t srv = 0; srv < SRVCount; ++srv)
                 SRVResources[srv].~CachedResource();
@@ -182,9 +180,9 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
         auto SamplerCount = GetSamplerCount();
         if (SamplerCount != 0)
         {
-            CachedSampler*            Samplers      = nullptr;
-            ID3D11SamplerState**      d3d11Samplers = nullptr;
-            TBindPointsAndActiveBits* bindPoints    = nullptr;
+            CachedSampler*       Samplers      = nullptr;
+            ID3D11SamplerState** d3d11Samplers = nullptr;
+            BindPointsD3D11*     bindPoints    = nullptr;
             GetSamplerArrays(Samplers, d3d11Samplers, bindPoints);
             for (size_t sam = 0; sam < SamplerCount; ++sam)
                 Samplers[sam].~CachedSampler();
@@ -195,7 +193,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
         {
             CachedResource*             UAVResources = nullptr;
             ID3D11UnorderedAccessView** d3d11UAVs    = nullptr;
-            TBindPointsAndActiveBits*   bindPoints   = nullptr;
+            BindPointsD3D11*            bindPoints   = nullptr;
             GetUAVArrays(UAVResources, d3d11UAVs, bindPoints);
             for (size_t uav = 0; uav < UAVCount; ++uav)
                 UAVResources[uav].~CachedResource();
@@ -276,7 +274,7 @@ void ShaderResourceCacheD3D11::DvpVerifyCacheConsistency()
     ID3D11SamplerState**        d3d11Samplers = nullptr;
     CachedResource*             UAVResources  = nullptr;
     ID3D11UnorderedAccessView** d3d11UAVs     = nullptr;
-    TBindPointsAndActiveBits*   bindPoints    = nullptr;
+    BindPointsD3D11*            bindPoints    = nullptr;
 
     GetCBArrays(CBs, d3d11CBs, bindPoints);
     GetSRVArrays(SRVResources, d3d11SRVs, bindPoints);
@@ -331,28 +329,28 @@ void ShaderResourceCacheD3D11::ProcessResources(THandleResource HandleResources)
     {
         ShaderResourceCacheD3D11::CachedCB* CachedCBs;
         ID3D11Buffer**                      d3d11CBs;
-        TBindPointsAndActiveBits*           bindPoints;
+        BindPointsD3D11*                    bindPoints;
         GetCBArrays(CachedCBs, d3d11CBs, bindPoints);
         HandleResources(GetCBCount(), CachedCBs, d3d11CBs);
     }
     {
         ShaderResourceCacheD3D11::CachedResource* CachedSRVResources;
         ID3D11ShaderResourceView**                d3d11SRVs;
-        TBindPointsAndActiveBits*                 bindPoints;
+        BindPointsD3D11*                          bindPoints;
         GetSRVArrays(CachedSRVResources, d3d11SRVs, bindPoints);
         HandleResources(GetSRVCount(), CachedSRVResources, d3d11SRVs);
     }
     {
         ShaderResourceCacheD3D11::CachedSampler* CachedSamplers;
         ID3D11SamplerState**                     d3d11Samplers;
-        TBindPointsAndActiveBits*                bindPoints;
+        BindPointsD3D11*                         bindPoints;
         GetSamplerArrays(CachedSamplers, d3d11Samplers, bindPoints);
         HandleResources(GetSamplerCount(), CachedSamplers, d3d11Samplers);
     }
     {
         ShaderResourceCacheD3D11::CachedResource* CachedUAVResources;
         ID3D11UnorderedAccessView**               d3d11UAVs;
-        TBindPointsAndActiveBits*                 bindPoints;
+        BindPointsD3D11*                          bindPoints;
         GetUAVArrays(CachedUAVResources, d3d11UAVs, bindPoints);
         HandleResources(GetUAVCount(), CachedUAVResources, d3d11UAVs);
     }
@@ -553,19 +551,19 @@ void ShaderResourceCacheD3D11::BindResources(DeviceContextD3D11Impl& Ctx, const 
         const auto                                Range = DESCRIPTOR_RANGE_CBV;
         ShaderResourceCacheD3D11::CachedCB const* CBs;
         ID3D11Buffer* const*                      d3d11CBs;
-        TBindPointsAndActiveBits const*           bindPoints;
+        BindPointsD3D11 const*                    bindPoints;
         GetConstCBArrays(CBs, d3d11CBs, bindPoints);
 
         for (Uint32 cb = 0; cb < CBCount; ++cb)
         {
-            Uint32      ActiveBits = bindPoints[cb][0] & ActiveStages;
-            const auto* BindPoints = &bindPoints[cb][1];
+            const auto& BindPoints = bindPoints[cb];
+            Uint32      ActiveBits = BindPoints.GetActiveBits() & ActiveStages;
             VERIFY(ActiveBits != 0, "resource is not initialized");
             while (ActiveBits != 0)
             {
                 const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
                 ActiveBits &= ~(1u << ShaderInd);
-                VERIFY_EXPR(BindPoints[ShaderInd] != InvalidBindPoint);
+                VERIFY_EXPR(BindPoints.IsValid(ShaderInd));
 
                 auto*      CommittedD3D11CBs = CommittedRes.D3D11CBs[ShaderInd];
                 UINT&      MinSlot           = MinMaxSlot[ShaderInd][Range].MinSlot;
@@ -588,19 +586,19 @@ void ShaderResourceCacheD3D11::BindResources(DeviceContextD3D11Impl& Ctx, const 
         const auto                                      Range = DESCRIPTOR_RANGE_SRV;
         ShaderResourceCacheD3D11::CachedResource const* SRVResources;
         ID3D11ShaderResourceView* const*                d3d11SRVs;
-        TBindPointsAndActiveBits const*                 bindPoints;
+        BindPointsD3D11 const*                          bindPoints;
         GetConstSRVArrays(SRVResources, d3d11SRVs, bindPoints);
 
         for (Uint32 srv = 0; srv < SRVCount; ++srv)
         {
-            Uint32      ActiveBits = bindPoints[srv][0] & ActiveStages;
-            const auto* BindPoints = &bindPoints[srv][1];
+            const auto& BindPoints = bindPoints[srv];
+            Uint32      ActiveBits = BindPoints.GetActiveBits() & ActiveStages;
             VERIFY(ActiveBits != 0, "resource is not initialized");
             while (ActiveBits != 0)
             {
                 const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
                 ActiveBits &= ~(1u << ShaderInd);
-                VERIFY_EXPR(BindPoints[ShaderInd] != InvalidBindPoint);
+                VERIFY_EXPR(BindPoints.IsValid(ShaderInd));
 
                 auto*      CommittedD3D11SRVs   = CommittedRes.D3D11SRVs[ShaderInd];
                 auto*      CommittedD3D11SRVRes = CommittedRes.D3D11SRVResources[ShaderInd];
@@ -625,19 +623,19 @@ void ShaderResourceCacheD3D11::BindResources(DeviceContextD3D11Impl& Ctx, const 
         const auto                                     Range = DESCRIPTOR_RANGE_SAMPLER;
         ShaderResourceCacheD3D11::CachedSampler const* Samplers;
         ID3D11SamplerState* const*                     d3d11Samplers;
-        TBindPointsAndActiveBits const*                bindPoints;
+        BindPointsD3D11 const*                         bindPoints;
         GetConstSamplerArrays(Samplers, d3d11Samplers, bindPoints);
 
         for (Uint32 sam = 0; sam < SamplerCount; ++sam)
         {
-            Uint32      ActiveBits = bindPoints[sam][0] & ActiveStages;
-            const auto* BindPoints = &bindPoints[sam][1];
+            const auto& BindPoints = bindPoints[sam];
+            Uint32      ActiveBits = BindPoints.GetActiveBits() & ActiveStages;
             VERIFY(ActiveBits != 0, "resource is not initialized");
             while (ActiveBits != 0)
             {
                 const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
                 ActiveBits &= ~(1u << ShaderInd);
-                VERIFY_EXPR(BindPoints[ShaderInd] != InvalidBindPoint);
+                VERIFY_EXPR(BindPoints.IsValid(ShaderInd));
 
                 auto*      CommittedD3D11Samplers = CommittedRes.D3D11Samplers[ShaderInd];
                 UINT&      MinSlot                = MinMaxSlot[ShaderInd][Range].MinSlot;
@@ -660,19 +658,19 @@ void ShaderResourceCacheD3D11::BindResources(DeviceContextD3D11Impl& Ctx, const 
         const auto                                      Range = DESCRIPTOR_RANGE_UAV;
         ShaderResourceCacheD3D11::CachedResource const* UAVResources;
         ID3D11UnorderedAccessView* const*               d3d11UAVs;
-        TBindPointsAndActiveBits const*                 bindPoints;
+        BindPointsD3D11 const*                          bindPoints;
         GetConstUAVArrays(UAVResources, d3d11UAVs, bindPoints);
 
         for (Uint32 uav = 0; uav < UAVCount; ++uav)
         {
-            Uint32      ActiveBits = bindPoints[uav][0] & ActiveStages;
-            const auto* BindPoints = &bindPoints[uav][1];
+            const auto& BindPoints = bindPoints[uav];
+            Uint32      ActiveBits = BindPoints.GetActiveBits() & ActiveStages;
             VERIFY(ActiveBits != 0, "resource is not initialized");
             while (ActiveBits != 0)
             {
                 const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
                 ActiveBits &= ~(1u << ShaderInd);
-                VERIFY_EXPR(BindPoints[ShaderInd] != InvalidBindPoint);
+                VERIFY_EXPR(BindPoints.IsValid(ShaderInd));
 
                 auto*      CommittedD3D11UAVs   = CommittedRes.D3D11UAVs[ShaderInd];
                 auto*      CommittedD3D11UAVRes = CommittedRes.D3D11UAVResources[ShaderInd];

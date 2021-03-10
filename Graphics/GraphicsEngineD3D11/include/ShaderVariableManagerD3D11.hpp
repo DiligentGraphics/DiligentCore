@@ -43,7 +43,7 @@ namespace Diligent
 {
 
 /// Diligent::ShaderVariableManagerD3D11 class
-// sizeof(ShaderVariableManagerD3D11) == AZ TODO (Release, x64)
+// sizeof(ShaderVariableManagerD3D11) == 56, (Release, x64)
 class ShaderVariableManagerD3D11
 {
 public:
@@ -83,12 +83,12 @@ public:
     const ResourceAttribs&      GetAttribs(Uint32 Index) const;
 
 
-    struct ShaderVariableD3D11Base : ShaderVariableBase<ShaderVariableManagerD3D11, IShaderResourceVariableD3D>
+    template <typename ThisImplType>
+    struct ShaderVariableD3D11Base : ShaderVariableBase<ThisImplType, ShaderVariableManagerD3D11, IShaderResourceVariableD3D>
     {
     public:
         ShaderVariableD3D11Base(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableBase<ShaderVariableManagerD3D11, IShaderResourceVariableD3D>{ParentLayout},
-            m_ResIndex{ResIndex}
+            ShaderVariableBase<ThisImplType, ShaderVariableManagerD3D11, IShaderResourceVariableD3D>{ParentLayout, ResIndex}
         {}
 
         // clang-format off
@@ -114,56 +114,21 @@ public:
             }
         }
 
-        virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
-        {
-            return GetDesc().VarType;
-        }
-
-        virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
-        {
-            const auto& Desc       = GetDesc();
-            ResourceDesc.Name      = Desc.Name;
-            ResourceDesc.Type      = Desc.ResourceType;
-            ResourceDesc.ArraySize = Desc.ArraySize;
-        }
-
-        virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
-        {
-            return m_ParentManager.GetVariableIndex(*this);
-        }
-
         virtual void DILIGENT_CALL_TYPE GetHLSLResourceDesc(HLSLShaderResourceDesc& HLSLResDesc) const override final
         {
-            // AZ TODO
+            GetResourceDesc(HLSLResDesc);
+            HLSLResDesc.ShaderRegister = GetAttribs().BindPoints[m_ParentManager.m_ShaderTypeIndex];
         }
-
-    private:
-        const Uint32 m_ResIndex;
     };
 
-    struct ConstBuffBindInfo final : ShaderVariableD3D11Base
+    struct ConstBuffBindInfo final : ShaderVariableD3D11Base<ConstBuffBindInfo>
     {
         ConstBuffBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<ConstBuffBindInfo>{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -172,29 +137,14 @@ public:
         }
     };
 
-    struct TexSRVBindInfo final : ShaderVariableD3D11Base
+    struct TexSRVBindInfo final : ShaderVariableD3D11Base<TexSRVBindInfo>
     {
         TexSRVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<TexSRVBindInfo>{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -203,29 +153,14 @@ public:
         }
     };
 
-    struct TexUAVBindInfo final : ShaderVariableD3D11Base
+    struct TexUAVBindInfo final : ShaderVariableD3D11Base<TexUAVBindInfo>
     {
         TexUAVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<TexUAVBindInfo>{ParentLayout, ResIndex}
         {}
 
         // Provide non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         __forceinline virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -234,29 +169,14 @@ public:
         }
     };
 
-    struct BuffUAVBindInfo final : ShaderVariableD3D11Base
+    struct BuffUAVBindInfo final : ShaderVariableD3D11Base<BuffUAVBindInfo>
     {
         BuffUAVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<BuffUAVBindInfo>{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -265,29 +185,14 @@ public:
         }
     };
 
-    struct BuffSRVBindInfo final : ShaderVariableD3D11Base
+    struct BuffSRVBindInfo final : ShaderVariableD3D11Base<BuffSRVBindInfo>
     {
         BuffSRVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<BuffSRVBindInfo>{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -296,29 +201,14 @@ public:
         }
     };
 
-    struct SamplerBindInfo final : ShaderVariableD3D11Base
+    struct SamplerBindInfo final : ShaderVariableD3D11Base<SamplerBindInfo>
     {
         SamplerBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<SamplerBindInfo>{ParentLayout, ResIndex}
         {}
 
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -329,10 +219,6 @@ public:
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
-#ifdef DILIGENT_DEVELOPMENT
-    bool dvpVerifyBindings() const;
-#endif
-
     IShaderResourceVariable* GetVariable(const Char* Name) const;
     IShaderResourceVariable* GetVariable(Uint32 Index) const;
 
@@ -340,7 +226,7 @@ public:
 
     Uint32 GetVariableCount() const;
 
-    Uint32 GetVariableIndex(const ShaderVariableD3D11Base& Variable) const;
+    Uint32 GetVariableIndex(const IShaderResourceVariable& Variable) const;
 
     // clang-format off
     Uint32 GetNumCBs()      const { return (m_TexSRVsOffset  - 0               ) / sizeof(ConstBuffBindInfo);}
@@ -365,13 +251,6 @@ private:
                                Uint32                                    NumAllowedTypes,
                                SHADER_TYPE                               ShaderType,
                                D3DShaderResourceCounters&                Counters);
-
-    template <typename HandlerType>
-    static void ProcessSignatureResources(const PipelineResourceSignatureD3D11Impl& Signature,
-                                          const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
-                                          Uint32                                    NumAllowedTypes,
-                                          SHADER_TYPE                               ShaderType,
-                                          HandlerType                               Handler);
 
     // clang-format off
     using OffsetType = Uint16;
@@ -487,6 +366,8 @@ private:
     OffsetType m_BuffUAVsOffset = 0;
     OffsetType m_SamplerOffset  = 0;
     OffsetType m_MemorySize     = 0;
+
+    Uint8 m_ShaderTypeIndex = 0;
 
 #ifdef DILIGENT_DEBUG
     IMemoryAllocator* m_pDbgAllocator = nullptr;

@@ -39,60 +39,6 @@ namespace Diligent
 {
 namespace
 {
-void GetShaderResourceTypeAndFlags(const D3DShaderResourceAttribs& Attribs,
-                                   SHADER_RESOURCE_TYPE&           OutType,
-                                   PIPELINE_RESOURCE_FLAGS&        OutFlags)
-{
-    OutFlags = PIPELINE_RESOURCE_FLAG_UNKNOWN;
-
-    switch (int{Attribs.GetInputType()})
-    {
-        case D3D_SIT_CBUFFER:
-            OutType = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
-            break;
-        case D3D_SIT_TBUFFER:
-            UNSUPPORTED("TBuffers are not supported");
-            OutType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
-        case D3D_SIT_TEXTURE:
-            if (Attribs.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER)
-            {
-                OutType  = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-                OutFlags = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
-            }
-            else
-                OutType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
-        case D3D_SIT_SAMPLER:
-            OutType = SHADER_RESOURCE_TYPE_SAMPLER;
-            break;
-        case D3D_SIT_UAV_RWTYPED:
-            if (Attribs.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER)
-            {
-                OutType  = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-                OutFlags = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
-            }
-            else
-                OutType = SHADER_RESOURCE_TYPE_TEXTURE_UAV;
-            break;
-        case D3D_SIT_STRUCTURED:
-        case D3D_SIT_BYTEADDRESS:
-            OutType = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            break;
-        case D3D_SIT_UAV_RWSTRUCTURED:
-        case D3D_SIT_UAV_RWBYTEADDRESS:
-        case D3D_SIT_UAV_APPEND_STRUCTURED:
-        case D3D_SIT_UAV_CONSUME_STRUCTURED:
-        case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-            OutType = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
-        default:
-            UNEXPECTED("Unknown HLSL resource type");
-            OutType = SHADER_RESOURCE_TYPE_UNKNOWN;
-            break;
-    }
-}
-
 void VerifyResourceMerge(const PipelineStateDesc&        PSODesc,
                          const D3DShaderResourceAttribs& ExistingRes,
                          const D3DShaderResourceAttribs& NewResAttribs)
@@ -267,7 +213,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 
             VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
             pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, BindingsPerStage);
-            pSignature->AddBindings(BindingsPerStage);
+            pSignature->ShiftBindings(BindingsPerStage);
         }
 
         ValidateShaderResources(pShader);
@@ -292,7 +238,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     {
         const auto& pSignature = m_Signatures[sign];
         if (pSignature != nullptr)
-            pSignature->AddBindings(BindingsPerStage);
+            pSignature->ShiftBindings(BindingsPerStage);
     }
 
     for (Uint32 s = 0; s < BindingsPerStage.size(); ++s)
@@ -570,5 +516,70 @@ void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pSha
         } //
     );
 }
+
+#ifdef DILIGENT_DEVELOPMENT
+void PipelineStateD3D11Impl::DvpVerifySRBResources(class ShaderResourceBindingD3D11Impl* pSRBs[], const TBindingsPerStage BaseBindings[], Uint32 NumSRBs) const
+{
+    // Verify SRB compatibility with this pipeline
+    const auto        SignCount = GetResourceSignatureCount();
+    TBindingsPerStage Bindings  = {};
+
+    if (m_Desc.IsAnyGraphicsPipeline())
+        Bindings[GetShaderTypeIndex(SHADER_TYPE_PIXEL)][DESCRIPTOR_RANGE_UAV] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);
+
+    for (Uint32 sign = 0; sign < SignCount; ++sign)
+    {
+        // Get resource signature from the root signature
+        const auto* pSignature = GetResourceSignature(sign);
+        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
+            continue; // Skip null and empty signatures
+
+        VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
+        const auto* const pSRB = pSRBs[sign];
+        if (pSRB == nullptr)
+        {
+            LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires SRB at index ", sign, " but none is bound in the device context.");
+            continue;
+        }
+
+        const auto* const pSRBSign = pSRB->GetSignature();
+        if (!pSignature->IsCompatibleWith(pSRBSign))
+        {
+            LOG_ERROR_MESSAGE("Shader resource binding at index ", sign, " with signature '", pSRBSign->GetDesc().Name,
+                              "' is not compatible with pipeline layout in current pipeline '", m_Desc.Name, "'.");
+        }
+
+        DEV_CHECK_ERR(Bindings == BaseBindings[sign],
+                      "Bound resources has incorrect base binding indices, this may indicate a bug in resource signature compatibility comparison.");
+
+        pSignature->ShiftBindings(Bindings);
+    }
+
+    auto attrib_it = m_ResourceAttibutions.begin();
+    for (const auto& pResources : m_ShaderResources)
+    {
+        pResources->ProcessResources(
+            [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
+            {
+                if (*attrib_it && !attrib_it->IsImmutableSampler())
+                {
+                    if (attrib_it->SignatureIndex >= NumSRBs || pSRBs[attrib_it->SignatureIndex] == nullptr)
+                    {
+                        LOG_ERROR_MESSAGE("No resource is bound to variable '", Attribs.Name, "' in shader '", pResources->GetShaderName(),
+                                          "' of PSO '", m_Desc.Name, "': SRB at index ", attrib_it->SignatureIndex, " is not bound in the context.");
+                        return;
+                    }
+
+                    const auto& SRBCache = pSRBs[attrib_it->SignatureIndex]->GetResourceCache();
+                    attrib_it->pSignature->DvpValidateCommittedResource(Attribs, attrib_it->ResourceIndex, SRBCache, pResources->GetShaderName(), m_Desc.Name);
+                }
+                ++attrib_it;
+            } //
+        );
+    }
+    VERIFY_EXPR(attrib_it == m_ResourceAttibutions.end());
+}
+
+#endif // DILIGENT_DEVELOPMENT
 
 } // namespace Diligent

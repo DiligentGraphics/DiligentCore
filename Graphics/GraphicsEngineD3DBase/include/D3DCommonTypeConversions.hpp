@@ -31,10 +31,13 @@
 /// Common D3D type conversions
 
 #include "GraphicsTypes.h"
+#include "PipelineResourceSignature.h"
 
 namespace Diligent
 {
 
 RESOURCE_DIMENSION D3DSrvDimensionToResourceDimension(D3D_SRV_DIMENSION SrvDim);
+
+void GetShaderResourceTypeAndFlags(const struct D3DShaderResourceAttribs& Attribs, SHADER_RESOURCE_TYPE& OutType, PIPELINE_RESOURCE_FLAGS& OutFlags);
 
 } // namespace Diligent

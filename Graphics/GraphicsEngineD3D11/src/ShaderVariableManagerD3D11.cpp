@@ -42,6 +42,30 @@
 
 namespace Diligent
 {
+namespace
+{
+template <typename HandlerType>
+void ProcessSignatureResources(const PipelineResourceSignatureD3D11Impl& Signature,
+                               const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                               Uint32                                    NumAllowedTypes,
+                               SHADER_TYPE                               ShaderStages,
+                               HandlerType                               Handler)
+{
+    const bool UsingCombinedSamplers = Signature.IsUsingCombinedSamplers();
+    Signature.ProcessResources(AllowedVarTypes, NumAllowedTypes, ShaderStages,
+                               [&](const PipelineResourceDesc& ResDesc, Uint32 Index) //
+                               {
+                                   const auto& ResAttr = Signature.GetResourceAttribs(Index);
+
+                                   // Skip samplers combined with textures and immutable samplers
+                                   if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
+                                       (UsingCombinedSamplers || ResAttr.IsImmutableSamplerAssigned()))
+                                       return;
+
+                                   Handler(Index);
+                               });
+}
+} // namespace
 
 ShaderVariableManagerD3D11::~ShaderVariableManagerD3D11()
 {
@@ -121,43 +145,6 @@ void ShaderVariableManagerD3D11::CountResources(const PipelineResourceSignatureD
         });
 }
 
-template <typename HandlerType>
-void ShaderVariableManagerD3D11::ProcessSignatureResources(const PipelineResourceSignatureD3D11Impl& Signature,
-                                                           const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
-                                                           Uint32                                    NumAllowedTypes,
-                                                           SHADER_TYPE                               ShaderType,
-                                                           HandlerType                               Handler)
-{
-    const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    const bool   UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
-
-    for (Uint32 var_type = 0; var_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++var_type)
-    {
-        const auto VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(var_type);
-        if (IsAllowedType(VarType, AllowedTypeBits))
-        {
-            const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
-            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
-            {
-                const auto& Res  = Signature.GetResourceDesc(r);
-                const auto& Attr = Signature.GetResourceAttribs(r);
-                VERIFY_EXPR(Res.VarType == VarType);
-
-                if ((Res.ShaderStages & ShaderType) == 0)
-                    continue;
-
-                // When using HLSL-style combined image samplers, we need to skip separate samplers.
-                // Also always skip immutable separate samplers.
-                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-                    (!UsingSeparateSamplers || Attr.IsImmutableSamplerAssigned()))
-                    continue;
-
-                Handler(r);
-            }
-        }
-    }
-}
-
 size_t ShaderVariableManagerD3D11::GetRequiredMemorySize(const PipelineResourceSignatureD3D11Impl& Signature,
                                                          const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
                                                          Uint32                                    NumAllowedTypes,
@@ -191,7 +178,8 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
     D3DShaderResourceCounters ResCounters;
     CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, ResCounters);
 
-    m_pSignature = &Signature;
+    m_pSignature      = &Signature;
+    m_ShaderTypeIndex = static_cast<Uint8>(GetShaderTypeIndex(ShaderType));
 
     // Initialize offsets
     size_t CurrentOffset = 0;
@@ -319,10 +307,11 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* 
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedCB = ResourceCache.GetCB(Attr.CacheOffset + ArrayIndex);
-        VerifyConstantBufferBinding(Desc.Name, Desc.ArraySize, Desc.VarType, Desc.Flags, ArrayIndex, pBuffer, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr());
+        VerifyConstantBufferBinding(Desc, ArrayIndex, pBuffer, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr(),
+                                    m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetCB(Attr.CacheOffset, ArrayIndex, Attr.BindPoints, std::move(pBuffD3D11Impl));
+    ResourceCache.SetCB(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pBuffD3D11Impl));
 }
 
 
@@ -342,9 +331,10 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSRV = ResourceCache.GetSRV(Attr.CacheOffset + ArrayIndex);
-        VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
+        VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
-                                  RESOURCE_DIM_UNDEFINED, false, CachedSRV.pView.RawPtr());
+                                  RESOURCE_DIM_UNDEFINED, false, CachedSRV.pView.RawPtr(),
+                                  m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
 
@@ -383,9 +373,9 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
             }
         }
 #endif
-        ResourceCache.SetSampler(SampAttr.CacheOffset, SampArrayIndex, SampAttr.BindPoints, pSamplerD3D11Impl);
+        ResourceCache.SetSampler(SampAttr.CacheOffset + SampArrayIndex, SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
     }
-    ResourceCache.SetTexSRV(Attr.CacheOffset, ArrayIndex, Attr.BindPoints, std::move(pViewD3D11));
+    ResourceCache.SetTexSRV(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
 void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSampler, Uint32 ArrayIndex)
@@ -408,9 +398,9 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pS
                           "''. Incorect object type: sampler is expected.");
     }
 
-    if (Attr.IsSamplerAssigned())
+    if (Attr.IsSamplerAssigned() && !Attr.IsImmutableSamplerAssigned())
     {
-        auto* TexSRVName = m_ParentManager.GetResourceDesc(Attr.SamplerInd).Name; // AZ TODO: check
+        auto* TexSRVName = m_ParentManager.GetResourceDesc(Attr.SamplerInd).Name;
         LOG_WARNING_MESSAGE("Texture sampler sampler '", Desc.Name, "' is assigned to texture SRV '",
                             TexSRVName, "' and should not be accessed directly. The sampler is initialized when texture SRV is set to '",
                             TexSRVName, "' variable.");
@@ -429,7 +419,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pS
     }
 #endif
 
-    ResourceCache.SetSampler(Attr.CacheOffset, ArrayIndex, Attr.BindPoints, std::move(pSamplerD3D11));
+    ResourceCache.SetSampler(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
 }
 
 void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
@@ -447,12 +437,14 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pV
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSRV = ResourceCache.GetSRV(Attr.CacheOffset + ArrayIndex);
-        VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
+        VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
-                                  RESOURCE_DIM_BUFFER, false, CachedSRV.pView.RawPtr());
+                                  RESOURCE_DIM_BUFFER, false, CachedSRV.pView.RawPtr(),
+                                  m_ParentManager.m_pSignature->GetDesc().Name);
+        ValidateBufferMode(Desc, ArrayIndex, pViewD3D11.RawPtr());
     }
 #endif
-    ResourceCache.SetBufSRV(Attr.CacheOffset, ArrayIndex, Attr.BindPoints, std::move(pViewD3D11));
+    ResourceCache.SetBufSRV(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
 
@@ -471,12 +463,13 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVi
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedUAV = ResourceCache.GetUAV(Attr.CacheOffset + ArrayIndex);
-        VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
+        VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
-                                  RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr());
+                                  RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr(),
+                                  m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetTexUAV(Attr.CacheOffset, ArrayIndex, Attr.BindPoints, std::move(pViewD3D11));
+    ResourceCache.SetTexUAV(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
 
@@ -495,12 +488,14 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pV
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedUAV = ResourceCache.GetUAV(Attr.CacheOffset + ArrayIndex);
-        VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
+        VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
-                                  RESOURCE_DIM_BUFFER, false, CachedUAV.pView.RawPtr());
+                                  RESOURCE_DIM_BUFFER, false, CachedUAV.pView.RawPtr(),
+                                  m_ParentManager.m_pSignature->GetDesc().Name);
+        ValidateBufferMode(Desc, ArrayIndex, pViewD3D11.RawPtr());
     }
 #endif
-    ResourceCache.SetBufUAV(Attr.CacheOffset, ArrayIndex, Attr.BindPoints, std::move(pViewD3D11));
+    ResourceCache.SetBufUAV(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
 void ShaderVariableManagerD3D11::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
@@ -516,22 +511,22 @@ void ShaderVariableManagerD3D11::BindResources(IResourceMapping* pResourceMappin
 
     HandleResources(
         [&](ConstBuffBindInfo& cb) {
-            cb.BindResources<ConstBuffBindInfo>(pResourceMapping, Flags);
+            cb.BindResources(pResourceMapping, Flags);
         },
         [&](TexSRVBindInfo& ts) {
-            ts.BindResources<TexSRVBindInfo>(pResourceMapping, Flags);
+            ts.BindResources(pResourceMapping, Flags);
         },
         [&](TexUAVBindInfo& uav) {
-            uav.BindResources<TexUAVBindInfo>(pResourceMapping, Flags);
+            uav.BindResources(pResourceMapping, Flags);
         },
         [&](BuffSRVBindInfo& srv) {
-            srv.BindResources<BuffSRVBindInfo>(pResourceMapping, Flags);
+            srv.BindResources(pResourceMapping, Flags);
         },
         [&](BuffUAVBindInfo& uav) {
-            uav.BindResources<BuffUAVBindInfo>(pResourceMapping, Flags);
+            uav.BindResources(pResourceMapping, Flags);
         },
         [&](SamplerBindInfo& sam) {
-            sam.BindResources<SamplerBindInfo>(pResourceMapping, Flags);
+            sam.BindResources(pResourceMapping, Flags);
         });
 }
 
@@ -579,10 +574,10 @@ IShaderResourceVariable* ShaderVariableManagerD3D11::GetVariable(const Char* Nam
 class ShaderVariableIndexLocator
 {
 public:
-    ShaderVariableIndexLocator(const ShaderVariableManagerD3D11& _Layout, const ShaderVariableManagerD3D11::ShaderVariableD3D11Base& Variable) :
+    ShaderVariableIndexLocator(const ShaderVariableManagerD3D11& _Mgr, const IShaderResourceVariable& Variable) :
         // clang-format off
-        Layout   {_Layout},
-        VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Layout.m_ResourceBuffer))
+        Mgr      {_Mgr},
+        VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Mgr.m_ResourceBuffer))
     // clang-format on
     {}
 
@@ -591,21 +586,21 @@ public:
     {
 #ifdef DILIGENT_DEBUG
         {
-            VERIFY(Layout.GetResourceOffset<ResourceType>() >= dbgPreviousResourceOffset, "Resource types are processed out of order!");
-            dbgPreviousResourceOffset = Layout.GetResourceOffset<ResourceType>();
-            VERIFY_EXPR(NextResourceTypeOffset >= Layout.GetResourceOffset<ResourceType>());
+            VERIFY(Mgr.GetResourceOffset<ResourceType>() >= dbgPreviousResourceOffset, "Resource types are processed out of order!");
+            dbgPreviousResourceOffset = Mgr.GetResourceOffset<ResourceType>();
+            VERIFY_EXPR(NextResourceTypeOffset >= Mgr.GetResourceOffset<ResourceType>());
         }
 #endif
         if (VarOffset < NextResourceTypeOffset)
         {
-            auto RelativeOffset = VarOffset - Layout.GetResourceOffset<ResourceType>();
+            auto RelativeOffset = VarOffset - Mgr.GetResourceOffset<ResourceType>();
             DEV_CHECK_ERR(RelativeOffset % sizeof(ResourceType) == 0, "Offset is not multiple of resource type (", sizeof(ResourceType), ")");
             Index += static_cast<Uint32>(RelativeOffset / sizeof(ResourceType));
             return true;
         }
         else
         {
-            Index += Layout.GetNumResources<ResourceType>();
+            Index += Mgr.GetNumResources<ResourceType>();
             return false;
         }
     }
@@ -613,7 +608,7 @@ public:
     Uint32 GetIndex() const { return Index; }
 
 private:
-    const ShaderVariableManagerD3D11& Layout;
+    const ShaderVariableManagerD3D11& Mgr;
     const size_t                      VarOffset;
     Uint32                            Index = 0;
 #ifdef DILIGENT_DEBUG
@@ -621,7 +616,7 @@ private:
 #endif
 };
 
-Uint32 ShaderVariableManagerD3D11::GetVariableIndex(const ShaderVariableD3D11Base& Variable) const
+Uint32 ShaderVariableManagerD3D11::GetVariableIndex(const IShaderResourceVariable& Variable) const
 {
     if (m_ResourceBuffer == nullptr)
     {
@@ -658,9 +653,9 @@ Uint32 ShaderVariableManagerD3D11::GetVariableIndex(const ShaderVariableD3D11Bas
 class ShaderVariableLocator
 {
 public:
-    ShaderVariableLocator(const ShaderVariableManagerD3D11& _Layout, Uint32 _Index) :
+    ShaderVariableLocator(const ShaderVariableManagerD3D11& _Mgr, Uint32 _Index) :
         // clang-format off
-        Layout{_Layout},
+        Mgr   {_Mgr},
         Index {_Index }
     // clang-format on
     {
@@ -671,13 +666,13 @@ public:
     {
 #ifdef DILIGENT_DEBUG
         {
-            VERIFY(Layout.GetResourceOffset<ResourceType>() >= dbgPreviousResourceOffset, "Resource types are processed out of order!");
-            dbgPreviousResourceOffset = Layout.GetResourceOffset<ResourceType>();
+            VERIFY(Mgr.GetResourceOffset<ResourceType>() >= dbgPreviousResourceOffset, "Resource types are processed out of order!");
+            dbgPreviousResourceOffset = Mgr.GetResourceOffset<ResourceType>();
         }
 #endif
-        auto NumResources = Layout.GetNumResources<ResourceType>();
+        auto NumResources = Mgr.GetNumResources<ResourceType>();
         if (Index < NumResources)
-            return &Layout.GetResource<ResourceType>(Index);
+            return &Mgr.GetResource<ResourceType>(Index);
         else
         {
             Index -= NumResources;
@@ -686,7 +681,7 @@ public:
     }
 
 private:
-    ShaderVariableManagerD3D11 const& Layout;
+    ShaderVariableManagerD3D11 const& Mgr;
     Uint32                            Index = 0;
 #ifdef DILIGENT_DEBUG
     Uint32 dbgPreviousResourceOffset = 0;
@@ -727,131 +722,4 @@ Uint32 ShaderVariableManagerD3D11::GetVariableCount() const
     return GetNumCBs() + GetNumTexSRVs() + GetNumTexUAVs() + GetNumBufSRVs() + GetNumBufUAVs() + GetNumSamplers();
 }
 
-// AZ TODO
-#if 0 //def DILIGENT_DEVELOPMENT
-bool ShaderVariableManagerD3D11::dvpVerifyBindings() const
-{
-
-#    define LOG_MISSING_BINDING(VarType, Attrs, BindPt)                                                                                                                   \
-        do                                                                                                                                                                \
-        {                                                                                                                                                                 \
-            if (Attrs.BindCount == 1)                                                                                                                                     \
-                LOG_ERROR_MESSAGE("No resource is bound to ", VarType, " variable '", Attrs.Name, "' in shader '", GetShaderName(), "'");                                 \
-            else                                                                                                                                                          \
-                LOG_ERROR_MESSAGE("No resource is bound to ", VarType, " variable '", Attrs.Name, "[", BindPt - Attrs.BindPoint, "]' in shader '", GetShaderName(), "'"); \
-        } while (false)
-
-    m_ResourceCache.DvpVerifyCacheConsistency();
-
-    bool BindingsOK = true;
-    HandleConstResources(
-        [&](const ConstBuffBindInfo& cb) //
-        {
-            for (Uint32 BindPoint = cb.m_Attribs.BindPoint; BindPoint < Uint32{cb.m_Attribs.BindPoint} + cb.m_Attribs.BindCount; ++BindPoint)
-            {
-                if (!m_ResourceCache.IsCBBound(BindPoint))
-                {
-                    LOG_MISSING_BINDING("constant buffer", cb.m_Attribs, BindPoint);
-                    BindingsOK = false;
-                }
-            }
-        },
-
-        [&](const TexSRVBindInfo& ts) //
-        {
-            for (Uint32 BindPoint = ts.m_Attribs.BindPoint; BindPoint < Uint32{ts.m_Attribs.BindPoint} + ts.m_Attribs.BindCount; ++BindPoint)
-            {
-                if (!m_ResourceCache.IsSRVBound(BindPoint, true))
-                {
-                    LOG_MISSING_BINDING("texture", ts.m_Attribs, BindPoint);
-                    BindingsOK = false;
-                }
-
-                if (ts.ValidSamplerAssigned())
-                {
-                    const auto& Sampler = GetConstResource<SamplerBindInfo>(ts.SamplerIndex);
-                    VERIFY_EXPR(Sampler.m_Attribs.BindCount == ts.m_Attribs.BindCount || Sampler.m_Attribs.BindCount == 1);
-
-                    // Verify that if single sampler is used for all texture array elements, all samplers set in the resource views are consistent
-                    if (ts.m_Attribs.BindCount > 1 && Sampler.m_Attribs.BindCount == 1)
-                    {
-                        ShaderResourceCacheD3D11::CachedSampler* pCachedSamplers       = nullptr;
-                        ID3D11SamplerState**                     ppCachedD3D11Samplers = nullptr;
-                        m_ResourceCache.GetSamplerArrays(pCachedSamplers, ppCachedD3D11Samplers);
-                        VERIFY_EXPR(Sampler.m_Attribs.BindPoint < m_ResourceCache.GetSamplerCount());
-                        const auto& CachedSampler = pCachedSamplers[Sampler.m_Attribs.BindPoint];
-
-                        ShaderResourceCacheD3D11::CachedResource* pCachedResources       = nullptr;
-                        ID3D11ShaderResourceView**                ppCachedD3D11Resources = nullptr;
-                        m_ResourceCache.GetSRVArrays(pCachedResources, ppCachedD3D11Resources);
-                        VERIFY_EXPR(BindPoint < m_ResourceCache.GetSRVCount());
-                        auto& CachedResource = pCachedResources[BindPoint];
-                        if (CachedResource.pView)
-                        {
-                            auto* pTexView = CachedResource.pView.RawPtr<ITextureView>();
-                            auto* pSampler = pTexView->GetSampler();
-                            if (pSampler != nullptr && pSampler != CachedSampler.pSampler.RawPtr())
-                            {
-                                LOG_ERROR_MESSAGE("All elements of texture array '", ts.m_Attribs.Name, "' in shader '", GetShaderName(), "' share the same sampler. However, the sampler set in view for element ", BindPoint - ts.m_Attribs.BindPoint, " does not match bound sampler. This may cause incorrect behavior on GL platform.");
-                            }
-                        }
-                    }
-                }
-            }
-        },
-
-        [&](const TexUAVBindInfo& uav) //
-        {
-            for (Uint32 BindPoint = uav.m_Attribs.BindPoint; BindPoint < Uint32{uav.m_Attribs.BindPoint} + uav.m_Attribs.BindCount; ++BindPoint)
-            {
-                if (!m_ResourceCache.IsUAVBound(BindPoint, true))
-                {
-                    LOG_MISSING_BINDING("texture UAV", uav.m_Attribs, BindPoint);
-                    BindingsOK = false;
-                }
-            }
-        },
-
-        [&](const BuffSRVBindInfo& buf) //
-        {
-            for (Uint32 BindPoint = buf.m_Attribs.BindPoint; BindPoint < Uint32{buf.m_Attribs.BindPoint} + buf.m_Attribs.BindCount; ++BindPoint)
-            {
-                if (!m_ResourceCache.IsSRVBound(BindPoint, false))
-                {
-                    LOG_MISSING_BINDING("buffer", buf.m_Attribs, BindPoint);
-                    BindingsOK = false;
-                }
-            }
-        },
-
-        [&](const BuffUAVBindInfo& uav) //
-        {
-            for (Uint32 BindPoint = uav.m_Attribs.BindPoint; BindPoint < Uint32{uav.m_Attribs.BindPoint} + uav.m_Attribs.BindCount; ++BindPoint)
-            {
-                if (!m_ResourceCache.IsUAVBound(BindPoint, false))
-                {
-                    LOG_MISSING_BINDING("buffer UAV", uav.m_Attribs, BindPoint);
-                    BindingsOK = false;
-                }
-            }
-        },
-
-        [&](const SamplerBindInfo& sam) //
-        {
-            for (Uint32 BindPoint = sam.m_Attribs.BindPoint; BindPoint < Uint32{sam.m_Attribs.BindPoint} + sam.m_Attribs.BindCount; ++BindPoint)
-            {
-                if (!m_ResourceCache.IsSamplerBound(BindPoint))
-                {
-                    LOG_MISSING_BINDING("sampler", sam.m_Attribs, BindPoint);
-                    BindingsOK = false;
-                }
-            }
-        } // clang-format off
-    ); // clang-format on
-#    undef LOG_MISSING_BINDING
-
-    return BindingsOK;
-}
-
-#endif
 } // namespace Diligent

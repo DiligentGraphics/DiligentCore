@@ -59,12 +59,8 @@ public:
                                        bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureD3D11Impl();
 
-    using ResourceAttribs = PipelineResourceAttribsD3D11;
-    using TBindPoints     = PipelineResourceAttribsD3D11::TBindPoints;
-
-    static constexpr auto NumShaderTypes    = ResourceAttribs::NumShaderTypes;
-    static constexpr auto InvalidBindPoint  = ResourceAttribs::InvalidBindPoint;
-    static constexpr auto InvalidBindPoints = ResourceAttribs::InvalidBindPoints;
+    using ResourceAttribs                = PipelineResourceAttribsD3D11;
+    static constexpr auto NumShaderTypes = BindPointsD3D11::NumShaderTypes;
 
     const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
     {
@@ -72,7 +68,7 @@ public:
         return m_pResourceAttribs[ResIndex];
     }
 
-    // sizeof(ImmutableSamplerAttribs) == 16, x64
+    // sizeof(ImmutableSamplerAttribs) == 24, x64
     struct ImmutableSamplerAttribs
     {
     private:
@@ -86,10 +82,9 @@ public:
 
         // clang-format off
         RefCntAutoPtr<ISampler> pSampler;
-        TBindPoints             BindPoints     = InvalidBindPoints;
-        TBindPoints             LastBindPoints = InvalidBindPoints; // array size for each stage may be different
-        Uint32                  CacheOffset    : _CacheOffsetBits;
-        Uint32                  ArraySize      : _ArraySizeBits;
+        Uint32                  CacheOffset : _CacheOffsetBits;
+        Uint32                  ArraySize   : _ArraySizeBits;
+        BindPointsD3D11         BindPoints;
         // clang-format on
 
         ImmutableSamplerAttribs() :
@@ -110,7 +105,18 @@ public:
     using TBindings         = ShaderResourceCacheD3D11::TResourceCount;
     using TBindingsPerStage = ShaderResourceCacheD3D11::TBindingsPerStage;
 
-    void AddBindings(TBindingsPerStage& Bindings) const;
+    __forceinline void ShiftBindings(TBindingsPerStage& Bindings) const
+    {
+        for (Uint32 s = 0; s < Bindings.size(); ++s)
+        {
+            for (Uint32 i = 0; i < Bindings[s].size(); ++i)
+            {
+                Uint32 Count = Bindings[s][i] + m_BindingCountPerStage[s][i];
+                VERIFY_EXPR(Count < std::numeric_limits<Uint8>::max());
+                Bindings[s][i] = static_cast<Uint8>(Count);
+            }
+        }
+    }
 
     void InitSRBResourceCache(ShaderResourceCacheD3D11& ResourceCache);
 
@@ -122,8 +128,6 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource attribs using the SPIRV resource attributes from the PSO.
     bool DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
-                                      RESOURCE_DIMENSION              ResourceDim,
-                                      bool                            IsMultisample,
                                       Uint32                          ResIndex,
                                       const ShaderResourceCacheD3D11& ResourceCache,
                                       const char*                     ShaderName,
@@ -142,19 +146,5 @@ private:
     ResourceAttribs*         m_pResourceAttribs  = nullptr; // [m_Desc.NumResources]
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 };
-
-
-__forceinline void PipelineResourceSignatureD3D11Impl::AddBindings(TBindingsPerStage& Bindings) const
-{
-    for (Uint32 s = 0; s < Bindings.size(); ++s)
-    {
-        for (Uint32 i = 0; i < Bindings[s].size(); ++i)
-        {
-            Uint32 Count = Bindings[s][i] + m_BindingCountPerStage[s][i];
-            VERIFY_EXPR(Count < std::numeric_limits<Uint8>::max());
-            Bindings[s][i] = static_cast<Uint8>(Count);
-        }
-    }
-}
 
 } // namespace Diligent

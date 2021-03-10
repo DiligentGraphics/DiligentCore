@@ -294,63 +294,6 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
     }
 }
 
-void GetShaderResourceTypeAndFlags(const D3DShaderResourceAttribs& Attribs,
-                                   SHADER_RESOURCE_TYPE&           OutType,
-                                   PIPELINE_RESOURCE_FLAGS&        OutFlags)
-{
-    OutFlags = PIPELINE_RESOURCE_FLAG_UNKNOWN;
-
-    switch (int{Attribs.GetInputType()})
-    {
-        case D3D_SIT_CBUFFER:
-            OutType = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
-            break;
-        case D3D_SIT_TBUFFER:
-            UNSUPPORTED("TBuffers are not supported");
-            OutType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
-        case D3D_SIT_TEXTURE:
-            if (Attribs.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER)
-            {
-                OutType  = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-                OutFlags = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
-            }
-            else
-                OutType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
-        case D3D_SIT_SAMPLER:
-            OutType = SHADER_RESOURCE_TYPE_SAMPLER;
-            break;
-        case D3D_SIT_UAV_RWTYPED:
-            if (Attribs.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER)
-            {
-                OutType  = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-                OutFlags = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
-            }
-            else
-                OutType = SHADER_RESOURCE_TYPE_TEXTURE_UAV;
-            break;
-        case D3D_SIT_STRUCTURED:
-        case D3D_SIT_BYTEADDRESS:
-            OutType = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            break;
-        case D3D_SIT_UAV_RWSTRUCTURED:
-        case D3D_SIT_UAV_RWBYTEADDRESS:
-        case D3D_SIT_UAV_APPEND_STRUCTURED:
-        case D3D_SIT_UAV_CONSUME_STRUCTURED:
-        case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-            OutType = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
-        case D3D_SIT_RTACCELERATIONSTRUCTURE:
-            OutType = SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
-            break;
-        default:
-            UNEXPECTED("Unknown HLSL resource type");
-            OutType = SHADER_RESOURCE_TYPE_UNKNOWN;
-            break;
-    }
-}
-
 void VerifyResourceMerge(const PipelineStateDesc&        PSODesc,
                          const D3DShaderResourceAttribs& ExistingRes,
                          const D3DShaderResourceAttribs& NewResAttribs)

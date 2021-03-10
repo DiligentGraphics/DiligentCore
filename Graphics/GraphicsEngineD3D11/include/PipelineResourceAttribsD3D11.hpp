@@ -49,7 +49,67 @@ enum DESCRIPTOR_RANGE : Uint32
 };
 DESCRIPTOR_RANGE ShaderResourceToDescriptorRange(SHADER_RESOURCE_TYPE Type);
 
-// sizeof(PipelineResourceAttribsD3D11) == 4, x64
+
+// sizeof(BindPointsD3D11) == 8, x64
+struct BindPointsD3D11
+{
+    /// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
+    static constexpr Uint32 NumShaderTypes = 6;
+
+    static constexpr Uint8 InvalidBindPoint = 0xFF;
+
+    BindPointsD3D11() noexcept {}
+    BindPointsD3D11(const BindPointsD3D11&) noexcept = default;
+
+    // clang-format off
+    Uint32 GetActiveBits()          const { return m_ActiveBits; }
+    bool   IsValid(Uint32 index)    const { return m_Bindings[index] != InvalidBindPoint; }
+    Uint8  operator[](Uint32 index) const { return m_Bindings[index]; }
+    // clang-format on
+
+    void Set(Uint32 Index, Uint32 BindPoint)
+    {
+        VERIFY_EXPR(Index < NumShaderTypes);
+        VERIFY_EXPR(BindPoint < InvalidBindPoint);
+        m_ActiveBits      = static_cast<Uint8>(m_ActiveBits | (1u << Index));
+        m_Bindings[Index] = static_cast<Uint8>(BindPoint);
+    }
+
+    size_t GetHash() const
+    {
+        size_t Hash = 0;
+        for (Uint32 i = 0; i < NumShaderTypes; ++i)
+            HashCombine(Hash, m_Bindings[i]);
+        return Hash;
+    }
+
+    bool operator==(const BindPointsD3D11& rhs) const
+    {
+        return m_Bindings == rhs.m_Bindings;
+    }
+
+    BindPointsD3D11 operator+(Uint32 value) const
+    {
+        BindPointsD3D11 Result{*this};
+        for (Uint32 Bits = Result.m_ActiveBits; Bits != 0;)
+        {
+            auto Index = PlatformMisc::GetLSB(Bits);
+            Bits &= ~(1u << Index);
+
+            auto NewBindPoint = Result.m_Bindings[Index] + value;
+            VERIFY_EXPR(NewBindPoint < InvalidBindPoint);
+            Result.m_Bindings[Index] = static_cast<Uint8>(NewBindPoint);
+        }
+        return Result;
+    }
+
+private:
+    Uint8                             m_ActiveBits = 0;
+    std::array<Uint8, NumShaderTypes> m_Bindings   = {InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint};
+};
+
+
+// sizeof(PipelineResourceAttribsD3D11) == 12, x64
 struct PipelineResourceAttribsD3D11
 {
 private:
@@ -61,18 +121,11 @@ public:
     static constexpr Uint32 InvalidCacheOffset = (1u << _CacheOffsetBits) - 1;
     static constexpr Uint32 InvalidSamplerInd  = (1u << _SamplerIndBits) - 1;
 
-    /// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
-    static constexpr Uint32 NumShaderTypes = 6;
-
-    using TBindPoints                              = std::array<Uint8, NumShaderTypes>;
-    static constexpr Uint8       InvalidBindPoint  = 0xFF;
-    static constexpr TBindPoints InvalidBindPoints = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
     // clang-format off
-    const Uint32  CacheOffset          : _CacheOffsetBits;      // SRB and Signature has the same cache offsets for static resources.
-    const Uint32  SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
-    const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag.
-    TBindPoints   BindPoints           = InvalidBindPoints;
+    const Uint32    CacheOffset          : _CacheOffsetBits;      // SRB and Signature has the same cache offsets for static resources.
+    const Uint32    SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
+    const Uint32    ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag.
+    BindPointsD3D11 BindPoints;
     // clang-format on
 
     PipelineResourceAttribsD3D11(Uint32 _CacheOffset,
@@ -93,22 +146,16 @@ public:
 
     bool IsCompatibleWith(const PipelineResourceAttribsD3D11& rhs) const
     {
-        // Ignore sampler index.
+        // Ignore cache offset and sampler index.
         // clang-format off
-        return CacheOffset                  == rhs.CacheOffset                  &&
-               IsImmutableSamplerAssigned() == rhs.IsImmutableSamplerAssigned() &&
+        return IsImmutableSamplerAssigned() == rhs.IsImmutableSamplerAssigned() &&
                BindPoints                   == rhs.BindPoints;
         // clang-format on
     }
 
     size_t GetHash() const
     {
-        Uint64 h = 0;
-        for (Uint32 i = 0; i < NumShaderTypes; ++i)
-        {
-            h |= (BindPoints[i] << (i * 8));
-        }
-        return ComputeHash(h);
+        return ComputeHash(IsImmutableSamplerAssigned(), BindPoints.GetHash());
     }
 };
 

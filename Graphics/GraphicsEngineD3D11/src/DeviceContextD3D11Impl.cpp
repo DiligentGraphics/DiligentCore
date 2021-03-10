@@ -295,7 +295,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
 #endif
             pSRB->GetResourceCache().BindResources(*this, Bindings, MinMaxSlot, m_CommittedRes, ActiveStages);
         }
-        pSRB->GetSignature()->AddBindings(Bindings);
+        pSRB->GetSignature()->ShiftBindings(Bindings);
     }
 
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
@@ -448,8 +448,7 @@ void DeviceContextD3D11Impl::DvpValidateCommittedShaderResources()
     if (m_BindInfo.CommittedResourcesValidated)
         return;
 
-    // AZ TODO
-    //m_pPipelineState->DvpVerifySRBResources(m_BindInfo.SRBs.data(), m_BindInfo.BoundResOffsets.data(), static_cast<Uint32>(m_BindInfo.SRBs.size()));
+    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.SRBs.data(), m_BindInfo.BoundResOffsets.data(), static_cast<Uint32>(m_BindInfo.SRBs.size()));
     m_BindInfo.CommittedResourcesValidated = true;
 }
 #endif
@@ -608,6 +607,10 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
         }
     }
 #endif
+
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 }
 
 void DeviceContextD3D11Impl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType)
@@ -713,6 +716,9 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
         DvpVerifyCommittedShaders();
     }
 #endif
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
     m_pd3d11DeviceContext->Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
 }
@@ -734,6 +740,9 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
         DvpVerifyCommittedCBs(SHADER_TYPE_COMPUTE);
         DvpVerifyCommittedShaders();
     }
+#endif
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
 #endif
 
     auto* pd3d11Buff = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer)->GetD3D11Buffer();

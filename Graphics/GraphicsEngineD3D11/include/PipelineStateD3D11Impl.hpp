@@ -92,6 +92,11 @@ public:
     Uint32      GetNumShaders() const { return m_NumShaders; }
     SHADER_TYPE GetShaderStageType(Uint32 Index) const;
 
+#ifdef DILIGENT_DEVELOPMENT
+    using TBindingsPerStage = PipelineResourceSignatureD3D11Impl::TBindingsPerStage;
+    void DvpVerifySRBResources(class ShaderResourceBindingD3D11Impl* pSRBs[], const TBindingsPerStage BaseBindings[], Uint32 NumSRBs) const;
+#endif
+
 private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType&        CreateInfo,
