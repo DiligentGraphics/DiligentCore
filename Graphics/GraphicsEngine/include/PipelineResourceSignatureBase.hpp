@@ -45,6 +45,7 @@
 #include "PlatformMisc.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "ShaderResourceCacheCommon.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -591,6 +592,18 @@ protected:
             }
         }
         return SamplerInd;
+    }
+
+    void CalculateHash()
+    {
+        const auto* const pThisImpl = static_cast<const PipelineResourceSignatureImplType*>(this);
+
+        m_Hash = CalculatePipelineResourceSignatureDescHash(this->m_Desc);
+        for (Uint32 i = 0; i < this->m_Desc.NumResources; ++i)
+        {
+            const auto& Attr = pThisImpl->GetResourceAttribs(i);
+            HashCombine(m_Hash, Attr.GetHash());
+        }
     }
 
 protected:

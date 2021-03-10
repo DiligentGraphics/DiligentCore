@@ -34,6 +34,7 @@
 #include "PrivateConstants.h"
 #include "ShaderResourceCacheCommon.hpp"
 #include "DebugUtilities.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -129,6 +130,24 @@ public:
         return (GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_CBV ||
                 GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_SRV ||
                 GetD3D12RootParamType() == D3D12_ROOT_PARAMETER_TYPE_UAV);
+    }
+
+    bool IsCompatibleWith(const PipelineResourceAttribsD3D12& rhs) const
+    {
+        // Ignore sampler index, signature root index & offset.
+        // clang-format off
+        return Register                == rhs.Register                &&
+               Space                   == rhs.Space                   &&
+               SRBRootIndex            == rhs.SRBRootIndex            &&
+               SRBOffsetFromTableStart == rhs.SRBOffsetFromTableStart &&
+               ImtblSamplerAssigned    == rhs.ImtblSamplerAssigned    &&
+               RootParamType           == rhs.RootParamType;
+        // clang-format on
+    }
+
+    size_t GetHash() const
+    {
+        return ComputeHash(Register, Space, SRBRootIndex, SRBOffsetFromTableStart, ImtblSamplerAssigned, RootParamType);
     }
 };
 

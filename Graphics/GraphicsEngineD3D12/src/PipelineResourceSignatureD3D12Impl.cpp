@@ -47,20 +47,6 @@ namespace Diligent
 namespace
 {
 
-inline bool ResourcesCompatible(const PipelineResourceSignatureD3D12Impl::ResourceAttribs& lhs,
-                                const PipelineResourceSignatureD3D12Impl::ResourceAttribs& rhs)
-{
-    // Ignore sampler index, signature root index & offset.
-    // clang-format off
-    return lhs.Register                == rhs.Register                &&
-           lhs.Space                   == rhs.Space                   &&
-           lhs.SRBRootIndex            == rhs.SRBRootIndex            &&
-           lhs.SRBOffsetFromTableStart == rhs.SRBOffsetFromTableStart &&
-           lhs.ImtblSamplerAssigned    == rhs.ImtblSamplerAssigned    &&
-           lhs.RootParamType           == rhs.RootParamType;
-    // clang-format on
-}
-
 void ValidatePipelineResourceSignatureDescD3D12(const PipelineResourceSignatureDesc& Desc) noexcept(false)
 {
     {
@@ -192,7 +178,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
             m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize.TotalSize);
         }
 
-        m_Hash = CalculateHash();
+        CalculateHash();
     }
     catch (...)
     {
@@ -404,27 +390,13 @@ bool PipelineResourceSignatureD3D12Impl::IsCompatibleWith(const PipelineResource
     VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
     for (Uint32 r = 0; r < ResCount; ++r)
     {
-        if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)))
+        const auto& Res      = GetResourceAttribs(r);
+        const auto& OtherRes = Other.GetResourceAttribs(r);
+        if (!Res.IsCompatibleWith(OtherRes))
             return false;
     }
 
     return true;
-}
-
-size_t PipelineResourceSignatureD3D12Impl::CalculateHash() const
-{
-    if (m_Desc.NumResources == 0 && m_Desc.NumImmutableSamplers == 0)
-        return 0;
-
-    auto Hash = CalculatePipelineResourceSignatureDescHash(m_Desc);
-    for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
-    {
-        const auto& Attr = m_pResourceAttribs[i];
-        HashCombine(Hash, Attr.Register, Attr.Space, Attr.SRBRootIndex, Attr.SRBOffsetFromTableStart,
-                    Attr.RootParamType, Attr.IsImmutableSamplerAssigned());
-    }
-
-    return Hash;
 }
 
 void PipelineResourceSignatureD3D12Impl::InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache)

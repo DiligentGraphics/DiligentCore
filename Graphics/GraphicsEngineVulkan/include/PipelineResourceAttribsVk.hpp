@@ -34,6 +34,7 @@
 #include "ShaderResourceCacheCommon.hpp"
 #include "PrivateConstants.h"
 #include "DebugUtilities.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -141,6 +142,23 @@ public:
     bool IsCombinedWithSampler() const
     {
         return SamplerInd != InvalidSamplerInd;
+    }
+
+    bool IsCompatibleWith(const PipelineResourceAttribsVk& rhs) const
+    {
+        // Ignore sampler index and cache offsets.
+        // clang-format off
+        return BindingIndex         == rhs.BindingIndex &&
+               ArraySize            == rhs.ArraySize    &&
+               DescrType            == rhs.DescrType    &&
+               DescrSet             == rhs.DescrSet     &&
+               ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
+        // clang-format on
+    }
+
+    size_t GetHash() const
+    {
+        return ComputeHash(BindingIndex, ArraySize, DescrType, DescrSet, ImtblSamplerAssigned);
     }
 };
 

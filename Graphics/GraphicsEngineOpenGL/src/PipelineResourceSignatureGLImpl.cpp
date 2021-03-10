@@ -32,22 +32,6 @@
 namespace Diligent
 {
 
-namespace
-{
-
-inline bool ResourcesCompatible(const PipelineResourceSignatureGLImpl::ResourceAttribs& lhs,
-                                const PipelineResourceSignatureGLImpl::ResourceAttribs& rhs)
-{
-    // Ignore sampler index.
-    // clang-format off
-    return lhs.CacheOffset          == rhs.CacheOffset &&
-           lhs.ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
-    // clang-format on
-}
-
-} // namespace
-
-
 const char* GetBindingRangeName(BINDING_RANGE Range)
 {
     static_assert(BINDING_RANGE_COUNT == 4, "Please update the switch below to handle the new shader resource range");
@@ -139,7 +123,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
             m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
         }
 
-        m_Hash = CalculateHash();
+        CalculateHash();
     }
     catch (...)
     {
@@ -207,21 +191,6 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
     {
         m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator());
     }
-}
-
-size_t PipelineResourceSignatureGLImpl::CalculateHash() const
-{
-    if (m_Desc.NumResources == 0 && m_Desc.NumImmutableSamplers == 0)
-        return 0;
-
-    auto Hash = CalculatePipelineResourceSignatureDescHash(m_Desc);
-    for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
-    {
-        const auto& Attr = m_pResourceAttribs[i];
-        HashCombine(Hash, Attr.CacheOffset);
-    }
-
-    return Hash;
 }
 
 PipelineResourceSignatureGLImpl::~PipelineResourceSignatureGLImpl()
@@ -529,7 +498,9 @@ bool PipelineResourceSignatureGLImpl::IsCompatibleWith(const PipelineResourceSig
     VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
     for (Uint32 r = 0; r < ResCount; ++r)
     {
-        if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)))
+        const auto& Res      = GetResourceAttribs(r);
+        const auto& OtherRes = Other.GetResourceAttribs(r);
+        if (!Res.IsCompatibleWith(OtherRes))
             return false;
     }
 

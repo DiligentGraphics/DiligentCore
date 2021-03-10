@@ -194,8 +194,6 @@ private:
 
     void CreateSetLayouts();
 
-    size_t CalculateHash() const;
-
     static inline CACHE_GROUP       GetResourceCacheGroup(const PipelineResourceDesc& Res);
     static inline DESCRIPTOR_SET_ID VarTypeToDescriptorSetId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
 

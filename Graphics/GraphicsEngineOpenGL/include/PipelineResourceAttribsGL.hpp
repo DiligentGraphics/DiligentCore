@@ -32,6 +32,7 @@
 
 #include "BasicTypes.h"
 #include "DebugUtilities.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -76,6 +77,20 @@ public:
     bool IsImmutableSamplerAssigned() const
     {
         return ImtblSamplerAssigned != 0;
+    }
+
+    bool IsCompatibleWith(const PipelineResourceAttribsGL& rhs) const
+    {
+        // Ignore sampler index.
+        // clang-format off
+        return CacheOffset          == rhs.CacheOffset &&
+               ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
+        // clang-format on
+    }
+
+    size_t GetHash() const
+    {
+        return ComputeHash(CacheOffset, ImtblSamplerAssigned);
     }
 };
 

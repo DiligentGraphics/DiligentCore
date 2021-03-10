@@ -44,19 +44,6 @@ namespace Diligent
 namespace
 {
 
-inline bool ResourcesCompatible(const PipelineResourceSignatureVkImpl::ResourceAttribs& lhs,
-                                const PipelineResourceSignatureVkImpl::ResourceAttribs& rhs)
-{
-    // Ignore sampler index and cache offsets.
-    // clang-format off
-    return lhs.BindingIndex         == rhs.BindingIndex &&
-           lhs.ArraySize            == rhs.ArraySize    &&
-           lhs.DescrType            == rhs.DescrType    &&
-           lhs.DescrSet             == rhs.DescrSet     &&
-           lhs.ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
-    // clang-format on
-}
-
 inline VkDescriptorType GetVkDescriptorType(DescriptorType Type)
 {
     static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
@@ -270,7 +257,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
             }
         }
 
-        m_Hash = CalculateHash();
+        CalculateHash();
     }
     catch (...)
     {
@@ -552,22 +539,6 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
     VERIFY_EXPR(NumSets == GetNumDescriptorSets());
 }
 
-size_t PipelineResourceSignatureVkImpl::CalculateHash() const
-{
-    if (m_Desc.NumResources == 0 && m_Desc.NumImmutableSamplers == 0)
-        return 0;
-
-    auto Hash = CalculatePipelineResourceSignatureDescHash(m_Desc);
-    for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
-    {
-        const auto& Attr = m_pResourceAttribs[i];
-        HashCombine(Hash, static_cast<Uint32>(Attr.GetDescriptorType()), Attr.BindingIndex, Attr.DescrType,
-                    Attr.DescrSet, Attr.IsImmutableSamplerAssigned(), Attr.SRBCacheOffset);
-    }
-
-    return Hash;
-}
-
 PipelineResourceSignatureVkImpl::~PipelineResourceSignatureVkImpl()
 {
     Destruct();
@@ -610,7 +581,9 @@ bool PipelineResourceSignatureVkImpl::IsCompatibleWith(const PipelineResourceSig
     VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
     for (Uint32 r = 0; r < ResCount; ++r)
     {
-        if (!ResourcesCompatible(GetResourceAttribs(r), Other.GetResourceAttribs(r)))
+        const auto& Res      = GetResourceAttribs(r);
+        const auto& OtherRes = Other.GetResourceAttribs(r);
+        if (!Res.IsCompatibleWith(OtherRes))
             return false;
     }
 

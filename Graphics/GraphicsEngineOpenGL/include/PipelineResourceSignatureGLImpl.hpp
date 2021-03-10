@@ -152,8 +152,6 @@ private:
 
     void Destruct();
 
-    size_t CalculateHash() const;
-
 private:
     TBindings m_BindingCount = {};
 
