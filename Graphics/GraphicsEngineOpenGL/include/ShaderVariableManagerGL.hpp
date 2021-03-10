@@ -27,45 +27,29 @@
 
 #pragma once
 
-// ShaderVariableManagerGL class manages resource bindings for all stages in a pipeline
+// ShaderVariableManagerGL class manages static resources of a pipeline resource signature, and
+// all types of resources for an SRB.
 
 //
+//        .-==========================-.              _______________________________________________________________________________________________________________
+//        ||                          ||             |           |           |       |            |            |       |            |         |           |          |
+//      __|| ShaderVariableManagerGL  ||------------>| UBInfo[0] | UBInfo[1] |  ...  | TexInfo[0] | TexInfo[1] |  ...  | ImgInfo[0] |   ...   |  SSBO[0]  |   ...    |
+//     |  ||                          ||             |___________|___________|_______|____________|____________|_______|____________|_________|___________|__________|
+//     |  '-==========================-'                          /                         \                              |
+//     |                 |                                 m_ResIndex                   m_ResIndex                    m_ResIndex
+//     |            m_pSignature                               /                              \                            |
+//     |    _____________V___________________         ________V________________________________V___________________________V__________________________________________
+//     |   |                                 |       |          |          |       |        |        |       |        |        |       |          |          |       |
+//     |   | PipelineResourceSignatureGLImpl |------>|   UB[0]  |   UB[1]  |  ...  | Tex[0] | Tex[1] |  ...  | Img[0] | Img[1] |  ...  | SSBOs[0] | SSBOs[1] |  ...  |
+//     |   |_________________________________|       |__________|__________|_______|________|________|_______|________|________|_______|__________|__________|_______|
+//     |                                                  |           |                |         |                |        |                |           |
+// m_ResourceCache                                     Binding     Binding          Binding    Binding          Binding  Binding         Binding      Binding
+//     |                                                  |           |                |         |                |        |                |           |
+//     |    _______________________                   ____V___________V________________V_________V________________V________V________________V___________V_____________
+//     |   |                       |                 |                           |                           |                           |                           |
+//     '-->| ShaderResourceCacheGL |--------     --->|      Uinform Buffers      |          Textures         |          Images           |       Storge Buffers      |
+//         |_______________________|                 |___________________________|___________________________|___________________________|___________________________|
 //
-//                                                      To            program              resource                  cache
-//
-//                                               A          A                  A        A              A           A              A            A
-//                                               |          |                  |        |              |           |              |            |
-//                                            Binding    Binding            Binding   Binding       Binding     Binding        Binding      Binding
-//      ___________________                  ____|__________|__________________|________|______________|___________|______________|____________|____________
-//     |                   |                |          |          |       |        |        |       |        |        |       |          |          |       |
-//     | ShaderResourcesGL |--------------->|   UB[0]  |   UB[1]  |  ...  | Sam[0] | Sam[1] |  ...  | Img[0] | Img[1] |  ...  | SSBOs[0] | SSBOs[1] |  ...  |
-//     |___________________|                |__________|__________|_______|________|________|_______|________|________|_______|__________|__________|_______|
-//                                                A                                    A                        A                            A
-//                                                |                                    |                        |                            |
-//                                               Ref                                  Ref                      Ref                          Ref
-//    .-==========================-.         _____|____________________________________|________________________|____________________________|______________
-//    ||                          ||        |           |           |       |            |            |       |            |         |           |          |
-//  __|| ShaderVariableManagerGL  ||------->| UBInfo[0] | UBInfo[1] |  ...  | SamInfo[0] | SamInfo[1] |  ...  | ImgInfo[0] |   ...   |  SSBO[0]  |   ...    |
-// |  ||                          ||        |___________|___________|_______|____________|____________|_______|____________|_________|___________|__________|
-// |  '-==========================-'                     /                                         \
-// |                                                   Ref                                         Ref
-// |                                                  /                                              \
-// |    ___________________                  ________V________________________________________________V_____________________________________________________
-// |   |                   |                |          |          |       |        |        |       |        |        |       |          |          |       |
-// |   | ShaderResourcesGL |--------------->|   UB[0]  |   UB[1]  |  ...  | Sam[0] | Sam[1] |  ...  | Img[0] | Img[1] |  ...  | SSBOs[0] | SSBOs[1] |  ...  |
-// |   |___________________|                |__________|__________|_______|________|________|_______|________|________|_______|__________|__________|_______|
-// |                                             |           |                |         |                |        |                |           |
-// |                                          Binding     Binding          Binding    Binding          Binding  Binding         Binding      Binding
-// |                                             |           |                |         |                |        |                |           |
-// |    _______________________              ____V___________V________________V_________V________________V________V________________V___________V_____________
-// |   |                       |            |                           |                           |                           |                           |
-// '-->| ShaderResourceCacheGL |----------->|      Uinform Buffers      |          Textures         |          Images           |       Storge Buffers      |
-//     |_______________________|            |___________________________|___________________________|___________________________|___________________________|
-//
-//
-// Note that ShaderResourcesGL are kept by PipelineStateGLImpl. ShaderVariableManagerGL class is either part of the same PSO class,
-// or part of ShaderResourceBindingGLImpl object that keeps a strong reference to the pipeline. So all references from GLVariableBase
-// are always valid.
 
 #include <array>
 
@@ -284,9 +268,6 @@ public:
         }
     };
 
-
-    // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
-    // while Layout is alive
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
     IShaderResourceVariable* GetVariable(const Char* Name) const;
@@ -328,13 +309,6 @@ private:
                                Uint32                                 NumAllowedTypes,
                                SHADER_TYPE                            ShaderType,
                                ResourceCounters&                      Counters);
-
-    template <typename HandlerType>
-    static void ProcessSignatureResources(const PipelineResourceSignatureGLImpl& Signature,
-                                          const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                          Uint32                                 NumAllowedTypes,
-                                          SHADER_TYPE                            ShaderType,
-                                          HandlerType                            Handler);
 
     // Offsets in bytes
     using OffsetType = Uint16;

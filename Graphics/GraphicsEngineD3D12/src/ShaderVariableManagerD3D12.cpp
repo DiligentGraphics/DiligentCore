@@ -37,40 +37,25 @@ namespace Diligent
 {
 
 template <typename HandlerType>
-void ShaderVariableManagerD3D12::ProcessSignatureResources(const PipelineResourceSignatureD3D12Impl& Signature,
-                                                           const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
-                                                           Uint32                                    NumAllowedTypes,
-                                                           SHADER_TYPE                               ShaderStages,
-                                                           HandlerType                               Handler)
+void ProcessSignatureResources(const PipelineResourceSignatureD3D12Impl& Signature,
+                               const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+                               Uint32                                    NumAllowedTypes,
+                               SHADER_TYPE                               ShaderStages,
+                               HandlerType                               Handler)
 {
-    const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    const bool   UsingCombinedSamplers = Signature.IsUsingCombinedSamplers();
+    const bool UsingCombinedSamplers = Signature.IsUsingCombinedSamplers();
+    Signature.ProcessResources(AllowedVarTypes, NumAllowedTypes, ShaderStages,
+                               [&](const PipelineResourceDesc& ResDesc, Uint32 Index) //
+                               {
+                                   const auto& ResAttr = Signature.GetResourceAttribs(Index);
 
-    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
-    {
-        if (IsAllowedType(VarType, AllowedTypeBits))
-        {
-            const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
-            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
-            {
-                const auto& Res  = Signature.GetResourceDesc(r);
-                const auto& Attr = Signature.GetResourceAttribs(r);
-                VERIFY_EXPR(Res.VarType == VarType);
+                                   // Skip samplers combined with textures and immutable samplers
+                                   if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
+                                       (UsingCombinedSamplers || ResAttr.IsImmutableSamplerAssigned()))
+                                       return;
 
-                if (!(Res.ShaderStages & ShaderStages))
-                    continue;
-
-                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-                    (UsingCombinedSamplers || Attr.IsImmutableSamplerAssigned()))
-                {
-                    // Skip samplers combined with textures and immutable samplers
-                    continue;
-                }
-
-                Handler(r);
-            }
-        }
-    }
+                                   Handler(Index);
+                               });
 }
 
 size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const PipelineResourceSignatureD3D12Impl& Signature,

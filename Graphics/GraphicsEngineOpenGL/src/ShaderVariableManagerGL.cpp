@@ -45,11 +45,13 @@ void ShaderVariableManagerGL::CountResources(const PipelineResourceSignatureGLIm
                                              const SHADER_TYPE                      ShaderType,
                                              ResourceCounters&                      Counters)
 {
-    ProcessSignatureResources(
-        Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
-        [&](Uint32 Index) //
+    Signature.ProcessResources(
+        AllowedVarTypes, NumAllowedTypes, ShaderType,
+        [&](const PipelineResourceDesc& ResDesc, Uint32) //
         {
-            const auto& ResDesc = Signature.GetResourceDesc(Index);
+            if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+                return;
+
             static_assert(BINDING_RANGE_COUNT == 4, "Please update the switch below to handle the new shader resource range");
             switch (PipelineResourceToBindingRange(ResDesc))
             {
@@ -58,43 +60,11 @@ void ShaderVariableManagerGL::CountResources(const PipelineResourceSignatureGLIm
                 case BINDING_RANGE_TEXTURE:        ++Counters.NumTextures;      break;
                 case BINDING_RANGE_IMAGE:          ++Counters.NumImages;        break;
                 case BINDING_RANGE_STORAGE_BUFFER: ++Counters.NumStorageBlocks; break;
-                    // clang-format on
+                // clang-format on
                 default:
                     UNEXPECTED("Unsupported resource type.");
             }
         });
-}
-
-template <typename HandlerType>
-void ShaderVariableManagerGL::ProcessSignatureResources(const PipelineResourceSignatureGLImpl& Signature,
-                                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                                        Uint32                                 NumAllowedTypes,
-                                                        SHADER_TYPE                            ShaderType,
-                                                        HandlerType                            Handler)
-{
-    const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-
-    for (Uint32 var_type = 0; var_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++var_type)
-    {
-        const auto VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(var_type);
-        if (IsAllowedType(VarType, AllowedTypeBits))
-        {
-            const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
-            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
-            {
-                const auto& Res = Signature.GetResourceDesc(r);
-                VERIFY_EXPR(Res.VarType == VarType);
-
-                if ((Res.ShaderStages & ShaderType) == 0)
-                    continue;
-
-                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
-                    continue;
-
-                Handler(r);
-            }
-        }
-    }
 }
 
 size_t ShaderVariableManagerGL::GetRequiredMemorySize(const PipelineResourceSignatureGLImpl& Signature,
@@ -167,11 +137,13 @@ void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& 
     // Current resource index for every resource type
     ResourceCounters VarCounters = {};
 
-    ProcessSignatureResources(
-        Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
-        [&](Uint32 Index) //
+    Signature.ProcessResources(
+        AllowedVarTypes, NumAllowedTypes, ShaderType,
+        [&](const PipelineResourceDesc& ResDesc, Uint32 Index) //
         {
-            const auto& ResDesc = Signature.GetResourceDesc(Index);
+            if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
+                return;
+
             static_assert(BINDING_RANGE_COUNT == 4, "Please update the switch below to handle the new shader resource range");
             switch (PipelineResourceToBindingRange(ResDesc))
             {

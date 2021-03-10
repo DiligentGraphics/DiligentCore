@@ -115,13 +115,6 @@ private:
     const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
     const ResourceAttribs&      GetAttribs(Uint32 Index) const;
 
-    template <typename HandlerType>
-    static void ProcessSignatureResources(const PipelineResourceSignatureVkImpl& Signature,
-                                          const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                          Uint32                                 NumAllowedTypes,
-                                          SHADER_TYPE                            ShaderStages,
-                                          HandlerType                            Handler);
-
 private:
     PipelineResourceSignatureVkImpl const* m_pSignature = nullptr;
 

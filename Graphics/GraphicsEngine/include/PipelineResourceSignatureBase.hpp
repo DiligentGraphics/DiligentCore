@@ -376,6 +376,35 @@ public:
         return m_SRBMemAllocator;
     }
 
+    // Processes resources with the allowed variable types in the allowed shader stages
+    // and calls user-provided handler for each resource.
+    template <typename HandlerType>
+    void ProcessResources(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                          Uint32                               NumAllowedTypes,
+                          SHADER_TYPE                          AllowedStages,
+                          HandlerType                          Handler) const
+    {
+        if (AllowedVarTypes == nullptr)
+            NumAllowedTypes = 1;
+
+        for (Uint32 TypeIdx = 0; TypeIdx < NumAllowedTypes; ++TypeIdx)
+        {
+            const auto IdxRange = AllowedVarTypes != nullptr ?
+                GetResourceIndexRange(AllowedVarTypes[TypeIdx]) :
+                std::make_pair<Uint32, Uint32>(0, GetTotalResourceCount());
+            for (Uint32 ResIdx = IdxRange.first; ResIdx < IdxRange.second; ++ResIdx)
+            {
+                const auto& ResDesc = GetResourceDesc(ResIdx);
+                VERIFY_EXPR(AllowedVarTypes == nullptr || ResDesc.VarType == AllowedVarTypes[TypeIdx]);
+
+                if ((ResDesc.ShaderStages & AllowedStages) != 0)
+                {
+                    Handler(ResDesc, ResIdx);
+                }
+            }
+        }
+    }
+
 protected:
     template <typename TReserveCustomData>
     FixedLinearAllocator AllocateInternalObjects(IMemoryAllocator&                    RawAllocator,

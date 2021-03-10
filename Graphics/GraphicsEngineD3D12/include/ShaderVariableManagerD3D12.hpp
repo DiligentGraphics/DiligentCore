@@ -120,13 +120,6 @@ private:
     const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
     const ResourceAttribs&      GetResourceAttribs(Uint32 Index) const;
 
-    template <typename HandlerType>
-    static void ProcessSignatureResources(const PipelineResourceSignatureD3D12Impl& Signature,
-                                          const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
-                                          Uint32                                    NumAllowedTypes,
-                                          SHADER_TYPE                               ShaderStages,
-                                          HandlerType                               Handler);
-
 private:
     PipelineResourceSignatureD3D12Impl const* m_pSignature = nullptr;
 

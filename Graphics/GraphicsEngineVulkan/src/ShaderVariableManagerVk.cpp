@@ -35,40 +35,26 @@ namespace Diligent
 {
 
 template <typename HandlerType>
-void ShaderVariableManagerVk::ProcessSignatureResources(const PipelineResourceSignatureVkImpl& Signature,
-                                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                                        Uint32                                 NumAllowedTypes,
-                                                        SHADER_TYPE                            ShaderStages,
-                                                        HandlerType                            Handler)
+void ProcessSignatureResources(const PipelineResourceSignatureVkImpl& Signature,
+                               const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                               Uint32                                 NumAllowedTypes,
+                               SHADER_TYPE                            ShaderStages,
+                               HandlerType                            Handler)
 {
-    const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    const bool   UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
+    const bool UsingSeparateSamplers = Signature.IsUsingSeparateSamplers();
+    Signature.ProcessResources(AllowedVarTypes, NumAllowedTypes, ShaderStages,
+                               [&](const PipelineResourceDesc& ResDesc, Uint32 Index) //
+                               {
+                                   const auto& ResAttr = Signature.GetResourceAttribs(Index);
 
-    for (Uint32 var_type = 0; var_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++var_type)
-    {
-        const auto VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(var_type);
-        if (IsAllowedType(VarType, AllowedTypeBits))
-        {
-            const auto ResIdxRange = Signature.GetResourceIndexRange(VarType);
-            for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
-            {
-                const auto& Res  = Signature.GetResourceDesc(r);
-                const auto& Attr = Signature.GetResourceAttribs(r);
-                VERIFY_EXPR(Res.VarType == VarType);
+                                   // When using HLSL-style combined image samplers, we need to skip separate samplers.
+                                   // Also always skip immutable separate samplers.
+                                   if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
+                                       (!UsingSeparateSamplers || ResAttr.IsImmutableSamplerAssigned()))
+                                       return;
 
-                if ((Res.ShaderStages & ShaderStages) == 0)
-                    continue;
-
-                // When using HLSL-style combined image samplers, we need to skip separate samplers.
-                // Also always skip immutable separate samplers.
-                if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
-                    (!UsingSeparateSamplers || Attr.IsImmutableSamplerAssigned()))
-                    continue;
-
-                Handler(r);
-            }
-        }
-    }
+                                   Handler(Index);
+                               });
 }
 
 size_t ShaderVariableManagerVk::GetRequiredMemorySize(const PipelineResourceSignatureVkImpl& Signature,
