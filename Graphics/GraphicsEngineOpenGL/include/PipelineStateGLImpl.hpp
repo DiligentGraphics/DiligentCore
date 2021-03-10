@@ -76,9 +76,9 @@ private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages);
 
-    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
-                             const TShaderStages&           ShaderStages,
-                             SHADER_TYPE                    ActiveStages);
+    void InitResourceLayout(const PipelineStateCreateInfo& CreateInfo,
+                            const TShaderStages&           ShaderStages,
+                            SHADER_TYPE                    ActiveStages);
 
     RefCntAutoPtr<PipelineResourceSignatureGLImpl> CreateDefaultSignature(
         const PipelineStateCreateInfo& CreateInfo,
@@ -103,9 +103,9 @@ private:
 
     std::vector<std::pair<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj>> m_GLProgPipelines;
 
-    Uint8                      m_NumPrograms                = 0;
-    bool                       m_IsProgramPipelineSupported = false;
-    std::array<SHADER_TYPE, 5> m_ShaderTypes                = {};
+    Uint8        m_NumPrograms                = 0;
+    bool         m_IsProgramPipelineSupported = false;
+    SHADER_TYPE* m_ShaderTypes                = nullptr; // [m_NumPrograms]
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages in the pipeline.

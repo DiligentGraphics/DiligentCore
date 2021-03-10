@@ -275,7 +275,10 @@ public:
 
     IObject& GetOwner() { return m_Owner; }
 
-    Uint32 GetVariableCount() const;
+    Uint32 GetVariableCount() const
+    {
+        return GetNumUBs() + GetNumTextures() + GetNumImages() + GetNumStorageBuffers();
+    }
 
     // clang-format off
     Uint32 GetNumUBs()            const { return (m_TextureOffset       - m_UBOffset)            / sizeof(UniformBuffBindInfo);    }
@@ -304,11 +307,10 @@ private:
         Uint32 NumImages        = 0;
         Uint32 NumStorageBlocks = 0;
     };
-    static void CountResources(const PipelineResourceSignatureGLImpl& Signature,
-                               const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                               Uint32                                 NumAllowedTypes,
-                               SHADER_TYPE                            ShaderType,
-                               ResourceCounters&                      Counters);
+    static ResourceCounters CountResources(const PipelineResourceSignatureGLImpl& Signature,
+                                           const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+                                           Uint32                                 NumAllowedTypes,
+                                           SHADER_TYPE                            ShaderType);
 
     // Offsets in bytes
     using OffsetType = Uint16;

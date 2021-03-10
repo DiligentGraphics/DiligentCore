@@ -93,11 +93,11 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
         VertexBuffers[s] = nullptr;
 
     // Get layout
-    auto*                pPSOGL         = ValidatedCast<PipelineStateGLImpl>(pPSO);
-    auto*                pIndexBufferGL = ValidatedCast<BufferGLImpl>(pIndexBuffer);
-    const auto&          InputLayout    = pPSOGL->GetGraphicsPipelineDesc().InputLayout;
-    const LayoutElement* LayoutElems    = InputLayout.LayoutElements;
-    Uint32               NumElems       = InputLayout.NumElements;
+    const auto* pPSOGL         = ValidatedCast<const PipelineStateGLImpl>(pPSO);
+    auto*       pIndexBufferGL = ValidatedCast<BufferGLImpl>(pIndexBuffer);
+    const auto& InputLayout    = pPSOGL->GetGraphicsPipelineDesc().InputLayout;
+    const auto* LayoutElems    = InputLayout.LayoutElements;
+    const auto  NumElems       = InputLayout.NumElements;
     // Construct the key
     VAOCacheKey Key(pPSOGL->GetUniqueID(), pIndexBufferGL ? pIndexBufferGL->GetUniqueID() : 0);
 

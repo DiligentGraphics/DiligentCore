@@ -180,7 +180,7 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
             auto SamplerIdx      = ResourceAttribs::InvalidSamplerInd;
             if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
             {
-                // Do not use combined sampler suffix - in OpenGL immutable samplers should be defined defined for textures directly
+                // Do not use combined sampler suffix - in OpenGL immutable samplers should be defined for textures directly
                 ImtblSamplerIdx = Diligent::FindImmutableSampler(m_Desc.ImmutableSamplers, m_Desc.NumImmutableSamplers,
                                                                  ResDesc.ShaderStages, ResDesc.Name, nullptr);
                 if (ImtblSamplerIdx != InvalidImmutableSamplerIndex)

@@ -42,6 +42,25 @@
 namespace Diligent
 {
 
+static void VerifyResourceMerge(const PipelineStateDesc&                    PSODesc,
+                                const ShaderResourcesGL::GLResourceAttribs& ExistingRes,
+                                const ShaderResourcesGL::GLResourceAttribs& NewResAttribs)
+{
+#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                          \
+    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                                  \
+                        "' is shared between multiple shaders in pipeline '", (PSODesc.Name ? PSODesc.Name : ""), \
+                        "', but its " PropertyName " varies. A variable shared between multiple shaders "         \
+                        "must be defined identically in all shaders. Either use separate variables for "          \
+                        "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
+
+    if (ExistingRes.ResourceType != NewResAttribs.ResourceType)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("type");
+
+    if (ExistingRes.ArraySize != NewResAttribs.ArraySize)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("array size");
+#undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
+}
+
 RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaultSignature(
     const PipelineStateCreateInfo& CreateInfo,
     const TShaderStages&           ShaderStages,
@@ -98,10 +117,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         }
         else
         {
-            DEV_CHECK_ERR(IterAndAssigned.first->Attribs.ResourceType == Attribs.ResourceType,
-                          "Shader variable '", Attribs.Name,
-                          "' exists in multiple shaders from the same shader stage, but its type is not consistent between "
-                          "shaders. All variables with the same name from the same shader stage must have the same type.");
+            VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->Attribs, Attribs);
         }
     };
     const auto HandleUB = [&](const ShaderResourcesGL::UniformBufferInfo& Attribs) {
@@ -165,9 +181,9 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     return pSignature;
 }
 
-void PipelineStateGLImpl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
-                                              const TShaderStages&           ShaderStages,
-                                              SHADER_TYPE                    ActiveStages)
+void PipelineStateGLImpl::InitResourceLayout(const PipelineStateCreateInfo& CreateInfo,
+                                             const TShaderStages&           ShaderStages,
+                                             SHADER_TYPE                    ActiveStages)
 {
     if (m_UsingImplicitSignature)
     {
@@ -237,15 +253,19 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
     VERIFY(deviceCaps.DevType != RENDER_DEVICE_TYPE_UNDEFINED, "Device caps are not initialized");
 
     m_IsProgramPipelineSupported = deviceCaps.Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED;
+    m_NumPrograms                = m_IsProgramPipelineSupported ? static_cast<Uint8>(ShaderStages.size()) : 1;
 
     FixedLinearAllocator MemPool{GetRawAllocator()};
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
-    MemPool.AddSpace<GLProgramObj>(m_IsProgramPipelineSupported ? ShaderStages.size() : 1);
+    MemPool.AddSpace<GLProgramObj>(m_NumPrograms);
+    MemPool.AddSpace<SHADER_TYPE>(m_NumPrograms);
 
     MemPool.Reserve();
 
     InitializePipelineDesc(CreateInfo, MemPool);
+    m_GLPrograms  = MemPool.ConstructArray<GLProgramObj>(m_NumPrograms, false);
+    m_ShaderTypes = MemPool.ConstructArray<SHADER_TYPE>(m_NumPrograms, SHADER_TYPE_UNKNOWN);
 
     // Get active shader stages.
     SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
@@ -259,25 +279,20 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
     // Create programs.
     if (m_IsProgramPipelineSupported)
     {
-        VERIFY_EXPR(m_ShaderTypes.size() >= ShaderStages.size());
-        m_GLPrograms = MemPool.ConstructArray<GLProgramObj>(ShaderStages.size(), false);
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
             auto* pShaderGL  = ShaderStages[i];
             m_GLPrograms[i]  = GLProgramObj{ShaderGLImpl::LinkProgram(&ShaderStages[i], 1, true)};
             m_ShaderTypes[i] = pShaderGL->GetDesc().ShaderType;
         }
-        m_NumPrograms = static_cast<Uint8>(ShaderStages.size());
     }
     else
     {
-        m_GLPrograms     = MemPool.ConstructArray<GLProgramObj>(1, false);
         m_GLPrograms[0]  = ShaderGLImpl::LinkProgram(ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), false);
         m_ShaderTypes[0] = ActiveStages;
-        m_NumPrograms    = 1;
     }
 
-    InitResourceLayouts(CreateInfo, ShaderStages, ActiveStages);
+    InitResourceLayout(CreateInfo, ShaderStages, ActiveStages);
 }
 
 PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,
@@ -369,6 +384,7 @@ void PipelineStateGLImpl::Destruct()
         m_GLPrograms = nullptr;
     }
 
+    m_ShaderTypes = nullptr;
     m_NumPrograms = 0;
 
     TPipelineStateBase::Destruct();
@@ -505,7 +521,7 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
         // Get resource signature from the root signature
-        const auto& pSignature = GetResourceSignature(sign);
+        const auto* pSignature = GetResourceSignature(sign);
         if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue; // Skip null and empty signatures
 
@@ -556,23 +572,26 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
                 }
 
                 const auto& SRBCache = ppSRBs[attrib_it->SignatureIndex]->GetResourceCache();
-                attrib_it->pSignature->DvpValidateCommittedResource(Attribs, ResDim, IsMS, attrib_it->ResourceIndex, SRBCache, PSO.m_ShaderNames[shader_ind].c_str(), PSO.m_Desc.Name);
+                attrib_it->pSignature->DvpValidateCommittedResource(Attribs, ResDim, IsMS, attrib_it->ResourceIndex,
+                                                                    SRBCache, PSO.m_ShaderNames[shader_ind].c_str(), PSO.m_Desc.Name);
             }
             ++attrib_it;
         }
 
-        void operator()(const ShaderResourcesGL::GLResourceAttribs& Attribs) { Validate(Attribs, RESOURCE_DIM_UNDEFINED, false); }
+        void operator()(const ShaderResourcesGL::StorageBlockInfo& Attribs) { Validate(Attribs, RESOURCE_DIM_BUFFER, false); }
+        void operator()(const ShaderResourcesGL::UniformBufferInfo& Attribs) { Validate(Attribs, RESOURCE_DIM_BUFFER, false); }
         void operator()(const ShaderResourcesGL::TextureInfo& Attribs) { Validate(Attribs, Attribs.ResourceDim, Attribs.IsMultisample); }
         void operator()(const ShaderResourcesGL::ImageInfo& Attribs) { Validate(Attribs, Attribs.ResourceDim, Attribs.IsMultisample); }
     };
 
-    Uint32               i = 0;
-    HandleResourceHelper HandleResource{*this, pSRBs, NumSRBs, m_ResourceAttibutions.begin(), i};
+    Uint32               ShaderInd = 0;
+    HandleResourceHelper HandleResource{*this, pSRBs, NumSRBs, m_ResourceAttibutions.begin(), ShaderInd};
 
     VERIFY_EXPR(m_ShaderResources.size() == m_ShaderNames.size());
-    for (; i < m_ShaderResources.size(); ++i)
+    for (; ShaderInd < m_ShaderResources.size(); ++ShaderInd)
     {
-        m_ShaderResources[i]->ProcessConstResources(std::ref(HandleResource), std::ref(HandleResource), std::ref(HandleResource), std::ref(HandleResource));
+        m_ShaderResources[ShaderInd]->ProcessConstResources(std::ref(HandleResource), std::ref(HandleResource),
+                                                            std::ref(HandleResource), std::ref(HandleResource));
     }
     VERIFY_EXPR(HandleResource.attrib_it == m_ResourceAttibutions.end());
 }

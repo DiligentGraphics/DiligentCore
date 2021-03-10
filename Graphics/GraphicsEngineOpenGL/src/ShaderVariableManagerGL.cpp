@@ -39,12 +39,14 @@
 namespace Diligent
 {
 
-void ShaderVariableManagerGL::CountResources(const PipelineResourceSignatureGLImpl& Signature,
-                                             const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
-                                             Uint32                                 NumAllowedTypes,
-                                             const SHADER_TYPE                      ShaderType,
-                                             ResourceCounters&                      Counters)
+ShaderVariableManagerGL::ResourceCounters ShaderVariableManagerGL::CountResources(
+    const PipelineResourceSignatureGLImpl& Signature,
+    const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
+    Uint32                                 NumAllowedTypes,
+    const SHADER_TYPE                      ShaderType)
 {
+    ResourceCounters Counters;
+
     Signature.ProcessResources(
         AllowedVarTypes, NumAllowedTypes, ShaderType,
         [&](const PipelineResourceDesc& ResDesc, Uint32) //
@@ -65,6 +67,8 @@ void ShaderVariableManagerGL::CountResources(const PipelineResourceSignatureGLIm
                     UNEXPECTED("Unsupported resource type.");
             }
         });
+
+    return Counters;
 }
 
 size_t ShaderVariableManagerGL::GetRequiredMemorySize(const PipelineResourceSignatureGLImpl& Signature,
@@ -72,8 +76,7 @@ size_t ShaderVariableManagerGL::GetRequiredMemorySize(const PipelineResourceSign
                                                       Uint32                                 NumAllowedTypes,
                                                       SHADER_TYPE                            ShaderType)
 {
-    ResourceCounters Counters;
-    CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, Counters);
+    auto Counters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
 
     // clang-format off
     size_t RequiredSize = Counters.NumUBs           * sizeof(UniformBuffBindInfo)   + 
@@ -94,8 +97,7 @@ void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& 
     m_pDbgAllocator = &Allocator;
 #endif
 
-    ResourceCounters Counters;
-    CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, Counters);
+    auto Counters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
 
     m_pSignature = &Signature;
 
@@ -215,7 +217,7 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(IDeviceObject* p
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<BufferGLImpl> pBuffGLImpl(pBuffer, IID_BufferGL);
+    RefCntAutoPtr<BufferGLImpl> pBuffGLImpl{pBuffer, IID_BufferGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedUB = ResourceCache.GetConstUB(Attr.CacheOffset + ArrayIndex);
@@ -243,16 +245,16 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView
         // resource mapping can be of wrong type
         RefCntAutoPtr<TextureViewGLImpl> pViewGL{pView, IID_TextureViewGL};
 
-        const auto ImmutableSamplerAssigned = m_ParentManager.m_pSignature->GetImmutableSamplerIdx(Attr) != InvalidImmutableSamplerIndex;
+        const auto ImmutableSamplerAssigned = (m_ParentManager.m_pSignature->GetImmutableSamplerIdx(Attr) != InvalidImmutableSamplerIndex);
 #ifdef DILIGENT_DEVELOPMENT
         {
-            auto& CachedTexSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
+            const auto& CachedTexSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
             VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
                                       pView, pViewGL.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
                                       RESOURCE_DIM_UNDEFINED, false, CachedTexSampler.pView.RawPtr());
             if (ImmutableSamplerAssigned && ResourceCache.GetContentType() == ResourceCacheContentType::SRB)
             {
-                VERIFY(CachedTexSampler.pSampler != nullptr, "Immutable samplers must be initialized by PipelineResourceSignatureGLImpl::InitializeSRBResourceCache!");
+                VERIFY(CachedTexSampler.pSampler != nullptr, "Immutable samplers must be initialized in the SRB cache by PipelineResourceSignatureGLImpl::InitializeSRBResourceCache!");
             }
             if (Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
             {
@@ -266,10 +268,10 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView
     {
         // We cannot use ValidatedCast<> here as the resource retrieved from the
         // resource mapping can be of wrong type
-        RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
+        RefCntAutoPtr<BufferViewGLImpl> pViewGL{pView, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
-            auto& CachedBuffSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
+            const auto& CachedBuffSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
             VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
                                       pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
                                       RESOURCE_DIM_BUFFER, false, CachedBuffSampler.pView.RawPtr());
@@ -277,7 +279,7 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView
             {
                 const auto& ViewDesc = pViewGL->GetDesc();
                 const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
-                if (!((BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED) || BuffDesc.Mode == BUFFER_MODE_RAW))
+                if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED))
                 {
                     LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
                                       Desc.Name, ": formatted buffer view is expected.");
@@ -307,10 +309,10 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(IDeviceObject* pView, 
     {
         // We cannot use ValidatedCast<> here as the resource retrieved from the
         // resource mapping can be of wrong type
-        RefCntAutoPtr<TextureViewGLImpl> pViewGL(pView, IID_TextureViewGL);
+        RefCntAutoPtr<TextureViewGLImpl> pViewGL{pView, IID_TextureViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
-            auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + ArrayIndex);
+            const auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + ArrayIndex);
             VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
                                       pView, pViewGL.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
                                       RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr());
@@ -322,7 +324,7 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(IDeviceObject* pView, 
     {
         // We cannot use ValidatedCast<> here as the resource retrieved from the
         // resource mapping can be of wrong type
-        RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
+        RefCntAutoPtr<BufferViewGLImpl> pViewGL{pView, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
             auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + ArrayIndex);
@@ -333,7 +335,7 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(IDeviceObject* pView, 
             {
                 const auto& ViewDesc = pViewGL->GetDesc();
                 const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
-                if (!((BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED) || BuffDesc.Mode == BUFFER_MODE_RAW))
+                if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED))
                 {
                     LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
                                       Desc.Name, ": formatted buffer view is expected.");
@@ -365,7 +367,7 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(IDeviceObject*
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
+    RefCntAutoPtr<BufferViewGLImpl> pViewGL{pView, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSSBO = ResourceCache.GetConstSSBO(Attr.CacheOffset + ArrayIndex);
@@ -446,11 +448,6 @@ IShaderResourceVariable* ShaderVariableManagerGL::GetVariable(const Char* Name) 
         return pSSBO;
 
     return nullptr;
-}
-
-Uint32 ShaderVariableManagerGL::GetVariableCount() const
-{
-    return GetNumUBs() + GetNumTextures() + GetNumImages() + GetNumStorageBuffers();
 }
 
 class ShaderVariableLocator

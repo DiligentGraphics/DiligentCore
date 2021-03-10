@@ -379,4 +379,6 @@ TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat);
 NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat);
 GLenum             TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
 
+void GLTextureTypeToResourceDim(GLenum TextureType, RESOURCE_DIMENSION& ResDim, bool& IsMS);
+
 } // namespace Diligent

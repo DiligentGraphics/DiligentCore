@@ -64,26 +64,16 @@ IMPLEMENT_QUERY_INTERFACE(TextureViewGLImpl, IID_TextureViewGL, TTextureViewBase
 
 const GLObjectWrappers::GLTextureObj& TextureViewGLImpl::GetHandle()
 {
-    if (m_ViewTexGLHandle)
-        return m_ViewTexGLHandle;
-    else
-    {
-        auto* pTexture = GetTexture();
-        CHECK_DYNAMIC_TYPE(TextureBaseGL, pTexture);
-        return static_cast<TextureBaseGL*>(pTexture)->GetGLHandle();
-    }
+    return m_ViewTexGLHandle ?
+        m_ViewTexGLHandle :
+        GetTexture<TextureBaseGL>()->GetGLHandle();
 }
 
 GLenum TextureViewGLImpl::GetBindTarget()
 {
-    if (m_ViewTexGLHandle)
-        return m_ViewTexBindTarget;
-    else
-    {
-        auto* pTexture = GetTexture();
-        CHECK_DYNAMIC_TYPE(TextureBaseGL, pTexture);
-        return static_cast<TextureBaseGL*>(pTexture)->GetBindTarget();
-    }
+    return m_ViewTexGLHandle ?
+        m_ViewTexBindTarget :
+        GetTexture<TextureBaseGL>()->GetBindTarget();
 }
 
 } // namespace Diligent
