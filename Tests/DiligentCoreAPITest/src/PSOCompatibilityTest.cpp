@@ -282,8 +282,7 @@ TEST(PSOCompatibility, IsCompatibleWith)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto DevType = pDevice->GetDeviceCaps().DevType;
-    auto PSO0    = CreateGraphicsPSO(pEnv, VS0, PS0);
+    auto PSO0 = CreateGraphicsPSO(pEnv, VS0, PS0);
     ASSERT_TRUE(PSO0);
     EXPECT_TRUE(PSO0->IsCompatibleWith(PSO0));
     auto PSO0_1 = CreateGraphicsPSO(pEnv, VS0, PS0);
@@ -300,15 +299,13 @@ TEST(PSOCompatibility, IsCompatibleWith)
     ASSERT_TRUE(PSO_TexArr);
     ASSERT_TRUE(PSO_ArrOfTex);
     EXPECT_TRUE(PSO_Tex->IsCompatibleWith(PSO_Tex2));
-    if (DevType != RENDER_DEVICE_TYPE_D3D12 && DevType != RENDER_DEVICE_TYPE_VULKAN)
-    {
-        EXPECT_FALSE(PSO_Tex->IsCompatibleWith(PSO_TexArr));
-    }
+
+    // From resource signature point of view, texture and texture array are compatible
+    EXPECT_TRUE(PSO_Tex->IsCompatibleWith(PSO_TexArr));
+
     VERIFY_EXPR(!PSO_Tex->IsCompatibleWith(PSO_ArrOfTex));
-    if (DevType != RENDER_DEVICE_TYPE_D3D12 && DevType != RENDER_DEVICE_TYPE_VULKAN)
-    {
-        EXPECT_FALSE(PSO_Tex2->IsCompatibleWith(PSO_TexArr));
-    }
+    // From resource signature point of view, texture and texture array are compatible
+    EXPECT_TRUE(PSO_Tex2->IsCompatibleWith(PSO_TexArr));
     EXPECT_FALSE(PSO_Tex2->IsCompatibleWith(PSO_ArrOfTex));
     EXPECT_FALSE(PSO_TexArr->IsCompatibleWith(PSO_ArrOfTex));
 
