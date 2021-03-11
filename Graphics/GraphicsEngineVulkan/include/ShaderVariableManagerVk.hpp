@@ -174,11 +174,6 @@ public:
     {
         return m_ParentManager.BindResource(pObj, ArrayIndex, m_ResIndex);
     }
-
-private:
-    using ResourceAttribs = PipelineResourceAttribsVk;
-
-    const ResourceAttribs& GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
 };
 
 } // namespace Diligent

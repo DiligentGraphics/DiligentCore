@@ -155,7 +155,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     RefCntAutoPtr<PipelineResourceSignatureGLImpl> pSignature;
     if (Resources.size())
     {
-        String SignName = String{"Implicit signature for PSO '"} + m_Desc.Name + '\'';
+        String SignName = String{"Implicit signature of PSO '"} + m_Desc.Name + '\'';
 
         PipelineResourceSignatureDesc ResSignDesc = {};
 

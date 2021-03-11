@@ -89,7 +89,6 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
 
     VERIFY_EXPR(m_pSignature == nullptr);
 
-    const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
     const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
 
@@ -312,7 +311,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureVkImpl& Si
     m_DstRes            {m_CachedSet.GetResource(m_DstResCacheOffset)}
 // clang-format on
 {
-    VERIFY_EXPR(ArrayIndex < m_ResDesc.ArraySize);
+    VERIFY(ArrayIndex < m_ResDesc.ArraySize, "Array index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
     VERIFY(m_DstRes.Type == m_Attribs.GetDescriptorType(), "Inconsistent types");
 
 #ifdef DILIGENT_DEBUG
@@ -401,8 +400,8 @@ void BindResourceHelper::operator()(IDeviceObject* pObj) const
     {
         if (m_DstRes.pObject && m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         {
-            LOG_ERROR_MESSAGE("Shader variable '", m_ResDesc.Name, "' is not dynamic but being unbound. This is an error and may cause unpredicted behavior. ",
-                              "Use another shader resource binding instance or label shader variable as dynamic if you need to bind another resource.");
+            LOG_ERROR_MESSAGE("Shader variable '", m_ResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
+                              "Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource.");
         }
 
         m_ResourceCache.ResetResource(m_Attribs.DescrSet, m_DstResCacheOffset);
@@ -442,7 +441,8 @@ void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer) const
     // We cannot use ValidatedCast<> here as the resource can have wrong type
     RefCntAutoPtr<BufferVkImpl> pBufferVk{pBuffer, IID_BufferVk};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyConstantBufferBinding(m_ResDesc, m_ArrayIndex, pBuffer, pBufferVk.RawPtr(), m_DstRes.pObject.RawPtr());
+    VerifyConstantBufferBinding(m_ResDesc, m_ArrayIndex, pBuffer, pBufferVk.RawPtr(), m_DstRes.pObject.RawPtr(),
+                                m_Signature.GetDesc().Name);
 #endif
 
     UpdateCachedResource(std::move(pBufferVk));
@@ -463,11 +463,14 @@ void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView) const
         const auto RequiredViewType = DescriptorTypeToBufferView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, m_ArrayIndex,
                                   pBufferView, pBufferViewVk.RawPtr(),
-                                  {RequiredViewType}, RESOURCE_DIM_BUFFER,
-                                  false, // IsMultisample
-                                  m_DstRes.pObject.RawPtr());
+                                  {RequiredViewType},
+                                  RESOURCE_DIM_BUFFER, // Expected resource dim
+                                  false,               // IsMultisample (ignored when resource dim is buffer)
+                                  m_DstRes.pObject.RawPtr(),
+                                  m_Signature.GetDesc().Name);
 
-        VERIFY_EXPR((m_ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) == 0);
+        VERIFY((m_ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) == 0,
+               "FORMATTED_BUFFER resource flag is set for a storage buffer - this should've not happened.");
         ValidateBufferMode(m_ResDesc, m_ArrayIndex, pBufferViewVk.RawPtr());
     }
 #endif
@@ -489,11 +492,14 @@ void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView) const
         const auto RequiredViewType = DescriptorTypeToBufferView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, m_ArrayIndex,
                                   pBufferView, pBufferViewVk.RawPtr(),
-                                  {RequiredViewType}, RESOURCE_DIM_BUFFER,
-                                  false, // IsMultisample
-                                  m_DstRes.pObject.RawPtr());
+                                  {RequiredViewType},
+                                  RESOURCE_DIM_BUFFER, // Expected resource dim
+                                  false,               // IsMultisample (ignored when resource dim is buffer)
+                                  m_DstRes.pObject.RawPtr(),
+                                  m_Signature.GetDesc().Name);
 
-        VERIFY_EXPR((m_ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0);
+        VERIFY((m_ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0,
+               "FORMATTED_BUFFER resource flag is not set for a texel buffer - this should've not happened.");
         ValidateBufferMode(m_ResDesc, m_ArrayIndex, pBufferViewVk.RawPtr());
     }
 #endif
@@ -517,8 +523,9 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
                                   pTexView, pTexViewVk0.RawPtr(),
                                   {RequiredViewType},
                                   RESOURCE_DIM_UNDEFINED, // Required resource dimension is not known
-                                  false,                  // IsMultisample
-                                  m_DstRes.pObject.RawPtr());
+                                  false,                  // IsMultisample (ignored when resource dim is unknown)
+                                  m_DstRes.pObject.RawPtr(),
+                                  m_Signature.GetDesc().Name);
     }
 #endif
 
@@ -610,7 +617,8 @@ void BindResourceHelper::CacheInputAttachment(IDeviceObject* pTexView) const
                               {TEXTURE_VIEW_SHADER_RESOURCE},
                               RESOURCE_DIM_UNDEFINED,
                               false, // IsMultisample
-                              m_DstRes.pObject.RawPtr());
+                              m_DstRes.pObject.RawPtr(),
+                              m_Signature.GetDesc().Name);
 #endif
 
     UpdateCachedResource(std::move(pTexViewVk));
@@ -621,7 +629,8 @@ void BindResourceHelper::CacheAccelerationStructure(IDeviceObject* pTLAS) const
     VERIFY(m_DstRes.Type == DescriptorType::AccelerationStructure, "Acceleration Structure resource is expected");
     RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyTLASResourceBinding(m_ResDesc, m_ArrayIndex, pTLAS, pTLASVk.RawPtr(), m_DstRes.pObject.RawPtr());
+    VerifyTLASResourceBinding(m_ResDesc, m_ArrayIndex, pTLAS, pTLASVk.RawPtr(), m_DstRes.pObject.RawPtr(),
+                              m_Signature.GetDesc().Name);
 #endif
 
     UpdateCachedResource(std::move(pTLASVk));

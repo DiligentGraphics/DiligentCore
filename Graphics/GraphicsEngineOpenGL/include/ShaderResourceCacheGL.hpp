@@ -93,21 +93,21 @@ public:
             // pSampler = nullptr;
 
             // Avoid unnecessary virtual function calls
-            pTexture = pTexView ? ValidatedCast<TextureBaseGL>(pTexView->TextureViewGLImpl::GetTexture()) : nullptr;
+            pTexture = pTexView ? pTexView->GetTexture<TextureBaseGL>() : nullptr;
             if (pTexView && SetSampler)
             {
                 pSampler = ValidatedCast<SamplerGLImpl>(pTexView->GetSampler());
             }
 
-            pView.Attach(pTexView.Detach());
+            pView = std::move(pTexView);
         }
 
         void Set(RefCntAutoPtr<BufferViewGLImpl>&& pBufView)
         {
             pTexture = nullptr;
             // Avoid unnecessary virtual function calls
-            pBuffer = pBufView ? ValidatedCast<BufferGLImpl>(pBufView->BufferViewGLImpl::GetBuffer()) : nullptr;
-            pView.Attach(pBufView.Detach());
+            pBuffer = pBufView ? pBufView->GetBuffer<BufferGLImpl>() : nullptr;
+            pView   = std::move(pBufView);
         }
     };
 

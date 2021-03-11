@@ -126,15 +126,15 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                                  const IDeviceObject*        pBuffer,
                                  const BufferImplType*       pBufferImpl,
                                  const IDeviceObject*        pCachedBuffer,
-                                 const char*                 ShaderName = nullptr)
+                                 const char*                 SignatureName)
 {
     if (pBuffer != nullptr && pBufferImpl == nullptr)
     {
         std::stringstream ss;
         ss << "Failed to bind resource '" << pBuffer->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (ShaderName != nullptr)
+        if (SignatureName != nullptr)
         {
-            ss << " in shader '" << ShaderName << '\'';
+            ss << " defined by signature '" << SignatureName << '\'';
         }
         ss << ". Invalid resource type: buffer is expected.";
         LOG_ERROR_MESSAGE(ss.str());
@@ -149,22 +149,22 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
         {
             std::stringstream ss;
             ss << "Error binding buffer '" << BuffDesc.Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-            if (ShaderName != nullptr)
+            if (SignatureName != nullptr)
             {
-                ss << " in shader '" << ShaderName << '\'';
+                ss << " defined by signature '" << SignatureName << '\'';
             }
             ss << ". The buffer was not created with BIND_UNIFORM_BUFFER flag.";
             LOG_ERROR_MESSAGE(ss.str());
             BindingOK = false;
         }
 
-        if (BuffDesc.Usage == USAGE_DYNAMIC && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS))
+        if (BuffDesc.Usage == USAGE_DYNAMIC && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) != 0)
         {
             std::stringstream ss;
             ss << "Error binding USAGE_DYNAMIC buffer '" << BuffDesc.Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-            if (ShaderName != nullptr)
+            if (SignatureName != nullptr)
             {
-                ss << " in shader '" << ShaderName << '\'';
+                ss << " defined by signature '" << SignatureName << '\'';
             }
             ss << ". The variable was initialized with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.";
             LOG_ERROR_MESSAGE(ss.str());
@@ -179,9 +179,9 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
         std::stringstream ss;
         ss << "Non-null constant (uniform) buffer '" << pCachedBuffer->GetDesc().Name << "' is already bound to " << VarTypeStr
            << " shader variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (ShaderName != nullptr)
+        if (SignatureName != nullptr)
         {
-            ss << " in shader '" << ShaderName << '\'';
+            ss << " defined by signature '" << SignatureName << '\'';
         }
         ss << ". Attempting to bind ";
         if (pBufferImpl)
@@ -296,7 +296,7 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
                                RESOURCE_DIMENSION                      ExpectedResourceDimension,
                                bool                                    IsMultisample,
                                const IDeviceObject*                    pCachedView,
-                               const char*                             ShaderName = nullptr)
+                               const char*                             SignatureName)
 {
     const char* ExpectedResourceType = GetResourceTypeName<ViewTypeEnumType>();
 
@@ -304,9 +304,9 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
     {
         std::stringstream ss;
         ss << "Failed to bind resource '" << pView->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (ShaderName != nullptr)
+        if (SignatureName != nullptr)
         {
-            ss << " in shader '" << ShaderName << '\'';
+            ss << " defined by signature '" << SignatureName << '\'';
         }
         ss << ". Invalid resource type: " << ExpectedResourceType << " is expected.";
         LOG_ERROR_MESSAGE(ss.str());
@@ -329,9 +329,9 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
             std::stringstream ss;
             ss << "Error binding " << ExpectedResourceType << " '" << pViewImpl->GetDesc().Name << "' to variable '"
                << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-            if (ShaderName != nullptr)
+            if (SignatureName != nullptr)
             {
-                ss << " in shader '" << ShaderName << '\'';
+                ss << " defined by signature '" << SignatureName << '\'';
             }
             ss << ". Incorrect view type: ";
             bool IsFirstViewType = true;
@@ -363,9 +363,9 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
         std::stringstream ss;
         ss << "Non-null resource '" << pCachedView->GetDesc().Name << "' is already bound to " << VarTypeStr
            << " shader variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (ShaderName != nullptr)
+        if (SignatureName != nullptr)
         {
-            ss << " in shader '" << ShaderName << '\'';
+            ss << " defined by signature '" << SignatureName << '\'';
         }
         ss << ". Attempting to bind ";
         if (pViewImpl)
@@ -403,7 +403,7 @@ bool ValidateBufferMode(const PipelineResourceDesc& ResDesc,
             if (BuffDesc.Mode != BUFFER_MODE_FORMATTED)
             {
                 LOG_ERROR_MESSAGE("Error binding buffer view '", pBufferView->GetDesc().Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                  GetShaderResourcePrintName(ResDesc, ArrayIndex), ": formatted buffer view is expected.");
+                                  GetShaderResourcePrintName(ResDesc, ArrayIndex), "': formatted buffer view is expected.");
                 BindingOK = false;
             }
         }
@@ -412,7 +412,7 @@ bool ValidateBufferMode(const PipelineResourceDesc& ResDesc,
             if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED && BuffDesc.Mode != BUFFER_MODE_RAW)
             {
                 LOG_ERROR_MESSAGE("Error binding buffer view '", pBufferView->GetDesc().Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                  GetShaderResourcePrintName(ResDesc, ArrayIndex), ": structured or raw buffer view is expected.");
+                                  GetShaderResourcePrintName(ResDesc, ArrayIndex), "': structured or raw buffer view is expected.");
                 BindingOK = false;
             }
         }
@@ -428,15 +428,15 @@ bool VerifyTLASResourceBinding(const PipelineResourceDesc& ResDesc,
                                const IDeviceObject*        pTLAS,
                                const TLASImplType*         pTLASImpl,
                                const IDeviceObject*        pCachedAS,
-                               const char*                 ShaderName = nullptr)
+                               const char*                 SignatureName)
 {
     if (pTLAS != nullptr && pTLASImpl == nullptr)
     {
         std::stringstream ss;
         ss << "Failed to bind resource '" << pCachedAS->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (ShaderName != nullptr)
+        if (SignatureName != nullptr)
         {
-            ss << " in shader '" << ShaderName << '\'';
+            ss << " defined by signature '" << SignatureName << '\'';
         }
         ss << ". Invalid resource type: TLAS is expected.";
         LOG_ERROR_MESSAGE(ss.str());
@@ -452,9 +452,9 @@ bool VerifyTLASResourceBinding(const PipelineResourceDesc& ResDesc,
         std::stringstream ss;
         ss << "Non-null resource '" << pCachedAS->GetDesc().Name << "' is already bound to " << VarTypeStr
            << " shader variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (ShaderName != nullptr)
+        if (SignatureName != nullptr)
         {
-            ss << " in shader '" << ShaderName << '\'';
+            ss << " defined by signature '" << SignatureName << '\'';
         }
         ss << ". Attempting to bind ";
         if (pTLAS)

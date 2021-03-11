@@ -518,7 +518,10 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
     RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> pImplicitSignature;
     if (Resources.size())
     {
+        String SignName = String{"Implicit signature of PSO '"} + (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : "") + '\'';
+
         PipelineResourceSignatureDesc ResSignDesc;
+        ResSignDesc.Name                       = SignName.c_str();
         ResSignDesc.Resources                  = Resources.data();
         ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
         ResSignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;

@@ -93,7 +93,6 @@ void ShaderVariableManagerD3D12::Initialize(const PipelineResourceSignatureD3D12
     m_pDbgAllocator = &Allocator;
 #endif
 
-    const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
     const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
 
@@ -281,7 +280,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureD3D12Impl&
     m_DstRes        {const_cast<const ShaderResourceCacheD3D12&>(ResourceCache).GetRootTable(m_RootIndex).GetResource(m_OffsetFromTableStart)}
 // clang-format on
 {
-    VERIFY(ArrayIndex < m_ResDesc.ArraySize, "Array index is out of range");
+    VERIFY(ArrayIndex < m_ResDesc.ArraySize, "Array index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
 
     if (m_CacheType != ResourceCacheContentType::Signature && !m_Attribs.IsRootView())
     {
@@ -324,11 +323,11 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureD3D12Impl&
 
 void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
 {
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12{pBuffer, IID_BufferD3D12};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyConstantBufferBinding(m_ResDesc, m_ArrayIndex, pBuffer, pBuffD3D12.RawPtr(), m_DstRes.pObject.RawPtr());
+    VerifyConstantBufferBinding(m_ResDesc, m_ArrayIndex, pBuffer, pBuffD3D12.RawPtr(), m_DstRes.pObject.RawPtr(),
+                                m_Signature.GetDesc().Name);
     if (m_ResDesc.ArraySize != 1 && pBuffD3D12 && pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC && pBuffD3D12->GetD3D12Resource() == nullptr)
     {
         LOG_ERROR_MESSAGE("Attempting to bind dynamic buffer '", pBuffD3D12->GetDesc().Name, "' that doesn't have backing d3d12 resource to array variable '", m_ResDesc.Name,
@@ -391,6 +390,10 @@ void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
 void BindResourceHelper::CacheAccelStruct(IDeviceObject* pTLAS) const
 {
     RefCntAutoPtr<ITopLevelASD3D12> pTLASD3D12{pTLAS, IID_TopLevelASD3D12};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyTLASResourceBinding(m_ResDesc, m_ArrayIndex, pTLAS, pTLASD3D12.RawPtr(), m_DstRes.pObject.RawPtr(),
+                              m_Signature.GetDesc().Name);
+#endif
     if (pTLASD3D12)
     {
         if (m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && m_DstRes.pObject != nullptr)
@@ -460,8 +463,7 @@ template <typename TResourceViewType,
 void BindResourceHelper::CacheResourceView(IDeviceObject* pView,
                                            TViewTypeEnum  dbgExpectedViewType) const
 {
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TResourceViewType> pViewD3D12{pView, ResourceViewTraits<TResourceViewType>::IID};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyResourceViewBinding(m_ResDesc, m_ArrayIndex,
@@ -469,7 +471,8 @@ void BindResourceHelper::CacheResourceView(IDeviceObject* pView,
                               {dbgExpectedViewType},
                               ResourceViewTraits<TResourceViewType>::ExpectedResDimension,
                               false, // IsMultisample
-                              m_DstRes.pObject.RawPtr());
+                              m_DstRes.pObject.RawPtr(),
+                              m_Signature.GetDesc().Name);
     ResourceViewTraits<TResourceViewType>::VerifyView(pViewD3D12, m_ResDesc, m_ArrayIndex);
 #endif
     if (pViewD3D12)
@@ -574,7 +577,7 @@ void BindResourceHelper::operator()(IDeviceObject* pObj) const
     {
         if (m_DstRes.pObject != nullptr && m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         {
-            LOG_ERROR_MESSAGE("Shader variable '", m_ResDesc.Name, "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. ",
+            LOG_ERROR_MESSAGE("Shader variable '", m_ResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
                               "Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource.");
         }
 
@@ -594,7 +597,7 @@ void BindResourceHelper::operator()(IDeviceObject* pObj) const
 
                 if (DstSam.pObject != nullptr && SamplerResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
                 {
-                    LOG_ERROR_MESSAGE("Sampler variable '", SamplerResDesc.Name, "' is not dynamic but is being reset to null. This is an error and may cause unpredicted behavior. ",
+                    LOG_ERROR_MESSAGE("Sampler variable '", SamplerResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
                                       "Use another shader resource binding instance or label the variable as dynamic if you need to bind another sampler.");
                 }
 
