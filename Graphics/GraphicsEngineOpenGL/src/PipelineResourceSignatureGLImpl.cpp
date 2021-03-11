@@ -403,17 +403,17 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
                     {
                         const auto HasImmutableSampler = GetImmutableSamplerIdx(ResAttr) != InvalidImmutableSamplerIndex;
 
-                        auto* const pTexViewGl = SrcCachedRes.pView.RawPtr<TextureViewGLImpl>();
-                        DstResourceCache.SetTexture(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<TextureViewGLImpl>{pTexViewGl}, !HasImmutableSampler);
+                        RefCntAutoPtr<TextureViewGLImpl> pTexViewGl{SrcCachedRes.pView.RawPtr<TextureViewGLImpl>()};
+                        DstResourceCache.SetTexture(ResAttr.CacheOffset + ArrInd, std::move(pTexViewGl), !HasImmutableSampler);
                         if (HasImmutableSampler)
                         {
-                            VERIFY(DstResourceCache.GetConstTexture(ResAttr.CacheOffset + ArrInd).pSampler, "Immutable sampler is not initialized in the cache");
+                            VERIFY(DstResourceCache.GetConstTexture(ResAttr.CacheOffset + ArrInd).pSampler, "Immutable sampler is not initialized in the cache. This is a bug.");
                         }
                     }
                     else if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
                     {
-                        auto* const pViewGl = SrcCachedRes.pView.RawPtr<BufferViewGLImpl>();
-                        DstResourceCache.SetTexelBuffer(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<BufferViewGLImpl>{pViewGl});
+                        RefCntAutoPtr<BufferViewGLImpl> pViewGl{SrcCachedRes.pView.RawPtr<BufferViewGLImpl>()};
+                        DstResourceCache.SetTexelBuffer(ResAttr.CacheOffset + ArrInd, std::move(pViewGl));
                     }
                     else
                     {
@@ -430,14 +430,14 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
 
                     if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV)
                     {
-                        auto* const pTexViewGl = SrcCachedRes.pView.RawPtr<TextureViewGLImpl>();
-                        DstResourceCache.SetTexImage(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<TextureViewGLImpl>{pTexViewGl});
+                        RefCntAutoPtr<TextureViewGLImpl> pTexViewGl{SrcCachedRes.pView.RawPtr<TextureViewGLImpl>()};
+                        DstResourceCache.SetTexImage(ResAttr.CacheOffset + ArrInd, std::move(pTexViewGl));
                     }
                     else if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV ||
                              ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
                     {
-                        auto* const pViewGl = SrcCachedRes.pView.RawPtr<BufferViewGLImpl>();
-                        DstResourceCache.SetBufImage(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<BufferViewGLImpl>{pViewGl});
+                        RefCntAutoPtr<BufferViewGLImpl> pViewGl{SrcCachedRes.pView.RawPtr<BufferViewGLImpl>()};
+                        DstResourceCache.SetBufImage(ResAttr.CacheOffset + ArrInd, std::move(pViewGl));
                     }
                     else
                     {

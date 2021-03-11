@@ -547,11 +547,9 @@ template void ShaderResourceCacheVk::TransitionResources<true>(DeviceContextVkIm
 
 VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescriptorWriteInfo() const
 {
-    // clang-format off
-    VERIFY(Type == DescriptorType::UniformBuffer ||
-           Type == DescriptorType::UniformBufferDynamic,
+    VERIFY((Type == DescriptorType::UniformBuffer ||
+            Type == DescriptorType::UniformBufferDynamic),
            "Uniform buffer resource is expected");
-    // clang-format on
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get uniform buffer write info: cached object is null");
 
     const auto* pBuffVk = pObject.RawPtr<const BufferVkImpl>();
@@ -572,13 +570,11 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescript
 
 VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescriptorWriteInfo() const
 {
-    // clang-format off
-    VERIFY(Type == DescriptorType::StorageBuffer ||
-           Type == DescriptorType::StorageBufferDynamic ||
-           Type == DescriptorType::StorageBuffer_ReadOnly ||
-           Type == DescriptorType::StorageBufferDynamic_ReadOnly,
+    VERIFY((Type == DescriptorType::StorageBuffer ||
+            Type == DescriptorType::StorageBufferDynamic ||
+            Type == DescriptorType::StorageBuffer_ReadOnly ||
+            Type == DescriptorType::StorageBufferDynamic_ReadOnly),
            "Storage buffer resource is expected");
-    // clang-format on
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get storage buffer write info: cached object is null");
 
     const auto* pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
@@ -622,12 +618,10 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
 
 VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteInfo() const
 {
-    // clang-format off
-    VERIFY(Type == DescriptorType::StorageImage ||
-           Type == DescriptorType::SeparateImage ||
-           Type == DescriptorType::CombinedImageSampler,
+    VERIFY((Type == DescriptorType::StorageImage ||
+            Type == DescriptorType::SeparateImage ||
+            Type == DescriptorType::CombinedImageSampler),
            "Storage image, separate image or sampled image resource is expected");
-    // clang-format on
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get image descriptor write info: cached object is null");
 
     bool IsStorageImage = (Type == DescriptorType::StorageImage);
@@ -679,12 +673,10 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
 
 VkBufferView ShaderResourceCacheVk::Resource::GetBufferViewWriteInfo() const
 {
-    // clang-format off
-    VERIFY(Type == DescriptorType::UniformTexelBuffer ||
-           Type == DescriptorType::StorageTexelBuffer ||
-           Type == DescriptorType::StorageTexelBuffer_ReadOnly,
+    VERIFY((Type == DescriptorType::UniformTexelBuffer ||
+            Type == DescriptorType::StorageTexelBuffer ||
+            Type == DescriptorType::StorageTexelBuffer_ReadOnly),
            "Uniform or storage buffer resource is expected");
-    // clang-format on
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get buffer view write info: cached object is null");
 
     // The following bits must have been set at buffer creation time:

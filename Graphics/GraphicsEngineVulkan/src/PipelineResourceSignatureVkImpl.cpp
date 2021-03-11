@@ -923,10 +923,6 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                     if (!ValidateResourceViewDimension(SPIRVAttribs.Name, SPIRVAttribs.ArraySize, ArrIndex, pTexViewVk, SPIRVAttribs.GetResourceDimension(), SPIRVAttribs.IsMultisample()))
                         BindingsOK = false;
                 }
-                else
-                {
-                    // Missing resource error is logged by BindResourceHelper::CacheImage
-                }
                 break;
 
             default:

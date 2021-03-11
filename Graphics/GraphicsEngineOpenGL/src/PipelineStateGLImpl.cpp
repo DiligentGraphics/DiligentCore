@@ -157,8 +157,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     {
         String SignName = String{"Implicit signature of PSO '"} + m_Desc.Name + '\'';
 
-        PipelineResourceSignatureDesc ResSignDesc = {};
-
+        PipelineResourceSignatureDesc ResSignDesc{};
         ResSignDesc.Name                       = SignName.c_str();
         ResSignDesc.Resources                  = Resources.data();
         ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
@@ -203,15 +202,9 @@ void PipelineStateGLImpl::InitResourceLayout(const PipelineStateCreateInfo& Crea
         if (pSignature == nullptr)
             continue;
 
-        if (m_IsProgramPipelineSupported)
-        {
-            for (Uint32 p = 0; p < m_NumPrograms; ++p)
-                pSignature->ApplyBindings(m_GLPrograms[p], CtxState, GetShaderStageType(p), Bindings);
-        }
-        else
-        {
-            pSignature->ApplyBindings(m_GLPrograms[0], CtxState, ActiveStages, Bindings);
-        }
+        for (Uint32 p = 0; p < m_NumPrograms; ++p)
+            pSignature->ApplyBindings(m_GLPrograms[p], CtxState, GetShaderStageType(p), Bindings);
+
         pSignature->ShiftBindings(Bindings);
     }
 
@@ -520,7 +513,6 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
     TBindings  Bindings  = {};
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
-        // Get resource signature from the root signature
         const auto* pSignature = GetResourceSignature(sign);
         if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue; // Skip null and empty signatures

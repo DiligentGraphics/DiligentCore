@@ -89,10 +89,10 @@ public:
 
         void Set(RefCntAutoPtr<TextureViewGLImpl>&& pTexView, bool SetSampler)
         {
-            // Do not null out pSampler as it could've been initialized by PipelineStateGLImpl::InitializeSRBResourceCache!
+            // Do not null out pSampler as it could've been initialized by PipelineResourceSignatureGLImpl::InitSRBResourceCache!
             // pSampler = nullptr;
 
-            // Avoid unnecessary virtual function calls
+            // Avoid unnecessary virtual call
             pTexture = pTexView ? pTexView->GetTexture<TextureBaseGL>() : nullptr;
             if (pTexView && SetSampler)
             {
@@ -105,7 +105,7 @@ public:
         void Set(RefCntAutoPtr<BufferViewGLImpl>&& pBufView)
         {
             pTexture = nullptr;
-            // Avoid unnecessary virtual function calls
+            // Avoid unnecessary virtual call
             pBuffer = pBufView ? pBufView->GetBuffer<BufferGLImpl>() : nullptr;
             pView   = std::move(pBufView);
         }
