@@ -215,13 +215,12 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(IDeviceObject* p
 
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
 
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferGLImpl> pBuffGLImpl{pBuffer, IID_BufferGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedUB = ResourceCache.GetConstUB(Attr.CacheOffset + ArrayIndex);
-        VerifyConstantBufferBinding(Desc.Name, Desc.ArraySize, Desc.VarType, Desc.Flags, ArrayIndex, pBuffer, pBuffGLImpl.RawPtr(), CachedUB.pBuffer.RawPtr());
+        VerifyConstantBufferBinding(Desc, ArrayIndex, pBuffer, pBuffGLImpl.RawPtr(), CachedUB.pBuffer.RawPtr());
     }
 #endif
 
@@ -241,17 +240,18 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView
     if (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
         Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
     {
-        // We cannot use ValidatedCast<> here as the resource retrieved from the
-        // resource mapping can be of wrong type
+        // We cannot use ValidatedCast<> here as the resource can be of wrong type
         RefCntAutoPtr<TextureViewGLImpl> pViewGL{pView, IID_TextureViewGL};
 
         const auto ImmutableSamplerAssigned = (m_ParentManager.m_pSignature->GetImmutableSamplerIdx(Attr) != InvalidImmutableSamplerIndex);
 #ifdef DILIGENT_DEVELOPMENT
         {
             const auto& CachedTexSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
-            VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
-                                      pView, pViewGL.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
-                                      RESOURCE_DIM_UNDEFINED, false, CachedTexSampler.pView.RawPtr());
+            VerifyResourceViewBinding(Desc, ArrayIndex, pView, pViewGL.RawPtr(),
+                                      {TEXTURE_VIEW_SHADER_RESOURCE},
+                                      RESOURCE_DIM_UNDEFINED,
+                                      false, // IsMultisample
+                                      CachedTexSampler.pView.RawPtr());
             if (ImmutableSamplerAssigned && ResourceCache.GetContentType() == ResourceCacheContentType::SRB)
             {
                 VERIFY(CachedTexSampler.pSampler != nullptr, "Immutable samplers must be initialized in the SRB cache by PipelineResourceSignatureGLImpl::InitSRBResourceCache!");
@@ -266,25 +266,20 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView
     }
     else if (Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
     {
-        // We cannot use ValidatedCast<> here as the resource retrieved from the
-        // resource mapping can be of wrong type
+        // We cannot use ValidatedCast<> here as the resource can be of wrong type
         RefCntAutoPtr<BufferViewGLImpl> pViewGL{pView, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
             const auto& CachedBuffSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
-            VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
-                                      pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
-                                      RESOURCE_DIM_BUFFER, false, CachedBuffSampler.pView.RawPtr());
-            if (pViewGL != nullptr)
-            {
-                const auto& ViewDesc = pViewGL->GetDesc();
-                const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
-                if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED))
-                {
-                    LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                      Desc.Name, ": formatted buffer view is expected.");
-                }
-            }
+            VerifyResourceViewBinding(Desc, ArrayIndex,
+                                      pView, pViewGL.RawPtr(),
+                                      {BUFFER_VIEW_SHADER_RESOURCE},
+                                      RESOURCE_DIM_BUFFER,
+                                      false, // IsMultisample
+                                      CachedBuffSampler.pView.RawPtr());
+
+            VERIFY_EXPR((Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0);
+            ValidateBufferMode(Desc, ArrayIndex, pViewGL.RawPtr());
         }
 #endif
         VERIFY_EXPR((Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0);
@@ -313,9 +308,12 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(IDeviceObject* pView, 
 #ifdef DILIGENT_DEVELOPMENT
         {
             const auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + ArrayIndex);
-            VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
-                                      pView, pViewGL.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
-                                      RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr());
+            VerifyResourceViewBinding(Desc, ArrayIndex,
+                                      pView, pViewGL.RawPtr(),
+                                      {TEXTURE_VIEW_UNORDERED_ACCESS},
+                                      RESOURCE_DIM_UNDEFINED,
+                                      false, // IsMultisample
+                                      CachedUAV.pView.RawPtr());
         }
 #endif
         ResourceCache.SetTexImage(Attr.CacheOffset + ArrayIndex, std::move(pViewGL));
@@ -328,22 +326,17 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(IDeviceObject* pView, 
 #ifdef DILIGENT_DEVELOPMENT
         {
             auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + ArrayIndex);
-            VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
-                                      pView, pViewGL.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
-                                      RESOURCE_DIM_BUFFER, false, CachedUAV.pView.RawPtr());
-            if (pViewGL != nullptr)
-            {
-                const auto& ViewDesc = pViewGL->GetDesc();
-                const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
-                if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED))
-                {
-                    LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                      Desc.Name, ": formatted buffer view is expected.");
-                }
-            }
+            VerifyResourceViewBinding(Desc, ArrayIndex,
+                                      pView, pViewGL.RawPtr(),
+                                      {BUFFER_VIEW_UNORDERED_ACCESS},
+                                      RESOURCE_DIM_BUFFER,
+                                      false, // IsMultisample
+                                      CachedUAV.pView.RawPtr());
+
+            VERIFY_EXPR((Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0);
+            ValidateBufferMode(Desc, ArrayIndex, pViewGL.RawPtr());
         }
 #endif
-        VERIFY_EXPR((Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0);
         ResourceCache.SetBufImage(Attr.CacheOffset + ArrayIndex, std::move(pViewGL));
     }
     else
@@ -372,19 +365,13 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(IDeviceObject*
     {
         auto& CachedSSBO = ResourceCache.GetConstSSBO(Attr.CacheOffset + ArrayIndex);
         // HLSL structured buffers are mapped to SSBOs in GLSL
-        VerifyResourceViewBinding(Desc.Name, Desc.ArraySize, Desc.VarType, ArrayIndex,
-                                  pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE, BUFFER_VIEW_UNORDERED_ACCESS},
-                                  RESOURCE_DIM_BUFFER, false, CachedSSBO.pBufferView.RawPtr());
-        if (pViewGL != nullptr)
-        {
-            const auto& ViewDesc = pViewGL->GetDesc();
-            const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
-            if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED && BuffDesc.Mode != BUFFER_MODE_RAW)
-            {
-                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                  Desc.Name, ": structured buffer view is expected.");
-            }
-        }
+        VerifyResourceViewBinding(Desc, ArrayIndex,
+                                  pView, pViewGL.RawPtr(),
+                                  {BUFFER_VIEW_SHADER_RESOURCE, BUFFER_VIEW_UNORDERED_ACCESS},
+                                  RESOURCE_DIM_BUFFER,
+                                  false, // IsMultisample
+                                  CachedSSBO.pBufferView.RawPtr());
+        ValidateBufferMode(Desc, ArrayIndex, pViewGL.RawPtr());
     }
 #endif
     ResourceCache.SetSSBO(Attr.CacheOffset + ArrayIndex, std::move(pViewGL));

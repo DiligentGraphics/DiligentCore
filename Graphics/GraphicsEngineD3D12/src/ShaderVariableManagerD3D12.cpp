@@ -328,8 +328,7 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12{pBuffer, IID_BufferD3D12};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyConstantBufferBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ResDesc.Flags, m_ArrayIndex,
-                                pBuffer, pBuffD3D12.RawPtr(), m_DstRes.pObject.RawPtr());
+    VerifyConstantBufferBinding(m_ResDesc, m_ArrayIndex, pBuffer, pBuffD3D12.RawPtr(), m_DstRes.pObject.RawPtr());
     if (m_ResDesc.ArraySize != 1 && pBuffD3D12 && pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC && pBuffD3D12->GetD3D12Resource() == nullptr)
     {
         LOG_ERROR_MESSAGE("Attempting to bind dynamic buffer '", pBuffD3D12->GetDesc().Name, "' that doesn't have backing d3d12 resource to array variable '", m_ResDesc.Name,
@@ -420,7 +419,9 @@ struct ResourceViewTraits<TextureViewD3D12Impl>
 {
     static const INTERFACE_ID& IID;
 
-    static bool VerifyView(const TextureViewD3D12Impl* pViewD3D12, const PipelineResourceDesc& ResDesc)
+    static constexpr RESOURCE_DIMENSION ExpectedResDimension = RESOURCE_DIM_UNDEFINED;
+
+    static bool VerifyView(const TextureViewD3D12Impl* pViewD3D12, const PipelineResourceDesc& ResDesc, Uint32 ArrayIndex)
     {
         return true;
     }
@@ -432,7 +433,9 @@ struct ResourceViewTraits<BufferViewD3D12Impl>
 {
     static const INTERFACE_ID& IID;
 
-    static bool VerifyView(const BufferViewD3D12Impl* pViewD3D12, const PipelineResourceDesc& ResDesc)
+    static constexpr RESOURCE_DIMENSION ExpectedResDimension = RESOURCE_DIM_BUFFER;
+
+    static bool VerifyView(const BufferViewD3D12Impl* pViewD3D12, const PipelineResourceDesc& ResDesc, Uint32 ArrayIndex)
     {
         if (pViewD3D12 != nullptr)
         {
@@ -443,13 +446,14 @@ struct ResourceViewTraits<BufferViewD3D12Impl>
                                   "[", ResDesc.ArraySize, "]', which is currently not supported in Direct3D12 backend. Either use non-array variable, or bind non-dynamic buffer.");
                 return false;
             }
+
+            ValidateBufferMode(ResDesc, ArrayIndex, pViewD3D12);
         }
 
         return true;
     }
 };
 const INTERFACE_ID& ResourceViewTraits<BufferViewD3D12Impl>::IID = IID_BufferViewD3D12;
-
 
 template <typename TResourceViewType,
           typename TViewTypeEnum>
@@ -460,12 +464,13 @@ void BindResourceHelper::CacheResourceView(IDeviceObject* pView,
     // resource mapping can be of wrong type
     RefCntAutoPtr<TResourceViewType> pViewD3D12{pView, ResourceViewTraits<TResourceViewType>::IID};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+    VerifyResourceViewBinding(m_ResDesc, m_ArrayIndex,
                               pView, pViewD3D12.RawPtr(),
-                              {dbgExpectedViewType}, RESOURCE_DIM_UNDEFINED,
+                              {dbgExpectedViewType},
+                              ResourceViewTraits<TResourceViewType>::ExpectedResDimension,
                               false, // IsMultisample
                               m_DstRes.pObject.RawPtr());
-    ResourceViewTraits<TResourceViewType>::VerifyView(pViewD3D12, m_ResDesc);
+    ResourceViewTraits<TResourceViewType>::VerifyView(pViewD3D12, m_ResDesc, m_ArrayIndex);
 #endif
     if (pViewD3D12)
     {

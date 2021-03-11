@@ -442,8 +442,7 @@ void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer) const
     // We cannot use ValidatedCast<> here as the resource can have wrong type
     RefCntAutoPtr<BufferVkImpl> pBufferVk{pBuffer, IID_BufferVk};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyConstantBufferBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ResDesc.Flags, m_ArrayIndex,
-                                pBuffer, pBufferVk.RawPtr(), m_DstRes.pObject.RawPtr());
+    VerifyConstantBufferBinding(m_ResDesc, m_ArrayIndex, pBuffer, pBufferVk.RawPtr(), m_DstRes.pObject.RawPtr());
 #endif
 
     UpdateCachedResource(std::move(pBufferVk));
@@ -462,21 +461,14 @@ void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView) const
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
         const auto RequiredViewType = DescriptorTypeToBufferView(m_DstRes.Type);
-        VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+        VerifyResourceViewBinding(m_ResDesc, m_ArrayIndex,
                                   pBufferView, pBufferViewVk.RawPtr(),
                                   {RequiredViewType}, RESOURCE_DIM_BUFFER,
                                   false, // IsMultisample
                                   m_DstRes.pObject.RawPtr());
-        if (pBufferViewVk != nullptr)
-        {
-            const auto& ViewDesc = pBufferViewVk->GetDesc();
-            const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
-            if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED && BuffDesc.Mode != BUFFER_MODE_RAW)
-            {
-                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                  m_ResDesc.Name, "': structured buffer view is expected.");
-            }
-        }
+
+        VERIFY_EXPR((m_ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) == 0);
+        ValidateBufferMode(m_ResDesc, m_ArrayIndex, pBufferViewVk.RawPtr());
     }
 #endif
 
@@ -495,21 +487,14 @@ void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView) const
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
         const auto RequiredViewType = DescriptorTypeToBufferView(m_DstRes.Type);
-        VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+        VerifyResourceViewBinding(m_ResDesc, m_ArrayIndex,
                                   pBufferView, pBufferViewVk.RawPtr(),
                                   {RequiredViewType}, RESOURCE_DIM_BUFFER,
                                   false, // IsMultisample
                                   m_DstRes.pObject.RawPtr());
-        if (pBufferViewVk != nullptr)
-        {
-            const auto& ViewDesc = pBufferViewVk->GetDesc();
-            const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
-            if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED))
-            {
-                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
-                                  m_ResDesc.Name, "': formatted buffer view is expected.");
-            }
-        }
+
+        VERIFY_EXPR((m_ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0);
+        ValidateBufferMode(m_ResDesc, m_ArrayIndex, pBufferViewVk.RawPtr());
     }
 #endif
 
@@ -528,7 +513,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
         auto RequiredViewType = DescriptorTypeToTextureView(m_DstRes.Type);
-        VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+        VerifyResourceViewBinding(m_ResDesc, m_ArrayIndex,
                                   pTexView, pTexViewVk0.RawPtr(),
                                   {RequiredViewType},
                                   RESOURCE_DIM_UNDEFINED, // Required resource dimension is not known
@@ -620,7 +605,7 @@ void BindResourceHelper::CacheInputAttachment(IDeviceObject* pTexView) const
     VERIFY(m_DstRes.Type == DescriptorType::InputAttachment, "Input attachment resource is expected");
     RefCntAutoPtr<TextureViewVkImpl> pTexViewVk{pTexView, IID_TextureViewVk};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyResourceViewBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex,
+    VerifyResourceViewBinding(m_ResDesc, m_ArrayIndex,
                               pTexView, pTexViewVk.RawPtr(),
                               {TEXTURE_VIEW_SHADER_RESOURCE},
                               RESOURCE_DIM_UNDEFINED,
@@ -636,7 +621,7 @@ void BindResourceHelper::CacheAccelerationStructure(IDeviceObject* pTLAS) const
     VERIFY(m_DstRes.Type == DescriptorType::AccelerationStructure, "Acceleration Structure resource is expected");
     RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
 #ifdef DILIGENT_DEVELOPMENT
-    VerifyTLASResourceBinding(m_ResDesc.Name, m_ResDesc.ArraySize, m_ResDesc.VarType, m_ArrayIndex, pTLAS, pTLASVk.RawPtr(), m_DstRes.pObject.RawPtr());
+    VerifyTLASResourceBinding(m_ResDesc, m_ArrayIndex, pTLAS, pTLASVk.RawPtr(), m_DstRes.pObject.RawPtr());
 #endif
 
     UpdateCachedResource(std::move(pTLASVk));
