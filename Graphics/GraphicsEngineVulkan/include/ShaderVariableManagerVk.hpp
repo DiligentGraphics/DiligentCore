@@ -115,6 +115,8 @@ public:
 
 private:
     friend ShaderVariableVkImpl;
+    friend ShaderVariableBase<ShaderVariableVkImpl, ShaderVariableManagerVk, IShaderResourceVariable>;
+
     using ResourceAttribs = PipelineResourceAttribsVk;
 
     Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
@@ -146,15 +148,14 @@ private:
 };
 
 // sizeof(ShaderVariableVkImpl) == 24 (x64)
-class ShaderVariableVkImpl final : public ShaderVariableBase<ShaderVariableManagerVk, IShaderResourceVariable>
+class ShaderVariableVkImpl final : public ShaderVariableBase<ShaderVariableVkImpl, ShaderVariableManagerVk, IShaderResourceVariable>
 {
 public:
-    using TBase = ShaderVariableBase<ShaderVariableManagerVk, IShaderResourceVariable>;
+    using TBase = ShaderVariableBase<ShaderVariableVkImpl, ShaderVariableManagerVk, IShaderResourceVariable>;
 
     ShaderVariableVkImpl(ShaderVariableManagerVk& ParentManager,
                          Uint32                   ResIndex) :
-        TBase{ParentManager},
-        m_ResIndex{ResIndex}
+        TBase{ParentManager, ResIndex}
     {}
 
     // clang-format off
@@ -164,41 +165,9 @@ public:
     ShaderVariableVkImpl& operator= (ShaderVariableVkImpl&&)      = delete;
     // clang-format on
 
-    virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
-    {
-        return GetDesc().VarType;
-    }
-
-    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-    {
-        BindResource(pObject, 0);
-    }
-
-    virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                             Uint32                FirstElement,
-                                             Uint32                NumElements) override final;
-
-    virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
-    {
-        const auto& Desc       = GetDesc();
-        ResourceDesc.Name      = Desc.Name;
-        ResourceDesc.Type      = Desc.ResourceType;
-        ResourceDesc.ArraySize = Desc.ArraySize;
-    }
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
-    {
-        return m_ParentManager.GetVariableIndex(*this);
-    }
-
     virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
     {
         return m_ParentManager.IsBound(ArrayIndex, m_ResIndex);
-    }
-
-    const PipelineResourceDesc& GetDesc() const
-    {
-        return m_ParentManager.GetResourceDesc(m_ResIndex);
     }
 
     void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
@@ -210,9 +179,6 @@ private:
     using ResourceAttribs = PipelineResourceAttribsVk;
 
     const ResourceAttribs& GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
-
-private:
-    const Uint32 m_ResIndex; // Index in Signatures' m_Desc.Resources
 };
 
 } // namespace Diligent

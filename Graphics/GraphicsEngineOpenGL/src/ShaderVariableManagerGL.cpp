@@ -97,7 +97,7 @@ void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& 
     m_pDbgAllocator = &Allocator;
 #endif
 
-    auto Counters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
+    const auto Counters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
 
     m_pSignature = &Signature;
 
@@ -254,7 +254,7 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView
                                       RESOURCE_DIM_UNDEFINED, false, CachedTexSampler.pView.RawPtr());
             if (ImmutableSamplerAssigned && ResourceCache.GetContentType() == ResourceCacheContentType::SRB)
             {
-                VERIFY(CachedTexSampler.pSampler != nullptr, "Immutable samplers must be initialized in the SRB cache by PipelineResourceSignatureGLImpl::InitializeSRBResourceCache!");
+                VERIFY(CachedTexSampler.pSampler != nullptr, "Immutable samplers must be initialized in the SRB cache by PipelineResourceSignatureGLImpl::InitSRBResourceCache!");
             }
             if (Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
             {
@@ -403,16 +403,16 @@ void ShaderVariableManagerGL::BindResources(IResourceMapping* pResourceMapping, 
 
     HandleResources(
         [&](UniformBuffBindInfo& ub) {
-            ub.BindResources<UniformBuffBindInfo>(pResourceMapping, Flags);
+            ub.BindResources(pResourceMapping, Flags);
         },
         [&](TextureBindInfo& tex) {
-            tex.BindResources<TextureBindInfo>(pResourceMapping, Flags);
+            tex.BindResources(pResourceMapping, Flags);
         },
         [&](ImageBindInfo& img) {
-            img.BindResources<ImageBindInfo>(pResourceMapping, Flags);
+            img.BindResources(pResourceMapping, Flags);
         },
         [&](StorageBufferBindInfo& ssbo) {
-            ssbo.BindResources<StorageBufferBindInfo>(pResourceMapping, Flags);
+            ssbo.BindResources(pResourceMapping, Flags);
         });
 }
 
@@ -505,7 +505,7 @@ IShaderResourceVariable* ShaderVariableManagerGL::GetVariable(Uint32 Index) cons
 class ShaderVariableIndexLocator
 {
 public:
-    ShaderVariableIndexLocator(const ShaderVariableManagerGL& _Layout, const ShaderVariableManagerGL::GLVariableBase& Variable) :
+    ShaderVariableIndexLocator(const ShaderVariableManagerGL& _Layout, const IShaderResourceVariable& Variable) :
         // clang-format off
         Layout   {_Layout},
         VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Layout.m_ResourceBuffer))
@@ -542,7 +542,7 @@ private:
 };
 
 
-Uint32 ShaderVariableManagerGL::GetVariableIndex(const GLVariableBase& Var) const
+Uint32 ShaderVariableManagerGL::GetVariableIndex(const IShaderResourceVariable& Var) const
 {
     if (!m_ResourceBuffer)
     {
@@ -574,7 +574,7 @@ const PipelineResourceDesc& ShaderVariableManagerGL::GetResourceDesc(Uint32 Inde
     return m_pSignature->GetResourceDesc(Index);
 }
 
-const ShaderVariableManagerGL::ResourceAttribs& ShaderVariableManagerGL::GetAttribs(Uint32 Index) const
+const ShaderVariableManagerGL::ResourceAttribs& ShaderVariableManagerGL::GetResourceAttribs(Uint32 Index) const
 {
     VERIFY_EXPR(m_pSignature);
     return m_pSignature->GetResourceAttribs(Index);

@@ -198,17 +198,8 @@ void ShaderVariableManagerD3D12::BindResources(IResourceMapping* pResourceMappin
 
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
-        m_pVariables[v].BindResources<ShaderVariableD3D12Impl>(pResourceMapping, Flags);
+        m_pVariables[v].BindResources(pResourceMapping, Flags);
     }
-}
-
-void ShaderVariableD3D12Impl::SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)
-{
-    const auto& ResDesc = GetDesc();
-    VerifyAndCorrectSetArrayArguments(ResDesc.Name, ResDesc.ArraySize, FirstElement, NumElements);
-
-    for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
-        BindResource(ppObjects[Elem], FirstElement + Elem);
 }
 
 

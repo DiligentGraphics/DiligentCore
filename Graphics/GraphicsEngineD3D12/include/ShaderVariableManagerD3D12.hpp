@@ -120,6 +120,8 @@ public:
 
 private:
     friend ShaderVariableD3D12Impl;
+    friend ShaderVariableBase<ShaderVariableD3D12Impl, ShaderVariableManagerD3D12, IShaderResourceVariableD3D>;
+
     using ResourceAttribs = PipelineResourceAttribsD3D12;
 
     Uint32 GetVariableIndex(const ShaderVariableD3D12Impl& Variable);
@@ -151,14 +153,13 @@ private:
 };
 
 // sizeof(ShaderVariableD3D12Impl) == 24 (x64)
-class ShaderVariableD3D12Impl final : public ShaderVariableBase<ShaderVariableManagerD3D12, IShaderResourceVariableD3D>
+class ShaderVariableD3D12Impl final : public ShaderVariableBase<ShaderVariableD3D12Impl, ShaderVariableManagerD3D12, IShaderResourceVariableD3D>
 {
 public:
-    using TBase = ShaderVariableBase<ShaderVariableManagerD3D12, IShaderResourceVariableD3D>;
+    using TBase = ShaderVariableBase<ShaderVariableD3D12Impl, ShaderVariableManagerD3D12, IShaderResourceVariableD3D>;
     ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
                             Uint32                      ResIndex) :
-        TBase{ParentManager},
-        m_ResIndex{ResIndex}
+        TBase{ParentManager, ResIndex}
     {}
 
     // clang-format off
@@ -179,31 +180,6 @@ public:
             *ppInterface = this;
             (*ppInterface)->AddRef();
         }
-    }
-
-    virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
-    {
-        return GetDesc().VarType;
-    }
-
-    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-    {
-        BindResource(pObject, 0);
-    }
-
-    virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final;
-
-    virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
-    {
-        const auto& Desc       = GetDesc();
-        ResourceDesc.Name      = Desc.Name;
-        ResourceDesc.Type      = Desc.ResourceType;
-        ResourceDesc.ArraySize = Desc.ArraySize;
-    }
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
-    {
-        return m_ParentManager.GetVariableIndex(*this);
     }
 
     virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
@@ -233,9 +209,6 @@ private:
     {
         return m_ParentManager.GetResourceAttribs(m_ResIndex);
     }
-
-private:
-    const Uint32 m_ResIndex;
 };
 
 } // namespace Diligent

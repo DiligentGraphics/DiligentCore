@@ -63,7 +63,7 @@ namespace Diligent
 
 class PipelineResourceSignatureGLImpl;
 
-// sizeof(ShaderVariableManagerGL) == 48 (x64, msvc, Release)
+// sizeof(ShaderVariableManagerGL) == 40 (x64, msvc, Release)
 class ShaderVariableManagerGL
 {
 public:
@@ -99,67 +99,27 @@ public:
 
     // These two methods can't be implemented in the header because they depend on PipelineResourceSignatureGLImpl
     const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
-    const ResourceAttribs&      GetAttribs(Uint32 Index) const;
+    const ResourceAttribs&      GetResourceAttribs(Uint32 Index) const;
 
-
-    struct GLVariableBase : public ShaderVariableBase<ShaderVariableManagerGL>
+    template <typename ThisImplType>
+    struct GLVariableBase : public ShaderVariableBase<ThisImplType, ShaderVariableManagerGL>
     {
     public:
-        using TBase = ShaderVariableBase<ShaderVariableManagerGL>;
         GLVariableBase(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
-            TBase{ParentLayout},
-            m_ResIndex{ResIndex}
+            ShaderVariableBase<ThisImplType, ShaderVariableManagerGL>{ParentLayout, ResIndex}
         {}
 
-        const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
-        const ResourceAttribs&      GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
-
-        virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
-        {
-            return GetDesc().VarType;
-        }
-
-        virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
-        {
-            const auto& Desc       = GetDesc();
-            ResourceDesc.Name      = Desc.Name;
-            ResourceDesc.Type      = Desc.ResourceType;
-            ResourceDesc.ArraySize = Desc.ArraySize;
-        }
-
-        virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
-        {
-            return m_ParentManager.GetVariableIndex(*this);
-        }
-
-    private:
-        const Uint32 m_ResIndex;
+        const ResourceAttribs& GetAttribs() const { return this->m_ParentManager.GetResourceAttribs(this->m_ResIndex); }
     };
 
 
-    struct UniformBuffBindInfo final : GLVariableBase
+    struct UniformBuffBindInfo final : GLVariableBase<UniformBuffBindInfo>
     {
         UniformBuffBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
-            GLVariableBase{ParentLayout, ResIndex}
+            GLVariableBase<UniformBuffBindInfo>{ParentLayout, ResIndex}
         {}
 
-        // Non-virtual function
         void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -169,29 +129,13 @@ public:
     };
 
 
-    struct TextureBindInfo final : GLVariableBase
+    struct TextureBindInfo final : GLVariableBase<TextureBindInfo>
     {
         TextureBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
-            GLVariableBase{ParentLayout, ResIndex}
+            GLVariableBase<TextureBindInfo>{ParentLayout, ResIndex}
         {}
 
-        // Non-virtual function
         void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -203,29 +147,13 @@ public:
     };
 
 
-    struct ImageBindInfo final : GLVariableBase
+    struct ImageBindInfo final : GLVariableBase<ImageBindInfo>
     {
         ImageBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
-            GLVariableBase{ParentLayout, ResIndex}
+            GLVariableBase<ImageBindInfo>{ParentLayout, ResIndex}
         {}
 
-        // Provide non-virtual function
         void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -237,29 +165,13 @@ public:
     };
 
 
-    struct StorageBufferBindInfo final : GLVariableBase
+    struct StorageBufferBindInfo final : GLVariableBase<StorageBufferBindInfo>
     {
         StorageBufferBindInfo(ShaderVariableManagerGL& ParentLayout, Uint32 ResIndex) :
-            GLVariableBase{ParentLayout, ResIndex}
+            GLVariableBase<StorageBufferBindInfo>{ParentLayout, ResIndex}
         {}
 
-        // Non-virtual function
         void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
-        {
-            BindResource(pObject, 0);
-        }
-
-        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
-                                                 Uint32                FirstElement,
-                                                 Uint32                NumElements) override final
-        {
-            const auto& Desc = GetDesc();
-            VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
-            for (Uint32 elem = 0; elem < NumElements; ++elem)
-                BindResource(ppObjects[elem], FirstElement + elem);
-        }
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -297,7 +209,7 @@ public:
         return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
     }
 
-    Uint32 GetVariableIndex(const GLVariableBase& Var) const;
+    Uint32 GetVariableIndex(const IShaderResourceVariable& Var) const;
 
 private:
     struct ResourceCounters

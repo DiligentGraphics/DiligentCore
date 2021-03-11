@@ -493,12 +493,14 @@ std::string GetShaderGroupName(const ShaderVectorType& Shaders)
 }
 
 /// Base implementation of a shader variable
-template <typename VarManagerType,
+template <typename ThisImplType,
+          typename VarManagerType,
           typename ResourceVariableBaseInterface = IShaderResourceVariable>
 struct ShaderVariableBase : public ResourceVariableBaseInterface
 {
-    ShaderVariableBase(VarManagerType& ParentManager) :
-        m_ParentManager{ParentManager}
+    ShaderVariableBase(VarManagerType& ParentManager, Uint32 ResIndex) :
+        m_ParentManager{ParentManager},
+        m_ResIndex{ResIndex}
     {
     }
 
@@ -530,7 +532,39 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         return m_ParentManager.GetOwner().GetReferenceCounters();
     }
 
-    template <typename ThisImplType>
+    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
+    {
+        static_cast<ThisImplType*>(this)->BindResource(pObject, 0);
+    }
+
+    virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                             Uint32                FirstElement,
+                                             Uint32                NumElements) override final
+    {
+        const auto& Desc = GetDesc();
+        VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
+        for (Uint32 elem = 0; elem < NumElements; ++elem)
+            static_cast<ThisImplType*>(this)->BindResource(ppObjects[elem], FirstElement + elem);
+    }
+
+    virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
+    {
+        return GetDesc().VarType;
+    }
+
+    virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
+    {
+        const auto& Desc       = GetDesc();
+        ResourceDesc.Name      = Desc.Name;
+        ResourceDesc.Type      = Desc.ResourceType;
+        ResourceDesc.ArraySize = Desc.ArraySize;
+    }
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
+    {
+        return m_ParentManager.GetVariableIndex(*static_cast<const ThisImplType*>(this));
+    }
+
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
     {
         auto* const pThis = static_cast<ThisImplType*>(this);
@@ -564,8 +598,14 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         }
     }
 
+    const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
+
 protected:
+    // Variable manager that owns this variable
     VarManagerType& m_ParentManager;
+
+    // Resource index in pipeline resource signature m_Desc.Resources[]
+    const Uint32 m_ResIndex;
 };
 
 } // namespace Diligent
