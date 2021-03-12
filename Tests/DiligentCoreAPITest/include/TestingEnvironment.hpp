@@ -117,7 +117,7 @@ public:
         return m_NeedWARPResourceArrayIndexingBugWorkaround;
     }
 
-    static void PushExpectedErrorSubstring(const char* Str);
+    static void PushExpectedErrorSubstring(const char* Str, bool ClearStack = true);
 
 protected:
     NativeWindow CreateNativeWindow();

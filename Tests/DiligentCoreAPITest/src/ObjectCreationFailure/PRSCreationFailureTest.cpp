@@ -283,12 +283,12 @@ TEST(PRSCreationFailureTest, InvalidAssignedSamplerStages)
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Invalid assigned sampler shader stage";
     PipelineResourceDesc Resources[]{
-        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_PIXEL, "g_Texture_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
     PRSDesc.UseCombinedTextureSamplers = true;
     PRSDesc.Resources                  = Resources;
     PRSDesc.NumResources               = _countof(Resources);
-    TestCreatePRSFailure(PRSDesc, "Texture 'g_Texture' and sampler 'g_Texture_sampler' assigned to it use different shader stages");
+    TestCreatePRSFailure(PRSDesc, "Texture 'g_Texture' is defined for the following shader stages: SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL, but sampler 'g_Texture_sampler' assigned to it uses only some of these stages: SHADER_TYPE_PIXEL");
 }
 
 TEST(PRSCreationFailureTest, InvalidAssignedSamplerVarType)
@@ -304,6 +304,7 @@ TEST(PRSCreationFailureTest, InvalidAssignedSamplerVarType)
     TestCreatePRSFailure(PRSDesc, "The type (mutable) of texture resource 'g_Texture' does not match the type (static) of sampler 'g_Texture_sampler' that is assigned to it");
 }
 
+#if 0 // Unassigned sampler is a warning
 TEST(PRSCreationFailureTest, UnassignedSampler)
 {
     PipelineResourceSignatureDesc PRSDesc;
@@ -316,6 +317,7 @@ TEST(PRSCreationFailureTest, UnassignedSampler)
     PRSDesc.NumResources               = _countof(Resources);
     TestCreatePRSFailure(PRSDesc, "Sampler 'g_Texture2_sampler' is not assigned to any texture");
 }
+#endif
 
 TEST(PRSCreationFailureTest, NullImmutableSamplerName)
 {
@@ -438,6 +440,43 @@ TEST(PRSCreationFailureTest, D3D12_MultiStageImtblSamplers)
     PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
 
     TestCreatePRSFailure(PRSDesc, "separate immutable samplers with the name 'g_Texture_sampler' in shader stages SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL and SHADER_TYPE_HULL, SHADER_TYPE_DOMAIN");
+}
+
+#if 0 // Unassigned immutable sampler is a warning
+TEST(PRSCreationFailureTest, UnassignedImmutableSampler)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Unassigned immutable sampler";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+    ImmutableSamplerDesc ImmutableSamplers[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", SamplerDesc{}},
+        {SHADER_TYPE_PIXEL, "g_Texture2", SamplerDesc{}}};
+    PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+    PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+
+    PRSDesc.UseCombinedTextureSamplers = true;
+    PRSDesc.Resources                  = Resources;
+    PRSDesc.NumResources               = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Immutable sampler 'g_Texture2' is not assigned to any texture or sampler");
+}
+#endif
+
+TEST(PRSCreationFailureTest, InvalidImmutableSamplerStages)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "Invalid immutable sampler stages";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}};
+    ImmutableSamplerDesc ImmutableSamplers[]{
+        {SHADER_TYPE_VERTEX, "g_Texture", SamplerDesc{}}};
+    PRSDesc.ImmutableSamplers    = ImmutableSamplers;
+    PRSDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
+
+    PRSDesc.UseCombinedTextureSamplers = true;
+    PRSDesc.Resources                  = Resources;
+    PRSDesc.NumResources               = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Texture 'g_Texture' is defined for the following shader stages: SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL, but immutable sampler that is assigned to it uses only some of these stages: SHADER_TYPE_VERTEX");
 }
 
 } // namespace

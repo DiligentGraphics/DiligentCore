@@ -103,8 +103,10 @@ void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* Inf
     }
 }
 
-void TestingEnvironment::PushExpectedErrorSubstring(const char* Str)
+void TestingEnvironment::PushExpectedErrorSubstring(const char* Str, bool ClearStack)
 {
+    if (ClearStack)
+        m_ExpectedErrorSubstrings.clear();
     VERIFY_EXPR(Str != nullptr && Str[0] != '\0');
     m_ExpectedErrorSubstrings.push_back(Str);
 }

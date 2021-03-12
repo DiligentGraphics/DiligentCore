@@ -55,10 +55,9 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
     if (Desc.UseCombinedTextureSamplers && (Desc.CombinedSamplerSuffix == nullptr || Desc.CombinedSamplerSuffix[0] == '\0'))
         LOG_PRS_ERROR_AND_THROW("Desc.UseCombinedTextureSamplers is true, but Desc.CombinedSamplerSuffix is null or empty");
 
-    std::unordered_map<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ResourceShaderStages;
-    // Hash map of resources by name
-    std::unordered_multimap<HashMapStringKey, PipelineResourceDesc, HashMapStringKey::Hasher> ResourcesByName;
 
+    // Hash map of all resources by name
+    std::unordered_multimap<HashMapStringKey, const PipelineResourceDesc&, HashMapStringKey::Hasher> Resources;
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
         const auto& Res = Desc.Resources[i];
@@ -75,23 +74,27 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         if (Res.ArraySize == 0)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must not be 0.");
 
-        auto& UsedStages = ResourceShaderStages[Res.Name];
-        if ((UsedStages & Res.ShaderStages) != 0)
+        const auto res_range = Resources.equal_range(Res.Name);
+        for (auto res_it = res_range.first; res_it != res_range.second; ++res_it)
         {
-            LOG_PRS_ERROR_AND_THROW("Multiple resources with name '", Res.Name,
-                                    "' specify overlapping shader stages. There may be multiple resources with the same name in different shader stages, "
-                                    "but the stages must not overlap.");
+            if ((res_it->second.ShaderStages & Res.ShaderStages) != 0)
+            {
+                LOG_PRS_ERROR_AND_THROW("Multiple resources with name '", Res.Name,
+                                        "' specify overlapping shader stages. There may be multiple resources with the same name in different shader stages, "
+                                        "but the stages must not overlap.");
+            }
+
+            if (Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
+            {
+                VERIFY_EXPR(res_it->second.ShaderStages != SHADER_TYPE_UNKNOWN);
+                LOG_PRS_ERROR_AND_THROW("This device does not support separable programs, but there are separate resources with the name '",
+                                        Res.Name, "' in shader stages ",
+                                        GetShaderStagesString(Res.ShaderStages), " and ",
+                                        GetShaderStagesString(res_it->second.ShaderStages),
+                                        ". When separable programs are not supported, every resource is always shared between all stages. "
+                                        "Use distinct resource names for each stage or define a single resource for all stages.");
+            }
         }
-        if (Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED && UsedStages != SHADER_TYPE_UNKNOWN)
-        {
-            LOG_PRS_ERROR_AND_THROW("This device does not support separable programs, but there are separate resources with the name '",
-                                    Res.Name, "' in shader stages ",
-                                    GetShaderStagesString(Res.ShaderStages), " and ",
-                                    GetShaderStagesString(UsedStages),
-                                    ". When separable programs are not supported, every resource is always shared between all stages. "
-                                    "Use distinct resource names for each stage or define a single resource for all stages.");
-        }
-        UsedStages |= Res.ShaderStages;
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && !Features.ShaderResourceRuntimeArray)
         {
@@ -102,7 +105,6 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         {
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].ResourceType (ACCEL_STRUCT): ray tracing is not supported by device.");
         }
-        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please add the new resource type to the switch below");
 
         auto AllowedResourceFlags = GetValidPipelineResourceFlags(Res.ResourceType);
         if ((Res.Flags & ~AllowedResourceFlags) != 0)
@@ -112,7 +114,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                     ": ", GetPipelineResourceFlagsString(AllowedResourceFlags, false, ", "), ".");
         }
 
-        ResourcesByName.emplace(Res.Name, Res);
+        Resources.emplace(Res.Name, Res);
 
         // NB: when creating immutable sampler array, we have to define the sampler as both resource and
         //     immutable sampler. The sampler will not be exposed as a shader variable though.
@@ -126,59 +128,8 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         //}
     }
 
-    if (Desc.UseCombinedTextureSamplers)
-    {
-        VERIFY_EXPR(Desc.CombinedSamplerSuffix != nullptr);
-        for (Uint32 i = 0; i < Desc.NumResources; ++i)
-        {
-            const auto& Res = Desc.Resources[i];
-            if (Res.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
-            {
-                const auto AssignedSamplerName = String{Res.Name} + Desc.CombinedSamplerSuffix;
-
-                auto sam_range = ResourcesByName.equal_range(AssignedSamplerName.c_str());
-                for (auto sam_it = sam_range.first; sam_it != sam_range.second; ++sam_it)
-                {
-                    const auto& Sam = sam_it->second;
-                    VERIFY_EXPR(AssignedSamplerName == Sam.Name);
-
-                    if ((Sam.ShaderStages & Res.ShaderStages) != 0)
-                    {
-                        if (Sam.ResourceType != SHADER_RESOURCE_TYPE_SAMPLER)
-                        {
-                            LOG_PRS_ERROR_AND_THROW("Resource '", Sam.Name, "' combined with texture '", Res.Name, "' is not a sampler.");
-                        }
-
-                        if (Sam.ShaderStages != Res.ShaderStages)
-                        {
-                            LOG_PRS_ERROR_AND_THROW("Texture '", Res.Name, "' and sampler '", Sam.Name, "' assigned to it use different shader stages.");
-                        }
-
-                        if (Sam.VarType != Res.VarType)
-                        {
-                            LOG_PRS_ERROR_AND_THROW("The type (", GetShaderVariableTypeLiteralName(Res.VarType), ") of texture resource '", Res.Name,
-                                                    "' does not match the type (", GetShaderVariableTypeLiteralName(Sam.VarType),
-                                                    ") of sampler '", Sam.Name, "' that is assigned to it.");
-                        }
-
-                        ResourcesByName.erase(sam_it);
-
-                        break;
-                    }
-                }
-            }
-        }
-
-        for (auto& res_it : ResourcesByName)
-        {
-            if (res_it.second.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
-            {
-                LOG_PRS_ERROR_AND_THROW("Sampler '", res_it.second.Name, "' is not assigned to any texture. All samplers must be assigned to textures when combined texture samplers are used.");
-            }
-        }
-    }
-
-    std::unordered_map<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> ImtblSamShaderStages;
+    // Hash map of all immutable samplers by name
+    std::unordered_multimap<HashMapStringKey, const ImmutableSamplerDesc&, HashMapStringKey::Hasher> ImtblSamplers;
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
     {
         const auto& SamDesc = Desc.ImmutableSamplers[i];
@@ -191,23 +142,149 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         if (SamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
             LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN.");
 
-        auto& UsedStages = ImtblSamShaderStages[SamDesc.SamplerOrTextureName];
-        if ((UsedStages & SamDesc.ShaderStages) != 0)
+        const auto sam_range = ImtblSamplers.equal_range(SamDesc.SamplerOrTextureName);
+        for (auto sam_it = sam_range.first; sam_it != sam_range.second; ++sam_it)
         {
-            LOG_PRS_ERROR_AND_THROW("Multiple immutable samplers with name '", SamDesc.SamplerOrTextureName,
-                                    "' specify overlapping shader stages. There may be multiple immutable samplers with the same name in different shader stages, "
-                                    "but the stages must not overlap.");
+            if ((sam_it->second.ShaderStages & SamDesc.ShaderStages) != 0)
+            {
+                LOG_PRS_ERROR_AND_THROW("Multiple immutable samplers with name '", SamDesc.SamplerOrTextureName,
+                                        "' specify overlapping shader stages. There may be multiple immutable samplers with the same name in different shader stages, "
+                                        "but the stages must not overlap.");
+            }
+            if (Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
+            {
+                VERIFY_EXPR(sam_it->second.ShaderStages != SHADER_TYPE_UNKNOWN);
+                LOG_PRS_ERROR_AND_THROW("This device does not support separable programs, but there are separate immutable samplers with the name '",
+                                        SamDesc.SamplerOrTextureName, "' in shader stages ",
+                                        GetShaderStagesString(SamDesc.ShaderStages), " and ",
+                                        GetShaderStagesString(sam_it->second.ShaderStages),
+                                        ". When separable programs are not supported, every resource is always shared between all stages. "
+                                        "Use distinct immutable sampler names for each stage or define a single sampler for all stages.");
+            }
         }
-        if (Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED && UsedStages != SHADER_TYPE_UNKNOWN)
+
+        ImtblSamplers.emplace(SamDesc.SamplerOrTextureName, SamDesc);
+    }
+
+    if (Desc.UseCombinedTextureSamplers)
+    {
+        VERIFY_EXPR(Desc.CombinedSamplerSuffix != nullptr);
+
+        // List of samplers assigned to some texture
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> AssignedSamplers;
+        // List of immutable samplers assigned to some texture
+        std::unordered_multimap<HashMapStringKey, SHADER_TYPE, HashMapStringKey::Hasher> AssignedImtblSamplers;
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
-            LOG_PRS_ERROR_AND_THROW("This device does not support separable programs, but there are separate immutable samplers with the name '",
-                                    SamDesc.SamplerOrTextureName, "' in shader stages ",
-                                    GetShaderStagesString(SamDesc.ShaderStages), " and ",
-                                    GetShaderStagesString(UsedStages),
-                                    ". When separable programs are not supported, every resource is always shared between all stages. "
-                                    "Use distinct immutable sampler names for each stage or define a single sampler for all stages.");
+            const auto& Res = Desc.Resources[i];
+            if (Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+            {
+                // Only texture SRVs can be combined with samplers
+                continue;
+            }
+
+            {
+                const auto AssignedSamplerName = String{Res.Name} + Desc.CombinedSamplerSuffix;
+
+                const auto sam_range = Resources.equal_range(AssignedSamplerName.c_str());
+                for (auto sam_it = sam_range.first; sam_it != sam_range.second; ++sam_it)
+                {
+                    const auto& Sam = sam_it->second;
+                    VERIFY_EXPR(AssignedSamplerName == Sam.Name);
+
+                    if ((Sam.ShaderStages & Res.ShaderStages) != 0)
+                    {
+                        if (Sam.ResourceType != SHADER_RESOURCE_TYPE_SAMPLER)
+                        {
+                            LOG_PRS_ERROR_AND_THROW("Resource '", Sam.Name, "' combined with texture '", Res.Name, "' is not a sampler.");
+                        }
+
+                        if ((Sam.ShaderStages & Res.ShaderStages) != Res.ShaderStages)
+                        {
+                            LOG_PRS_ERROR_AND_THROW("Texture '", Res.Name, "' is defined for the following shader stages: ", GetShaderStagesString(Res.ShaderStages),
+                                                    ", but sampler '", Sam.Name, "' assigned to it uses only some of these stages: ", GetShaderStagesString(Sam.ShaderStages),
+                                                    ". A resource that is present in multiple shader stages can't be combined with different samplers in different stages. "
+                                                    "Either use separate resources for different stages, or define the sampler for all stages that the resource uses.");
+                        }
+
+                        if (Sam.VarType != Res.VarType)
+                        {
+                            LOG_PRS_ERROR_AND_THROW("The type (", GetShaderVariableTypeLiteralName(Res.VarType), ") of texture resource '", Res.Name,
+                                                    "' does not match the type (", GetShaderVariableTypeLiteralName(Sam.VarType),
+                                                    ") of sampler '", Sam.Name, "' that is assigned to it.");
+                        }
+
+                        AssignedSamplers.emplace(Sam.Name, Sam.ShaderStages);
+
+                        break;
+                    }
+                }
+            }
+
+            {
+                const auto imtbl_sam_range = ImtblSamplers.equal_range(Res.Name);
+                for (auto sam_it = imtbl_sam_range.first; sam_it != imtbl_sam_range.second; ++sam_it)
+                {
+                    const auto& Sam = sam_it->second;
+                    VERIFY_EXPR(strcmp(Sam.SamplerOrTextureName, Res.Name) == 0);
+
+                    if ((Sam.ShaderStages & Res.ShaderStages) != 0)
+                    {
+                        if ((Sam.ShaderStages & Res.ShaderStages) != Res.ShaderStages)
+                        {
+                            LOG_PRS_ERROR_AND_THROW("Texture '", Res.Name, "' is defined for the following shader stages: ", GetShaderStagesString(Res.ShaderStages),
+                                                    ", but immutable sampler that is assigned to it uses only some of these stages: ", GetShaderStagesString(Sam.ShaderStages),
+                                                    ". A resource that is present in multiple shader stages can't be combined with different immutable samples in different stages. "
+                                                    "Either use separate resources for different stages, or define the immutable sampler for all stages that the resource uses.");
+                        }
+
+                        AssignedImtblSamplers.emplace(Sam.SamplerOrTextureName, Sam.ShaderStages);
+
+                        break;
+                    }
+                }
+            }
         }
-        UsedStages |= SamDesc.ShaderStages;
+
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        {
+            const auto& Res = Desc.Resources[i];
+            if (Res.ResourceType != SHADER_RESOURCE_TYPE_SAMPLER)
+                continue;
+
+            auto assigned_sam_range = AssignedSamplers.equal_range(Res.Name);
+
+            auto it = assigned_sam_range.first;
+            while (it != assigned_sam_range.second)
+            {
+                if (it->second == Res.ShaderStages)
+                    break;
+                ++it;
+            }
+            if (it == assigned_sam_range.second)
+            {
+                LOG_WARNING_MESSAGE("Sampler '", Res.Name, "' (", GetShaderStagesString(Res.ShaderStages), ")' is not assigned to any texture. All samplers should be assigned to textures when combined texture samplers are used.");
+            }
+        }
+
+        for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
+        {
+            const auto& SamDesc = Desc.ImmutableSamplers[i];
+
+            auto assigned_sam_range = AssignedImtblSamplers.equal_range(SamDesc.SamplerOrTextureName);
+
+            auto it = assigned_sam_range.first;
+            while (it != assigned_sam_range.second)
+            {
+                if (it->second == SamDesc.ShaderStages)
+                    break;
+                ++it;
+            }
+            if (it == assigned_sam_range.second)
+            {
+                LOG_WARNING_MESSAGE("Immutable sampler '", SamDesc.SamplerOrTextureName, "' (", GetShaderStagesString(SamDesc.ShaderStages), ") is not assigned to any texture or sampler. All immutable samplers should be assigned to textures or samplers when combined texture samplers are used.");
+            }
+        }
     }
 }
 
@@ -225,11 +302,9 @@ Uint32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
         const auto& Sam = ImtblSamplers[s];
         if (((Sam.ShaderStages & ShaderStages) != 0) && StreqSuff(ResourceName, Sam.SamplerOrTextureName, SamplerSuffix))
         {
-            DEV_CHECK_ERR((Sam.ShaderStages & ShaderStages) == ShaderStages,
-                          "Resource '", ResourceName, "' is defined for the following shader stages: ", GetShaderStagesString(ShaderStages),
-                          ", but immutable sampler '", Sam.SamplerOrTextureName, "' specifes only some of these stages: ", GetShaderStagesString(Sam.ShaderStages),
-                          ". A resource that is present in multiple shader stages can't use different immutable samples in different stages. "
-                          "Either use separate resources for different stages, or define the immutable sample for all stages that the resource uses.");
+            VERIFY((Sam.ShaderStages & ShaderStages) == ShaderStages,
+                   "Immutable sampler uses only some of the stages that resource '", ResourceName,
+                   "' is defined for. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
             return s;
         }
     }

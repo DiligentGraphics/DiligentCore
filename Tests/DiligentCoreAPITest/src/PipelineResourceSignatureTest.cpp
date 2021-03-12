@@ -644,11 +644,6 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    if (!pDevice->GetDeviceCaps().Features.SeparablePrograms)
-    {
-        GTEST_SKIP();
-    }
-
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -698,9 +693,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
             TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
         ImmutableSamplerDesc ImmutableSamplers[] =
             {
-                {SHADER_TYPE_PIXEL, "g_Texture", SamLinearWrapDesc},
-                {SHADER_TYPE_PIXEL, "g_Sampler", SamLinearWrapDesc},
-                {SHADER_TYPE_VERTEX, "g_Texture", SamLinearWrapDesc} //
+                {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", SamLinearWrapDesc} //
             };
 
         PipelineResourceSignatureDesc Desc;
@@ -716,7 +709,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
         pDevice->CreatePipelineResourceSignature(Desc, &pSignature2);
         ASSERT_NE(pSignature2, nullptr);
 
-        EXPECT_EQ(pSignature2->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Sampler"), nullptr);
+        EXPECT_EQ(pSignature2->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Texture"), nullptr);
         EXPECT_EQ(pSignature2->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Texture_sampler"), nullptr);
     }
 
