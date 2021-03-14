@@ -26,9 +26,9 @@
  */
 
 #include "pch.h"
-#include <atlbase.h>
 
 #include "FenceD3D11Impl.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -55,8 +55,7 @@ Uint64 FenceD3D11Impl::GetCompletedValue()
         if (res == S_OK)
         {
             VERIFY_EXPR(Data == TRUE);
-            if (QueryData.Value > m_LastCompletedFenceValue)
-                m_LastCompletedFenceValue = QueryData.Value;
+            UpdateLastCompletedFenceValue(QueryData.Value);
             m_PendingQueries.pop_front();
         }
         else
@@ -65,7 +64,7 @@ Uint64 FenceD3D11Impl::GetCompletedValue()
         }
     }
 
-    return m_LastCompletedFenceValue;
+    return m_LastCompletedFenceValue.load();
 }
 
 void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
@@ -81,9 +80,7 @@ void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
             std::this_thread::yield();
 
         VERIFY_EXPR(Data == TRUE);
-        if (QueryData.Value > m_LastCompletedFenceValue)
-            m_LastCompletedFenceValue = QueryData.Value;
-
+        UpdateLastCompletedFenceValue(QueryData.Value);
         m_PendingQueries.pop_front();
     }
 }
@@ -91,8 +88,7 @@ void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
 void FenceD3D11Impl::Reset(Uint64 Value)
 {
     DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
-    if (Value > m_LastCompletedFenceValue)
-        m_LastCompletedFenceValue = Value;
+    UpdateLastCompletedFenceValue(Value);
 }
 
 } // namespace Diligent

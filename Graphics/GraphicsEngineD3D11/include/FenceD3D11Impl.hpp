@@ -31,10 +31,11 @@
 /// Declaration of Diligent::FenceD3D11Impl class
 
 #include <deque>
+#include <atlbase.h>
+
+#include "EngineD3D11ImplTraits.hpp"
 #include "FenceD3D11.h"
-#include "RenderDeviceD3D11.h"
 #include "FenceBase.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {
@@ -81,7 +82,6 @@ private:
         {}
     };
     std::deque<PendingFenceData> m_PendingQueries;
-    volatile Uint64              m_LastCompletedFenceValue = 0;
 };
 
 } // namespace Diligent

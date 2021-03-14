@@ -76,11 +76,8 @@ public:
     void Wait(Uint64 Value);
 
 private:
-    inline void UpdateLastCompletedFenceValue(uint64_t NewValue);
-
     VulkanUtilities::VulkanFencePool                             m_FencePool;
     std::deque<std::pair<Uint64, VulkanUtilities::FenceWrapper>> m_PendingFences;
-    std::atomic_uint64_t                                         m_LastCompletedFenceValue{0};
 };
 
 } // namespace Diligent

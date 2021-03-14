@@ -52,15 +52,6 @@ FenceGLImpl::~FenceGLImpl()
 {
 }
 
-void FenceGLImpl::UpdateFenceValue(Uint64 NewValue)
-{
-    auto CurrValue = m_LastCompletedFenceValue.load();
-    while (!m_LastCompletedFenceValue.compare_exchange_strong(CurrValue, std::max(CurrValue, NewValue)))
-    {
-        // If exchange fails, CurrValue will hold the actual value of m_LastCompletedFenceValue
-    }
-}
-
 Uint64 FenceGLImpl::GetCompletedValue()
 {
     while (!m_PendingFences.empty())
@@ -74,7 +65,7 @@ Uint64 FenceGLImpl::GetCompletedValue()
             );
         if (res == GL_ALREADY_SIGNALED)
         {
-            UpdateFenceValue(val_fence.first);
+            UpdateLastCompletedFenceValue(val_fence.first);
             m_PendingFences.pop_front();
         }
         else
@@ -98,7 +89,7 @@ void FenceGLImpl::Wait(Uint64 Value, bool FlushCommands)
         VERIFY_EXPR(res == GL_ALREADY_SIGNALED || res == GL_CONDITION_SATISFIED);
         (void)res;
 
-        UpdateFenceValue(val_fence.first);
+        UpdateLastCompletedFenceValue(val_fence.first);
         m_PendingFences.pop_front();
     }
 }
@@ -106,7 +97,7 @@ void FenceGLImpl::Wait(Uint64 Value, bool FlushCommands)
 void FenceGLImpl::Reset(Uint64 NewValue)
 {
     DEV_CHECK_ERR(NewValue >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", NewValue, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
-    UpdateFenceValue(NewValue);
+    UpdateLastCompletedFenceValue(NewValue);
 }
 
 } // namespace Diligent

@@ -30,6 +30,8 @@
 /// \file
 /// Implementation of the Diligent::FenceBase template class
 
+#include <atomic>
+
 #include "DeviceObjectBase.hpp"
 #include "GraphicsTypes.h"
 #include "RefCntAutoPtr.hpp"
@@ -66,6 +68,18 @@ public:
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Fence, TDeviceObjectBase)
+
+protected:
+    void UpdateLastCompletedFenceValue(uint64_t NewValue)
+    {
+        auto LastCompletedValue = m_LastCompletedFenceValue.load();
+        while (!m_LastCompletedFenceValue.compare_exchange_strong(LastCompletedValue, std::max(LastCompletedValue, NewValue)))
+        {
+            // If exchange fails, LastCompletedValue will hold the actual value of m_LastCompletedFenceValue.
+        }
+    }
+
+    std::atomic_uint64_t m_LastCompletedFenceValue{0};
 };
 
 } // namespace Diligent
