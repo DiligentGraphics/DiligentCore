@@ -30,14 +30,14 @@
 /// \file
 /// Declaration of Diligent::BufferD3D11Impl class
 
+#include <atlbase.h>
+
 #include "EngineD3D11ImplTraits.hpp"
 #include "BufferD3D11.h"
 #include "BufferBase.hpp"
 
 namespace Diligent
 {
-
-class RenderDeviceD3D11Impl;
 
 /// Buffer object implementation in Direct3D11 backend.
 class BufferD3D11Impl final : public BufferBase<EngineD3D11ImplTraits>

@@ -28,6 +28,7 @@
 #include "pch.h"
 
 #include "QueryD3D11Impl.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
 
 namespace Diligent

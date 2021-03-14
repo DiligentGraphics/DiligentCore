@@ -30,6 +30,8 @@
 /// \file
 /// Declaration of Diligent::CommandListD3D11Impl class
 
+#include <atlbase.h>
+
 #include "EngineD3D11ImplTraits.hpp"
 #include "CommandListBase.hpp"
 

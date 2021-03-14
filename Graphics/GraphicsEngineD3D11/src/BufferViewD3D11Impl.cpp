@@ -28,6 +28,7 @@
 #include "pch.h"
 #include "BufferViewD3D11Impl.hpp"
 #include "BufferD3D11Impl.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {

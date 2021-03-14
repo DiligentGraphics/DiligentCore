@@ -26,7 +26,9 @@
  */
 
 #include "pch.h"
+
 #include "RenderDeviceD3D11Impl.hpp"
+
 #include "DeviceContextD3D11Impl.hpp"
 #include "BufferD3D11Impl.hpp"
 #include "ShaderD3D11Impl.hpp"
@@ -34,7 +36,6 @@
 #include "Texture2D_D3D11.hpp"
 #include "Texture3D_D3D11.hpp"
 #include "SamplerD3D11Impl.hpp"
-#include "D3D11TypeConversions.hpp"
 #include "TextureViewD3D11Impl.hpp"
 #include "PipelineStateD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
@@ -43,6 +44,8 @@
 #include "QueryD3D11Impl.hpp"
 #include "RenderPassD3D11Impl.hpp"
 #include "FramebufferD3D11Impl.hpp"
+
+#include "D3D11TypeConversions.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

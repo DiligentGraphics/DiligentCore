@@ -32,7 +32,6 @@
 
 #include "EngineD3D11ImplTraits.hpp"
 #include "RenderDeviceD3DBase.hpp"
-#include "DeviceContextD3D11.h"
 
 namespace Diligent
 {

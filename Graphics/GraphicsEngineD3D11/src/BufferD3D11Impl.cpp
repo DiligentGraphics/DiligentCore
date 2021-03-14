@@ -29,8 +29,6 @@
 
 #include "BufferD3D11Impl.hpp"
 
-#include <atlbase.h>
-
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
 #include "BufferViewD3D11Impl.hpp"
@@ -71,11 +69,11 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
     {
-        static constexpr Uint32 Alignment = 16;
-        m_Desc.uiSizeInBytes              = AlignUp(m_Desc.uiSizeInBytes, Alignment);
+        static constexpr Uint32 Alignment{16};
+        m_Desc.uiSizeInBytes = AlignUp(m_Desc.uiSizeInBytes, Alignment);
     }
 
-    D3D11_BUFFER_DESC D3D11BuffDesc;
+    D3D11_BUFFER_DESC D3D11BuffDesc{};
     D3D11BuffDesc.BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
     D3D11BuffDesc.ByteWidth = m_Desc.uiSizeInBytes;
     D3D11BuffDesc.MiscFlags = 0;
@@ -233,7 +231,7 @@ void BufferD3D11Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
 
     try
     {
-        auto* pDeviceD3D11Impl  = ValidatedCast<RenderDeviceD3D11Impl>(GetDevice());
+        auto* pDeviceD3D11Impl  = GetDevice();
         auto& BuffViewAllocator = pDeviceD3D11Impl->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");
 

@@ -28,6 +28,7 @@
 #include "pch.h"
 
 #include "RenderPassD3D11Impl.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

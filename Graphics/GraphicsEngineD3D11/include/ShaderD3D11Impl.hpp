@@ -30,20 +30,17 @@
 /// \file
 /// Declaration of Diligent::ShaderD3D11Impl class
 
+#include <atlbase.h>
+
+#include "EngineD3D11ImplTraits.hpp"
 #include "ShaderD3D11.h"
-#include "RenderDeviceD3D11.h"
 #include "ShaderBase.hpp"
 #include "ShaderD3DBase.hpp"
-#include "ShaderResourceCacheD3D11.hpp"
 #include "EngineD3D11Defines.h"
 #include "ShaderResourcesD3D11.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
-class ResourceMapping;
 
 /// Shader implementation in Direct3D11 backend.
 class ShaderD3D11Impl final : public ShaderBase<EngineD3D11ImplTraits>, public ShaderD3DBase

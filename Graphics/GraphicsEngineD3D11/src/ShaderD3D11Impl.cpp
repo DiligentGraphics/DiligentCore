@@ -29,7 +29,6 @@
 
 #include "ShaderD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
-#include "ResourceMapping.h"
 
 namespace Diligent
 {

@@ -30,7 +30,7 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceBindingD3D11Impl class
 
-#include <array>
+#include "EngineD3D11ImplTraits.hpp"
 
 #include "ShaderResourceBindingD3D11.h"
 #include "RenderDeviceD3D11.h"

@@ -31,6 +31,7 @@
 /// Declaration of Diligent::DisjointQueryPool class
 
 #include <memory>
+#include <atlbase.h>
 
 namespace Diligent
 {

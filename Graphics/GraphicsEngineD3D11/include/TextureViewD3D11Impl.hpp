@@ -30,15 +30,14 @@
 /// \file
 /// Declaration of Diligent::TextureViewD3D11Impl class
 
+#include <atlbase.h>
+
+#include "EngineD3D11ImplTraits.hpp"
 #include "TextureViewD3D11.h"
-#include "RenderDeviceD3D11.h"
 #include "TextureViewBase.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Texture view implementation in Direct3D11 backend.
 class TextureViewD3D11Impl final : public TextureViewBase<EngineD3D11ImplTraits>

@@ -31,16 +31,15 @@
 /// Declaration of Diligent::QueryD3D11Impl class
 
 #include <memory>
+#include <atlbase.h>
 
+#include "EngineD3D11ImplTraits.hpp"
 #include "QueryD3D11.h"
 #include "QueryBase.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 #include "DisjointQueryPool.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Query implementation in Direct3D11 backend.
 class QueryD3D11Impl final : public QueryBase<EngineD3D11ImplTraits>

@@ -30,15 +30,14 @@
 /// \file
 /// Declaration of Diligent::BufferViewD3D11Impl class
 
+#include <atlbase.h>
+
+#include "EngineD3D11ImplTraits.hpp"
 #include "BufferViewD3D11.h"
-#include "RenderDeviceD3D11.h"
 #include "BufferViewBase.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Buffer view implementation in Direct3D11 backend.
 class BufferViewD3D11Impl final : public BufferViewBase<EngineD3D11ImplTraits>

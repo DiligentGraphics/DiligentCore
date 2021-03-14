@@ -30,15 +30,14 @@
 /// \file
 /// Declaration of Diligent::SamplerD3D11Impl class
 
+#include <atlbase.h>
+
+#include "EngineD3D11ImplTraits.hpp"
 #include "SamplerD3D11.h"
-#include "RenderDeviceD3D11.h"
 #include "SamplerBase.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Sampler implementation in Direct3D11 backend.
 class SamplerD3D11Impl final : public SamplerBase<EngineD3D11ImplTraits>

@@ -71,7 +71,7 @@ private:
     {
         CComPtr<ID3D11DeviceContext> pd3d11Ctx;
         CComPtr<ID3D11Query>         pd3d11Query;
-        Uint64                       Value;
+        const Uint64                 Value;
 
         PendingFenceData(CComPtr<ID3D11DeviceContext> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 _Value) :
             // clang-format off

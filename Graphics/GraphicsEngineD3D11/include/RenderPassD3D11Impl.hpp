@@ -30,9 +30,9 @@
 /// \file
 /// Declaration of Diligent::RenderPassD3D11Impl class
 
+#include "EngineD3D11ImplTraits.hpp"
 #include "RenderDeviceD3D11.h"
 #include "RenderPassBase.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {
