@@ -34,6 +34,8 @@
 #include "GraphicsAccessories.hpp"
 #include "ResourceLayoutTestCommon.hpp"
 
+#include "Vulkan/TestingEnvironmentVk.hpp"
+
 #include "gtest/gtest.h"
 
 using namespace Diligent;
@@ -1558,6 +1560,27 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         GTEST_SKIP() << "Direct3D does not support GLSL";
     }
 
+    if (deviceCaps.IsVulkanDevice() && !pEnv->HasDXCompiler())
+    {
+        GTEST_SKIP() << "Vulkan requires DXCompiler which is not found";
+    }
+
+    bool ConstantBufferNonUniformIndexing = true;
+    bool SRVBufferNonUniformIndexing      = true;
+    bool UAVBufferNonUniformIndexing      = true;
+    bool SRVTextureNonUniformIndexing     = true;
+    bool UAVTextureNonUniformIndexing     = true;
+
+    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        auto* pEnvVk                     = static_cast<TestingEnvironmentVk*>(pEnv);
+        ConstantBufferNonUniformIndexing = (pEnvVk->DescriptorIndexing.shaderUniformBufferArrayNonUniformIndexing == VK_TRUE);
+        SRVBufferNonUniformIndexing      = (pEnvVk->DescriptorIndexing.shaderStorageBufferArrayNonUniformIndexing == VK_TRUE);
+        UAVBufferNonUniformIndexing      = SRVBufferNonUniformIndexing;
+        SRVTextureNonUniformIndexing     = (pEnvVk->DescriptorIndexing.shaderSampledImageArrayNonUniformIndexing == VK_TRUE);
+        UAVTextureNonUniformIndexing     = (pEnvVk->DescriptorIndexing.shaderStorageImageArrayNonUniformIndexing == VK_TRUE);
+    }
+
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pContext   = pEnv->GetDeviceContext();
@@ -1679,6 +1702,15 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     Macros.AddShaderMacro("NUM_RWTEXTURES", RWTexArraySize);
     Macros.AddShaderMacro("NUM_RWSTRUCT_BUFFERS", RWStructBuffArraySize);
     Macros.AddShaderMacro("NUM_RWFMT_BUFFERS", RWFormattedBuffArraySize);
+
+    Macros.AddShaderMacro("TEXTURES_NONUNIFORM_INDEXING", SRVTextureNonUniformIndexing ? 1 : 0);
+    Macros.AddShaderMacro("CONST_BUFFERS_NONUNIFORM_INDEXING", ConstantBufferNonUniformIndexing ? 1 : 0);
+    Macros.AddShaderMacro("FMT_BUFFERS_NONUNIFORM_INDEXING", SRVBufferNonUniformIndexing ? 1 : 0);
+    Macros.AddShaderMacro("STRUCT_BUFFERS_NONUNIFORM_INDEXING", SRVBufferNonUniformIndexing ? 1 : 0);
+    Macros.AddShaderMacro("RWTEXTURES_NONUNIFORM_INDEXING", UAVTextureNonUniformIndexing ? 1 : 0);
+    Macros.AddShaderMacro("RWSTRUCT_BUFFERS_NONUNIFORM_INDEXING", UAVBufferNonUniformIndexing ? 1 : 0);
+    Macros.AddShaderMacro("RWFMT_BUFFERS_NONUNIFORM_INDEXING", UAVBufferNonUniformIndexing ? 1 : 0);
+
     if (IsGLSL)
         Macros.AddShaderMacro("float4", "vec4");
     for (Uint32 i = 0; i < TexArraySize; ++i)

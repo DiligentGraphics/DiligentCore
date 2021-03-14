@@ -529,8 +529,11 @@ void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
             {
                 case SHADER_COMPILER_DEFAULT:
                 case SHADER_COMPILER_GLSLANG:
-                case SHADER_COMPILER_DXC:
                     m_ShaderCompiler = compiler;
+
+                case SHADER_COMPILER_DXC:
+                    if (HasDXCompiler())
+                        m_ShaderCompiler = compiler;
                     break;
 
                 default:

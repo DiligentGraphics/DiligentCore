@@ -189,6 +189,23 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtFeatures.Spirv15 = true;
         }
 
+#    ifdef PLATFORM_MACOS
+        // Extension required for MoltenVk
+        if (IsExtensionSupported(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.PortabilitySubset;
+            NextFeat  = &m_ExtFeatures.PortabilitySubset.pNext;
+
+            m_ExtFeatures.HasPortabilitySubset    = true;
+            m_ExtFeatures.PortabilitySubset.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR;
+
+            *NextProp = &m_ExtProperties.PortabilitySubset;
+            NextProp  = &m_ExtProperties.PortabilitySubset.pNext;
+
+            m_ExtProperties.PortabilitySubset.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_PROPERTIES_KHR;
+        }
+#    endif
+
         // make sure that last pNext is null
         *NextFeat = nullptr;
         *NextProp = nullptr;

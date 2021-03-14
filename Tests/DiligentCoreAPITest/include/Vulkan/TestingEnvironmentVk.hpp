@@ -30,10 +30,10 @@
 #include <array>
 
 #include "TestingEnvironment.hpp"
+#include "DXCompiler.hpp"
 
 #define VK_NO_PROTOTYPES
 #include "vulkan/vulkan.h"
-#include "vulkan/vulkan_beta.h"
 
 namespace Diligent
 {
@@ -78,6 +78,11 @@ public:
         return m_vkPhysicalDevice;
     }
 
+    bool HasDXCompiler() const override final
+    {
+        return m_pDxCompiler != nullptr && m_pDxCompiler->IsLoaded();
+    }
+
     VkShaderModule CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource);
 
     static VkRenderPassCreateInfo GetRenderPassCreateInfo(
@@ -110,7 +115,13 @@ private:
     VkCommandPool    m_vkCmdPool        = VK_NULL_HANDLE;
     VkFence          m_vkFence          = VK_NULL_HANDLE;
 
+    std::unique_ptr<IDXCompiler> m_pDxCompiler;
+
     VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
+
+public:
+    VkPhysicalDeviceDescriptorIndexingFeaturesEXT DescriptorIndexing = {};
+    VkPhysicalDeviceProperties                    DeviceProps        = {};
 };
 
 } // namespace Testing

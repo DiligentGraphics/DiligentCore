@@ -69,6 +69,8 @@ public:
 
     virtual void Reset();
 
+    virtual bool HasDXCompiler() const { return false; }
+
     void ReleaseResources();
 
     class ScopedReset

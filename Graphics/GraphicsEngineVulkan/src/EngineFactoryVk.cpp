@@ -246,9 +246,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
         VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures        EnabledExtFeats   = {};
 
-        // SPIRV 1.5 is in Vulkan 1.2 core
-        EnabledExtFeats.Spirv15 = DeviceExtFeatures.Spirv15;
-
 #define ENABLE_FEATURE(IsFeatureSupported, Feature, FeatureName)                         \
     do                                                                                   \
     {                                                                                    \
@@ -438,6 +435,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                     VERIFY_EXPR(DeviceExtFeatures.Spirv14);
                 }
 
+                // SPIRV 1.5 is in Vulkan 1.2 core
+                EnabledExtFeats.Spirv15 = DeviceExtFeatures.Spirv15;
+
                 DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);    // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME); // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);   // required for ray tracing
@@ -479,6 +479,18 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                     EnabledExtFeats.RayTracingPipeline.rayTraversalPrimitiveCulling        = false; // for GLSL_EXT_ray_flags_primitive_culling
                 }
             }
+
+#ifdef PLATFORM_MACOS
+            if (DeviceExtFeatures.HasPortabilitySubset)
+            {
+                EnabledExtFeats.HasPortabilitySubset = DeviceExtFeatures.HasPortabilitySubset;
+                EnabledExtFeats.PortabilitySubset    = DeviceExtFeatures.PortabilitySubset;
+                DeviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+
+                *NextExt = &EnabledExtFeats.PortabilitySubset;
+                NextExt  = &EnabledExtFeats.PortabilitySubset.pNext;
+            }
+#endif
 
             // make sure that last pNext is null
             *NextExt = nullptr;

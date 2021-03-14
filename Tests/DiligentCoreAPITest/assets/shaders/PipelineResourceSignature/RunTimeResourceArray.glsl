@@ -2,30 +2,87 @@
 #extension GL_ARB_shading_language_420pack : enable
 #extension GL_EXT_nonuniform_qualifier : require
 
-uniform texture2D g_Textures[];
+#if TEXTURES_NONUNIFORM_INDEXING
+#    define TEXTURES_NONUNIFORM(x) nonuniformEXT(x)
+#    define TEXTURES_COUNT         // unsized array
+#else
+#    define TEXTURES_NONUNIFORM(x) x
+#    define TEXTURES_COUNT         NUM_TEXTURES
+#endif
+
+#if CONST_BUFFERS_NONUNIFORM_INDEXING
+#    define CONST_BUFFERS_NONUNIFORM(x) nonuniformEXT(x)
+#    define CONST_BUFFERS_COUNT         // unsized array
+#else
+#    define CONST_BUFFERS_NONUNIFORM(x) x
+#    define CONST_BUFFERS_COUNT         NUM_CONST_BUFFERS
+#endif
+
+#if FMT_BUFFERS_NONUNIFORM_INDEXING
+#    define FMT_BUFFERS_NONUNIFORM(x) nonuniformEXT(x)
+#    define FMT_BUFFERS_COUNT         // unsized array
+#else
+#    define FMT_BUFFERS_NONUNIFORM(x) x
+#    define FMT_BUFFERS_COUNT         NUM_FMT_BUFFERS
+#endif
+
+#if STRUCT_BUFFERS_NONUNIFORM_INDEXING
+#    define STRUCT_BUFFERS_NONUNIFORM(x) nonuniformEXT(x)
+#    define STRUCT_BUFFERS_COUNT         // unsized array
+#else
+#    define STRUCT_BUFFERS_NONUNIFORM(x) x
+#    define STRUCT_BUFFERS_COUNT         NUM_STRUCT_BUFFERS
+#endif
+
+#if RWTEXTURES_NONUNIFORM_INDEXING
+#    define RWTEXTURES_NONUNIFORM(x) nonuniformEXT(x)
+#    define RWTEXTURES_COUNT         // unsized array
+#else
+#    define RWTEXTURES_NONUNIFORM(x) x
+#    define RWTEXTURES_COUNT         NUM_RWTEXTURES
+#endif
+
+#if RWSTRUCT_BUFFERS_NONUNIFORM_INDEXING
+#    define RWSTRUCT_BUFFERS_NONUNIFORM(x) nonuniformEXT(x)
+#    define RWSTRUCT_BUFFERS_COUNT         // unsized array
+#else
+#    define RWSTRUCT_BUFFERS_NONUNIFORM(x) x
+#    define RWSTRUCT_BUFFERS_COUNT         NUM_RWSTRUCT_BUFFERS
+#endif
+
+#if RWFMT_BUFFERS_NONUNIFORM_INDEXING
+#    define RWFMT_BUFFERS_NONUNIFORM(x) nonuniformEXT(x)
+#    define RWFMT_BUFFERS_COUNT         // unsized array
+#else
+#    define RWFMT_BUFFERS_NONUNIFORM(x) x
+#    define RWFMT_BUFFERS_COUNT         NUM_RWFMT_BUFFERS
+#endif
+
+uniform texture2D g_Textures[TEXTURES_COUNT];
 uniform sampler g_Samplers[];
 
 uniform g_ConstantBuffers
 {
     vec4 Data;
-}g_ConstantBufferInst[];
+}g_ConstantBufferInst[CONST_BUFFERS_COUNT];
 
-uniform samplerBuffer g_FormattedBuffers[];
+uniform samplerBuffer g_FormattedBuffers[FMT_BUFFERS_COUNT];
 
 layout(std140) readonly buffer g_StructuredBuffers
 {
     vec4 Data;
-}g_StructuredBufferInst[];
+}g_StructuredBufferInst[STRUCT_BUFFERS_COUNT];
 
-layout(rgba8) uniform image2D g_RWTextures[];
+layout(rgba8) uniform image2D g_RWTextures[RWTEXTURES_COUNT];
 
 layout(std140) buffer g_RWStructBuffers
 {
     vec4 Data;
-}g_RWStructBuffersInst[];
+}g_RWStructBuffersInst[RWSTRUCT_BUFFERS_COUNT];
 
 
-layout(rgba32f) uniform imageBuffer g_RWFormattedBuffers[];
+layout(rgba32f) uniform imageBuffer g_RWFormattedBuffers[RWFMT_BUFFERS_COUNT];
+
 
 vec4 CheckValue(vec4 Val, vec4 Expected)
 {
@@ -69,7 +126,7 @@ vec4 VerifyResources(uint index, vec2 coord)
     StructBuffRefValues[1] = StructBuff_Ref1;
     StructBuffRefValues[2] = StructBuff_Ref2;
 
-    vec4 RWTexRefValues[NUM_TEXTURES];
+    vec4 RWTexRefValues[NUM_RWTEXTURES];
     RWTexRefValues[0] = RWTex2D_Ref0;
     RWTexRefValues[1] = RWTex2D_Ref1;
     RWTexRefValues[2] = RWTex2D_Ref2;
@@ -94,13 +151,13 @@ vec4 VerifyResources(uint index, vec2 coord)
     uint RWFmtBuffIdx    = index % NUM_RWFMT_BUFFERS;
 
     vec4 AllCorrect = vec4(1.0, 1.0, 1.0, 1.0);
-    AllCorrect *= CheckValue(textureLod(sampler2D(g_Textures[nonuniformEXT(TexIdx)], g_Samplers[nonuniformEXT(SamIdx)]), coord, 0.0), TexRefValues[TexIdx]);
-    AllCorrect *= CheckValue(g_ConstantBufferInst[nonuniformEXT(BuffIdx)].Data, ConstBuffRefValues[BuffIdx]);
-    AllCorrect *= CheckValue(texelFetch(g_FormattedBuffers[nonuniformEXT(FmtBuffIdx)], 0), FmtBuffRefValues[FmtBuffIdx]);
-    AllCorrect *= CheckValue(g_StructuredBufferInst[nonuniformEXT(StructBuffIdx)].Data, StructBuffRefValues[StructBuffIdx]);
-    AllCorrect *= CheckValue(imageLoad(g_RWTextures[nonuniformEXT(RWTexIdx)], ivec2(coord * 10)), RWTexRefValues[RWTexIdx]);
-    AllCorrect *= CheckValue(g_RWStructBuffersInst[nonuniformEXT(RWStructBuffIdx)].Data, RWStructBuffRefValues[RWStructBuffIdx]);
-    AllCorrect *= CheckValue(imageLoad(g_RWFormattedBuffers[nonuniformEXT(RWFmtBuffIdx)], 0), RWFmtBuffRefValues[RWFmtBuffIdx]);
+    AllCorrect *= CheckValue(textureLod(sampler2D(g_Textures[TEXTURES_NONUNIFORM(TexIdx)], g_Samplers[nonuniformEXT(SamIdx)]), coord, 0.0), TexRefValues[TexIdx]);
+    AllCorrect *= CheckValue(g_ConstantBufferInst[CONST_BUFFERS_NONUNIFORM(BuffIdx)].Data, ConstBuffRefValues[BuffIdx]);
+    AllCorrect *= CheckValue(texelFetch(g_FormattedBuffers[FMT_BUFFERS_NONUNIFORM(FmtBuffIdx)], 0), FmtBuffRefValues[FmtBuffIdx]);
+    AllCorrect *= CheckValue(g_StructuredBufferInst[STRUCT_BUFFERS_NONUNIFORM(StructBuffIdx)].Data, StructBuffRefValues[StructBuffIdx]);
+    AllCorrect *= CheckValue(imageLoad(g_RWTextures[RWTEXTURES_NONUNIFORM(RWTexIdx)], ivec2(coord * 10)), RWTexRefValues[RWTexIdx]);
+    AllCorrect *= CheckValue(g_RWStructBuffersInst[RWSTRUCT_BUFFERS_NONUNIFORM(RWStructBuffIdx)].Data, RWStructBuffRefValues[RWStructBuffIdx]);
+    AllCorrect *= CheckValue(imageLoad(g_RWFormattedBuffers[RWFMT_BUFFERS_NONUNIFORM(RWFmtBuffIdx)], 0), RWFmtBuffRefValues[RWFmtBuffIdx]);
 
     return AllCorrect;
 }

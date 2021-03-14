@@ -47,7 +47,8 @@ void CreateTestingSwapChainVk(TestingEnvironmentVk* pEnv,
 
 TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
                                            const SwapChainDesc& SCDesc) :
-    TestingEnvironment{CI, SCDesc}
+    TestingEnvironment{CI, SCDesc},
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, nullptr)}
 {
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
@@ -71,6 +72,45 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
 
     auto vkPhysicalDevice = pRenderDeviceVk->GetVkPhysicalDevice();
     vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, &m_MemoryProperties);
+
+    vkGetPhysicalDeviceProperties(vkPhysicalDevice, &DeviceProps);
+
+    {
+        // Enumerate available extensions
+        uint32_t                           ExtensionCount = 0;
+        std::vector<VkExtensionProperties> InstanceExtensions;
+
+        vkEnumerateInstanceExtensionProperties(nullptr, &ExtensionCount, nullptr);
+        InstanceExtensions.resize(ExtensionCount);
+        vkEnumerateInstanceExtensionProperties(nullptr, &ExtensionCount, InstanceExtensions.data());
+
+        bool HasPhysicalDeviceProps2 = false;
+        bool HasDescriptorIndexing   = false;
+        for (uint32_t i = 0; i < ExtensionCount; ++i)
+        {
+            if (!HasPhysicalDeviceProps2 && strcmp(InstanceExtensions[i].extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
+                HasPhysicalDeviceProps2 = true;
+            if (!HasDescriptorIndexing && strcmp(InstanceExtensions[i].extensionName, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) == 0)
+                HasDescriptorIndexing = true;
+        }
+
+        // Get extension features and properties.
+        if (HasPhysicalDeviceProps2)
+        {
+            VkPhysicalDeviceFeatures2 Feats2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+            void**                    NextFeat = &Feats2.pNext;
+
+            if (HasDescriptorIndexing)
+            {
+                *NextFeat = &DescriptorIndexing;
+                NextFeat  = &DescriptorIndexing.pNext;
+
+                DescriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+            }
+
+            vkGetPhysicalDeviceFeatures2KHR(vkPhysicalDevice, &Feats2);
+        }
+    }
 
     {
         VkCommandPoolCreateInfo CmdPoolCI = {};

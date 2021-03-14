@@ -877,6 +877,10 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateResourceLimits();
+#endif
+
     m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 
     // Verify that pipeline layout is compatible with shader resources and
@@ -1096,6 +1100,202 @@ void PipelineStateVkImpl::DvpVerifySRBResources(const SRBArray& SRBs) const
     }
     VERIFY_EXPR(res_info == m_ResourceAttibutions.end());
 }
-#endif
+
+void PipelineStateVkImpl::DvpValidateResourceLimits() const
+{
+    const auto& Limits       = GetDevice()->GetPhysicalDevice().GetProperties().limits;
+    const auto& ASLimits     = GetDevice()->GetPhysicalDevice().GetExtProperties().AccelStruct;
+    const auto& DescIndFeats = GetDevice()->GetPhysicalDevice().GetExtFeatures().DescriptorIndexing;
+    const auto& DescIndProps = GetDevice()->GetPhysicalDevice().GetExtProperties().DescriptorIndexing;
+    const auto  DescCount    = static_cast<Uint32>(DescriptorType::Count);
+
+    std::array<Uint32, DescCount>                                      DescriptorCount         = {};
+    std::array<std::array<Uint32, DescCount>, MAX_SHADERS_IN_PIPELINE> PerStageDescriptorCount = {};
+    std::array<bool, MAX_SHADERS_IN_PIPELINE>                          ShaderStagePresented    = {};
+
+    for (Uint32 s = 0; s < GetResourceSignatureCount(); ++s)
+    {
+        const auto* pSignature = GetResourceSignature(s);
+        if (pSignature == nullptr)
+            continue;
+
+        for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+        {
+            const auto& ResDesc   = pSignature->GetResourceDesc(r);
+            const auto& ResAttr   = pSignature->GetResourceAttribs(r);
+            const auto  DescIndex = static_cast<Uint32>(ResAttr.DescrType);
+
+            DescriptorCount[DescIndex] += ResAttr.ArraySize;
+
+            for (auto ShaderStages = ResDesc.ShaderStages; ShaderStages != 0;)
+            {
+                const auto ShaderInd = GetShaderTypePipelineIndex(ExtractLSB(ShaderStages), m_Desc.PipelineType);
+                PerStageDescriptorCount[ShaderInd][DescIndex] += ResAttr.ArraySize;
+                ShaderStagePresented[ShaderInd] = true;
+            }
+
+            if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0)
+            {
+                bool NonUniformIndexingSupported = false;
+                bool NonUniformIndexingIsNative  = false;
+                switch (ResAttr.GetDescriptorType())
+                {
+                    case DescriptorType::Sampler:
+                        NonUniformIndexingSupported = true;
+                        NonUniformIndexingIsNative  = true;
+                        break;
+                    case DescriptorType::CombinedImageSampler:
+                    case DescriptorType::SeparateImage:
+                        NonUniformIndexingSupported = DescIndFeats.shaderSampledImageArrayNonUniformIndexing;
+                        NonUniformIndexingIsNative  = DescIndProps.shaderSampledImageArrayNonUniformIndexingNative;
+                        break;
+                    case DescriptorType::StorageImage:
+                        NonUniformIndexingSupported = DescIndFeats.shaderStorageImageArrayNonUniformIndexing;
+                        NonUniformIndexingIsNative  = DescIndProps.shaderStorageImageArrayNonUniformIndexingNative;
+                        break;
+                    case DescriptorType::UniformTexelBuffer:
+                        NonUniformIndexingSupported = DescIndFeats.shaderUniformTexelBufferArrayNonUniformIndexing;
+                        NonUniformIndexingIsNative  = DescIndProps.shaderSampledImageArrayNonUniformIndexingNative;
+                        break;
+                    case DescriptorType::StorageTexelBuffer:
+                    case DescriptorType::StorageTexelBuffer_ReadOnly:
+                        NonUniformIndexingSupported = DescIndFeats.shaderStorageTexelBufferArrayNonUniformIndexing;
+                        NonUniformIndexingIsNative  = DescIndProps.shaderStorageBufferArrayNonUniformIndexingNative;
+                        break;
+                    case DescriptorType::UniformBuffer:
+                    case DescriptorType::UniformBufferDynamic:
+                        NonUniformIndexingSupported = DescIndFeats.shaderUniformBufferArrayNonUniformIndexing;
+                        NonUniformIndexingIsNative  = DescIndProps.shaderUniformBufferArrayNonUniformIndexingNative;
+                        break;
+                    case DescriptorType::StorageBuffer:
+                    case DescriptorType::StorageBuffer_ReadOnly:
+                    case DescriptorType::StorageBufferDynamic:
+                    case DescriptorType::StorageBufferDynamic_ReadOnly:
+                        NonUniformIndexingSupported = DescIndFeats.shaderStorageBufferArrayNonUniformIndexing;
+                        NonUniformIndexingIsNative  = DescIndProps.shaderStorageBufferArrayNonUniformIndexingNative;
+                        break;
+                    case DescriptorType::InputAttachment:
+                        NonUniformIndexingSupported = DescIndFeats.shaderInputAttachmentArrayNonUniformIndexing;
+                        NonUniformIndexingIsNative  = DescIndProps.shaderInputAttachmentArrayNonUniformIndexingNative;
+                        break;
+                    case DescriptorType::AccelerationStructure:
+                        // There is no separate feature for acceleration structures, GLSL spec says:
+                        // "If GL_EXT_nonuniform_qualifier is supported
+                        // When aggregated into arrays within a shader, accelerationStructureEXT can
+                        // be indexed with a non-uniform integral expressions, when decorated with the
+                        // nonuniformEXT qualifier."
+                        // Descriptor indexing is supported here, otherwise error will be generated in ValidatePipelineResourceSignatureDesc().
+                        NonUniformIndexingSupported = true;
+                        NonUniformIndexingIsNative  = true;
+                        break;
+                }
+
+                // TODO: We don't know if this resource is used for non-uniform indexing or not.
+                if (!NonUniformIndexingSupported)
+                {
+                    LOG_WARNING_MESSAGE("PSO '", m_Desc.Name, "', resource signature '", pSignature->GetDesc().Name, "' contains shader resource '",
+                                        ResDesc.Name, "' that is defined with RUNTIME_ARRAY flag, but current device does not support non-uniform indexing for this resource type.");
+                }
+                else if (!NonUniformIndexingIsNative)
+                {
+                    LOG_WARNING_MESSAGE("Performance warning in PSO '", m_Desc.Name, "', resource signature '", pSignature->GetDesc().Name, "': shader resource '",
+                                        ResDesc.Name, "' is defined with RUNTIME_ARRAY flag, but non-uniform indexing is emulated on this device.");
+                }
+            }
+        }
+    }
+
+    // Check total descriptor count
+    {
+        const Uint32 NumSampledImages =
+            DescriptorCount[static_cast<Uint32>(DescriptorType::CombinedImageSampler)] +
+            DescriptorCount[static_cast<Uint32>(DescriptorType::SeparateImage)] +
+            DescriptorCount[static_cast<Uint32>(DescriptorType::UniformTexelBuffer)];
+        const Uint32 NumStorageImages =
+            DescriptorCount[static_cast<Uint32>(DescriptorType::StorageImage)] +
+            DescriptorCount[static_cast<Uint32>(DescriptorType::StorageTexelBuffer)] +
+            DescriptorCount[static_cast<Uint32>(DescriptorType::StorageTexelBuffer_ReadOnly)];
+        const Uint32 NumStorageBuffers =
+            DescriptorCount[static_cast<Uint32>(DescriptorType::StorageBuffer)] +
+            DescriptorCount[static_cast<Uint32>(DescriptorType::StorageBuffer_ReadOnly)];
+        const Uint32 NumDynamicStorageBuffers =
+            DescriptorCount[static_cast<Uint32>(DescriptorType::StorageBufferDynamic)] +
+            DescriptorCount[static_cast<Uint32>(DescriptorType::StorageBufferDynamic_ReadOnly)];
+        const Uint32 NumSamplers               = DescriptorCount[static_cast<Uint32>(DescriptorType::Sampler)];
+        const Uint32 NumUniformBuffers         = DescriptorCount[static_cast<Uint32>(DescriptorType::UniformBuffer)];
+        const Uint32 NumDynamicUniformBuffers  = DescriptorCount[static_cast<Uint32>(DescriptorType::UniformBufferDynamic)];
+        const Uint32 NumInputAttachments       = DescriptorCount[static_cast<Uint32>(DescriptorType::InputAttachment)];
+        const Uint32 NumAccelerationStructures = DescriptorCount[static_cast<Uint32>(DescriptorType::AccelerationStructure)];
+
+        DEV_CHECK_ERR(NumSamplers <= Limits.maxDescriptorSetSamplers,
+                      "In PSO '", m_Desc.Name, "', the number of samplers (", NumSamplers, ") exceeds the limit (", Limits.maxDescriptorSetSamplers, ").");
+        DEV_CHECK_ERR(NumSampledImages <= Limits.maxDescriptorSetSampledImages,
+                      "In PSO '", m_Desc.Name, "', the number of sampled images (", NumSampledImages, ") exceeds the limit (", Limits.maxDescriptorSetSampledImages, ").");
+        DEV_CHECK_ERR(NumStorageImages <= Limits.maxDescriptorSetStorageImages,
+                      "In PSO '", m_Desc.Name, "', the number of storage images (", NumStorageImages, ") exceeds the limit (", Limits.maxDescriptorSetStorageImages, ").");
+        DEV_CHECK_ERR(NumStorageBuffers <= Limits.maxDescriptorSetStorageBuffers,
+                      "In PSO '", m_Desc.Name, "', the number of storage buffers (", NumStorageBuffers, ") exceeds the limit (", Limits.maxDescriptorSetStorageBuffers, ").");
+        DEV_CHECK_ERR(NumDynamicStorageBuffers <= Limits.maxDescriptorSetStorageBuffersDynamic,
+                      "In PSO '", m_Desc.Name, "', the number of dynamic storage buffers (", NumDynamicStorageBuffers, ") exceeds the limit (", Limits.maxDescriptorSetStorageBuffersDynamic, ").");
+        DEV_CHECK_ERR(NumUniformBuffers <= Limits.maxDescriptorSetUniformBuffers,
+                      "In PSO '", m_Desc.Name, "', the number of uniform buffers (", NumUniformBuffers, ") exceeds the limit (", Limits.maxDescriptorSetUniformBuffers, ").");
+        DEV_CHECK_ERR(NumDynamicUniformBuffers <= Limits.maxDescriptorSetUniformBuffersDynamic,
+                      "In PSO '", m_Desc.Name, "', the number of dynamic uniform buffers (", NumDynamicUniformBuffers, ") exceeds the limit (", Limits.maxDescriptorSetUniformBuffersDynamic, ").");
+        DEV_CHECK_ERR(NumInputAttachments <= Limits.maxDescriptorSetInputAttachments,
+                      "In PSO '", m_Desc.Name, "', the number of input attachments (", NumInputAttachments, ") exceeds the limit (", Limits.maxDescriptorSetInputAttachments, ").");
+        DEV_CHECK_ERR(NumAccelerationStructures <= ASLimits.maxDescriptorSetAccelerationStructures,
+                      "In PSO '", m_Desc.Name, "', the number of acceleration structures (", NumAccelerationStructures, ") exceeds the limit (", ASLimits.maxDescriptorSetAccelerationStructures, ").");
+    }
+
+    // Check per stage descriptor count
+    for (Uint32 ShaderInd = 0; ShaderInd < PerStageDescriptorCount.size(); ++ShaderInd)
+    {
+        if (!ShaderStagePresented[ShaderInd])
+            continue;
+
+        const auto& NumDesc    = PerStageDescriptorCount[ShaderInd];
+        const auto  ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, m_Desc.PipelineType);
+        const char* StageName  = GetShaderTypeLiteralName(ShaderType);
+
+        const Uint32 NumSampledImages =
+            NumDesc[static_cast<Uint32>(DescriptorType::CombinedImageSampler)] +
+            NumDesc[static_cast<Uint32>(DescriptorType::SeparateImage)] +
+            NumDesc[static_cast<Uint32>(DescriptorType::UniformTexelBuffer)];
+        const Uint32 NumStorageImages =
+            NumDesc[static_cast<Uint32>(DescriptorType::StorageImage)] +
+            NumDesc[static_cast<Uint32>(DescriptorType::StorageTexelBuffer)] +
+            NumDesc[static_cast<Uint32>(DescriptorType::StorageTexelBuffer_ReadOnly)];
+        const Uint32 NumStorageBuffers =
+            NumDesc[static_cast<Uint32>(DescriptorType::StorageBuffer)] +
+            NumDesc[static_cast<Uint32>(DescriptorType::StorageBuffer_ReadOnly)] +
+            NumDesc[static_cast<Uint32>(DescriptorType::StorageBufferDynamic)] +
+            NumDesc[static_cast<Uint32>(DescriptorType::StorageBufferDynamic_ReadOnly)];
+        const Uint32 NumUniformBuffers =
+            NumDesc[static_cast<Uint32>(DescriptorType::UniformBuffer)] +
+            NumDesc[static_cast<Uint32>(DescriptorType::UniformBufferDynamic)];
+        const Uint32 NumSamplers               = NumDesc[static_cast<Uint32>(DescriptorType::Sampler)];
+        const Uint32 NumInputAttachments       = NumDesc[static_cast<Uint32>(DescriptorType::InputAttachment)];
+        const Uint32 NumAccelerationStructures = NumDesc[static_cast<Uint32>(DescriptorType::AccelerationStructure)];
+        const Uint32 NumResources              = NumSampledImages + NumStorageImages + NumStorageBuffers + NumUniformBuffers + NumSamplers + NumInputAttachments + NumAccelerationStructures;
+
+        DEV_CHECK_ERR(NumResources <= Limits.maxPerStageResources,
+                      "In PSO '", m_Desc.Name, "' shader stage '", StageName, "', the total number of resources (", NumResources, ") exceeds the per-stage limit (", Limits.maxPerStageResources, ").");
+        DEV_CHECK_ERR(NumSamplers <= Limits.maxPerStageDescriptorSamplers,
+                      "In PSO '", m_Desc.Name, "' shader stage '", StageName, "', the number of samplers (", NumSamplers, ") exceeds the per-stage limit (", Limits.maxPerStageDescriptorSamplers, ").");
+        DEV_CHECK_ERR(NumSampledImages <= Limits.maxPerStageDescriptorSampledImages,
+                      "In PSO '", m_Desc.Name, "' shader stage '", StageName, "', the number of sampled images (", NumSampledImages, ") exceeds the per-stage limit (", Limits.maxPerStageDescriptorSampledImages, ").");
+        DEV_CHECK_ERR(NumStorageImages <= Limits.maxPerStageDescriptorStorageImages,
+                      "In PSO '", m_Desc.Name, "' shader stage '", StageName, "', the number of storage images (", NumStorageImages, ") exceeds the per-stage limit (", Limits.maxPerStageDescriptorStorageImages, ").");
+        DEV_CHECK_ERR(NumStorageBuffers <= Limits.maxPerStageDescriptorStorageBuffers,
+                      "In PSO '", m_Desc.Name, "' shader stage '", StageName, "', the number of storage buffers (", NumStorageBuffers, ") exceeds the per-stage limit (", Limits.maxPerStageDescriptorStorageBuffers, ").");
+        DEV_CHECK_ERR(NumUniformBuffers <= Limits.maxPerStageDescriptorUniformBuffers,
+                      "In PSO '", m_Desc.Name, "' shader stage '", StageName, "', the number of uniform buffers (", NumUniformBuffers, ") exceeds the per-stage limit (", Limits.maxPerStageDescriptorUniformBuffers, ").");
+        DEV_CHECK_ERR(NumInputAttachments <= Limits.maxPerStageDescriptorInputAttachments,
+                      "In PSO '", m_Desc.Name, "' shader stage '", StageName, "', the number of input attachments (", NumInputAttachments, ") exceeds the per-stage limit (", Limits.maxPerStageDescriptorInputAttachments, ").");
+        DEV_CHECK_ERR(NumAccelerationStructures <= ASLimits.maxPerStageDescriptorAccelerationStructures,
+                      "In PSO '", m_Desc.Name, "' shader stage '", StageName, "', the number of acceleration structures (", NumAccelerationStructures, ") exceeds the per-stage limit (", ASLimits.maxPerStageDescriptorAccelerationStructures, ").");
+    }
+}
+#endif // DILIGENT_DEVELOPMENT
 
 } // namespace Diligent

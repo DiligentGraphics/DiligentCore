@@ -75,6 +75,11 @@ public:
 
     void ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle);
 
+    virtual bool HasDXCompiler() const override final
+    {
+        return m_pDxCompiler != nullptr && m_pDxCompiler->IsLoaded();
+    }
+
     HRESULT CompileDXILShader(const std::string& Source,
                               LPCWSTR            strFunctionName,
                               const DxcDefine*   Defines,

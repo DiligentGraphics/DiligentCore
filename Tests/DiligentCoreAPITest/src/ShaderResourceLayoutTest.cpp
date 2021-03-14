@@ -37,6 +37,8 @@
 #include "ResourceLayoutTestCommon.hpp"
 #include "TestingSwapChainBase.hpp"
 
+#include "Vulkan/TestingEnvironmentVk.hpp"
+
 #include "gtest/gtest.h"
 
 using namespace Diligent;
@@ -747,11 +749,39 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     ComputeShaderReference(pSwapChain);
 
     const auto& deviceCaps = pDevice->GetDeviceCaps();
-    auto        deviceType = deviceCaps.DevType;
 
     constexpr Uint32 MaxStaticBuffArraySize  = 4;
     constexpr Uint32 MaxMutableBuffArraySize = 3;
     constexpr Uint32 MaxDynamicBuffArraySize = 2;
+    constexpr Uint32 MaxUAVBuffers =
+        MaxStaticBuffArraySize +
+        MaxMutableBuffArraySize +
+        MaxDynamicBuffArraySize +
+        3 /*non array resources*/ +
+        1 /*output UAV texture*/;
+
+    bool UseReducedUAVCount = false;
+    switch (deviceCaps.DevType)
+    {
+        case RENDER_DEVICE_TYPE_D3D11:
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            UseReducedUAVCount = true;
+            break;
+
+        case RENDER_DEVICE_TYPE_VULKAN:
+        {
+            const auto* pEnvVk = static_cast<const TestingEnvironmentVk*>(pEnv);
+            const auto& Limits = pEnvVk->DeviceProps.limits;
+            if (Limits.maxPerStageDescriptorStorageImages < 8)
+            {
+                GTEST_SKIP() << "The number of supported UAV buffers is too small.";
+            }
+            else if (Limits.maxPerStageDescriptorStorageImages < MaxUAVBuffers)
+                UseReducedUAVCount = true;
+            break;
+        }
+    }
 
     // Prepare buffers with reference values
     ReferenceBuffers RefBuffers{
@@ -762,8 +792,8 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
         IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED //
     };
 
-    const Uint32 StaticBuffArraySize  = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : MaxStaticBuffArraySize;
-    const Uint32 MutableBuffArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : MaxMutableBuffArraySize;
+    const Uint32 StaticBuffArraySize  = UseReducedUAVCount ? 1 : MaxStaticBuffArraySize;
+    const Uint32 MutableBuffArraySize = UseReducedUAVCount ? 1 : MaxMutableBuffArraySize;
     const Uint32 DynamicBuffArraySize = MaxDynamicBuffArraySize;
 
     static constexpr size_t Buff_StaticIdx = 0;
@@ -920,15 +950,43 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     ComputeShaderReference(pSwapChain);
 
     const auto& deviceCaps = pDevice->GetDeviceCaps();
-    auto        deviceType = deviceCaps.DevType;
 
     constexpr Uint32 MaxStaticTexArraySize  = 2;
     constexpr Uint32 MaxMutableTexArraySize = 4;
     constexpr Uint32 MaxDynamicTexArraySize = 3;
+    constexpr Uint32 MaxUAVTextures =
+        MaxStaticTexArraySize +
+        MaxMutableTexArraySize +
+        MaxDynamicTexArraySize +
+        3 /*non array resources*/ +
+        1 /*output UAV texture*/;
+
+    bool UseReducedUAVCount = false;
+    switch (deviceCaps.DevType)
+    {
+        case RENDER_DEVICE_TYPE_D3D11:
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            UseReducedUAVCount = true;
+            break;
+
+        case RENDER_DEVICE_TYPE_VULKAN:
+        {
+            const auto* pEnvVk = static_cast<TestingEnvironmentVk*>(pEnv);
+            const auto& Limits = pEnvVk->DeviceProps.limits;
+            if (Limits.maxPerStageDescriptorStorageImages < 8)
+            {
+                GTEST_SKIP() << "The number of supported UAV textures is too small.";
+            }
+            else if (Limits.maxPerStageDescriptorStorageImages < MaxUAVTextures)
+                UseReducedUAVCount = true;
+            break;
+        }
+    }
 
     const Uint32 StaticTexArraySize  = MaxStaticTexArraySize;
-    const Uint32 MutableTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : MaxMutableTexArraySize;
-    const Uint32 DynamicTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : MaxDynamicTexArraySize;
+    const Uint32 MutableTexArraySize = UseReducedUAVCount ? 1 : MaxMutableTexArraySize;
+    const Uint32 DynamicTexArraySize = UseReducedUAVCount ? 1 : MaxDynamicTexArraySize;
 
     ReferenceTextures RefTextures{
         3 + MaxStaticTexArraySize + MaxMutableTexArraySize + MaxDynamicTexArraySize + 1, // Extra texture for dynamic variables

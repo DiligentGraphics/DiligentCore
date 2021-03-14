@@ -3216,6 +3216,9 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
     vkASBuildInfo.ppGeometries              = nullptr;
     vkASBuildInfo.scratchData.deviceAddress = pScratchVk->GetVkDeviceAddress() + Attribs.ScratchBufferOffset;
 
+    const auto& ASLimits = m_pDevice->GetPhysicalDevice().GetExtProperties().AccelStruct;
+    VERIFY(vkASBuildInfo.scratchData.deviceAddress % ASLimits.minAccelerationStructureScratchOffsetAlignment == 0, "Scratch buffer start address is not properly aligned");
+
     EnsureVkCmdBuffer();
     m_CommandBuffer.BuildAccelerationStructure(1, &vkASBuildInfo, &VkRangePtr);
     ++m_State.NumCommands;
@@ -3319,6 +3322,9 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
     vkASBuildInfo.pGeometries               = &vkASGeometry;
     vkASBuildInfo.ppGeometries              = nullptr;
     vkASBuildInfo.scratchData.deviceAddress = pScratchVk->GetVkDeviceAddress() + Attribs.ScratchBufferOffset;
+
+    const auto& ASLimits = m_pDevice->GetPhysicalDevice().GetExtProperties().AccelStruct;
+    VERIFY(vkASBuildInfo.scratchData.deviceAddress % ASLimits.minAccelerationStructureScratchOffsetAlignment == 0, "Scratch buffer start address is not properly aligned");
 
     m_CommandBuffer.BuildAccelerationStructure(1, &vkASBuildInfo, &vkRangePtr);
     ++m_State.NumCommands;

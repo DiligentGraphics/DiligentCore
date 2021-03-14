@@ -107,6 +107,8 @@ public:
     // when resource is bound.
     using SRBArray = std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES>;
     void DvpVerifySRBResources(const SRBArray& SRBs) const;
+
+    void DvpValidateResourceLimits() const;
 #endif
 
 private:

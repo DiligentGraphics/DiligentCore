@@ -39,17 +39,19 @@ class VulkanPhysicalDevice
 public:
     struct ExtensionFeatures
     {
-        VkPhysicalDeviceMeshShaderFeaturesNV             MeshShader          = {};
-        VkPhysicalDevice16BitStorageFeaturesKHR          Storage16Bit        = {};
-        VkPhysicalDevice8BitStorageFeaturesKHR           Storage8Bit         = {};
-        VkPhysicalDeviceShaderFloat16Int8FeaturesKHR     ShaderFloat16Int8   = {};
-        VkPhysicalDeviceAccelerationStructureFeaturesKHR AccelStruct         = {};
-        VkPhysicalDeviceRayTracingPipelineFeaturesKHR    RayTracingPipeline  = {};
-        VkPhysicalDeviceRayQueryFeaturesKHR              RayQuery            = {};
-        bool                                             Spirv14             = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
-        bool                                             Spirv15             = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
-        VkPhysicalDeviceBufferDeviceAddressFeaturesKHR   BufferDeviceAddress = {};
-        VkPhysicalDeviceDescriptorIndexingFeaturesEXT    DescriptorIndexing  = {};
+        VkPhysicalDeviceMeshShaderFeaturesNV             MeshShader           = {};
+        VkPhysicalDevice16BitStorageFeaturesKHR          Storage16Bit         = {};
+        VkPhysicalDevice8BitStorageFeaturesKHR           Storage8Bit          = {};
+        VkPhysicalDeviceShaderFloat16Int8FeaturesKHR     ShaderFloat16Int8    = {};
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR AccelStruct          = {};
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR    RayTracingPipeline   = {};
+        VkPhysicalDeviceRayQueryFeaturesKHR              RayQuery             = {};
+        bool                                             Spirv14              = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
+        bool                                             Spirv15              = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
+        VkPhysicalDeviceBufferDeviceAddressFeaturesKHR   BufferDeviceAddress  = {};
+        VkPhysicalDeviceDescriptorIndexingFeaturesEXT    DescriptorIndexing   = {};
+        bool                                             HasPortabilitySubset = false;
+        VkPhysicalDevicePortabilitySubsetFeaturesKHR     PortabilitySubset    = {};
     };
 
     struct ExtensionProperties
@@ -58,6 +60,7 @@ public:
         VkPhysicalDeviceAccelerationStructurePropertiesKHR AccelStruct        = {};
         VkPhysicalDeviceRayTracingPipelinePropertiesKHR    RayTracingPipeline = {};
         VkPhysicalDeviceDescriptorIndexingPropertiesEXT    DescriptorIndexing = {};
+        VkPhysicalDevicePortabilitySubsetPropertiesKHR     PortabilitySubset  = {};
     };
 
 public:

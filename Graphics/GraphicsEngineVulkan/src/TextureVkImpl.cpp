@@ -60,6 +60,11 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
     const bool bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
+    const bool ImageView2DSupported =
+        (m_Desc.Type == RESOURCE_DIM_TEX_3D && LogicalDevice.GetEnabledExtFeatures().HasPortabilitySubset) ?
+        LogicalDevice.GetEnabledExtFeatures().PortabilitySubset.imageView2DOn3DImage == VK_TRUE :
+        true;
+
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
         VkImageCreateInfo ImageCI = {};
@@ -80,7 +85,8 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         else if (m_Desc.Type == RESOURCE_DIM_TEX_3D)
         {
             ImageCI.imageType = VK_IMAGE_TYPE_3D;
-            ImageCI.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+            if (ImageView2DSupported)
+                ImageCI.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
         }
         else
         {
@@ -125,11 +131,13 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         {
             // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearColorImage()
             ImageCI.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            DEV_CHECK_ERR(ImageView2DSupported, "imageView2DOn3DImage in VkPhysicalDevicePortabilitySubsetFeaturesKHR is not enabled, can not create render target with 2D image view");
         }
         if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
         {
             // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearDepthStencilImage()
             ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            DEV_CHECK_ERR(ImageView2DSupported, "imageView2DOn3DImage in VkPhysicalDevicePortabilitySubsetFeaturesKHR is not enabled, can not create depth-stencil target with 2D image view");
         }
         if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
         {
@@ -146,7 +154,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
         {
-            if (CheckCSBasedMipGenerationSupport(ImageCI.format))
+            if (CheckCSBasedMipGenerationSupport(ImageCI.format) && ImageView2DSupported)
             {
                 ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
                 m_bCSBasedMipGenerationSupported = true;

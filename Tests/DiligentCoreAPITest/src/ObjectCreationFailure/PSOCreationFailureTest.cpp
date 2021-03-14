@@ -137,8 +137,8 @@ protected:
         auto* const pEnv    = TestingEnvironment::GetInstance();
         auto* const pDevice = pEnv->GetDevice();
 
-        sm_HasMeshShader = pDevice->GetDeviceCaps().Features.MeshShaders;
-        sm_HasRayTracing = pDevice->GetDeviceCaps().Features.RayTracing;
+        sm_HasMeshShader = pDevice->GetDeviceCaps().Features.MeshShaders && pEnv->HasDXCompiler();
+        sm_HasRayTracing = pDevice->GetDeviceCaps().Features.RayTracing && pEnv->HasDXCompiler();
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.Source                     = g_TrivialVSSource;
@@ -1390,7 +1390,7 @@ TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
         GTEST_SKIP();
     }
 
-    static constexpr char PSSource[] = R"(
+    static constexpr char PSSource_HLSL[] = R"(
     Texture2D g_Texture[];
     cbuffer ConstBuffer
     {
@@ -1402,15 +1402,38 @@ TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
     }
     )";
 
+    static constexpr char PSSource_GLSL[] = R"(
+    #version 460 core
+    #extension GL_EXT_nonuniform_qualifier : require
+    #extension GL_EXT_samplerless_texture_functions : require
+
+    uniform texture2D g_Texture[];
+    layout(std140) uniform ConstBuffer
+    {
+        uint Index;
+    };
+    layout(location=0) out vec4 out_Color;
+
+    void main()
+    {
+        out_Color = texelFetch(g_Texture[nonuniformEXT(Index)], ivec2(0,0), 0);
+    }
+    )";
+
     ShaderCreateInfo ShaderCI;
-    ShaderCI.Source          = PSSource;
     ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
     ShaderCI.Desc.Name       = "Invalid Run-Time Array (PSOCreationFailureTest)";
-    ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
-    if (deviceCaps.IsVulkanDevice())
-        ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC; // GLSLang does not handle HLSL run-time arrays properly
+    ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    if (deviceCaps.IsD3DDevice())
+    {
+        ShaderCI.Source         = PSSource_HLSL;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    }
     else
-        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    {
+        ShaderCI.Source         = PSSource_GLSL;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+    }
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.CompileFlags               = SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS;
     RefCntAutoPtr<IShader> pPS;

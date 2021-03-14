@@ -645,7 +645,16 @@ TEST_P(TextureCreationTest, CreateTexture)
 
     // Test texture 3D
     if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_3D)
-        CreateTestTexture(RESOURCE_DIM_TEX_3D, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
+    {
+        auto TexInfo2 = TestInfo;
+#ifdef PLATFORM_MACOS
+        // in MoltenVk 2D image view from 3D texture may be unsupported.
+        TexInfo2.BindFlags &= ~(BIND_RENDER_TARGET | BIND_DEPTH_STENCIL);
+        if (TexInfo2.Fmt == TEX_FORMAT_D32_FLOAT || TexInfo2.Fmt == TEX_FORMAT_D16_UNORM)
+            return;
+#endif
+        CreateTestTexture(RESOURCE_DIM_TEX_3D, TexInfo2.Fmt, TexInfo2.BindFlags, 1, TexInfo2.TestDataUpload);
+    }
 }
 
 
