@@ -1351,8 +1351,8 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
         VERIFY((FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth - 1)) == 0, "Compressed block width is expected to be power of 2");
         VERIFY((FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight - 1)) == 0, "Compressed block height is expected to be power of 2");
         // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
-        MipProps.StorageWidth   = Align(MipProps.LogicalWidth, Uint32{FmtAttribs.BlockWidth});
-        MipProps.StorageHeight  = Align(MipProps.LogicalHeight, Uint32{FmtAttribs.BlockHeight});
+        MipProps.StorageWidth   = AlignUp(MipProps.LogicalWidth, Uint32{FmtAttribs.BlockWidth});
+        MipProps.StorageHeight  = AlignUp(MipProps.LogicalHeight, Uint32{FmtAttribs.BlockHeight});
         MipProps.RowSize        = MipProps.StorageWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
         MipProps.DepthSliceSize = MipProps.StorageHeight / Uint32{FmtAttribs.BlockHeight} * MipProps.RowSize;
         MipProps.MipSize        = MipProps.DepthSliceSize * MipProps.Depth;
@@ -1575,7 +1575,7 @@ Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
         for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
         {
             auto MipInfo = GetMipLevelProperties(TexDesc, mip);
-            ArraySliceSize += Align(MipInfo.MipSize, Alignment);
+            ArraySliceSize += AlignUp(MipInfo.MipSize, Alignment);
         }
 
         Offset = ArraySliceSize;
@@ -1589,7 +1589,7 @@ Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
     for (Uint32 mip = 0; mip < MipLevel; ++mip)
     {
         auto MipInfo = GetMipLevelProperties(TexDesc, mip);
-        Offset += Align(MipInfo.MipSize, Alignment);
+        Offset += AlignUp(MipInfo.MipSize, Alignment);
     }
 
     if (ArraySlice == TexDesc.ArraySize)
@@ -1641,8 +1641,8 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
         // Align update region size by the block size
         VERIFY_EXPR(IsPowerOfTwo(FmtAttribs.BlockWidth));
         VERIFY_EXPR(IsPowerOfTwo(FmtAttribs.BlockHeight));
-        const auto BlockAlignedRegionWidth  = Align(UpdateRegionWidth, Uint32{FmtAttribs.BlockWidth});
-        const auto BlockAlignedRegionHeight = Align(UpdateRegionHeight, Uint32{FmtAttribs.BlockHeight});
+        const auto BlockAlignedRegionWidth  = AlignUp(UpdateRegionWidth, Uint32{FmtAttribs.BlockWidth});
+        const auto BlockAlignedRegionHeight = AlignUp(UpdateRegionHeight, Uint32{FmtAttribs.BlockHeight});
 
         CopyInfo.RowSize  = BlockAlignedRegionWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize};
         CopyInfo.RowCount = BlockAlignedRegionHeight / FmtAttribs.BlockHeight;
@@ -1654,7 +1654,7 @@ BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
     }
 
     VERIFY_EXPR(IsPowerOfTwo(RowStrideAlignment));
-    CopyInfo.RowStride = Align(CopyInfo.RowSize, RowStrideAlignment);
+    CopyInfo.RowStride = AlignUp(CopyInfo.RowSize, RowStrideAlignment);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         CopyInfo.RowStrideInTexels = CopyInfo.RowStride / Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.BlockWidth};

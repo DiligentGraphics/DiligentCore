@@ -28,6 +28,7 @@
 #include "pch.h"
 
 #include "ShaderResourceCacheD3D11.hpp"
+
 #include "TextureBaseD3D11.hpp"
 #include "BufferD3D11Impl.hpp"
 #include "SamplerD3D11Impl.hpp"
@@ -45,10 +46,10 @@ size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const TResourceCount& Res
     auto   SamplerCount = ResCount[DESCRIPTOR_RANGE_SAMPLER];
     auto   UAVCount     = ResCount[DESCRIPTOR_RANGE_UAV];
     size_t MemSize      = 0;
-    MemSize = Align(MemSize + (sizeof(CachedCB)       + sizeof(BindPointsD3D11) + sizeof(ID3D11Buffer*))              * CBCount,      MaxAlignment);
-    MemSize = Align(MemSize + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11ShaderResourceView*))  * SRVCount,     MaxAlignment);
-    MemSize = Align(MemSize + (sizeof(CachedSampler)  + sizeof(BindPointsD3D11) + sizeof(ID3D11SamplerState*))        * SamplerCount, MaxAlignment);
-    MemSize = Align(MemSize + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount,     MaxAlignment);
+    MemSize = AlignUp(MemSize + (sizeof(CachedCB)       + sizeof(BindPointsD3D11) + sizeof(ID3D11Buffer*))              * CBCount,      MaxAlignment);
+    MemSize = AlignUp(MemSize + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11ShaderResourceView*))  * SRVCount,     MaxAlignment);
+    MemSize = AlignUp(MemSize + (sizeof(CachedSampler)  + sizeof(BindPointsD3D11) + sizeof(ID3D11SamplerState*))        * SamplerCount, MaxAlignment);
+    MemSize = AlignUp(MemSize + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount,     MaxAlignment);
     // clang-format on
     VERIFY(MemSize < InvalidResourceOffset, "Memory size exeed the maximum allowed size.");
     return MemSize;
@@ -80,10 +81,10 @@ void ShaderResourceCacheD3D11::Initialize(const TResourceCount& ResCount, IMemor
     VERIFY(UAVCount     == m_UAVCount,     "UAVs count (", UAVCount, ") exceeds maximum representable value");
 
     // m_CBOffset  = 0
-    m_SRVOffset       = static_cast<OffsetType>(Align(m_CBOffset      + (sizeof(CachedCB)       + sizeof(BindPointsD3D11) + sizeof(ID3D11Buffer*))              * CBCount,      MaxAlignment));
-    m_SamplerOffset   = static_cast<OffsetType>(Align(m_SRVOffset     + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11ShaderResourceView*))  * SRVCount,     MaxAlignment));
-    m_UAVOffset       = static_cast<OffsetType>(Align(m_SamplerOffset + (sizeof(CachedSampler)  + sizeof(BindPointsD3D11) + sizeof(ID3D11SamplerState*))        * SamplerCount, MaxAlignment));
-    size_t BufferSize = static_cast<OffsetType>(Align(m_UAVOffset     + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount,     MaxAlignment));
+    m_SRVOffset       = static_cast<OffsetType>(AlignUp(m_CBOffset      + (sizeof(CachedCB)       + sizeof(BindPointsD3D11) + sizeof(ID3D11Buffer*))              * CBCount,      MaxAlignment));
+    m_SamplerOffset   = static_cast<OffsetType>(AlignUp(m_SRVOffset     + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11ShaderResourceView*))  * SRVCount,     MaxAlignment));
+    m_UAVOffset       = static_cast<OffsetType>(AlignUp(m_SamplerOffset + (sizeof(CachedSampler)  + sizeof(BindPointsD3D11) + sizeof(ID3D11SamplerState*))        * SamplerCount, MaxAlignment));
+    size_t BufferSize = static_cast<OffsetType>(AlignUp(m_UAVOffset     + (sizeof(CachedResource) + sizeof(BindPointsD3D11) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount,     MaxAlignment));
     // clang-format on
 
     VERIFY_EXPR(m_pResourceData == nullptr);

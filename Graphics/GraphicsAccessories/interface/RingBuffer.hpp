@@ -116,14 +116,14 @@ public:
     {
         VERIFY_EXPR(Size > 0);
         VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of 2");
-        Size = Align(Size, Alignment);
+        Size = AlignUp(Size, Alignment);
 
         if (m_UsedSize + Size > m_MaxSize)
         {
             return InvalidOffset;
         }
 
-        auto AlignedHead = Align(m_Head, Alignment);
+        auto AlignedHead = AlignUp(m_Head, Alignment);
         if (m_Head >= m_Tail)
         {
             //                                         AlignedHead

@@ -140,7 +140,7 @@ TEST(Common_FixedLinearAllocator, LargeAlignment)
     Allocator.AddSpace(32, 8192);
     Allocator.Reserve();
     auto* Ptr = Allocator.Allocate(32, 8192);
-    EXPECT_EQ(Ptr, Align(Ptr, 8192));
+    EXPECT_EQ(Ptr, AlignUp(Ptr, 8192));
 }
 
 TEST(Common_FixedLinearAllocator, ObjectConstruction)
@@ -174,13 +174,13 @@ TEST(Common_FixedLinearAllocator, ObjectConstruction)
 
     {
         auto* pUI8 = Allocator.Construct<uint8_t>(uint8_t{15});
-        EXPECT_EQ(pUI8, Align(pUI8, alignof(uint8_t)));
+        EXPECT_EQ(pUI8, AlignUp(pUI8, alignof(uint8_t)));
         EXPECT_EQ(*pUI8, uint8_t{15});
     }
 
     {
         auto* pUI16 = Allocator.Copy(uint16_t{31});
-        EXPECT_EQ(pUI16, Align(pUI16, alignof(uint16_t)));
+        EXPECT_EQ(pUI16, AlignUp(pUI16, alignof(uint16_t)));
         EXPECT_EQ(*pUI16, uint16_t{31});
     }
 
@@ -196,7 +196,7 @@ TEST(Common_FixedLinearAllocator, ObjectConstruction)
 
     {
         auto* pUI32 = Allocator.ConstructArray<uint32_t>(5, 100u);
-        EXPECT_EQ(pUI32, Align(pUI32, alignof(uint32_t)));
+        EXPECT_EQ(pUI32, AlignUp(pUI32, alignof(uint32_t)));
         for (size_t i = 0; i < 5; ++i)
             EXPECT_EQ(pUI32[i], 100u);
     }
@@ -205,7 +205,7 @@ TEST(Common_FixedLinearAllocator, ObjectConstruction)
         std::array<uint64_t, 3> RefArray = {11, 120, 1300};
 
         auto* pUI64 = Allocator.CopyArray<uint64_t>(RefArray.data(), RefArray.size());
-        EXPECT_EQ(pUI64, Align(pUI64, alignof(uint64_t)));
+        EXPECT_EQ(pUI64, AlignUp(pUI64, alignof(uint64_t)));
         for (size_t i = 0; i < RefArray.size(); ++i)
             EXPECT_EQ(pUI64[i], RefArray[i]);
     }
@@ -217,7 +217,7 @@ TEST(Common_FixedLinearAllocator, ObjectConstruction)
 
     {
         auto* pObj = Allocator.Allocate<TObj1k>(4);
-        EXPECT_EQ(pObj, Align(pObj, alignof(TObj1k)));
+        EXPECT_EQ(pObj, AlignUp(pObj, alignof(TObj1k)));
     }
 }
 

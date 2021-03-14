@@ -197,7 +197,7 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
     VERIFY_EXPR(Alignment > 0);
     VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of 2");
 
-    if (m_CurrOffset == InvalidOffset || SizeInBytes + (Align(m_CurrOffset, Alignment) - m_CurrOffset) > m_AvailableSize)
+    if (m_CurrOffset == InvalidOffset || SizeInBytes + (AlignUp(m_CurrOffset, Alignment) - m_CurrOffset) > m_AvailableSize)
     {
         auto NewPageSize = m_PageSize;
         while (NewPageSize < SizeInBytes)
@@ -216,9 +216,9 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
         }
     }
 
-    if (m_CurrOffset != InvalidOffset && SizeInBytes + (Align(m_CurrOffset, Alignment) - m_CurrOffset) <= m_AvailableSize)
+    if (m_CurrOffset != InvalidOffset && SizeInBytes + (AlignUp(m_CurrOffset, Alignment) - m_CurrOffset) <= m_AvailableSize)
     {
-        auto AlignedOffset = Align(m_CurrOffset, Alignment);
+        auto AlignedOffset = AlignUp(m_CurrOffset, Alignment);
         auto AdjustedSize  = SizeInBytes + (AlignedOffset - m_CurrOffset);
         VERIFY_EXPR(AdjustedSize <= m_AvailableSize);
         m_AvailableSize -= AdjustedSize;

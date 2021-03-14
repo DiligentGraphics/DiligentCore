@@ -30,14 +30,14 @@
 /// \file
 /// Declaration of Diligent::BufferD3D11Impl class
 
+#include "EngineD3D11ImplTraits.hpp"
 #include "BufferD3D11.h"
-#include "RenderDeviceD3D11.h"
 #include "BufferBase.hpp"
-#include "BufferViewD3D11Impl.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {
+
+class RenderDeviceD3D11Impl;
 
 /// Buffer object implementation in Direct3D11 backend.
 class BufferD3D11Impl final : public BufferBase<EngineD3D11ImplTraits>
@@ -45,18 +45,18 @@ class BufferD3D11Impl final : public BufferBase<EngineD3D11ImplTraits>
 public:
     using TBufferBase = BufferBase<EngineD3D11ImplTraits>;
 
-    BufferD3D11Impl(IReferenceCounters*          pRefCounters,
-                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
-                    class RenderDeviceD3D11Impl* pDeviceD3D11,
-                    const BufferDesc&            BuffDesc,
-                    const BufferData*            pBuffData = nullptr);
+    BufferD3D11Impl(IReferenceCounters*        pRefCounters,
+                    FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                    RenderDeviceD3D11Impl*     pDeviceD3D11,
+                    const BufferDesc&          BuffDesc,
+                    const BufferData*          pBuffData = nullptr);
 
-    BufferD3D11Impl(IReferenceCounters*          pRefCounters,
-                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
-                    class RenderDeviceD3D11Impl* pDeviceD3D11,
-                    const BufferDesc&            BuffDesc,
-                    RESOURCE_STATE               InitialState,
-                    ID3D11Buffer*                pd3d11Buffer);
+    BufferD3D11Impl(IReferenceCounters*        pRefCounters,
+                    FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                    RenderDeviceD3D11Impl*     pDeviceD3D11,
+                    const BufferDesc&          BuffDesc,
+                    RESOURCE_STATE             InitialState,
+                    ID3D11Buffer*              pd3d11Buffer);
 
     ~BufferD3D11Impl();
 

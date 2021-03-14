@@ -63,13 +63,13 @@ TEST(Common_Align, IsPowerOfTwo)
     }
 }
 
-TEST(Common_Align, Align)
+TEST(Common_Align, AlignUp)
 {
-    EXPECT_EQ(Align(Uint8{0}, Uint8{16}), Uint8{0});
-    EXPECT_EQ(Align(Uint8{1}, Uint8{16}), Uint8{16});
-    EXPECT_EQ(Align(Uint8{15}, Uint8{16}), Uint8{16});
-    EXPECT_EQ(Align(Uint8{16}, Uint8{16}), Uint8{16});
-    EXPECT_EQ(Align(Uint8{17}, Uint8{16}), Uint8{32});
+    EXPECT_EQ(AlignUp(Uint8{0}, Uint8{16}), Uint8{0});
+    EXPECT_EQ(AlignUp(Uint8{1}, Uint8{16}), Uint8{16});
+    EXPECT_EQ(AlignUp(Uint8{15}, Uint8{16}), Uint8{16});
+    EXPECT_EQ(AlignUp(Uint8{16}, Uint8{16}), Uint8{16});
+    EXPECT_EQ(AlignUp(Uint8{17}, Uint8{16}), Uint8{32});
 
     for (Uint32 i = 0; i < 1024; ++i)
     {
@@ -78,10 +78,10 @@ TEST(Common_Align, Align)
         auto Aligned = (i / Alignment) * Alignment;
         if (Aligned < i) Aligned += Alignment;
 
-        EXPECT_EQ(Align(i, Alignment), Aligned);
+        EXPECT_EQ(AlignUp(i, Alignment), Aligned);
     }
 
-    EXPECT_EQ(Align((Uint64{1} << 63) + 1, Uint64{1024}), (Uint64{1} << 63) + 1024);
+    EXPECT_EQ(AlignUp((Uint64{1} << 63) + 1, Uint64{1024}), (Uint64{1} << 63) + 1024);
 }
 
 TEST(Common_Align, AlignDown)
@@ -106,11 +106,11 @@ TEST(Common_Align, AlignDown)
 
 TEST(Common_Align, AlignPtr)
 {
-    EXPECT_EQ(Align((void*)0x1000, size_t{16}), (void*)0x1000);
-    EXPECT_EQ(Align((void*)0x1001, size_t{16}), (void*)0x1010);
-    EXPECT_EQ(Align((void*)0x100F, size_t{16}), (void*)0x1010);
-    EXPECT_EQ(Align((void*)0x1010, size_t{16}), (void*)0x1010);
-    EXPECT_EQ(Align((void*)0x1011, size_t{16}), (void*)0x1020);
+    EXPECT_EQ(AlignUp((void*)0x1000, size_t{16}), (void*)0x1000);
+    EXPECT_EQ(AlignUp((void*)0x1001, size_t{16}), (void*)0x1010);
+    EXPECT_EQ(AlignUp((void*)0x100F, size_t{16}), (void*)0x1010);
+    EXPECT_EQ(AlignUp((void*)0x1010, size_t{16}), (void*)0x1010);
+    EXPECT_EQ(AlignUp((void*)0x1011, size_t{16}), (void*)0x1020);
 
     for (uintptr_t i = 0; i < 1024; ++i)
     {
@@ -119,7 +119,7 @@ TEST(Common_Align, AlignPtr)
         auto Aligned = (i / Alignment) * Alignment;
         if (Aligned < i) Aligned += Alignment;
 
-        EXPECT_EQ(Align((void*)(0x1000 + i), (size_t)Alignment), (void*)(0x1000 + Aligned));
+        EXPECT_EQ(AlignUp((void*)(0x1000 + i), (size_t)Alignment), (void*)(0x1000 + Aligned));
     }
 }
 

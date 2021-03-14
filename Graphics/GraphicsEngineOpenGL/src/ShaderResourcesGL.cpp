@@ -104,7 +104,7 @@ void ShaderResourcesGL::AllocateResources(std::vector<UniformBufferInfo>& Unifor
         StringPoolDataSize += strlen(sb.Name) + 1;
     }
 
-    auto AlignedStringPoolDataSize = Align(StringPoolDataSize, sizeof(void*));
+    auto AlignedStringPoolDataSize = AlignUp(StringPoolDataSize, sizeof(void*));
 
     // clang-format off
     size_t TotalMemorySize = 

@@ -538,12 +538,12 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
         MemInfo.buffer = Ctx.vkVertexBuffer;
         vkGetBufferMemoryRequirements2(Ctx.vkDevice, &MemInfo, &MemReqs);
 
-        MemSize = Align(MemSize, MemReqs.memoryRequirements.alignment);
+        MemSize = AlignUp(MemSize, MemReqs.memoryRequirements.alignment);
         MemSize += MemReqs.memoryRequirements.size;
         MemTypeBits |= MemReqs.memoryRequirements.memoryTypeBits;
 
         BindMem.emplace_back([&Ctx, MemReqs, &BufferInfo](VkDeviceMemory Mem, VkDeviceSize& Offset) {
-            Offset = Align(Offset, MemReqs.memoryRequirements.alignment);
+            Offset = AlignUp(Offset, MemReqs.memoryRequirements.alignment);
             vkBindBufferMemory(Ctx.vkDevice, Ctx.vkVertexBuffer, Mem, Offset);
             Offset += MemReqs.memoryRequirements.size;
             BufferInfo.buffer         = Ctx.vkVertexBuffer;
@@ -562,12 +562,12 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
         MemInfo.buffer = Ctx.vkIndexBuffer;
         vkGetBufferMemoryRequirements2(Ctx.vkDevice, &MemInfo, &MemReqs);
 
-        MemSize = Align(MemSize, MemReqs.memoryRequirements.alignment);
+        MemSize = AlignUp(MemSize, MemReqs.memoryRequirements.alignment);
         MemSize += MemReqs.memoryRequirements.size;
         MemTypeBits |= MemReqs.memoryRequirements.memoryTypeBits;
 
         BindMem.emplace_back([&Ctx, MemReqs, &BufferInfo](VkDeviceMemory Mem, VkDeviceSize& Offset) {
-            Offset = Align(Offset, MemReqs.memoryRequirements.alignment);
+            Offset = AlignUp(Offset, MemReqs.memoryRequirements.alignment);
             vkBindBufferMemory(Ctx.vkDevice, Ctx.vkIndexBuffer, Mem, Offset);
             Offset += MemReqs.memoryRequirements.size;
             BufferInfo.buffer        = Ctx.vkIndexBuffer;
@@ -586,12 +586,12 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
         MemInfo.buffer = Ctx.vkInstanceBuffer;
         vkGetBufferMemoryRequirements2(Ctx.vkDevice, &MemInfo, &MemReqs);
 
-        MemSize = Align(MemSize, MemReqs.memoryRequirements.alignment);
+        MemSize = AlignUp(MemSize, MemReqs.memoryRequirements.alignment);
         MemSize += MemReqs.memoryRequirements.size;
         MemTypeBits |= MemReqs.memoryRequirements.memoryTypeBits;
 
         BindMem.emplace_back([&Ctx, MemReqs, &BufferInfo](VkDeviceMemory Mem, VkDeviceSize& Offset) {
-            Offset = Align(Offset, MemReqs.memoryRequirements.alignment);
+            Offset = AlignUp(Offset, MemReqs.memoryRequirements.alignment);
             vkBindBufferMemory(Ctx.vkDevice, Ctx.vkInstanceBuffer, Mem, Offset);
             Offset += MemReqs.memoryRequirements.size;
             BufferInfo.buffer           = Ctx.vkInstanceBuffer;
@@ -610,12 +610,12 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
         MemInfo.buffer = Ctx.vkScratchBuffer;
         vkGetBufferMemoryRequirements2(Ctx.vkDevice, &MemInfo, &MemReqs);
 
-        MemSize = Align(MemSize, MemReqs.memoryRequirements.alignment);
+        MemSize = AlignUp(MemSize, MemReqs.memoryRequirements.alignment);
         MemSize += MemReqs.memoryRequirements.size;
         MemTypeBits |= MemReqs.memoryRequirements.memoryTypeBits;
 
         BindMem.emplace_back([&Ctx, MemReqs, &BufferInfo](VkDeviceMemory Mem, VkDeviceSize& Offset) {
-            Offset = Align(Offset, MemReqs.memoryRequirements.alignment);
+            Offset = AlignUp(Offset, MemReqs.memoryRequirements.alignment);
             vkBindBufferMemory(Ctx.vkDevice, Ctx.vkScratchBuffer, Mem, Offset);
             Offset += MemReqs.memoryRequirements.size;
             BufferInfo.buffer          = Ctx.vkScratchBuffer;
@@ -628,9 +628,9 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     {
         const Uint32 GroupSize = Ctx.RayTracingProps.shaderGroupHandleSize + ShaderRecordSize;
 
-        BuffCI.size = Align(GroupSize, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        BuffCI.size = Align(BuffCI.size + GroupSize * NumMissShaders, Ctx.RayTracingProps.shaderGroupBaseAlignment);
-        BuffCI.size = Align(BuffCI.size + GroupSize * NumHitShaders, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        BuffCI.size = AlignUp(GroupSize, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        BuffCI.size = AlignUp(BuffCI.size + GroupSize * NumMissShaders, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        BuffCI.size = AlignUp(BuffCI.size + GroupSize * NumHitShaders, Ctx.RayTracingProps.shaderGroupBaseAlignment);
 
         res = vkCreateBuffer(Ctx.vkDevice, &BuffCI, nullptr, &Ctx.vkSBTBuffer);
         ASSERT_GE(res, VK_SUCCESS);
@@ -639,12 +639,12 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
         MemInfo.buffer = Ctx.vkSBTBuffer;
         vkGetBufferMemoryRequirements2(Ctx.vkDevice, &MemInfo, &MemReqs);
 
-        MemSize = Align(MemSize, MemReqs.memoryRequirements.alignment);
+        MemSize = AlignUp(MemSize, MemReqs.memoryRequirements.alignment);
         MemSize += MemReqs.memoryRequirements.size;
         MemTypeBits |= MemReqs.memoryRequirements.memoryTypeBits;
 
         BindMem.emplace_back([&Ctx, MemReqs, &BufferInfo](VkDeviceMemory Mem, VkDeviceSize& Offset) {
-            Offset = Align(Offset, MemReqs.memoryRequirements.alignment);
+            Offset = AlignUp(Offset, MemReqs.memoryRequirements.alignment);
             vkBindBufferMemory(Ctx.vkDevice, Ctx.vkSBTBuffer, Mem, Offset);
             Offset += MemReqs.memoryRequirements.size;
             BufferInfo.buffer      = Ctx.vkSBTBuffer;
@@ -850,7 +850,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, RAYGEN_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
-        Offset                               = Align(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        Offset                               = AlignUp(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
         MissShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
         MissShaderBindingTable.size          = ShaderGroupHandleSize;
         MissShaderBindingTable.stride        = ShaderGroupHandleSize;
@@ -858,7 +858,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, MISS_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
-        Offset                              = Align(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        Offset                              = AlignUp(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
         HitShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
         HitShaderBindingTable.size          = ShaderGroupHandleSize;
         HitShaderBindingTable.stride        = ShaderGroupHandleSize;
@@ -1010,7 +1010,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, RAYGEN_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
-        Offset                               = Align(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        Offset                               = AlignUp(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
         MissShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
         MissShaderBindingTable.size          = ShaderGroupHandleSize;
         MissShaderBindingTable.stride        = ShaderGroupHandleSize;
@@ -1018,7 +1018,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, MISS_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
-        Offset                              = Align(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        Offset                              = AlignUp(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
         HitShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
         HitShaderBindingTable.size          = ShaderGroupHandleSize;
         HitShaderBindingTable.stride        = ShaderGroupHandleSize;
@@ -1168,7 +1168,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, RAYGEN_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
-        Offset                               = Align(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        Offset                               = AlignUp(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
         MissShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
         MissShaderBindingTable.size          = ShaderGroupHandleSize;
         MissShaderBindingTable.stride        = ShaderGroupHandleSize;
@@ -1176,7 +1176,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, MISS_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
-        Offset                              = Align(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        Offset                              = AlignUp(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
         HitShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
         HitShaderBindingTable.size          = ShaderGroupHandleSize;
         HitShaderBindingTable.stride        = ShaderGroupHandleSize;
@@ -1424,7 +1424,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, RAYGEN_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
-        Offset                               = Align(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        Offset                               = AlignUp(Offset + RaygenShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
         MissShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
         MissShaderBindingTable.size          = ShaderRecordSize;
         MissShaderBindingTable.stride        = ShaderRecordSize;
@@ -1432,7 +1432,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, MISS_GROUP, 1, ShaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, Offset, ShaderGroupHandleSize, ShaderHandle);
 
-        Offset                              = Align(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
+        Offset                              = AlignUp(Offset + MissShaderBindingTable.size, Ctx.RayTracingProps.shaderGroupBaseAlignment);
         HitShaderBindingTable.deviceAddress = Ctx.vkSBTBufferAddress + Offset;
         HitShaderBindingTable.size          = ShaderRecordSize * HitGroupCount;
         HitShaderBindingTable.stride        = ShaderRecordSize;

@@ -189,7 +189,7 @@ public:
     {
         VERIFY_EXPR(Size > 0);
         VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of 2");
-        Size = Align(Size, Alignment);
+        Size = AlignUp(Size, Alignment);
         if (m_FreeSize < Size)
             return Allocation::InvalidAllocation();
 
@@ -214,7 +214,7 @@ public:
         //
         auto Offset = SmallestBlockIt->first;
         VERIFY_EXPR(Offset % m_CurrAlignment == 0);
-        auto AlignedOffset = Align(Offset, Alignment);
+        auto AlignedOffset = AlignUp(Offset, Alignment);
         auto AdjustedSize  = Size + (AlignedOffset - Offset);
         VERIFY_EXPR(AdjustedSize <= Size + AlignmentReserve);
         auto NewOffset = Offset + AdjustedSize;

@@ -26,15 +26,19 @@
  */
 
 #include "pch.h"
-#include <atlbase.h>
 
 #include "BufferD3D11Impl.hpp"
+
+#include <atlbase.h>
+
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
-#include "D3D11TypeConversions.hpp"
 #include "BufferViewD3D11Impl.hpp"
+
+#include "D3D11TypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 #include "EngineMemory.h"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -67,8 +71,8 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
     {
-        Uint32 AlignmentMask = 15;
-        m_Desc.uiSizeInBytes = (m_Desc.uiSizeInBytes + AlignmentMask) & (~AlignmentMask);
+        static constexpr Uint32 Alignment = 16;
+        m_Desc.uiSizeInBytes              = AlignUp(m_Desc.uiSizeInBytes, Alignment);
     }
 
     D3D11_BUFFER_DESC D3D11BuffDesc;

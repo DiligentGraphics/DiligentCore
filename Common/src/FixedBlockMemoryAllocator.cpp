@@ -35,7 +35,7 @@ namespace Diligent
 
 static size_t AdjustBlockSize(size_t BlockSize)
 {
-    return Align(std::max(BlockSize, size_t{1}), sizeof(void*));
+    return AlignUp(std::max(BlockSize, size_t{1}), sizeof(void*));
 }
 
 FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemoryAllocator,

@@ -93,7 +93,7 @@ QueryManagerD3D12::QueryManagerD3D12(ID3D12Device* pd3d12Device,
 
         // AlignedDestinationBufferOffset must be a multiple of 8 bytes.
         // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
-        Uint32 AlignedQueryDataSize = Align(GetQueryDataSize(static_cast<QUERY_TYPE>(QueryType)), Uint32{8});
+        Uint32 AlignedQueryDataSize = AlignUp(GetQueryDataSize(static_cast<QUERY_TYPE>(QueryType)), Uint32{8});
         HeapInfo.AvailableQueries.resize(HeapInfo.HeapSize);
         HeapInfo.ResolveBufferOffsets.resize(HeapInfo.HeapSize);
         for (Uint32 i = 0; i < HeapInfo.HeapSize; ++i)

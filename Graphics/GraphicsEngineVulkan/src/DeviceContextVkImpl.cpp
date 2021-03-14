@@ -2333,8 +2333,8 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
             // Reaback memory is not created with HOST_COHERENT flag, so we have to explicitly invalidate the mapped range
             // to make device writes visible to CPU reads
             VERIFY_EXPR(pMapRegion->MaxZ >= 1 && pMapRegion->MaxY >= 1);
-            auto BlockAlignedMaxX = Align(pMapRegion->MaxX, Uint32{FmtAttribs.BlockWidth});
-            auto BlockAlignedMaxY = Align(pMapRegion->MaxY, Uint32{FmtAttribs.BlockHeight});
+            auto BlockAlignedMaxX = AlignUp(pMapRegion->MaxX, Uint32{FmtAttribs.BlockWidth});
+            auto BlockAlignedMaxY = AlignUp(pMapRegion->MaxY, Uint32{FmtAttribs.BlockHeight});
             auto MapEndOffset     = SubresourceOffset +
                 ((pMapRegion->MaxZ - 1) * MipLevelAttribs.StorageHeight + (BlockAlignedMaxY - FmtAttribs.BlockHeight)) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize +
                 (BlockAlignedMaxX / FmtAttribs.BlockWidth) * FmtAttribs.GetElementSize();

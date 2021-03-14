@@ -44,7 +44,7 @@ bool IsPowerOfTwo(T val)
 }
 
 template <typename T1, typename T2>
-inline typename std::conditional<sizeof(T1) >= sizeof(T2), T1, T2>::type Align(T1 val, T2 alignment)
+inline typename std::conditional<sizeof(T1) >= sizeof(T2), T1, T2>::type AlignUp(T1 val, T2 alignment)
 {
     static_assert(std::is_unsigned<T1>::value == std::is_unsigned<T2>::value, "both types must be signed or unsigned");
     static_assert(!std::is_pointer<T1>::value && !std::is_pointer<T2>::value, "types must not be pointers");
@@ -55,9 +55,9 @@ inline typename std::conditional<sizeof(T1) >= sizeof(T2), T1, T2>::type Align(T
 }
 
 template <typename PtrType, typename AlignType>
-inline PtrType* Align(PtrType* val, AlignType alignment)
+inline PtrType* AlignUp(PtrType* val, AlignType alignment)
 {
-    return reinterpret_cast<PtrType*>(Align(reinterpret_cast<uintptr_t>(val), static_cast<uintptr_t>(alignment)));
+    return reinterpret_cast<PtrType*>(AlignUp(reinterpret_cast<uintptr_t>(val), static_cast<uintptr_t>(alignment)));
 }
 
 template <typename T1, typename T2>

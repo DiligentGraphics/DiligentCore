@@ -109,7 +109,7 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(VkDeviceSize SizeInBytes, VkDe
     }
     else
     {
-        auto AlignmentOffset = Align(m_CurrPage.CurrOffset, Alignment) - m_CurrPage.CurrOffset;
+        auto AlignmentOffset = AlignUp(m_CurrPage.CurrOffset, Alignment) - m_CurrPage.CurrOffset;
         if (m_CurrPage.AvailableSize < SizeInBytes + AlignmentOffset)
         {
             // Allocate new page

@@ -90,7 +90,7 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
     VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
     m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT);
 
-    m_MemoryAlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
+    m_MemoryAlignedOffset = AlignUp(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
     VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_MemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
     auto Memory = m_MemoryAllocation.Page->GetVkMemory();
     auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_MemoryAlignedOffset);

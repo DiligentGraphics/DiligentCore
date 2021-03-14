@@ -597,7 +597,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     VERIFY(NumShaderStageInputs <= MaxOffset, "Max offset exceeded");
     m_NumShaderStageInputs = static_cast<OffsetType>(NumShaderStageInputs);
 
-    auto AlignedResourceNamesPoolSize = Align(ResourceNamesPoolSize, sizeof(void*));
+    auto AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
 
     static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)");
     // clang-format off

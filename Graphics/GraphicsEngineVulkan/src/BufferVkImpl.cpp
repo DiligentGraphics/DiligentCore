@@ -261,7 +261,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
         m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, AllocateFlags);
 
-        m_BufferMemoryAlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
+        m_BufferMemoryAlignedOffset = AlignUp(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
         VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_BufferMemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
         auto Memory = m_MemoryAllocation.Page->GetVkMemory();
         auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_BufferMemoryAlignedOffset);
@@ -312,7 +312,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 // to the host (10.2)
                 auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
                 auto StagingBufferMemory     = StagingMemoryAllocation.Page->GetVkMemory();
-                auto AlignedStagingMemOffset = Align(VkDeviceSize{StagingMemoryAllocation.UnalignedOffset}, StagingBufferMemReqs.alignment);
+                auto AlignedStagingMemOffset = AlignUp(VkDeviceSize{StagingMemoryAllocation.UnalignedOffset}, StagingBufferMemReqs.alignment);
                 VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
 
                 auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());

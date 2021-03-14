@@ -234,7 +234,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
         auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(SizeInBytes, Alignment);
         if (MasterBlock.IsValid())
         {
-            AlignedOffset = Align(MasterBlock.UnalignedOffset, size_t{Alignment});
+            AlignedOffset = AlignUp(MasterBlock.UnalignedOffset, size_t{Alignment});
             AlignedSize   = MasterBlock.Size;
             VERIFY_EXPR(MasterBlock.Size >= SizeInBytes + (AlignedOffset - MasterBlock.UnalignedOffset));
             m_CurrAllocatedSize += static_cast<Uint32>(MasterBlock.Size);
@@ -243,7 +243,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
     }
     else
     {
-        if (m_CurrOffset == InvalidOffset || SizeInBytes + (Align(m_CurrOffset, size_t{Alignment}) - m_CurrOffset) > m_AvailableSize)
+        if (m_CurrOffset == InvalidOffset || SizeInBytes + (AlignUp(m_CurrOffset, size_t{Alignment}) - m_CurrOffset) > m_AvailableSize)
         {
             auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(m_MasterBlockSize, 0);
             if (MasterBlock.IsValid())
@@ -257,7 +257,7 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
 
         if (m_CurrOffset != InvalidOffset)
         {
-            AlignedOffset = Align(m_CurrOffset, size_t{Alignment});
+            AlignedOffset = AlignUp(m_CurrOffset, size_t{Alignment});
             AlignedSize   = SizeInBytes + (AlignedOffset - m_CurrOffset);
             if (AlignedSize <= m_AvailableSize)
             {

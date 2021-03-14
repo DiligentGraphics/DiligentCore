@@ -190,7 +190,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
         m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
-        auto AlignedOffset = Align(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
+        auto AlignedOffset = AlignUp(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);
         VERIFY_EXPR(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset));
         auto Memory = m_MemoryAllocation.Page->GetVkMemory();
         auto err    = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
@@ -304,7 +304,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             // to the host (10.2)
             auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             auto StagingBufferMemory     = StagingMemoryAllocation.Page->GetVkMemory();
-            auto AlignedStagingMemOffset = Align(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
+            auto AlignedStagingMemOffset = AlignUp(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
             VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
 
             auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
@@ -426,7 +426,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             // which requires the ranges to be aligned by nonCoherentAtomSize.
             const auto& DeviceLimits = pRenderDeviceVk->GetPhysicalDevice().GetProperties().limits;
             // Align the buffer size to ensure that any aligned range is always in bounds.
-            VkStagingBuffCI.size = Align(VkStagingBuffCI.size, DeviceLimits.nonCoherentAtomSize);
+            VkStagingBuffCI.size = AlignUp(VkStagingBuffCI.size, DeviceLimits.nonCoherentAtomSize);
         }
         else if (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
         {
@@ -454,7 +454,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         m_MemoryAllocation           = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, MemProperties);
         auto StagingBufferMemory     = m_MemoryAllocation.Page->GetVkMemory();
-        auto AlignedStagingMemOffset = Align(m_MemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
+        auto AlignedStagingMemOffset = AlignUp(m_MemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
         VERIFY_EXPR(m_MemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - m_MemoryAllocation.UnalignedOffset));
 
         auto err = LogicalDevice.BindBufferMemory(m_StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
@@ -787,7 +787,7 @@ void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Siz
     Offset += m_StagingDataAlignedOffset;
     auto AlignedOffset = AlignDown(Offset, PhysDeviceLimits.nonCoherentAtomSize);
     Size += Offset - AlignedOffset;
-    auto AlignedSize = Align(Size, PhysDeviceLimits.nonCoherentAtomSize);
+    auto AlignedSize = AlignUp(Size, PhysDeviceLimits.nonCoherentAtomSize);
 
     InvalidateRange.offset = AlignedOffset;
     InvalidateRange.size   = AlignedSize;

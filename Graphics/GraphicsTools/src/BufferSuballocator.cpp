@@ -176,7 +176,7 @@ public:
             while (!Subregion.IsValid())
             {
                 auto ExtraSize = m_ExpansionSize != 0 ?
-                    std::max(m_ExpansionSize, Align(Size, Alignment)) :
+                    std::max(m_ExpansionSize, AlignUp(Size, Alignment)) :
                     m_Mgr.GetMaxSize();
 
                 m_Mgr.Extend(ExtraSize);
@@ -189,7 +189,7 @@ public:
             NEW_RC_OBJ(m_SuballocationsAllocator, "BufferSuballocationImpl instance", BufferSuballocationImpl)
             (
                 this, 
-                Align(static_cast<Uint32>(Subregion.UnalignedOffset), Alignment),
+                AlignUp(static_cast<Uint32>(Subregion.UnalignedOffset), Alignment),
                 Size,
                 std::move(Subregion)
             )

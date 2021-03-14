@@ -107,7 +107,7 @@ VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSiz
     {
         // Offset may not necessarily be aligned, but the allocation is guaranteed to be large enough
         // to accomodate requested alignment
-        VERIFY_EXPR(Diligent::Align(VkDeviceSize{Allocation.UnalignedOffset}, alignment) - Allocation.UnalignedOffset + size <= Allocation.Size);
+        VERIFY_EXPR(Diligent::AlignUp(VkDeviceSize{Allocation.UnalignedOffset}, alignment) - Allocation.UnalignedOffset + size <= Allocation.Size);
         return VulkanMemoryAllocation{this, Allocation.UnalignedOffset, Allocation.Size};
     }
     else
@@ -201,7 +201,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
 
     if (Allocation.Page != nullptr)
     {
-        VERIFY_EXPR(Size + Diligent::Align(Allocation.UnalignedOffset, Alignment) - Allocation.UnalignedOffset <= Allocation.Size);
+        VERIFY_EXPR(Size + Diligent::AlignUp(Allocation.UnalignedOffset, Alignment) - Allocation.UnalignedOffset <= Allocation.Size);
     }
 
     m_CurrUsedSize[stat_ind].fetch_add(Allocation.Size);

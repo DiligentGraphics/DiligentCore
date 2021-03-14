@@ -90,7 +90,7 @@ public:
 
         for (auto& block : m_Blocks)
         {
-            auto* Ptr = Align(block.CurrPtr, align);
+            auto* Ptr = AlignUp(block.CurrPtr, align);
             if (Ptr + size <= block.Data + block.Size)
             {
                 block.CurrPtr = Ptr + size;
@@ -105,7 +105,7 @@ public:
         m_Blocks.emplace_back(m_pAllocator->Allocate(BlockSize, "dynamic linear allocator page", __FILE__, __LINE__), BlockSize);
 
         auto& block = m_Blocks.back();
-        auto* Ptr   = Align(block.Data, align);
+        auto* Ptr   = AlignUp(block.Data, align);
         VERIFY(Ptr + size <= block.Data + block.Size, "Not enough space in the new block - this is a bug");
         block.CurrPtr = Ptr + size;
         return Ptr;

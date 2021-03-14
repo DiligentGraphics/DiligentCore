@@ -124,7 +124,7 @@ public:
         }
         m_CurrAlignment = alignment;
 
-        size = Align(size, alignment);
+        size = AlignUp(size, alignment);
         m_ReservedSize += size;
 
 #if DILIGENT_DEBUG
@@ -163,11 +163,11 @@ public:
         VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
         VERIFY(m_pAllocator != nullptr, "Allocator must not be null");
         // Make sure the data size is at least sizeof(void*)-aligned
-        m_ReservedSize = Align(m_ReservedSize, sizeof(void*));
+        m_ReservedSize = AlignUp(m_ReservedSize, sizeof(void*));
         if (m_ReservedSize > 0)
         {
             m_pDataStart = reinterpret_cast<uint8_t*>(m_pAllocator->Allocate(m_ReservedSize, "Raw memory for linear allocator", __FILE__, __LINE__));
-            VERIFY(m_pDataStart == Align(m_pDataStart, sizeof(void*)), "Memory pointer must be at least sizeof(void*)-aligned");
+            VERIFY(m_pDataStart == AlignUp(m_pDataStart, sizeof(void*)), "Memory pointer must be at least sizeof(void*)-aligned");
 
             m_pCurrPtr = m_pDataStart;
         }
@@ -182,7 +182,7 @@ public:
         if (size == 0)
             return nullptr;
 
-        size = Align(size, alignment);
+        size = AlignUp(size, alignment);
 
 #if DILIGENT_DEBUG
         VERIFY(m_DbgCurrAllocation < m_DbgAllocations.size(), "Allocation number exceed the number of allocations that were originally reserved.");
@@ -191,8 +191,8 @@ public:
         VERIFY(CurrAllocation.alignment == alignment, "Allocation alignment (", alignment, ") does not match the initially requested alignment (", CurrAllocation.alignment, ")");
 #endif
 
-        VERIFY(Align(m_pCurrPtr, m_CurrAlignment) == m_pCurrPtr, "Current pointer is not aligned as expected");
-        m_pCurrPtr      = Align(m_pCurrPtr, alignment);
+        VERIFY(AlignUp(m_pCurrPtr, m_CurrAlignment) == m_pCurrPtr, "Current pointer is not aligned as expected");
+        m_pCurrPtr      = AlignUp(m_pCurrPtr, alignment);
         m_CurrAlignment = alignment;
 
         VERIFY(m_pCurrPtr + size <= m_pDataStart + CurrAllocation.reserved_size,

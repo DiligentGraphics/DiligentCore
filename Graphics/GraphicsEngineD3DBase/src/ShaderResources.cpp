@@ -85,7 +85,7 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
     m_AccelStructsOffset = AdvanceOffset(ResCounters.NumAccelStructs);
     m_TotalResources     = AdvanceOffset(0);
 
-    auto AlignedResourceNamesPoolSize = Align(ResourceNamesPoolSize, sizeof(void*));
+    auto AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
     auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + AlignedResourceNamesPoolSize * sizeof(char);
 
     VERIFY_EXPR(GetNumCBs()         == ResCounters.NumCBs);

@@ -443,7 +443,7 @@ public:
         const auto ShaderGroupBaseAlignment = this->m_pDevice->GetProperties().ShaderGroupBaseAlignment;
 
         const auto AlignToLarger = [ShaderGroupBaseAlignment](size_t offset) -> Uint32 {
-            return Align(static_cast<Uint32>(offset), ShaderGroupBaseAlignment);
+            return AlignUp(static_cast<Uint32>(offset), ShaderGroupBaseAlignment);
         };
 
         const Uint32 RayGenOffset          = 0;

@@ -34,6 +34,7 @@
 #include "ShaderResourceCacheCommon.hpp"
 #include "TextureBaseD3D11.hpp"
 #include "BufferD3D11Impl.hpp"
+#include "BufferViewD3D11Impl.hpp"
 #include "SamplerD3D11Impl.hpp"
 #include "PipelineResourceAttribsD3D11.hpp"
 
