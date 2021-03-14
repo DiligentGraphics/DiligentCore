@@ -43,15 +43,17 @@ struct CommandListDesc : public DeviceObjectAttribs
 
 /// Template class implementing base functionality of the command list object.
 
-/// \tparam BaseInterface - Base interface that this class will inheret
-///                         (Diligent::ICommandListD3D11, Diligent::ICommandListD3D12 or Diligent::ICommandListVk).
-/// \tparam RenderDeviceImplType - Type of the render device implementation
-///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
-///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
-class CommandListBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, CommandListDesc>
+/// \tparam EngineImplTraits - Engine implementation type traits.
+template <typename EngineImplTraits>
+class CommandListBase : public DeviceObjectBase<typename EngineImplTraits::CommandListInterface, typename EngineImplTraits::RenderDeviceImplType, CommandListDesc>
 {
 public:
+    // Base interface that this class inherits (ICommandList).
+    using BaseInterface = typename EngineImplTraits::CommandListInterface;
+
+    // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, CommandListDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this command list.

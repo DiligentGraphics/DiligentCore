@@ -43,6 +43,7 @@
 #include "QueryD3D12.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
+#include "CommandList.h"
 #include "BottomLevelASD3D12.h"
 #include "TopLevelASD3D12.h"
 #include "ShaderBindingTableD3D12.h"
@@ -67,6 +68,7 @@ class FenceD3D12Impl;
 class QueryD3D12Impl;
 class RenderPassD3D12Impl;
 class FramebufferD3D12Impl;
+class CommandListD3D12Impl;
 class BottomLevelASD3D12Impl;
 class TopLevelASD3D12Impl;
 class ShaderBindingTableD3D12Impl;
@@ -93,6 +95,7 @@ struct EngineD3D12ImplTraits
     using QueryInterface                     = IQueryD3D12;
     using RenderPassInterface                = IRenderPass;
     using FramebufferInterface               = IFramebuffer;
+    using CommandListInterface               = ICommandList;
     using BottomLevelASInterface             = IBottomLevelASD3D12;
     using TopLevelASInterface                = ITopLevelASD3D12;
     using ShaderBindingTableInterface        = IShaderBindingTableD3D12;
@@ -113,6 +116,7 @@ struct EngineD3D12ImplTraits
     using QueryImplType                     = QueryD3D12Impl;
     using RenderPassImplType                = RenderPassD3D12Impl;
     using FramebufferImplType               = FramebufferD3D12Impl;
+    using CommandListImplType               = CommandListD3D12Impl;
     using BottomLevelASImplType             = BottomLevelASD3D12Impl;
     using TopLevelASImplType                = TopLevelASD3D12Impl;
     using ShaderBindingTableImplType        = ShaderBindingTableD3D12Impl;

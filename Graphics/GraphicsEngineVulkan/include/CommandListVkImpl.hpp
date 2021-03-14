@@ -33,16 +33,15 @@
 #include "EngineVkImplTraits.hpp"
 #include "VulkanUtilities/VulkanHeaders.h"
 #include "CommandListBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {
 
 /// Command list implementation in Vulkan backend.
-class CommandListVkImpl final : public CommandListBase<ICommandList, RenderDeviceVkImpl>
+class CommandListVkImpl final : public CommandListBase<EngineVkImplTraits>
 {
 public:
-    using TCommandListBase = CommandListBase<ICommandList, RenderDeviceVkImpl>;
+    using TCommandListBase = CommandListBase<EngineVkImplTraits>;
 
     CommandListVkImpl(IReferenceCounters* pRefCounters,
                       RenderDeviceVkImpl* pDevice,

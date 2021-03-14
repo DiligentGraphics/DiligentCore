@@ -30,20 +30,17 @@
 /// \file
 /// Declaration of Diligent::CommandListD3D11Impl class
 
-#include "RenderDeviceD3D11.h"
+#include "EngineD3D11ImplTraits.hpp"
 #include "CommandListBase.hpp"
-#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
 /// Command list implementation in Direct3D11 backend.
-class CommandListD3D11Impl final : public CommandListBase<ICommandList, RenderDeviceD3D11Impl>
+class CommandListD3D11Impl final : public CommandListBase<EngineD3D11ImplTraits>
 {
 public:
-    using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D11Impl>;
+    using TCommandListBase = CommandListBase<EngineD3D11ImplTraits>;
 
     CommandListD3D11Impl(IReferenceCounters*    pRefCounters,
                          RenderDeviceD3D11Impl* pDevice,

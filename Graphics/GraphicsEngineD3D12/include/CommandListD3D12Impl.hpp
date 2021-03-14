@@ -30,19 +30,17 @@
 /// \file
 /// Declaration of Diligent::CommandListD3D12Impl class
 
+#include "EngineD3D12ImplTraits.hpp"
 #include "CommandListBase.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
 
-class DeviceContextD3D12Impl;
-
 /// Command list implementation in Direct3D12 backend.
-class CommandListD3D12Impl final : public CommandListBase<ICommandList, RenderDeviceD3D12Impl>
+class CommandListD3D12Impl final : public CommandListBase<EngineD3D12ImplTraits>
 {
 public:
-    using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D12Impl>;
+    using TCommandListBase = CommandListBase<EngineD3D12ImplTraits>;
 
     CommandListD3D12Impl(IReferenceCounters*                           pRefCounters,
                          RenderDeviceD3D12Impl*                        pDevice,

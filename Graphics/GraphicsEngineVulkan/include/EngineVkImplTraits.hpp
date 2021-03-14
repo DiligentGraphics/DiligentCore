@@ -43,6 +43,7 @@
 #include "QueryVk.h"
 #include "RenderPassVk.h"
 #include "FramebufferVk.h"
+#include "CommandList.h"
 #include "BottomLevelASVk.h"
 #include "TopLevelASVk.h"
 #include "ShaderBindingTableVk.h"
@@ -67,6 +68,7 @@ class FenceVkImpl;
 class QueryVkImpl;
 class RenderPassVkImpl;
 class FramebufferVkImpl;
+class CommandListVkImpl;
 class BottomLevelASVkImpl;
 class TopLevelASVkImpl;
 class ShaderBindingTableVkImpl;
@@ -93,6 +95,7 @@ struct EngineVkImplTraits
     using QueryInterface                     = IQueryVk;
     using RenderPassInterface                = IRenderPassVk;
     using FramebufferInterface               = IFramebufferVk;
+    using CommandListInterface               = ICommandList;
     using BottomLevelASInterface             = IBottomLevelASVk;
     using TopLevelASInterface                = ITopLevelASVk;
     using ShaderBindingTableInterface        = IShaderBindingTableVk;
@@ -113,6 +116,7 @@ struct EngineVkImplTraits
     using QueryImplType                     = QueryVkImpl;
     using RenderPassImplType                = RenderPassVkImpl;
     using FramebufferImplType               = FramebufferVkImpl;
+    using CommandListImplType               = CommandListVkImpl;
     using BottomLevelASImplType             = BottomLevelASVkImpl;
     using TopLevelASImplType                = TopLevelASVkImpl;
     using ShaderBindingTableImplType        = ShaderBindingTableVkImpl;

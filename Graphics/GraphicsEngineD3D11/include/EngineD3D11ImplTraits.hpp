@@ -43,6 +43,7 @@
 #include "QueryD3D11.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
+#include "CommandList.h"
 #include "PipelineResourceSignature.h"
 #include "DeviceContextD3D11.h"
 
@@ -63,6 +64,7 @@ class FenceD3D11Impl;
 class QueryD3D11Impl;
 class RenderPassD3D11Impl;
 class FramebufferD3D11Impl;
+class CommandListD3D11Impl;
 class BottomLevelASD3D11Impl;
 class TopLevelASD3D11Impl;
 class ShaderBindingTableD3D11Impl;
@@ -89,6 +91,7 @@ struct EngineD3D11ImplTraits
     using QueryInterface                     = IQueryD3D11;
     using RenderPassInterface                = IRenderPass;
     using FramebufferInterface               = IFramebuffer;
+    using CommandListInterface               = ICommandList;
     using PipelineResourceSignatureInterface = IPipelineResourceSignature;
 
     using RenderDeviceImplType              = RenderDeviceD3D11Impl;
@@ -105,6 +108,7 @@ struct EngineD3D11ImplTraits
     using QueryImplType                     = QueryD3D11Impl;
     using RenderPassImplType                = RenderPassD3D11Impl;
     using FramebufferImplType               = FramebufferD3D11Impl;
+    using CommandListImplType               = CommandListD3D11Impl;
     using BottomLevelASImplType             = BottomLevelASD3D11Impl;
     using TopLevelASImplType                = TopLevelASD3D11Impl;
     using ShaderBindingTableImplType        = ShaderBindingTableD3D11Impl;
