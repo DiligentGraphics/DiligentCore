@@ -725,13 +725,12 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
         else
             DxilArgs.push_back(L"-Od"); // TODO: something goes wrong if optimization is enabled
 #endif
+        DEV_CHECK_ERR((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ENABLE_INLINE_RAY_TRACING) == 0 ||
+                          (ShaderModel.Major > 6 || (ShaderModel.Major == 6 && ShaderModel.Minor >= 5)),
+                      "Inline ray tracing requires Shader Model 6.5 and above");
     }
     else if (m_Target == DXCompilerTarget::Vulkan)
     {
-        const Uint32 RayTracingStages =
-            SHADER_TYPE_RAY_GEN | SHADER_TYPE_RAY_MISS | SHADER_TYPE_RAY_CLOSEST_HIT |
-            SHADER_TYPE_RAY_ANY_HIT | SHADER_TYPE_RAY_INTERSECTION | SHADER_TYPE_CALLABLE;
-
         DxilArgs.assign(
             {
                 L"-spirv",
@@ -740,9 +739,10 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
                 L"-O3", // Optimization level 3
             });
 
-        if (ShaderCI.Desc.ShaderType & RayTracingStages)
+        if ((ShaderCI.Desc.ShaderType & SHADER_TYPE_ALL_RAY_TRACING) != 0 ||
+            (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ENABLE_INLINE_RAY_TRACING) != 0)
         {
-            DxilArgs.push_back(L"-fspv-target-env=vulkan1.2"); // required for SPV_KHR_ray_tracing
+            DxilArgs.push_back(L"-fspv-target-env=vulkan1.2"); // required for SPV_KHR_ray_tracing and SPV_KHR_ray_query
         }
     }
     else

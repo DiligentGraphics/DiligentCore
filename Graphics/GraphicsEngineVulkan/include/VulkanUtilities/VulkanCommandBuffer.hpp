@@ -670,6 +670,22 @@ public:
 #endif
     }
 
+    __forceinline void TraceRaysIndirect(const VkStridedDeviceAddressRegionKHR& RaygenShaderBindingTable,
+                                         const VkStridedDeviceAddressRegionKHR& MissShaderBindingTable,
+                                         const VkStridedDeviceAddressRegionKHR& HitShaderBindingTable,
+                                         const VkStridedDeviceAddressRegionKHR& CallableShaderBindingTable,
+                                         VkDeviceAddress                        indirectDeviceAddress)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RayTracingPipeline != VK_NULL_HANDLE, "No ray tracing pipeline bound");
+
+        vkCmdTraceRaysIndirectKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, indirectDeviceAddress);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
+#endif
+    }
+
     void FlushBarriers();
 
     __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)

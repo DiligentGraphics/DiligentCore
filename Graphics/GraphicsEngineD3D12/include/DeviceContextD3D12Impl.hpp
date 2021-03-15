@@ -276,6 +276,9 @@ public:
     /// Implementation of IDeviceContext::TraceRays() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
+    /// Implementation of IDeviceContext::TraceRaysIndirect() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+
     /// Implementation of IDeviceContextD3D12::ID3D12GraphicsCommandList() in Direct3D12 backend.
     virtual ID3D12GraphicsCommandList* DILIGENT_CALL_TYPE GetD3D12CommandList() override final;
 
@@ -373,11 +376,12 @@ private:
     __forceinline void PrepareForDispatchCompute(ComputeContext& GraphCtx);
     __forceinline void PrepareForDispatchRays(GraphicsContext& GraphCtx);
 
-    __forceinline void PrepareDrawIndirectBuffer(GraphicsContext&               GraphCtx,
-                                                 IBuffer*                       pAttribsBuffer,
-                                                 RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
-                                                 ID3D12Resource*&               pd3d12ArgsBuff,
-                                                 Uint64&                        BuffDataStartByteOffset);
+    __forceinline void PrepareIndirectBuffer(GraphicsContext&               GraphCtx,
+                                             IBuffer*                       pAttribsBuffer,
+                                             RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
+                                             ID3D12Resource*&               pd3d12ArgsBuff,
+                                             Uint64&                        BuffDataStartByteOffset,
+                                             const char*                    OpName);
 
     struct RootTableInfo
     {
@@ -458,6 +462,7 @@ private:
     CComPtr<ID3D12CommandSignature> m_pDrawIndexedIndirectSignature;
     CComPtr<ID3D12CommandSignature> m_pDispatchIndirectSignature;
     CComPtr<ID3D12CommandSignature> m_pDrawMeshIndirectSignature;
+    CComPtr<ID3D12CommandSignature> m_pTraceRaysIndirectSignature;
 
     D3D12DynamicHeap m_DynamicHeap;
 

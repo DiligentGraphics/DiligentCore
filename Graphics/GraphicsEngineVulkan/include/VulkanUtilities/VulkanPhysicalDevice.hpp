@@ -45,6 +45,7 @@ public:
         VkPhysicalDeviceShaderFloat16Int8FeaturesKHR     ShaderFloat16Int8   = {};
         VkPhysicalDeviceAccelerationStructureFeaturesKHR AccelStruct         = {};
         VkPhysicalDeviceRayTracingPipelineFeaturesKHR    RayTracingPipeline  = {};
+        VkPhysicalDeviceRayQueryFeaturesKHR              RayQuery            = {};
         bool                                             Spirv14             = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
         bool                                             Spirv15             = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
         VkPhysicalDeviceBufferDeviceAddressFeaturesKHR   BufferDeviceAddress = {};

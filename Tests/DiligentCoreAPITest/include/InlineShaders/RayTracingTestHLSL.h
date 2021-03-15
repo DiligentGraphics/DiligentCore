@@ -50,7 +50,7 @@ RWTexture2D<float4>             g_ColorBuffer : register(u0);
 [shader("raygeneration")]
 void main()
 {
-    const float2 uv = float2(DispatchRaysIndex().xy) / float2(DispatchRaysDimensions().xy - 1);
+    const float2 uv = float2(DispatchRaysIndex().xy + 0.5) / float2(DispatchRaysDimensions().xy);
 
     RayDesc ray;
     ray.Origin    = float3(uv.x, 1.0 - uv.y, -1.0);
@@ -102,7 +102,7 @@ RWTexture2D<float4>             g_ColorBuffer : register(u0);
 [shader("raygeneration")]
 void main()
 {
-    const float2 uv = float2(DispatchRaysIndex().xy) / float2(DispatchRaysDimensions().xy - 1);
+    const float2 uv = float2(DispatchRaysIndex().xy + 0.5) / float2(DispatchRaysDimensions().xy);
 
     RayDesc ray;
     ray.Origin    = float3(uv.x, 1.0 - uv.y, -1.0);
@@ -166,7 +166,7 @@ RWTexture2D<float4>             g_ColorBuffer : register(u0);
 [shader("raygeneration")]
 void main()
 {
-    const float2 uv = float2(DispatchRaysIndex().xy) / float2(DispatchRaysDimensions().xy - 1);
+    const float2 uv = float2(DispatchRaysIndex().xy + 0.5) / float2(DispatchRaysDimensions().xy);
 
     RayDesc ray;
     ray.Origin    = float3(uv.x, 1.0 - uv.y, 0.0);
@@ -251,7 +251,7 @@ RWTexture2D<float4>             g_ColorBuffer : register(u0);
 [shader("raygeneration")]
 void main()
 {
-    const float2 uv = float2(DispatchRaysIndex().xy) / float2(DispatchRaysDimensions().xy - 1);
+    const float2 uv = float2(DispatchRaysIndex().xy + 0.5) / float2(DispatchRaysDimensions().xy);
 
     RayDesc ray;
     ray.Origin    = float3(uv.x, 1.0 - uv.y, -1.0);
@@ -349,7 +349,7 @@ RWTexture2D<float4>             g_ColorBuffer;
 [shader("raygeneration")]
 void main()
 {
-    const float2 uv = float2(DispatchRaysIndex().xy) / float2(DispatchRaysDimensions().xy - 1);
+    const float2 uv = float2(DispatchRaysIndex().xy + 0.5) / float2(DispatchRaysDimensions().xy);
 
     RayDesc ray;
     ray.Origin    = float3(uv.x, 1.0 - uv.y, -1.0);
@@ -427,6 +427,127 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
 )hlsl";
 // clang-format on
 
+
+// clang-format off
+const std::string RayTracingTest6_RG{R"hlsl(
+RaytracingAccelerationStructure g_TLAS;
+RWTexture2D<float4>             g_ColorBuffer;
+
+float4 HitShader(float2 attrBarycentrics)
+{
+    float3 barycentrics = float3(1.0 - attrBarycentrics.x - attrBarycentrics.y, attrBarycentrics.x, attrBarycentrics.y);
+    return float4(barycentrics, 1.0);
+}
+
+float4 MissShader()
+{
+    return float4(1.0, 0.0, 0.0, 1.0);
+}
+
+[shader("raygeneration")]
+void main()
+{
+    const float2 uv = float2(DispatchRaysIndex().xy + 0.5) / float2(DispatchRaysDimensions().xy);
+
+    RayDesc ray;
+    ray.Origin    = float3(uv.x, 1.0 - uv.y, -1.0);
+    ray.Direction = float3(0.0, 0.0, 1.0);
+    ray.TMin      = 0.01;
+    ray.TMax      = 10.0;
+
+    RayQuery<RAY_FLAG_NONE> q;
+
+    q.TraceRayInline(g_TLAS,         // Acceleration Structure
+                     RAY_FLAG_NONE,  // Ray Flags
+                     ~0,             // Instance Inclusion Mask
+                     ray);
+
+    q.Proceed();
+
+    float4 Color;
+    if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+    {
+        Color = HitShader(q.CommittedTriangleBarycentrics());
+    }
+    else
+    {
+        Color = MissShader();
+    }
+    g_ColorBuffer[DispatchRaysIndex().xy] = Color;
+}
+)hlsl"};
+// clang-format on
+
+
+// clang-format offstruct PSInput
+const std::string RayTracingTest7_VS{R"hlsl(
+struct PSInput
+{ 
+    float4 Pos : SV_POSITION; 
+    float2 UV  : TEX_COORD; 
+};
+
+void main(in uint vid : SV_VertexID,
+          out PSInput PSIn) 
+{
+    PSIn.UV  = float2(vid & 1, vid >> 1);
+    PSIn.Pos = float4(PSIn.UV * 2.0 - 1.0, 0.0, 1.0);
+}
+)hlsl"};
+
+const std::string RayTracingTest7_PS{R"hlsl(
+struct PSInput 
+{ 
+    float4 Pos : SV_POSITION; 
+    float2 UV  : TEX_COORD; 
+};
+
+RaytracingAccelerationStructure g_TLAS;
+RWTexture2D<float4>             g_ColorBuffer;
+
+float4 HitShader(float2 attrBarycentrics)
+{
+    float3 barycentrics = float3(1.0 - attrBarycentrics.x - attrBarycentrics.y, attrBarycentrics.x, attrBarycentrics.y);
+    return float4(barycentrics, 1.0);
+}
+
+float4 MissShader()
+{
+    return float4(1.0, 0.0, 0.0, 1.0);
+}
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    const float2 uv = PSIn.UV;
+
+    RayDesc ray;
+    ray.Origin    = float3(uv.x, uv.y, -1.0);
+    ray.Direction = float3(0.0, 0.0, 1.0);
+    ray.TMin      = 0.01;
+    ray.TMax      = 10.0;
+
+    RayQuery<RAY_FLAG_NONE> q;
+
+    q.TraceRayInline(g_TLAS,         // Acceleration Structure
+                     RAY_FLAG_NONE,  // Ray Flags
+                     ~0,             // Instance Inclusion Mask
+                     ray);
+
+    q.Proceed();
+
+    float4 Color;
+    if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+    {
+        Color = HitShader(q.CommittedTriangleBarycentrics());
+    }
+    else
+    {
+        Color = MissShader();
+    }
+    return Color;
+}
+)hlsl"};
+// clang-format on
 
 } // namespace HLSL
 

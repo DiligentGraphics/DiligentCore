@@ -252,6 +252,10 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
     /// Enable unbounded resource arrays (e.g. Texture2D g_Texture[]).
     SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS = 0x01,
 
+    /// Enable inline ray tracing for graphics and compute shaders.
+    /// Requires RayTracing2 device feature.
+    SHADER_COMPILE_FLAG_ENABLE_INLINE_RAY_TRACING = 0x02,
+
     SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_COMPILE_FLAGS);

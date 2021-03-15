@@ -72,6 +72,7 @@ bool VerifyCopyTLASAttribs(const CopyTLASAttribs& Attribs);
 bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteBLASCompactedSizeAttribs& Attribs);
 bool VerifyWriteTLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteTLASCompactedSizeAttribs& Attribs);
 bool VerifyTraceRaysAttribs(const TraceRaysAttribs& Attribs);
+bool VerifyTraceRaysIndirectAttribs(const IRenderDevice* pDevice, const TraceRaysIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer, Uint32 SBTSize);
 
 
 
@@ -332,6 +333,10 @@ protected:
     bool WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const;
     bool WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const;
     bool TraceRays(const TraceRaysAttribs& Attribs, int) const;
+    bool TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
+
+    static constexpr Uint32 TraceRaysIndirectCommandSBTSize = 88; // D3D12: 88 bytes, size of SBT offsets
+                                                                  // Vulkan: 0 bytes, SBT offsets placed directly into function call
 
     /// Strong reference to the device.
     RefCntAutoPtr<DeviceImplType> m_pDevice;
@@ -1667,6 +1672,47 @@ bool DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
     return true;
 }
 
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const
+{
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing2 != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect: indirect trace rays is not supported by this device");
+        return false;
+    }
+
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (!m_pPipelineState->GetDesc().IsRayTracingPipeline())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a ray tracing pipeline.");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect must be performed outside of render pass");
+        return false;
+    }
+
+    if (!VerifyTraceRaysIndirectAttribs(m_pDevice, Attribs, pAttribsBuffer, TraceRaysIndirectCommandSBTSize))
+        return false;
+
+    if (!PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)))
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
+                          "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
+        return false;
+    }
+#endif
+
+    return true;
+}
 
 
 

@@ -138,7 +138,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
     try
     {
         Uint32 Version = VK_API_VERSION_1_0;
-        if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
+        if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED || EngineCI.Features.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
             Version = VK_API_VERSION_1_2;
 
         auto Instance = VulkanUtilities::VulkanInstance::Create(
@@ -280,8 +280,18 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
         const auto& DescrIndexingFeats = DeviceExtFeatures.DescriptorIndexing;
         ENABLE_FEATURE(DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE, ShaderResourceRuntimeArray, "Shader resource runtime array is");
-
-        ENABLE_FEATURE(DeviceExtFeatures.AccelStruct.accelerationStructure != VK_FALSE && DeviceExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE, RayTracing, "Ray tracing is");
+        const auto& AccelStructFeats = DeviceExtFeatures.AccelStruct;
+        const auto& RayTracingFeats  = DeviceExtFeatures.RayTracingPipeline;
+        const auto& RayQueryFeats    = DeviceExtFeatures.RayQuery;
+        // clang-format off
+        ENABLE_FEATURE(AccelStructFeats.accelerationStructure != VK_FALSE &&
+                       RayTracingFeats.rayTracingPipeline     != VK_FALSE, RayTracing, "Ray tracing is");
+        ENABLE_FEATURE(AccelStructFeats.accelerationStructure              != VK_FALSE &&
+                       RayTracingFeats.rayTracingPipeline                  != VK_FALSE &&
+                       RayTracingFeats.rayTracingPipelineTraceRaysIndirect != VK_FALSE &&
+                       RayTracingFeats.rayTraversalPrimitiveCulling        != VK_FALSE &&
+                       RayQueryFeats.rayQuery                              != VK_FALSE, RayTracing2, "Inline ray tracing is");
+        // clang-format on
 #undef FeatureSupport
 
 
@@ -417,13 +427,13 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             }
 
             // Ray tracing
-            if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
+            if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED || EngineCI.Features.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
             {
                 // this extensions added to Vulkan 1.2 core
                 if (!DeviceExtFeatures.Spirv15)
                 {
                     DeviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME); // required for VK_KHR_spirv_1_4
-                    DeviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);             // required for VK_KHR_ray_tracing_pipeline
+                    DeviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);             // required for VK_KHR_ray_tracing_pipeline or VK_KHR_ray_query
                     EnabledExtFeats.Spirv14 = DeviceExtFeatures.Spirv14;
                     VERIFY_EXPR(DeviceExtFeatures.Spirv14);
                 }
@@ -439,14 +449,11 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
                 // disable unused features
                 EnabledExtFeats.AccelStruct.accelerationStructureCaptureReplay                    = false;
-                EnabledExtFeats.AccelStruct.accelerationStructureIndirectBuild                    = false;
                 EnabledExtFeats.AccelStruct.accelerationStructureHostCommands                     = false;
                 EnabledExtFeats.AccelStruct.descriptorBindingAccelerationStructureUpdateAfterBind = false;
 
                 EnabledExtFeats.RayTracingPipeline.rayTracingPipelineShaderGroupHandleCaptureReplay      = false;
                 EnabledExtFeats.RayTracingPipeline.rayTracingPipelineShaderGroupHandleCaptureReplayMixed = false;
-                EnabledExtFeats.RayTracingPipeline.rayTracingPipelineTraceRaysIndirect                   = false;
-                EnabledExtFeats.RayTracingPipeline.rayTraversalPrimitiveCulling                          = false; // for GLSL_EXT_ray_flags_primitive_culling
 
                 *NextExt = &EnabledExtFeats.AccelStruct;
                 NextExt  = &EnabledExtFeats.AccelStruct.pNext;
@@ -454,6 +461,23 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 NextExt  = &EnabledExtFeats.RayTracingPipeline.pNext;
                 *NextExt = &EnabledExtFeats.BufferDeviceAddress;
                 NextExt  = &EnabledExtFeats.BufferDeviceAddress.pNext;
+
+                // Inline ray tracing from any shader.
+                if (EngineCI.Features.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
+                {
+                    DeviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+
+                    EnabledExtFeats.RayQuery = RayQueryFeats;
+
+                    *NextExt = &EnabledExtFeats.RayQuery;
+                    NextExt  = &EnabledExtFeats.RayQuery.pNext;
+                }
+                else
+                {
+                    EnabledExtFeats.AccelStruct.accelerationStructureIndirectBuild         = false;
+                    EnabledExtFeats.RayTracingPipeline.rayTracingPipelineTraceRaysIndirect = false;
+                    EnabledExtFeats.RayTracingPipeline.rayTraversalPrimitiveCulling        = false; // for GLSL_EXT_ray_flags_primitive_culling
+                }
             }
 
             // make sure that last pNext is null
@@ -461,7 +485,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 33, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 34, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();

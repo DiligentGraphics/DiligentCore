@@ -1560,15 +1560,18 @@ struct DeviceFeatures
 
     /// Indicates if device supports geometry shaders
     DEVICE_FEATURE_STATE GeometryShaders               DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
-        
+
     /// Indicates if device supports tessellation
     DEVICE_FEATURE_STATE Tessellation                  DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
-        
+
     /// Indicates if device supports mesh and amplification shaders
     DEVICE_FEATURE_STATE MeshShaders                   DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
-    
+
     /// Indicates if device supports ray tracing shaders
     DEVICE_FEATURE_STATE RayTracing                    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports inline ray tracing and indirect commands
+    DEVICE_FEATURE_STATE RayTracing2                   DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports bindless resources
     DEVICE_FEATURE_STATE BindlessResources             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
@@ -1666,6 +1669,7 @@ struct DeviceFeatures
         Tessellation                      {State},
         MeshShaders                       {State},
         RayTracing                        {State},
+        RayTracing2                       {State},
         BindlessResources                 {State},
         OcclusionQueries                  {State},
         BinaryOcclusionQueries            {State},
@@ -1691,7 +1695,7 @@ struct DeviceFeatures
         ShaderResourceRuntimeArray        {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 33, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 34, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif

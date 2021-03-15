@@ -1237,6 +1237,29 @@ struct TraceRaysAttribs
 typedef struct TraceRaysAttribs TraceRaysAttribs;
 
 
+/// This structure is used by IDeviceContext::TraceRaysIndirect().
+struct TraceRaysIndirectAttribs
+{
+    /// Shader binding table.
+    IShaderBindingTable* pSBT        DEFAULT_INITIALIZER(nullptr);
+
+    /// State transition mode for indirect trace rays attributes buffer.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// The offset from the beginning of the buffer to the trace rays command arguments.
+    Uint32  ArgsByteOffset    DEFAULT_INITIALIZER(0);
+
+    /// For Direct3D12 backend size must be 104 bytes,
+    /// for Vulkan backend size must be 12 bytes (only uint3) or 104 bytes for D3D12 compatibility.
+    Uint32  ArgsByteSize      DEFAULT_INITIALIZER(104);
+
+#if DILIGENT_CPP_INTERFACE
+    TraceRaysIndirectAttribs() noexcept {}
+#endif
+};
+typedef struct TraceRaysIndirectAttribs TraceRaysIndirectAttribs;
+
+
 static const Uint32 REMAINING_MIP_LEVELS   = ~0u;
 static const Uint32 REMAINING_ARRAY_SLICES = ~0u;
 
@@ -2202,6 +2225,19 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           to the shader binding table passed as an argument to the function.
     VIRTUAL void METHOD(TraceRays)(THIS_
                                    const TraceRaysAttribs REF Attribs) PURE;
+    
+
+    /// Executes an indirect trace rays command.
+    ///
+    /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect trace rays attributes.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                 [88 bytes reserved] - for Direct3D12 backend
+    ///                                 Uint32 DimensionX;
+    ///                                 Uint32 DimensionY;
+    ///                                 Uint32 DimensionZ;
+    VIRTUAL void METHOD(TraceRaysIndirect)(THIS_
+                                           const TraceRaysIndirectAttribs REF Attribs,
+                                           IBuffer*                           pAttribsBuffer) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -2260,6 +2296,7 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_WriteBLASCompactedSize(This, ...)    CALL_IFACE_METHOD(DeviceContext, WriteBLASCompactedSize,    This, __VA_ARGS__)
 #    define IDeviceContext_WriteTLASCompactedSize(This, ...)    CALL_IFACE_METHOD(DeviceContext, WriteTLASCompactedSize,    This, __VA_ARGS__)
 #    define IDeviceContext_TraceRays(This, ...)                 CALL_IFACE_METHOD(DeviceContext, TraceRays,                 This, __VA_ARGS__)
+#    define IDeviceContext_TraceRaysIndirect(This, ...)         CALL_IFACE_METHOD(DeviceContext, TraceRaysIndirect,         This, __VA_ARGS__)
 
 // clang-format on
 

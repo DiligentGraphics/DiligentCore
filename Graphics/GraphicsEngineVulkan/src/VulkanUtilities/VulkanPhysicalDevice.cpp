@@ -146,6 +146,15 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtProperties.RayTracingPipeline.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
         }
 
+        // Get inline ray tracing features.
+        if (IsExtensionSupported(VK_KHR_RAY_QUERY_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.RayQuery;
+            NextFeat  = &m_ExtFeatures.RayQuery.pNext;
+
+            m_ExtFeatures.RayQuery.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+        }
+
         // Additional extension that is required for ray tracing.
         if (IsExtensionSupported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
         {

@@ -46,7 +46,7 @@ layout(location=0) rayPayloadEXT vec4  payload;
 
 void main()
 {
-    const vec2 uv        = vec2(gl_LaunchIDEXT.xy) / vec2(gl_LaunchSizeEXT.xy - 1);
+    const vec2 uv        = vec2(gl_LaunchIDEXT.xy + 0.5) / vec2(gl_LaunchSizeEXT.xy);
     const vec3 origin    = vec3(uv.x, 1.0 - uv.y, -1.0);
     const vec3 direction = vec3(0.0, 0.0, 1.0);
 
@@ -113,7 +113,7 @@ layout(location=0) rayPayloadEXT vec4  payload;
 
 void main()
 {
-    const vec2 uv        = vec2(gl_LaunchIDEXT.xy) / vec2(gl_LaunchSizeEXT.xy - 1);
+    const vec2 uv        = vec2(gl_LaunchIDEXT.xy + 0.5) / vec2(gl_LaunchSizeEXT.xy);
     const vec3 origin    = vec3(uv.x, 1.0 - uv.y, -1.0);
     const vec3 direction = vec3(0.0, 0.0, 1.0);
 
@@ -199,7 +199,7 @@ layout(location=0) rayPayloadEXT vec4  payload;
 
 void main()
 {
-    const vec2 uv        = vec2(gl_LaunchIDEXT.xy) / vec2(gl_LaunchSizeEXT.xy - 1);
+    const vec2 uv        = vec2(gl_LaunchIDEXT.xy + 0.5) / vec2(gl_LaunchSizeEXT.xy);
     const vec3 origin    = vec3(uv.x, 1.0 - uv.y, 0.0);
     const vec3 direction = vec3(0.0, 0.0, 1.0);
 
@@ -294,7 +294,7 @@ layout(location=0) rayPayloadEXT vec4  payload;
 
 void main()
 {
-    const vec2 uv        = vec2(gl_LaunchIDEXT.xy) / vec2(gl_LaunchSizeEXT.xy - 1);
+    const vec2 uv        = vec2(gl_LaunchIDEXT.xy + 0.5) / vec2(gl_LaunchSizeEXT.xy);
     const vec3 origin    = vec3(uv.x, 1.0 - uv.y, -1.0);
     const vec3 direction = vec3(0.0, 0.0, 1.0);
 

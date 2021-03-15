@@ -1648,4 +1648,9 @@ void DeviceContextGLImpl::TraceRays(const TraceRaysAttribs& Attribs)
     UNSUPPORTED("TraceRays is not supported in OpenGL");
 }
 
+void DeviceContextGLImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+{
+    UNSUPPORTED("TraceRaysIndirect is not supported in OpenGL");
+}
+
 } // namespace Diligent

@@ -269,6 +269,9 @@ public:
     /// Implementation of IDeviceContext::TraceRays() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
+    /// Implementation of IDeviceContext::TraceRaysIndirect() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal texture state is used as old state.
@@ -451,7 +454,7 @@ private:
 
     __forceinline void          PrepareForDraw(DRAW_FLAGS Flags);
     __forceinline void          PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
-    __forceinline BufferVkImpl* PrepareIndirectDrawAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode);
+    __forceinline BufferVkImpl* PrepareIndirectAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode, const char* OpName);
     __forceinline void          PrepareForDispatchCompute();
     __forceinline void          PrepareForRayTracing();
 

@@ -792,7 +792,9 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #endif
 }
 
-BufferVkImpl* DeviceContextVkImpl::PrepareIndirectDrawAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode)
+BufferVkImpl* DeviceContextVkImpl::PrepareIndirectAttribsBuffer(IBuffer*                       pAttribsBuffer,
+                                                                RESOURCE_STATE_TRANSITION_MODE TransitonMode,
+                                                                const char*                    OpName)
 {
     DEV_CHECK_ERR(pAttribsBuffer, "Indirect draw attribs buffer must not be null");
     auto* pIndirectDrawAttribsVk = ValidatedCast<BufferVkImpl>(pAttribsBuffer);
@@ -804,7 +806,7 @@ BufferVkImpl* DeviceContextVkImpl::PrepareIndirectDrawAttribsBuffer(IBuffer* pAt
 
     // Buffer memory barries must be executed outside of render pass
     TransitionOrVerifyBufferState(*pIndirectDrawAttribsVk, TransitonMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
-                                  VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect draw (DeviceContextVkImpl::Draw)");
+                                  VK_ACCESS_INDIRECT_COMMAND_READ_BIT, OpName);
     return pIndirectDrawAttribsVk;
 }
 
@@ -852,7 +854,7 @@ void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuff
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
-    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectDrawAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode);
+    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, "Indirect draw (DeviceContextVkImpl::DrawIndirect)");
 
     PrepareForDraw(Attribs.Flags);
 
@@ -867,7 +869,7 @@ void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
-    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectDrawAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode);
+    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, "Indirect draw (DeviceContextVkImpl::DrawIndexedIndirect)");
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
@@ -893,7 +895,7 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
-    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectDrawAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode);
+    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, "Indirect draw (DeviceContextVkImpl::DrawMeshIndirect)");
 
     PrepareForDraw(Attribs.Flags);
 
@@ -3468,6 +3470,58 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
     PrepareForRayTracing();
     m_CommandBuffer.TraceRays(RaygenShaderBindingTable, MissShaderBindingTable, HitShaderBindingTable, CallableShaderBindingTable,
                               Attribs.DimensionX, Attribs.DimensionY, Attribs.DimensionZ);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextVkImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+{
+    if (!TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0))
+        return;
+
+    auto*    pSBTVk  = ValidatedCast<ShaderBindingTableVkImpl>(Attribs.pSBT);
+    IBuffer* pBuffer = nullptr;
+
+    ShaderBindingTableVkImpl::BindingTable RayGenShaderRecord  = {};
+    ShaderBindingTableVkImpl::BindingTable MissShaderTable     = {};
+    ShaderBindingTableVkImpl::BindingTable HitGroupTable       = {};
+    ShaderBindingTableVkImpl::BindingTable CallableShaderTable = {};
+
+    pSBTVk->GetData(pBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
+
+    const char* OpName             = "Trace rays indirect (DeviceContextVkImpl::TraceRaysIndirect)";
+    auto* const pSBTBufferVk       = ValidatedCast<BufferVkImpl>(pBuffer);
+    auto* const pIndirectAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, OpName);
+    const auto  IndirectBuffOffset = Attribs.ArgsByteOffset + (Attribs.ArgsByteSize == sizeof(Uint32) * 3 ? 0 : TraceRaysIndirectCommandSBTSize);
+
+    if (RayGenShaderRecord.pData || MissShaderTable.pData || HitGroupTable.pData || CallableShaderTable.pData)
+    {
+        TransitionOrVerifyBufferState(*pSBTBufferVk, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
+
+        // buffer ranges are not intersected, so we don't need to add barriers between them
+        if (RayGenShaderRecord.pData)
+            UpdateBuffer(pBuffer, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+        if (MissShaderTable.pData)
+            UpdateBuffer(pBuffer, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+        if (HitGroupTable.pData)
+            UpdateBuffer(pBuffer, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+        if (CallableShaderTable.pData)
+            UpdateBuffer(pBuffer, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    }
+    TransitionOrVerifyBufferState(*pSBTBufferVk, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
+
+    // clang-format off
+    VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {pSBTBufferVk->GetVkDeviceAddress() + RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
+    VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {pSBTBufferVk->GetVkDeviceAddress() + MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
+    VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {pSBTBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
+    VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {pSBTBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
+    // clang-format on
+
+    PrepareForRayTracing();
+    m_CommandBuffer.TraceRaysIndirect(RaygenShaderBindingTable, MissShaderBindingTable, HitShaderBindingTable, CallableShaderBindingTable,
+                                      pIndirectAttribsVk->GetVkDeviceAddress() + IndirectBuffOffset);
     ++m_State.NumCommands;
 }
 

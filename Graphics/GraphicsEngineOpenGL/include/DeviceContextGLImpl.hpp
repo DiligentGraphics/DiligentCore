@@ -261,6 +261,9 @@ public:
     /// Implementation of IDeviceContext::TraceRays() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
+    /// Implementation of IDeviceContext::TraceRaysIndirect() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 

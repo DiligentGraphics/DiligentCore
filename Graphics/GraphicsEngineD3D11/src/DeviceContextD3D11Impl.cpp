@@ -2292,6 +2292,11 @@ void DeviceContextD3D11Impl::TraceRays(const TraceRaysAttribs& Attribs)
     UNSUPPORTED("TraceRays is not supported in DirectX 11");
 }
 
+void DeviceContextD3D11Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+{
+    UNSUPPORTED("TraceRaysIndirect is not supported in DirectX 11");
+}
+
 // clang-format off
 #ifdef VERIFY_CONTEXT_BINDINGS
     DEFINE_D3D11CTX_FUNC_POINTERS(GetCBMethods,      GetConstantBuffers)
