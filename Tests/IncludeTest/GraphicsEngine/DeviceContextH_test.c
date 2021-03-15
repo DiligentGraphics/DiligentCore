@@ -41,4 +41,37 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     IDeviceContext_DrawIndexed(pCtx, &drawIndexedAttribs);
     IDeviceContext_DrawIndirect(pCtx, &drawIndirectAttribs, pIndirectBuffer);
     IDeviceContext_DrawIndexedIndirect(pCtx, &drawIndexedIndirectAttribs, pIndirectBuffer);
+
+    struct DrawMeshAttribs drawMeshAttribs = {0};
+    IDeviceContext_DrawMesh(pCtx, &drawMeshAttribs);
+
+    struct DrawMeshIndirectAttribs drawMeshIndirectAttribs = {0};
+    IDeviceContext_DrawMeshIndirect(pCtx, &drawMeshIndirectAttribs, pIndirectBuffer);
+
+    struct DrawMeshIndirectCountAttribs drawMeshIndirectCountAttribs = {0};
+    IDeviceContext_DrawMeshIndirectCount(pCtx, &drawMeshIndirectCountAttribs, pIndirectBuffer, pIndirectBuffer);
+
+    struct BuildBLASAttribs buildBLASAttribs = {0};
+    IDeviceContext_BuildBLAS(pCtx, &buildBLASAttribs);
+
+    struct BuildTLASAttribs buildTLASAttribs = {0};
+    IDeviceContext_BuildTLAS(pCtx, &buildTLASAttribs);
+
+    struct CopyBLASAttribs copyBLASAttribs = {0};
+    IDeviceContext_CopyBLAS(pCtx, &copyBLASAttribs);
+
+    struct CopyTLASAttribs copyTLASAttribs = {0};
+    IDeviceContext_CopyTLAS(pCtx, &copyTLASAttribs);
+
+    struct WriteBLASCompactedSizeAttribs writeBLASCompactedSizeAttribs = {0};
+    IDeviceContext_WriteBLASCompactedSize(pCtx, &writeBLASCompactedSizeAttribs);
+
+    struct WriteTLASCompactedSizeAttribs writeTLASCompactedSizeAttribs = {0};
+    IDeviceContext_WriteTLASCompactedSize(pCtx, &writeTLASCompactedSizeAttribs);
+
+    struct TraceRaysAttribs traceRaysAttribs = {0};
+    IDeviceContext_TraceRays(pCtx, &traceRaysAttribs);
+
+    struct TraceRaysIndirectAttribs traceRaysIndirectAttribs = {0};
+    IDeviceContext_TraceRaysIndirect(pCtx, &traceRaysIndirectAttribs, pIndirectBuffer);
 }

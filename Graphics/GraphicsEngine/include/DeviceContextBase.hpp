@@ -57,6 +57,7 @@ bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& 
 
 bool VerifyDrawMeshAttribs(Uint32 MaxDrawMeshTasksCount, const DrawMeshAttribs& Attribs);
 bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer);
+bool VerifyDrawMeshIndirectCountAttribs(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff, Uint32 IndirectCmdStride);
 
 bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttribs& ResolveAttribs,
                                             const TextureDesc&                      SrcTexDesc,
@@ -72,7 +73,10 @@ bool VerifyCopyTLASAttribs(const CopyTLASAttribs& Attribs);
 bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteBLASCompactedSizeAttribs& Attribs);
 bool VerifyWriteTLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteTLASCompactedSizeAttribs& Attribs);
 bool VerifyTraceRaysAttribs(const TraceRaysAttribs& Attribs);
-bool VerifyTraceRaysIndirectAttribs(const IRenderDevice* pDevice, const TraceRaysIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer, Uint32 SBTSize);
+bool VerifyTraceRaysIndirectAttribs(const IRenderDevice*            pDevice,
+                                    const TraceRaysIndirectAttribs& Attribs,
+                                    const IBuffer*                  pAttribsBuffer,
+                                    Uint32                          SBTSize);
 
 
 
@@ -290,12 +294,13 @@ protected:
 
 #ifdef DILIGENT_DEVELOPMENT
     // clang-format off
-    bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs) const;
-    bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs) const;
-    bool DvpVerifyDrawMeshArguments           (const DrawMeshAttribs&            Attribs) const;
-    bool DvpVerifyDrawIndirectArguments       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer) const;
-    bool DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
-    bool DvpVerifyDrawMeshIndirectArguments   (const DrawMeshIndirectAttribs&    Attribs, const IBuffer* pAttribsBuffer) const;
+    bool DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const;
+    bool DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs) const;
+    bool DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const;
+    bool DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer) const;
+    bool DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer) const;
+    bool DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const;
+    bool DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const;
 
     bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
     bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
@@ -307,12 +312,13 @@ protected:
     bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
     bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
 #else
-    bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const {return true;}
-    bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const {return true;}
-    bool DvpVerifyDrawMeshArguments           (const DrawMeshAttribs&            Attribs)const {return true;}
-    bool DvpVerifyDrawIndirectArguments       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer)const {return true;}
-    bool DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {return true;}
-    bool DvpVerifyDrawMeshIndirectArguments   (const DrawMeshIndirectAttribs&    Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+    bool DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {return true;}
+    bool DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs)const {return true;}
+    bool DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs)const {return true;}
+    bool DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+    bool DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+    bool DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+    bool DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const {return true;}
 
     bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {return true;}
     bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {return true;}
@@ -335,8 +341,10 @@ protected:
     bool TraceRays(const TraceRaysAttribs& Attribs, int) const;
     bool TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
 
-    static constexpr Uint32 TraceRaysIndirectCommandSBTSize = 88; // D3D12: 88 bytes, size of SBT offsets
-                                                                  // Vulkan: 0 bytes, SBT offsets placed directly into function call
+    static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(uint) * 3; // D3D12: 12 bytes (x, y, z dimension)
+                                                                              // Vulkan: 8 bytes (task count, first task)
+    static constexpr Uint32 TraceRaysIndirectCommandSBTSize = 88;             // D3D12: 88 bytes, size of SBT offsets
+                                                                              // Vulkan: 0 bytes, SBT offsets placed directly into function call
 
     /// Strong reference to the device.
     RefCntAutoPtr<DeviceImplType> m_pDevice;
@@ -1892,6 +1900,37 @@ inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectAr
     }
 
     return VerifyDrawMeshIndirectAttribs(Attribs, pAttribsBuffer);
+}
+
+template <typename ImplementationTraits>
+inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectCountArguments(
+    const DrawMeshIndirectCountAttribs& Attribs,
+    const IBuffer*                      pAttribsBuffer,
+    const IBuffer*                      pCountBuff) const
+{
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
+        return true;
+
+    if (m_pDevice->GetDeviceCaps().Features.MeshShaders != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("DrawMeshIndirectCount: mesh shaders are not supported by this device");
+        return false;
+    }
+
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("DrawMeshIndirectCount command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_MESH)
+    {
+        LOG_ERROR_MESSAGE("DrawMeshIndirectCount command arguments are invalid: pipeline state '",
+                          m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
+        return false;
+    }
+
+    return VerifyDrawMeshIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuff, DrawMeshIndirectCommandStride);
 }
 
 template <typename ImplementationTraits>

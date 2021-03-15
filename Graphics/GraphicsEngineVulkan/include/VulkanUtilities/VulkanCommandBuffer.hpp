@@ -164,6 +164,19 @@ public:
 #endif
     }
 
+    __forceinline void DrawMeshIndirectCount(VkBuffer Buffer, VkDeviceSize Offset, VkBuffer CountBuffer, VkDeviceSize CountBufferOffset, uint32_t MaxDrawCount, uint32_t Stride)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksIndirectCountNV() must be called inside render pass");
+        VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
+
+        vkCmdDrawMeshTasksIndirectCountNV(m_VkCmdBuffer, Buffer, Offset, CountBuffer, CountBufferOffset, MaxDrawCount, Stride);
+#else
+        UNSUPPORTED("DrawMeshIndirectCount is not supported when vulkan library is linked statically");
+#endif
+    }
+
     __forceinline void Dispatch(uint32_t GroupCountX, uint32_t GroupCountY, uint32_t GroupCountZ)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);

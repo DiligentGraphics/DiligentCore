@@ -903,6 +903,28 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
     ++m_State.NumCommands;
 }
 
+void DeviceContextVkImpl::DrawMeshIndirectCount(const DrawMeshIndirectCountAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
+{
+    if (!DvpVerifyDrawMeshIndirectCountArguments(Attribs, pAttribsBuffer, pCountBuffer))
+        return;
+
+    // We must prepare indirect draw attribs buffer first because state transitions must
+    // be performed outside of render pass, and PrepareForDraw commits render pass
+    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, "Indirect buffer (DeviceContextVkImpl::DrawMeshIndirectCount)");
+    BufferVkImpl* pCountBufferVk         = PrepareIndirectAttribsBuffer(pCountBuffer, Attribs.CountBufferStateTransitionMode, "Count buffer (DeviceContextVkImpl::DrawMeshIndirectCount)");
+
+    PrepareForDraw(Attribs.Flags);
+
+    m_CommandBuffer.DrawMeshIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
+                                          pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + Attribs.IndirectDrawArgsOffset,
+                                          pCountBufferVk->GetVkBuffer(),
+                                          pCountBufferVk->GetDynamicOffset(m_ContextId, this) + Attribs.CountBufferOffset,
+                                          Attribs.MaxCommandCount,
+                                          DrawMeshIndirectCommandStride);
+    ++m_State.NumCommands;
+}
+
+
 void DeviceContextVkImpl::PrepareForDispatchCompute()
 {
     EnsureVkCmdBuffer();

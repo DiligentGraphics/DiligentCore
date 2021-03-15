@@ -133,6 +133,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         IndirectArg.Type            = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
         hr                          = pd3d12Device->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDrawMeshIndirectSignature), reinterpret_cast<void**>(static_cast<ID3D12CommandSignature**>(&m_pDrawMeshIndirectSignature)));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create draw mesh indirect command signature");
+        VERIFY_EXPR(CmdSignatureDesc.ByteStride == DrawMeshIndirectCommandStride);
     }
 #endif
     if (pDeviceD3D12Impl->GetDeviceCaps().Features.RayTracing2 == DEVICE_FEATURE_STATE_ENABLED)
@@ -627,12 +628,12 @@ void DeviceContextD3D12Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     ++m_State.NumCommands;
 }
 
-void DeviceContextD3D12Impl::PrepareIndirectBuffer(GraphicsContext&               GraphCtx,
-                                                   IBuffer*                       pAttribsBuffer,
-                                                   RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
-                                                   ID3D12Resource*&               pd3d12ArgsBuff,
-                                                   Uint64&                        BuffDataStartByteOffset,
-                                                   const char*                    OpName)
+void DeviceContextD3D12Impl::PrepareIndirectAttribsBuffer(CommandContext&                CmdCtx,
+                                                          IBuffer*                       pAttribsBuffer,
+                                                          RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
+                                                          ID3D12Resource*&               pd3d12ArgsBuff,
+                                                          Uint64&                        BuffDataStartByteOffset,
+                                                          const char*                    OpName)
 {
     DEV_CHECK_ERR(pAttribsBuffer != nullptr, "Indirect draw attribs buffer must not be null");
 
@@ -642,8 +643,9 @@ void DeviceContextD3D12Impl::PrepareIndirectBuffer(GraphicsContext&             
         pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-    TransitionOrVerifyBufferState(GraphCtx, *pIndirectDrawAttribsD3D12, BufferStateTransitionMode,
-                                  RESOURCE_STATE_INDIRECT_ARGUMENT, OpName);
+    TransitionOrVerifyBufferState(CmdCtx, *pIndirectDrawAttribsD3D12, BufferStateTransitionMode,
+                                  RESOURCE_STATE_INDIRECT_ARGUMENT,
+                                  OpName);
 
     pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
 }
@@ -658,8 +660,8 @@ void DeviceContextD3D12Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IB
 
     ID3D12Resource* pd3d12ArgsBuff;
     Uint64          BuffDataStartByteOffset;
-    PrepareIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
-                          "Indirect draw (DeviceContextD3D12Impl::DrawIndirect)");
+    PrepareIndirectAttribsBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
+                                 "Indirect draw (DeviceContextD3D12Impl::DrawIndirect)");
 
     GraphCtx.ExecuteIndirect(m_pDrawIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
     ++m_State.NumCommands;
@@ -675,8 +677,8 @@ void DeviceContextD3D12Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
 
     ID3D12Resource* pd3d12ArgsBuff;
     Uint64          BuffDataStartByteOffset;
-    PrepareIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
-                          "Indexed indirect draw (DeviceContextD3D12Impl::DrawIndexedIndirect)");
+    PrepareIndirectAttribsBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
+                                 "indexed Indirect draw (DeviceContextD3D12Impl::DrawIndexedIndirect)");
 
     GraphCtx.ExecuteIndirect(m_pDrawIndexedIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
     ++m_State.NumCommands;
@@ -704,10 +706,33 @@ void DeviceContextD3D12Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Att
 
     ID3D12Resource* pd3d12ArgsBuff;
     Uint64          BuffDataStartByteOffset;
-    PrepareIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
-                          "Indirect draw mesh (DeviceContextD3D12Impl::DrawMeshIndirect)");
+    PrepareIndirectAttribsBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
+                                 "Indirect draw mesh (DeviceContextD3D12Impl::DrawMeshIndirect)");
 
     GraphCtx.ExecuteIndirect(m_pDrawMeshIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextD3D12Impl::DrawMeshIndirectCount(const DrawMeshIndirectCountAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
+{
+    if (!DvpVerifyDrawMeshIndirectCountArguments(Attribs, pAttribsBuffer, pCountBuffer))
+        return;
+
+    auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+    PrepareForDraw(GraphCtx, Attribs.Flags);
+
+    ID3D12Resource* pd3d12ArgsBuff;
+    ID3D12Resource* pd3d12CountBuff;
+    Uint64          ArgsBuffDataStartByteOffset;
+    Uint64          CountBuffDataStartByteOffset;
+    PrepareIndirectAttribsBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, ArgsBuffDataStartByteOffset,
+                                 "Indirect buffer (DeviceContextD3D12Impl::DrawMeshIndirectCount)");
+    PrepareIndirectAttribsBuffer(GraphCtx, pCountBuffer, Attribs.CountBufferStateTransitionMode, pd3d12CountBuff, CountBuffDataStartByteOffset,
+                                 "Count buffer (DeviceContextD3D12Impl::DrawMeshIndirectCount)");
+
+    GraphCtx.ExecuteIndirect(m_pDrawMeshIndirectSignature, Attribs.MaxCommandCount,
+                             pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + ArgsBuffDataStartByteOffset,
+                             pd3d12CountBuff, Attribs.CountBufferOffset + CountBuffDataStartByteOffset);
     ++m_State.NumCommands;
 }
 
@@ -756,17 +781,11 @@ void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndire
     auto& ComputeCtx = GetCmdContext().AsComputeContext();
     PrepareForDispatchCompute(ComputeCtx);
 
-    auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
-
-#ifdef DILIGENT_DEVELOPMENT
-    if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-        pBufferD3D12->DvpVerifyDynamicAllocation(this);
-#endif
-
-    TransitionOrVerifyBufferState(ComputeCtx, *pBufferD3D12, Attribs.IndirectAttribsBufferStateTransitionMode,
-                                  RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextD3D12Impl::DispatchComputeIndirect)");
+    ID3D12Resource* pd3d12ArgsBuff;
     Uint64          BuffDataStartByteOffset;
-    ID3D12Resource* pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
+    PrepareIndirectAttribsBuffer(ComputeCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset,
+                                 "Indirect dispatch (DeviceContextD3D12Impl::DispatchComputeIndirect)");
+
     ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, Attribs.DispatchArgsByteOffset + BuffDataStartByteOffset);
     ++m_State.NumCommands;
 }

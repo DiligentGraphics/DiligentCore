@@ -60,7 +60,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-TEST(MeshShaderTest, DrawQuad)
+TEST(MeshShaderTest, DrawTriangle)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -170,7 +170,8 @@ TEST(MeshShaderTest, DrawQuad)
     pSwapChain->Present();
 }
 
-TEST(MeshShaderTest, DrawQuadIndirect)
+
+TEST(MeshShaderTest, DrawTriangleIndirect)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -274,42 +275,205 @@ TEST(MeshShaderTest, DrawQuadIndirect)
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
-    Uint32 IndirectBufferData[3];
-
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN)
+    struct IndirectAndCountBuffData
     {
-        IndirectBufferData[0] = 1; // TaskCount
-        IndirectBufferData[1] = 0; // FirstTask
+        char   Unused[16];
+        Uint32 IndirectData[3] = {};
+        Uint32 End;
+    };
+    IndirectAndCountBuffData Data;
+
+    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        Data.IndirectData[0] = 1;   // TaskCount
+        Data.IndirectData[1] = 0;   // FirstTask
+        Data.IndirectData[2] = ~0u; // ignored
     }
     else
     {
-        IndirectBufferData[0] = 1; // ThreadGroupCountX
-        IndirectBufferData[1] = 1; // ThreadGroupCountY
-        IndirectBufferData[2] = 1; // ThreadGroupCountZ
+        Data.IndirectData[0] = 1; // ThreadGroupCountX
+        Data.IndirectData[1] = 1; // ThreadGroupCountY
+        Data.IndirectData[2] = 1; // ThreadGroupCountZ
     }
 
     BufferDesc IndirectBufferDesc;
     IndirectBufferDesc.Name          = "Indirect buffer";
     IndirectBufferDesc.Usage         = USAGE_IMMUTABLE;
-    IndirectBufferDesc.uiSizeInBytes = sizeof(IndirectBufferData);
+    IndirectBufferDesc.uiSizeInBytes = sizeof(Data);
     IndirectBufferDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS;
 
-    BufferData InitData;
-    InitData.pData    = &IndirectBufferData;
-    InitData.DataSize = IndirectBufferDesc.uiSizeInBytes;
+    BufferData InitData{&Data, sizeof(Data)};
 
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(IndirectBufferDesc, &InitData, &pBuffer);
 
     pContext->SetPipelineState(pPSO);
 
-    DrawMeshIndirectAttribs drawAttrs(DRAW_FLAG_VERIFY_ALL, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    DrawMeshIndirectAttribs drawAttrs;
+    drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.IndirectDrawArgsOffset                   = offsetof(IndirectAndCountBuffData, IndirectData);
+    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
     pContext->DrawMeshIndirect(drawAttrs, pBuffer);
 
     pSwapChain->Present();
 }
 
-TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
+
+TEST(MeshShaderTest, DrawTriangleIndirectCount)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceCaps().Features.MeshShaders)
+    {
+        GTEST_SKIP() << "Mesh shader is not supported by this device";
+    }
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pConext    = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pConext->Flush();
+        pConext->InvalidateState();
+
+        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        switch (deviceType)
+        {
+#if D3D12_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D12:
+                MeshShaderIndirectDrawReferenceD3D12(pSwapChain);
+                break;
+#endif
+
+#if VULKAN_SUPPORTED
+            case RENDER_DEVICE_TYPE_VULKAN:
+                MeshShaderIndirectDrawReferenceVk(pSwapChain);
+                break;
+#endif
+
+            case RENDER_DEVICE_TYPE_D3D11:
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
+            case RENDER_DEVICE_TYPE_METAL:
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
+        }
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    float ClearColor[] = {0.f, 0.f, 0.f, 0.f};
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.Name = "Mesh shader test";
+
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
+    GraphicsPipeline.NumRenderTargets                     = 1;
+    GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = SHADER_COMPILER_DXC;
+    ShaderCI.UseCombinedTextureSamplers = true;
+
+    RefCntAutoPtr<IShader> pMS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_MESH;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Mesh shader test - MS";
+        ShaderCI.Source          = HLSL::MeshShaderTest_MS.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pMS);
+        ASSERT_NE(pMS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Mesh shader test - PS";
+        ShaderCI.Source          = HLSL::MeshShaderTest_PS.c_str();
+
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    PSOCreateInfo.pMS = pMS;
+    PSOCreateInfo.pPS = pPS;
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    struct IndirectAndCountBuffData
+    {
+        char   Unused[16];
+        Uint32 Count;
+        Uint32 IndirectData[3];
+    };
+    IndirectAndCountBuffData Data;
+
+    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        Data.IndirectData[0] = 1;   // TaskCount
+        Data.IndirectData[1] = 0;   // FirstTask
+        Data.IndirectData[2] = ~0u; // ignored
+    }
+    else
+    {
+        Data.IndirectData[0] = 1; // ThreadGroupCountX
+        Data.IndirectData[1] = 1; // ThreadGroupCountY
+        Data.IndirectData[2] = 1; // ThreadGroupCountZ
+    }
+    Data.Count = 1;
+
+    BufferDesc IndirectBufferDesc;
+    IndirectBufferDesc.Name          = "Indirect & Count buffer";
+    IndirectBufferDesc.Usage         = USAGE_IMMUTABLE;
+    IndirectBufferDesc.uiSizeInBytes = sizeof(Data);
+    IndirectBufferDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS;
+
+    BufferData InitData{&Data, sizeof(Data)};
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(IndirectBufferDesc, &InitData, &pBuffer);
+
+    pContext->SetPipelineState(pPSO);
+
+    DrawMeshIndirectCountAttribs drawAttrs;
+    drawAttrs.Flags                                    = DRAW_FLAG_VERIFY_ALL;
+    drawAttrs.CountBufferOffset                        = offsetof(IndirectAndCountBuffData, Count);
+    drawAttrs.CountBufferStateTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.IndirectDrawArgsOffset                   = offsetof(IndirectAndCountBuffData, IndirectData);
+    drawAttrs.IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    drawAttrs.MaxCommandCount                          = Data.Count;
+
+    pContext->DrawMeshIndirectCount(drawAttrs, pBuffer, pBuffer);
+
+    pSwapChain->Present();
+}
+
+
+TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();

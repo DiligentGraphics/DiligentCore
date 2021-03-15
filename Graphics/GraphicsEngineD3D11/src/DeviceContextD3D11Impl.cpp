@@ -850,6 +850,11 @@ void DeviceContextD3D11Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Att
     UNSUPPORTED("DrawMeshIndirect is not supported in DirectX 11");
 }
 
+void DeviceContextD3D11Impl::DrawMeshIndirectCount(const DrawMeshIndirectCountAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
+{
+    UNSUPPORTED("DrawMeshIndirectCount is not supported in DirectX 11");
+}
+
 void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
     if (!DvpVerifyDispatchArguments(Attribs))

@@ -144,6 +144,8 @@ public:
     virtual void DILIGENT_CALL_TYPE DrawMesh           (const DrawMeshAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawMeshIndirect() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE DrawMeshIndirect   (const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    /// Implementation of IDeviceContext::DrawMeshIndirectCount() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE DrawMeshIndirectCount(const DrawMeshIndirectCountAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer) override final;
     
 
     /// Implementation of IDeviceContext::DispatchCompute() in Direct3D12 backend.
@@ -376,12 +378,12 @@ private:
     __forceinline void PrepareForDispatchCompute(ComputeContext& GraphCtx);
     __forceinline void PrepareForDispatchRays(GraphicsContext& GraphCtx);
 
-    __forceinline void PrepareIndirectBuffer(GraphicsContext&               GraphCtx,
-                                             IBuffer*                       pAttribsBuffer,
-                                             RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
-                                             ID3D12Resource*&               pd3d12ArgsBuff,
-                                             Uint64&                        BuffDataStartByteOffset,
-                                             const char*                    OpName);
+    __forceinline void PrepareIndirectAttribsBuffer(CommandContext&                CmdCtx,
+                                                    IBuffer*                       pAttribsBuffer,
+                                                    RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
+                                                    ID3D12Resource*&               pd3d12ArgsBuff,
+                                                    Uint64&                        BuffDataStartByteOffset,
+                                                    const char*                    OpName);
 
     struct RootTableInfo
     {

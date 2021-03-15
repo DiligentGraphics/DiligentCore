@@ -174,6 +174,12 @@ public:
         m_pCommandList->ExecuteIndirect(pCmdSignature, 1, pBuff, ArgsOffset, nullptr, 0);
     }
 
+    void ExecuteIndirect(ID3D12CommandSignature* pCmdSignature, Uint32 MaxCommandCount, ID3D12Resource* pArgsBuff, Uint64 ArgsOffset, ID3D12Resource* pCountBuff, Uint64 CountOffset)
+    {
+        FlushResourceBarriers();
+        m_pCommandList->ExecuteIndirect(pCmdSignature, MaxCommandCount, pArgsBuff, ArgsOffset, pCountBuff, CountOffset);
+    }
+
     void                       SetID(const Char* ID) { m_ID = ID; }
     ID3D12GraphicsCommandList* GetCommandList() { return m_pCommandList; }
 
