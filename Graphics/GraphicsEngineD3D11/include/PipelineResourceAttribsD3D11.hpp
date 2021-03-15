@@ -62,6 +62,7 @@ struct BindPointsD3D11
     BindPointsD3D11(const BindPointsD3D11&) noexcept = default;
 
     // clang-format off
+    bool   IsEmpty()                const { return m_ActiveBits == 0; }
     Uint32 GetActiveBits()          const { return m_ActiveBits; }
     bool   IsValid(Uint32 index)    const { return m_Bindings[index] != InvalidBindPoint; }
     Uint8  operator[](Uint32 index) const { return m_Bindings[index]; }
@@ -113,32 +114,25 @@ private:
 struct PipelineResourceAttribsD3D11
 {
 private:
-    static constexpr Uint32 _CacheOffsetBits     = 10;
     static constexpr Uint32 _SamplerIndBits      = 10;
     static constexpr Uint32 _SamplerAssignedBits = 1;
 
 public:
-    static constexpr Uint32 InvalidCacheOffset = (1u << _CacheOffsetBits) - 1;
-    static constexpr Uint32 InvalidSamplerInd  = (1u << _SamplerIndBits) - 1;
+    static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
 
     // clang-format off
-    const Uint32    CacheOffset          : _CacheOffsetBits;      // SRB and Signature have the same cache offsets for static resources
-                                                                  // (thanks to sorting variables by type, where all static vars go first).
     const Uint32    SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
     const Uint32    ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag.
     BindPointsD3D11 BindPoints;
     // clang-format on
 
-    PipelineResourceAttribsD3D11(Uint32 _CacheOffset,
-                                 Uint32 _SamplerInd,
+    PipelineResourceAttribsD3D11(Uint32 _SamplerInd,
                                  bool   _ImtblSamplerAssigned) noexcept :
         // clang-format off
-            CacheOffset         {_CacheOffset                   },
             SamplerInd          {_SamplerInd                    },
             ImtblSamplerAssigned{_ImtblSamplerAssigned ? 1u : 0u}
     // clang-format on
     {
-        VERIFY(CacheOffset == _CacheOffset, "Cache offset (", _CacheOffset, ") exceeds maximum representable value");
         VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
     }
 

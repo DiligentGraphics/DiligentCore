@@ -227,54 +227,43 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
     Uint32 bufUav = 0;
     Uint32 sam    = 0;
 
-    Uint32 NumCBSlots      = 0;
-    Uint32 NumSRVSlots     = 0;
-    Uint32 NumSamplerSlots = 0;
-    Uint32 NumUAVSlots     = 0;
     ProcessSignatureResources(
         Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
         [&](Uint32 Index) //
         {
             const auto& ResDesc = Signature.GetResourceDesc(Index);
-            const auto& ResAttr = Signature.GetResourceAttribs(Index);
             static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource range");
             switch (ResDesc.ResourceType)
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
                     // Initialize current CB in place, increment CB counter
                     new (&GetResource<ConstBuffBindInfo>(cb++)) ConstBuffBindInfo(*this, Index);
-                    NumCBSlots = std::max(NumCBSlots, ResAttr.CacheOffset + ResDesc.ArraySize);
                     break;
 
                 case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
                 case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
                     // Initialize tex SRV in place, increment counter of tex SRVs
                     new (&GetResource<TexSRVBindInfo>(texSrv++)) TexSRVBindInfo{*this, Index};
-                    NumSRVSlots = std::max(NumSRVSlots, ResAttr.CacheOffset + ResDesc.ArraySize);
                     break;
 
                 case SHADER_RESOURCE_TYPE_BUFFER_SRV:
                     // Initialize buff SRV in place, increment counter of buff SRVs
                     new (&GetResource<BuffSRVBindInfo>(bufSrv++)) BuffSRVBindInfo(*this, Index);
-                    NumSRVSlots = std::max(NumSRVSlots, ResAttr.CacheOffset + ResDesc.ArraySize);
                     break;
 
                 case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
                     // Initialize tex UAV in place, increment counter of tex UAVs
                     new (&GetResource<TexUAVBindInfo>(texUav++)) TexUAVBindInfo(*this, Index);
-                    NumUAVSlots = std::max(NumUAVSlots, ResAttr.CacheOffset + ResDesc.ArraySize);
                     break;
 
                 case SHADER_RESOURCE_TYPE_BUFFER_UAV:
                     // Initialize buff UAV in place, increment counter of buff UAVs
                     new (&GetResource<BuffUAVBindInfo>(bufUav++)) BuffUAVBindInfo(*this, Index);
-                    NumUAVSlots = std::max(NumUAVSlots, ResAttr.CacheOffset + ResDesc.ArraySize);
                     break;
 
                 case SHADER_RESOURCE_TYPE_SAMPLER:
                     // Initialize current sampler in place, increment sampler counter
                     new (&GetResource<SamplerBindInfo>(sam++)) SamplerBindInfo(*this, Index);
-                    NumSamplerSlots = std::max(NumSamplerSlots, ResAttr.CacheOffset + ResDesc.ArraySize);
                     break;
 
                 default:
@@ -306,12 +295,12 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* 
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{pBuffer, IID_BufferD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedCB = ResourceCache.GetCB(Attr.CacheOffset + ArrayIndex);
+        const auto& CachedCB = ResourceCache.GetCB(Attr.BindPoints + ArrayIndex);
         VerifyConstantBufferBinding(Desc, ArrayIndex, pBuffer, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr(),
                                     m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetCB(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pBuffD3D11Impl));
+    ResourceCache.SetCB(Attr.BindPoints + ArrayIndex, std::move(pBuffD3D11Impl));
 }
 
 
@@ -330,7 +319,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedSRV = ResourceCache.GetSRV(Attr.CacheOffset + ArrayIndex);
+        auto& CachedSRV = ResourceCache.GetSRV(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_UNDEFINED, false, CachedSRV.pView.RawPtr(),
@@ -364,7 +353,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
 #ifdef DILIGENT_DEVELOPMENT
         if (SampDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         {
-            auto& CachedSampler = ResourceCache.GetSampler(SampAttr.CacheOffset + SampArrayIndex);
+            auto& CachedSampler = ResourceCache.GetSampler(SampAttr.BindPoints + SampArrayIndex);
             if (CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11Impl)
             {
                 auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
@@ -373,9 +362,9 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
             }
         }
 #endif
-        ResourceCache.SetSampler(SampAttr.CacheOffset + SampArrayIndex, SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
+        ResourceCache.SetSampler(SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
     }
-    ResourceCache.SetTexSRV(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetTexSRV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
 void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSampler, Uint32 ArrayIndex)
@@ -408,7 +397,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pS
 
     if (GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
     {
-        auto& CachedSampler = ResourceCache.GetSampler(Attr.CacheOffset + ArrayIndex);
+        auto& CachedSampler = ResourceCache.GetSampler(Attr.BindPoints + ArrayIndex);
         if (CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
@@ -419,7 +408,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pS
     }
 #endif
 
-    ResourceCache.SetSampler(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
+    ResourceCache.SetSampler(Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
 }
 
 void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
@@ -436,7 +425,7 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pV
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedSRV = ResourceCache.GetSRV(Attr.CacheOffset + ArrayIndex);
+        auto& CachedSRV = ResourceCache.GetSRV(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_BUFFER, false, CachedSRV.pView.RawPtr(),
@@ -444,7 +433,7 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pV
         ValidateBufferMode(Desc, ArrayIndex, pViewD3D11.RawPtr());
     }
 #endif
-    ResourceCache.SetBufSRV(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetBufSRV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
 
@@ -462,14 +451,14 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVi
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedUAV = ResourceCache.GetUAV(Attr.CacheOffset + ArrayIndex);
+        auto& CachedUAV = ResourceCache.GetUAV(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetTexUAV(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetTexUAV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
 
@@ -487,7 +476,7 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pV
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedUAV = ResourceCache.GetUAV(Attr.CacheOffset + ArrayIndex);
+        auto& CachedUAV = ResourceCache.GetUAV(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_BUFFER, false, CachedUAV.pView.RawPtr(),
@@ -495,7 +484,7 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pV
         ValidateBufferMode(Desc, ArrayIndex, pViewD3D11.RawPtr());
     }
 #endif
-    ResourceCache.SetBufUAV(Attr.CacheOffset + ArrayIndex, Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetBufUAV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
 void ShaderVariableManagerD3D11::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)

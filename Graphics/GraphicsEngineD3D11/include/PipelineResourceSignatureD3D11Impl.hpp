@@ -71,28 +71,14 @@ public:
     // sizeof(ImmutableSamplerAttribs) == 24, x64
     struct ImmutableSamplerAttribs
     {
-    private:
-        static constexpr Uint32 _CacheOffsetBits = 10;
-        static constexpr Uint32 _ArraySizeBits   = 22;
-
     public:
-        static constexpr Uint32 InvalidCacheOffset = (1u << _CacheOffsetBits) - 1;
-        static_assert(InvalidCacheOffset == ResourceAttribs::InvalidCacheOffset,
-                      "InvalidCacheOffset value mismatch between ResourceAttribs and ImmutableSamplerAttribs");
-
-        // clang-format off
         RefCntAutoPtr<ISampler> pSampler;
-        Uint32                  CacheOffset : _CacheOffsetBits;
-        Uint32                  ArraySize   : _ArraySizeBits;
+        Uint32                  ArraySize = 0;
         BindPointsD3D11         BindPoints;
-        // clang-format on
 
-        ImmutableSamplerAttribs() :
-            CacheOffset{InvalidCacheOffset},
-            ArraySize{0}
-        {}
+        ImmutableSamplerAttribs() noexcept {}
 
-        bool              IsAllocated() const { return CacheOffset != InvalidCacheOffset; }
+        bool              IsAllocated() const { return !BindPoints.IsEmpty(); }
         SamplerD3D11Impl* GetSamplerD3D11() const { return ValidatedCast<SamplerD3D11Impl>(pSampler.RawPtr<ISampler>()); }
     };
 
@@ -102,20 +88,18 @@ public:
         return m_ImmutableSamplers[SampIndex];
     }
 
-    using TBindings         = ShaderResourceCacheD3D11::TResourceCount;
     using TResourceCount    = std::array<Uint8, D3D11_RESOURCE_RANGE_COUNT>;
-    using TBindingsPerStage = std::array<TResourceCount, NumShaderTypes>;
-
+    using TBindingsPerStage = std::array<std::array<Uint8, NumShaderTypes>, D3D11_RESOURCE_RANGE_COUNT>;
 
     __forceinline void ShiftBindings(TBindingsPerStage& Bindings) const
     {
-        for (Uint32 s = 0; s < Bindings.size(); ++s)
+        for (Uint32 r = 0; r < Bindings.size(); ++r)
         {
-            for (Uint32 i = 0; i < Bindings[s].size(); ++i)
+            for (Uint32 s = 0; s < Bindings[r].size(); ++s)
             {
-                Uint32 Count = Bindings[s][i] + m_BindingCountPerStage[s][i];
+                Uint32 Count = Bindings[r][s] + m_BindingCountPerStage[r][s];
                 VERIFY_EXPR(Count < std::numeric_limits<Uint8>::max());
-                Bindings[s][i] = static_cast<Uint8>(Count);
+                Bindings[r][s] = static_cast<Uint8>(Count);
             }
         }
     }
@@ -142,11 +126,9 @@ private:
     void Destruct();
 
 private:
-    TBindings         m_ResourceCount        = {};
-    TBindingsPerStage m_BindingCountPerStage = {};
-
-    ResourceAttribs*         m_pResourceAttribs  = nullptr; // [m_Desc.NumResources]
-    ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
+    TBindingsPerStage        m_BindingCountPerStage = {};
+    ResourceAttribs*         m_pResourceAttribs     = nullptr; // [m_Desc.NumResources]
+    ImmutableSamplerAttribs* m_ImmutableSamplers    = nullptr; // [m_Desc.NumImmutableSamplers]
 };
 
 } // namespace Diligent

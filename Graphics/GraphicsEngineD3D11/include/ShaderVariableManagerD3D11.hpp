@@ -133,7 +133,7 @@ public:
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsCBBound(GetAttribs().CacheOffset + ArrayIndex);
+            return m_ParentManager.m_ResourceCache.IsCBBound(GetAttribs().BindPoints + ArrayIndex);
         }
     };
 
@@ -149,7 +149,7 @@ public:
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsSRVBound(GetAttribs().CacheOffset + ArrayIndex, true);
+            return m_ParentManager.m_ResourceCache.IsSRVBound(GetAttribs().BindPoints + ArrayIndex, true);
         }
     };
 
@@ -165,7 +165,7 @@ public:
         __forceinline virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsUAVBound(GetAttribs().CacheOffset + ArrayIndex, true);
+            return m_ParentManager.m_ResourceCache.IsUAVBound(GetAttribs().BindPoints + ArrayIndex, true);
         }
     };
 
@@ -181,7 +181,7 @@ public:
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsUAVBound(GetAttribs().CacheOffset + ArrayIndex, false);
+            return m_ParentManager.m_ResourceCache.IsUAVBound(GetAttribs().BindPoints + ArrayIndex, false);
         }
     };
 
@@ -197,7 +197,7 @@ public:
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsSRVBound(GetAttribs().CacheOffset + ArrayIndex, false);
+            return m_ParentManager.m_ResourceCache.IsSRVBound(GetAttribs().BindPoints + ArrayIndex, false);
         }
     };
 
@@ -213,7 +213,7 @@ public:
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsSamplerBound(GetAttribs().CacheOffset + ArrayIndex);
+            return m_ParentManager.m_ResourceCache.IsSamplerBound(GetAttribs().BindPoints + ArrayIndex);
         }
     };
 

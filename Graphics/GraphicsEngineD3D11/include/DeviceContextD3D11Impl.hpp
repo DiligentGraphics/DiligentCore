@@ -387,17 +387,8 @@ private:
     };
 
     using TBindingsPerStage = PipelineResourceSignatureD3D11Impl::TBindingsPerStage;
-    struct MinMaxSlot
-    {
-        UINT MinSlot = UINT_MAX;
-        UINT MaxSlot = 0;
-    };
-    using TMinMaxSlotPerStage = std::array<std::array<MinMaxSlot, D3D11_RESOURCE_RANGE_COUNT>, NumShaderTypes>;
-
-
     void BindCacheResources(const ShaderResourceCacheD3D11& ResourceCache,
-                            const TBindingsPerStage&        Bindings,
-                            TMinMaxSlotPerStage&            MinMaxSlot,
+                            const TBindingsPerStage&        BaseBindings,
                             SHADER_TYPE                     ActiveStages);
 
 #ifdef DILIGENT_DEVELOPMENT

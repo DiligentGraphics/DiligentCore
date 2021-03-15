@@ -114,8 +114,6 @@ private:
     void ValidateShaderResources(const ShaderD3D11Impl* pShader);
 
 private:
-    using SignaturePtr = RefCntAutoPtr<PipelineResourceSignatureD3D11Impl>;
-
     std::array<Uint8, 5> m_ShaderTypes = {};
     Uint8                m_NumShaders  = 0;
 

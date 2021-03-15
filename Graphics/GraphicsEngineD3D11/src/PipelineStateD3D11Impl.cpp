@@ -202,7 +202,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 
         PipelineResourceSignatureD3D11Impl::TBindingsPerStage BindingsPerStage = {};
         if (m_Desc.IsAnyGraphicsPipeline())
-            BindingsPerStage[PSInd][D3D11_RESOURCE_RANGE_UAV] = GetGraphicsPipelineDesc().NumRenderTargets;
+            BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
@@ -232,7 +232,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     PipelineResourceSignatureD3D11Impl::TBindingsPerStage BindingsPerStage = {};
 
     if (m_Desc.IsAnyGraphicsPipeline())
-        BindingsPerStage[PSInd][D3D11_RESOURCE_RANGE_UAV] = GetGraphicsPipelineDesc().NumRenderTargets;
+        BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
 
     for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
     {
@@ -241,18 +241,16 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             pSignature->ShiftBindings(BindingsPerStage);
     }
 
-    for (Uint32 s = 0; s < BindingsPerStage.size(); ++s)
+    for (Uint32 s = 0; s < PipelineResourceSignatureD3D11Impl::NumShaderTypes; ++s)
     {
-        const auto& BindCount = BindingsPerStage[s];
-
-        DEV_CHECK_ERR(BindCount[D3D11_RESOURCE_RANGE_CBV] <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT,
-                      "Constant buffer count ", Uint32{BindCount[D3D11_RESOURCE_RANGE_CBV]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT);
-        DEV_CHECK_ERR(BindCount[D3D11_RESOURCE_RANGE_SRV] <= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT,
-                      "SRV count ", Uint32{BindCount[D3D11_RESOURCE_RANGE_SRV]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
-        DEV_CHECK_ERR(BindCount[D3D11_RESOURCE_RANGE_SAMPLER] <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT,
-                      "Sampler count ", Uint32{BindCount[D3D11_RESOURCE_RANGE_SAMPLER]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT);
-        DEV_CHECK_ERR(BindCount[D3D11_RESOURCE_RANGE_UAV] <= D3D11_PS_CS_UAV_REGISTER_COUNT,
-                      "UAV count ", Uint32{BindCount[D3D11_RESOURCE_RANGE_UAV]}, " exceeds D3D11 limit ", D3D11_PS_CS_UAV_REGISTER_COUNT);
+        DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_CBV][s] <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT,
+                      "Constant buffer count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_CBV][s]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT);
+        DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_SRV][s] <= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT,
+                      "SRV count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_SRV][s]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
+        DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_SAMPLER][s] <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT,
+                      "Sampler count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_SAMPLER][s]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT);
+        DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][s] <= D3D11_PS_CS_UAV_REGISTER_COUNT,
+                      "UAV count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][s]}, " exceeds D3D11 limit ", D3D11_PS_CS_UAV_REGISTER_COUNT);
     }
 #endif
 }
@@ -525,7 +523,7 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(class ShaderResourceBindingD3
     TBindingsPerStage Bindings  = {};
 
     if (m_Desc.IsAnyGraphicsPipeline())
-        Bindings[GetShaderTypeIndex(SHADER_TYPE_PIXEL)][D3D11_RESOURCE_RANGE_UAV] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);
+        Bindings[D3D11_RESOURCE_RANGE_UAV][GetShaderTypeIndex(SHADER_TYPE_PIXEL)] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);
 
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
