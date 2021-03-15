@@ -33,10 +33,8 @@
 #include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"
-#include "ShaderD3D11.h"
 #include "ShaderBase.hpp"
 #include "ShaderD3DBase.hpp"
-#include "EngineD3D11Defines.h"
 #include "ShaderResourcesD3D11.hpp"
 
 namespace Diligent

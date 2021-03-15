@@ -31,7 +31,6 @@
 /// Definition of the Diligent::ShaderBindingTableVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "ShaderBindingTableVk.h"
 #include "ShaderBindingTableBase.hpp"
 #include "TopLevelASVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"

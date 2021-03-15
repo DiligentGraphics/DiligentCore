@@ -33,7 +33,6 @@
 #include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"
-#include "SamplerD3D11.h"
 #include "SamplerBase.hpp"
 
 namespace Diligent

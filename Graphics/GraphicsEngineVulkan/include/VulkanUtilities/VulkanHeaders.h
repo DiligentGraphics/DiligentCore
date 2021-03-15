@@ -31,13 +31,13 @@
 #    define VK_NO_PROTOTYPES
 #endif
 
+#define VK_ENABLE_BETA_EXTENSIONS
+#include "vulkan/vulkan.h"
+
 #define VK_FORMAT_RANGE_SIZE (VK_FORMAT_ASTC_12x12_SRGB_BLOCK - VK_FORMAT_UNDEFINED + 1)
 
 #if DILIGENT_USE_VOLK
-#    define VK_ENABLE_BETA_EXTENSIONS
 #    include "volk/volk.h"
-#else
-#    include "vulkan/vulkan.h"
 #endif
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(_X11_XLIB_H_)

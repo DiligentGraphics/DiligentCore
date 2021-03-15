@@ -70,7 +70,6 @@
 #    include <d3d11_4.h>
 #endif
 
-#include "EngineD3D11Defines.h"
 #include "Errors.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.hpp"

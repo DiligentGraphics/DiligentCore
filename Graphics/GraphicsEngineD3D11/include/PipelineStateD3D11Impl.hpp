@@ -30,8 +30,7 @@
 /// \file
 /// Declaration of Diligent::PipelineStateD3D11Impl class
 
-#include "PipelineStateD3D11.h"
-#include "RenderDeviceD3D11.h"
+#include "EngineD3D11ImplTraits.hpp"
 #include "PipelineStateBase.hpp"
 
 #include "PipelineResourceSignatureD3D11Impl.hpp" // Required by PipelineStateBase

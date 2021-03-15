@@ -31,15 +31,11 @@
 /// Declaration of Diligent::ShaderVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "ShaderVk.h"
 #include "ShaderBase.hpp"
 #include "SPIRVShaderResources.hpp"
 
 namespace Diligent
 {
-
-class ResourceMapping;
-class FixedBlockMemoryAllocator;
 
 /// Shader object object implementation in Vulkan backend.
 class ShaderVkImpl final : public ShaderBase<EngineVkImplTraits>

@@ -31,7 +31,6 @@
 /// Declaration of Diligent::TextureVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "TextureVk.h"
 #include "TextureBase.hpp"
 #include "TextureViewVkImpl.hpp"
 #include "VulkanUtilities/VulkanMemoryManager.hpp"

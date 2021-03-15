@@ -28,7 +28,6 @@
 #pragma once
 
 #include "EngineGLImplTraits.hpp"
-#include "ShaderGL.h"
 #include "ShaderBase.hpp"
 #include "GLObjectWrapper.hpp"
 #include "ShaderResourcesGL.hpp"

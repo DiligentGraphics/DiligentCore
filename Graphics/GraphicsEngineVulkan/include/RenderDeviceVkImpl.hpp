@@ -33,8 +33,6 @@
 
 #include "EngineVkImplTraits.hpp"
 
-#include "CommandQueueVk.h"
-
 #include "RenderDeviceBase.hpp"
 #include "RenderDeviceNextGenBase.hpp"
 

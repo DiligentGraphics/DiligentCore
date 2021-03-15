@@ -34,8 +34,6 @@
 #include <bitset>
 
 #include "EngineVkImplTraits.hpp"
-
-#include "DeviceContextVk.h"
 #include "DeviceContextNextGenBase.hpp"
 
 // Vk object implementations are required by DeviceContextBase

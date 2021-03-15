@@ -31,7 +31,6 @@
 /// Declaration of Diligent::BufferViewVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "BufferViewVk.h"
 #include "BufferViewBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 

@@ -32,7 +32,7 @@
 
 #include <vector>
 
-#include "DeviceContextD3D11.h"
+#include "EngineD3D11ImplTraits.hpp"
 #include "DeviceContextBase.hpp"
 #include "BufferD3D11Impl.hpp"
 #include "TextureBaseD3D11.hpp"

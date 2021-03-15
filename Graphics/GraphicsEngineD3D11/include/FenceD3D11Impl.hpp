@@ -34,7 +34,6 @@
 #include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"
-#include "FenceD3D11.h"
 #include "FenceBase.hpp"
 
 namespace Diligent

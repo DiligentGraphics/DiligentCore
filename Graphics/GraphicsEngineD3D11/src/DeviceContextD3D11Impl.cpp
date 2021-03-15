@@ -37,7 +37,6 @@
 #include "TextureViewD3D11Impl.hpp"
 #include "PipelineStateD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
-#include "EngineD3D11Defines.h"
 #include "CommandListD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
 #include "FenceD3D11Impl.hpp"

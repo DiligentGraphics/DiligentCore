@@ -48,8 +48,6 @@
 namespace Diligent
 {
 
-class RenderDeviceVkImpl;
-class ShaderVariableManagerVk;
 struct SPIRVShaderResourceAttribs;
 
 /// Implementation of the Diligent::PipelineResourceSignatureVkImpl class

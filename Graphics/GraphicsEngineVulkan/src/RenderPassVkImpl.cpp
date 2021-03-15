@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "RenderPassVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 
 namespace Diligent

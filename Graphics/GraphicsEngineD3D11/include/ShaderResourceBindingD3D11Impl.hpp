@@ -31,9 +31,6 @@
 /// Declaration of Diligent::ShaderResourceBindingD3D11Impl class
 
 #include "EngineD3D11ImplTraits.hpp"
-
-#include "ShaderResourceBindingD3D11.h"
-#include "RenderDeviceD3D11.h"
 #include "ShaderResourceBindingBase.hpp"
 
 // ShaderResourceCacheD3D11 and ShaderVariableManagerD3D11 are required by ShaderResourceBindingBase

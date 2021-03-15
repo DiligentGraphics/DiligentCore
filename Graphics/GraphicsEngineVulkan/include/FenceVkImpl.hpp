@@ -34,7 +34,6 @@
 #include <atomic>
 
 #include "EngineVkImplTraits.hpp"
-#include "FenceVk.h"
 #include "FenceBase.hpp"
 #include "VulkanUtilities/VulkanFencePool.hpp"
 

@@ -30,7 +30,6 @@
 #include <vector>
 
 #include "EngineGLImplTraits.hpp"
-#include "DeviceContextGL.h"
 #include "DeviceContextBase.hpp"
 
 // GL object implementations are required by DeviceContextBase

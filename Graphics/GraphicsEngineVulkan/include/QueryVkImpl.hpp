@@ -33,14 +33,11 @@
 #include <array>
 
 #include "EngineVkImplTraits.hpp"
-#include "QueryVk.h"
 #include "QueryBase.hpp"
 #include "QueryManagerVk.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Query implementation in Vulkan backend.
 class QueryVkImpl final : public QueryBase<EngineVkImplTraits>

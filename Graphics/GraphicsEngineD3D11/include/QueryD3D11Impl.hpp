@@ -34,7 +34,6 @@
 #include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"
-#include "QueryD3D11.h"
 #include "QueryBase.hpp"
 #include "DisjointQueryPool.hpp"
 

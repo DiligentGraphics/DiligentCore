@@ -31,7 +31,6 @@
 /// Declaration of Diligent::ShaderBindingTableD3D12Impl class
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "ShaderBindingTableD3D12.h"
 #include "ShaderBindingTableBase.hpp"
 #include "TopLevelASD3D12Impl.hpp"
 #include "D3D12ResourceBase.hpp"

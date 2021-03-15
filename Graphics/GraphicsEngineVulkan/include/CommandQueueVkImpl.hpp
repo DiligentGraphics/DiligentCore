@@ -35,7 +35,6 @@
 #include <atomic>
 
 #include "EngineVkImplTraits.hpp"
-#include "CommandQueueVk.h"
 #include "ObjectBase.hpp"
 #include "FenceVkImpl.hpp"
 

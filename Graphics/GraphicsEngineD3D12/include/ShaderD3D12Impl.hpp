@@ -31,15 +31,12 @@
 /// Declaration of Diligent::ShaderD3D12Impl class
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "ShaderD3D12.h"
 #include "ShaderBase.hpp"
 #include "ShaderD3DBase.hpp"
 #include "ShaderResourcesD3D12.hpp"
 
 namespace Diligent
 {
-
-class ResourceMapping;
 
 /// Implementation of a shader object in Direct3D12 backend.
 class ShaderD3D12Impl final : public ShaderBase<EngineD3D12ImplTraits>, public ShaderD3DBase

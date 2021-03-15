@@ -33,7 +33,6 @@
 #include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"
-#include "BufferViewD3D11.h"
 #include "BufferViewBase.hpp"
 
 namespace Diligent

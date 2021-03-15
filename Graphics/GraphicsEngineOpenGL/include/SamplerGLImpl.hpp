@@ -28,7 +28,6 @@
 #pragma once
 
 #include "EngineGLImplTraits.hpp"
-#include "SamplerGL.h"
 #include "SamplerBase.hpp"
 #include "GLObjectWrapper.hpp"
 

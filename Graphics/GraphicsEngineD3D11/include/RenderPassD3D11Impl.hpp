@@ -31,13 +31,10 @@
 /// Declaration of Diligent::RenderPassD3D11Impl class
 
 #include "EngineD3D11ImplTraits.hpp"
-#include "RenderDeviceD3D11.h"
 #include "RenderPassBase.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Render pass implementation in Direct3D11 backend.
 class RenderPassD3D11Impl final : public RenderPassBase<EngineD3D11ImplTraits>

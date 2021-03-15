@@ -33,7 +33,6 @@
 #include <vector>
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "PipelineStateD3D12.h"
 #include "PipelineStateBase.hpp"
 #include "PipelineResourceSignatureD3D12Impl.hpp" // Requiured by PipelineStateBase
 #include "RootSignature.hpp"

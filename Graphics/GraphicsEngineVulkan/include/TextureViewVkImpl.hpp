@@ -31,14 +31,11 @@
 /// Declaration of Diligent::TextureViewVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "TextureViewVk.h"
 #include "TextureViewBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Texture view implementation in Vulkan backend.
 class TextureViewVkImpl final : public TextureViewBase<EngineVkImplTraits>

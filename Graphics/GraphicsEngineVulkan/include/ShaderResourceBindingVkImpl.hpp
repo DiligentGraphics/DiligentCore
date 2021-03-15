@@ -31,7 +31,6 @@
 /// Declaration of Diligent::ShaderResourceBindingVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "ShaderResourceBindingVk.h"
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderBase.hpp"
 

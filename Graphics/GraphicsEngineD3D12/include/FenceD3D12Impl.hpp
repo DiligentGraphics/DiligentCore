@@ -31,7 +31,6 @@
 /// Declaration of Diligent::FenceD3D12Impl class
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "FenceD3D12.h"
 #include "FenceBase.hpp"
 
 namespace Diligent

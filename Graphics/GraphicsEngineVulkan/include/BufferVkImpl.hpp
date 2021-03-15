@@ -31,7 +31,6 @@
 /// Declaration of Diligent::BufferVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "BufferVk.h"
 #include "BufferBase.hpp"
 #include "BufferViewVkImpl.hpp" // Required by BufferBase
 

@@ -31,7 +31,6 @@
 /// Declaration of Diligent::BufferD3D12Impl class
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "BufferD3D12.h"
 #include "BufferBase.hpp"
 #include "BufferViewD3D12Impl.hpp" // Required by BufferBase
 #include "D3D12ResourceBase.hpp"

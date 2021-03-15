@@ -31,7 +31,6 @@
 /// Declaration of Diligent::ShaderResourceBindingGLImpl class
 
 #include "EngineGLImplTraits.hpp"
-#include "ShaderResourceBindingGL.h"
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderResourcesGL.hpp"
 

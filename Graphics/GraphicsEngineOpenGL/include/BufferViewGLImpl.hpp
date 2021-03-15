@@ -28,7 +28,6 @@
 #pragma once
 
 #include "EngineGLImplTraits.hpp"
-#include "BufferViewGL.h"
 #include "BufferViewBase.hpp"
 #include "GLObjectWrapper.hpp"
 

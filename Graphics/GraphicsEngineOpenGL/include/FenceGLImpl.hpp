@@ -34,7 +34,6 @@
 #include <atomic>
 
 #include "EngineGLImplTraits.hpp"
-#include "FenceGL.h"
 #include "FenceBase.hpp"
 #include "GLObjectWrapper.hpp"
 

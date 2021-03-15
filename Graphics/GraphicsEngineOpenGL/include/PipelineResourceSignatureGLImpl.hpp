@@ -46,8 +46,6 @@
 namespace Diligent
 {
 
-class RenderDeviceGLImpl;
-
 enum BINDING_RANGE : Uint32
 {
     BINDING_RANGE_UNIFORM_BUFFER = 0,

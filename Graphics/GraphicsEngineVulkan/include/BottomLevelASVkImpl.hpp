@@ -31,7 +31,6 @@
 /// Definition of the Diligent::BottomLevelASVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "BottomLevelASVk.h"
 #include "BottomLevelASBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "VulkanUtilities/VulkanMemoryManager.hpp"

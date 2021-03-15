@@ -30,7 +30,6 @@
 #include <vector>
 
 #include "EngineGLImplTraits.hpp"
-#include "PipelineStateGL.h"
 #include "PipelineStateBase.hpp"
 
 #include "PipelineResourceSignatureGLImpl.hpp" // Requiured by PipelineStateBase

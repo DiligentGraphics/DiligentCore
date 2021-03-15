@@ -31,7 +31,6 @@
 /// Declaration of Diligent::QueryGLImpl class
 
 #include "EngineGLImplTraits.hpp"
-#include "QueryGL.h"
 #include "QueryBase.hpp"
 #include "GLObjectWrapper.hpp"
 

@@ -30,16 +30,12 @@
 /// \file
 /// Declaration of Diligent::RenderPassVkImpl class
 
-#include "RenderDeviceVk.h"
-#include "RenderPassVk.h"
+#include "EngineVkImplTraits.hpp"
 #include "RenderPassBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Render pass implementation in Vulkan backend.
 class RenderPassVkImpl final : public RenderPassBase<EngineVkImplTraits>

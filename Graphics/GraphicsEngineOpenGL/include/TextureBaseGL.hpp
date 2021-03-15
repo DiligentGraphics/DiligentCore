@@ -28,7 +28,6 @@
 #pragma once
 
 #include "EngineGLImplTraits.hpp"
-#include "TextureGL.h"
 #include "TextureBase.hpp"
 #include "TextureViewGLImpl.hpp" // Required by TextureBase
 #include "GLObjectWrapper.hpp"

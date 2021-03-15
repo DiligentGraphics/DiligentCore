@@ -33,7 +33,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "DeviceContextD3D12.h"
+#include "EngineD3D12ImplTraits.hpp"
 #include "DeviceContextNextGenBase.hpp"
 
 // D3D12 object implementations are required by DeviceContextBase

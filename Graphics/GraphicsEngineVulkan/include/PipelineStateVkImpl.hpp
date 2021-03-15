@@ -34,7 +34,6 @@
 #include <memory>
 
 #include "EngineVkImplTraits.hpp"
-#include "PipelineStateVk.h"
 #include "PipelineStateBase.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp" // Required by PipelineStateBase
 
@@ -47,11 +46,6 @@
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
-class ShaderVariableManagerVk;
-class ShaderVkImpl;
-class ShaderResourceBindingVkImpl;
 
 /// Pipeline state object implementation in Vulkan backend.
 class PipelineStateVkImpl final : public PipelineStateBase<EngineVkImplTraits>

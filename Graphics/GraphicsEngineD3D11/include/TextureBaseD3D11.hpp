@@ -30,8 +30,7 @@
 /// \file
 /// Declaration of Diligent::TextureBaseD3D11 class
 
-#include "TextureD3D11.h"
-#include "RenderDeviceD3D11.h"
+#include "EngineD3D11ImplTraits.hpp"
 #include "TextureBase.hpp"
 #include "TextureViewD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"

@@ -31,7 +31,6 @@
 /// Declaration of Diligent::TopLevelASD3D12Impl class
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "TopLevelASD3D12.h"
 #include "TopLevelASBase.hpp"
 #include "D3D12ResourceBase.hpp"
 #include "BottomLevelASD3D12Impl.hpp" // Required by TopLevelASBase

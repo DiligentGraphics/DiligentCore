@@ -33,7 +33,6 @@
 #include <array>
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "QueryD3D12.h"
 #include "QueryBase.hpp"
 #include "QueryManagerD3D12.hpp"
 

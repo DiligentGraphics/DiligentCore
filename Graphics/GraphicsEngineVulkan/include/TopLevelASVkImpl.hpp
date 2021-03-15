@@ -31,7 +31,6 @@
 /// Definition of the Diligent::TopLevelASVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "TopLevelASVk.h"
 #include "TopLevelASBase.hpp"
 #include "BottomLevelASVkImpl.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"

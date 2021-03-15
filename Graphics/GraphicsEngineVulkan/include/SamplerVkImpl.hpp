@@ -31,14 +31,11 @@
 /// Declaration of Diligent::SamplerVkImpl class
 
 #include "EngineVkImplTraits.hpp"
-#include "SamplerVk.h"
 #include "SamplerBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
 
 /// Sampler object object implementation in Vulkan backend.
 class SamplerVkImpl final : public SamplerBase<EngineVkImplTraits>

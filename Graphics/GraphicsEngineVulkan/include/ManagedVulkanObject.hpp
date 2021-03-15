@@ -34,8 +34,6 @@
 namespace Diligent
 {
 
-class RenderDeviceVkImpl;
-
 template <typename VulkanObjectWrapperType>
 class ManagedVulkanObject : public DeviceObjectBase<IDeviceObject, RenderDeviceVkImpl, DeviceObjectAttribs>
 {
