@@ -38,16 +38,16 @@
 namespace Diligent
 {
 
-enum DESCRIPTOR_RANGE : Uint32
+enum D3D11_RESOURCE_RANGE : Uint32
 {
-    DESCRIPTOR_RANGE_CBV = 0,
-    DESCRIPTOR_RANGE_SRV,
-    DESCRIPTOR_RANGE_SAMPLER,
-    DESCRIPTOR_RANGE_UAV,
-    DESCRIPTOR_RANGE_COUNT,
-    DESCRIPTOR_RANGE_UNKNOWN = ~0u
+    D3D11_RESOURCE_RANGE_CBV = 0,
+    D3D11_RESOURCE_RANGE_SRV,
+    D3D11_RESOURCE_RANGE_SAMPLER,
+    D3D11_RESOURCE_RANGE_UAV,
+    D3D11_RESOURCE_RANGE_COUNT,
+    D3D11_RESOURCE_RANGE_UNKNOWN = ~0u
 };
-DESCRIPTOR_RANGE ShaderResourceToDescriptorRange(SHADER_RESOURCE_TYPE Type);
+D3D11_RESOURCE_RANGE ShaderResourceToDescriptorRange(SHADER_RESOURCE_TYPE Type);
 
 
 // sizeof(BindPointsD3D11) == 8, x64
@@ -122,7 +122,8 @@ public:
     static constexpr Uint32 InvalidSamplerInd  = (1u << _SamplerIndBits) - 1;
 
     // clang-format off
-    const Uint32    CacheOffset          : _CacheOffsetBits;      // SRB and Signature has the same cache offsets for static resources.
+    const Uint32    CacheOffset          : _CacheOffsetBits;      // SRB and Signature have the same cache offsets for static resources
+                                                                  // (thanks to sorting variables by type, where all static vars go first).
     const Uint32    SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
     const Uint32    ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag.
     BindPointsD3D11 BindPoints;

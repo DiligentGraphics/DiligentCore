@@ -103,7 +103,9 @@ public:
     }
 
     using TBindings         = ShaderResourceCacheD3D11::TResourceCount;
-    using TBindingsPerStage = ShaderResourceCacheD3D11::TBindingsPerStage;
+    using TResourceCount    = std::array<Uint8, D3D11_RESOURCE_RANGE_COUNT>;
+    using TBindingsPerStage = std::array<TResourceCount, NumShaderTypes>;
+
 
     __forceinline void ShiftBindings(TBindingsPerStage& Bindings) const
     {

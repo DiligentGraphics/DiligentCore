@@ -32,23 +32,23 @@
 namespace Diligent
 {
 
-DESCRIPTOR_RANGE ShaderResourceToDescriptorRange(SHADER_RESOURCE_TYPE Type)
+D3D11_RESOURCE_RANGE ShaderResourceToDescriptorRange(SHADER_RESOURCE_TYPE Type)
 {
     static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
     switch (Type)
     {
         // clang-format off
-        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return DESCRIPTOR_RANGE_CBV;
-        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return DESCRIPTOR_RANGE_SRV;
-        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return DESCRIPTOR_RANGE_SRV;
-        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return DESCRIPTOR_RANGE_UAV;
-        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return DESCRIPTOR_RANGE_UAV;
-        case SHADER_RESOURCE_TYPE_SAMPLER:          return DESCRIPTOR_RANGE_SAMPLER;
-        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return DESCRIPTOR_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return D3D11_RESOURCE_RANGE_CBV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return D3D11_RESOURCE_RANGE_UAV;
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return D3D11_RESOURCE_RANGE_UAV;
+        case SHADER_RESOURCE_TYPE_SAMPLER:          return D3D11_RESOURCE_RANGE_SAMPLER;
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return D3D11_RESOURCE_RANGE_SRV;
             // clang-format on
         default:
             UNEXPECTED("Unsupported resource type");
-            return DESCRIPTOR_RANGE_UNKNOWN;
+            return D3D11_RESOURCE_RANGE_UNKNOWN;
     }
 }
 
@@ -117,7 +117,7 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
 
 void PipelineResourceSignatureD3D11Impl::CreateLayout()
 {
-    using TBindings32         = std::array<Uint32, DESCRIPTOR_RANGE_COUNT>;
+    using TBindings32         = std::array<Uint32, D3D11_RESOURCE_RANGE_COUNT>;
     using TBindingsPerStage32 = std::array<TBindings32, NumShaderTypes>;
 
     if (m_pStaticResCache)
@@ -175,7 +175,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
 
     TBindings32         ResourceCount   = {};
     TBindingsPerStage32 BindingPerStage = {};
-    const auto          AllocBindPoints = [&BindingPerStage](BindPointsD3D11& BindPoints, SHADER_TYPE ShaderStages, Uint32 ArraySize, DESCRIPTOR_RANGE Range) //
+    const auto          AllocBindPoints = [&BindingPerStage](BindPointsD3D11& BindPoints, SHADER_TYPE ShaderStages, Uint32 ArraySize, D3D11_RESOURCE_RANGE Range) //
     {
         while (ShaderStages != 0)
         {
@@ -202,7 +202,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         }
 
         constexpr SHADER_TYPE UAVStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
-        if (Range == DESCRIPTOR_RANGE_UAV && (ResDesc.ShaderStages & ~UAVStages) != 0)
+        if (Range == D3D11_RESOURCE_RANGE_UAV && (ResDesc.ShaderStages & ~UAVStages) != 0)
         {
             LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", m_Desc.Name, "' is invalid: ",
                                 "Desc.Resources[", i, "].ResourceType (", GetShaderResourceTypeLiteralName(ResDesc.ResourceType),
@@ -218,9 +218,9 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
 
             if (!ImtblSampAttribs.IsAllocated())
             {
-                ImtblSampAttribs.CacheOffset = ResourceCount[DESCRIPTOR_RANGE_SAMPLER];
-                AllocBindPoints(ImtblSampAttribs.BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, DESCRIPTOR_RANGE_SAMPLER);
-                ResourceCount[DESCRIPTOR_RANGE_SAMPLER] += ImtblSampAttribs.ArraySize;
+                ImtblSampAttribs.CacheOffset = ResourceCount[D3D11_RESOURCE_RANGE_SAMPLER];
+                AllocBindPoints(ImtblSampAttribs.BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, D3D11_RESOURCE_RANGE_SAMPLER);
+                ResourceCount[D3D11_RESOURCE_RANGE_SAMPLER] += ImtblSampAttribs.ArraySize;
             }
         }
 
@@ -253,7 +253,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
     // Add bindings for immutable samplers that is not assigned to texture or separate sampler.
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        const auto  Range            = DESCRIPTOR_RANGE_SAMPLER;
+        const auto  Range            = D3D11_RESOURCE_RANGE_SAMPLER;
         const auto& ImtblSamp        = GetImmutableSamplerDesc(i);
         auto&       ImtblSampAttribs = m_ImmutableSamplers[i];
 
@@ -329,10 +329,10 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
         const auto& ResAttr = GetResourceAttribs(r);
         VERIFY_EXPR(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
-        static_assert(DESCRIPTOR_RANGE_COUNT == 4, "Please update the switch below to handle the new descriptor range");
+        static_assert(D3D11_RESOURCE_RANGE_COUNT == 4, "Please update the switch below to handle the new descriptor range");
         switch (ShaderResourceToDescriptorRange(ResDesc.ResourceType))
         {
-            case DESCRIPTOR_RANGE_CBV:
+            case D3D11_RESOURCE_RANGE_CBV:
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
                     const auto& SrcCachedRes = SrcResourceCache.GetCB(ResAttr.CacheOffset + ArrInd);
@@ -342,7 +342,7 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
                     DstResourceCache.SetCB(ResAttr.CacheOffset + ArrInd, ResAttr.BindPoints + ArrInd, RefCntAutoPtr<BufferD3D11Impl>{SrcCachedRes.pBuff});
                 }
                 break;
-            case DESCRIPTOR_RANGE_SRV:
+            case D3D11_RESOURCE_RANGE_SRV:
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
                     const auto& SrcCachedRes = SrcResourceCache.GetSRV(ResAttr.CacheOffset + ArrInd);
@@ -355,7 +355,7 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
                         DstResourceCache.SetBufSRV(ResAttr.CacheOffset + ArrInd, ResAttr.BindPoints + ArrInd, RefCntAutoPtr<BufferViewD3D11Impl>{SrcCachedRes.pView.RawPtr<BufferViewD3D11Impl>()});
                 }
                 break;
-            case DESCRIPTOR_RANGE_SAMPLER:
+            case D3D11_RESOURCE_RANGE_SAMPLER:
                 // Immutable samplers will be copied in InitSRBResourceCache().
                 if (!ResAttr.IsImmutableSamplerAssigned())
                 {
@@ -369,7 +369,7 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
                     }
                 }
                 break;
-            case DESCRIPTOR_RANGE_UAV:
+            case D3D11_RESOURCE_RANGE_UAV:
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
                     const auto& SrcCachedRes = SrcResourceCache.GetUAV(ResAttr.CacheOffset + ArrInd);
@@ -441,7 +441,7 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
     {
         const auto& ImtblSam = GetImmutableSamplerDesc(samp);
         const auto& SampAttr = GetImmutableSamplerAttribs(samp);
-        const auto  Range    = DESCRIPTOR_RANGE_SAMPLER;
+        const auto  Range    = D3D11_RESOURCE_RANGE_SAMPLER;
 
         if ((ImtblSam.ShaderStages & ShaderStage) != 0 && SampAttr.IsAllocated())
         {
@@ -489,7 +489,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
     bool BindingsOK = true;
     switch (ShaderResourceToDescriptorRange(ResDesc.ResourceType))
     {
-        case DESCRIPTOR_RANGE_CBV:
+        case D3D11_RESOURCE_RANGE_CBV:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
                 if (!ResourceCache.IsCBBound(ResAttr.CacheOffset + ArrInd))
@@ -501,7 +501,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
             }
             break;
 
-        case DESCRIPTOR_RANGE_SAMPLER:
+        case D3D11_RESOURCE_RANGE_SAMPLER:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
                 if (!ResourceCache.IsSamplerBound(ResAttr.CacheOffset + ArrInd))
@@ -513,7 +513,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
             }
             break;
 
-        case DESCRIPTOR_RANGE_SRV:
+        case D3D11_RESOURCE_RANGE_SRV:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
                 const bool IsTexView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
@@ -533,7 +533,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
             }
             break;
 
-        case DESCRIPTOR_RANGE_UAV:
+        case D3D11_RESOURCE_RANGE_UAV:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
                 const bool IsTexView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);

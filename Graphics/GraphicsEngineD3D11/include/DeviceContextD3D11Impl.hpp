@@ -333,11 +333,67 @@ private:
 
     void BindShaderResources();
 
-    using TBindingsPerStage   = PipelineResourceSignatureD3D11Impl::TBindingsPerStage;
-    using TCommittedResources = ShaderResourceCacheD3D11::TCommittedResources;
-    using TMinMaxSlotPerStage = ShaderResourceCacheD3D11::TMinMaxSlotPerStage;
+    static constexpr int NumShaderTypes = BindPointsD3D11::NumShaderTypes;
+    struct TCommittedResources
+    {
+        // clang-format off
 
-    static constexpr auto NumShaderTypes = PipelineResourceSignatureD3D11Impl::NumShaderTypes;
+        /// An array of D3D11 constant buffers committed to D3D11 device context,
+        /// for each shader type. The context addref's all bound resources, so we do
+        /// not need to keep strong references.
+        ID3D11Buffer*              D3D11CBs     [NumShaderTypes][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
+    
+        /// An array of D3D11 shader resource views committed to D3D11 device context,
+        /// for each shader type. The context addref's all bound resources, so we do 
+        /// not need to keep strong references.
+        ID3D11ShaderResourceView*  D3D11SRVs    [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+    
+        /// An array of D3D11 samplers committed to D3D11 device context,
+        /// for each shader type. The context addref's all bound resources, so we do 
+        /// not need to keep strong references.
+        ID3D11SamplerState*        D3D11Samplers[NumShaderTypes][D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = {};
+    
+        /// An array of D3D11 UAVs committed to D3D11 device context,
+        /// for each shader type. The context addref's all bound resources, so we do 
+        /// not need to keep strong references.
+        ID3D11UnorderedAccessView* D3D11UAVs    [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
+
+        /// An array of D3D11 resources commited as SRV to D3D11 device context,
+        /// for each shader type. The context addref's all bound resources, so we do 
+        /// not need to keep strong references.
+        ID3D11Resource*  D3D11SRVResources      [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+
+        /// An array of D3D11 resources commited as UAV to D3D11 device context,
+        /// for each shader type. The context addref's all bound resources, so we do 
+        /// not need to keep strong references.
+        ID3D11Resource*  D3D11UAVResources      [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
+
+        Uint8 NumCBs     [NumShaderTypes] = {};
+        Uint8 NumSRVs    [NumShaderTypes] = {};
+        Uint8 NumSamplers[NumShaderTypes] = {};
+        Uint8 NumUAVs    [NumShaderTypes] = {};
+
+        // clang-format on
+
+        void Clear()
+        {
+            *this = {};
+        }
+    };
+
+    using TBindingsPerStage = PipelineResourceSignatureD3D11Impl::TBindingsPerStage;
+    struct MinMaxSlot
+    {
+        UINT MinSlot = UINT_MAX;
+        UINT MaxSlot = 0;
+    };
+    using TMinMaxSlotPerStage = std::array<std::array<MinMaxSlot, D3D11_RESOURCE_RANGE_COUNT>, NumShaderTypes>;
+
+
+    void BindCacheResources(const ShaderResourceCacheD3D11& ResourceCache,
+                            const TBindingsPerStage&        Bindings,
+                            TMinMaxSlotPerStage&            MinMaxSlot,
+                            SHADER_TYPE                     ActiveStages);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();

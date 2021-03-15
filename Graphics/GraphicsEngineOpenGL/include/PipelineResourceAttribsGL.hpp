@@ -50,9 +50,10 @@ public:
 
     // clang-format off
     const Uint32  CacheOffset;                                 // SRB and Signature use the same cache offsets for static resources.
-                                                                // Binding == BaseBinding[Range] + CacheOffset
+                                                               // (thanks to sorting variables by type, where all static vars go first).
+                                                               // Binding == BaseBinding[Range] + CacheOffset
     const Uint32  SamplerInd           : _SamplerIndBits;      // ImtblSamplerAssigned == true:  index of the immutable sampler in m_ImmutableSamplers.
-                                                                // ImtblSamplerAssigned == false: index of the assigned sampler in m_Desc.Resources.
+                                                               // ImtblSamplerAssigned == false: index of the assigned sampler in m_Desc.Resources.
     const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
     // clang-format on
 

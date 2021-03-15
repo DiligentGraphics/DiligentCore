@@ -30,59 +30,6 @@
 /// \file
 /// Declaration of Diligent::ShaderResourcesD3D11 class
 
-
-//  ShaderResourcesD3D11 are created by ShaderD3D11Impl instances. They are then referenced by ShaderResourceLayoutD3D11 objects, which are in turn
-//  created by instances of ShaderResourceBindingsD3D11Impl and PipelineStateD3D11Impl
-//
-//    _________________
-//   |                 |
-//   | ShaderD3D11Impl |
-//   |_________________|
-//            |
-//            |shared_ptr
-//    ________V_____________                  _____________________________________________________________________
-//   |                      |  unique_ptr    |        |           |           |           |           |            |
-//   | ShaderResourcesD3D11 |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  |  Samplers  |
-//   |______________________|                |________|___________|___________|___________|___________|____________|
-//            A                                     A         A          A          A           A            A
-//            |                                      \         \          \          \           \           \   
-//            |shared_ptr                            Ref       Ref        Ref        Ref         Ref         Ref
-//    ________|__________________                  ____\_________\__________\__________\___________\_______ ___\______
-//   |                           |   unique_ptr   |        |           |           |           |           |          |
-//   | ShaderResourceLayoutD3D11 |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  | Samplers |
-//   |___________________________|                |________|___________|___________|___________|___________|__________|
-//                                                               |                                              A
-//                                                               |_________________SamplerIndex_________________|
-//
-//
-//  One ShaderResourcesD3D11 instance can be referenced by multiple objects
-//
-//
-//                                                                               ____<m_pResourceLayouts>___        ________________________________
-//                                                                              |                           |      |                                |
-//                                                                          ----| ShaderResourceLayoutD3D11 |<-----| ShaderResourceBindingD3D11Impl |
-//                                                                         |    |___________________________|      |________________________________|
-//                                                                         |
-//                                                                         |
-//    _________________                  ______________________            |     ____<m_pResourceLayouts>___        ________________________________
-//   |                 |  shared_ptr    |                      | shared_ptr|    |                           |      |                                |
-//   | ShaderD3D11Impl |--------------->| ShaderResourcesD3D11 |<---------------| ShaderResourceLayoutD3D11 |<-----| ShaderResourceBindingD3D11Impl |
-//   |_________________|                |______________________|           |    |___________________________|      |________________________________|
-//                                                  A                      |
-//                                                  |                      |
-//   _____<StaticResLayout>_____                    |                      |     ____<m_pResourceLayouts>___        ________________________________
-//  |                           |   shared_ptr      |                      |    |                           |      |                                |
-//  | ShaderResourceLayoutD3D11 |-------------------                        ----| ShaderResourceLayoutD3D11 |<-----| ShaderResourceBindingD3D11Impl |
-//  |___________________________|                                               |___________________________|      |________________________________|
-//              A
-//   ___________|______________
-//  |                          |
-//  |  PipelineStateD3D11Impl  |
-//  |__________________________|
-//
-
-#include <vector>
-
 #include "ShaderResources.hpp"
 
 namespace Diligent
@@ -110,17 +57,6 @@ public:
     __forceinline Int32 GetMaxSamplerBindPoint()const { return m_MaxSamplerBindPoint; }
     __forceinline Int32 GetMaxUAVBindPoint()    const { return m_MaxUAVBindPoint;     }
     // clang-format on
-
-#ifdef DILIGENT_DEVELOPMENT
-    void dvpVerifyCommittedResources(ID3D11Buffer*                   CommittedD3D11CBs[],
-                                     ID3D11ShaderResourceView*       CommittedD3D11SRVs[],
-                                     ID3D11Resource*                 CommittedD3D11SRVResources[],
-                                     ID3D11SamplerState*             CommittedD3D11Samplers[],
-                                     ID3D11UnorderedAccessView*      CommittedD3D11UAVs[],
-                                     ID3D11Resource*                 CommittedD3D11UAVResources[],
-                                     class ShaderResourceCacheD3D11& ResourceCache) const;
-#endif
-
 
 private:
     using MaxBindPointType = Int8;

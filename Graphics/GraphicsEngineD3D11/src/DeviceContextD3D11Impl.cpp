@@ -233,7 +233,7 @@ void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState* pPipeline
     auto* pShaderResBindingD3D11 = ValidatedCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
     auto& ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
 
-    ResourceCache.TransitionResourceStates(*this, ShaderResourceCacheD3D11::StateTransitionMode::Transition);
+    ResourceCache.TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(*this);
 }
 
 void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -254,14 +254,165 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
 
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
-        ResourceCache.TransitionResourceStates(*this, ShaderResourceCacheD3D11::StateTransitionMode::Transition);
+        ResourceCache.TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(*this);
     }
 #ifdef DILIGENT_DEVELOPMENT
     else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
-        ResourceCache.TransitionResourceStates(*this, ShaderResourceCacheD3D11::StateTransitionMode::Verify);
+        ResourceCache.TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Verify>(*this);
     }
 #endif
+}
+
+
+void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& ResourceCache,
+                                                const TBindingsPerStage&        BaseBindings,
+                                                TMinMaxSlotPerStage&            MinMaxSlot,
+                                                SHADER_TYPE                     ActiveStages)
+{
+    const auto CBCount = ResourceCache.GetCBCount();
+    if (CBCount != 0)
+    {
+        constexpr auto                            Range = D3D11_RESOURCE_RANGE_CBV;
+        ShaderResourceCacheD3D11::CachedCB const* CBs;
+        ID3D11Buffer* const*                      d3d11CBs;
+        BindPointsD3D11 const*                    bindPoints;
+        ResourceCache.GetConstCBArrays(CBs, d3d11CBs, bindPoints);
+
+        for (Uint32 cb = 0; cb < CBCount; ++cb)
+        {
+            const auto& BindPoints = bindPoints[cb];
+            Uint32      ActiveBits = BindPoints.GetActiveBits() & ActiveStages;
+            VERIFY(ActiveBits != 0, "resource is not initialized");
+            while (ActiveBits != 0)
+            {
+                const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
+                ActiveBits &= ~(1u << ShaderInd);
+                VERIFY_EXPR(BindPoints.IsValid(ShaderInd));
+
+                auto*      CommittedD3D11CBs = m_CommittedRes.D3D11CBs[ShaderInd];
+                UINT&      MinSlot           = MinMaxSlot[ShaderInd][Range].MinSlot;
+                UINT&      MaxSlot           = MinMaxSlot[ShaderInd][Range].MaxSlot;
+                const UINT Slot              = BaseBindings[ShaderInd][Range] + BindPoints[ShaderInd];
+                const bool IsNewCB           = CommittedD3D11CBs[Slot] != d3d11CBs[cb];
+                MinSlot                      = IsNewCB ? std::min(MinSlot, Slot) : MinSlot;
+                MaxSlot                      = IsNewCB ? Slot : MaxSlot;
+
+                VERIFY_EXPR(!IsNewCB || (Slot >= MinSlot && Slot <= MaxSlot));
+                VERIFY_EXPR(d3d11CBs[cb] != nullptr);
+                CommittedD3D11CBs[Slot] = d3d11CBs[cb];
+            }
+        }
+    }
+
+    const auto SRVCount = ResourceCache.GetSRVCount();
+    if (SRVCount != 0)
+    {
+        constexpr auto                                  Range = D3D11_RESOURCE_RANGE_SRV;
+        ShaderResourceCacheD3D11::CachedResource const* SRVResources;
+        ID3D11ShaderResourceView* const*                d3d11SRVs;
+        BindPointsD3D11 const*                          bindPoints;
+        ResourceCache.GetConstSRVArrays(SRVResources, d3d11SRVs, bindPoints);
+
+        for (Uint32 srv = 0; srv < SRVCount; ++srv)
+        {
+            const auto& BindPoints = bindPoints[srv];
+            Uint32      ActiveBits = BindPoints.GetActiveBits() & ActiveStages;
+            VERIFY(ActiveBits != 0, "resource is not initialized");
+            while (ActiveBits != 0)
+            {
+                const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
+                ActiveBits &= ~(1u << ShaderInd);
+                VERIFY_EXPR(BindPoints.IsValid(ShaderInd));
+
+                auto*      CommittedD3D11SRVs   = m_CommittedRes.D3D11SRVs[ShaderInd];
+                auto*      CommittedD3D11SRVRes = m_CommittedRes.D3D11SRVResources[ShaderInd];
+                UINT&      MinSlot              = MinMaxSlot[ShaderInd][Range].MinSlot;
+                UINT&      MaxSlot              = MinMaxSlot[ShaderInd][Range].MaxSlot;
+                const UINT Slot                 = BaseBindings[ShaderInd][Range] + BindPoints[ShaderInd];
+                const bool IsNewSRV             = CommittedD3D11SRVs[Slot] != d3d11SRVs[srv];
+                MinSlot                         = IsNewSRV ? std::min(MinSlot, Slot) : MinSlot;
+                MaxSlot                         = IsNewSRV ? Slot : MaxSlot;
+
+                VERIFY_EXPR(!IsNewSRV || (Slot >= MinSlot && Slot <= MaxSlot));
+                VERIFY_EXPR(d3d11SRVs[srv] != nullptr);
+                CommittedD3D11SRVRes[Slot] = SRVResources[srv].pd3d11Resource;
+                CommittedD3D11SRVs[Slot]   = d3d11SRVs[srv];
+            }
+        }
+    }
+
+    const auto SamplerCount = ResourceCache.GetSamplerCount();
+    if (SamplerCount != 0)
+    {
+        constexpr auto                                 Range = D3D11_RESOURCE_RANGE_SAMPLER;
+        ShaderResourceCacheD3D11::CachedSampler const* Samplers;
+        ID3D11SamplerState* const*                     d3d11Samplers;
+        BindPointsD3D11 const*                         bindPoints;
+        ResourceCache.GetConstSamplerArrays(Samplers, d3d11Samplers, bindPoints);
+
+        for (Uint32 sam = 0; sam < SamplerCount; ++sam)
+        {
+            const auto& BindPoints = bindPoints[sam];
+            Uint32      ActiveBits = BindPoints.GetActiveBits() & ActiveStages;
+            VERIFY(ActiveBits != 0, "resource is not initialized");
+            while (ActiveBits != 0)
+            {
+                const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
+                ActiveBits &= ~(1u << ShaderInd);
+                VERIFY_EXPR(BindPoints.IsValid(ShaderInd));
+
+                auto*      CommittedD3D11Samplers = m_CommittedRes.D3D11Samplers[ShaderInd];
+                UINT&      MinSlot                = MinMaxSlot[ShaderInd][Range].MinSlot;
+                UINT&      MaxSlot                = MinMaxSlot[ShaderInd][Range].MaxSlot;
+                const UINT Slot                   = BaseBindings[ShaderInd][Range] + BindPoints[ShaderInd];
+                const bool IsNewSam               = CommittedD3D11Samplers[Slot] != d3d11Samplers[sam];
+                MinSlot                           = IsNewSam ? std::min(MinSlot, Slot) : MinSlot;
+                MaxSlot                           = IsNewSam ? Slot : MaxSlot;
+
+                VERIFY_EXPR(!IsNewSam || (Slot >= MinSlot && Slot <= MaxSlot));
+                VERIFY_EXPR(d3d11Samplers[sam] != nullptr);
+                CommittedD3D11Samplers[Slot] = d3d11Samplers[sam];
+            }
+        }
+    }
+
+    const auto UAVCount = ResourceCache.GetUAVCount();
+    if (UAVCount != 0)
+    {
+        constexpr auto                                  Range = D3D11_RESOURCE_RANGE_UAV;
+        ShaderResourceCacheD3D11::CachedResource const* UAVResources;
+        ID3D11UnorderedAccessView* const*               d3d11UAVs;
+        BindPointsD3D11 const*                          bindPoints;
+        ResourceCache.GetConstUAVArrays(UAVResources, d3d11UAVs, bindPoints);
+
+        for (Uint32 uav = 0; uav < UAVCount; ++uav)
+        {
+            const auto& BindPoints = bindPoints[uav];
+            Uint32      ActiveBits = BindPoints.GetActiveBits() & ActiveStages;
+            VERIFY(ActiveBits != 0, "resource is not initialized");
+            while (ActiveBits != 0)
+            {
+                const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
+                ActiveBits &= ~(1u << ShaderInd);
+                VERIFY_EXPR(BindPoints.IsValid(ShaderInd));
+
+                auto*      CommittedD3D11UAVs   = m_CommittedRes.D3D11UAVs[ShaderInd];
+                auto*      CommittedD3D11UAVRes = m_CommittedRes.D3D11UAVResources[ShaderInd];
+                UINT&      MinSlot              = MinMaxSlot[ShaderInd][Range].MinSlot;
+                UINT&      MaxSlot              = MinMaxSlot[ShaderInd][Range].MaxSlot;
+                const UINT Slot                 = BaseBindings[ShaderInd][Range] + BindPoints[ShaderInd];
+                const bool IsNewUAV             = CommittedD3D11UAVs[Slot] != d3d11UAVs[uav];
+                MinSlot                         = IsNewUAV ? std::min(MinSlot, Slot) : MinSlot;
+                MaxSlot                         = IsNewUAV ? Slot : MaxSlot;
+
+                VERIFY_EXPR(!IsNewUAV || (Slot >= MinSlot && Slot <= MaxSlot));
+                VERIFY_EXPR(d3d11UAVs[uav] != nullptr);
+                CommittedD3D11UAVRes[Slot] = UAVResources[uav].pd3d11Resource;
+                CommittedD3D11UAVs[Slot]   = d3d11UAVs[uav];
+            }
+        }
+    }
 }
 
 void DeviceContextD3D11Impl::BindShaderResources()
@@ -269,12 +420,13 @@ void DeviceContextD3D11Impl::BindShaderResources()
     if ((m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask) == 0)
         return;
 
+
     TBindingsPerStage   Bindings     = {};
     TMinMaxSlotPerStage MinMaxSlot   = {};
     const auto          ActiveStages = m_BindInfo.ActiveStages;
 
     if (m_pPipelineState->GetDesc().IsAnyGraphicsPipeline())
-        Bindings[GetShaderTypeIndex(SHADER_TYPE_PIXEL)][DESCRIPTOR_RANGE_UAV] = static_cast<Uint8>(m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets);
+        Bindings[GetShaderTypeIndex(SHADER_TYPE_PIXEL)][D3D11_RESOURCE_RANGE_UAV] = static_cast<Uint8>(m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets);
 
     auto ActiveSRBMask = Uint32{m_BindInfo.ActiveSRBMask};
     while (ActiveSRBMask != 0)
@@ -293,7 +445,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
 #ifdef DILIGENT_DEVELOPMENT
             m_BindInfo.BoundResOffsets[sign] = Bindings;
 #endif
-            pSRB->GetResourceCache().BindResources(*this, Bindings, MinMaxSlot, m_CommittedRes, ActiveStages);
+            BindCacheResources(pSRB->GetResourceCache(), Bindings, MinMaxSlot, ActiveStages);
         }
         pSRB->GetSignature()->ShiftBindings(Bindings);
     }
@@ -308,7 +460,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
 
         // CBV
         {
-            const auto Range   = DESCRIPTOR_RANGE_CBV;
+            const auto Range   = D3D11_RESOURCE_RANGE_CBV;
             const UINT MinSlot = MinMaxSlot[ShaderInd][Range].MinSlot;
             const UINT MaxSlot = MinMaxSlot[ShaderInd][Range].MaxSlot;
             if (MinSlot != UINT_MAX)
@@ -328,7 +480,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
 
         // SRV
         {
-            const auto Range   = DESCRIPTOR_RANGE_SRV;
+            const auto Range   = D3D11_RESOURCE_RANGE_SRV;
             const UINT MinSlot = MinMaxSlot[ShaderInd][Range].MinSlot;
             const UINT MaxSlot = MinMaxSlot[ShaderInd][Range].MaxSlot;
             if (MinSlot != UINT_MAX)
@@ -348,7 +500,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
 
         // Sampler
         {
-            const auto Range   = DESCRIPTOR_RANGE_SAMPLER;
+            const auto Range   = D3D11_RESOURCE_RANGE_SAMPLER;
             const UINT MinSlot = MinMaxSlot[ShaderInd][Range].MinSlot;
             const UINT MaxSlot = MinMaxSlot[ShaderInd][Range].MaxSlot;
             if (MinSlot != UINT_MAX)
@@ -368,7 +520,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
 
         // UAV
         {
-            const auto Range   = DESCRIPTOR_RANGE_UAV;
+            const auto Range   = D3D11_RESOURCE_RANGE_UAV;
             const UINT MinSlot = MinMaxSlot[ShaderInd][Range].MinSlot;
             const UINT MaxSlot = MinMaxSlot[ShaderInd][Range].MaxSlot;
             if (MinSlot != UINT_MAX)
