@@ -49,15 +49,18 @@ VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanLog
 
     m_CmdPool = m_LogicalDevice->CreateCommandPool(CmdPoolCI);
     DEV_CHECK_ERR(m_CmdPool != VK_NULL_HANDLE, "Failed to create vulkan command pool");
-#ifdef DILIGENT_DEVELOPMENT
-    m_BuffCounter = 0;
-#endif
 }
 
 VulkanCommandBufferPool::~VulkanCommandBufferPool()
 {
+    DEV_CHECK_ERR(m_BuffCounter == 0, m_BuffCounter,
+                  " command buffer(s) have not been returned to the pool. If there are outstanding references to these "
+                  "buffers in release queues, VulkanCommandBufferPool::RecycleCommandBuffer() will crash when attempting to "
+                  "return the buffer to the pool.");
+
+    for (auto CmdBuff : m_CmdBuffers)
+        m_LogicalDevice->FreeCommandBuffer(m_CmdPool, CmdBuff);
     m_CmdPool.Release();
-    DEV_CHECK_ERR(m_BuffCounter == 0, m_BuffCounter, " command buffer(s) have not been returned to the pool. If there are outstanding references to these buffers in release queues, FreeCommandBuffer() will crash when attempting to return a buffer to the pool.");
 }
 
 VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
@@ -114,7 +117,7 @@ VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
     return CmdBuffer;
 }
 
-void VulkanCommandBufferPool::FreeCommandBuffer(VkCommandBuffer&& CmdBuffer)
+void VulkanCommandBufferPool::RecycleCommandBuffer(VkCommandBuffer&& CmdBuffer)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
     m_CmdBuffers.emplace_back(CmdBuffer);
@@ -122,13 +125,6 @@ void VulkanCommandBufferPool::FreeCommandBuffer(VkCommandBuffer&& CmdBuffer)
 #ifdef DILIGENT_DEVELOPMENT
     --m_BuffCounter;
 #endif
-}
-
-CommandPoolWrapper&& VulkanCommandBufferPool::Release()
-{
-    m_LogicalDevice.reset();
-    m_CmdBuffers.clear();
-    return std::move(m_CmdPool);
 }
 
 } // namespace VulkanUtilities

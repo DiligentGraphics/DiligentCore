@@ -122,7 +122,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     },
     m_TransientCmdPoolMgr
     {
-        *this,
+        GetLogicalDevice(),
         "Transient command buffer pool manager",
         CmdQueues[0]->GetQueueFamilyIndex(),
         VK_COMMAND_POOL_CREATE_TRANSIENT_BIT
@@ -327,7 +327,9 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
 }
 
 
-void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool)
+void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32                                QueueIndex,
+                                                           VkCommandBuffer                       vkCmdBuff,
+                                                           VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
     VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
 
@@ -373,7 +375,71 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
                            FenceValue = pCmdQueueVk->Submit(SubmitInfo);
                        } //
     );
-    m_TransientCmdPoolMgr.SafeReleaseCommandPool(std::move(CmdPool), QueueIndex, FenceValue);
+
+    class TransientCmdPoolRecycler
+    {
+    public:
+        TransientCmdPoolRecycler(const VulkanUtilities::VulkanLogicalDevice& _LogicalDevice,
+                                 CommandPoolManager&                         _CmdPoolMgr,
+                                 VulkanUtilities::CommandPoolWrapper&&       _Pool,
+                                 VkCommandBuffer&&                           _vkCmdBuffer) :
+            // clang-format off
+            LogicalDevice{_LogicalDevice         },
+            CmdPoolMgr   {&_CmdPoolMgr           },
+            Pool         {std::move(_Pool)       },
+            vkCmdBuffer  {std::move(_vkCmdBuffer)}
+        // clang-format on
+        {
+            VERIFY_EXPR(Pool != VK_NULL_HANDLE && vkCmdBuffer != VK_NULL_HANDLE);
+            _vkCmdBuffer = VK_NULL_HANDLE;
+        }
+
+        // clang-format off
+        TransientCmdPoolRecycler             (const TransientCmdPoolRecycler&)  = delete;
+        TransientCmdPoolRecycler& operator = (const TransientCmdPoolRecycler&)  = delete;
+        TransientCmdPoolRecycler& operator = (      TransientCmdPoolRecycler&&) = delete;
+
+        TransientCmdPoolRecycler(TransientCmdPoolRecycler&& rhs) :
+            LogicalDevice{rhs.LogicalDevice         },
+            CmdPoolMgr   {rhs.CmdPoolMgr            },
+            Pool         {std::move(rhs.Pool)       },
+            vkCmdBuffer  {std::move(rhs.vkCmdBuffer)}
+        {
+            rhs.CmdPoolMgr  = nullptr;
+            rhs.vkCmdBuffer = VK_NULL_HANDLE;
+        }
+        // clang-format on
+
+        ~TransientCmdPoolRecycler()
+        {
+            if (CmdPoolMgr != nullptr)
+            {
+                LogicalDevice.FreeCommandBuffer(Pool, vkCmdBuffer);
+                CmdPoolMgr->RecycleCommandPool(std::move(Pool));
+            }
+        }
+
+    private:
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice;
+
+        CommandPoolManager*                 CmdPoolMgr = nullptr;
+        VulkanUtilities::CommandPoolWrapper Pool;
+        VkCommandBuffer                     vkCmdBuffer = VK_NULL_HANDLE;
+    };
+
+    // Discard command pool directly to the release queue since we know exactly which queue it was submitted to
+    // as well as the associated FenceValue
+    // clang-format off
+    GetReleaseQueue(QueueIndex).DiscardResource(
+        TransientCmdPoolRecycler
+        {
+            GetLogicalDevice(),
+            m_TransientCmdPoolMgr,
+            std::move(CmdPool),
+            std::move(vkCmdBuff)
+        },
+        FenceValue);
+    // clang-format on
 }
 
 void RenderDeviceVkImpl::SubmitCommandBuffer(Uint32                                                 QueueIndex,

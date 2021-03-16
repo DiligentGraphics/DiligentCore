@@ -171,7 +171,8 @@ public:
     void ReleaseVulkanObject(AccelStructWrapper&&   AccelStruct) const;
 
     void FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const;
-
+    void FreeCommandBuffer(VkCommandPool Pool, VkCommandBuffer CmdBuffer) const;
+    
     VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer) const;
     VkMemoryRequirements GetImageMemoryRequirements (VkImage  vkImage ) const;
     VkDeviceAddress      GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const;

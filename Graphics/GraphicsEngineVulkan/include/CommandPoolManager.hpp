@@ -32,19 +32,18 @@
 #include <atomic>
 #include "STDAllocator.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/VulkanLogicalDevice.hpp"
 
 namespace Diligent
 {
 
-class RenderDeviceVkImpl;
-
 class CommandPoolManager
 {
 public:
-    CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl,
-                       std::string              Name,
-                       uint32_t                 queueFamilyIndex,
-                       VkCommandPoolCreateFlags flags) noexcept;
+    CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
+                       std::string                                 Name,
+                       uint32_t                                    queueFamilyIndex,
+                       VkCommandPoolCreateFlags                    flags) noexcept;
 
     // clang-format off
     CommandPoolManager             (const CommandPoolManager&)  = delete;
@@ -58,8 +57,6 @@ public:
     // Allocates Vulkan command pool.
     VulkanUtilities::CommandPoolWrapper AllocateCommandPool(const char* DebugName = nullptr);
 
-    void SafeReleaseCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool, Uint32 CmdQueueIndex, Uint64 FenceValue);
-
     void DestroyPools();
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -69,11 +66,12 @@ public:
     }
 #endif
 
-private:
     // Returns command pool to the list of available pools. The GPU must have finished using the pool
-    void FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
+    void RecycleCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
-    RenderDeviceVkImpl&            m_DeviceVkImpl;
+private:
+    const VulkanUtilities::VulkanLogicalDevice& m_LogicalDevice;
+
     const std::string              m_Name;
     const uint32_t                 m_QueueFamilyIndex;
     const VkCommandPoolCreateFlags m_CmdPoolFlags;
@@ -82,7 +80,7 @@ private:
     std::deque<VulkanUtilities::CommandPoolWrapper, STDAllocatorRawMem<VulkanUtilities::CommandPoolWrapper>> m_CmdPools;
 
 #ifdef DILIGENT_DEVELOPMENT
-    std::atomic_int32_t m_AllocatedPoolCounter;
+    std::atomic_int32_t m_AllocatedPoolCounter{0};
 #endif
 };
 

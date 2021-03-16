@@ -463,6 +463,11 @@ void VulkanLogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorS
 }
 
 
+void VulkanLogicalDevice::FreeCommandBuffer(VkCommandPool Pool, VkCommandBuffer CmdBuffer) const
+{
+    VERIFY_EXPR(Pool != VK_NULL_HANDLE && CmdBuffer != VK_NULL_HANDLE);
+    vkFreeCommandBuffers(m_VkDevice, Pool, 1, &CmdBuffer);
+}
 
 
 VkMemoryRequirements VulkanLogicalDevice::GetBufferMemoryRequirements(VkBuffer vkBuffer) const

@@ -426,7 +426,7 @@ private:
         m_State.NumCommands = m_State.NumCommands != 0 ? m_State.NumCommands : 1;
         if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
         {
-            auto vkCmdBuff = m_CmdPool.GetCommandBuffer();
+            auto vkCmdBuff = m_CmdPool->GetCommandBuffer();
             m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff);
         }
     }
@@ -600,10 +600,11 @@ private:
     };
     std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher> m_MappedTextures;
 
-    VulkanUtilities::VulkanCommandBufferPool m_CmdPool;
-    VulkanUploadHeap                         m_UploadHeap;
-    VulkanDynamicHeap                        m_DynamicHeap;
-    DynamicDescriptorSetAllocator            m_DynamicDescrSetAllocator;
+    std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool> m_CmdPool;
+
+    VulkanUploadHeap              m_UploadHeap;
+    VulkanDynamicHeap             m_DynamicHeap;
+    DynamicDescriptorSetAllocator m_DynamicDescrSetAllocator;
 
     std::shared_ptr<GenerateMipsVkHelper> m_GenerateMipsHelper;
     RefCntAutoPtr<IShaderResourceBinding> m_GenerateMipsSRB;

@@ -80,9 +80,12 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
     // potentially running in another thread
     m_CmdPool
     {
-        pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(),
-        pDeviceVkImpl->GetCommandQueue(CommandQueueId).GetQueueFamilyIndex(),
-        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+        new VulkanUtilities::VulkanCommandBufferPool
+        {
+            pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(),
+            pDeviceVkImpl->GetCommandQueue(CommandQueueId).GetQueueFamilyIndex(),
+            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+        }
     },
     // Upload heap must always be thread-safe as Finish() may be called from another thread
     m_UploadHeap
@@ -163,30 +166,26 @@ DeviceContextVkImpl::~DeviceContextVkImpl()
     DEV_CHECK_ERR(m_DynamicDescrSetAllocator.GetAllocatedPoolCount() == 0, "All allocated dynamic descriptor set pools must have been released at this point");
     // clang-format on
 
-    auto VkCmdPool = m_CmdPool.Release();
-    m_pDevice->SafeReleaseDeviceObject(std::move(VkCmdPool), ~Uint64{0});
+    // NB: If there are any command buffers in the release queue, they will always be returned to the pool
+    //     before the pool itself is released because the pool will always end up later in the queue,
+    //     so we do not need to idle the GPU.
+    //     Also note that command buffers are disposed directly into the release queue, but
+    //     the command pool goes into the stale objects queue and is moved into the release queue
+    //     when the next command buffer is submitted.
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_CmdPool), ~Uint64{0});
 
-    // clang-format off
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_GenerateMipsHelper), ~Uint64{0});
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_GenerateMipsSRB),    ~Uint64{0});
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_DummyVB),            ~Uint64{0});
-    // clang-format on
-
-    // The main reason we need to idle the GPU is because we need to make sure that all command buffers are returned to the
-    // pool. Upload heap, dynamic heap and dynamic descriptor manager return their resources to global managers and
-    // do not really need to wait for GPU to idle.
-    m_pDevice->IdleGPU();
-    DEV_CHECK_ERR(m_CmdPool.DvpGetBufferCounter() == 0, "All command buffers must have been returned to the pool");
+    // NB: Upload heap, dynamic heap and dynamic descriptor manager return their resources to
+    //     global managers and do not need to wait for GPU to idle.
 }
 
 void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
 {
     VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
-    class CmdBufferDeleter
+    class CmdBufferRecycler
     {
     public:
         // clang-format off
-        CmdBufferDeleter(VkCommandBuffer                           _vkCmdBuff, 
+        CmdBufferRecycler(VkCommandBuffer                           _vkCmdBuff, 
                          VulkanUtilities::VulkanCommandBufferPool& _Pool) noexcept :
             vkCmdBuff {_vkCmdBuff},
             Pool      {&_Pool    }
@@ -194,11 +193,11 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vk
             VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
         }
 
-        CmdBufferDeleter             (const CmdBufferDeleter&)  = delete;
-        CmdBufferDeleter& operator = (const CmdBufferDeleter&)  = delete;
-        CmdBufferDeleter& operator = (      CmdBufferDeleter&&) = delete;
+        CmdBufferRecycler             (const CmdBufferRecycler&)  = delete;
+        CmdBufferRecycler& operator = (const CmdBufferRecycler&)  = delete;
+        CmdBufferRecycler& operator = (      CmdBufferRecycler&&) = delete;
 
-        CmdBufferDeleter(CmdBufferDeleter&& rhs) noexcept : 
+        CmdBufferRecycler(CmdBufferRecycler&& rhs) noexcept : 
             vkCmdBuff {rhs.vkCmdBuff},
             Pool      {rhs.Pool     }
         {
@@ -207,21 +206,23 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vk
         }
         // clang-format on
 
-        ~CmdBufferDeleter()
+        ~CmdBufferRecycler()
         {
             if (Pool != nullptr)
             {
-                Pool->FreeCommandBuffer(std::move(vkCmdBuff));
+                Pool->RecycleCommandBuffer(std::move(vkCmdBuff));
             }
         }
 
     private:
-        VkCommandBuffer                           vkCmdBuff;
-        VulkanUtilities::VulkanCommandBufferPool* Pool;
+        VkCommandBuffer                           vkCmdBuff = VK_NULL_HANDLE;
+        VulkanUtilities::VulkanCommandBufferPool* Pool      = nullptr;
     };
 
+    // Discard command buffer directly to the release queue since we know exactly which queue it was submitted to
+    // as well as the associated FenceValue.
     auto& ReleaseQueue = m_pDevice->GetReleaseQueue(CmdQueue);
-    ReleaseQueue.DiscardResource(CmdBufferDeleter{vkCmdBuff, m_CmdPool}, FenceValue);
+    ReleaseQueue.DiscardResource(CmdBufferRecycler{vkCmdBuff, *m_CmdPool}, FenceValue);
 }
 
 inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(Uint32 CmdQueue, Uint64 FenceValue)

@@ -32,28 +32,23 @@
 namespace Diligent
 {
 
-CommandPoolManager::CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl,
-                                       std::string              Name,
-                                       uint32_t                 queueFamilyIndex,
-                                       VkCommandPoolCreateFlags flags) noexcept :
+CommandPoolManager::CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
+                                       std::string                                 Name,
+                                       uint32_t                                    queueFamilyIndex,
+                                       VkCommandPoolCreateFlags                    flags) noexcept :
     // clang-format off
-    m_DeviceVkImpl    {DeviceVkImpl     },
+    m_LogicalDevice   {LogicalDevice    },
     m_Name            {std::move(Name)  },
     m_QueueFamilyIndex{queueFamilyIndex },
     m_CmdPoolFlags    {flags            },
     m_CmdPools        (STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>"))
 // clang-format on
 {
-#ifdef DILIGENT_DEVELOPMENT
-    m_AllocatedPoolCounter = 0;
-#endif
 }
 
 VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(const char* DebugName)
 {
     std::lock_guard<std::mutex> LockGuard{m_Mutex};
-
-    const auto& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
 
     VulkanUtilities::CommandPoolWrapper CmdPool;
     if (!m_CmdPools.empty())
@@ -61,7 +56,7 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
         CmdPool = std::move(m_CmdPools.front());
         m_CmdPools.pop_front();
 
-        LogicalDevice.ResetCommandPool(CmdPool);
+        m_LogicalDevice.ResetCommandPool(CmdPool);
     }
 
     if (CmdPool == VK_NULL_HANDLE)
@@ -73,7 +68,7 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
         CmdPoolCI.queueFamilyIndex = m_QueueFamilyIndex;
         CmdPoolCI.flags            = m_CmdPoolFlags;
 
-        CmdPool = LogicalDevice.CreateCommandPool(CmdPoolCI);
+        CmdPool = m_LogicalDevice.CreateCommandPool(CmdPoolCI);
         DEV_CHECK_ERR(CmdPool != VK_NULL_HANDLE, "Failed to create Vulkan command pool");
     }
 
@@ -83,54 +78,9 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
     return std::move(CmdPool);
 }
 
-void CommandPoolManager::SafeReleaseCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool, Uint32 CmdQueueIndex, Uint64 FenceValue)
+void CommandPoolManager::RecycleCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
-    class CommandPoolDeleter
-    {
-    public:
-        CommandPoolDeleter(CommandPoolManager& _CmdPoolMgr, VulkanUtilities::CommandPoolWrapper&& _Pool) :
-            // clang-format off
-            CmdPoolMgr{&_CmdPoolMgr    },
-            Pool      {std::move(_Pool)}
-        // clang-format on
-        {
-            VERIFY_EXPR(Pool != VK_NULL_HANDLE);
-        }
-
-        // clang-format off
-        CommandPoolDeleter             (const CommandPoolDeleter&)  = delete;
-        CommandPoolDeleter& operator = (const CommandPoolDeleter&)  = delete;
-        CommandPoolDeleter& operator = (      CommandPoolDeleter&&) = delete;
-
-        CommandPoolDeleter(CommandPoolDeleter&& rhs) : 
-            CmdPoolMgr{rhs.CmdPoolMgr     },
-            Pool      {std::move(rhs.Pool)}
-        {
-            rhs.CmdPoolMgr = nullptr;
-        }
-        // clang-format on
-
-        ~CommandPoolDeleter()
-        {
-            if (CmdPoolMgr != nullptr)
-            {
-                CmdPoolMgr->FreeCommandPool(std::move(Pool));
-            }
-        }
-
-    private:
-        CommandPoolManager*                 CmdPoolMgr;
-        VulkanUtilities::CommandPoolWrapper Pool;
-    };
-
-    // Discard command pool directly to the release queue since we know exactly which queue it was submitted to
-    // as well as the associated FenceValue
-    m_DeviceVkImpl.GetReleaseQueue(CmdQueueIndex).DiscardResource(CommandPoolDeleter{*this, std::move(CmdPool)}, FenceValue);
-}
-
-void CommandPoolManager::FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool)
-{
-    std::lock_guard<std::mutex> LockGuard(m_Mutex);
+    std::lock_guard<std::mutex> LockGuard{m_Mutex};
 #ifdef DILIGENT_DEVELOPMENT
     --m_AllocatedPoolCounter;
 #endif
@@ -139,8 +89,8 @@ void CommandPoolManager::FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& C
 
 void CommandPoolManager::DestroyPools()
 {
-    std::lock_guard<std::mutex> LockGuard(m_Mutex);
-    DEV_CHECK_ERR(m_AllocatedPoolCounter == 0, m_AllocatedPoolCounter, " pool(s) have not been freed. This will cause a crash if the references to these pools are still in release queues when CommandPoolManager::FreeCommandPool() is called for destroyed CommandPoolManager object.");
+    std::lock_guard<std::mutex> LockGuard{m_Mutex};
+    DEV_CHECK_ERR(m_AllocatedPoolCounter == 0, m_AllocatedPoolCounter, " pool(s) have not been recycled. This will cause a crash if the references to these pools are still in release queues when CommandPoolManager::RecycleCommandPool() is called for destroyed CommandPoolManager object.");
     LOG_INFO_MESSAGE(m_Name, " allocated descriptor pool count: ", m_CmdPools.size());
     m_CmdPools.clear();
 }
