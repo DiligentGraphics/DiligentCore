@@ -161,11 +161,27 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         ResSignDesc.Name                       = SignName.c_str();
         ResSignDesc.Resources                  = Resources.data();
         ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
-        ResSignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;
-        ResSignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
         ResSignDesc.BindingIndex               = 0;
         ResSignDesc.SRBAllocationGranularity   = CreateInfo.PSODesc.SRBAllocationGranularity;
         ResSignDesc.UseCombinedTextureSamplers = true;
+
+        std::vector<ImmutableSamplerDesc> ImmutableSamplers;
+        if (m_IsProgramPipelineSupported)
+        {
+            ResSignDesc.ImmutableSamplers = LayoutDesc.ImmutableSamplers;
+        }
+        else
+        {
+            // Apply each immutable sampler to all shader stages
+            ImmutableSamplers.resize(LayoutDesc.NumImmutableSamplers);
+            for (Uint32 i = 0; i < LayoutDesc.NumImmutableSamplers; ++i)
+            {
+                ImmutableSamplers[i]              = LayoutDesc.ImmutableSamplers[i];
+                ImmutableSamplers[i].ShaderStages = ActiveStages;
+            }
+            ResSignDesc.ImmutableSamplers = ImmutableSamplers.data();
+        }
+        ResSignDesc.NumImmutableSamplers = LayoutDesc.NumImmutableSamplers;
 
         // Always initialize default resource signature as internal device object.
         // This is necessary to avoud cyclic references from TexRegionRenderer.
