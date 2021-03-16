@@ -504,28 +504,42 @@ public:
 
     ResourceCacheContentType GetContentType() const { return m_ContentType; }
 
-    void BindCBs(Uint32        ShaderInd,
-                 ID3D11Buffer* CommittedD3D11CBs[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT],
-                 Uint8&        Binding,
-                 Uint32&       MinSlot,
-                 Uint32&       MaxSlot) const;
-    void BindSRVs(Uint32                    ShaderInd,
-                  ID3D11ShaderResourceView* CommittedD3D11SRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
-                  ID3D11Resource*           CommittedD3D11SRVResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
-                  Uint8&                    Binding,
-                  Uint32&                   MinSlot,
-                  Uint32&                   MaxSlot) const;
-    void BindSamplers(Uint32              ShaderInd,
-                      ID3D11SamplerState* CommittedD3D11Samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT],
-                      Uint8&              Binding,
-                      Uint32&             MinSlot,
-                      Uint32&             MaxSlot) const;
-    void BindUAVs(Uint32                     ShaderInd,
-                  ID3D11UnorderedAccessView* CommittedD3D11UAVs[D3D11_PS_CS_UAV_REGISTER_COUNT],
-                  ID3D11Resource*            CommittedD3D11UAVResources[D3D11_PS_CS_UAV_REGISTER_COUNT],
-                  Uint8&                     Binding,
-                  Uint32&                    MinSlot,
-                  Uint32&                    MaxSlot) const;
+    struct MinMaxSlot
+    {
+        UINT MinSlot = UINT_MAX;
+        UINT MaxSlot = 0;
+
+        void Add(UINT Slot)
+        {
+            MinSlot = std::min(MinSlot, Slot);
+
+            VERIFY_EXPR(Slot >= MaxSlot);
+            MaxSlot = Slot;
+        }
+
+        explicit operator bool() const
+        {
+            return MinSlot <= MaxSlot;
+        }
+    };
+
+    MinMaxSlot BindCBs(Uint32        ShaderInd,
+                       ID3D11Buffer* CommittedD3D11CBs[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT],
+                       Uint8&        Binding) const;
+
+    MinMaxSlot BindSRVs(Uint32                    ShaderInd,
+                        ID3D11ShaderResourceView* CommittedD3D11SRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
+                        ID3D11Resource*           CommittedD3D11SRVResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
+                        Uint8&                    Binding) const;
+
+    MinMaxSlot BindSamplers(Uint32              ShaderInd,
+                            ID3D11SamplerState* CommittedD3D11Samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT],
+                            Uint8&              Binding) const;
+
+    MinMaxSlot BindUAVs(Uint32                     ShaderInd,
+                        ID3D11UnorderedAccessView* CommittedD3D11UAVs[D3D11_PS_CS_UAV_REGISTER_COUNT],
+                        ID3D11Resource*            CommittedD3D11UAVResources[D3D11_PS_CS_UAV_REGISTER_COUNT],
+                        Uint8&                     Binding) const;
 
 private:
     template <typename TCachedResourceType, typename TGetResourceCount, typename TGetResourceArraysFunc, typename TSrcResourceType, typename TD3D11ResourceType>

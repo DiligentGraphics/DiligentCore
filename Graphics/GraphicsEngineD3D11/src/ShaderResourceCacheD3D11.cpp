@@ -474,104 +474,108 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
     }
 }
 
-void ShaderResourceCacheD3D11::BindCBs(Uint32        ShaderInd,
-                                       ID3D11Buffer* CommittedD3D11CBs[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT],
-                                       Uint8&        Binding,
-                                       Uint32&       MinSlot,
-                                       Uint32&       MaxSlot) const
+ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
+    Uint32        ShaderInd,
+    ID3D11Buffer* CommittedD3D11CBs[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT],
+    Uint8&        Binding) const
 {
     CachedCB const*      CBs;
     ID3D11Buffer* const* d3d11CBs;
     GetConstCBArrays(ShaderInd, CBs, d3d11CBs);
 
+    MinMaxSlot Slots;
+
     const auto CBCount = GetCBCount(ShaderInd);
     for (Uint32 cb = 0; cb < CBCount; ++cb)
     {
-        const Uint32 Slot    = Binding++;
-        const bool   IsNewCB = CommittedD3D11CBs[Slot] != d3d11CBs[cb];
-        MinSlot              = IsNewCB ? std::min(MinSlot, Slot) : MinSlot;
-        MaxSlot              = IsNewCB ? Slot : MaxSlot;
+        const Uint32 Slot = Binding++;
+        if (CommittedD3D11CBs[Slot] != d3d11CBs[cb])
+            Slots.Add(Slot);
 
-        VERIFY_EXPR(!IsNewCB || (Slot >= MinSlot && Slot <= MaxSlot));
         VERIFY_EXPR(d3d11CBs[cb] != nullptr);
         CommittedD3D11CBs[Slot] = d3d11CBs[cb];
     }
+
+    return Slots;
 }
 
-void ShaderResourceCacheD3D11::BindSRVs(Uint32                    ShaderInd,
-                                        ID3D11ShaderResourceView* CommittedD3D11SRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
-                                        ID3D11Resource*           CommittedD3D11SRVResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
-                                        Uint8&                    Binding,
-                                        Uint32&                   MinSlot,
-                                        Uint32&                   MaxSlot) const
+ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindSRVs(
+    Uint32                    ShaderInd,
+    ID3D11ShaderResourceView* CommittedD3D11SRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
+    ID3D11Resource*           CommittedD3D11SRVResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
+    Uint8&                    Binding) const
 {
     CachedResource const*            SRVResources;
     ID3D11ShaderResourceView* const* d3d11SRVs;
     GetConstSRVArrays(ShaderInd, SRVResources, d3d11SRVs);
 
+    MinMaxSlot Slots;
+
     const auto SRVCount = GetSRVCount(ShaderInd);
     for (Uint32 srv = 0; srv < SRVCount; ++srv)
     {
-        const Uint32 Slot     = Binding++;
-        const bool   IsNewSRV = CommittedD3D11SRVs[Slot] != d3d11SRVs[srv];
-        MinSlot               = IsNewSRV ? std::min(MinSlot, Slot) : MinSlot;
-        MaxSlot               = IsNewSRV ? Slot : MaxSlot;
+        const Uint32 Slot = Binding++;
+        if (CommittedD3D11SRVs[Slot] != d3d11SRVs[srv])
+            Slots.Add(Slot);
 
-        VERIFY_EXPR(!IsNewSRV || (Slot >= MinSlot && Slot <= MaxSlot));
         VERIFY_EXPR(d3d11SRVs[srv] != nullptr);
         CommittedD3D11SRVResources[Slot] = SRVResources[srv].pd3d11Resource;
         CommittedD3D11SRVs[Slot]         = d3d11SRVs[srv];
     }
+
+    return Slots;
 }
 
-void ShaderResourceCacheD3D11::BindSamplers(Uint32              ShaderInd,
-                                            ID3D11SamplerState* CommittedD3D11Samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT],
-                                            Uint8&              Binding,
-                                            Uint32&             MinSlot,
-                                            Uint32&             MaxSlot) const
+ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindSamplers(
+    Uint32              ShaderInd,
+    ID3D11SamplerState* CommittedD3D11Samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT],
+    Uint8&              Binding) const
 {
     CachedSampler const*       Samplers;
     ID3D11SamplerState* const* d3d11Samplers;
     GetConstSamplerArrays(ShaderInd, Samplers, d3d11Samplers);
 
+    MinMaxSlot Slots;
+
     const auto SamplerCount = GetSamplerCount(ShaderInd);
     for (Uint32 sam = 0; sam < SamplerCount; ++sam)
     {
-        const Uint32 Slot     = Binding++;
-        const bool   IsNewSam = CommittedD3D11Samplers[Slot] != d3d11Samplers[sam];
-        MinSlot               = IsNewSam ? std::min(MinSlot, Slot) : MinSlot;
-        MaxSlot               = IsNewSam ? Slot : MaxSlot;
+        const Uint32 Slot = Binding++;
+        if (CommittedD3D11Samplers[Slot] != d3d11Samplers[sam])
+            Slots.Add(Slot);
 
-        VERIFY_EXPR(!IsNewSam || (Slot >= MinSlot && Slot <= MaxSlot));
         VERIFY_EXPR(d3d11Samplers[sam] != nullptr);
         CommittedD3D11Samplers[Slot] = d3d11Samplers[sam];
     }
+
+    return Slots;
 }
 
-void ShaderResourceCacheD3D11::BindUAVs(Uint32                     ShaderInd,
-                                        ID3D11UnorderedAccessView* CommittedD3D11UAVs[D3D11_PS_CS_UAV_REGISTER_COUNT],
-                                        ID3D11Resource*            CommittedD3D11UAVResources[D3D11_PS_CS_UAV_REGISTER_COUNT],
-                                        Uint8&                     Binding,
-                                        Uint32&                    MinSlot,
-                                        Uint32&                    MaxSlot) const
+ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindUAVs(
+    Uint32                     ShaderInd,
+    ID3D11UnorderedAccessView* CommittedD3D11UAVs[D3D11_PS_CS_UAV_REGISTER_COUNT],
+    ID3D11Resource*            CommittedD3D11UAVResources[D3D11_PS_CS_UAV_REGISTER_COUNT],
+    Uint8&                     Binding) const
 {
     CachedResource const*             UAVResources;
     ID3D11UnorderedAccessView* const* d3d11UAVs;
     GetConstUAVArrays(ShaderInd, UAVResources, d3d11UAVs);
 
+    MinMaxSlot Slots;
+
     const auto UAVCount = GetUAVCount(ShaderInd);
     for (Uint32 uav = 0; uav < UAVCount; ++uav)
     {
-        const Uint32 Slot     = Binding++;
-        const bool   IsNewUAV = CommittedD3D11UAVs[Slot] != d3d11UAVs[uav];
-        MinSlot               = IsNewUAV ? std::min(MinSlot, Slot) : MinSlot;
-        MaxSlot               = IsNewUAV ? Slot : MaxSlot;
+        const Uint32 Slot = Binding++;
+        if (CommittedD3D11UAVs[Slot] != d3d11UAVs[uav])
+            Slots.Add(Slot);
 
-        VERIFY_EXPR(!IsNewUAV || (Slot >= MinSlot && Slot <= MaxSlot));
         VERIFY_EXPR(d3d11UAVs[uav] != nullptr);
         CommittedD3D11UAVResources[Slot] = UAVResources[uav].pd3d11Resource;
         CommittedD3D11UAVs[Slot]         = d3d11UAVs[uav];
     }
+
+    return Slots;
 }
 
 } // namespace Diligent
