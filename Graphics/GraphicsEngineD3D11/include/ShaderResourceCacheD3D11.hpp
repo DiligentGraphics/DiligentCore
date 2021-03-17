@@ -296,15 +296,15 @@ public:
     };
 
     template <D3D11_RESOURCE_RANGE Range>
-    MinMaxSlot BindResources(Uint32                                                   ShaderInd,
-                             typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Resources[],
-                             Uint8&                                                   Binding) const;
+    inline MinMaxSlot BindResources(Uint32                                                   ShaderInd,
+                                    typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Resources[],
+                                    const TResourcesPerStage&                                BaseBindings) const;
 
     template <D3D11_RESOURCE_RANGE Range>
-    MinMaxSlot BindResourceViews(Uint32                                                   ShaderInd,
-                                 typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Views[],
-                                 ID3D11Resource*                                          CommittedD3D11Resources[],
-                                 Uint8&                                                   Binding) const;
+    inline MinMaxSlot BindResourceViews(Uint32                                                   ShaderInd,
+                                        typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Views[],
+                                        ID3D11Resource*                                          CommittedD3D11Resources[],
+                                        const TResourcesPerStage&                                BaseBindings) const;
 
     enum class StateTransitionMode
     {
@@ -492,18 +492,19 @@ template void ShaderResourceCacheD3D11::TransitionResourceStates<ShaderResourceC
 template void ShaderResourceCacheD3D11::TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Verify>(DeviceContextD3D11Impl& Ctx);
 
 template <D3D11_RESOURCE_RANGE Range>
-ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResources(
+inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResources(
     Uint32                                                   ShaderInd,
     typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Resources[],
-    Uint8&                                                   Binding) const
+    const TResourcesPerStage&                                BaseBindings) const
 {
-    const auto ResCount  = GetResourceCount<Range>(ShaderInd);
-    const auto ResArrays = GetConstResourceArrays<Range>(ShaderInd);
+    const auto   ResCount    = GetResourceCount<Range>(ShaderInd);
+    const auto   ResArrays   = GetConstResourceArrays<Range>(ShaderInd);
+    const Uint32 BaseBinding = BaseBindings[Range][ShaderInd];
 
     MinMaxSlot Slots;
     for (Uint32 res = 0; res < ResCount; ++res)
     {
-        const Uint32 Slot = Binding++;
+        const Uint32 Slot = BaseBinding + res;
         if (CommittedD3D11Resources[Slot] != ResArrays.second[res])
             Slots.Add(Slot);
 
@@ -516,19 +517,20 @@ ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResources(
 
 
 template <D3D11_RESOURCE_RANGE Range>
-ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResourceViews(
+inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResourceViews(
     Uint32                                                   ShaderInd,
     typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Views[],
     ID3D11Resource*                                          CommittedD3D11Resources[],
-    Uint8&                                                   Binding) const
+    const TResourcesPerStage&                                BaseBindings) const
 {
-    const auto ResCount  = GetResourceCount<Range>(ShaderInd);
-    const auto ResArrays = GetConstResourceArrays<Range>(ShaderInd);
+    const auto   ResCount    = GetResourceCount<Range>(ShaderInd);
+    const auto   ResArrays   = GetConstResourceArrays<Range>(ShaderInd);
+    const Uint32 BaseBinding = BaseBindings[Range][ShaderInd];
 
     MinMaxSlot Slots;
     for (Uint32 res = 0; res < ResCount; ++res)
     {
-        const Uint32 Slot = Binding++;
+        const Uint32 Slot = BaseBinding + res;
         if (CommittedD3D11Views[Slot] != ResArrays.second[res])
             Slots.Add(Slot);
 

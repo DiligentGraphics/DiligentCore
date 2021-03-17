@@ -386,10 +386,18 @@ private:
         }
     };
 
+    enum PixelShaderUAVBindMode
+    {
+        Clear = 0,
+        Keep,
+        Bind
+    };
+
     using TBindingsPerStage = PipelineResourceSignatureD3D11Impl::TBindingsPerStage;
     void BindCacheResources(const ShaderResourceCacheD3D11& ResourceCache,
                             const TBindingsPerStage&        BaseBindings,
-                            SHADER_TYPE                     ActiveStages);
+                            SHADER_TYPE                     ActiveStages,
+                            PixelShaderUAVBindMode&         PsUavBindMode);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();
