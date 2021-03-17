@@ -32,6 +32,7 @@
 
 #include <array>
 #include <memory>
+#include <utility>
 
 #include "MemoryAllocator.h"
 #include "ShaderResourceCacheCommon.hpp"
@@ -180,37 +181,37 @@ public:
     __forceinline void SetCB(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl)
     {
         auto* pd3d11Buff = pBuffD3D11Impl ? pBuffD3D11Impl->BufferD3D11Impl::GetD3D11Buffer() : nullptr;
-        SetD3D11ResourceInternal<CachedCB>(BindPoints, std::move(pBuffD3D11Impl), pd3d11Buff);
+        SetD3D11ResourceInternal(BindPoints, std::move(pBuffD3D11Impl), pd3d11Buff);
     }
 
     __forceinline void SetTexSRV(BindPointsD3D11 BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
     {
         auto* pd3d11SRV = pTexView ? static_cast<ID3D11ShaderResourceView*>(pTexView->TextureViewD3D11Impl::GetD3D11View()) : nullptr;
-        SetD3D11ResourceInternal<CachedResource>(BindPoints, std::move(pTexView), pd3d11SRV);
+        SetD3D11ResourceInternal(BindPoints, std::move(pTexView), pd3d11SRV);
     }
 
     __forceinline void SetBufSRV(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferViewD3D11Impl> pBuffView)
     {
         auto* pd3d11SRV = pBuffView ? static_cast<ID3D11ShaderResourceView*>(pBuffView->BufferViewD3D11Impl::GetD3D11View()) : nullptr;
-        SetD3D11ResourceInternal<CachedResource>(BindPoints, std::move(pBuffView), pd3d11SRV);
+        SetD3D11ResourceInternal(BindPoints, std::move(pBuffView), pd3d11SRV);
     }
 
     __forceinline void SetTexUAV(BindPointsD3D11 BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
     {
         auto* pd3d11UAV = pTexView ? static_cast<ID3D11UnorderedAccessView*>(pTexView->TextureViewD3D11Impl::GetD3D11View()) : nullptr;
-        SetD3D11ResourceInternal<CachedResource>(BindPoints, std::move(pTexView), pd3d11UAV);
+        SetD3D11ResourceInternal(BindPoints, std::move(pTexView), pd3d11UAV);
     }
 
     __forceinline void SetBufUAV(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferViewD3D11Impl> pBuffView)
     {
         auto* pd3d11UAV = pBuffView ? static_cast<ID3D11UnorderedAccessView*>(pBuffView->BufferViewD3D11Impl::GetD3D11View()) : nullptr;
-        SetD3D11ResourceInternal<CachedResource>(BindPoints, std::move(pBuffView), pd3d11UAV);
+        SetD3D11ResourceInternal(BindPoints, std::move(pBuffView), pd3d11UAV);
     }
 
     __forceinline void SetSampler(BindPointsD3D11 BindPoints, SamplerD3D11Impl* pSampler)
     {
         auto* pd3d11Sampler = pSampler ? pSampler->SamplerD3D11Impl::GetD3D11SamplerState() : nullptr;
-        SetD3D11ResourceInternal<CachedSampler>(BindPoints, pSampler, pd3d11Sampler);
+        SetD3D11ResourceInternal(BindPoints, pSampler, pd3d11Sampler);
     }
 
 
@@ -219,10 +220,8 @@ public:
     {
         const Uint32 ShaderInd = PlatformMisc::GetLSB(BindPoints.GetActiveBits());
         VERIFY(BindPoints[ShaderInd] < GetResourceCount<D3D11ResourceType>(ShaderInd), "Resource slot is out of range");
-        CachedResourceTraits<D3D11ResourceType>::CachedResourceType const* CachedResources;
-        D3D11ResourceType* const*                                          pd3d11Resources;
-        GetConstResourceArrays(ShaderInd, CachedResources, pd3d11Resources);
-        return CachedResources[BindPoints[ShaderInd]];
+        const auto ResArrays = GetConstResourceArrays<D3D11ResourceType>(ShaderInd);
+        return ResArrays.first[BindPoints[ShaderInd]];
     }
 
     template <typename D3D11ResourceType>
@@ -234,21 +233,16 @@ public:
             const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
             ActiveBits &= ~(1u << ShaderInd);
 
-            CachedResourceTraits<D3D11ResourceType>::CachedResourceType const* pSrcCachedResources;
-            D3D11ResourceType* const*                                          pd3d11SrcResources;
-            SrcCache.GetConstResourceArrays(ShaderInd, pSrcCachedResources, pd3d11SrcResources);
-
-            CachedResourceTraits<D3D11ResourceType>::CachedResourceType* pDstCachedResources;
-            D3D11ResourceType**                                          pd3d11DstResources;
-            GetResourceArrays(ShaderInd, pDstCachedResources, pd3d11DstResources);
+            auto SrcResArrays = SrcCache.GetConstResourceArrays<D3D11ResourceType>(ShaderInd);
+            auto DstResArrays = GetResourceArrays<D3D11ResourceType>(ShaderInd);
 
             const Uint32 CacheOffset = BindPoints[ShaderInd];
             VERIFY(CacheOffset < GetResourceCount<D3D11ResourceType>(ShaderInd), "Index is out of range");
-            if (!pSrcCachedResources[CacheOffset])
+            if (!SrcResArrays.first[CacheOffset])
                 IsBound = false;
 
-            pDstCachedResources[CacheOffset] = pSrcCachedResources[CacheOffset];
-            pd3d11DstResources[CacheOffset]  = pd3d11SrcResources[CacheOffset];
+            DstResArrays.first[CacheOffset]  = SrcResArrays.first[CacheOffset];
+            DstResArrays.second[CacheOffset] = SrcResArrays.second[CacheOffset];
         }
         return IsBound;
     }
@@ -263,10 +257,8 @@ public:
             ActiveBits &= ~(1u << ShaderInd);
             const Uint32 CacheOffset = BindPoints[ShaderInd];
 
-            CachedResourceTraits<D3D11ResourceType>::CachedResourceType const* CachedResources;
-            D3D11ResourceType* const*                                          pd3d11Resources;
-            GetConstResourceArrays(ShaderInd, CachedResources, pd3d11Resources);
-            if (CacheOffset < GetResourceCount<D3D11ResourceType>(ShaderInd) && CachedResources[CacheOffset])
+            const auto ResArrays = GetConstResourceArrays<D3D11ResourceType>(ShaderInd);
+            if (CacheOffset < GetResourceCount<D3D11ResourceType>(ShaderInd) && ResArrays.first[CacheOffset])
             {
                 continue;
             }
@@ -288,31 +280,6 @@ public:
 
     template <typename D3D11ResourceType>
     __forceinline Uint32 GetResourceCount(Uint32 ShaderInd) const;
-
-    template <typename D3D11ResourceType>
-    __forceinline void GetResourceArrays(
-        Uint32                                                                 ShaderInd,
-        typename CachedResourceTraits<D3D11ResourceType>::CachedResourceType*& pResources,
-        D3D11ResourceType**&                                                   pd3d11Resources) const
-    {
-        static_assert(alignof(CachedResourceTraits<D3D11ResourceType>::CachedResourceType) == alignof(D3D11ResourceType*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-
-        pResources      = reinterpret_cast<CachedResourceTraits<D3D11ResourceType>::CachedResourceType*>(m_pResourceData.get() + GetResourceDataOffset<D3D11ResourceType>(ShaderInd));
-        pd3d11Resources = reinterpret_cast<D3D11ResourceType**>(pResources + GetResourceCount<D3D11ResourceType>(ShaderInd));
-    }
-
-
-    template <typename D3D11ResourceType>
-    __forceinline void GetConstResourceArrays(
-        Uint32                                                                       ShaderInd,
-        typename CachedResourceTraits<D3D11ResourceType>::CachedResourceType const*& pResources,
-        D3D11ResourceType* const*&                                                   pd3d11Resources) const
-    {
-        static_assert(alignof(CachedResourceTraits<D3D11ResourceType>::CachedResourceType) == alignof(D3D11ResourceType*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-
-        pResources      = reinterpret_cast<CachedResourceTraits<D3D11ResourceType>::CachedResourceType const*>(m_pResourceData.get() + GetResourceDataOffset<D3D11ResourceType>(ShaderInd));
-        pd3d11Resources = reinterpret_cast<D3D11ResourceType* const*>(pResources + GetResourceCount<D3D11ResourceType>(ShaderInd));
-    }
 
     bool IsInitialized() const { return m_IsInitialized; }
 
@@ -352,7 +319,29 @@ private:
     template <typename D3D11ResourceTpye>
     __forceinline Uint32 GetResourceDataOffset(Uint32 ShaderInd) const;
 
-    template <typename TCachedResourceType, typename TSrcResourceType, typename TD3D11ResourceType>
+    template <typename D3D11ResourceType>
+    __forceinline std::pair<typename CachedResourceTraits<D3D11ResourceType>::CachedResourceType*, D3D11ResourceType**>
+    GetResourceArrays(Uint32 ShaderInd) const
+    {
+        static_assert(alignof(CachedResourceTraits<D3D11ResourceType>::CachedResourceType) == alignof(D3D11ResourceType*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
+
+        using CachedResourceType    = CachedResourceTraits<D3D11ResourceType>::CachedResourceType;
+        const auto  DataOffset      = GetResourceDataOffset<D3D11ResourceType>(ShaderInd);
+        const auto  ResCount        = GetResourceCount<D3D11ResourceType>(ShaderInd);
+        auto* const pResources      = reinterpret_cast<CachedResourceType*>(m_pResourceData.get() + DataOffset);
+        auto* const pd3d11Resources = reinterpret_cast<D3D11ResourceType**>(pResources + ResCount);
+        return std::make_pair(pResources, pd3d11Resources);
+    }
+
+    template <typename D3D11ResourceType>
+    __forceinline std::pair<const typename CachedResourceTraits<D3D11ResourceType>::CachedResourceType*, D3D11ResourceType* const*>
+    GetConstResourceArrays(Uint32 ShaderInd) const
+    {
+        const auto ResArrays = GetResourceArrays<D3D11ResourceType>(ShaderInd);
+        return std::make_pair(ResArrays.first, ResArrays.second);
+    }
+
+    template <typename TSrcResourceType, typename TD3D11ResourceType>
     __forceinline void SetD3D11ResourceInternal(BindPointsD3D11 BindPoints, TSrcResourceType pResource, TD3D11ResourceType* pd3d11Resource)
     {
         VERIFY(pResource != nullptr && pd3d11Resource != nullptr || pResource == nullptr && pd3d11Resource == nullptr,
@@ -366,11 +355,9 @@ private:
             const Uint32 ResCount    = GetResourceCount<TD3D11ResourceType>(ShaderInd);
             VERIFY(CacheOffset < ResCount, "Index is out of range");
 
-            TCachedResourceType* Resources;
-            TD3D11ResourceType** d3d11ResArr;
-            GetResourceArrays(ShaderInd, Resources, d3d11ResArr);
-            Resources[CacheOffset].Set(pResource);
-            d3d11ResArr[CacheOffset] = pd3d11Resource;
+            auto ResArrays = GetResourceArrays<TD3D11ResourceType>(ShaderInd);
+            ResArrays.first[CacheOffset].Set(pResource);
+            ResArrays.second[CacheOffset] = pd3d11Resource;
         }
     }
 
@@ -498,21 +485,18 @@ ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResources(
     D3D11ResourceType* CommittedD3D11Resources[],
     Uint8&             Binding) const
 {
-    CachedResourceTraits<D3D11ResourceType>::CachedResourceType const* CachedResources;
-    D3D11ResourceType* const*                                          pd3d11Resources;
-    GetConstResourceArrays(ShaderInd, CachedResources, pd3d11Resources);
+    const auto ResCount  = GetResourceCount<D3D11ResourceType>(ShaderInd);
+    const auto ResArrays = GetConstResourceArrays<D3D11ResourceType>(ShaderInd);
 
     MinMaxSlot Slots;
-
-    const auto ResCount = GetResourceCount<D3D11ResourceType>(ShaderInd);
     for (Uint32 res = 0; res < ResCount; ++res)
     {
         const Uint32 Slot = Binding++;
-        if (CommittedD3D11Resources[Slot] != pd3d11Resources[res])
+        if (CommittedD3D11Resources[Slot] != ResArrays.second[res])
             Slots.Add(Slot);
 
-        VERIFY_EXPR(pd3d11Resources[res] != nullptr);
-        CommittedD3D11Resources[Slot] = pd3d11Resources[res];
+        VERIFY_EXPR(ResArrays.second[res] != nullptr);
+        CommittedD3D11Resources[Slot] = ResArrays.second[res];
     }
 
     return Slots;
@@ -525,22 +509,19 @@ ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResourceViews
     ID3D11Resource*        CommittedD3D11Resources[],
     Uint8&                 Binding) const
 {
-    CachedResourceTraits<D3D11ResourceViewType>::CachedResourceType const* CachedResources;
-    D3D11ResourceViewType* const*                                          pd3d11Views;
-    GetConstResourceArrays(ShaderInd, CachedResources, pd3d11Views);
+    const auto ResCount  = GetResourceCount<D3D11ResourceViewType>(ShaderInd);
+    const auto ResArrays = GetConstResourceArrays<D3D11ResourceViewType>(ShaderInd);
 
     MinMaxSlot Slots;
-
-    const auto ResCount = GetResourceCount<D3D11ResourceViewType>(ShaderInd);
     for (Uint32 res = 0; res < ResCount; ++res)
     {
         const Uint32 Slot = Binding++;
-        if (CommittedD3D11Views[Slot] != pd3d11Views[res])
+        if (CommittedD3D11Views[Slot] != ResArrays.second[res])
             Slots.Add(Slot);
 
-        VERIFY_EXPR(pd3d11Views[res] != nullptr);
-        CommittedD3D11Resources[Slot] = CachedResources[res].pd3d11Resource;
-        CommittedD3D11Views[Slot]     = pd3d11Views[res];
+        VERIFY_EXPR(ResArrays.second[res] != nullptr);
+        CommittedD3D11Resources[Slot] = ResArrays.first[res].pd3d11Resource;
+        CommittedD3D11Views[Slot]     = ResArrays.second[res];
     }
 
     return Slots;
