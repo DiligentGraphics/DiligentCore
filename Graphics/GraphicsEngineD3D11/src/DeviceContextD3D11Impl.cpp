@@ -286,7 +286,7 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
         const auto     ShaderInd         = ShaderIndices[i];
         auto*          CommittedD3D11CBs = m_CommittedRes.D3D11CBs[ShaderInd];
         Uint8          Binding           = BaseBindings[Range][ShaderInd];
-        auto           Slots             = ResourceCache.BindCBs(ShaderInd, CommittedD3D11CBs, Binding);
+        auto           Slots             = ResourceCache.BindResources(ShaderInd, CommittedD3D11CBs, Binding);
 
         if (Slots)
         {
@@ -310,7 +310,7 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
         auto*          CommittedD3D11SRVs   = m_CommittedRes.D3D11SRVs[ShaderInd];
         auto*          CommittedD3D11SRVRes = m_CommittedRes.D3D11SRVResources[ShaderInd];
         Uint8          Binding              = BaseBindings[Range][ShaderInd];
-        auto           Slots                = ResourceCache.BindSRVs(ShaderInd, CommittedD3D11SRVs, CommittedD3D11SRVRes, Binding);
+        auto           Slots                = ResourceCache.BindResourceViews(ShaderInd, CommittedD3D11SRVs, CommittedD3D11SRVRes, Binding);
 
         if (Slots)
         {
@@ -333,7 +333,7 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
         const auto     ShaderInd              = ShaderIndices[i];
         auto*          CommittedD3D11Samplers = m_CommittedRes.D3D11Samplers[ShaderInd];
         Uint8          Binding                = BaseBindings[Range][ShaderInd];
-        auto           Slots                  = ResourceCache.BindSamplers(ShaderInd, CommittedD3D11Samplers, Binding);
+        auto           Slots                  = ResourceCache.BindResources(ShaderInd, CommittedD3D11Samplers, Binding);
 
         if (Slots)
         {
@@ -358,7 +358,7 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
         auto*          CommittedD3D11UAVs   = m_CommittedRes.D3D11UAVs[ShaderInd];
         auto*          CommittedD3D11UAVRes = m_CommittedRes.D3D11UAVResources[ShaderInd];
         Uint8          Binding              = BaseBindings[Range][ShaderInd];
-        auto           Slots                = ResourceCache.BindUAVs(ShaderInd, CommittedD3D11UAVs, CommittedD3D11UAVRes, Binding);
+        auto           Slots                = ResourceCache.BindResourceViews(ShaderInd, CommittedD3D11UAVs, CommittedD3D11UAVRes, Binding);
 
         if (Slots)
         {

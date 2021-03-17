@@ -87,6 +87,11 @@ public:
         /// Strong reference to the buffer
         RefCntAutoPtr<BufferD3D11Impl> pBuff;
 
+        explicit operator bool() const
+        {
+            return pBuff;
+        }
+
     private:
         friend class ShaderResourceCacheD3D11;
         __forceinline void Set(RefCntAutoPtr<BufferD3D11Impl> _pBuff)
@@ -100,6 +105,11 @@ public:
     {
         /// Strong reference to the sampler
         RefCntAutoPtr<SamplerD3D11Impl> pSampler;
+
+        explicit operator bool() const
+        {
+            return pSampler;
+        }
 
     private:
         friend class ShaderResourceCacheD3D11;
@@ -128,6 +138,14 @@ public:
 
         CachedResource() noexcept {}
 
+        explicit operator bool() const
+        {
+            VERIFY_EXPR((pView && pd3d11Resource != nullptr) || (!pView && pd3d11Resource == nullptr));
+            VERIFY_EXPR(pTexture == nullptr || pBuffer == nullptr);
+            VERIFY_EXPR((pView && (pTexture != nullptr || pBuffer != nullptr)) || (!pView && (pTexture == nullptr && pBuffer == nullptr)));
+            return pView;
+        }
+
     private:
         friend class ShaderResourceCacheD3D11;
         __forceinline void Set(RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
@@ -149,6 +167,9 @@ public:
         }
     };
 
+    template <typename D3D11ResourceType>
+    struct CachedResourceTraits;
+
     static constexpr int NumShaderTypes = BindPointsD3D11::NumShaderTypes;
     using TBindingsPerStage             = std::array<std::array<Uint8, NumShaderTypes>, D3D11_RESOURCE_RANGE_COUNT>;
 
@@ -159,82 +180,53 @@ public:
     __forceinline void SetCB(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl)
     {
         auto* pd3d11Buff = pBuffD3D11Impl ? pBuffD3D11Impl->BufferD3D11Impl::GetD3D11Buffer() : nullptr;
-        SetD3D11ResourceInternal<CachedCB>(BindPoints, &ShaderResourceCacheD3D11::GetCBCount, &ShaderResourceCacheD3D11::GetCBArrays, std::move(pBuffD3D11Impl), pd3d11Buff);
+        SetD3D11ResourceInternal<CachedCB>(BindPoints, std::move(pBuffD3D11Impl), pd3d11Buff);
     }
 
     __forceinline void SetTexSRV(BindPointsD3D11 BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
     {
         auto* pd3d11SRV = pTexView ? static_cast<ID3D11ShaderResourceView*>(pTexView->TextureViewD3D11Impl::GetD3D11View()) : nullptr;
-        SetD3D11ResourceInternal<CachedResource>(BindPoints, &ShaderResourceCacheD3D11::GetSRVCount, &ShaderResourceCacheD3D11::GetSRVArrays, std::move(pTexView), pd3d11SRV);
+        SetD3D11ResourceInternal<CachedResource>(BindPoints, std::move(pTexView), pd3d11SRV);
     }
 
     __forceinline void SetBufSRV(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferViewD3D11Impl> pBuffView)
     {
         auto* pd3d11SRV = pBuffView ? static_cast<ID3D11ShaderResourceView*>(pBuffView->BufferViewD3D11Impl::GetD3D11View()) : nullptr;
-        SetD3D11ResourceInternal<CachedResource>(BindPoints, &ShaderResourceCacheD3D11::GetSRVCount, &ShaderResourceCacheD3D11::GetSRVArrays, std::move(pBuffView), pd3d11SRV);
+        SetD3D11ResourceInternal<CachedResource>(BindPoints, std::move(pBuffView), pd3d11SRV);
     }
 
     __forceinline void SetTexUAV(BindPointsD3D11 BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
     {
         auto* pd3d11UAV = pTexView ? static_cast<ID3D11UnorderedAccessView*>(pTexView->TextureViewD3D11Impl::GetD3D11View()) : nullptr;
-        SetD3D11ResourceInternal<CachedResource>(BindPoints, &ShaderResourceCacheD3D11::GetUAVCount, &ShaderResourceCacheD3D11::GetUAVArrays, std::move(pTexView), pd3d11UAV);
+        SetD3D11ResourceInternal<CachedResource>(BindPoints, std::move(pTexView), pd3d11UAV);
     }
 
     __forceinline void SetBufUAV(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferViewD3D11Impl> pBuffView)
     {
         auto* pd3d11UAV = pBuffView ? static_cast<ID3D11UnorderedAccessView*>(pBuffView->BufferViewD3D11Impl::GetD3D11View()) : nullptr;
-        SetD3D11ResourceInternal<CachedResource>(BindPoints, &ShaderResourceCacheD3D11::GetUAVCount, &ShaderResourceCacheD3D11::GetUAVArrays, std::move(pBuffView), pd3d11UAV);
+        SetD3D11ResourceInternal<CachedResource>(BindPoints, std::move(pBuffView), pd3d11UAV);
     }
 
     __forceinline void SetSampler(BindPointsD3D11 BindPoints, SamplerD3D11Impl* pSampler)
     {
         auto* pd3d11Sampler = pSampler ? pSampler->SamplerD3D11Impl::GetD3D11SamplerState() : nullptr;
-        SetD3D11ResourceInternal<CachedSampler>(BindPoints, &ShaderResourceCacheD3D11::GetSamplerCount, &ShaderResourceCacheD3D11::GetSamplerArrays, pSampler, pd3d11Sampler);
+        SetD3D11ResourceInternal<CachedSampler>(BindPoints, pSampler, pd3d11Sampler);
     }
 
 
-    __forceinline CachedCB const& GetCB(BindPointsD3D11 BindPoints) const
+    template <typename D3D11ResourceType>
+    __forceinline const typename CachedResourceTraits<D3D11ResourceType>::CachedResourceType& GetResource(BindPointsD3D11 BindPoints) const
     {
         const Uint32 ShaderInd = PlatformMisc::GetLSB(BindPoints.GetActiveBits());
-        VERIFY(BindPoints[ShaderInd] < GetCBCount(ShaderInd), "CB slot is out of range");
-        ShaderResourceCacheD3D11::CachedCB const* CBs;
-        ID3D11Buffer* const*                      pd3d11CBs;
-        GetConstCBArrays(ShaderInd, CBs, pd3d11CBs);
-        return CBs[BindPoints[ShaderInd]];
+        VERIFY(BindPoints[ShaderInd] < GetResourceCount<D3D11ResourceType>(ShaderInd), "Resource slot is out of range");
+        CachedResourceTraits<D3D11ResourceType>::CachedResourceType const* CachedResources;
+        D3D11ResourceType* const*                                          pd3d11Resources;
+        GetConstResourceArrays(ShaderInd, CachedResources, pd3d11Resources);
+        return CachedResources[BindPoints[ShaderInd]];
     }
 
-    __forceinline CachedResource const& GetSRV(BindPointsD3D11 BindPoints) const
-    {
-        const Uint32 ShaderInd = PlatformMisc::GetLSB(BindPoints.GetActiveBits());
-        VERIFY(BindPoints[ShaderInd] < GetSRVCount(ShaderInd), "SRV slot is out of range");
-        ShaderResourceCacheD3D11::CachedResource const* SRVResources;
-        ID3D11ShaderResourceView* const*                pd3d11SRVs;
-        GetConstSRVArrays(ShaderInd, SRVResources, pd3d11SRVs);
-        return SRVResources[BindPoints[ShaderInd]];
-    }
-
-    __forceinline CachedResource const& GetUAV(BindPointsD3D11 BindPoints) const
-    {
-        const Uint32 ShaderInd = PlatformMisc::GetLSB(BindPoints.GetActiveBits());
-        VERIFY(BindPoints[ShaderInd] < GetUAVCount(ShaderInd), "UAV slot is out of range");
-        ShaderResourceCacheD3D11::CachedResource const* UAVResources;
-        ID3D11UnorderedAccessView* const*               pd3d11UAVs;
-        GetConstUAVArrays(ShaderInd, UAVResources, pd3d11UAVs);
-        return UAVResources[BindPoints[ShaderInd]];
-    }
-
-    __forceinline CachedSampler const& GetSampler(BindPointsD3D11 BindPoints) const
-    {
-        const Uint32 ShaderInd = PlatformMisc::GetLSB(BindPoints.GetActiveBits());
-        VERIFY(BindPoints[ShaderInd] < GetSamplerCount(ShaderInd), "Sampler slot is out of range");
-        ShaderResourceCacheD3D11::CachedSampler const* Samplers;
-        ID3D11SamplerState* const*                     pd3d11Samplers;
-        GetConstSamplerArrays(ShaderInd, Samplers, pd3d11Samplers);
-        return Samplers[BindPoints[ShaderInd]];
-    }
-
-
-    __forceinline bool CopyCB(const ShaderResourceCacheD3D11& SrcCache, BindPointsD3D11 BindPoints)
+    template <typename D3D11ResourceType>
+    bool CopyResource(const ShaderResourceCacheD3D11& SrcCache, BindPointsD3D11 BindPoints)
     {
         bool IsBound = true;
         for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
@@ -242,108 +234,27 @@ public:
             const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
             ActiveBits &= ~(1u << ShaderInd);
 
-            CachedCB const*      pSrcCBs;
-            ID3D11Buffer* const* pSrcd3d11CBs;
-            SrcCache.GetConstCBArrays(ShaderInd, pSrcCBs, pSrcd3d11CBs);
+            CachedResourceTraits<D3D11ResourceType>::CachedResourceType const* pSrcCachedResources;
+            D3D11ResourceType* const*                                          pd3d11SrcResources;
+            SrcCache.GetConstResourceArrays(ShaderInd, pSrcCachedResources, pd3d11SrcResources);
 
-            CachedCB*      pCBs;
-            ID3D11Buffer** pd3d11CBs;
-            GetCBArrays(ShaderInd, pCBs, pd3d11CBs);
+            CachedResourceTraits<D3D11ResourceType>::CachedResourceType* pDstCachedResources;
+            D3D11ResourceType**                                          pd3d11DstResources;
+            GetResourceArrays(ShaderInd, pDstCachedResources, pd3d11DstResources);
 
             const Uint32 CacheOffset = BindPoints[ShaderInd];
-            VERIFY(CacheOffset < GetCBCount(ShaderInd), "Index is out of range");
-            if (pSrcCBs[CacheOffset].pBuff == nullptr)
+            VERIFY(CacheOffset < GetResourceCount<D3D11ResourceType>(ShaderInd), "Index is out of range");
+            if (!pSrcCachedResources[CacheOffset])
                 IsBound = false;
 
-            pCBs[CacheOffset]      = pSrcCBs[CacheOffset];
-            pd3d11CBs[CacheOffset] = pSrcd3d11CBs[CacheOffset];
+            pDstCachedResources[CacheOffset] = pSrcCachedResources[CacheOffset];
+            pd3d11DstResources[CacheOffset]  = pd3d11SrcResources[CacheOffset];
         }
         return IsBound;
     }
 
-    __forceinline bool CopySRV(const ShaderResourceCacheD3D11& SrcCache, BindPointsD3D11 BindPoints)
-    {
-        bool IsBound = true;
-        for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
-        {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
-
-            CachedResource const*            pSrcSRVResources;
-            ID3D11ShaderResourceView* const* pSrcd3d11SRVs;
-            SrcCache.GetConstSRVArrays(ShaderInd, pSrcSRVResources, pSrcd3d11SRVs);
-
-            CachedResource*            pSRVResources;
-            ID3D11ShaderResourceView** pd3d11SRVs;
-            GetSRVArrays(ShaderInd, pSRVResources, pd3d11SRVs);
-
-            const Uint32 CacheOffset = BindPoints[ShaderInd];
-            VERIFY(CacheOffset < GetSRVCount(ShaderInd), "Index is out of range");
-            if (pSrcSRVResources[CacheOffset].pBuffer == nullptr && pSrcSRVResources[CacheOffset].pTexture == nullptr)
-                IsBound = false;
-
-            pSRVResources[CacheOffset] = pSrcSRVResources[CacheOffset];
-            pd3d11SRVs[CacheOffset]    = pSrcd3d11SRVs[CacheOffset];
-        }
-        return IsBound;
-    }
-
-    __forceinline bool CopyUAV(const ShaderResourceCacheD3D11& SrcCache, BindPointsD3D11 BindPoints)
-    {
-        bool IsBound = true;
-        for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
-        {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
-
-            CachedResource const*             pSrcUAVResources;
-            ID3D11UnorderedAccessView* const* pSrcd3d11UAVs;
-            SrcCache.GetConstUAVArrays(ShaderInd, pSrcUAVResources, pSrcd3d11UAVs);
-
-            CachedResource*             pUAVResources;
-            ID3D11UnorderedAccessView** pd3d11UAVs;
-            GetUAVArrays(ShaderInd, pUAVResources, pd3d11UAVs);
-
-            const Uint32 CacheOffset = BindPoints[ShaderInd];
-            VERIFY(CacheOffset < GetUAVCount(ShaderInd), "Index is out of range");
-            if (pSrcUAVResources[CacheOffset].pBuffer == nullptr && pSrcUAVResources[CacheOffset].pTexture == nullptr)
-                IsBound = false;
-
-            pUAVResources[CacheOffset] = pSrcUAVResources[CacheOffset];
-            pd3d11UAVs[CacheOffset]    = pSrcd3d11UAVs[CacheOffset];
-        }
-        return IsBound;
-    }
-
-    __forceinline bool CopySampler(const ShaderResourceCacheD3D11& SrcCache, BindPointsD3D11 BindPoints)
-    {
-        bool IsBound = true;
-        for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
-        {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
-
-            CachedSampler const*       pSrcSamplers;
-            ID3D11SamplerState* const* pSrcd3d11Samplers;
-            SrcCache.GetConstSamplerArrays(ShaderInd, pSrcSamplers, pSrcd3d11Samplers);
-
-            CachedSampler*       pSamplers;
-            ID3D11SamplerState** pd3d11Samplers;
-            GetSamplerArrays(ShaderInd, pSamplers, pd3d11Samplers);
-
-            const Uint32 CacheOffset = BindPoints[ShaderInd];
-            VERIFY(CacheOffset < GetSamplerCount(ShaderInd), "Index is out of range");
-            if (pSrcSamplers[CacheOffset].pSampler == nullptr)
-                IsBound = false;
-
-            pSamplers[CacheOffset]      = pSrcSamplers[CacheOffset];
-            pd3d11Samplers[CacheOffset] = pSrcd3d11Samplers[CacheOffset];
-        }
-        return IsBound;
-    }
-
-
-    __forceinline bool IsCBBound(BindPointsD3D11 BindPoints) const
+    template <typename D3D11ResourceType>
+    __forceinline bool IsResourceBound(BindPointsD3D11 BindPoints) const
     {
         bool IsBound = true;
         for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
@@ -352,80 +263,11 @@ public:
             ActiveBits &= ~(1u << ShaderInd);
             const Uint32 CacheOffset = BindPoints[ShaderInd];
 
-            CachedCB const*      CBs;
-            ID3D11Buffer* const* d3d11CBs;
-            GetConstCBArrays(ShaderInd, CBs, d3d11CBs);
-            if (CacheOffset < GetCBCount(ShaderInd) && d3d11CBs[CacheOffset] != nullptr)
+            CachedResourceTraits<D3D11ResourceType>::CachedResourceType const* CachedResources;
+            D3D11ResourceType* const*                                          pd3d11Resources;
+            GetConstResourceArrays(ShaderInd, CachedResources, pd3d11Resources);
+            if (CacheOffset < GetResourceCount<D3D11ResourceType>(ShaderInd) && CachedResources[CacheOffset])
             {
-                VERIFY(CBs[CacheOffset].pBuff != nullptr, "No relevant buffer resource");
-                continue;
-            }
-            IsBound = false;
-        }
-        return IsBound;
-    }
-
-    __forceinline bool IsSRVBound(BindPointsD3D11 BindPoints, bool dbgIsTextureView) const
-    {
-        bool IsBound = true;
-        for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
-        {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
-            const Uint32 CacheOffset = BindPoints[ShaderInd];
-
-            CachedResource const*            SRVResources;
-            ID3D11ShaderResourceView* const* d3d11SRVs;
-            GetConstSRVArrays(ShaderInd, SRVResources, d3d11SRVs);
-            if (CacheOffset < GetSRVCount(ShaderInd) && d3d11SRVs[CacheOffset] != nullptr)
-            {
-                VERIFY((dbgIsTextureView && SRVResources[CacheOffset].pTexture != nullptr) || (!dbgIsTextureView && SRVResources[CacheOffset].pBuffer != nullptr),
-                       "No relevant resource");
-                continue;
-            }
-            IsBound = false;
-        }
-        return IsBound;
-    }
-
-    __forceinline bool IsUAVBound(BindPointsD3D11 BindPoints, bool dbgIsTextureView) const
-    {
-        bool IsBound = true;
-        for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
-        {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
-            const Uint32 CacheOffset = BindPoints[ShaderInd];
-
-            CachedResource const*             UAVResources;
-            ID3D11UnorderedAccessView* const* d3d11UAVs;
-            GetConstUAVArrays(ShaderInd, UAVResources, d3d11UAVs);
-            if (CacheOffset < GetUAVCount(ShaderInd) && d3d11UAVs[CacheOffset] != nullptr)
-            {
-                VERIFY((dbgIsTextureView && UAVResources[CacheOffset].pTexture != nullptr) || (!dbgIsTextureView && UAVResources[CacheOffset].pBuffer != nullptr),
-                       "No relevant resource");
-                continue;
-            }
-            IsBound = false;
-        }
-        return IsBound;
-    }
-
-    __forceinline bool IsSamplerBound(BindPointsD3D11 BindPoints) const
-    {
-        bool IsBound = true;
-        for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
-        {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
-            const Uint32 CacheOffset = BindPoints[ShaderInd];
-
-            CachedSampler const*       Samplers;
-            ID3D11SamplerState* const* d3d11Samplers;
-            GetConstSamplerArrays(ShaderInd, Samplers, d3d11Samplers);
-            if (CacheOffset < GetSamplerCount(ShaderInd) && d3d11Samplers[CacheOffset] != nullptr)
-            {
-                VERIFY(Samplers[CacheOffset].pSampler != nullptr, "No relevant sampler");
                 continue;
             }
             IsBound = false;
@@ -444,60 +286,32 @@ public:
     __forceinline Uint32 GetUAVCount    (Uint32 ShaderInd) const { return (m_Offsets[UAVOffset  + ShaderInd + 1] - m_Offsets[UAVOffset  + ShaderInd]) / (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)); }
     // clang-format on
 
-    __forceinline void GetCBArrays(Uint32 ShaderInd, CachedCB*& CBs, ID3D11Buffer**& pd3d11CBs) const
+    template <typename D3D11ResourceType>
+    __forceinline Uint32 GetResourceCount(Uint32 ShaderInd) const;
+
+    template <typename D3D11ResourceType>
+    __forceinline void GetResourceArrays(
+        Uint32                                                                 ShaderInd,
+        typename CachedResourceTraits<D3D11ResourceType>::CachedResourceType*& pResources,
+        D3D11ResourceType**&                                                   pd3d11Resources) const
     {
-        VERIFY(alignof(CachedCB) == alignof(ID3D11Buffer*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-        CBs       = reinterpret_cast<CachedCB*>(m_pResourceData.get() + m_Offsets[CBOffset + ShaderInd]);
-        pd3d11CBs = reinterpret_cast<ID3D11Buffer**>(CBs + GetCBCount(ShaderInd));
+        static_assert(alignof(CachedResourceTraits<D3D11ResourceType>::CachedResourceType) == alignof(D3D11ResourceType*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
+
+        pResources      = reinterpret_cast<CachedResourceTraits<D3D11ResourceType>::CachedResourceType*>(m_pResourceData.get() + GetResourceDataOffset<D3D11ResourceType>(ShaderInd));
+        pd3d11Resources = reinterpret_cast<D3D11ResourceType**>(pResources + GetResourceCount<D3D11ResourceType>(ShaderInd));
     }
 
-    __forceinline void GetSRVArrays(Uint32 ShaderInd, CachedResource*& SRVResources, ID3D11ShaderResourceView**& d3d11SRVs) const
-    {
-        VERIFY(alignof(CachedResource) == alignof(ID3D11ShaderResourceView*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-        SRVResources = reinterpret_cast<CachedResource*>(m_pResourceData.get() + m_Offsets[SRVOffset + ShaderInd]);
-        d3d11SRVs    = reinterpret_cast<ID3D11ShaderResourceView**>(SRVResources + GetSRVCount(ShaderInd));
-    }
 
-    __forceinline void GetSamplerArrays(Uint32 ShaderInd, CachedSampler*& Samplers, ID3D11SamplerState**& pd3d11Samplers) const
+    template <typename D3D11ResourceType>
+    __forceinline void GetConstResourceArrays(
+        Uint32                                                                       ShaderInd,
+        typename CachedResourceTraits<D3D11ResourceType>::CachedResourceType const*& pResources,
+        D3D11ResourceType* const*&                                                   pd3d11Resources) const
     {
-        VERIFY(alignof(CachedSampler) == alignof(ID3D11SamplerState*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-        Samplers       = reinterpret_cast<CachedSampler*>(m_pResourceData.get() + m_Offsets[SampOffset + ShaderInd]);
-        pd3d11Samplers = reinterpret_cast<ID3D11SamplerState**>(Samplers + GetSamplerCount(ShaderInd));
-    }
+        static_assert(alignof(CachedResourceTraits<D3D11ResourceType>::CachedResourceType) == alignof(D3D11ResourceType*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
 
-    __forceinline void GetUAVArrays(Uint32 ShaderInd, CachedResource*& UAVResources, ID3D11UnorderedAccessView**& pd3d11UAVs) const
-    {
-        VERIFY(alignof(CachedResource) == alignof(ID3D11UnorderedAccessView*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-        UAVResources = reinterpret_cast<CachedResource*>(m_pResourceData.get() + m_Offsets[UAVOffset + ShaderInd]);
-        pd3d11UAVs   = reinterpret_cast<ID3D11UnorderedAccessView**>(UAVResources + GetUAVCount(ShaderInd));
-    }
-
-    __forceinline void GetConstCBArrays(Uint32 ShaderInd, CachedCB const*& CBs, ID3D11Buffer* const*& pd3d11CBs) const
-    {
-        VERIFY(alignof(CachedCB) == alignof(ID3D11Buffer*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-        CBs       = reinterpret_cast<CachedCB const*>(m_pResourceData.get() + m_Offsets[CBOffset + ShaderInd]);
-        pd3d11CBs = reinterpret_cast<ID3D11Buffer* const*>(CBs + GetCBCount(ShaderInd));
-    }
-
-    __forceinline void GetConstSRVArrays(Uint32 ShaderInd, CachedResource const*& SRVResources, ID3D11ShaderResourceView* const*& d3d11SRVs) const
-    {
-        VERIFY(alignof(CachedResource) == alignof(ID3D11ShaderResourceView*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-        SRVResources = reinterpret_cast<CachedResource const*>(m_pResourceData.get() + m_Offsets[SRVOffset + ShaderInd]);
-        d3d11SRVs    = reinterpret_cast<ID3D11ShaderResourceView* const*>(SRVResources + GetSRVCount(ShaderInd));
-    }
-
-    __forceinline void GetConstSamplerArrays(Uint32 ShaderInd, CachedSampler const*& Samplers, ID3D11SamplerState* const*& pd3d11Samplers) const
-    {
-        VERIFY(alignof(CachedSampler) == alignof(ID3D11SamplerState*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-        Samplers       = reinterpret_cast<CachedSampler const*>(m_pResourceData.get() + m_Offsets[SampOffset + ShaderInd]);
-        pd3d11Samplers = reinterpret_cast<ID3D11SamplerState* const*>(Samplers + GetSamplerCount(ShaderInd));
-    }
-
-    __forceinline void GetConstUAVArrays(Uint32 ShaderInd, CachedResource const*& UAVResources, ID3D11UnorderedAccessView* const*& pd3d11UAVs) const
-    {
-        VERIFY(alignof(CachedResource) == alignof(ID3D11UnorderedAccessView*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
-        UAVResources = reinterpret_cast<CachedResource const*>(m_pResourceData.get() + m_Offsets[UAVOffset + ShaderInd]);
-        pd3d11UAVs   = reinterpret_cast<ID3D11UnorderedAccessView* const*>(UAVResources + GetUAVCount(ShaderInd));
+        pResources      = reinterpret_cast<CachedResourceTraits<D3D11ResourceType>::CachedResourceType const*>(m_pResourceData.get() + GetResourceDataOffset<D3D11ResourceType>(ShaderInd));
+        pd3d11Resources = reinterpret_cast<D3D11ResourceType* const*>(pResources + GetResourceCount<D3D11ResourceType>(ShaderInd));
     }
 
     bool IsInitialized() const { return m_IsInitialized; }
@@ -523,27 +337,23 @@ public:
         }
     };
 
-    MinMaxSlot BindCBs(Uint32        ShaderInd,
-                       ID3D11Buffer* CommittedD3D11CBs[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT],
-                       Uint8&        Binding) const;
+    template <typename D3D11ResourceType>
+    MinMaxSlot BindResources(Uint32             ShaderInd,
+                             D3D11ResourceType* CommittedD3D11Resources[],
+                             Uint8&             Binding) const;
 
-    MinMaxSlot BindSRVs(Uint32                    ShaderInd,
-                        ID3D11ShaderResourceView* CommittedD3D11SRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
-                        ID3D11Resource*           CommittedD3D11SRVResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
-                        Uint8&                    Binding) const;
-
-    MinMaxSlot BindSamplers(Uint32              ShaderInd,
-                            ID3D11SamplerState* CommittedD3D11Samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT],
-                            Uint8&              Binding) const;
-
-    MinMaxSlot BindUAVs(Uint32                     ShaderInd,
-                        ID3D11UnorderedAccessView* CommittedD3D11UAVs[D3D11_PS_CS_UAV_REGISTER_COUNT],
-                        ID3D11Resource*            CommittedD3D11UAVResources[D3D11_PS_CS_UAV_REGISTER_COUNT],
-                        Uint8&                     Binding) const;
+    template <typename D3D11ResourceViewType>
+    MinMaxSlot BindResourceViews(Uint32                 ShaderInd,
+                                 D3D11ResourceViewType* CommittedD3D11Views[],
+                                 ID3D11Resource*        CommittedD3D11Resources[],
+                                 Uint8&                 Binding) const;
 
 private:
-    template <typename TCachedResourceType, typename TGetResourceCount, typename TGetResourceArraysFunc, typename TSrcResourceType, typename TD3D11ResourceType>
-    __forceinline void SetD3D11ResourceInternal(BindPointsD3D11 BindPoints, TGetResourceCount GetCount, TGetResourceArraysFunc GetArrays, TSrcResourceType pResource, TD3D11ResourceType* pd3d11Resource)
+    template <typename D3D11ResourceTpye>
+    __forceinline Uint32 GetResourceDataOffset(Uint32 ShaderInd) const;
+
+    template <typename TCachedResourceType, typename TSrcResourceType, typename TD3D11ResourceType>
+    __forceinline void SetD3D11ResourceInternal(BindPointsD3D11 BindPoints, TSrcResourceType pResource, TD3D11ResourceType* pd3d11Resource)
     {
         VERIFY(pResource != nullptr && pd3d11Resource != nullptr || pResource == nullptr && pd3d11Resource == nullptr,
                "Resource and D3D11 resource must be set/unset atomically");
@@ -553,12 +363,12 @@ private:
             ActiveBits &= ~(1u << ShaderInd);
 
             const Uint32 CacheOffset = BindPoints[ShaderInd];
-            const Uint32 ResCount    = (this->*GetCount)(ShaderInd);
+            const Uint32 ResCount    = GetResourceCount<TD3D11ResourceType>(ShaderInd);
             VERIFY(CacheOffset < ResCount, "Index is out of range");
 
             TCachedResourceType* Resources;
             TD3D11ResourceType** d3d11ResArr;
-            (this->*GetArrays)(ShaderInd, Resources, d3d11ResArr);
+            GetResourceArrays(ShaderInd, Resources, d3d11ResArr);
             Resources[CacheOffset].Set(pResource);
             d3d11ResArr[CacheOffset] = pd3d11Resource;
         }
@@ -602,8 +412,138 @@ private:
 
 static constexpr size_t ResCacheSize = sizeof(ShaderResourceCacheD3D11);
 
+
+template <>
+struct ShaderResourceCacheD3D11::CachedResourceTraits<ID3D11Buffer>
+{
+    using CachedResourceType = CachedCB;
+};
+
+template <>
+struct ShaderResourceCacheD3D11::CachedResourceTraits<ID3D11SamplerState>
+{
+    using CachedResourceType = CachedSampler;
+};
+
+template <>
+struct ShaderResourceCacheD3D11::CachedResourceTraits<ID3D11ShaderResourceView>
+{
+    using CachedResourceType = CachedResource;
+};
+
+template <>
+struct ShaderResourceCacheD3D11::CachedResourceTraits<ID3D11UnorderedAccessView>
+{
+    using CachedResourceType = CachedResource;
+};
+
+
+template <>
+__forceinline Uint32 ShaderResourceCacheD3D11::GetResourceCount<ID3D11Buffer>(Uint32 ShaderInd) const
+{
+    return GetCBCount(ShaderInd);
+}
+
+template <>
+__forceinline Uint32 ShaderResourceCacheD3D11::GetResourceCount<ID3D11ShaderResourceView>(Uint32 ShaderInd) const
+{
+    return GetSRVCount(ShaderInd);
+}
+
+template <>
+__forceinline Uint32 ShaderResourceCacheD3D11::GetResourceCount<ID3D11UnorderedAccessView>(Uint32 ShaderInd) const
+{
+    return GetUAVCount(ShaderInd);
+}
+
+template <>
+__forceinline Uint32 ShaderResourceCacheD3D11::GetResourceCount<ID3D11SamplerState>(Uint32 ShaderInd) const
+{
+    return GetSamplerCount(ShaderInd);
+}
+
+
+template <>
+__forceinline Uint32 ShaderResourceCacheD3D11::GetResourceDataOffset<ID3D11Buffer>(Uint32 ShaderInd) const
+{
+    return m_Offsets[CBOffset + ShaderInd];
+}
+
+template <>
+__forceinline Uint32 ShaderResourceCacheD3D11::GetResourceDataOffset<ID3D11ShaderResourceView>(Uint32 ShaderInd) const
+{
+    return m_Offsets[SRVOffset + ShaderInd];
+}
+
+template <>
+__forceinline Uint32 ShaderResourceCacheD3D11::GetResourceDataOffset<ID3D11SamplerState>(Uint32 ShaderInd) const
+{
+    return m_Offsets[SampOffset + ShaderInd];
+}
+
+template <>
+__forceinline Uint32 ShaderResourceCacheD3D11::GetResourceDataOffset<ID3D11UnorderedAccessView>(Uint32 ShaderInd) const
+{
+    return m_Offsets[UAVOffset + ShaderInd];
+}
+
 // Instantiate templates
 template void ShaderResourceCacheD3D11::TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(DeviceContextD3D11Impl& Ctx);
 template void ShaderResourceCacheD3D11::TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Verify>(DeviceContextD3D11Impl& Ctx);
+
+
+template <typename D3D11ResourceType>
+ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResources(
+    Uint32             ShaderInd,
+    D3D11ResourceType* CommittedD3D11Resources[],
+    Uint8&             Binding) const
+{
+    CachedResourceTraits<D3D11ResourceType>::CachedResourceType const* CachedResources;
+    D3D11ResourceType* const*                                          pd3d11Resources;
+    GetConstResourceArrays(ShaderInd, CachedResources, pd3d11Resources);
+
+    MinMaxSlot Slots;
+
+    const auto ResCount = GetResourceCount<D3D11ResourceType>(ShaderInd);
+    for (Uint32 res = 0; res < ResCount; ++res)
+    {
+        const Uint32 Slot = Binding++;
+        if (CommittedD3D11Resources[Slot] != pd3d11Resources[res])
+            Slots.Add(Slot);
+
+        VERIFY_EXPR(pd3d11Resources[res] != nullptr);
+        CommittedD3D11Resources[Slot] = pd3d11Resources[res];
+    }
+
+    return Slots;
+}
+
+template <typename D3D11ResourceViewType>
+ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResourceViews(
+    Uint32                 ShaderInd,
+    D3D11ResourceViewType* CommittedD3D11Views[],
+    ID3D11Resource*        CommittedD3D11Resources[],
+    Uint8&                 Binding) const
+{
+    CachedResourceTraits<D3D11ResourceViewType>::CachedResourceType const* CachedResources;
+    D3D11ResourceViewType* const*                                          pd3d11Views;
+    GetConstResourceArrays(ShaderInd, CachedResources, pd3d11Views);
+
+    MinMaxSlot Slots;
+
+    const auto ResCount = GetResourceCount<D3D11ResourceViewType>(ShaderInd);
+    for (Uint32 res = 0; res < ResCount; ++res)
+    {
+        const Uint32 Slot = Binding++;
+        if (CommittedD3D11Views[Slot] != pd3d11Views[res])
+            Slots.Add(Slot);
+
+        VERIFY_EXPR(pd3d11Views[res] != nullptr);
+        CommittedD3D11Resources[Slot] = CachedResources[res].pd3d11Resource;
+        CommittedD3D11Views[Slot]     = pd3d11Views[res];
+    }
+
+    return Slots;
+}
 
 } // namespace Diligent

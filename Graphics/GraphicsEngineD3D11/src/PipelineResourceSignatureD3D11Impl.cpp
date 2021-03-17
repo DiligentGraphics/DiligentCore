@@ -327,14 +327,14 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
             case D3D11_RESOURCE_RANGE_CBV:
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
-                    if (!DstResourceCache.CopyCB(SrcResourceCache, ResAttr.BindPoints + ArrInd))
+                    if (!DstResourceCache.CopyResource<ID3D11Buffer>(SrcResourceCache, ResAttr.BindPoints + ArrInd))
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
                 }
                 break;
             case D3D11_RESOURCE_RANGE_SRV:
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
-                    if (!DstResourceCache.CopySRV(SrcResourceCache, ResAttr.BindPoints + ArrInd))
+                    if (!DstResourceCache.CopyResource<ID3D11ShaderResourceView>(SrcResourceCache, ResAttr.BindPoints + ArrInd))
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
                 }
                 break;
@@ -344,7 +344,7 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
                 {
                     for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                     {
-                        if (!DstResourceCache.CopySampler(SrcResourceCache, ResAttr.BindPoints + ArrInd))
+                        if (!DstResourceCache.CopyResource<ID3D11SamplerState>(SrcResourceCache, ResAttr.BindPoints + ArrInd))
                             LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
                     }
                 }
@@ -352,7 +352,7 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
             case D3D11_RESOURCE_RANGE_UAV:
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
-                    if (!DstResourceCache.CopyUAV(SrcResourceCache, ResAttr.BindPoints + ArrInd))
+                    if (!DstResourceCache.CopyResource<ID3D11UnorderedAccessView>(SrcResourceCache, ResAttr.BindPoints + ArrInd))
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
                 }
                 break;
@@ -467,7 +467,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
         case D3D11_RESOURCE_RANGE_CBV:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
-                if (!ResourceCache.IsCBBound(ResAttr.BindPoints + ArrInd))
+                if (!ResourceCache.IsResourceBound<ID3D11Buffer>(ResAttr.BindPoints + ArrInd))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(ResDesc, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
@@ -479,7 +479,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
         case D3D11_RESOURCE_RANGE_SAMPLER:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
-                if (!ResourceCache.IsSamplerBound(ResAttr.BindPoints + ArrInd))
+                if (!ResourceCache.IsResourceBound<ID3D11SamplerState>(ResAttr.BindPoints + ArrInd))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(ResDesc, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
@@ -491,8 +491,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
         case D3D11_RESOURCE_RANGE_SRV:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
-                const bool IsTexView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
-                if (!ResourceCache.IsSRVBound(ResAttr.BindPoints + ArrInd, IsTexView))
+                if (!ResourceCache.IsResourceBound<ID3D11ShaderResourceView>(ResAttr.BindPoints + ArrInd))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(ResDesc, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
@@ -512,8 +511,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
         case D3D11_RESOURCE_RANGE_UAV:
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
             {
-                const bool IsTexView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-                if (!ResourceCache.IsUAVBound(ResAttr.BindPoints + ArrInd, IsTexView))
+                if (!ResourceCache.IsResourceBound<ID3D11UnorderedAccessView>(ResAttr.BindPoints + ArrInd))
                 {
                     LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(ResDesc, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");

@@ -114,7 +114,7 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
         {
             CachedCB*      CBs      = nullptr;
             ID3D11Buffer** d3d11CBs = nullptr;
-            GetCBArrays(ShaderInd, CBs, d3d11CBs);
+            GetResourceArrays(ShaderInd, CBs, d3d11CBs);
             for (Uint32 cb = 0; cb < CBCount; ++cb)
                 new (CBs + cb) CachedCB{};
         }
@@ -124,7 +124,7 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
         {
             CachedResource*            SRVResources = nullptr;
             ID3D11ShaderResourceView** d3d11SRVs    = nullptr;
-            GetSRVArrays(ShaderInd, SRVResources, d3d11SRVs);
+            GetResourceArrays(ShaderInd, SRVResources, d3d11SRVs);
             for (Uint32 srv = 0; srv < SRVCount; ++srv)
                 new (SRVResources + srv) CachedResource{};
         }
@@ -134,7 +134,7 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
         {
             CachedSampler*       Samplers      = nullptr;
             ID3D11SamplerState** d3d11Samplers = nullptr;
-            GetSamplerArrays(ShaderInd, Samplers, d3d11Samplers);
+            GetResourceArrays(ShaderInd, Samplers, d3d11Samplers);
             for (Uint32 sam = 0; sam < SamplerCount; ++sam)
                 new (Samplers + sam) CachedSampler{};
         }
@@ -144,7 +144,7 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
         {
             CachedResource*             UAVResources = nullptr;
             ID3D11UnorderedAccessView** d3d11UAVs    = nullptr;
-            GetUAVArrays(ShaderInd, UAVResources, d3d11UAVs);
+            GetResourceArrays(ShaderInd, UAVResources, d3d11UAVs);
             for (Uint32 uav = 0; uav < UAVCount; ++uav)
                 new (UAVResources + uav) CachedResource{};
         }
@@ -165,7 +165,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             {
                 CachedCB*      CBs      = nullptr;
                 ID3D11Buffer** d3d11CBs = nullptr;
-                GetCBArrays(ShaderInd, CBs, d3d11CBs);
+                GetResourceArrays(ShaderInd, CBs, d3d11CBs);
                 for (size_t cb = 0; cb < CBCount; ++cb)
                     CBs[cb].~CachedCB();
             }
@@ -175,7 +175,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             {
                 CachedResource*            SRVResources = nullptr;
                 ID3D11ShaderResourceView** d3d11SRVs    = nullptr;
-                GetSRVArrays(ShaderInd, SRVResources, d3d11SRVs);
+                GetResourceArrays(ShaderInd, SRVResources, d3d11SRVs);
                 for (size_t srv = 0; srv < SRVCount; ++srv)
                     SRVResources[srv].~CachedResource();
             }
@@ -185,7 +185,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             {
                 CachedSampler*       Samplers      = nullptr;
                 ID3D11SamplerState** d3d11Samplers = nullptr;
-                GetSamplerArrays(ShaderInd, Samplers, d3d11Samplers);
+                GetResourceArrays(ShaderInd, Samplers, d3d11Samplers);
                 for (size_t sam = 0; sam < SamplerCount; ++sam)
                     Samplers[sam].~CachedSampler();
             }
@@ -195,7 +195,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             {
                 CachedResource*             UAVResources = nullptr;
                 ID3D11UnorderedAccessView** d3d11UAVs    = nullptr;
-                GetUAVArrays(ShaderInd, UAVResources, d3d11UAVs);
+                GetResourceArrays(ShaderInd, UAVResources, d3d11UAVs);
                 for (size_t uav = 0; uav < UAVCount; ++uav)
                     UAVResources[uav].~CachedResource();
             }
@@ -271,10 +271,10 @@ void ShaderResourceCacheD3D11::DvpVerifyCacheConsistency()
         CachedResource*             UAVResources  = nullptr;
         ID3D11UnorderedAccessView** d3d11UAVs     = nullptr;
 
-        GetCBArrays(ShaderInd, CBs, d3d11CBs);
-        GetSRVArrays(ShaderInd, SRVResources, d3d11SRVs);
-        GetSamplerArrays(ShaderInd, Samplers, d3d11Samplers);
-        GetUAVArrays(ShaderInd, UAVResources, d3d11UAVs);
+        GetResourceArrays(ShaderInd, CBs, d3d11CBs);
+        GetResourceArrays(ShaderInd, SRVResources, d3d11SRVs);
+        GetResourceArrays(ShaderInd, Samplers, d3d11Samplers);
+        GetResourceArrays(ShaderInd, UAVResources, d3d11UAVs);
 
         auto CBCount = GetCBCount(ShaderInd);
         for (size_t cb = 0; cb < CBCount; ++cb)
@@ -341,7 +341,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
 
         CachedCB*      CBs;
         ID3D11Buffer** d3d11CBs;
-        GetCBArrays(ShaderInd, CBs, d3d11CBs);
+        GetResourceArrays(ShaderInd, CBs, d3d11CBs);
 
         for (Uint32 i = 0; i < CBCount; ++i)
         {
@@ -376,7 +376,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
 
         CachedResource*            SRVResources;
         ID3D11ShaderResourceView** d3d11SRVs;
-        GetSRVArrays(ShaderInd, SRVResources, d3d11SRVs);
+        GetResourceArrays(ShaderInd, SRVResources, d3d11SRVs);
 
         for (Uint32 i = 0; i < SRVCount; ++i)
         {
@@ -433,7 +433,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
 
         CachedResource*             UAVResources;
         ID3D11UnorderedAccessView** d3d11UAVs;
-        GetUAVArrays(ShaderInd, UAVResources, d3d11UAVs);
+        GetResourceArrays(ShaderInd, UAVResources, d3d11UAVs);
 
         for (Uint32 i = 0; i < UAVCount; ++i)
         {
@@ -472,110 +472,6 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
             }
         }
     }
-}
-
-ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
-    Uint32        ShaderInd,
-    ID3D11Buffer* CommittedD3D11CBs[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT],
-    Uint8&        Binding) const
-{
-    CachedCB const*      CBs;
-    ID3D11Buffer* const* d3d11CBs;
-    GetConstCBArrays(ShaderInd, CBs, d3d11CBs);
-
-    MinMaxSlot Slots;
-
-    const auto CBCount = GetCBCount(ShaderInd);
-    for (Uint32 cb = 0; cb < CBCount; ++cb)
-    {
-        const Uint32 Slot = Binding++;
-        if (CommittedD3D11CBs[Slot] != d3d11CBs[cb])
-            Slots.Add(Slot);
-
-        VERIFY_EXPR(d3d11CBs[cb] != nullptr);
-        CommittedD3D11CBs[Slot] = d3d11CBs[cb];
-    }
-
-    return Slots;
-}
-
-ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindSRVs(
-    Uint32                    ShaderInd,
-    ID3D11ShaderResourceView* CommittedD3D11SRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
-    ID3D11Resource*           CommittedD3D11SRVResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT],
-    Uint8&                    Binding) const
-{
-    CachedResource const*            SRVResources;
-    ID3D11ShaderResourceView* const* d3d11SRVs;
-    GetConstSRVArrays(ShaderInd, SRVResources, d3d11SRVs);
-
-    MinMaxSlot Slots;
-
-    const auto SRVCount = GetSRVCount(ShaderInd);
-    for (Uint32 srv = 0; srv < SRVCount; ++srv)
-    {
-        const Uint32 Slot = Binding++;
-        if (CommittedD3D11SRVs[Slot] != d3d11SRVs[srv])
-            Slots.Add(Slot);
-
-        VERIFY_EXPR(d3d11SRVs[srv] != nullptr);
-        CommittedD3D11SRVResources[Slot] = SRVResources[srv].pd3d11Resource;
-        CommittedD3D11SRVs[Slot]         = d3d11SRVs[srv];
-    }
-
-    return Slots;
-}
-
-ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindSamplers(
-    Uint32              ShaderInd,
-    ID3D11SamplerState* CommittedD3D11Samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT],
-    Uint8&              Binding) const
-{
-    CachedSampler const*       Samplers;
-    ID3D11SamplerState* const* d3d11Samplers;
-    GetConstSamplerArrays(ShaderInd, Samplers, d3d11Samplers);
-
-    MinMaxSlot Slots;
-
-    const auto SamplerCount = GetSamplerCount(ShaderInd);
-    for (Uint32 sam = 0; sam < SamplerCount; ++sam)
-    {
-        const Uint32 Slot = Binding++;
-        if (CommittedD3D11Samplers[Slot] != d3d11Samplers[sam])
-            Slots.Add(Slot);
-
-        VERIFY_EXPR(d3d11Samplers[sam] != nullptr);
-        CommittedD3D11Samplers[Slot] = d3d11Samplers[sam];
-    }
-
-    return Slots;
-}
-
-ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindUAVs(
-    Uint32                     ShaderInd,
-    ID3D11UnorderedAccessView* CommittedD3D11UAVs[D3D11_PS_CS_UAV_REGISTER_COUNT],
-    ID3D11Resource*            CommittedD3D11UAVResources[D3D11_PS_CS_UAV_REGISTER_COUNT],
-    Uint8&                     Binding) const
-{
-    CachedResource const*             UAVResources;
-    ID3D11UnorderedAccessView* const* d3d11UAVs;
-    GetConstUAVArrays(ShaderInd, UAVResources, d3d11UAVs);
-
-    MinMaxSlot Slots;
-
-    const auto UAVCount = GetUAVCount(ShaderInd);
-    for (Uint32 uav = 0; uav < UAVCount; ++uav)
-    {
-        const Uint32 Slot = Binding++;
-        if (CommittedD3D11UAVs[Slot] != d3d11UAVs[uav])
-            Slots.Add(Slot);
-
-        VERIFY_EXPR(d3d11UAVs[uav] != nullptr);
-        CommittedD3D11UAVResources[Slot] = UAVResources[uav].pd3d11Resource;
-        CommittedD3D11UAVs[Slot]         = d3d11UAVs[uav];
-    }
-
-    return Slots;
 }
 
 } // namespace Diligent
