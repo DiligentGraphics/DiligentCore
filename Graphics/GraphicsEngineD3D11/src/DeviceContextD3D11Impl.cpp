@@ -264,10 +264,10 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
 }
 
 
-void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& ResourceCache,
-                                                const TBindingsPerStage&        BaseBindings,
-                                                SHADER_TYPE                     ActiveStages,
-                                                PixelShaderUAVBindMode&         PsUavBindMode)
+void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
+                                                const D3D11ShaderResourceCounters& BaseBindings,
+                                                SHADER_TYPE                        ActiveStages,
+                                                PixelShaderUAVBindMode&            PsUavBindMode)
 {
     while (ActiveStages != 0)
     {
@@ -367,11 +367,11 @@ void DeviceContextD3D11Impl::BindShaderResources()
     if ((m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask) == 0)
         return;
 
-    TBindingsPerStage Bindings     = {};
-    const auto        ActiveStages = m_BindInfo.ActiveStages;
+    D3D11ShaderResourceCounters Bindings     = {};
+    const auto                  ActiveStages = m_BindInfo.ActiveStages;
 
     if (m_pPipelineState->GetDesc().IsAnyGraphicsPipeline())
-        Bindings[D3D11_RESOURCE_RANGE_UAV][GetShaderTypeIndex(SHADER_TYPE_PIXEL)] = static_cast<Uint8>(m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets);
+        Bindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = static_cast<Uint8>(m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets);
 
     PixelShaderUAVBindMode PsUavBindMode = m_CommittedRes.NumUAVs[PSInd] > 0 ?
         PixelShaderUAVBindMode::Clear :

@@ -39,7 +39,7 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const TResourcesPerStage& ResCount)
+size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const D3D11ShaderResourceCounters& ResCount)
 {
     size_t MemSize = 0;
     // clang-format off
@@ -60,7 +60,7 @@ size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const TResourcesPerStage&
     return MemSize;
 }
 
-void ShaderResourceCacheD3D11::Initialize(const TResourcesPerStage& ResCount, IMemoryAllocator& MemAllocator)
+void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters& ResCount, IMemoryAllocator& MemAllocator)
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
     VERIFY(!IsInitialized(), "Resource cache has already been intialized!");

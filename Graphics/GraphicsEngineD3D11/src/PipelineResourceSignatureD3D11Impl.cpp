@@ -26,8 +26,10 @@
  */
 
 #include "pch.h"
+
 #include "PipelineResourceSignatureD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
+#include "ShaderVariableD3D.hpp"
 
 namespace Diligent
 {
@@ -117,45 +119,35 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
 
 void PipelineResourceSignatureD3D11Impl::CreateLayout()
 {
-    using TBindings32         = std::array<Uint32, D3D11_RESOURCE_RANGE_COUNT>;
-    using TBindingsPerStage32 = std::array<std::array<Uint32, NumShaderTypes>, D3D11_RESOURCE_RANGE_COUNT>;
-
-    const auto AllocBindPoints = [](TBindingsPerStage32& BindingPerStage, BindPointsD3D11& BindPoints, SHADER_TYPE ShaderStages, Uint32 ArraySize, D3D11_RESOURCE_RANGE Range) //
+    const auto AllocBindPoints = [](D3D11ShaderResourceCounters& BindingPerStage, D3D11ResourceBindPoints& BindPoints, SHADER_TYPE ShaderStages, Uint32 ArraySize, D3D11_RESOURCE_RANGE Range) //
     {
         while (ShaderStages != 0)
         {
-            auto   Stage     = ExtractLSB(ShaderStages);
-            Uint32 ShaderInd = GetShaderTypeIndex(Stage);
+            auto Stage     = ExtractLSB(ShaderStages);
+            auto ShaderInd = GetShaderTypeIndex(Stage);
 
-            BindPoints.Set(ShaderInd, BindingPerStage[Range][ShaderInd]);
-            BindingPerStage[Range][ShaderInd] += ArraySize;
+            BindPoints[ShaderInd] = BindingPerStage[Range][ShaderInd];
+
+            using T = std::remove_reference<decltype(BindingPerStage[Range][ShaderInd])>::type;
+            VERIFY(Uint32{BindingPerStage[Range][ShaderInd]} + ArraySize < std::numeric_limits<T>::max(), "Binding value exceeds representable range");
+            BindingPerStage[Range][ShaderInd] += static_cast<Uint8>(ArraySize);
         }
     };
 
     if (m_pStaticResCache)
     {
-        TBindingsPerStage32 StaticBindingsPerStage32 = {};
-        const auto          ResIdxRange              = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-        for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
+        D3D11ShaderResourceCounters StaticBindingsPerStage{};
+        const auto                  StaticResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        for (Uint32 r = StaticResIdxRange.first; r < StaticResIdxRange.second; ++r)
         {
-            const auto&     ResDesc = m_Desc.Resources[r];
-            const auto      Range   = ShaderResourceToDescriptorRange(ResDesc.ResourceType);
-            BindPointsD3D11 BindPoints;
-            AllocBindPoints(StaticBindingsPerStage32, BindPoints, ResDesc.ShaderStages, ResDesc.ArraySize, Range);
+            const auto& ResDesc = m_Desc.Resources[r];
+            const auto  Range   = ShaderResourceToDescriptorRange(ResDesc.ResourceType);
+
+            D3D11ResourceBindPoints BindPoints;
+            AllocBindPoints(StaticBindingsPerStage, BindPoints, ResDesc.ShaderStages, ResDesc.ArraySize, Range);
         }
 
-        TBindingsPerStage StaticBindingsPerStage8 = {};
-        for (Uint32 r = 0; r < StaticBindingsPerStage32.size(); ++r)
-        {
-            for (Uint32 s = 0; s < StaticBindingsPerStage32[r].size(); ++s)
-            {
-                using T = std::remove_reference<decltype(StaticBindingsPerStage8[r][s])>::type;
-                VERIFY_EXPR(StaticBindingsPerStage32[r][s] < std::numeric_limits<T>::max());
-                StaticBindingsPerStage8[r][s] = static_cast<T>(StaticBindingsPerStage32[r][s]);
-            }
-        }
-
-        m_pStaticResCache->Initialize(StaticBindingsPerStage8, GetRawAllocator());
+        m_pStaticResCache->Initialize(StaticBindingsPerStage, GetRawAllocator());
         VERIFY_EXPR(m_pStaticResCache->IsInitialized());
     }
 
@@ -191,7 +183,6 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         }
     }
 
-    TBindingsPerStage32 BindingPerStage = {};
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const auto& ResDesc = m_Desc.Resources[i];
@@ -223,7 +214,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
 
             if (!ImtblSampAttribs.IsAllocated())
             {
-                AllocBindPoints(BindingPerStage, ImtblSampAttribs.BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, D3D11_RESOURCE_RANGE_SAMPLER);
+                AllocBindPoints(m_BindingCountPerStage, ImtblSampAttribs.BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, D3D11_RESOURCE_RANGE_SAMPLER);
             }
         }
 
@@ -234,7 +225,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
                     AssignedSamplerInd,
                     SrcImmutableSamplerInd != InvalidImmutableSamplerIndex //
                 };
-            AllocBindPoints(BindingPerStage, pAttrib->BindPoints, ResDesc.ShaderStages, ResDesc.ArraySize, Range);
+            AllocBindPoints(m_BindingCountPerStage, pAttrib->BindPoints, ResDesc.ShaderStages, ResDesc.ArraySize, Range);
         }
         else
         {
@@ -261,23 +252,13 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         if (IsUsingCombinedSamplers() && !ImtblSampAttribs.IsAllocated())
             continue;
 
-        GetDevice()->CreateSampler(ImtblSamp.Desc, &ImtblSampAttribs.pSampler);
+        GetDevice()->CreateSampler(ImtblSamp.Desc, ImtblSampAttribs.pSampler.DblPtr<ISampler>());
 
         // Add as separate sampler.
         if (!ImtblSampAttribs.IsAllocated())
         {
             ImtblSampAttribs.ArraySize = 1;
-            AllocBindPoints(BindingPerStage, ImtblSampAttribs.BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, Range);
-        }
-    }
-
-    for (Uint32 r = 0; r < BindingPerStage.size(); ++r)
-    {
-        for (Uint32 s = 0; s < BindingPerStage[r].size(); ++s)
-        {
-            using T = std::remove_reference<decltype(m_BindingCountPerStage[r][s])>::type;
-            VERIFY_EXPR(BindingPerStage[r][s] < std::numeric_limits<T>::max());
-            m_BindingCountPerStage[r][s] = static_cast<T>(BindingPerStage[r][s]);
+            AllocBindPoints(m_BindingCountPerStage, ImtblSampAttribs.BindPoints, ImtblSamp.ShaderStages, ImtblSampAttribs.ArraySize, Range);
         }
     }
 }
@@ -374,8 +355,8 @@ void PipelineResourceSignatureD3D11Impl::InitSRBResourceCache(ShaderResourceCach
 
         if (ImtblSampAttr.IsAllocated())
         {
-            SamplerD3D11Impl* pSampler = ImtblSampAttr.GetSamplerD3D11();
-            VERIFY_EXPR(pSampler != nullptr);
+            SamplerD3D11Impl* pSampler = ImtblSampAttr.pSampler.RawPtr<SamplerD3D11Impl>();
+            VERIFY_EXPR(ImtblSampAttr.pSampler != nullptr);
             VERIFY_EXPR(ImtblSampAttr.ArraySize > 0);
 
             for (Uint32 ArrInd = 0; ArrInd < ImtblSampAttr.ArraySize; ++ArrInd)
@@ -384,7 +365,9 @@ void PipelineResourceSignatureD3D11Impl::InitSRBResourceCache(ShaderResourceCach
     }
 }
 
-void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(ResourceBinding::TMap& ResourceMap, SHADER_TYPE ShaderStage, const TBindingsPerStage& BaseBindings) const
+void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(ResourceBinding::TMap&             ResourceMap,
+                                                                        SHADER_TYPE                        ShaderStage,
+                                                                        const D3D11ShaderResourceCounters& BaseBindings) const
 {
     VERIFY(ShaderStage != SHADER_TYPE_UNKNOWN && IsPowerOfTwo(ShaderStage), "Only single shader stage must be provided.");
     const auto ShaderInd = GetShaderTypeIndex(ShaderStage);
@@ -397,7 +380,7 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
 
         if ((ResDesc.ShaderStages & ShaderStage) != 0)
         {
-            VERIFY_EXPR(ResAttr.BindPoints.IsValid(ShaderInd));
+            VERIFY_EXPR(ResAttr.BindPoints.IsStageActive(ShaderInd));
             ResourceBinding::BindInfo BindInfo //
                 {
                     Uint32{BaseBindings[Range][ShaderInd]} + ResAttr.BindPoints[ShaderInd],
@@ -420,7 +403,7 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
 
         if ((ImtblSam.ShaderStages & ShaderStage) != 0 && SampAttr.IsAllocated())
         {
-            VERIFY_EXPR(SampAttr.BindPoints.IsValid(ShaderInd));
+            VERIFY_EXPR(SampAttr.BindPoints.IsStageActive(ShaderInd));
 
             String SampName{ImtblSam.SamplerOrTextureName};
             if (IsUsingCombinedSamplers())
@@ -498,13 +481,19 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                     BindingsOK = false;
                     continue;
                 }
-                /*
-                const auto& SRV = ResourceCache.GetSRV(ResAttr.BindPoints + ArrInd);
+
+                const auto& SRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(ResAttr.BindPoints + ArrInd);
                 if (SRV.pTexture)
-                    ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, SRV.pView.RawPtr<ITextureView>(), D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample());
+                {
+                    if (!ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, SRV.pView.RawPtr<TextureViewD3D11Impl>(),
+                                                       D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample()))
+                        BindingsOK = false;
+                }
                 else
-                    ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, SRV.pView.RawPtr<IBufferView>(), D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample());
-                */
+                {
+                    if (!VerifyBufferViewModeD3D(SRV.pView.RawPtr<BufferViewD3D11Impl>(), D3DAttribs, ShaderName))
+                        BindingsOK = false;
+                }
             }
             break;
 
@@ -518,13 +507,18 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                     BindingsOK = false;
                     continue;
                 }
-                /*
-                const auto& UAV = ResourceCache.GetUAV(ResAttr.BindPoints + ArrInd);
+                const auto& UAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(ResAttr.BindPoints + ArrInd);
                 if (UAV.pTexture)
-                    ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, UAV.pView.RawPtr<ITextureView>(), D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample());
+                {
+                    if (!ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, UAV.pView.RawPtr<TextureViewD3D11Impl>(),
+                                                       D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample()))
+                        BindingsOK = false;
+                }
                 else
-                    ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, UAV.pView.RawPtr<IBufferView>(), D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample());
-                */
+                {
+                    if (!VerifyBufferViewModeD3D(UAV.pView.RawPtr<BufferViewD3D11Impl>(), D3DAttribs, ShaderName))
+                        BindingsOK = false;
+                }
             }
             break;
 

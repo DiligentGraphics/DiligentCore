@@ -156,44 +156,41 @@ public:
     template <D3D11_RESOURCE_RANGE>
     struct CachedResourceTraits;
 
-    static constexpr int NumShaderTypes = BindPointsD3D11::NumShaderTypes;
-    using TResourcesPerStage            = std::array<std::array<Uint8, NumShaderTypes>, D3D11_RESOURCE_RANGE_COUNT>;
+    static size_t GetRequriedMemorySize(const D3D11ShaderResourceCounters& ResCount);
 
-    static size_t GetRequriedMemorySize(const TResourcesPerStage& ResCount);
+    void Initialize(const D3D11ShaderResourceCounters& ResCount, IMemoryAllocator& MemAllocator);
 
-    void Initialize(const TResourcesPerStage& ResCount, IMemoryAllocator& MemAllocator);
-
-    __forceinline void SetCB(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl)
+    __forceinline void SetCB(const D3D11ResourceBindPoints& BindPoints, RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl)
     {
         auto* pd3d11Buff = pBuffD3D11Impl ? pBuffD3D11Impl->BufferD3D11Impl::GetD3D11Buffer() : nullptr;
         SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_CBV>(BindPoints, std::move(pBuffD3D11Impl), pd3d11Buff);
     }
 
-    __forceinline void SetTexSRV(BindPointsD3D11 BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
+    __forceinline void SetTexSRV(const D3D11ResourceBindPoints& BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
     {
         auto* pd3d11SRV = pTexView ? static_cast<ID3D11ShaderResourceView*>(pTexView->TextureViewD3D11Impl::GetD3D11View()) : nullptr;
         SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_SRV>(BindPoints, std::move(pTexView), pd3d11SRV);
     }
 
-    __forceinline void SetBufSRV(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferViewD3D11Impl> pBuffView)
+    __forceinline void SetBufSRV(const D3D11ResourceBindPoints& BindPoints, RefCntAutoPtr<BufferViewD3D11Impl> pBuffView)
     {
         auto* pd3d11SRV = pBuffView ? static_cast<ID3D11ShaderResourceView*>(pBuffView->BufferViewD3D11Impl::GetD3D11View()) : nullptr;
         SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_SRV>(BindPoints, std::move(pBuffView), pd3d11SRV);
     }
 
-    __forceinline void SetTexUAV(BindPointsD3D11 BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
+    __forceinline void SetTexUAV(const D3D11ResourceBindPoints& BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
     {
         auto* pd3d11UAV = pTexView ? static_cast<ID3D11UnorderedAccessView*>(pTexView->TextureViewD3D11Impl::GetD3D11View()) : nullptr;
         SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_UAV>(BindPoints, std::move(pTexView), pd3d11UAV);
     }
 
-    __forceinline void SetBufUAV(BindPointsD3D11 BindPoints, RefCntAutoPtr<BufferViewD3D11Impl> pBuffView)
+    __forceinline void SetBufUAV(const D3D11ResourceBindPoints& BindPoints, RefCntAutoPtr<BufferViewD3D11Impl> pBuffView)
     {
         auto* pd3d11UAV = pBuffView ? static_cast<ID3D11UnorderedAccessView*>(pBuffView->BufferViewD3D11Impl::GetD3D11View()) : nullptr;
         SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_UAV>(BindPoints, std::move(pBuffView), pd3d11UAV);
     }
 
-    __forceinline void SetSampler(BindPointsD3D11 BindPoints, SamplerD3D11Impl* pSampler)
+    __forceinline void SetSampler(const D3D11ResourceBindPoints& BindPoints, SamplerD3D11Impl* pSampler)
     {
         auto* pd3d11Sampler = pSampler ? pSampler->SamplerD3D11Impl::GetD3D11SamplerState() : nullptr;
         SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_SAMPLER>(BindPoints, pSampler, pd3d11Sampler);
@@ -201,10 +198,10 @@ public:
 
 
     template <D3D11_RESOURCE_RANGE ResRange>
-    __forceinline const typename CachedResourceTraits<ResRange>::CachedResourceType& GetResource(BindPointsD3D11 BindPoints) const
+    __forceinline const typename CachedResourceTraits<ResRange>::CachedResourceType& GetResource(const D3D11ResourceBindPoints& BindPoints) const
     {
-        VERIFY(BindPoints.GetActiveBits() != 0, "No active shader stage");
-        const auto ShaderInd = PlatformMisc::GetLSB(BindPoints.GetActiveBits());
+        VERIFY(BindPoints.GetActiveStages() != SHADER_TYPE_UNKNOWN, "No active shader stage");
+        const auto ShaderInd = GetFirstShaderStageIndex(BindPoints.GetActiveStages());
         const auto Offset    = BindPoints[ShaderInd];
         VERIFY(Offset < GetResourceCount<ResRange>(ShaderInd), "Resource slot is out of range");
         const auto ResArrays = GetConstResourceArrays<ResRange>(ShaderInd);
@@ -212,13 +209,12 @@ public:
     }
 
     template <D3D11_RESOURCE_RANGE ResRange>
-    bool CopyResource(const ShaderResourceCacheD3D11& SrcCache, BindPointsD3D11 BindPoints)
+    bool CopyResource(const ShaderResourceCacheD3D11& SrcCache, const D3D11ResourceBindPoints& BindPoints)
     {
         bool IsBound = true;
-        for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
+        for (auto ActiveStages = BindPoints.GetActiveStages(); ActiveStages != SHADER_TYPE_UNKNOWN;)
         {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
+            const auto ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
 
             auto SrcResArrays = SrcCache.GetConstResourceArrays<ResRange>(ShaderInd);
             auto DstResArrays = GetResourceArrays<ResRange>(ShaderInd);
@@ -236,21 +232,19 @@ public:
     }
 
     template <D3D11_RESOURCE_RANGE ResRange>
-    __forceinline bool IsResourceBound(BindPointsD3D11 BindPoints) const
+    __forceinline bool IsResourceBound(const D3D11ResourceBindPoints& BindPoints) const
     {
-        Uint32 ActiveBits = BindPoints.GetActiveBits();
-        if (ActiveBits == 0)
+        if (BindPoints.IsEmpty())
             return false;
 
-        const Uint32 FirstShaderInd = PlatformMisc::GetLSB(ActiveBits);
-        const bool   IsBound        = IsResourceBound<ResRange>(FirstShaderInd, BindPoints[FirstShaderInd]);
+        auto       ActiveStages   = BindPoints.GetActiveStages();
+        const auto FirstShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
+        const bool IsBound        = IsResourceBound<ResRange>(FirstShaderInd, BindPoints[FirstShaderInd]);
 
 #ifdef DILIGENT_DEBUG
-        ActiveBits &= ~(1u << FirstShaderInd);
-        while (ActiveBits != 0)
+        while (ActiveStages != SHADER_TYPE_UNKNOWN)
         {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
+            const Uint32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
             VERIFY_EXPR(IsBound == IsResourceBound<ResRange>(ShaderInd, BindPoints[ShaderInd]));
         }
 #endif
@@ -298,13 +292,13 @@ public:
     template <D3D11_RESOURCE_RANGE Range>
     inline MinMaxSlot BindResources(Uint32                                                   ShaderInd,
                                     typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Resources[],
-                                    const TResourcesPerStage&                                BaseBindings) const;
+                                    const D3D11ShaderResourceCounters&                       BaseBindings) const;
 
     template <D3D11_RESOURCE_RANGE Range>
     inline MinMaxSlot BindResourceViews(Uint32                                                   ShaderInd,
                                         typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Views[],
                                         ID3D11Resource*                                          CommittedD3D11Resources[],
-                                        const TResourcesPerStage&                                BaseBindings) const;
+                                        const D3D11ShaderResourceCounters&                       BaseBindings) const;
 
     enum class StateTransitionMode
     {
@@ -345,15 +339,13 @@ private:
     }
 
     template <D3D11_RESOURCE_RANGE ResRange, typename TSrcResourceType, typename TD3D11ResourceType>
-    __forceinline void SetD3D11ResourceInternal(BindPointsD3D11 BindPoints, TSrcResourceType pResource, TD3D11ResourceType* pd3d11Resource)
+    __forceinline void SetD3D11ResourceInternal(const D3D11ResourceBindPoints& BindPoints, TSrcResourceType pResource, TD3D11ResourceType* pd3d11Resource)
     {
         VERIFY(pResource != nullptr && pd3d11Resource != nullptr || pResource == nullptr && pd3d11Resource == nullptr,
                "Resource and D3D11 resource must be set/unset atomically");
-        for (Uint32 ActiveBits = BindPoints.GetActiveBits(); ActiveBits != 0;)
+        for (auto ActiveStages = BindPoints.GetActiveStages(); ActiveStages != SHADER_TYPE_UNKNOWN;)
         {
-            const Uint32 ShaderInd = PlatformMisc::GetLSB(ActiveBits);
-            ActiveBits &= ~(1u << ShaderInd);
-
+            const Uint32 ShaderInd   = ExtractFirstShaderStageIndex(ActiveStages);
             const Uint32 CacheOffset = BindPoints[ShaderInd];
             VERIFY(CacheOffset < GetResourceCount<ResRange>(ShaderInd), "Cache offset is out of range");
 
@@ -389,6 +381,8 @@ private:
     using OffsetType = Uint16;
 
     static constexpr size_t MaxAlignment = std::max(std::max(std::max(alignof(CachedCB), alignof(CachedResource)), alignof(CachedSampler)), alignof(IUnknown*));
+
+    static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
 
     static constexpr Uint32 FirstCBOffsetIdx  = 0;
     static constexpr Uint32 FirstSRVOffsetIdx = FirstCBOffsetIdx + NumShaderTypes;
@@ -495,7 +489,7 @@ template <D3D11_RESOURCE_RANGE Range>
 inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResources(
     Uint32                                                   ShaderInd,
     typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Resources[],
-    const TResourcesPerStage&                                BaseBindings) const
+    const D3D11ShaderResourceCounters&                       BaseBindings) const
 {
     const auto   ResCount    = GetResourceCount<Range>(ShaderInd);
     const auto   ResArrays   = GetConstResourceArrays<Range>(ShaderInd);
@@ -521,7 +515,7 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResour
     Uint32                                                   ShaderInd,
     typename CachedResourceTraits<Range>::D3D11ResourceType* CommittedD3D11Views[],
     ID3D11Resource*                                          CommittedD3D11Resources[],
-    const TResourcesPerStage&                                BaseBindings) const
+    const D3D11ShaderResourceCounters&                       BaseBindings) const
 {
     const auto   ResCount    = GetResourceCount<Range>(ShaderInd);
     const auto   ResArrays   = GetConstResourceArrays<Range>(ShaderInd);

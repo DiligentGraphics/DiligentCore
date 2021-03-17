@@ -34,6 +34,8 @@
 
 #include "BasicTypes.h"
 #include "DebugUtilities.hpp"
+#include "HashUtils.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -50,64 +52,124 @@ enum D3D11_RESOURCE_RANGE : Uint32
 D3D11_RESOURCE_RANGE ShaderResourceToDescriptorRange(SHADER_RESOURCE_TYPE Type);
 
 
-// sizeof(BindPointsD3D11) == 8, x64
-struct BindPointsD3D11
+/// Resource binding points in all shader stages.
+// sizeof(D3D11ResourceBindPoints) == 8, x64
+struct D3D11ResourceBindPoints
 {
     /// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     static constexpr Uint32 NumShaderTypes = 6;
 
-    static constexpr Uint8 InvalidBindPoint = 0xFF;
-
-    BindPointsD3D11() noexcept {}
-    BindPointsD3D11(const BindPointsD3D11&) noexcept = default;
-
-    // clang-format off
-    bool   IsEmpty()                const { return m_ActiveBits == 0; }
-    Uint32 GetActiveBits()          const { return m_ActiveBits; }
-    bool   IsValid(Uint32 index)    const { return m_Bindings[index] != InvalidBindPoint; }
-    Uint8  operator[](Uint32 index) const { return m_Bindings[index]; }
-    // clang-format on
-
-    void Set(Uint32 Index, Uint32 BindPoint)
+    D3D11ResourceBindPoints() noexcept
     {
-        VERIFY_EXPR(Index < NumShaderTypes);
-        VERIFY_EXPR(BindPoint < InvalidBindPoint);
-        m_ActiveBits      = static_cast<Uint8>(m_ActiveBits | (1u << Index));
-        m_Bindings[Index] = static_cast<Uint8>(BindPoint);
+#ifdef DILIGENT_DEBUG
+        for (auto BindPoint : Bindings)
+            VERIFY_EXPR(BindPoint == InvalidBindPoint);
+#endif
+    }
+
+    D3D11ResourceBindPoints(const D3D11ResourceBindPoints&) noexcept = default;
+
+    SHADER_TYPE GetActiveStages() const
+    {
+        return static_cast<SHADER_TYPE>(ActiveStages);
+    }
+
+    bool IsEmpty() const
+    {
+        return GetActiveStages() == SHADER_TYPE_UNKNOWN;
+    }
+
+    bool IsStageActive(Uint32 ShaderInd) const
+    {
+        bool IsActive = (GetActiveStages() & (1u << ShaderInd)) != 0;
+        VERIFY_EXPR((IsActive && Bindings[ShaderInd] != InvalidBindPoint ||
+                     !IsActive && Bindings[ShaderInd] == InvalidBindPoint));
+        return IsActive;
+    }
+
+    Uint8 operator[](Uint32 ShaderInd) const
+    {
+        return Bindings[ShaderInd];
     }
 
     size_t GetHash() const
     {
         size_t Hash = 0;
-        for (Uint32 i = 0; i < NumShaderTypes; ++i)
-            HashCombine(Hash, m_Bindings[i]);
+        for (auto Binding : Bindings)
+            HashCombine(Hash, Binding);
         return Hash;
     }
 
-    bool operator==(const BindPointsD3D11& rhs) const
+    bool operator==(const D3D11ResourceBindPoints& rhs) const
     {
-        return m_Bindings == rhs.m_Bindings;
+        return Bindings == rhs.Bindings;
     }
 
-    BindPointsD3D11 operator+(Uint32 value) const
+    D3D11ResourceBindPoints operator+(Uint32 value) const
     {
-        BindPointsD3D11 Result{*this};
-        for (Uint32 Bits = Result.m_ActiveBits; Bits != 0;)
+        D3D11ResourceBindPoints NewBindPoints{*this};
+        for (auto Stages = GetActiveStages(); Stages != 0;)
         {
-            auto Index = PlatformMisc::GetLSB(Bits);
-            Bits &= ~(1u << Index);
-
-            auto NewBindPoint = Result.m_Bindings[Index] + value;
-            VERIFY_EXPR(NewBindPoint < InvalidBindPoint);
-            Result.m_Bindings[Index] = static_cast<Uint8>(NewBindPoint);
+            auto ShaderInd = ExtractFirstShaderStageIndex(Stages);
+            VERIFY_EXPR(Uint32{Bindings[ShaderInd]} + value < InvalidBindPoint);
+            NewBindPoints.Bindings[ShaderInd] = Bindings[ShaderInd] + static_cast<Uint8>(value);
         }
-        return Result;
+        return NewBindPoints;
     }
 
 private:
-    Uint8                             m_ActiveBits = 0;
-    std::array<Uint8, NumShaderTypes> m_Bindings   = {InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint};
+    struct SetBindPointHelper
+    {
+        SetBindPointHelper(D3D11ResourceBindPoints& _BindPoints,
+                           const Uint32             _ShaderInd) :
+            BindPoints{_BindPoints},
+            ShaderInd{_ShaderInd}
+        {}
+
+        Uint8 operator=(Uint32 BindPoint)
+        {
+            BindPoints.Set(ShaderInd, BindPoint);
+            return static_cast<Uint8>(BindPoint);
+        }
+
+        operator Uint8() const
+        {
+            return static_cast<const D3D11ResourceBindPoints&>(BindPoints)[ShaderInd];
+        }
+
+    private:
+        D3D11ResourceBindPoints& BindPoints;
+        const Uint32             ShaderInd;
+    };
+
+public:
+    SetBindPointHelper operator[](Uint32 ShaderInd)
+    {
+        return SetBindPointHelper{*this, ShaderInd};
+    }
+
+private:
+    void Set(Uint32 ShaderInd, Uint32 BindPoint)
+    {
+        VERIFY_EXPR(ShaderInd < NumShaderTypes);
+        VERIFY(BindPoint < InvalidBindPoint, "Bind point (", BindPoint, ") is out of range");
+
+        Bindings[ShaderInd] = static_cast<Uint8>(BindPoint);
+        ActiveStages |= Uint32{1} << ShaderInd;
+    }
+
+    static constexpr Uint8 InvalidBindPoint = 0xFF;
+
+    //     0      1      2      3      4      5
+    // |  PS  |  VS  |  GS  |  HS  |  DS  |  CS  |
+    std::array<Uint8, NumShaderTypes> Bindings{InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint, InvalidBindPoint};
+
+    Uint8 ActiveStages = 0;
 };
+
+
+/// Resource counters for all shader stages and all resource types
+using D3D11ShaderResourceCounters = std::array<std::array<Uint8, D3D11ResourceBindPoints::NumShaderTypes>, D3D11_RESOURCE_RANGE_COUNT>;
 
 
 // sizeof(PipelineResourceAttribsD3D11) == 12, x64
@@ -123,7 +185,7 @@ public:
     // clang-format off
     const Uint32    SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
     const Uint32    ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag.
-    BindPointsD3D11 BindPoints;
+    D3D11ResourceBindPoints BindPoints;
     // clang-format on
 
     PipelineResourceAttribsD3D11(Uint32 _SamplerInd,

@@ -437,6 +437,29 @@ inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
     return PlatformMisc::GetLSB(Type);
 }
 
+inline Int32 GetFirstShaderStageIndex(SHADER_TYPE Stages)
+{
+    if (Stages == SHADER_TYPE_UNKNOWN)
+        return -1;
+
+    VERIFY(Stages > SHADER_TYPE_UNKNOWN && Stages < SHADER_TYPE_LAST * 2, "Value ", Uint32{Stages}, " is not a valid SHADER_TYPE enum value");
+
+    return PlatformMisc::GetLSB(Stages);
+}
+
+inline Int32 ExtractFirstShaderStageIndex(SHADER_TYPE& Stages)
+{
+    if (Stages == SHADER_TYPE_UNKNOWN)
+        return -1;
+
+    VERIFY(Stages > SHADER_TYPE_UNKNOWN && Stages < SHADER_TYPE_LAST * 2, "Value ", Uint32{Stages}, " is not a valid SHADER_TYPE enum value");
+
+    const auto StageIndex = PlatformMisc::GetLSB(Stages);
+    Stages &= ~static_cast<SHADER_TYPE>(1u << StageIndex);
+    return StageIndex;
+}
+
+
 static_assert(SHADER_TYPE_LAST == 0x2000, "Please add the new shader type index below");
 
 static constexpr Int32 VSInd   = 0;

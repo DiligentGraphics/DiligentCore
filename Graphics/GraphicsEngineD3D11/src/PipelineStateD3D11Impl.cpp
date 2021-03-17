@@ -200,7 +200,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         const auto        ShaderType = pShader->GetDesc().ShaderType;
         auto*             pBytecode  = Shaders[s]->GetBytecode();
 
-        PipelineResourceSignatureD3D11Impl::TBindingsPerStage BindingsPerStage = {};
+        D3D11ShaderResourceCounters BindingsPerStage = {};
         if (m_Desc.IsAnyGraphicsPipeline())
             BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
 
@@ -229,7 +229,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    PipelineResourceSignatureD3D11Impl::TBindingsPerStage BindingsPerStage = {};
+    D3D11ShaderResourceCounters BindingsPerStage = {};
 
     if (m_Desc.IsAnyGraphicsPipeline())
         BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
@@ -241,7 +241,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             pSignature->ShiftBindings(BindingsPerStage);
     }
 
-    for (Uint32 s = 0; s < PipelineResourceSignatureD3D11Impl::NumShaderTypes; ++s)
+    for (Uint32 s = 0; s < D3D11ResourceBindPoints::NumShaderTypes; ++s)
     {
         DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_CBV][s] <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT,
                       "Constant buffer count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_CBV][s]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT);
@@ -516,11 +516,13 @@ void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pSha
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void PipelineStateD3D11Impl::DvpVerifySRBResources(class ShaderResourceBindingD3D11Impl* pSRBs[], const TBindingsPerStage BaseBindings[], Uint32 NumSRBs) const
+void PipelineStateD3D11Impl::DvpVerifySRBResources(ShaderResourceBindingD3D11Impl*   pSRBs[],
+                                                   const D3D11ShaderResourceCounters BaseBindings[],
+                                                   Uint32                            NumSRBs) const
 {
     // Verify SRB compatibility with this pipeline
-    const auto        SignCount = GetResourceSignatureCount();
-    TBindingsPerStage Bindings  = {};
+    const auto                  SignCount = GetResourceSignatureCount();
+    D3D11ShaderResourceCounters Bindings  = {};
 
     if (m_Desc.IsAnyGraphicsPipeline())
         Bindings[D3D11_RESOURCE_RANGE_UAV][GetShaderTypeIndex(SHADER_TYPE_PIXEL)] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);

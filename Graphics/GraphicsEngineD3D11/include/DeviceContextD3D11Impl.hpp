@@ -338,7 +338,7 @@ private:
 
     void BindShaderResources();
 
-    static constexpr int NumShaderTypes = BindPointsD3D11::NumShaderTypes;
+    static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
     struct TCommittedResources
     {
         // clang-format off
@@ -393,11 +393,10 @@ private:
         Bind
     };
 
-    using TBindingsPerStage = PipelineResourceSignatureD3D11Impl::TBindingsPerStage;
-    void BindCacheResources(const ShaderResourceCacheD3D11& ResourceCache,
-                            const TBindingsPerStage&        BaseBindings,
-                            SHADER_TYPE                     ActiveStages,
-                            PixelShaderUAVBindMode&         PsUavBindMode);
+    void BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
+                            const D3D11ShaderResourceCounters& BaseBindings,
+                            SHADER_TYPE                        ActiveStages,
+                            PixelShaderUAVBindMode&            PsUavBindMode);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();
@@ -424,7 +423,7 @@ private:
         bool CommittedResourcesValidated = false;
 
         // Binding offsets that was used at last BindProgramResources() call.
-        std::array<TBindingsPerStage, MAX_RESOURCE_SIGNATURES> BoundResOffsets = {};
+        std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES> BoundResOffsets = {};
 #endif
 
         SRBState()

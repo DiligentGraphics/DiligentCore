@@ -92,8 +92,7 @@ public:
     SHADER_TYPE GetShaderStageType(Uint32 Index) const;
 
 #ifdef DILIGENT_DEVELOPMENT
-    using TBindingsPerStage = PipelineResourceSignatureD3D11Impl::TBindingsPerStage;
-    void DvpVerifySRBResources(class ShaderResourceBindingD3D11Impl* pSRBs[], const TBindingsPerStage BaseBindings[], Uint32 NumSRBs) const;
+    void DvpVerifySRBResources(class ShaderResourceBindingD3D11Impl* pSRBs[], const D3D11ShaderResourceCounters BaseBindings[], Uint32 NumSRBs) const;
 #endif
 
 private:

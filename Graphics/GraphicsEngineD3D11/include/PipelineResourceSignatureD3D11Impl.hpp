@@ -32,17 +32,18 @@
 
 #include <array>
 
-#include "ResourceBindingMap.hpp"
-
 #include "EngineD3D11ImplTraits.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 #include "PipelineResourceAttribsD3D11.hpp"
 
 // ShaderVariableManagerD3D11, ShaderResourceCacheD3D11, and ShaderResourceBindingD3D11Impl
 // are required by PipelineResourceSignatureBase
+#include "ShaderResourceCacheD3D11.hpp"
 #include "ShaderVariableManagerD3D11.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
-#include "ShaderResourceCacheD3D11.hpp"
+#include "SamplerD3D11Impl.hpp"
+
+#include "ResourceBindingMap.hpp"
 
 namespace Diligent
 {
@@ -59,8 +60,7 @@ public:
                                        bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureD3D11Impl();
 
-    using ResourceAttribs                = PipelineResourceAttribsD3D11;
-    static constexpr auto NumShaderTypes = BindPointsD3D11::NumShaderTypes;
+    using ResourceAttribs = PipelineResourceAttribsD3D11;
 
     const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
     {
@@ -72,14 +72,13 @@ public:
     struct ImmutableSamplerAttribs
     {
     public:
-        RefCntAutoPtr<ISampler> pSampler;
-        Uint32                  ArraySize = 0;
-        BindPointsD3D11         BindPoints;
+        RefCntAutoPtr<SamplerD3D11Impl> pSampler;
+        Uint32                          ArraySize = 0;
+        D3D11ResourceBindPoints         BindPoints;
 
         ImmutableSamplerAttribs() noexcept {}
 
-        bool              IsAllocated() const { return !BindPoints.IsEmpty(); }
-        SamplerD3D11Impl* GetSamplerD3D11() const { return ValidatedCast<SamplerD3D11Impl>(pSampler.RawPtr<ISampler>()); }
+        bool IsAllocated() const { return !BindPoints.IsEmpty(); }
     };
 
     const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const
@@ -88,10 +87,7 @@ public:
         return m_ImmutableSamplers[SampIndex];
     }
 
-    using TResourceCount    = std::array<Uint8, D3D11_RESOURCE_RANGE_COUNT>;
-    using TBindingsPerStage = std::array<std::array<Uint8, NumShaderTypes>, D3D11_RESOURCE_RANGE_COUNT>;
-
-    __forceinline void ShiftBindings(TBindingsPerStage& Bindings) const
+    __forceinline void ShiftBindings(D3D11ShaderResourceCounters& Bindings) const
     {
         for (Uint32 r = 0; r < Bindings.size(); ++r)
         {
@@ -106,7 +102,7 @@ public:
 
     void InitSRBResourceCache(ShaderResourceCacheD3D11& ResourceCache);
 
-    void UpdateShaderResourceBindingMap(ResourceBinding::TMap& ResourceMap, SHADER_TYPE ShaderStage, const TBindingsPerStage& BaseBindings) const;
+    void UpdateShaderResourceBindingMap(ResourceBinding::TMap& ResourceMap, SHADER_TYPE ShaderStage, const D3D11ShaderResourceCounters& BaseBindings) const;
 
     // Copies static resources from the static resource cache to the destination cache
     void CopyStaticResources(ShaderResourceCacheD3D11& ResourceCache) const;
@@ -126,9 +122,9 @@ private:
     void Destruct();
 
 private:
-    TBindingsPerStage        m_BindingCountPerStage = {};
-    ResourceAttribs*         m_pResourceAttribs     = nullptr; // [m_Desc.NumResources]
-    ImmutableSamplerAttribs* m_ImmutableSamplers    = nullptr; // [m_Desc.NumImmutableSamplers]
+    D3D11ShaderResourceCounters m_BindingCountPerStage = {};
+    ResourceAttribs*            m_pResourceAttribs     = nullptr; // [m_Desc.NumResources]
+    ImmutableSamplerAttribs*    m_ImmutableSamplers    = nullptr; // [m_Desc.NumImmutableSamplers]
 };
 
 } // namespace Diligent
