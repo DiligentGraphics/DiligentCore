@@ -83,7 +83,7 @@ public:
     const ResourceAttribs&      GetAttribs(Uint32 Index) const;
 
 
-    template <typename ThisImplType>
+    template <typename ThisImplType, D3D11_RESOURCE_RANGE ResRange>
     struct ShaderVariableD3D11Base : ShaderVariableBase<ThisImplType, ShaderVariableManagerD3D11, IShaderResourceVariableD3D>
     {
     public:
@@ -119,102 +119,66 @@ public:
             GetResourceDesc(HLSLResDesc);
             HLSLResDesc.ShaderRegister = GetAttribs().BindPoints[m_ParentManager.m_ShaderTypeIndex];
         }
+
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
+        {
+            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
+            return m_ParentManager.m_ResourceCache.IsResourceBound<ResRange>(GetAttribs().BindPoints + ArrayIndex);
+        }
     };
 
-    struct ConstBuffBindInfo final : ShaderVariableD3D11Base<ConstBuffBindInfo>
+    struct ConstBuffBindInfo final : ShaderVariableD3D11Base<ConstBuffBindInfo, D3D11_RESOURCE_RANGE_CBV>
     {
         ConstBuffBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base<ConstBuffBindInfo>{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<ConstBuffBindInfo, D3D11_RESOURCE_RANGE_CBV>{ParentLayout, ResIndex}
         {}
 
-        // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex);
-
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-        {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_CBV>(GetAttribs().BindPoints + ArrayIndex);
-        }
     };
 
-    struct TexSRVBindInfo final : ShaderVariableD3D11Base<TexSRVBindInfo>
+    struct TexSRVBindInfo final : ShaderVariableD3D11Base<TexSRVBindInfo, D3D11_RESOURCE_RANGE_SRV>
     {
         TexSRVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base<TexSRVBindInfo>{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<TexSRVBindInfo, D3D11_RESOURCE_RANGE_SRV>{ParentLayout, ResIndex}
         {}
 
-        // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-        {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_SRV>(GetAttribs().BindPoints + ArrayIndex);
-        }
     };
 
-    struct TexUAVBindInfo final : ShaderVariableD3D11Base<TexUAVBindInfo>
+    struct TexUAVBindInfo final : ShaderVariableD3D11Base<TexUAVBindInfo, D3D11_RESOURCE_RANGE_UAV>
     {
         TexUAVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base<TexUAVBindInfo>{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<TexUAVBindInfo, D3D11_RESOURCE_RANGE_UAV>{ParentLayout, ResIndex}
         {}
 
-        // Provide non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        __forceinline virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-        {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_UAV>(GetAttribs().BindPoints + ArrayIndex);
-        }
     };
 
-    struct BuffUAVBindInfo final : ShaderVariableD3D11Base<BuffUAVBindInfo>
+    struct BuffUAVBindInfo final : ShaderVariableD3D11Base<BuffUAVBindInfo, D3D11_RESOURCE_RANGE_UAV>
     {
         BuffUAVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base<BuffUAVBindInfo>{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<BuffUAVBindInfo, D3D11_RESOURCE_RANGE_UAV>{ParentLayout, ResIndex}
         {}
 
-        // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-        {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_UAV>(GetAttribs().BindPoints + ArrayIndex);
-        }
     };
 
-    struct BuffSRVBindInfo final : ShaderVariableD3D11Base<BuffSRVBindInfo>
+    struct BuffSRVBindInfo final : ShaderVariableD3D11Base<BuffSRVBindInfo, D3D11_RESOURCE_RANGE_SRV>
     {
         BuffSRVBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base<BuffSRVBindInfo>{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<BuffSRVBindInfo, D3D11_RESOURCE_RANGE_SRV>{ParentLayout, ResIndex}
         {}
 
-        // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-        {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_SRV>(GetAttribs().BindPoints + ArrayIndex);
-        }
     };
 
-    struct SamplerBindInfo final : ShaderVariableD3D11Base<SamplerBindInfo>
+    struct SamplerBindInfo final : ShaderVariableD3D11Base<SamplerBindInfo, D3D11_RESOURCE_RANGE_SAMPLER>
     {
         SamplerBindInfo(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableD3D11Base<SamplerBindInfo>{ParentLayout, ResIndex}
+            ShaderVariableD3D11Base<SamplerBindInfo, D3D11_RESOURCE_RANGE_SAMPLER>{ParentLayout, ResIndex}
         {}
 
-        // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
-
-        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
-        {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            return m_ParentManager.m_ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_SAMPLER>(GetAttribs().BindPoints + ArrayIndex);
-        }
     };
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);

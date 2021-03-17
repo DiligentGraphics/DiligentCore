@@ -237,7 +237,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
                     // Initialize current CB in place, increment CB counter
-                    new (&GetResource<ConstBuffBindInfo>(cb++)) ConstBuffBindInfo(*this, Index);
+                    new (&GetResource<ConstBuffBindInfo>(cb++)) ConstBuffBindInfo{*this, Index};
                     break;
 
                 case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
@@ -248,22 +248,22 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
 
                 case SHADER_RESOURCE_TYPE_BUFFER_SRV:
                     // Initialize buff SRV in place, increment counter of buff SRVs
-                    new (&GetResource<BuffSRVBindInfo>(bufSrv++)) BuffSRVBindInfo(*this, Index);
+                    new (&GetResource<BuffSRVBindInfo>(bufSrv++)) BuffSRVBindInfo{*this, Index};
                     break;
 
                 case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
                     // Initialize tex UAV in place, increment counter of tex UAVs
-                    new (&GetResource<TexUAVBindInfo>(texUav++)) TexUAVBindInfo(*this, Index);
+                    new (&GetResource<TexUAVBindInfo>(texUav++)) TexUAVBindInfo{*this, Index};
                     break;
 
                 case SHADER_RESOURCE_TYPE_BUFFER_UAV:
                     // Initialize buff UAV in place, increment counter of buff UAVs
-                    new (&GetResource<BuffUAVBindInfo>(bufUav++)) BuffUAVBindInfo(*this, Index);
+                    new (&GetResource<BuffUAVBindInfo>(bufUav++)) BuffUAVBindInfo{*this, Index};
                     break;
 
                 case SHADER_RESOURCE_TYPE_SAMPLER:
                     // Initialize current sampler in place, increment sampler counter
-                    new (&GetResource<SamplerBindInfo>(sam++)) SamplerBindInfo(*this, Index);
+                    new (&GetResource<SamplerBindInfo>(sam++)) SamplerBindInfo{*this, Index};
                     break;
 
                 default:
@@ -290,8 +290,7 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* 
 
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
 
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{pBuffer, IID_BufferD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -314,8 +313,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
 
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -376,8 +374,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pS
 
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
 
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{pSampler, IID_SamplerD3D11};
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -420,8 +417,7 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pV
 
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
 
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -446,8 +442,7 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVi
 
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
 
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -471,8 +466,7 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pV
 
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
 
-    // We cannot use ValidatedCast<> here as the resource retrieved from the
-    // resource mapping can be of wrong type
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {

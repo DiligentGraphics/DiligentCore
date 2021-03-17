@@ -251,7 +251,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         }
     }
 
-    // Add bindings for immutable samplers that is not assigned to texture or separate sampler.
+    // Add bindings for immutable samplers that are not assigned to texture or separate sampler.
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
         const auto  Range            = D3D11_RESOURCE_RANGE_SAMPLER;
