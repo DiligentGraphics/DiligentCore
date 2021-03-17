@@ -118,18 +118,24 @@ struct D3D11ResourceBindPoints
     }
 
 private:
-    struct SetBindPointHelper
+    struct StageAccessor
     {
-        SetBindPointHelper(D3D11ResourceBindPoints& _BindPoints,
-                           const Uint32             _ShaderInd) :
+        StageAccessor(D3D11ResourceBindPoints& _BindPoints,
+                      const Uint32             _ShaderInd) :
             BindPoints{_BindPoints},
             ShaderInd{_ShaderInd}
         {}
 
+        // clang-format off
+        StageAccessor           (const StageAccessor&)  = delete;
+        StageAccessor           (      StageAccessor&&) = default;
+        StageAccessor& operator=(const StageAccessor&)  = delete;
+        StageAccessor& operator=(      StageAccessor&&) = delete;
+        // clang-format on
+
         Uint8 operator=(Uint32 BindPoint)
         {
-            BindPoints.Set(ShaderInd, BindPoint);
-            return static_cast<Uint8>(BindPoint);
+            return BindPoints.Set(ShaderInd, BindPoint);
         }
 
         operator Uint8() const
@@ -143,19 +149,20 @@ private:
     };
 
 public:
-    SetBindPointHelper operator[](Uint32 ShaderInd)
+    StageAccessor operator[](Uint32 ShaderInd)
     {
-        return SetBindPointHelper{*this, ShaderInd};
+        return StageAccessor{*this, ShaderInd};
     }
 
 private:
-    void Set(Uint32 ShaderInd, Uint32 BindPoint)
+    Uint8 Set(Uint32 ShaderInd, Uint32 BindPoint)
     {
         VERIFY_EXPR(ShaderInd < NumShaderTypes);
         VERIFY(BindPoint < InvalidBindPoint, "Bind point (", BindPoint, ") is out of range");
 
         Bindings[ShaderInd] = static_cast<Uint8>(BindPoint);
         ActiveStages |= Uint32{1} << ShaderInd;
+        return static_cast<Uint8>(BindPoint);
     }
 
     static constexpr Uint8 InvalidBindPoint = 0xFF;
@@ -168,8 +175,99 @@ private:
 };
 
 
+/// Shader resource counters for one specific resource range
+struct D3D11ResourceRangeCounters
+{
+    Uint8 operator[](Uint32 Stage) const
+    {
+        VERIFY_EXPR(Stage < D3D11ResourceBindPoints::NumShaderTypes);
+        return (PackedCounters >> (NumBitsPerStage * Stage)) & StageMask;
+    }
+
+    D3D11ResourceRangeCounters& operator+=(const D3D11ResourceRangeCounters& rhs)
+    {
+#ifdef DILIGENT_DEBUG
+        for (Uint32 s = 0; s < D3D11ResourceBindPoints::NumShaderTypes; ++s)
+        {
+            const Uint32 val0 = (*static_cast<const D3D11ResourceRangeCounters*>(this))[s];
+            const Uint32 val1 = rhs[s];
+            VERIFY(val0 + val1 <= MaxCounter, "The resulting value is out of range");
+        }
+#endif
+        PackedCounters += rhs.PackedCounters;
+        return *this;
+    }
+
+    bool operator==(const D3D11ResourceRangeCounters& rhs) const
+    {
+        return PackedCounters == rhs.PackedCounters;
+    }
+
+private:
+    struct StageAccessor
+    {
+        StageAccessor(D3D11ResourceRangeCounters& _Counters,
+                      const Uint32                _ShaderInd) :
+            Counters{_Counters},
+            ShaderInd{_ShaderInd}
+        {}
+
+        // clang-format off
+        StageAccessor           (const StageAccessor&)  = delete;
+        StageAccessor           (      StageAccessor&&) = default;
+        StageAccessor& operator=(const StageAccessor&)  = delete;
+        StageAccessor& operator=(      StageAccessor&&) = delete;
+        // clang-format on
+
+        Uint8 operator=(Uint32 Counter)
+        {
+            return Counters.Set(ShaderInd, Counter);
+        }
+
+        Uint8 operator+=(Uint32 Val)
+        {
+            Uint32 CurrValue = static_cast<const D3D11ResourceRangeCounters&>(Counters)[ShaderInd];
+            return Counters.Set(ShaderInd, CurrValue + Val);
+        }
+
+        operator Uint8() const
+        {
+            return static_cast<const D3D11ResourceRangeCounters&>(Counters)[ShaderInd];
+        }
+
+    private:
+        D3D11ResourceRangeCounters& Counters;
+        const Uint32                ShaderInd;
+    };
+
+public:
+    StageAccessor operator[](Uint32 ShaderInd)
+    {
+        return StageAccessor{*this, ShaderInd};
+    }
+
+
+private:
+    Uint8 Set(Uint32 ShaderInd, Uint32 Counter)
+    {
+        VERIFY_EXPR(Counter <= MaxCounter);
+        const Uint64 BitOffset = NumBitsPerStage * ShaderInd;
+        PackedCounters &= ~(StageMask << BitOffset);
+        PackedCounters |= Uint64{Counter} << BitOffset;
+        return static_cast<Uint8>(Counter);
+    }
+
+    static constexpr Uint64 NumBitsPerStage = 8;
+    static constexpr Uint64 StageMask       = (Uint64{1} << NumBitsPerStage) - 1;
+    static constexpr Uint32 MaxCounter      = (Uint32{1} << NumBitsPerStage) - 1;
+
+    // 0      1      2      3      4      5      6      7      8
+    // |  PS  |  VS  |  GS  |  HS  |  DS  |  CS  |unused|unused|
+    Uint64 PackedCounters = 0;
+};
+
 /// Resource counters for all shader stages and all resource types
-using D3D11ShaderResourceCounters = std::array<std::array<Uint8, D3D11ResourceBindPoints::NumShaderTypes>, D3D11_RESOURCE_RANGE_COUNT>;
+using D3D11ShaderResourceCounters = std::array<D3D11ResourceRangeCounters, D3D11_RESOURCE_RANGE_COUNT>;
 
 
 // sizeof(PipelineResourceAttribsD3D11) == 12, x64

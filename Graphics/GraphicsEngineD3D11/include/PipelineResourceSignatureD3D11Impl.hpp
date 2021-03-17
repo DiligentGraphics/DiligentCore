@@ -89,15 +89,8 @@ public:
 
     __forceinline void ShiftBindings(D3D11ShaderResourceCounters& Bindings) const
     {
-        for (Uint32 r = 0; r < Bindings.size(); ++r)
-        {
-            for (Uint32 s = 0; s < Bindings[r].size(); ++s)
-            {
-                Uint32 Count = Bindings[r][s] + m_BindingCountPerStage[r][s];
-                VERIFY_EXPR(Count < std::numeric_limits<Uint8>::max());
-                Bindings[r][s] = static_cast<Uint8>(Count);
-            }
-        }
+        for (Uint32 r = 0; r < D3D11_RESOURCE_RANGE_COUNT; ++r)
+            Bindings[r] += m_ResourceCounters[r];
     }
 
     void InitSRBResourceCache(ShaderResourceCacheD3D11& ResourceCache);
@@ -122,9 +115,9 @@ private:
     void Destruct();
 
 private:
-    D3D11ShaderResourceCounters m_BindingCountPerStage = {};
-    ResourceAttribs*            m_pResourceAttribs     = nullptr; // [m_Desc.NumResources]
-    ImmutableSamplerAttribs*    m_ImmutableSamplers    = nullptr; // [m_Desc.NumImmutableSamplers]
+    D3D11ShaderResourceCounters m_ResourceCounters  = {};
+    ResourceAttribs*            m_pResourceAttribs  = nullptr; // [m_Desc.NumResources]
+    ImmutableSamplerAttribs*    m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 };
 
 } // namespace Diligent
