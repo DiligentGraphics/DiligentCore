@@ -295,7 +295,7 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* 
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{pBuffer, IID_BufferD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedCB = ResourceCache.GetResource<ID3D11Buffer>(Attr.BindPoints + ArrayIndex);
+        const auto& CachedCB = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + ArrayIndex);
         VerifyConstantBufferBinding(Desc, ArrayIndex, pBuffer, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr(),
                                     m_ParentManager.m_pSignature->GetDesc().Name);
     }
@@ -319,7 +319,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedSRV = ResourceCache.GetResource<ID3D11ShaderResourceView>(Attr.BindPoints + ArrayIndex);
+        auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_UNDEFINED, false, CachedSRV.pView.RawPtr(),
@@ -353,7 +353,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
 #ifdef DILIGENT_DEVELOPMENT
         if (SampDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         {
-            auto& CachedSampler = ResourceCache.GetResource<ID3D11SamplerState>(SampAttr.BindPoints + SampArrayIndex);
+            auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex);
             if (CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11Impl)
             {
                 auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
@@ -397,7 +397,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pS
 
     if (GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
     {
-        auto& CachedSampler = ResourceCache.GetResource<ID3D11SamplerState>(Attr.BindPoints + ArrayIndex);
+        auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + ArrayIndex);
         if (CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11)
         {
             auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
@@ -425,7 +425,7 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pV
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedSRV = ResourceCache.GetResource<ID3D11ShaderResourceView>(Attr.BindPoints + ArrayIndex);
+        auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_BUFFER, false, CachedSRV.pView.RawPtr(),
@@ -451,7 +451,7 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVi
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedUAV = ResourceCache.GetResource<ID3D11UnorderedAccessView>(Attr.BindPoints + ArrayIndex);
+        auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr(),
@@ -476,7 +476,7 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pV
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedUAV = ResourceCache.GetResource<ID3D11UnorderedAccessView>(Attr.BindPoints + ArrayIndex);
+        auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_BUFFER, false, CachedUAV.pView.RawPtr(),

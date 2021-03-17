@@ -39,7 +39,7 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const TBindingsPerStage& ResCount)
+size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const TResourcesPerStage& ResCount)
 {
     size_t MemSize = 0;
     // clang-format off
@@ -60,7 +60,7 @@ size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const TBindingsPerStage& 
     return MemSize;
 }
 
-void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMemoryAllocator& MemAllocator)
+void ShaderResourceCacheD3D11::Initialize(const TResourcesPerStage& ResCount, IMemoryAllocator& MemAllocator)
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
     VERIFY(!IsInitialized(), "Resource cache has already been intialized!");
@@ -68,25 +68,25 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
     size_t MemOffset = 0;
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const Uint32 Idx = CBOffset + ShaderInd;
+        const Uint32 Idx = FirstCBOffsetIdx + ShaderInd;
         m_Offsets[Idx]   = static_cast<OffsetType>(MemOffset);
         MemOffset        = AlignUp(MemOffset + (sizeof(CachedCB) + sizeof(ID3D11Buffer*)) * ResCount[D3D11_RESOURCE_RANGE_CBV][ShaderInd], MaxAlignment);
     }
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const Uint32 Idx = SRVOffset + ShaderInd;
+        const Uint32 Idx = FirstSRVOffsetIdx + ShaderInd;
         m_Offsets[Idx]   = static_cast<OffsetType>(MemOffset);
         MemOffset        = AlignUp(MemOffset + (sizeof(CachedResource) + sizeof(ID3D11ShaderResourceView*)) * ResCount[D3D11_RESOURCE_RANGE_SRV][ShaderInd], MaxAlignment);
     }
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const Uint32 Idx = SampOffset + ShaderInd;
+        const Uint32 Idx = FirstSamOffsetIdx + ShaderInd;
         m_Offsets[Idx]   = static_cast<OffsetType>(MemOffset);
         MemOffset        = AlignUp(MemOffset + (sizeof(CachedSampler) + sizeof(ID3D11SamplerState*)) * ResCount[D3D11_RESOURCE_RANGE_SAMPLER][ShaderInd], MaxAlignment);
     }
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const Uint32 Idx = UAVOffset + ShaderInd;
+        const Uint32 Idx = FirstUAVOffsetIdx + ShaderInd;
         m_Offsets[Idx]   = static_cast<OffsetType>(MemOffset);
         MemOffset        = AlignUp(MemOffset + (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)) * ResCount[D3D11_RESOURCE_RANGE_UAV][ShaderInd], MaxAlignment);
     }
@@ -112,7 +112,7 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
         const auto CBCount = GetCBCount(ShaderInd);
         if (CBCount != 0)
         {
-            auto CBArrays = GetResourceArrays<ID3D11Buffer>(ShaderInd);
+            auto CBArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
             for (Uint32 cb = 0; cb < CBCount; ++cb)
                 new (CBArrays.first + cb) CachedCB{};
         }
@@ -120,7 +120,7 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
         const auto SRVCount = GetSRVCount(ShaderInd);
         if (SRVCount != 0)
         {
-            auto SRVArrays = GetResourceArrays<ID3D11ShaderResourceView>(ShaderInd);
+            auto SRVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
             for (Uint32 srv = 0; srv < SRVCount; ++srv)
                 new (SRVArrays.first + srv) CachedResource{};
         }
@@ -128,7 +128,7 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
         const auto SamplerCount = GetSamplerCount(ShaderInd);
         if (SamplerCount != 0)
         {
-            auto SamArrays = GetResourceArrays<ID3D11SamplerState>(ShaderInd);
+            auto SamArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd);
             for (Uint32 sam = 0; sam < SamplerCount; ++sam)
                 new (SamArrays.first + sam) CachedSampler{};
         }
@@ -136,7 +136,7 @@ void ShaderResourceCacheD3D11::Initialize(const TBindingsPerStage& ResCount, IMe
         const auto UAVCount = GetUAVCount(ShaderInd);
         if (UAVCount != 0)
         {
-            auto UAVArrays = GetResourceArrays<ID3D11UnorderedAccessView>(ShaderInd);
+            auto UAVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
             for (Uint32 uav = 0; uav < UAVCount; ++uav)
                 new (UAVArrays.first + uav) CachedResource{};
         }
@@ -155,7 +155,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             const auto CBCount = GetCBCount(ShaderInd);
             if (CBCount != 0)
             {
-                auto CBArrays = GetResourceArrays<ID3D11Buffer>(ShaderInd);
+                auto CBArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
                 for (size_t cb = 0; cb < CBCount; ++cb)
                     CBArrays.first[cb].~CachedCB();
             }
@@ -163,7 +163,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             const auto SRVCount = GetSRVCount(ShaderInd);
             if (SRVCount != 0)
             {
-                auto SRVArrays = GetResourceArrays<ID3D11ShaderResourceView>(ShaderInd);
+                auto SRVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
                 for (size_t srv = 0; srv < SRVCount; ++srv)
                     SRVArrays.first[srv].~CachedResource();
             }
@@ -171,7 +171,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             const auto SamplerCount = GetSamplerCount(ShaderInd);
             if (SamplerCount != 0)
             {
-                auto SamArrays = GetResourceArrays<ID3D11SamplerState>(ShaderInd);
+                auto SamArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd);
                 for (size_t sam = 0; sam < SamplerCount; ++sam)
                     SamArrays.first[sam].~CachedSampler();
             }
@@ -179,7 +179,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             const auto UAVCount = GetUAVCount(ShaderInd);
             if (UAVCount != 0)
             {
-                auto UAVArrays = GetResourceArrays<ID3D11UnorderedAccessView>(ShaderInd);
+                auto UAVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
                 for (size_t uav = 0; uav < UAVCount; ++uav)
                     UAVArrays.first[uav].~CachedResource();
             }
@@ -246,10 +246,10 @@ void ShaderResourceCacheD3D11::DvpVerifyCacheConsistency()
 
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto CBArrays  = GetResourceArrays<ID3D11Buffer>(ShaderInd);
-        const auto SRVArrays = GetResourceArrays<ID3D11ShaderResourceView>(ShaderInd);
-        const auto SamArrays = GetResourceArrays<ID3D11SamplerState>(ShaderInd);
-        const auto UAVArrays = GetResourceArrays<ID3D11UnorderedAccessView>(ShaderInd);
+        const auto CBArrays  = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
+        const auto SRVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
+        const auto SamArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd);
+        const auto UAVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
 
         auto CBCount = GetCBCount(ShaderInd);
         for (size_t cb = 0; cb < CBCount; ++cb)
@@ -314,7 +314,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
         if (CBCount == 0)
             continue;
 
-        auto CBArrays = GetResourceArrays<ID3D11Buffer>(ShaderInd);
+        auto CBArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
         for (Uint32 i = 0; i < CBCount; ++i)
         {
             if (auto* pBuffer = CBArrays.first[i].pBuff.RawPtr<BufferD3D11Impl>())
@@ -346,7 +346,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
         if (SRVCount == 0)
             continue;
 
-        auto SRVArrays = GetResourceArrays<ID3D11ShaderResourceView>(ShaderInd);
+        auto SRVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
         for (Uint32 i = 0; i < SRVCount; ++i)
         {
             auto& SRVRes = SRVArrays.first[i];
@@ -400,7 +400,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
         if (UAVCount == 0)
             continue;
 
-        auto UAVArrays = GetResourceArrays<ID3D11UnorderedAccessView>(ShaderInd);
+        auto UAVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
         for (Uint32 i = 0; i < UAVCount; ++i)
         {
             auto& UAVRes = UAVArrays.first[i];

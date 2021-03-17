@@ -268,142 +268,126 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                                                 const TBindingsPerStage&        BaseBindings,
                                                 SHADER_TYPE                     ActiveStages)
 {
-    Uint8       ShaderIndices[NumShaderTypes] = {};
-    SHADER_TYPE ShaderTypes[NumShaderTypes]   = {};
-    Uint32      ShaderCount                   = 0;
-
-    for (Uint32 Stages = ActiveStages; Stages != 0; ++ShaderCount)
-    {
-        const Uint32 ShaderInd = PlatformMisc::GetLSB(Stages);
-        Stages &= ~(1u << ShaderInd);
-        ShaderIndices[ShaderCount] = static_cast<Uint8>(ShaderInd);
-        ShaderTypes[ShaderCount]   = static_cast<SHADER_TYPE>(1u << ShaderInd);
-    }
-
-    for (Uint32 i = 0; i < ShaderCount; ++i)
-    {
-        constexpr auto Range             = D3D11_RESOURCE_RANGE_CBV;
-        const auto     ShaderInd         = ShaderIndices[i];
-        auto*          CommittedD3D11CBs = m_CommittedRes.D3D11CBs[ShaderInd];
-        Uint8          Binding           = BaseBindings[Range][ShaderInd];
-        auto           Slots             = ResourceCache.BindResources(ShaderInd, CommittedD3D11CBs, Binding);
-
-        if (Slots)
-        {
-            auto SetCBMethod = SetCBMethods[ShaderInd];
-            (m_pd3d11DeviceContext->*SetCBMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, CommittedD3D11CBs + Slots.MinSlot);
-            m_CommittedRes.NumCBs[ShaderInd] = std::max(m_CommittedRes.NumCBs[ShaderInd], Binding);
-            VERIFY_EXPR(Slots.MaxSlot < Binding);
-        }
-#ifdef VERIFY_CONTEXT_BINDINGS
-        if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
-        {
-            DvpVerifyCommittedCBs(ShaderTypes[i]);
-        }
-#endif
-    }
-
-    for (Uint32 i = 0; i < ShaderCount; ++i)
-    {
-        constexpr auto Range                = D3D11_RESOURCE_RANGE_SRV;
-        const auto     ShaderInd            = ShaderIndices[i];
-        auto*          CommittedD3D11SRVs   = m_CommittedRes.D3D11SRVs[ShaderInd];
-        auto*          CommittedD3D11SRVRes = m_CommittedRes.D3D11SRVResources[ShaderInd];
-        Uint8          Binding              = BaseBindings[Range][ShaderInd];
-        auto           Slots                = ResourceCache.BindResourceViews(ShaderInd, CommittedD3D11SRVs, CommittedD3D11SRVRes, Binding);
-
-        if (Slots)
-        {
-            auto SetSRVMethod = SetSRVMethods[ShaderInd];
-            (m_pd3d11DeviceContext->*SetSRVMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, CommittedD3D11SRVs + Slots.MinSlot);
-            m_CommittedRes.NumSRVs[ShaderInd] = std::max(m_CommittedRes.NumSRVs[ShaderInd], Binding);
-            VERIFY_EXPR(Slots.MaxSlot <= Binding);
-        }
-#ifdef VERIFY_CONTEXT_BINDINGS
-        if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
-        {
-            DvpVerifyCommittedSRVs(ShaderTypes[i]);
-        }
-#endif
-    }
-
-    for (Uint32 i = 0; i < ShaderCount; ++i)
-    {
-        constexpr auto Range                  = D3D11_RESOURCE_RANGE_SAMPLER;
-        const auto     ShaderInd              = ShaderIndices[i];
-        auto*          CommittedD3D11Samplers = m_CommittedRes.D3D11Samplers[ShaderInd];
-        Uint8          Binding                = BaseBindings[Range][ShaderInd];
-        auto           Slots                  = ResourceCache.BindResources(ShaderInd, CommittedD3D11Samplers, Binding);
-
-        if (Slots)
-        {
-            auto SetSamplerMethod = SetSamplerMethods[ShaderInd];
-            (m_pd3d11DeviceContext->*SetSamplerMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, CommittedD3D11Samplers + Slots.MinSlot);
-            m_CommittedRes.NumSamplers[ShaderInd] = std::max(m_CommittedRes.NumSamplers[ShaderInd], Binding);
-            VERIFY_EXPR(Slots.MaxSlot < Binding);
-        }
-#ifdef VERIFY_CONTEXT_BINDINGS
-        if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
-        {
-            DvpVerifyCommittedSamplers(ShaderTypes[i]);
-        }
-#endif
-    }
-
     bool ClearPixelShaderUAVs = m_CommittedRes.NumUAVs[PSInd] > 0;
-    for (Uint32 i = 0; i < ShaderCount; ++i)
+
+    while (ActiveStages != 0)
     {
-        constexpr auto Range                = D3D11_RESOURCE_RANGE_UAV;
-        const auto     ShaderInd            = ShaderIndices[i];
-        auto*          CommittedD3D11UAVs   = m_CommittedRes.D3D11UAVs[ShaderInd];
-        auto*          CommittedD3D11UAVRes = m_CommittedRes.D3D11UAVResources[ShaderInd];
-        Uint8          Binding              = BaseBindings[Range][ShaderInd];
-        auto           Slots                = ResourceCache.BindResourceViews(ShaderInd, CommittedD3D11UAVs, CommittedD3D11UAVRes, Binding);
+        const auto ShaderInd  = PlatformMisc::GetLSB(ActiveStages);
+        const auto ShaderType = static_cast<SHADER_TYPE>(1u << ShaderInd);
+        ActiveStages &= ~ShaderType;
 
-        if (Slots)
         {
-            if (ShaderInd == PSInd)
-                ClearPixelShaderUAVs = false;
+            auto* d3d11CBs = m_CommittedRes.d3d11CBs[ShaderInd];
+            Uint8 Binding  = BaseBindings[D3D11_RESOURCE_RANGE_CBV][ShaderInd];
+            auto  Slots    = ResourceCache.BindResources<D3D11_RESOURCE_RANGE_CBV>(ShaderInd, d3d11CBs, Binding);
 
-            // Something has changed
-            if (ShaderInd == PSInd)
+            if (Slots)
             {
-                // Pixel shader UAVs cannot be set independently; they all need to be set at the same time.
-                // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
-                const auto StartUAVSlot = m_NumBoundRenderTargets;
-                const auto NumUAVSlot   = Binding;
-                VERIFY(NumUAVSlot > StartUAVSlot, "Number of UAVs must be greater than the render target count");
-                m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
-                    D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
-                    StartUAVSlot, NumUAVSlot - StartUAVSlot, CommittedD3D11UAVs + StartUAVSlot, nullptr);
-                // Clear previously bound UAVs, but do not clear lower slots as if
-                // render target count reduces, we will bind these UAVs in CommitRenderTargets()
-                for (Uint32 uav = NumUAVSlot; uav < m_CommittedRes.NumUAVs[ShaderInd]; ++uav)
-                {
-                    CommittedD3D11UAVRes[uav] = nullptr;
-                    CommittedD3D11UAVs[uav]   = nullptr;
-                }
-                m_CommittedRes.NumUAVs[ShaderInd] = NumUAVSlot;
-            }
-            else if (ShaderInd == CSInd)
-            {
-                // This can only be CS
-                auto SetUAVMethod = SetUAVMethods[ShaderInd];
-                (m_pd3d11DeviceContext->*SetUAVMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, CommittedD3D11UAVs + Slots.MinSlot, nullptr);
-                m_CommittedRes.NumUAVs[ShaderInd] = std::max(m_CommittedRes.NumUAVs[ShaderInd], Binding);
+                auto SetCBMethod = SetCBMethods[ShaderInd];
+                (m_pd3d11DeviceContext->*SetCBMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11CBs + Slots.MinSlot);
+                m_CommittedRes.NumCBs[ShaderInd] = std::max(m_CommittedRes.NumCBs[ShaderInd], Binding);
                 VERIFY_EXPR(Slots.MaxSlot < Binding);
             }
-            else
-            {
-                UNEXPECTED("UAV is not supported in shader that is not pixel or compute");
-            }
-        }
 #ifdef VERIFY_CONTEXT_BINDINGS
-        if ((m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0 && ShaderInd == CSInd)
-        {
-            DvpVerifyCommittedUAVs(ShaderTypes[i]);
-        }
+            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+            {
+                DvpVerifyCommittedCBs(ShaderType);
+            }
 #endif
+        }
+
+        {
+            auto* d3d11SRVs   = m_CommittedRes.d3d11SRVs[ShaderInd];
+            auto* d3d11SRVRes = m_CommittedRes.d3d11SRVResources[ShaderInd];
+            Uint8 Binding     = BaseBindings[D3D11_RESOURCE_RANGE_SRV][ShaderInd];
+            auto  Slots       = ResourceCache.BindResourceViews<D3D11_RESOURCE_RANGE_SRV>(ShaderInd, d3d11SRVs, d3d11SRVRes, Binding);
+
+            if (Slots)
+            {
+                auto SetSRVMethod = SetSRVMethods[ShaderInd];
+                (m_pd3d11DeviceContext->*SetSRVMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11SRVs + Slots.MinSlot);
+                m_CommittedRes.NumSRVs[ShaderInd] = std::max(m_CommittedRes.NumSRVs[ShaderInd], Binding);
+                VERIFY_EXPR(Slots.MaxSlot <= Binding);
+            }
+#ifdef VERIFY_CONTEXT_BINDINGS
+            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+            {
+                DvpVerifyCommittedSRVs(ShaderType);
+            }
+#endif
+        }
+
+        {
+            auto* d3d11Samplers = m_CommittedRes.d3d11Samplers[ShaderInd];
+            Uint8 Binding       = BaseBindings[D3D11_RESOURCE_RANGE_SAMPLER][ShaderInd];
+            auto  Slots         = ResourceCache.BindResources<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd, d3d11Samplers, Binding);
+
+            if (Slots)
+            {
+                auto SetSamplerMethod = SetSamplerMethods[ShaderInd];
+                (m_pd3d11DeviceContext->*SetSamplerMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11Samplers + Slots.MinSlot);
+                m_CommittedRes.NumSamplers[ShaderInd] = std::max(m_CommittedRes.NumSamplers[ShaderInd], Binding);
+                VERIFY_EXPR(Slots.MaxSlot < Binding);
+            }
+#ifdef VERIFY_CONTEXT_BINDINGS
+            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+            {
+                DvpVerifyCommittedSamplers(ShaderType);
+            }
+#endif
+        }
+
+        {
+            auto* d3d11UAVs   = m_CommittedRes.d3d11UAVs[ShaderInd];
+            auto* d3d11UAVRes = m_CommittedRes.d3d11UAVResources[ShaderInd];
+            Uint8 Binding     = BaseBindings[D3D11_RESOURCE_RANGE_UAV][ShaderInd];
+            auto  Slots       = ResourceCache.BindResourceViews<D3D11_RESOURCE_RANGE_UAV>(ShaderInd, d3d11UAVs, d3d11UAVRes, Binding);
+
+            if (Slots)
+            {
+                if (ShaderInd == PSInd)
+                    ClearPixelShaderUAVs = false;
+
+                // Something has changed
+                if (ShaderInd == PSInd)
+                {
+                    // Pixel shader UAVs cannot be set independently; they all need to be set at the same time.
+                    // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
+                    const auto StartUAVSlot = m_NumBoundRenderTargets;
+                    const auto NumUAVSlot   = Binding;
+                    VERIFY(NumUAVSlot > StartUAVSlot, "Number of UAVs must be greater than the render target count");
+                    m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
+                        D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
+                        StartUAVSlot, NumUAVSlot - StartUAVSlot, d3d11UAVs + StartUAVSlot, nullptr);
+                    // Clear previously bound UAVs, but do not clear lower slots as if
+                    // render target count reduces, we will bind these UAVs in CommitRenderTargets()
+                    for (Uint32 uav = NumUAVSlot; uav < m_CommittedRes.NumUAVs[ShaderInd]; ++uav)
+                    {
+                        d3d11UAVRes[uav] = nullptr;
+                        d3d11UAVs[uav]   = nullptr;
+                    }
+                    m_CommittedRes.NumUAVs[ShaderInd] = NumUAVSlot;
+                }
+                else if (ShaderInd == CSInd)
+                {
+                    // This can only be CS
+                    auto SetUAVMethod = SetUAVMethods[ShaderInd];
+                    (m_pd3d11DeviceContext->*SetUAVMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11UAVs + Slots.MinSlot, nullptr);
+                    m_CommittedRes.NumUAVs[ShaderInd] = std::max(m_CommittedRes.NumUAVs[ShaderInd], Binding);
+                    VERIFY_EXPR(Slots.MaxSlot < Binding);
+                }
+                else
+                {
+                    UNEXPECTED("UAV is not supported in shader that is not pixel or compute");
+                }
+            }
+#ifdef VERIFY_CONTEXT_BINDINGS
+            if ((m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0 && ShaderInd == CSInd)
+            {
+                DvpVerifyCommittedUAVs(ShaderType);
+            }
+#endif
+        }
     }
 
     if (ClearPixelShaderUAVs)
@@ -412,8 +396,8 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
         // This is important as UnbindPixelShaderUAV<> function may need to rebind
         // existing UAVs and the UAVs pointed to by CommittedD3D11UAVRes must be alive
         // (we do not keep strong references to d3d11 UAVs)
-        auto* CommittedD3D11UAVs          = m_CommittedRes.D3D11UAVs[PSInd];
-        auto* CommittedD3D11UAVRes        = m_CommittedRes.D3D11UAVResources[PSInd];
+        auto* CommittedD3D11UAVs          = m_CommittedRes.d3d11UAVs[PSInd];
+        auto* CommittedD3D11UAVRes        = m_CommittedRes.d3d11UAVResources[PSInd];
         auto& NumCommittedPixelShaderUAVs = m_CommittedRes.NumUAVs[PSInd];
         for (Uint32 uav = 0; uav < NumCommittedPixelShaderUAVs; ++uav)
         {
@@ -1165,8 +1149,8 @@ void DeviceContextD3D11Impl::CommitRenderTargets()
         m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(NumRenderTargets, NumRenderTargets > 0 ? pd3d11RTs : nullptr, pd3d11DSV,
                                                                          0, D3D11_KEEP_UNORDERED_ACCESS_VIEWS, nullptr, nullptr);
 
-        auto CommittedD3D11UAVs   = m_CommittedRes.D3D11UAVs[PSInd];
-        auto CommittedD3D11UAVRes = m_CommittedRes.D3D11UAVResources[PSInd];
+        auto CommittedD3D11UAVs   = m_CommittedRes.d3d11UAVs[PSInd];
+        auto CommittedD3D11UAVRes = m_CommittedRes.d3d11UAVResources[PSInd];
         for (Uint32 slot = 0; slot < NumRenderTargets; ++slot)
         {
             CommittedD3D11UAVs[slot]   = nullptr;
@@ -1289,7 +1273,7 @@ void DeviceContextD3D11Impl::UnbindTextureFromInput(TextureBaseD3D11* pTexture, 
     VERIFY(pTexture, "Null texture provided");
     if (!pTexture) return;
 
-    UnbindResourceView(m_CommittedRes.D3D11SRVs, m_CommittedRes.D3D11SRVResources, m_CommittedRes.NumSRVs, pd3d11Resource, SetSRVMethods);
+    UnbindResourceView(m_CommittedRes.d3d11SRVs, m_CommittedRes.d3d11SRVResources, m_CommittedRes.NumSRVs, pd3d11Resource, SetSRVMethods);
     pTexture->ClearState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT);
 }
 
@@ -1300,7 +1284,7 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3
 
     if (pBuffer->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
     {
-        UnbindResourceView(m_CommittedRes.D3D11SRVs, m_CommittedRes.D3D11SRVResources, m_CommittedRes.NumSRVs, pd3d11Buffer, SetSRVMethods);
+        UnbindResourceView(m_CommittedRes.d3d11SRVs, m_CommittedRes.d3d11SRVResources, m_CommittedRes.NumSRVs, pd3d11Buffer, SetSRVMethods);
         pBuffer->ClearState(RESOURCE_STATE_SHADER_RESOURCE);
     }
 
@@ -1346,7 +1330,7 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3
     {
         for (Int32 ShaderTypeInd = 0; ShaderTypeInd < NumShaderTypes; ++ShaderTypeInd)
         {
-            auto* CommittedD3D11CBs = m_CommittedRes.D3D11CBs[ShaderTypeInd];
+            auto* CommittedD3D11CBs = m_CommittedRes.d3d11CBs[ShaderTypeInd];
             auto  NumSlots          = m_CommittedRes.NumCBs[ShaderTypeInd];
             for (Uint32 Slot = 0; Slot < NumSlots; ++Slot)
             {
@@ -1368,7 +1352,7 @@ void DeviceContextD3D11Impl::UnbindResourceFromUAV(IDeviceObject* pResource, ID3
     VERIFY(pResource, "Null resource provided");
     if (!pResource) return;
 
-    UnbindResourceView(m_CommittedRes.D3D11UAVs, m_CommittedRes.D3D11UAVResources, m_CommittedRes.NumUAVs, pd3d11Resource, SetUAVMethods);
+    UnbindResourceView(m_CommittedRes.d3d11UAVs, m_CommittedRes.d3d11UAVResources, m_CommittedRes.NumUAVs, pd3d11Resource, SetUAVMethods);
 }
 
 void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget(TextureBaseD3D11* pTexture)
@@ -1498,7 +1482,7 @@ void DeviceContextD3D11Impl::BeginSubpass()
             if (auto* pTexView = FBDesc.ppAttachments[AttachmentRef.AttachmentIndex])
             {
                 auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexView->GetTexture());
-                UnbindResourceView(m_CommittedRes.D3D11SRVs, m_CommittedRes.D3D11SRVResources, m_CommittedRes.NumSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
+                UnbindResourceView(m_CommittedRes.d3d11SRVs, m_CommittedRes.d3d11SRVResources, m_CommittedRes.NumSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
             }
         }
     };
@@ -1680,18 +1664,18 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
     for (int ShaderType = 0; ShaderType < NumShaderTypes; ++ShaderType)
     {
         // clang-format off
-        ReleaseCommittedShaderResourcesHelper(m_CommittedRes.D3D11CBs[ShaderType],      m_CommittedRes.NumCBs[ShaderType],      SetCBMethods[ShaderType],      m_pd3d11DeviceContext);
-        ReleaseCommittedShaderResourcesHelper(m_CommittedRes.D3D11SRVs[ShaderType],     m_CommittedRes.NumSRVs[ShaderType],     SetSRVMethods[ShaderType],     m_pd3d11DeviceContext);
-        ReleaseCommittedShaderResourcesHelper(m_CommittedRes.D3D11Samplers[ShaderType], m_CommittedRes.NumSamplers[ShaderType], SetSamplerMethods[ShaderType], m_pd3d11DeviceContext);
+        ReleaseCommittedShaderResourcesHelper(m_CommittedRes.d3d11CBs[ShaderType],      m_CommittedRes.NumCBs[ShaderType],      SetCBMethods[ShaderType],      m_pd3d11DeviceContext);
+        ReleaseCommittedShaderResourcesHelper(m_CommittedRes.d3d11SRVs[ShaderType],     m_CommittedRes.NumSRVs[ShaderType],     SetSRVMethods[ShaderType],     m_pd3d11DeviceContext);
+        ReleaseCommittedShaderResourcesHelper(m_CommittedRes.d3d11Samplers[ShaderType], m_CommittedRes.NumSamplers[ShaderType], SetSamplerMethods[ShaderType], m_pd3d11DeviceContext);
         // clang-format on
 
         if (ShaderType == PSInd)
-            ReleaseCommittedPSUAVs(m_CommittedRes.D3D11UAVs[ShaderType], m_CommittedRes.NumUAVs[ShaderType], m_pd3d11DeviceContext);
+            ReleaseCommittedPSUAVs(m_CommittedRes.d3d11UAVs[ShaderType], m_CommittedRes.NumUAVs[ShaderType], m_pd3d11DeviceContext);
         else
-            ReleaseCommittedShaderResourcesHelper(m_CommittedRes.D3D11UAVs[ShaderType], m_CommittedRes.NumUAVs[ShaderType], SetUAVMethods[ShaderType], m_pd3d11DeviceContext);
+            ReleaseCommittedShaderResourcesHelper(m_CommittedRes.d3d11UAVs[ShaderType], m_CommittedRes.NumUAVs[ShaderType], SetUAVMethods[ShaderType], m_pd3d11DeviceContext);
 
-        memset(m_CommittedRes.D3D11SRVResources[ShaderType], 0, sizeof(m_CommittedRes.D3D11SRVResources[ShaderType][0]) * m_CommittedRes.NumSRVs[ShaderType]);
-        memset(m_CommittedRes.D3D11UAVResources[ShaderType], 0, sizeof(m_CommittedRes.D3D11UAVResources[ShaderType][0]) * m_CommittedRes.NumUAVs[ShaderType]);
+        memset(m_CommittedRes.d3d11SRVResources[ShaderType], 0, sizeof(m_CommittedRes.d3d11SRVResources[ShaderType][0]) * m_CommittedRes.NumSRVs[ShaderType]);
+        memset(m_CommittedRes.d3d11UAVResources[ShaderType], 0, sizeof(m_CommittedRes.d3d11UAVResources[ShaderType][0]) * m_CommittedRes.NumUAVs[ShaderType]);
         m_CommittedRes.NumCBs[ShaderType]      = 0;
         m_CommittedRes.NumSRVs[ShaderType]     = 0;
         m_CommittedRes.NumSamplers[ShaderType] = 0;
@@ -2270,24 +2254,24 @@ void DeviceContextD3D11Impl::DvpVerifyViewConsistency(TD3D11ViewType  CommittedD
 
 void DeviceContextD3D11Impl::DvpVerifyCommittedSRVs(SHADER_TYPE ShaderStages)
 {
-    DvpVerifyCommittedResources<D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT>(m_CommittedRes.D3D11SRVs, m_CommittedRes.NumSRVs, GetSRVMethods, "SRV", ShaderStages);
-    DvpVerifyViewConsistency<D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT>(m_CommittedRes.D3D11SRVs, m_CommittedRes.D3D11SRVResources, m_CommittedRes.NumSRVs, "SRV", ShaderStages);
+    DvpVerifyCommittedResources<D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT>(m_CommittedRes.d3d11SRVs, m_CommittedRes.NumSRVs, GetSRVMethods, "SRV", ShaderStages);
+    DvpVerifyViewConsistency<D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT>(m_CommittedRes.d3d11SRVs, m_CommittedRes.d3d11SRVResources, m_CommittedRes.NumSRVs, "SRV", ShaderStages);
 }
 
 void DeviceContextD3D11Impl::DvpVerifyCommittedUAVs(SHADER_TYPE ShaderStages)
 {
-    DvpVerifyCommittedResources<D3D11_PS_CS_UAV_REGISTER_COUNT>(m_CommittedRes.D3D11UAVs, m_CommittedRes.NumUAVs, GetUAVMethods, "UAV", ShaderStages);
-    DvpVerifyViewConsistency<D3D11_PS_CS_UAV_REGISTER_COUNT>(m_CommittedRes.D3D11UAVs, m_CommittedRes.D3D11UAVResources, m_CommittedRes.NumUAVs, "UAV", ShaderStages);
+    DvpVerifyCommittedResources<D3D11_PS_CS_UAV_REGISTER_COUNT>(m_CommittedRes.d3d11UAVs, m_CommittedRes.NumUAVs, GetUAVMethods, "UAV", ShaderStages);
+    DvpVerifyViewConsistency<D3D11_PS_CS_UAV_REGISTER_COUNT>(m_CommittedRes.d3d11UAVs, m_CommittedRes.d3d11UAVResources, m_CommittedRes.NumUAVs, "UAV", ShaderStages);
 }
 
 void DeviceContextD3D11Impl::DvpVerifyCommittedSamplers(SHADER_TYPE ShaderStages)
 {
-    DvpVerifyCommittedResources<D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>(m_CommittedRes.D3D11Samplers, m_CommittedRes.NumSamplers, GetSamplerMethods, "Sampler", ShaderStages);
+    DvpVerifyCommittedResources<D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT>(m_CommittedRes.d3d11Samplers, m_CommittedRes.NumSamplers, GetSamplerMethods, "Sampler", ShaderStages);
 }
 
 void DeviceContextD3D11Impl::DvpVerifyCommittedCBs(SHADER_TYPE ShaderStages)
 {
-    DvpVerifyCommittedResources<D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>(m_CommittedRes.D3D11CBs, m_CommittedRes.NumCBs, GetCBMethods, "Constant buffer", ShaderStages);
+    DvpVerifyCommittedResources<D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT>(m_CommittedRes.d3d11CBs, m_CommittedRes.NumCBs, GetCBMethods, "Constant buffer", ShaderStages);
 }
 
 void DeviceContextD3D11Impl::DvpVerifyCommittedIndexBuffer()

@@ -346,32 +346,32 @@ private:
         /// An array of D3D11 constant buffers committed to D3D11 device context,
         /// for each shader type. The context addref's all bound resources, so we do
         /// not need to keep strong references.
-        ID3D11Buffer*              D3D11CBs     [NumShaderTypes][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
+        ID3D11Buffer*              d3d11CBs     [NumShaderTypes][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
     
         /// An array of D3D11 shader resource views committed to D3D11 device context,
         /// for each shader type. The context addref's all bound resources, so we do 
         /// not need to keep strong references.
-        ID3D11ShaderResourceView*  D3D11SRVs    [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+        ID3D11ShaderResourceView*  d3d11SRVs    [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
     
         /// An array of D3D11 samplers committed to D3D11 device context,
         /// for each shader type. The context addref's all bound resources, so we do 
         /// not need to keep strong references.
-        ID3D11SamplerState*        D3D11Samplers[NumShaderTypes][D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = {};
+        ID3D11SamplerState*        d3d11Samplers[NumShaderTypes][D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT] = {};
     
         /// An array of D3D11 UAVs committed to D3D11 device context,
         /// for each shader type. The context addref's all bound resources, so we do 
         /// not need to keep strong references.
-        ID3D11UnorderedAccessView* D3D11UAVs    [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
+        ID3D11UnorderedAccessView* d3d11UAVs    [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
 
         /// An array of D3D11 resources commited as SRV to D3D11 device context,
         /// for each shader type. The context addref's all bound resources, so we do 
         /// not need to keep strong references.
-        ID3D11Resource*  D3D11SRVResources      [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+        ID3D11Resource*  d3d11SRVResources      [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
 
         /// An array of D3D11 resources commited as UAV to D3D11 device context,
         /// for each shader type. The context addref's all bound resources, so we do 
         /// not need to keep strong references.
-        ID3D11Resource*  D3D11UAVResources      [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
+        ID3D11Resource*  d3d11UAVResources      [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
 
         Uint8 NumCBs     [NumShaderTypes] = {};
         Uint8 NumSRVs    [NumShaderTypes] = {};
