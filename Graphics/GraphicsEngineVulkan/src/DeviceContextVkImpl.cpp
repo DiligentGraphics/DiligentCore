@@ -348,31 +348,11 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     // (14.2.2. Pipeline Layouts, clause 'Pipeline Layout Compatibility')
     // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets-compatibility
 
-    // Find the first incompatible shader resource bindings
-    Uint32 sign = 0;
-    for (; sign < SignCount; ++sign)
-    {
-        const auto* pLayoutSign = pPipelineStateVk->GetResourceSignature(sign);
-        const auto* pSRBSign    = BindInfo.SRBs[sign] != nullptr ? BindInfo.SRBs[sign]->GetSignature() : nullptr;
-
-        if ((pLayoutSign == nullptr || pLayoutSign->GetNumDescriptorSets() == 0) != (pSRBSign == nullptr || pSRBSign->GetNumDescriptorSets() == 0))
-        {
-            // One signature is null or empty while the other is not - SRB is not compatible with the layout.
-            break;
-        }
-
-        if (pLayoutSign != nullptr && pSRBSign != nullptr && pLayoutSign->IsIncompatibleWith(*pSRBSign))
-        {
-            // Signatures are incompatible
-            break;
-        }
-    }
-
     // Unbind incompatible shader resources
     // A consequence of layout compatibility is that when the implementation compiles a pipeline
     // layout and maps pipeline resources to implementation resources, the mechanism for set N
     // should only be a function of sets [0..N].
-    for (; sign < SignCount; ++sign)
+    for (auto sign = DvpGetCompatibleSignatureCount(BindInfo.SRBs.data()); sign < SignCount; ++sign)
     {
         BindInfo.SRBs[sign] = nullptr;
 

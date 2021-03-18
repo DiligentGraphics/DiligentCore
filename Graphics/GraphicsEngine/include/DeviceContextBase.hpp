@@ -105,18 +105,19 @@ template <typename EngineImplTraits>
 class DeviceContextBase : public ObjectBase<typename EngineImplTraits::DeviceContextInterface>
 {
 public:
-    using BaseInterface         = typename EngineImplTraits::DeviceContextInterface;
-    using TObjectBase           = ObjectBase<BaseInterface>;
-    using DeviceImplType        = typename EngineImplTraits::RenderDeviceImplType;
-    using BufferImplType        = typename EngineImplTraits::BufferImplType;
-    using TextureImplType       = typename EngineImplTraits::TextureImplType;
-    using PipelineStateImplType = typename EngineImplTraits::PipelineStateImplType;
-    using TextureViewImplType   = typename EngineImplTraits::TextureViewImplType;
-    using QueryImplType         = typename EngineImplTraits::QueryImplType;
-    using FramebufferImplType   = typename EngineImplTraits::FramebufferImplType;
-    using RenderPassImplType    = typename EngineImplTraits::RenderPassImplType;
-    using BottomLevelASType     = typename EngineImplTraits::BottomLevelASImplType;
-    using TopLevelASType        = typename EngineImplTraits::TopLevelASImplType;
+    using BaseInterface                 = typename EngineImplTraits::DeviceContextInterface;
+    using TObjectBase                   = ObjectBase<BaseInterface>;
+    using DeviceImplType                = typename EngineImplTraits::RenderDeviceImplType;
+    using BufferImplType                = typename EngineImplTraits::BufferImplType;
+    using TextureImplType               = typename EngineImplTraits::TextureImplType;
+    using PipelineStateImplType         = typename EngineImplTraits::PipelineStateImplType;
+    using ShaderResourceBindingImplType = typename EngineImplTraits::ShaderResourceBindingImplType;
+    using TextureViewImplType           = typename EngineImplTraits::TextureViewImplType;
+    using QueryImplType                 = typename EngineImplTraits::QueryImplType;
+    using FramebufferImplType           = typename EngineImplTraits::FramebufferImplType;
+    using RenderPassImplType            = typename EngineImplTraits::RenderPassImplType;
+    using BottomLevelASType             = typename EngineImplTraits::BottomLevelASImplType;
+    using TopLevelASType                = typename EngineImplTraits::TopLevelASImplType;
 
     /// \param pRefCounters  - Reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - Render device.
@@ -311,6 +312,8 @@ protected:
     bool DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName) const;
     bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
     bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
+
+    Uint32 DvpGetCompatibleSignatureCount(ShaderResourceBindingImplType* pBoundSRBs[])const;
 #else
     bool DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {return true;}
     bool DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs)const {return true;}
@@ -2119,6 +2122,34 @@ bool DeviceContextBase<ImplementationTraits>::DvpVerifyTLASState(
     }
 
     return true;
+}
+
+template <typename ImplementationTraits>
+Uint32 DeviceContextBase<ImplementationTraits>::DvpGetCompatibleSignatureCount(ShaderResourceBindingImplType* pBoundSRBs[]) const
+{
+    VERIFY_EXPR(m_pPipelineState);
+    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
+
+    Uint32 sign = 0;
+    for (; sign < SignCount; ++sign)
+    {
+        const auto* pPSOSign = m_pPipelineState->GetResourceSignature(sign);
+        const auto* pSRBSign = pBoundSRBs[sign] != nullptr ? pBoundSRBs[sign]->GetSignature() : nullptr;
+
+        if ((pPSOSign == nullptr || pPSOSign->IsEmpty()) != (pSRBSign == nullptr || pSRBSign->IsEmpty()))
+        {
+            // One signature is null or empty while the other is not - SRB is not compatible with the PSO.
+            break;
+        }
+
+        if (pPSOSign != nullptr && pSRBSign != nullptr && pPSOSign->IsIncompatibleWith(*pSRBSign))
+        {
+            // Signatures are incompatible
+            break;
+        }
+    }
+
+    return sign;
 }
 
 #endif // DILIGENT_DEVELOPMENT

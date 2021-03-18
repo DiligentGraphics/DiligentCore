@@ -154,29 +154,9 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    // Find the first incompatible shader resource bindings
-    Uint32 sign = 0;
-    for (; sign < SignCount; ++sign)
-    {
-        const auto* pLayoutSign = m_pPipelineState->GetResourceSignature(sign);
-        const auto* pSRBSign    = m_BindInfo.SRBs[sign] != nullptr ? m_BindInfo.SRBs[sign]->GetSignature() : nullptr;
-
-        if ((pLayoutSign == nullptr || pLayoutSign->GetTotalResourceCount() == 0) != (pSRBSign == nullptr || pSRBSign->GetTotalResourceCount() == 0))
-        {
-            // One signature is null or empty while the other is not - SRB is not compatible with the layout.
-            break;
-        }
-
-        if (pLayoutSign != nullptr && pSRBSign != nullptr && pLayoutSign->IsIncompatibleWith(*pSRBSign))
-        {
-            // Signatures are incompatible
-            break;
-        }
-    }
-
     // Unbind incompatible SRB and SRB with a higher binding index.
     // This is the same behavior that used in Vulkan backend.
-    for (; sign < SignCount; ++sign)
+    for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs.data()); sign < SignCount; ++sign)
     {
         m_BindInfo.SRBs[sign] = nullptr;
         m_BindInfo.ClearStaleSRBBit(sign);
@@ -191,9 +171,9 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 /// Helper macro used to create an array of device context methods to
 /// set particular resource for every shader stage
 #define DEFINE_D3D11CTX_FUNC_POINTERS(ArrayName, FuncName) \
-    typedef decltype (&ID3D11DeviceContext::VS##FuncName) T##FuncName##Type;  \
-    static const T##FuncName##Type ArrayName[] =    \
-    {                                           \
+    using T##FuncName##Type = decltype (&ID3D11DeviceContext::VS##FuncName); \
+    static const T##FuncName##Type ArrayName[] = \
+    {                                        \
         &ID3D11DeviceContext::VS##FuncName,  \
         &ID3D11DeviceContext::PS##FuncName,  \
         &ID3D11DeviceContext::GS##FuncName,  \
