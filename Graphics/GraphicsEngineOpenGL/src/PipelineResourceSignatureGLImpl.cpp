@@ -27,6 +27,9 @@
 
 #include "pch.h"
 #include "PipelineResourceSignatureGLImpl.hpp"
+
+#include <algorithm>
+
 #include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
@@ -183,7 +186,11 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
             CacheOffset += ResDesc.ArraySize;
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                StaticResCounter[Range] += ResDesc.ArraySize;
+            {
+                // Since resources in the static cache are indexed by the same bindings, we need to
+                // make sure that there is enough space in the cache.
+                StaticResCounter[Range] = std::max(StaticResCounter[Range], CacheOffset);
+            }
         }
     }
 

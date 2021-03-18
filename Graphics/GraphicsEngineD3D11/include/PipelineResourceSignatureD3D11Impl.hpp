@@ -73,7 +73,7 @@ public:
     {
     public:
         RefCntAutoPtr<SamplerD3D11Impl> pSampler;
-        Uint32                          ArraySize = 0;
+        Uint32                          ArraySize = 1;
         D3D11ResourceBindPoints         BindPoints;
 
         ImmutableSamplerAttribs() noexcept {}
@@ -101,7 +101,7 @@ public:
     void CopyStaticResources(ShaderResourceCacheD3D11& ResourceCache) const;
 
 #ifdef DILIGENT_DEVELOPMENT
-    /// Verifies committed resource attribs using the SPIRV resource attributes from the PSO.
+    /// Verifies committed resource using the D3D resource attributes from the PSO.
     bool DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
                                       Uint32                          ResIndex,
                                       const ShaderResourceCacheD3D11& ResourceCache,

@@ -124,7 +124,7 @@ public:
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
 
 #ifdef DILIGENT_DEVELOPMENT
-    /// Verifies committed resource attribs using the SPIRV resource attributes from the PSO.
+    /// Verifies committed resource using the SPIRV resource attributes from the PSO.
     bool DvpValidateCommittedResource(const SPIRVShaderResourceAttribs& SPIRVAttribs,
                                       Uint32                            ResIndex,
                                       const ShaderResourceCacheVk&      ResourceCache,

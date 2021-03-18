@@ -49,14 +49,13 @@ enum D3D11_RESOURCE_RANGE : Uint32
     D3D11_RESOURCE_RANGE_COUNT,
     D3D11_RESOURCE_RANGE_UNKNOWN = ~0u
 };
-D3D11_RESOURCE_RANGE ShaderResourceToDescriptorRange(SHADER_RESOURCE_TYPE Type);
 
 
 /// Resource binding points in all shader stages.
 // sizeof(D3D11ResourceBindPoints) == 8, x64
 struct D3D11ResourceBindPoints
 {
-    /// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
+    /// The number of different shader types (Vertex, Pixel, Geometry, Hull, Domain, Compute)
     static constexpr Uint32 NumShaderTypes = 6;
 
     D3D11ResourceBindPoints() noexcept
@@ -81,7 +80,7 @@ struct D3D11ResourceBindPoints
 
     bool IsStageActive(Uint32 ShaderInd) const
     {
-        bool IsActive = (GetActiveStages() & (1u << ShaderInd)) != 0;
+        bool IsActive = (GetActiveStages() & GetShaderTypeFromIndex(ShaderInd)) != 0;
         VERIFY_EXPR((IsActive && Bindings[ShaderInd] != InvalidBindPoint ||
                      !IsActive && Bindings[ShaderInd] == InvalidBindPoint));
         return IsActive;
@@ -89,6 +88,7 @@ struct D3D11ResourceBindPoints
 
     Uint8 operator[](Uint32 ShaderInd) const
     {
+        VERIFY(IsStageActive(ShaderInd), "Requesting bind point for inactive shader stage");
         return Bindings[ShaderInd];
     }
 
@@ -108,7 +108,7 @@ struct D3D11ResourceBindPoints
     D3D11ResourceBindPoints operator+(Uint32 value) const
     {
         D3D11ResourceBindPoints NewBindPoints{*this};
-        for (auto Stages = GetActiveStages(); Stages != 0;)
+        for (auto Stages = GetActiveStages(); Stages != SHADER_TYPE_UNKNOWN;)
         {
             auto ShaderInd = ExtractFirstShaderStageIndex(Stages);
             VERIFY_EXPR(Uint32{Bindings[ShaderInd]} + value < InvalidBindPoint);
@@ -128,7 +128,7 @@ private:
 
         // clang-format off
         StageAccessor           (const StageAccessor&)  = delete;
-        StageAccessor           (      StageAccessor&&) = default;
+        StageAccessor           (      StageAccessor&&) = delete;
         StageAccessor& operator=(const StageAccessor&)  = delete;
         StageAccessor& operator=(      StageAccessor&&) = delete;
         // clang-format on
@@ -151,7 +151,7 @@ private:
 public:
     StageAccessor operator[](Uint32 ShaderInd)
     {
-        return StageAccessor{*this, ShaderInd};
+        return {*this, ShaderInd};
     }
 
 private:
@@ -178,18 +178,20 @@ private:
 /// Shader resource counters for one specific resource range
 struct D3D11ResourceRangeCounters
 {
+    static constexpr Uint32 NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
+
     Uint8 operator[](Uint32 Stage) const
     {
-        VERIFY_EXPR(Stage < D3D11ResourceBindPoints::NumShaderTypes);
+        VERIFY_EXPR(Stage < NumShaderTypes);
         return (PackedCounters >> (NumBitsPerStage * Stage)) & StageMask;
     }
 
     D3D11ResourceRangeCounters& operator+=(const D3D11ResourceRangeCounters& rhs)
     {
 #ifdef DILIGENT_DEBUG
-        for (Uint32 s = 0; s < D3D11ResourceBindPoints::NumShaderTypes; ++s)
+        for (Uint32 s = 0; s < NumShaderTypes; ++s)
         {
-            const Uint32 val0 = (*static_cast<const D3D11ResourceRangeCounters*>(this))[s];
+            const Uint32 val0 = static_cast<const D3D11ResourceRangeCounters&>(*this)[s];
             const Uint32 val1 = rhs[s];
             VERIFY(val0 + val1 <= MaxCounter, "The resulting value is out of range");
         }
@@ -214,7 +216,7 @@ private:
 
         // clang-format off
         StageAccessor           (const StageAccessor&)  = delete;
-        StageAccessor           (      StageAccessor&&) = default;
+        StageAccessor           (      StageAccessor&&) = delete;
         StageAccessor& operator=(const StageAccessor&)  = delete;
         StageAccessor& operator=(      StageAccessor&&) = delete;
         // clang-format on
@@ -243,9 +245,8 @@ private:
 public:
     StageAccessor operator[](Uint32 ShaderInd)
     {
-        return StageAccessor{*this, ShaderInd};
+        return {*this, ShaderInd};
     }
-
 
 private:
     Uint8 Set(Uint32 ShaderInd, Uint32 Counter)
@@ -274,17 +275,17 @@ using D3D11ShaderResourceCounters = std::array<D3D11ResourceRangeCounters, D3D11
 struct PipelineResourceAttribsD3D11
 {
 private:
-    static constexpr Uint32 _SamplerIndBits      = 10;
+    static constexpr Uint32 _SamplerIndBits      = 31;
     static constexpr Uint32 _SamplerAssignedBits = 1;
 
 public:
     static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
 
     // clang-format off
-    const Uint32    SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
-    const Uint32    ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag.
-    D3D11ResourceBindPoints BindPoints;
+    const Uint32 SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
+    const Uint32 ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag.
     // clang-format on
+    D3D11ResourceBindPoints BindPoints;
 
     PipelineResourceAttribsD3D11(Uint32 _SamplerInd,
                                  bool   _ImtblSamplerAssigned) noexcept :

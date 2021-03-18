@@ -99,7 +99,7 @@ public:
     void InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache);
 
 #ifdef DILIGENT_DEVELOPMENT
-    /// Verifies committed resource attribs using the SPIRV resource attributes from the PSO.
+    /// Verifies committed resource using the resource attributes from the PSO.
     bool DvpValidateCommittedResource(const ShaderResourcesGL::GLResourceAttribs& GLAttribs,
                                       RESOURCE_DIMENSION                          ResourceDim,
                                       bool                                        IsMultisample,

@@ -190,8 +190,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
 {
     // Index of the assigned sampler, for every texture SRV in m_Desc.Resources, or InvalidSamplerInd.
     std::vector<Uint32> TextureSrvToAssignedSamplerInd(m_Desc.NumResources, ResourceAttribs::InvalidSamplerInd);
-    // Index of the immutable sampler for every sampler in m_Desc.Resources, or -1.
-    std::vector<Int32> ResourceToImmutableSamplerInd(m_Desc.NumResources, -1);
+    // Index of the immutable sampler for every sampler in m_Desc.Resources, or InvalidImmutableSamplerIndex.
+    std::vector<Uint32> ResourceToImmutableSamplerInd(m_Desc.NumResources, InvalidImmutableSamplerIndex);
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const auto& ResDesc = m_Desc.Resources[i];
@@ -200,6 +200,14 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
         {
             // We only need to search for immutable samplers for SHADER_RESOURCE_TYPE_SAMPLER.
             // For SHADER_RESOURCE_TYPE_TEXTURE_SRV, we will look for the assigned sampler and check if it is immutable.
+
+            // If there is an immutable sampler that is not defined as resource, e.g.:
+            //
+            //      PipelineResourceDesc Resources[] = {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, ...}
+            //      ImmutableSamplerDesc ImtblSams[] = {SHADER_TYPE_PIXEL, "g_Texture", ...}
+            //
+            // the sampler will not be assigned to the texture. It will be defined as static sampler when D3D12 PSO is created,
+            // will be added to bindings map by UpdateShaderResourceBindingMap and then properly mapped to the shader sampler register.
 
             // Note that FindImmutableSampler() below will work properly both when combined texture samplers are used and when not:
             //  - When combined texture samplers are used, sampler suffix will not be null,
@@ -253,6 +261,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
         if (AssignedSamplerInd != ResourceAttribs::InvalidSamplerInd)
         {
             VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
+            VERIFY_EXPR(SrcImmutableSamplerInd == InvalidImmutableSamplerIndex);
             SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[AssignedSamplerInd];
         }
 
@@ -267,7 +276,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
 
         auto d3d12RootParamType = static_cast<D3D12_ROOT_PARAMETER_TYPE>(D3D12_ROOT_PARAMETER_TYPE_UAV + 1);
         // Do not allocate resource slot for immutable samplers that are also defined as resource
-        if (!(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && SrcImmutableSamplerInd >= 0))
+        if (!(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && SrcImmutableSamplerInd != InvalidImmutableSamplerIndex))
         {
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
@@ -330,6 +339,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
         }
         else
         {
+            VERIFY_EXPR(AssignedSamplerInd == ResourceAttribs::InvalidSamplerInd);
+            // Use register and space assigned to the immutable sampler
             const auto& ImtblSamAttribs = GetImmutableSamplerAttribs(SrcImmutableSamplerInd);
             VERIFY_EXPR(ImtblSamAttribs.IsValid());
             // Initialize space and register, which are required for register remapping
@@ -346,7 +357,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
                 SRBOffsetFromTableStart,
                 SigRootIndex,
                 SigOffsetFromTableStart,
-                SrcImmutableSamplerInd >= 0,
+                SrcImmutableSamplerInd != InvalidImmutableSamplerIndex,
                 d3d12RootParamType //
             };
     }
