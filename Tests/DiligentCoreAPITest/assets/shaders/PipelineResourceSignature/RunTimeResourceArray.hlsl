@@ -151,6 +151,10 @@ float4 VerifyResources(uint index, float2 coord)
     uint RWStructBuffIdx = index % NUM_RWSTRUCT_BUFFERS;
     uint RWFmtBuffIdx    = index % NUM_RWFMT_BUFFERS;
 
+#ifdef USE_D3D12_WARP_BUG_WORKAROUND
+    ConstBuffIdx = 0;
+#endif
+
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
     AllCorrect *= CheckValue(g_Textures[TEXTURES_NONUNIFORM(TexIdx)].SampleLevel(g_Samplers[NonUniformResourceIndex(SamIdx)], coord, 0.0), TexRefValues[TexIdx]);
     AllCorrect *= CheckValue(g_ConstantBuffers[CONST_BUFFERS_NONUNIFORM(ConstBuffIdx)].Data, ConstBuffRefValues[ConstBuffIdx]);

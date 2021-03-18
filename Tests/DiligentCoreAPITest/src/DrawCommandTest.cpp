@@ -2154,15 +2154,23 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.UseCombinedTextureSamplers = true;
-    if (UseArray && pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+
+    auto SelectShaderCompiler = [UseArray, pEnv](ShaderCreateInfo& ShaderCI) //
     {
-        // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
-        // Shader resource array indexing always references array element 0 when shaders are compiled
-        // with shader model 5.1.
-        // Use SM5.0 with old compiler as a workaround.
-        ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
-        ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
-    }
+        if (UseArray && pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+        {
+            // As of Windows version 2004 (build 19041), there is a bug in D3D12 WARP rasterizer:
+            // Shader resource array indexing always references array element 0 when shaders are compiled
+            // with shader model 5.1.
+            // Use SM5.0 with old compiler as a workaround.
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+        }
+        else
+        {
+            ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        }
+    };
 
     RefCntAutoPtr<IShader> pVS;
     {
@@ -2192,7 +2200,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         {
             ShaderCI.Source = UseArray ? HLSL::DrawTest_VSFormattedBufferArray.c_str() : HLSL::DrawTest_VSFormattedBuffers.c_str();
         }
-        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        SelectShaderCompiler(ShaderCI);
         pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_NE(pVS, nullptr);
     }
@@ -2200,11 +2208,11 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
     RefCntAutoPtr<IShader> pPS;
     {
         ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Draw command test structured buffers - PS";
         ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
+        SelectShaderCompiler(ShaderCI);
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
     }

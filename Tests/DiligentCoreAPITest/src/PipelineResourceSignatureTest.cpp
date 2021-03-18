@@ -1711,6 +1711,12 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     Macros.AddShaderMacro("RWSTRUCT_BUFFERS_NONUNIFORM_INDEXING", UAVBufferNonUniformIndexing ? 1 : 0);
     Macros.AddShaderMacro("RWFMT_BUFFERS_NONUNIFORM_INDEXING", UAVBufferNonUniformIndexing ? 1 : 0);
 
+    if (pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+    {
+        // Constant buffer indexing does not work properly in D3D12 WARP - only the 0th element is accessed correctly
+        Macros.AddShaderMacro("USE_D3D12_WARP_BUG_WORKAROUND", 1);
+    }
+
     if (IsGLSL)
         Macros.AddShaderMacro("float4", "vec4");
     for (Uint32 i = 0; i < TexArraySize; ++i)
