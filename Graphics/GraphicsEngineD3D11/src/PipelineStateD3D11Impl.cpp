@@ -207,9 +207,12 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         const auto        ShaderType = pShader->GetDesc().ShaderType;
         auto*             pBytecode  = Shaders[s]->GetBytecode();
 
-        D3D11ShaderResourceCounters BindingsPerStage = {};
+        D3D11ShaderResourceCounters BaseBindings = {};
         if (m_Desc.IsAnyGraphicsPipeline())
-            BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
+        {
+            // In Direct3D11, UAVs use the same register space as render targets
+            BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
+        }
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
@@ -219,8 +222,8 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
                 continue;
 
             VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
-            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, BindingsPerStage);
-            pSignature->ShiftBindings(BindingsPerStage);
+            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, BaseBindings);
+            pSignature->ShiftBindings(BaseBindings);
         }
 
         ValidateShaderResources(pShader);
@@ -236,28 +239,39 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    D3D11ShaderResourceCounters BindingsPerStage = {};
-
-    if (m_Desc.IsAnyGraphicsPipeline())
-        BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
-
-    for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
     {
-        const auto& pSignature = m_Signatures[sign];
-        if (pSignature != nullptr)
-            pSignature->ShiftBindings(BindingsPerStage);
-    }
+        D3D11ShaderResourceCounters ResCounters = {};
 
-    for (Uint32 s = 0; s < D3D11ResourceBindPoints::NumShaderTypes; ++s)
-    {
-        DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_CBV][s] <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT,
-                      "Constant buffer count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_CBV][s]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT);
-        DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_SRV][s] <= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT,
-                      "SRV count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_SRV][s]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
-        DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_SAMPLER][s] <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT,
-                      "Sampler count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_SAMPLER][s]}, " exceeds D3D11 limit ", D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT);
-        DEV_CHECK_ERR(BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][s] <= D3D11_PS_CS_UAV_REGISTER_COUNT,
-                      "UAV count ", Uint32{BindingsPerStage[D3D11_RESOURCE_RANGE_UAV][s]}, " exceeds D3D11 limit ", D3D11_PS_CS_UAV_REGISTER_COUNT);
+        if (m_Desc.IsAnyGraphicsPipeline())
+            ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
+
+        for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
+        {
+            const auto& pSignature = m_Signatures[sign];
+            if (pSignature != nullptr)
+                pSignature->ShiftBindings(ResCounters);
+        }
+
+        for (Uint32 s = 0; s < D3D11ResourceBindPoints::NumShaderTypes; ++s)
+        {
+            const auto ShaderType = GetShaderTypeFromIndex(s);
+            DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_CBV][s] <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT,
+                          "Constant buffer count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_CBV][s]},
+                          " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
+                          D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT);
+            DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_SRV][s] <= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT,
+                          "SRV count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_SRV][s]},
+                          " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
+                          D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
+            DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_SAMPLER][s] <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT,
+                          "Sampler count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_SAMPLER][s]},
+                          " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
+                          D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT);
+            DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_UAV][s] <= D3D11_PS_CS_UAV_REGISTER_COUNT,
+                          "UAV count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_UAV][s]},
+                          " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
+                          D3D11_PS_CS_UAV_REGISTER_COUNT);
+        }
     }
 #endif
 }
@@ -466,38 +480,16 @@ void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pSha
 
             if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
             {
-                const auto& ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                auto ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
+                    ResDesc.ResourceType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
 
-                auto ResourceType = ResDesc.ResourceType;
-                if (ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
-                    ResourceType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-                if (Type != ResourceType)
-                {
-                    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
-                                        "' and type '", GetShaderResourceTypeLiteralName(Type), "' that is not compatible with type '",
-                                        GetShaderResourceTypeLiteralName(ResDesc.ResourceType), "' in pipeline resource signature '", pSignature->GetDesc().Name, "'.");
-                }
-
-                if ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER))
-                {
-                    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", Attribs.Name,
-                                        "' that is", ((Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
-                                        " labeled as formatted buffer, while the same resource specified by the pipeline resource signature '",
-                                        pSignature->GetDesc().Name, "' is", ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? "" : " not"),
-                                        " labeled as such.");
-                }
-
-                VERIFY(Attribs.BindCount != 0,
-                       "Runtime-sized array is not supported in Direct3D11, shader must not be compiled.");
+                VERIFY(Attribs.BindCount != 0, "Runtime-sized arrays are not supported in Direct3D11.");
                 VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0,
                        "Runtime-sized array flag is not supported in Direct3D11, this error must be handled by ValidatePipelineResourceSignatureDesc()");
 
-                if (ResDesc.ArraySize < Attribs.BindCount)
-                {
-                    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", Attribs.Name,
-                                        "' whose array size (", Attribs.BindCount, ") is greater than the array size (",
-                                        ResDesc.ArraySize, ") specified by the pipeline resource signature '", pSignature->GetDesc().Name, "'.");
-                }
+                ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, Attribs.BindCount,
+                                                      pShader->GetDesc().Name, pSignature->GetDesc().Name);
             }
             else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
             {
@@ -523,11 +515,11 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(ShaderResourceBindingD3D11Imp
                                                    Uint32                            NumSRBs) const
 {
     // Verify SRB compatibility with this pipeline
-    const auto                  SignCount = GetResourceSignatureCount();
-    D3D11ShaderResourceCounters Bindings  = {};
+    const auto                  SignCount   = GetResourceSignatureCount();
+    D3D11ShaderResourceCounters ResCounters = {};
 
     if (m_Desc.IsAnyGraphicsPipeline())
-        Bindings[D3D11_RESOURCE_RANGE_UAV][GetShaderTypeIndex(SHADER_TYPE_PIXEL)] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);
+        ResCounters[D3D11_RESOURCE_RANGE_UAV][GetShaderTypeIndex(SHADER_TYPE_PIXEL)] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);
 
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
@@ -551,10 +543,10 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(ShaderResourceBindingD3D11Imp
                               "' is not compatible with pipeline layout in current pipeline '", m_Desc.Name, "'.");
         }
 
-        DEV_CHECK_ERR(Bindings == BaseBindings[sign],
+        DEV_CHECK_ERR(ResCounters == BaseBindings[sign],
                       "Bound resources has incorrect base binding indices, this may indicate a bug in resource signature compatibility comparison.");
 
-        pSignature->ShiftBindings(Bindings);
+        pSignature->ShiftBindings(ResCounters);
     }
 
     auto attrib_it = m_ResourceAttibutions.begin();
