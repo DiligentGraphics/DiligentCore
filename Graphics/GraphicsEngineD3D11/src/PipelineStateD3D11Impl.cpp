@@ -37,8 +37,10 @@
 
 namespace Diligent
 {
+
 namespace
 {
+
 void VerifyResourceMerge(const PipelineStateDesc&        PSODesc,
                          const D3DShaderResourceAttribs& ExistingRes,
                          const D3DShaderResourceAttribs& NewResAttribs)
@@ -62,6 +64,11 @@ void VerifyResourceMerge(const PipelineStateDesc&        PSODesc,
     if (ExistingRes.IsMultisample() != NewResAttribs.IsMultisample())
         LOG_RESOURCE_MERGE_ERROR_AND_THROW("mutlisample state");
 #undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
+}
+
+__forceinline SHADER_TYPE GetShaderStageType(const ShaderD3D11Impl* pShader)
+{
+    return pShader->GetDesc().ShaderType;
 }
 
 } // namespace
@@ -263,45 +270,50 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType&       
     ExtractShaders<ShaderD3D11Impl>(CreateInfo, Shaders);
 
     m_NumShaders = static_cast<Uint8>(Shaders.size());
-
-    for (Uint32 s = 0; s < Shaders.size(); ++s)
+    for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto ShaderType  = Shaders[s]->GetDesc().ShaderType;
-        m_ShaderTypes[s] = static_cast<Uint8>(GetShaderTypeIndex(ShaderType));
-        VERIFY_EXPR(ShaderType == GetShaderTypeFromIndex(m_ShaderTypes[s]));
+        const auto ShaderType    = Shaders[s]->GetDesc().ShaderType;
+        const auto ShaderTypeIdx = GetShaderTypeIndex(ShaderType);
+        VERIFY_EXPR(m_ShaderIndices[ShaderTypeIdx] < 0);
+        m_ShaderIndices[ShaderTypeIdx] = static_cast<Int8>(s);
     }
 
     FixedLinearAllocator MemPool{GetRawAllocator()};
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
+    MemPool.AddSpace<D3D11ShaderAutoPtrType>(m_NumShaders);
 
     MemPool.Reserve();
 
     InitializePipelineDesc(CreateInfo, MemPool);
+    m_ppd3d11Shaders = MemPool.ConstructArray<D3D11ShaderAutoPtrType>(m_NumShaders);
 
     InitResourceLayouts(CreateInfo, Shaders, ByteCodes);
 
     auto* pDeviceD3D11 = GetDevice()->GetD3D11Device();
-    for (Uint32 s = 0; s < Shaders.size(); ++s)
+    for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto        ShaderType = Shaders[s]->GetDesc().ShaderType;
+        const auto  ShaderType = Shaders[s]->GetDesc().ShaderType;
         const auto& pByteCode  = ByteCodes[s];
         switch (ShaderType)
         {
-#define CREATE_SHADER(SHADER_NAME, ShaderName, pShader)                                                                                   \
-    case SHADER_TYPE_##SHADER_NAME:                                                                                                       \
-    {                                                                                                                                     \
-        HRESULT hr = pDeviceD3D11->Create##ShaderName##Shader(pByteCode->GetBufferPointer(), pByteCode->GetBufferSize(), NULL, &pShader); \
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 shader");                                                                      \
-        break;                                                                                                                            \
+#define CREATE_SHADER(SHADER_NAME, ShaderName)                                                                                         \
+    case SHADER_TYPE_##SHADER_NAME:                                                                                                    \
+    {                                                                                                                                  \
+        CComPtr<ID3D11##ShaderName##Shader> pShader;                                                                                   \
+                                                                                                                                       \
+        auto hr = pDeviceD3D11->Create##ShaderName##Shader(pByteCode->GetBufferPointer(), pByteCode->GetBufferSize(), NULL, &pShader); \
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 shader");                                                                   \
+        m_ppd3d11Shaders[s] = pShader;                                                                                                 \
+        break;                                                                                                                         \
     }
             // clang-format off
-            CREATE_SHADER(VERTEX,   Vertex,   m_pVS)
-            CREATE_SHADER(PIXEL,    Pixel,    m_pPS)
-            CREATE_SHADER(GEOMETRY, Geometry, m_pGS)
-            CREATE_SHADER(DOMAIN,   Domain,   m_pDS)
-            CREATE_SHADER(HULL,     Hull,     m_pHS)
-            CREATE_SHADER(COMPUTE,  Compute,  m_pCS)
+            CREATE_SHADER(VERTEX,   Vertex)
+            CREATE_SHADER(PIXEL,    Pixel)
+            CREATE_SHADER(GEOMETRY, Geometry)
+            CREATE_SHADER(DOMAIN,   Domain)
+            CREATE_SHADER(HULL,     Hull)
+            CREATE_SHADER(COMPUTE,  Compute)
             // clang-format on
             default: LOG_ERROR_AND_THROW("Unknown shader type");
         }
@@ -320,7 +332,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
         std::vector<CComPtr<ID3DBlob>> ByteCodes;
         InitInternalObjects(CreateInfo, ByteCodes);
 
-        if (m_pVS == nullptr)
+        if (GetD3D11VertexShader() == nullptr)
             LOG_ERROR_AND_THROW("Vertex shader is null");
 
         auto& GraphicsPipeline = GetGraphicsPipelineDesc();
@@ -384,19 +396,14 @@ PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
 
 void PipelineStateD3D11Impl::Destruct()
 {
-    m_ShaderTypes = {};
-    m_NumShaders  = 0;
-
-    m_pd3d11BlendState        = nullptr;
-    m_pd3d11RasterizerState   = nullptr;
-    m_pd3d11DepthStencilState = nullptr;
-    m_pd3d11InputLayout       = nullptr;
-    m_pVS                     = nullptr;
-    m_pPS                     = nullptr;
-    m_pGS                     = nullptr;
-    m_pDS                     = nullptr;
-    m_pHS                     = nullptr;
-    m_pCS                     = nullptr;
+    m_pd3d11BlendState.Release();
+    m_pd3d11RasterizerState.Release();
+    m_pd3d11DepthStencilState.Release();
+    m_pd3d11InputLayout.Release();
+    for (Uint32 s = 0; s < m_NumShaders; ++s)
+        m_ppd3d11Shaders[s].~D3D11ShaderAutoPtrType();
+    m_ppd3d11Shaders = nullptr;
+    m_ShaderIndices.fill(-1);
 
     TPipelineStateBase::Destruct();
 }
@@ -410,15 +417,10 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO) const
         return false;
 
     const auto& rhs = *ValidatedCast<const PipelineStateD3D11Impl>(pPSO);
-    if (m_NumShaders != rhs.m_NumShaders || m_ShaderTypes != rhs.m_ShaderTypes)
+    if (m_ActiveShaderStages != rhs.m_ActiveShaderStages)
         return false;
 
     return true;
-}
-
-SHADER_TYPE PipelineStateD3D11Impl::GetShaderStageType(Uint32 Index) const
-{
-    return GetShaderTypeFromIndex(m_ShaderTypes[Index]);
 }
 
 void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pShader)

@@ -71,25 +71,24 @@ public:
     virtual ID3D11InputLayout* DILIGENT_CALL_TYPE GetD3D11InputLayout() override final { return m_pd3d11InputLayout; }
 
     /// Implementation of IPipelineStateD3D11::GetD3D11VertexShader() method.
-    virtual ID3D11VertexShader* DILIGENT_CALL_TYPE GetD3D11VertexShader() override final { return m_pVS; }
+    virtual ID3D11VertexShader* DILIGENT_CALL_TYPE GetD3D11VertexShader() override final { return GetD3D11Shader<ID3D11VertexShader>(VSInd); }
 
     /// Implementation of IPipelineStateD3D11::GetD3D11PixelShader() method.
-    virtual ID3D11PixelShader* DILIGENT_CALL_TYPE GetD3D11PixelShader() override final { return m_pPS; }
+    virtual ID3D11PixelShader* DILIGENT_CALL_TYPE GetD3D11PixelShader() override final { return GetD3D11Shader<ID3D11PixelShader>(PSInd); }
 
     /// Implementation of IPipelineStateD3D11::GetD3D11GeometryShader() method.
-    virtual ID3D11GeometryShader* DILIGENT_CALL_TYPE GetD3D11GeometryShader() override final { return m_pGS; }
+    virtual ID3D11GeometryShader* DILIGENT_CALL_TYPE GetD3D11GeometryShader() override final { return GetD3D11Shader<ID3D11GeometryShader>(GSInd); }
 
     /// Implementation of IPipelineStateD3D11::GetD3D11DomainShader() method.
-    virtual ID3D11DomainShader* DILIGENT_CALL_TYPE GetD3D11DomainShader() override final { return m_pDS; }
+    virtual ID3D11DomainShader* DILIGENT_CALL_TYPE GetD3D11DomainShader() override final { return GetD3D11Shader<ID3D11DomainShader>(DSInd); }
 
     /// Implementation of IPipelineStateD3D11::GetD3D11HullShader() method.
-    virtual ID3D11HullShader* DILIGENT_CALL_TYPE GetD3D11HullShader() override final { return m_pHS; }
+    virtual ID3D11HullShader* DILIGENT_CALL_TYPE GetD3D11HullShader() override final { return GetD3D11Shader<ID3D11HullShader>(HSInd); }
 
     /// Implementation of IPipelineStateD3D11::GetD3D11ComputeShader() method.
-    virtual ID3D11ComputeShader* DILIGENT_CALL_TYPE GetD3D11ComputeShader() override final { return m_pCS; }
+    virtual ID3D11ComputeShader* DILIGENT_CALL_TYPE GetD3D11ComputeShader() override final { return GetD3D11Shader<ID3D11ComputeShader>(CSInd); }
 
-    Uint32      GetNumShaders() const { return m_NumShaders; }
-    SHADER_TYPE GetShaderStageType(Uint32 Index) const;
+    Uint32 GetNumShaders() const { return m_NumShaders; }
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpVerifySRBResources(class ShaderResourceBindingD3D11Impl* pSRBs[], const D3D11ShaderResourceCounters BaseBindings[], Uint32 NumSRBs) const;
@@ -112,20 +111,27 @@ private:
 
     void ValidateShaderResources(const ShaderD3D11Impl* pShader);
 
+    template <typename D3D11ShaderType>
+    D3D11ShaderType* GetD3D11Shader(Uint32 ShaderInd)
+    {
+        auto idx = m_ShaderIndices[ShaderInd];
+        return idx >= 0 ? static_cast<D3D11ShaderType*>(m_ppd3d11Shaders[idx].p) : nullptr;
+    }
+
 private:
-    std::array<Uint8, 5> m_ShaderTypes = {};
-    Uint8                m_NumShaders  = 0;
+    // ShaderTypeIndex -> index in m_ppd3d11Shaders array
+    std::array<Int8, D3D11ResourceBindPoints::NumShaderTypes> m_ShaderIndices = {-1, -1, -1, -1, -1, -1};
+
+    // The number of shader stages in this pipeline
+    Uint8 m_NumShaders = 0;
 
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
     CComPtr<ID3D11InputLayout>       m_pd3d11InputLayout;
-    CComPtr<ID3D11VertexShader>      m_pVS;
-    CComPtr<ID3D11PixelShader>       m_pPS;
-    CComPtr<ID3D11GeometryShader>    m_pGS;
-    CComPtr<ID3D11DomainShader>      m_pDS;
-    CComPtr<ID3D11HullShader>        m_pHS;
-    CComPtr<ID3D11ComputeShader>     m_pCS;
+
+    using D3D11ShaderAutoPtrType             = CComPtr<ID3D11DeviceChild>;
+    D3D11ShaderAutoPtrType* m_ppd3d11Shaders = nullptr; // Shader array indexed by m_ShaderIndices[]
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages in the pipeline.
@@ -135,10 +141,5 @@ private:
     std::vector<ResourceAttribution> m_ResourceAttibutions;
 #endif
 };
-
-__forceinline SHADER_TYPE GetShaderStageType(const ShaderD3D11Impl* pShader)
-{
-    return pShader->GetDesc().ShaderType;
-}
 
 } // namespace Diligent
