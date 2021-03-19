@@ -555,6 +555,9 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
     ResInfo.pResourceCache = &ResourceCache;
     BindInfo.SetStaleSRBBit(SRBIndex);
+    // We must not clear entire ResInfo as DescriptorSetBaseInd and DynamicOffsetCount
+    // are set by SetPipelineState().
+    ResInfo.vkSets = {};
 
     if (ResourceCache.GetNumDynamicBuffers() > 0)
         BindInfo.SetDynamicBufferBit(SRBIndex);
