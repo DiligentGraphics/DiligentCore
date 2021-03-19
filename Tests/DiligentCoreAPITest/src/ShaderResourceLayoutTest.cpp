@@ -781,6 +781,13 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
                 UseReducedUAVCount = true;
             break;
         }
+
+        case RENDER_DEVICE_TYPE_D3D12:
+        case RENDER_DEVICE_TYPE_METAL:
+            break;
+
+        default:
+            UNEXPECTED("Unexpected device type");
     }
 
     // Prepare buffers with reference values
@@ -982,6 +989,13 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
                 UseReducedUAVCount = true;
             break;
         }
+
+        case RENDER_DEVICE_TYPE_D3D12:
+        case RENDER_DEVICE_TYPE_METAL:
+            break;
+
+        default:
+            UNEXPECTED("Unexpected device type");
     }
 
     const Uint32 StaticTexArraySize  = MaxStaticTexArraySize;

@@ -45,6 +45,10 @@
 #include "HLSLUtils.hpp"
 #include "BasicMath.hpp"
 
+#ifndef D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES
+#    define D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES (1 << 20)
+#endif
+
 namespace Diligent
 {
 
