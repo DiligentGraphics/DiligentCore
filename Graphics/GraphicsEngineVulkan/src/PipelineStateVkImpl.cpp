@@ -1188,6 +1188,9 @@ void PipelineStateVkImpl::DvpValidateResourceLimits() const
                         NonUniformIndexingSupported = true;
                         NonUniformIndexingIsNative  = true;
                         break;
+
+                    default:
+                        UNEXPECTED("Unexpected descriptor type");
                 }
 
                 // TODO: We don't know if this resource is used for non-uniform indexing or not.

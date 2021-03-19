@@ -41,6 +41,12 @@
 #include <algorithm>
 #include <d3d12.h>
 
+#ifndef NTDDI_WIN10_VB // First defined in Win SDK 10.0.19041.0
+#    define D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS static_cast<D3D12_INDIRECT_ARGUMENT_TYPE>(D3D12_INDIRECT_ARGUMENT_TYPE_UNORDERED_ACCESS_VIEW + 1)
+#    define D3D12_RAYTRACING_TIER_1_1                  static_cast<D3D12_RAYTRACING_TIER>(11)
+#endif
+
+
 #include "PlatformDefinitions.h"
 #include "Errors.hpp"
 #include "RefCntAutoPtr.hpp"

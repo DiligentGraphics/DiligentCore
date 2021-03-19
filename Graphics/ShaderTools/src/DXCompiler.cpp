@@ -46,6 +46,13 @@
 
 #if D3D12_SUPPORTED
 #    include <d3d12shader.h>
+
+#    ifndef NTDDI_WIN10_VB // First defined in Win SDK 10.0.19041.0
+#        define NO_D3D_SIT_ACCELSTRUCT_FEEDBACK_TEX 1
+
+#        define D3D_SIT_RTACCELERATIONSTRUCTURE static_cast<D3D_SHADER_INPUT_TYPE>(D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER + 1)
+#        define D3D_SIT_UAV_FEEDBACKTEXTURE     static_cast<D3D_SHADER_INPUT_TYPE>(D3D_SIT_RTACCELERATIONSTRUCTURE + 1)
+#    endif
 #endif
 
 #include "HLSLUtils.hpp"
@@ -882,7 +889,11 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
             Ext.SrcBindPoint = ResDesc.BindPoint;
             Ext.SrcSpace     = ResDesc.Space;
 
+#    ifdef NO_D3D_SIT_ACCELSTRUCT_FEEDBACK_TEX
+            switch (int{ResDesc.Type}) // Prevent "not a valid value for switch of enum '_D3D_SHADER_INPUT_TYPE'" warning
+#    else
             switch (ResDesc.Type)
+#    endif
             {
                 case D3D_SIT_CBUFFER:
                     Ext.Type = RES_TYPE_CBV;
