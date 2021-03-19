@@ -1683,6 +1683,9 @@ TEST_F(DrawCommandTest, DeferredContexts)
     auto* pSwapChain    = pEnv->GetSwapChain();
     auto* pImmediateCtx = pEnv->GetDeviceContext();
 
+    const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
     Uint32 Indices[] = {0, 1, 2, 3, 4, 5};
     auto   pVB       = CreateVertexBuffer(Vert, sizeof(Vert));
     auto   pIB       = CreateIndexBuffer(Indices, _countof(Indices));
@@ -1694,8 +1697,7 @@ TEST_F(DrawCommandTest, DeferredContexts)
         };
     pImmediateCtx->TransitionResourceStates(_countof(Barriers), Barriers);
 
-    ITextureView* pRTVs[]      = {pSwapChain->GetCurrentBackBufferRTV()};
-    const float   ClearColor[] = {0.f, 0.f, 0.f, 0.0f};
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pImmediateCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pImmediateCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
