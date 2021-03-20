@@ -30,12 +30,16 @@
 /// \file
 /// Declaration of Diligent::ShaderD3D11Impl class
 
+#include <mutex>
+#include <unordered_map>
 #include <atlbase.h>
+#include <cstring>
 
 #include "EngineD3D11ImplTraits.hpp"
 #include "ShaderBase.hpp"
 #include "ShaderD3DBase.hpp"
 #include "ShaderResourcesD3D11.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -74,16 +78,66 @@ public:
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.
     virtual ID3D11DeviceChild* DILIGENT_CALL_TYPE GetD3D11Shader() override final
     {
-        return m_pShader;
+        // GetD3D11Shader(m_pShaderByteCode) should not throw as the shader must
+        // already have been created.
+        return GetD3D11Shader(m_pShaderByteCode);
     }
 
     ID3DBlob* GetBytecode() { return m_pShaderByteCode; }
 
     const std::shared_ptr<const ShaderResourcesD3D11>& GetShaderResources() const { return m_pShaderResources; }
 
+    ID3D11DeviceChild* GetD3D11Shader(ID3DBlob* pBlob) noexcept(false);
+
 private:
-    /// D3D11 shader
-    CComPtr<ID3D11DeviceChild> m_pShader;
+    struct BlobHashKey
+    {
+        const size_t      Hash;
+        CComPtr<ID3DBlob> pBlob;
+
+        explicit BlobHashKey(ID3DBlob* _pBlob) :
+            Hash{ComputeHash(_pBlob)},
+            pBlob{_pBlob}
+        {}
+
+        struct Hasher
+        {
+            size_t operator()(const BlobHashKey& Key) const
+            {
+                return Key.Hash;
+            }
+        };
+
+        bool operator==(const BlobHashKey& rhs) const
+        {
+            if (Hash != rhs.Hash)
+                return false;
+
+            const auto Size0 = pBlob->GetBufferSize();
+            const auto Size1 = rhs.pBlob->GetBufferSize();
+            if (Size0 != Size1)
+                return false;
+
+            return memcmp(pBlob->GetBufferPointer(), rhs.pBlob->GetBufferPointer(), Size0) == 0;
+        }
+
+    private:
+        static size_t ComputeHash(ID3DBlob* pBlob)
+        {
+            const auto* pData = reinterpret_cast<const Uint32*>(pBlob->GetBufferPointer());
+            const auto  Size  = pBlob->GetBufferSize();
+            VERIFY(Size % 4 == 0, "Bytecode size is expected to be a multiple of 4");
+            size_t Hash = 0;
+            for (Uint32 i = 0; i < Size / 4; ++i)
+            {
+                HashCombine(Hash, pData[i]);
+            }
+            return Hash;
+        }
+    };
+
+    std::mutex                                                                       m_d3dShaderCacheMtx;
+    std::unordered_map<BlobHashKey, CComPtr<ID3D11DeviceChild>, BlobHashKey::Hasher> m_d3dShaderCache;
 
     // ShaderResources class instance must be referenced through the shared pointer, because
     // it is referenced by ShaderResourceLayoutD3D11 class instances

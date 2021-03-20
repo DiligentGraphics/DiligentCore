@@ -107,12 +107,12 @@ public:
 
 private:
     template <typename PSOCreateInfoType>
-    void InitInternalObjects(const PSOCreateInfoType&        CreateInfo,
-                             std::vector<CComPtr<ID3DBlob>>& ByteCodes);
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo,
+                             CComPtr<ID3DBlob>&       pVSByteCode);
 
     void InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
                              const std::vector<ShaderD3D11Impl*>& Shaders,
-                             std::vector<CComPtr<ID3DBlob>>&      ByteCodes);
+                             CComPtr<ID3DBlob>&                   pVSByteCode);
 
     RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> CreateDefaultResourceSignature(
         const PipelineStateCreateInfo&       CreateInfo,

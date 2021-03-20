@@ -97,48 +97,14 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
     ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion), nullptr}
 // clang-format on
 {
-    auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
-    switch (ShaderCI.Desc.ShaderType)
-    {
-
-#define CREATE_SHADER(SHADER_NAME, ShaderName)                                                                                                                                \
-    case SHADER_TYPE_##SHADER_NAME:                                                                                                                                           \
-    {                                                                                                                                                                         \
-        ID3D11##ShaderName##Shader* pShader;                                                                                                                                  \
-        HRESULT                     hr = pDeviceD3D11->Create##ShaderName##Shader(m_pShaderByteCode->GetBufferPointer(), m_pShaderByteCode->GetBufferSize(), NULL, &pShader); \
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 shader");                                                                                                          \
-        if (SUCCEEDED(hr))                                                                                                                                                    \
-        {                                                                                                                                                                     \
-            pShader->QueryInterface(__uuidof(ID3D11DeviceChild), reinterpret_cast<void**>(static_cast<ID3D11DeviceChild**>(&m_pShader)));                                     \
-            pShader->Release();                                                                                                                                               \
-        }                                                                                                                                                                     \
-        break;                                                                                                                                                                \
-    }
-
-        CREATE_SHADER(VERTEX, Vertex)
-        CREATE_SHADER(PIXEL, Pixel)
-        CREATE_SHADER(GEOMETRY, Geometry)
-        CREATE_SHADER(DOMAIN, Domain)
-        CREATE_SHADER(HULL, Hull)
-        CREATE_SHADER(COMPUTE, Compute)
-
-        default: UNEXPECTED("Unknown shader type");
-    }
-
-    if (!m_pShader)
-        LOG_ERROR_AND_THROW("Failed to create the shader from the byte code");
-
-    if (*m_Desc.Name != 0)
-    {
-        auto hr = m_pShader->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
-        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set shader name");
-    }
-
     // Load shader resources
     auto& Allocator  = GetRawAllocator();
     auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
     auto* pResources = new (pRawMem) ShaderResourcesD3D11(pRenderDeviceD3D11, m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
+
+    // Add shader to the cache
+    GetD3D11Shader(m_pShaderByteCode);
 }
 
 ShaderD3D11Impl::~ShaderD3D11Impl()
@@ -158,6 +124,66 @@ void ShaderD3D11Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterf
     {
         TShaderBase::QueryInterface(IID, ppInterface);
     }
+}
+
+ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(ID3DBlob* pBlob) noexcept(false)
+{
+    std::lock_guard<std::mutex> Lock{m_d3dShaderCacheMtx};
+
+    BlobHashKey BlobKey{pBlob};
+
+    auto it = m_d3dShaderCache.find(BlobKey);
+    if (it != m_d3dShaderCache.end())
+    {
+        return it->second;
+    }
+
+    VERIFY(pBlob->GetBufferSize() == m_pShaderByteCode->GetBufferSize(), "The byte code size does not match the size of original byte code");
+
+    auto* pd3d11Device = m_pDevice->GetD3D11Device();
+
+    CComPtr<ID3D11DeviceChild> pd3d11Shader;
+    switch (m_Desc.ShaderType)
+    {
+#define CREATE_SHADER(SHADER_NAME, ShaderName)                                                                                                            \
+    case SHADER_TYPE_##SHADER_NAME:                                                                                                                       \
+    {                                                                                                                                                     \
+        ID3D11##ShaderName##Shader* pd3d11SpecificShader = nullptr;                                                                                       \
+                                                                                                                                                          \
+        HRESULT hr = pd3d11Device->Create##ShaderName##Shader(pBlob->GetBufferPointer(), pBlob->GetBufferSize(),                                          \
+                                                              NULL, &pd3d11SpecificShader);                                                               \
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 shader");                                                                                      \
+        if (SUCCEEDED(hr))                                                                                                                                \
+        {                                                                                                                                                 \
+            pd3d11SpecificShader->QueryInterface(__uuidof(ID3D11DeviceChild), reinterpret_cast<void**>(static_cast<ID3D11DeviceChild**>(&pd3d11Shader))); \
+            pd3d11SpecificShader->Release();                                                                                                              \
+        }                                                                                                                                                 \
+        break;                                                                                                                                            \
+    }
+
+        // clang-format off
+        CREATE_SHADER(VERTEX,   Vertex)
+        CREATE_SHADER(PIXEL,    Pixel)
+        CREATE_SHADER(GEOMETRY, Geometry)
+        CREATE_SHADER(DOMAIN,   Domain)
+        CREATE_SHADER(HULL,     Hull)
+        CREATE_SHADER(COMPUTE,  Compute)
+        // clang-format on
+#undef CREATE_SHADER
+
+        default: UNEXPECTED("Unexpected shader type");
+    }
+
+    if (!pd3d11Shader)
+        LOG_ERROR_AND_THROW("Failed to create shader from the byte code");
+
+    if (*m_Desc.Name != 0)
+    {
+        auto hr = pd3d11Shader->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set shader name");
+    }
+
+    return m_d3dShaderCache.emplace(BlobKey, std::move(pd3d11Shader)).first->second;
 }
 
 } // namespace Diligent

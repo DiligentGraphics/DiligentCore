@@ -161,7 +161,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
 
 void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
                                                  const std::vector<ShaderD3D11Impl*>& Shaders,
-                                                 std::vector<CComPtr<ID3DBlob>>&      ByteCodes)
+                                                 CComPtr<ID3DBlob>&                   pVSByteCode)
 {
     if (m_UsingImplicitSignature)
     {
@@ -191,12 +191,11 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     m_NumPixelUAVs = BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd];
 
     // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
-    ByteCodes.resize(Shaders.size());
     for (size_t s = 0; s < Shaders.size(); ++s)
     {
-        const auto* const pShader    = Shaders[s];
-        const auto        ShaderType = pShader->GetDesc().ShaderType;
-        auto*             pBytecode  = Shaders[s]->GetBytecode();
+        auto* const pShader    = Shaders[s];
+        auto const  ShaderType = pShader->GetDesc().ShaderType;
+        auto* const pBytecode  = Shaders[s]->GetBytecode();
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
@@ -211,12 +210,18 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 
         ValidateShaderResources(pShader);
 
-        auto& pPatchedBytecode = ByteCodes[s];
+        CComPtr<ID3DBlob> pPatchedBytecode;
         D3DCreateBlob(pBytecode->GetBufferSize(), &pPatchedBytecode);
         memcpy(pPatchedBytecode->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
 
         if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetBufferPointer(), pPatchedBytecode->GetBufferSize()))
             LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
+
+        m_ppd3d11Shaders[s] = pShader->GetD3D11Shader(pPatchedBytecode);
+        VERIFY_EXPR(m_ppd3d11Shaders[s]); // GetD3D11Shader() throws an exception in case of an error
+
+        if (ShaderType == SHADER_TYPE_VERTEX)
+            pVSByteCode = pPatchedBytecode;
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -258,8 +263,8 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 }
 
 template <typename PSOCreateInfoType>
-void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType&        CreateInfo,
-                                                 std::vector<CComPtr<ID3DBlob>>& ByteCodes)
+void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo,
+                                                 CComPtr<ID3DBlob>&       pVSByteCode)
 {
     std::vector<ShaderD3D11Impl*> Shaders;
     ExtractShaders<ShaderD3D11Impl>(CreateInfo, Shaders);
@@ -287,37 +292,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType&       
     m_ppd3d11Shaders = MemPool.ConstructArray<D3D11ShaderAutoPtrType>(m_NumShaders);
     m_BaseBindings   = MemPool.ConstructArray<D3D11ShaderResourceCounters>(SignCount);
 
-    InitResourceLayouts(CreateInfo, Shaders, ByteCodes);
-
-    auto* pDeviceD3D11 = GetDevice()->GetD3D11Device();
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
-    {
-        const auto  ShaderType = Shaders[s]->GetDesc().ShaderType;
-        const auto& pByteCode  = ByteCodes[s];
-        switch (ShaderType)
-        {
-#define CREATE_SHADER(SHADER_NAME, ShaderName)                                                                                         \
-    case SHADER_TYPE_##SHADER_NAME:                                                                                                    \
-    {                                                                                                                                  \
-        CComPtr<ID3D11##ShaderName##Shader> pShader;                                                                                   \
-                                                                                                                                       \
-        auto hr = pDeviceD3D11->Create##ShaderName##Shader(pByteCode->GetBufferPointer(), pByteCode->GetBufferSize(), NULL, &pShader); \
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 shader");                                                                   \
-        m_ppd3d11Shaders[s] = pShader;                                                                                                 \
-        break;                                                                                                                         \
-    }
-            // clang-format off
-            CREATE_SHADER(VERTEX,   Vertex)
-            CREATE_SHADER(PIXEL,    Pixel)
-            CREATE_SHADER(GEOMETRY, Geometry)
-            CREATE_SHADER(DOMAIN,   Domain)
-            CREATE_SHADER(HULL,     Hull)
-            CREATE_SHADER(COMPUTE,  Compute)
-            // clang-format on
-            default: LOG_ERROR_AND_THROW("Unknown shader type");
-        }
-#undef CREATE_SHADER
-    }
+    InitResourceLayouts(CreateInfo, Shaders, pVSByteCode);
 }
 
 
@@ -328,8 +303,8 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
 {
     try
     {
-        std::vector<CComPtr<ID3DBlob>> ByteCodes;
-        InitInternalObjects(CreateInfo, ByteCodes);
+        CComPtr<ID3DBlob> pVSByteCode;
+        InitInternalObjects(CreateInfo, pVSByteCode);
 
         if (GetD3D11VertexShader() == nullptr)
             LOG_ERROR_AND_THROW("Vertex shader is null");
@@ -359,7 +334,6 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
             std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC>> d311InputElements(STD_ALLOCATOR_RAW_MEM(D3D11_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D11_INPUT_ELEMENT_DESC>"));
             LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(InputLayout, d311InputElements);
 
-            ID3DBlob* pVSByteCode = ByteCodes.front();
             CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateInputLayout(d311InputElements.data(), static_cast<UINT>(d311InputElements.size()), pVSByteCode->GetBufferPointer(), pVSByteCode->GetBufferSize(), &m_pd3d11InputLayout),
                                    "Failed to create the Direct3D11 input layout");
         }
@@ -378,8 +352,9 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
 {
     try
     {
-        std::vector<CComPtr<ID3DBlob>> ByteCodes;
-        InitInternalObjects(CreateInfo, ByteCodes);
+        CComPtr<ID3DBlob> pVSByteCode;
+        InitInternalObjects(CreateInfo, pVSByteCode);
+        VERIFY_EXPR(!pVSByteCode);
     }
     catch (...)
     {
