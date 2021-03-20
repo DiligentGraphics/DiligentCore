@@ -641,30 +641,11 @@ void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pSha
 #ifdef DILIGENT_DEVELOPMENT
 void PipelineStateD3D12Impl::DvpVerifySRBResources(ShaderResourceBindingD3D12Impl* pSRBs[], Uint32 NumSRBs) const
 {
-    // Verify SRB compatibility with this pipeline
-    const auto SignCount = GetResourceSignatureCount();
-    for (Uint32 sign = 0; sign < SignCount; ++sign)
-    {
-        // Get resource signature from the root signature
-        const auto* const pSignature = m_RootSig->GetResourceSignature(sign);
-        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
-            continue; // Skip null and empty signatures
-
-        VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
-        const auto* const pSRB = pSRBs[sign];
-        if (pSRB == nullptr)
-        {
-            LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires SRB at index ", sign, " but none is bound in the device context.");
-            continue;
-        }
-
-        const auto* const pSRBSign = pSRB->GetSignature();
-        if (!pSignature->IsCompatibleWith(pSRBSign))
-        {
-            LOG_ERROR_MESSAGE("Shader resource binding at index ", sign, " with signature '", pSRBSign->GetDesc().Name,
-                              "' is not compatible with pipeline layout in current pipeline '", m_Desc.Name, "'.");
-        }
-    }
+    DvpVerifySRBCompatibility(pSRBs,
+                              [this](Uint32 idx) {
+                                  // Use signature from the root signature
+                                  return m_RootSig->GetResourceSignature(idx);
+                              });
 
     auto attrib_it = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)

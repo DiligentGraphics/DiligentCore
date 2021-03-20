@@ -1073,6 +1073,8 @@ void PipelineStateVkImpl::Destruct()
 #ifdef DILIGENT_DEVELOPMENT
 void PipelineStateVkImpl::DvpVerifySRBResources(const SRBArray& SRBs) const
 {
+    DvpVerifySRBCompatibility(SRBs.data());
+
     auto res_info = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)
     {
