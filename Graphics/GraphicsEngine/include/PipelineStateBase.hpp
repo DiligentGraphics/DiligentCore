@@ -912,7 +912,7 @@ protected:
             const auto* const pSRB = pSRBs[sign];
             if (pSRB == nullptr)
             {
-                LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires SRB at index ", sign, ", but none is bound in the device context.");
+                LOG_ERROR_MESSAGE("Pipeline state '", this->m_Desc.Name, "' requires SRB at index ", sign, ", but none is bound in the device context.");
                 AllOK = false;
                 continue;
             }
@@ -921,7 +921,7 @@ protected:
             if (!pPSOSign->IsCompatibleWith(pSRBSign))
             {
                 LOG_ERROR_MESSAGE("Shader resource binding at index ", sign, " with signature '", pSRBSign->GetDesc().Name,
-                                  "' is not compatible with the signature in pipeline '", m_Desc.Name, "'.");
+                                  "' is not compatible with the signature in pipeline '", this->m_Desc.Name, "'.");
                 AllOK = false;
             }
         }
