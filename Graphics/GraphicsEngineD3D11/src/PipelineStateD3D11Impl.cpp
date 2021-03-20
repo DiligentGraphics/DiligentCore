@@ -170,6 +170,26 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
+    D3D11ShaderResourceCounters BaseBindings = {};
+    if (m_Desc.IsAnyGraphicsPipeline())
+    {
+        // In Direct3D11, UAVs use the same register space as render targets
+        BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
+    }
+
+    for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
+    {
+        const PipelineResourceSignatureD3D11Impl* const pSignature = m_Signatures[sign];
+        if (pSignature == nullptr)
+            continue;
+
+        VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
+        m_BaseBindings[sign] = BaseBindings;
+        pSignature->ShiftBindings(BaseBindings);
+    }
+
+    m_NumPixelUAVs = BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd];
+
     // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
     ByteCodes.resize(Shaders.size());
     for (size_t s = 0; s < Shaders.size(); ++s)
@@ -177,13 +197,6 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         const auto* const pShader    = Shaders[s];
         const auto        ShaderType = pShader->GetDesc().ShaderType;
         auto*             pBytecode  = Shaders[s]->GetBytecode();
-
-        D3D11ShaderResourceCounters BaseBindings = {};
-        if (m_Desc.IsAnyGraphicsPipeline())
-        {
-            // In Direct3D11, UAVs use the same register space as render targets
-            BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
-        }
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
@@ -193,8 +206,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
                 continue;
 
             VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
-            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, BaseBindings);
-            pSignature->ShiftBindings(BaseBindings);
+            pSignature->UpdateShaderResourceBindingMap(ResourceMap, ShaderType, GetBaseBindings(sign));
         }
 
         ValidateShaderResources(pShader);
@@ -266,10 +278,14 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType&       
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
     MemPool.AddSpace<D3D11ShaderAutoPtrType>(m_NumShaders);
 
+    const auto SignCount = GetResourceSignatureCount(); // Must be called after ReserveSpaceForPipelineDesc()
+    MemPool.AddSpace<D3D11ShaderResourceCounters>(SignCount);
+
     MemPool.Reserve();
 
     InitializePipelineDesc(CreateInfo, MemPool);
     m_ppd3d11Shaders = MemPool.ConstructArray<D3D11ShaderAutoPtrType>(m_NumShaders);
+    m_BaseBindings   = MemPool.ConstructArray<D3D11ShaderResourceCounters>(SignCount);
 
     InitResourceLayouts(CreateInfo, Shaders, ByteCodes);
 
@@ -484,10 +500,6 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(ShaderResourceBindingD3D11Imp
                                                    Uint32                            NumSRBs) const
 {
     // Verify SRB compatibility with this pipeline
-    D3D11ShaderResourceCounters ResCounters = {};
-    if (m_Desc.IsAnyGraphicsPipeline())
-        ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);
-
     const auto SignCount = GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
@@ -511,10 +523,8 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(ShaderResourceBindingD3D11Imp
                               "' is not compatible with pipeline layout in current pipeline '", m_Desc.Name, "'.");
         }
 
-        DEV_CHECK_ERR(ResCounters == BaseBindings[sign],
+        DEV_CHECK_ERR(GetBaseBindings(sign) == BaseBindings[sign],
                       "Bound resources has incorrect base binding indices, this may indicate a bug in resource signature compatibility comparison.");
-
-        pSignature->ShiftBindings(ResCounters);
     }
 
     auto attrib_it = m_ResourceAttibutions.begin();

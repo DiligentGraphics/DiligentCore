@@ -90,6 +90,17 @@ public:
 
     Uint32 GetNumShaders() const { return m_NumShaders; }
 
+    const D3D11ShaderResourceCounters& GetBaseBindings(Uint32 Index) const
+    {
+        VERIFY_EXPR(Index < GetResourceSignatureCount());
+        return m_BaseBindings[Index];
+    }
+
+    Uint8 GetNumPixleUAVs() const
+    {
+        return m_NumPixelUAVs;
+    }
+
 #ifdef DILIGENT_DEVELOPMENT
     void DvpVerifySRBResources(class ShaderResourceBindingD3D11Impl* pSRBs[], const D3D11ShaderResourceCounters BaseBindings[], Uint32 NumSRBs) const;
 #endif
@@ -125,6 +136,9 @@ private:
     // The number of shader stages in this pipeline
     Uint8 m_NumShaders = 0;
 
+    // The total number of pixel shader UAVs used by this pipeline, including render targets
+    Uint8 m_NumPixelUAVs = 0;
+
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
@@ -132,6 +146,8 @@ private:
 
     using D3D11ShaderAutoPtrType             = CComPtr<ID3D11DeviceChild>;
     D3D11ShaderAutoPtrType* m_ppd3d11Shaders = nullptr; // Shader array indexed by m_ShaderIndices[]
+
+    D3D11ShaderResourceCounters* m_BaseBindings = nullptr; // [GetResourceSignatureCount()]
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages in the pipeline.

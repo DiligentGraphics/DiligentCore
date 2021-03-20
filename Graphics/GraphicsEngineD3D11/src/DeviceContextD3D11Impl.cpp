@@ -139,8 +139,8 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     m_BindInfo.ActiveSRBMask = 0;
     for (Uint32 s = 0; s < SignCount; ++s)
     {
-        const auto* pLayoutSign = m_pPipelineState->GetResourceSignature(s);
-        if (pLayoutSign == nullptr || pLayoutSign->GetTotalResourceCount() == 0)
+        const auto* pSignature = m_pPipelineState->GetResourceSignature(s);
+        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue;
 
         m_BindInfo.ActiveSRBMask |= (1u << s);
@@ -150,7 +150,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     if (m_BindInfo.ActiveStages != ActiveStages)
     {
         m_BindInfo.ActiveStages = ActiveStages;
-        m_BindInfo.StaleSRBMask = 0xFF;
+        m_BindInfo.StaleSRBMask = m_BindInfo.ActiveSRBMask;
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -345,37 +345,24 @@ void DeviceContextD3D11Impl::BindShaderResources()
     if ((m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask) == 0)
         return;
 
-    D3D11ShaderResourceCounters BaseBindings = {};
-    if (m_pPipelineState->GetDesc().IsAnyGraphicsPipeline())
-        BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = static_cast<Uint8>(m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets);
-
     PixelShaderUAVBindMode PsUavBindMode = m_CommittedRes.NumUAVs[PSInd] > 0 ?
         PixelShaderUAVBindMode::Clear :
         PixelShaderUAVBindMode::Keep;
 
-    auto ActiveSRBMask = Uint32{m_BindInfo.ActiveSRBMask};
-    while (ActiveSRBMask != 0)
+    while (m_BindInfo.StaleSRBMask != 0)
     {
-        Uint32 sign   = PlatformMisc::GetLSB(ActiveSRBMask);
-        Uint32 SigBit = (1u << sign);
+        Uint32 SigBit = ExtractLSB(m_BindInfo.StaleSRBMask);
+        Uint32 sign   = PlatformMisc::GetLSB(SigBit);
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
+        const auto& BaseBindings = m_pPipelineState->GetBaseBindings(sign);
 
-        ActiveSRBMask &= ~SigBit;
-
+#ifdef DILIGENT_DEVELOPMENT
+        m_BindInfo.BaseBindings[sign] = BaseBindings;
+#endif
         auto* pSRB = m_BindInfo.SRBs[sign];
         VERIFY_EXPR(pSRB);
-
-        if (m_BindInfo.StaleSRBMask & SigBit)
-        {
-#ifdef DILIGENT_DEVELOPMENT
-            m_BindInfo.BaseBindings[sign] = BaseBindings;
-#endif
-            BindCacheResources(pSRB->GetResourceCache(), BaseBindings, PsUavBindMode);
-        }
-        pSRB->GetSignature()->ShiftBindings(BaseBindings);
+        BindCacheResources(pSRB->GetResourceCache(), BaseBindings, PsUavBindMode);
     }
-    m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
-
 
     if (PsUavBindMode == PixelShaderUAVBindMode::Bind)
     {
@@ -383,7 +370,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
         // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
         const auto StartUAVSlot = m_NumBoundRenderTargets;
 
-        const Uint8 NumUAVSlots = BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd];
+        const Uint8 NumUAVSlots = m_pPipelineState->GetNumPixleUAVs();
         VERIFY(NumUAVSlots > StartUAVSlot, "Number of UAVs must be greater than the render target count");
         auto* d3d11UAVs   = m_CommittedRes.d3d11UAVs[PSInd];
         auto* d3d11UAVRes = m_CommittedRes.d3d11UAVResources[PSInd];
