@@ -79,7 +79,7 @@ public:
         return m_pResourceAttribs[ResIndex];
     }
 
-    using TBindings = std::array<Uint32, BINDING_RANGE_COUNT>;
+    using TBindings = std::array<Uint16, BINDING_RANGE_COUNT>;
 
     // Applies bindings for resources in this signature to GLProgram.
     // The bindings are biased by BaseBindings.

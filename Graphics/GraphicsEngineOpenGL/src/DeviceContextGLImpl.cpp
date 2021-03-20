@@ -161,8 +161,8 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     m_BindInfo.ActiveSRBMask = 0;
     for (Uint32 s = 0; s < SignCount; ++s)
     {
-        const auto* pLayoutSign = m_pPipelineState->GetResourceSignature(s);
-        if (pLayoutSign == nullptr || pLayoutSign->GetTotalResourceCount() == 0)
+        const auto* pSignature = m_pPipelineState->GetResourceSignature(s);
+        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue;
 
         m_BindInfo.ActiveSRBMask |= (1u << s);
@@ -170,7 +170,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 
 #ifdef DILIGENT_DEVELOPMENT
     // Unbind incompatible SRB and SRB with a higher binding index.
-    // This is the same behavior that used in Vulkan backend.
+    // This is the same behavior as in Vulkan backend.
     for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs.data()); sign < SignCount; ++sign)
     {
         m_BindInfo.SRBs[sign] = nullptr;
@@ -677,41 +677,33 @@ void DeviceContextGLImpl::BindProgramResources()
     //if (m_CommitedResourcesTentativeBarriers != 0)
     //    LOG_INFO_MESSAGE("Not all tentative resource barriers have been executed since the last call to CommitShaderResources(). Did you forget to call Draw()/DispatchCompute() ?");
 
-    if ((m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask) == 0)
+    // Only commit those stale SRBs that are used by current PSO
+    Uint32 StaleSRBs = m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask;
+    if (StaleSRBs == 0)
         return;
 
     VERIFY_EXPR(m_BoundWritableTextures.empty());
     VERIFY_EXPR(m_BoundWritableBuffers.empty());
 
     m_CommitedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
-    TBindings Bindings                   = {};
 
-    auto ActiveSRBMask = Uint32{m_BindInfo.ActiveSRBMask};
-    while (ActiveSRBMask != 0)
+    while (StaleSRBs != 0)
     {
-        Uint32 sign = PlatformMisc::GetLSB(ActiveSRBMask);
+        auto SignBit = ExtractLSB(StaleSRBs);
+        auto sign    = PlatformMisc::GetLSB(SignBit);
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
-
-        Uint32 SignBit = (1u << sign);
-        ActiveSRBMask &= ~SignBit;
+        const auto& BaseBindings = m_pPipelineState->GetBaseBindings(sign);
+#ifdef DILIGENT_DEVELOPMENT
+        m_BindInfo.BaseBindings[sign] = BaseBindings;
+#endif
 
         const auto* pSRB = m_BindInfo.SRBs[sign];
         DEV_CHECK_ERR(pSRB != nullptr, "No SRB is bound for index ", sign);
-
-        if (m_BindInfo.StaleSRBMask & SignBit)
-        {
-            auto& ResoureCache = pSRB->GetResourceCache();
-            ResoureCache.BindResources(GetContextState(), Bindings, m_BoundWritableTextures, m_BoundWritableBuffers);
-
-#ifdef DILIGENT_DEVELOPMENT
-            m_BindInfo.BaseBindings[sign] = Bindings;
-#endif
-        }
-
-        pSRB->GetSignature()->ShiftBindings(Bindings);
+        auto& ResoureCache = pSRB->GetResourceCache();
+        ResoureCache.BindResources(GetContextState(), BaseBindings, m_BoundWritableTextures, m_BoundWritableBuffers);
     }
-
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
+
 
 #if GL_ARB_shader_image_load_store
     // Go through the list of textures bound as AUVs and set the required memory barriers

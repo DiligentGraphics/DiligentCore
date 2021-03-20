@@ -119,7 +119,7 @@ ShaderResourceCacheGL::~ShaderResourceCacheGL()
 }
 
 void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
-                                          const std::array<Uint32, 4>& BaseBindings,
+                                          const std::array<Uint16, 4>& BaseBindings,
                                           std::vector<TextureBaseGL*>& WritableTextures,
                                           std::vector<BufferGLImpl*>&  WritableBuffers) const
 {

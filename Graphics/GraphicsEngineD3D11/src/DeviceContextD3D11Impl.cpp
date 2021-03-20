@@ -150,12 +150,12 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     if (m_BindInfo.ActiveStages != ActiveStages)
     {
         m_BindInfo.ActiveStages = ActiveStages;
-        m_BindInfo.StaleSRBMask = m_BindInfo.ActiveSRBMask;
+        m_BindInfo.StaleSRBMask = 0xFFu;
     }
 
 #ifdef DILIGENT_DEVELOPMENT
     // Unbind incompatible SRBs and SRBs with higher binding indices.
-    // This is the same behavior that as in Vulkan backend.
+    // This is the same behavior as in Vulkan backend.
     for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs.data()); sign < SignCount; ++sign)
     {
         m_BindInfo.SRBs[sign] = nullptr;
@@ -342,17 +342,19 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
 
 void DeviceContextD3D11Impl::BindShaderResources()
 {
-    if ((m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask) == 0)
+    // Only commit those stale SRBs that are used by current PSO
+    Uint32 StaleSRBs = m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask;
+    if (StaleSRBs == 0)
         return;
 
     PixelShaderUAVBindMode PsUavBindMode = m_CommittedRes.NumUAVs[PSInd] > 0 ?
         PixelShaderUAVBindMode::Clear :
         PixelShaderUAVBindMode::Keep;
 
-    while (m_BindInfo.StaleSRBMask != 0)
+    while (StaleSRBs != 0)
     {
-        Uint32 SigBit = ExtractLSB(m_BindInfo.StaleSRBMask);
-        Uint32 sign   = PlatformMisc::GetLSB(SigBit);
+        auto SignBit = ExtractLSB(StaleSRBs);
+        auto sign    = PlatformMisc::GetLSB(SignBit);
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
         const auto& BaseBindings = m_pPipelineState->GetBaseBindings(sign);
 
@@ -363,6 +365,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
         VERIFY_EXPR(pSRB);
         BindCacheResources(pSRB->GetResourceCache(), BaseBindings, PsUavBindMode);
     }
+    m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 
     if (PsUavBindMode == PixelShaderUAVBindMode::Bind)
     {

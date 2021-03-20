@@ -211,13 +211,13 @@ void PipelineStateGLImpl::InitResourceLayout(const PipelineStateCreateInfo& Crea
     auto& CtxState = m_pDevice->GetImmediateContext().RawPtr<DeviceContextGLImpl>()->GetContextState();
 
     PipelineResourceSignatureGLImpl::TBindings Bindings = {};
-
     for (Uint32 s = 0; s < m_SignatureCount; ++s)
     {
         const auto& pSignature = m_Signatures[s];
         if (pSignature == nullptr)
             continue;
 
+        m_BaseBindings[s] = Bindings;
         for (Uint32 p = 0; p < m_NumPrograms; ++p)
             pSignature->ApplyBindings(m_GLPrograms[p], CtxState, GetShaderStageType(p), Bindings);
 
@@ -268,13 +268,16 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
     MemPool.AddSpace<GLProgramObj>(m_NumPrograms);
+    const auto SignCount = GetResourceSignatureCount(); // Must be called after ReserveSpaceForPipelineDesc()
+    MemPool.AddSpace<TBindings>(SignCount);
     MemPool.AddSpace<SHADER_TYPE>(m_NumPrograms);
 
     MemPool.Reserve();
 
     InitializePipelineDesc(CreateInfo, MemPool);
-    m_GLPrograms  = MemPool.ConstructArray<GLProgramObj>(m_NumPrograms, false);
-    m_ShaderTypes = MemPool.ConstructArray<SHADER_TYPE>(m_NumPrograms, SHADER_TYPE_UNKNOWN);
+    m_GLPrograms   = MemPool.ConstructArray<GLProgramObj>(m_NumPrograms, false);
+    m_BaseBindings = MemPool.ConstructArray<TBindings>(SignCount);
+    m_ShaderTypes  = MemPool.ConstructArray<SHADER_TYPE>(m_NumPrograms, SHADER_TYPE_UNKNOWN);
 
     // Get active shader stages.
     SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
@@ -526,7 +529,6 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
 {
     // Verify SRB compatibility with this pipeline
     const auto SignCount = GetResourceSignatureCount();
-    TBindings  Bindings  = {};
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
         const auto* pSignature = GetResourceSignature(sign);
@@ -548,10 +550,8 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
                               "' is not compatible with pipeline layout in current pipeline '", m_Desc.Name, "'.");
         }
 
-        DEV_CHECK_ERR(Bindings == BaseBindings[sign],
+        DEV_CHECK_ERR(GetBaseBindings(sign) == BaseBindings[sign],
                       "Bound resources has incorrect base binding indices, this may indicate a bug in resource signature compatibility comparison.");
-
-        pSignature->ShiftBindings(Bindings);
     }
 
 

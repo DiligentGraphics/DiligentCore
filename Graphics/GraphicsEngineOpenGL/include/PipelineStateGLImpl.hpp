@@ -62,8 +62,14 @@ public:
 
     void CommitProgram(GLContextState& State);
 
-#ifdef DILIGENT_DEVELOPMENT
     using TBindings = PipelineResourceSignatureGLImpl::TBindings;
+    const TBindings& GetBaseBindings(Uint32 Index) const
+    {
+        VERIFY_EXPR(Index < GetResourceSignatureCount());
+        return m_BaseBindings[Index];
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
     void DvpVerifySRBResources(class ShaderResourceBindingGLImpl* pSRBs[], const TBindings BaseBindings[], Uint32 NumSRBs) const;
 #endif
 
@@ -105,6 +111,8 @@ private:
     Uint8        m_NumPrograms                = 0;
     bool         m_IsProgramPipelineSupported = false;
     SHADER_TYPE* m_ShaderTypes                = nullptr; // [m_NumPrograms]
+
+    TBindings* m_BaseBindings = nullptr; // [m_SignatureCount]
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages in the pipeline.

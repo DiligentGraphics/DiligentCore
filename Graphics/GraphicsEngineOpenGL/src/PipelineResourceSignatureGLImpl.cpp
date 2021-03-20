@@ -29,6 +29,7 @@
 #include "PipelineResourceSignatureGLImpl.hpp"
 
 #include <algorithm>
+#include <limits>
 
 #include "RenderDeviceGLImpl.hpp"
 
@@ -176,14 +177,15 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
                     SamplerIdx = FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd);
             }
 
-            Uint32& CacheOffset = m_BindingCount[Range];
+            auto& CacheOffset = m_BindingCount[Range];
             new (m_pResourceAttribs + i) ResourceAttribs //
                 {
                     CacheOffset,
                     SamplerIdx,
                     ImtblSamplerIdx != InvalidImmutableSamplerIndex // _ImtblSamplerAssigned
                 };
-            CacheOffset += ResDesc.ArraySize;
+            VERIFY(CacheOffset + ResDesc.ArraySize <= std::numeric_limits<TBindings::value_type>::max(), "Cache offset exceeds representable range");
+            CacheOffset += static_cast<TBindings::value_type>(ResDesc.ArraySize);
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {

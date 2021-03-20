@@ -117,7 +117,7 @@ public:
         RefCntAutoPtr<BufferViewGLImpl> pBufferView;
     };
 
-    using TResourceCount = std::array<Uint32, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
+    using TResourceCount = std::array<Uint16, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
     static size_t GetRequriedMemorySize(const TResourceCount& ResCount);
 
     void Initialize(const TResourceCount& Count, IMemoryAllocator& MemAllocator);
@@ -242,7 +242,7 @@ public:
 #endif
 
     void BindResources(GLContextState&              GLState,
-                       const std::array<Uint32, 4>& BaseBindings,
+                       const std::array<Uint16, 4>& BaseBindings,
                        std::vector<TextureBaseGL*>& WritableTextures,
                        std::vector<BufferGLImpl*>&  WritableBuffers) const;
 
