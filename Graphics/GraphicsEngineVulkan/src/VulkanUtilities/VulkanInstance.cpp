@@ -358,7 +358,15 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const
     {
         VkPhysicalDeviceProperties SelectedDeviceProps;
         vkGetPhysicalDeviceProperties(SelectedPhysicalDevice, &SelectedDeviceProps);
-        LOG_INFO_MESSAGE("Using physical device '", SelectedDeviceProps.deviceName, '\'');
+        LOG_INFO_MESSAGE("Using physical device '", SelectedDeviceProps.deviceName,
+                         "', API version ",
+                         VK_VERSION_MAJOR(SelectedDeviceProps.apiVersion), '.',
+                         VK_VERSION_MINOR(SelectedDeviceProps.apiVersion), '.',
+                         VK_VERSION_PATCH(SelectedDeviceProps.apiVersion),
+                         ", Driver version ",
+                         VK_VERSION_MAJOR(SelectedDeviceProps.driverVersion), '.',
+                         VK_VERSION_MINOR(SelectedDeviceProps.driverVersion), '.',
+                         VK_VERSION_PATCH(SelectedDeviceProps.driverVersion), '.');
     }
     else
     {

@@ -110,4 +110,29 @@ void GetShaderResourceTypeAndFlags(const D3DShaderResourceAttribs& Attribs,
     }
 }
 
+void VerifyD3DResourceMerge(const PipelineStateDesc&        PSODesc,
+                            const D3DShaderResourceAttribs& ExistingRes,
+                            const D3DShaderResourceAttribs& NewResAttribs) noexcept(false)
+{
+#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                          \
+    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                                  \
+                        "' is shared between multiple shaders in pipeline '", (PSODesc.Name ? PSODesc.Name : ""), \
+                        "', but its " PropertyName " varies. A variable shared between multiple shaders "         \
+                        "must be defined identically in all shaders. Either use separate variables for "          \
+                        "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
+
+    if (ExistingRes.GetInputType() != NewResAttribs.GetInputType())
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("input type");
+
+    if (ExistingRes.GetSRVDimension() != NewResAttribs.GetSRVDimension())
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("resource dimension");
+
+    if (ExistingRes.BindCount != NewResAttribs.BindCount)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("array size");
+
+    if (ExistingRes.IsMultisample() != NewResAttribs.IsMultisample())
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("mutlisample state");
+#undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
+}
+
 } // namespace Diligent

@@ -31,10 +31,7 @@
 /// Declaration of Diligent::ShaderVariableManagerD3D11 class
 
 #include "ShaderResources.hpp"
-#include "ShaderBase.hpp"
 #include "ShaderResourceVariableBase.hpp"
-#include "ShaderVariableD3D.hpp"
-#include "ShaderResourcesD3D11.hpp"
 #include "ShaderResourceVariableD3D.h"
 #include "PipelineResourceAttribsD3D11.hpp"
 #include "ShaderResourceCacheD3D11.hpp"
@@ -43,7 +40,7 @@ namespace Diligent
 {
 
 /// Diligent::ShaderVariableManagerD3D11 class
-// sizeof(ShaderVariableManagerD3D11) == 56, (Release, x64)
+// sizeof(ShaderVariableManagerD3D11) == 48, (Release, x64)
 class ShaderVariableManagerD3D11
 {
 public:
@@ -210,11 +207,11 @@ public:
     // clang-format on
 
 private:
-    static void CountResources(const PipelineResourceSignatureD3D11Impl& Signature,
-                               const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
-                               Uint32                                    NumAllowedTypes,
-                               SHADER_TYPE                               ShaderType,
-                               D3DShaderResourceCounters&                Counters);
+    static D3DShaderResourceCounters CountResources(
+        const PipelineResourceSignatureD3D11Impl& Signature,
+        const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+        Uint32                                    NumAllowedTypes,
+        SHADER_TYPE                               ShaderType);
 
     // clang-format off
     using OffsetType = Uint16;
@@ -310,6 +307,8 @@ private:
             HandleSampler(GetConstResource<SamplerBindInfo>(s));
     }
 
+    void SetSampler(Uint32 ResIdx, class SamplerD3D11Impl* pSamplerD3D11, Uint32 ArrayIndex);
+
     friend class ShaderVariableIndexLocator;
     friend class ShaderVariableLocator;
 
@@ -319,7 +318,7 @@ private:
     IObject& m_Owner;
 
     // No need to use shared pointer, as the resource cache is either part of the same
-    // ShaderD3D11Impl object, or ShaderResourceBindingD3D11Impl object
+    // PipelineResourceSignatureD3D11Impl object, or ShaderResourceBindingD3D11Impl object.
     ShaderResourceCacheD3D11& m_ResourceCache;
     void*                     m_ResourceBuffer = nullptr;
 

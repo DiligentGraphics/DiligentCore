@@ -116,12 +116,13 @@ const PipelineResourceAttribsD3D11& ShaderVariableManagerD3D11::GetAttribs(Uint3
     return m_pSignature->GetResourceAttribs(Index);
 }
 
-void ShaderVariableManagerD3D11::CountResources(const PipelineResourceSignatureD3D11Impl& Signature,
-                                                const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
-                                                Uint32                                    NumAllowedTypes,
-                                                const SHADER_TYPE                         ShaderType,
-                                                D3DShaderResourceCounters&                Counters)
+D3DShaderResourceCounters ShaderVariableManagerD3D11::CountResources(
+    const PipelineResourceSignatureD3D11Impl& Signature,
+    const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
+    Uint32                                    NumAllowedTypes,
+    const SHADER_TYPE                         ShaderType)
 {
+    D3DShaderResourceCounters Counters;
     ProcessSignatureResources(
         Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
         [&](Uint32 Index) //
@@ -143,6 +144,7 @@ void ShaderVariableManagerD3D11::CountResources(const PipelineResourceSignatureD
                     UNEXPECTED("Unsupported resource type.");
             }
         });
+    return Counters;
 }
 
 size_t ShaderVariableManagerD3D11::GetRequiredMemorySize(const PipelineResourceSignatureD3D11Impl& Signature,
@@ -150,9 +152,7 @@ size_t ShaderVariableManagerD3D11::GetRequiredMemorySize(const PipelineResourceS
                                                          Uint32                                    NumAllowedTypes,
                                                          SHADER_TYPE                               ShaderType)
 {
-    D3DShaderResourceCounters ResCounters;
-    CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, ResCounters);
-
+    const auto ResCounters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
     // clang-format off
     auto MemSize = ResCounters.NumCBs      * sizeof(ConstBuffBindInfo) +
                    ResCounters.NumTexSRVs  * sizeof(TexSRVBindInfo)    +
@@ -175,8 +175,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
     m_pDbgAllocator = &Allocator;
 #endif
 
-    D3DShaderResourceCounters ResCounters;
-    CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, ResCounters);
+    const auto ResCounters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
 
     m_pSignature      = &Signature;
     m_ShaderTypeIndex = static_cast<Uint8>(GetShaderTypeIndex(ShaderType));
@@ -205,7 +204,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
 
     VERIFY_EXPR(m_MemorySize == GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType));
 
-    if (m_MemorySize)
+    if (m_MemorySize > 0)
     {
         m_ResourceBuffer = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader resource layout resources", m_MemorySize);
     }
@@ -285,10 +284,10 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* 
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
-    DEV_CHECK_ERR(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", Desc.Name, "'. Max allowed index: ", Desc.ArraySize - 1);
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
-
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{pBuffer, IID_BufferD3D11};
@@ -307,11 +306,11 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
-    DEV_CHECK_ERR(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", Desc.Name, "'. Max allowed index: ", Desc.ArraySize - 1);
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
-
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
+    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
@@ -330,98 +329,90 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
         const auto& SampAttr = m_ParentManager.GetAttribs(Attr.SamplerInd);
         const auto& SampDesc = m_ParentManager.GetResourceDesc(Attr.SamplerInd);
         VERIFY_EXPR(SampDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+        VERIFY(!SampAttr.IsImmutableSamplerAssigned(),
+               "When an immutable sampler is assigned to a texture, the texture's ImtblSamplerAssigned flag must also be set by "
+               "PipelineResourceSignatureD3D11Impl::CreateLayout(). This mismatch is a bug.");
         VERIFY_EXPR((Desc.ShaderStages & SampDesc.ShaderStages) == Desc.ShaderStages);
         VERIFY_EXPR(SampDesc.ArraySize == Desc.ArraySize || SampDesc.ArraySize == 1);
         const auto SampArrayIndex = (SampDesc.ArraySize != 1 ? ArrayIndex : 0);
 
-        SamplerD3D11Impl* pSamplerD3D11Impl = nullptr;
         if (pViewD3D11)
         {
-            pSamplerD3D11Impl = ValidatedCast<SamplerD3D11Impl>(pViewD3D11->GetSampler());
-#ifdef DILIGENT_DEVELOPMENT
-            if (pSamplerD3D11Impl == nullptr)
+            auto* pSamplerD3D11Impl = ValidatedCast<SamplerD3D11Impl>(pViewD3D11->GetSampler());
+            if (pSamplerD3D11Impl != nullptr)
             {
-                if (SampDesc.ArraySize > 1)
-                    LOG_ERROR_MESSAGE("Failed to bind sampler to variable '", SampDesc.Name, "[", ArrayIndex, "]'. Sampler is not set in the texture view '", pViewD3D11->GetDesc().Name, "'");
-                else
-                    LOG_ERROR_MESSAGE("Failed to bind sampler to variable '", SampDesc.Name, "'. Sampler is not set in the texture view '", pViewD3D11->GetDesc().Name, "'");
+                m_ParentManager.SetSampler(Attr.SamplerInd, pSamplerD3D11Impl, SampArrayIndex);
             }
-#endif
-        }
-#ifdef DILIGENT_DEVELOPMENT
-        if (SampDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        {
-            auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex);
-            if (CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11Impl)
+            else
             {
-                auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
-                LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", GetShaderResourcePrintName(SampDesc, ArrayIndex),
-                                  "'. Attempting to bind another sampler or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.");
+                LOG_ERROR_MESSAGE("Failed to bind sampler to variable '", GetShaderResourcePrintName(SampDesc, ArrayIndex), "'. Sampler is not set in the texture view '", pViewD3D11->GetDesc().Name, "'");
             }
         }
-#endif
-        ResourceCache.SetSampler(SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
     }
     ResourceCache.SetTexSRV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
-void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSampler, Uint32 ArrayIndex)
+void ShaderVariableManagerD3D11::SetSampler(Uint32 ResIdx, SamplerD3D11Impl* pSamplerD3D11, Uint32 ArrayIndex)
 {
-    const auto& Desc = GetDesc();
-    const auto& Attr = GetAttribs();
-    DEV_CHECK_ERR(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", Desc.Name, "'. Max allowed index: ", Desc.ArraySize - 1);
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
-
+    const auto& Desc = GetResourceDesc(ResIdx);
+    const auto& Attr = GetAttribs(ResIdx);
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
-
-    // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{pSampler, IID_SamplerD3D11};
+    VERIFY_EXPR(ArrayIndex < Desc.ArraySize);
+    VERIFY(!Attr.IsImmutableSamplerAssigned(), "Sampler must not be assigned to an immutable sampler.");
 
 #ifdef DILIGENT_DEVELOPMENT
-    if (pSampler && !pSamplerD3D11)
+    if (Desc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
     {
-        LOG_ERROR_MESSAGE("Failed to bind object '", Desc.Name, "' to variable '", GetShaderResourcePrintName(Desc, ArrayIndex),
-                          "''. Incorect object type: sampler is expected.");
-    }
-
-    if (Attr.IsSamplerAssigned() && !Attr.IsImmutableSamplerAssigned())
-    {
-        auto* TexSRVName = m_ParentManager.GetResourceDesc(Attr.SamplerInd).Name;
-        LOG_WARNING_MESSAGE("Texture sampler sampler '", Desc.Name, "' is assigned to texture SRV '",
-                            TexSRVName, "' and should not be accessed directly. The sampler is initialized when texture SRV is set to '",
-                            TexSRVName, "' variable.");
-    }
-
-    if (GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-    {
-        auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + ArrayIndex);
+        const auto& CachedSampler = m_ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + ArrayIndex);
         if (CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11)
         {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
-            LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", GetShaderResourcePrintName(Desc, ArrayIndex),
+            LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", GetShaderVariableTypeLiteralName(Desc.VarType),
+                              " shader variable '", GetShaderResourcePrintName(Desc, ArrayIndex),
                               "'. Attempting to bind another sampler or null is an error and may cause unpredicted behavior. "
                               "Use another shader resource binding instance or label the variable as dynamic.");
         }
     }
 #endif
 
-    ResourceCache.SetSampler(Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
+    m_ResourceCache.SetSampler(Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
+}
+
+void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSampler, Uint32 ArrayIndex)
+{
+    const auto& Desc = GetDesc();
+    VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+
+    // We cannot use ValidatedCast<> here as the resource can be of wrong type
+    RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{pSampler, IID_SamplerD3D11};
+    if (pSamplerD3D11)
+    {
+        m_ParentManager.SetSampler(m_ResIndex, std::move(pSamplerD3D11), ArrayIndex);
+    }
+    else
+    {
+        if (pSampler != nullptr)
+        {
+            LOG_ERROR_MESSAGE("Failed to bind object '", Desc.Name, "' to variable '", GetShaderResourcePrintName(Desc, ArrayIndex),
+                              "''. Incorect object type: sampler is expected.");
+        }
+    }
 }
 
 void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
-    DEV_CHECK_ERR(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", Desc.Name, "'. Max allowed index: ", Desc.ArraySize - 1);
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
-
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
+    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + ArrayIndex);
+        const auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_BUFFER, false, CachedSRV.pView.RawPtr(),
@@ -437,16 +428,16 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVi
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
-    DEV_CHECK_ERR(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", Desc.Name, "'. Max allowed index: ", Desc.ArraySize - 1);
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
-
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + ArrayIndex);
+        const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr(),
@@ -461,16 +452,16 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pV
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
-    DEV_CHECK_ERR(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", Desc.Name, "'. Max allowed index: ", Desc.ArraySize - 1);
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
-
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
+    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + ArrayIndex);
+        const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + ArrayIndex);
         VerifyResourceViewBinding(Desc, ArrayIndex,
                                   pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_BUFFER, false, CachedUAV.pView.RawPtr(),
@@ -630,7 +621,7 @@ Uint32 ShaderVariableManagerD3D11::GetVariableIndex(const IShaderResourceVariabl
     }
 
     LOG_ERROR("Failed to get variable index. The variable ", &Variable, " does not belong to this shader resource layout");
-    return static_cast<Uint32>(-1);
+    return ~0U;
 }
 
 class ShaderVariableLocator

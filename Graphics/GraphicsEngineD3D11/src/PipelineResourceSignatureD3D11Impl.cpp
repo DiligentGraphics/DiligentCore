@@ -292,11 +292,10 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
     // SrcResourceCache contains only static resources.
     // DstResourceCache contains static, mutable and dynamic resources.
     const auto& SrcResourceCache = *m_pStaticResCache;
-    const auto  ResIdxRange      = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-
     VERIFY_EXPR(SrcResourceCache.GetContentType() == ResourceCacheContentType::Signature);
     VERIFY_EXPR(DstResourceCache.GetContentType() == ResourceCacheContentType::SRB);
 
+    const auto ResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
     {
         const auto& ResDesc = GetResourceDesc(r);
@@ -490,6 +489,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                 }
                 else
                 {
+                    VERIFY_EXPR(SRV.pBuffer != nullptr);
                     if (!VerifyBufferViewModeD3D(SRV.pView.RawPtr<BufferViewD3D11Impl>(), D3DAttribs, ShaderName))
                         BindingsOK = false;
                 }
@@ -515,6 +515,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                 }
                 else
                 {
+                    VERIFY_EXPR(UAV.pBuffer != nullptr);
                     if (!VerifyBufferViewModeD3D(UAV.pView.RawPtr<BufferViewD3D11Impl>(), D3DAttribs, ShaderName))
                         BindingsOK = false;
                 }

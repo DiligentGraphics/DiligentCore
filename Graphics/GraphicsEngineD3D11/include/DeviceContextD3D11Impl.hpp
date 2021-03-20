@@ -395,7 +395,6 @@ private:
 
     void BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
                             const D3D11ShaderResourceCounters& BaseBindings,
-                            SHADER_TYPE                        ActiveStages,
                             PixelShaderUAVBindMode&            PsUavBindMode);
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -415,15 +414,15 @@ private:
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
 
         Bitfield ActiveSRBMask = 0; // Indicates which SRBs are active in current PSO
-        Bitfield StaleSRBMask  = 0; // Indicates stale SRBs that have descriptor sets that need to be bound
+        Bitfield StaleSRBMask  = 0; // Indicates stale SRBs that have resources that need to be bound
 
         SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
 
 #ifdef DILIGENT_DEVELOPMENT
         bool CommittedResourcesValidated = false;
 
-        // Binding offsets that was used at last BindProgramResources() call.
-        std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES> BoundResOffsets = {};
+        // Base bindings that were used in the last BindShaderResources() call.
+        std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
 #endif
 
         SRBState()

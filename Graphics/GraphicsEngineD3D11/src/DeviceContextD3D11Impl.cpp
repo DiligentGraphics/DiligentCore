@@ -73,7 +73,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
         return;
 
     TDeviceContextBase::SetPipelineState(pPipelineStateD3D11, 0 /*Dummy*/);
-    auto& Desc = pPipelineStateD3D11->GetDesc();
+    const auto& Desc = pPipelineStateD3D11->GetDesc();
     if (Desc.PipelineType == PIPELINE_TYPE_COMPUTE)
     {
         auto* pd3d11CS = pPipelineStateD3D11->GetD3D11ComputeShader();
@@ -146,16 +146,16 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
         m_BindInfo.ActiveSRBMask |= (1u << s);
     }
 
-    // Reset states if new pipeline have new shader stages.
-    if ((m_BindInfo.ActiveStages & ActiveStages) != ActiveStages)
+    // Reset SRBs if the new pipeline have different shader stages.
+    if (m_BindInfo.ActiveStages != ActiveStages)
     {
         m_BindInfo.ActiveStages = ActiveStages;
         m_BindInfo.StaleSRBMask = 0xFF;
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    // Unbind incompatible SRB and SRB with a higher binding index.
-    // This is the same behavior that used in Vulkan backend.
+    // Unbind incompatible SRBs and SRBs with higher binding indices.
+    // This is the same behavior that as in Vulkan backend.
     for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs.data()); sign < SignCount; ++sign)
     {
         m_BindInfo.SRBs[sign] = nullptr;
@@ -246,14 +246,12 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
 
 void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
                                                 const D3D11ShaderResourceCounters& BaseBindings,
-                                                SHADER_TYPE                        ActiveStages,
                                                 PixelShaderUAVBindMode&            PsUavBindMode)
 {
-    while (ActiveStages != 0)
+    for (SHADER_TYPE ActiveStages = m_BindInfo.ActiveStages; ActiveStages != SHADER_TYPE_UNKNOWN;)
     {
-        const auto ShaderInd  = PlatformMisc::GetLSB(ActiveStages);
-        const auto ShaderType = static_cast<SHADER_TYPE>(1u << ShaderInd);
-        ActiveStages &= ~ShaderType;
+        const auto ShaderInd  = ExtractFirstShaderStageIndex(ActiveStages);
+        const auto ShaderType = GetShaderTypeFromIndex(ShaderInd);
 
         if (ResourceCache.GetCBCount(ShaderInd) > 0)
         {
@@ -347,11 +345,9 @@ void DeviceContextD3D11Impl::BindShaderResources()
     if ((m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask) == 0)
         return;
 
-    D3D11ShaderResourceCounters Bindings     = {};
-    const auto                  ActiveStages = m_BindInfo.ActiveStages;
-
+    D3D11ShaderResourceCounters BaseBindings = {};
     if (m_pPipelineState->GetDesc().IsAnyGraphicsPipeline())
-        Bindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = static_cast<Uint8>(m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets);
+        BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = static_cast<Uint8>(m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets);
 
     PixelShaderUAVBindMode PsUavBindMode = m_CommittedRes.NumUAVs[PSInd] > 0 ?
         PixelShaderUAVBindMode::Clear :
@@ -372,11 +368,11 @@ void DeviceContextD3D11Impl::BindShaderResources()
         if (m_BindInfo.StaleSRBMask & SigBit)
         {
 #ifdef DILIGENT_DEVELOPMENT
-            m_BindInfo.BoundResOffsets[sign] = Bindings;
+            m_BindInfo.BaseBindings[sign] = BaseBindings;
 #endif
-            BindCacheResources(pSRB->GetResourceCache(), Bindings, ActiveStages, PsUavBindMode);
+            BindCacheResources(pSRB->GetResourceCache(), BaseBindings, PsUavBindMode);
         }
-        pSRB->GetSignature()->ShiftBindings(Bindings);
+        pSRB->GetSignature()->ShiftBindings(BaseBindings);
     }
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 
@@ -387,7 +383,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
         // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
         const auto StartUAVSlot = m_NumBoundRenderTargets;
 
-        const Uint8 NumUAVSlots = Bindings[D3D11_RESOURCE_RANGE_UAV][PSInd];
+        const Uint8 NumUAVSlots = BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd];
         VERIFY(NumUAVSlots > StartUAVSlot, "Number of UAVs must be greater than the render target count");
         auto* d3d11UAVs   = m_CommittedRes.d3d11UAVs[PSInd];
         auto* d3d11UAVRes = m_CommittedRes.d3d11UAVResources[PSInd];
@@ -430,7 +426,7 @@ void DeviceContextD3D11Impl::DvpValidateCommittedShaderResources()
     if (m_BindInfo.CommittedResourcesValidated)
         return;
 
-    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.SRBs.data(), m_BindInfo.BoundResOffsets.data(), static_cast<Uint32>(m_BindInfo.SRBs.size()));
+    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.SRBs.data(), m_BindInfo.BaseBindings.data(), static_cast<Uint32>(m_BindInfo.SRBs.size()));
     m_BindInfo.CommittedResourcesValidated = true;
 }
 #endif

@@ -26,10 +26,12 @@
  */
 
 #include "pch.h"
+
+#include "PipelineStateD3D11Impl.hpp"
+
 #include <array>
 #include <d3dcompiler.h>
 
-#include "PipelineStateD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
 #include "EngineMemory.h"
@@ -38,41 +40,10 @@
 namespace Diligent
 {
 
-namespace
-{
-
-void VerifyResourceMerge(const PipelineStateDesc&        PSODesc,
-                         const D3DShaderResourceAttribs& ExistingRes,
-                         const D3DShaderResourceAttribs& NewResAttribs)
-{
-#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                          \
-    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                                  \
-                        "' is shared between multiple shaders in pipeline '", (PSODesc.Name ? PSODesc.Name : ""), \
-                        "', but its " PropertyName " varies. A variable shared between multiple shaders "         \
-                        "must be defined identically in all shaders. Either use separate variables for "          \
-                        "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
-
-    if (ExistingRes.GetInputType() != NewResAttribs.GetInputType())
-        LOG_RESOURCE_MERGE_ERROR_AND_THROW("input type");
-
-    if (ExistingRes.GetSRVDimension() != NewResAttribs.GetSRVDimension())
-        LOG_RESOURCE_MERGE_ERROR_AND_THROW("resource dimension");
-
-    if (ExistingRes.BindCount != NewResAttribs.BindCount)
-        LOG_RESOURCE_MERGE_ERROR_AND_THROW("array size");
-
-    if (ExistingRes.IsMultisample() != NewResAttribs.IsMultisample())
-        LOG_RESOURCE_MERGE_ERROR_AND_THROW("mutlisample state");
-#undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
-}
-
 __forceinline SHADER_TYPE GetShaderStageType(const ShaderD3D11Impl* pShader)
 {
     return pShader->GetDesc().ShaderType;
 }
-
-} // namespace
-
 
 RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::CreateDefaultResourceSignature(
     const PipelineStateCreateInfo&       CreateInfo,
@@ -106,19 +77,20 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
     for (auto* pShader : Shaders)
     {
         const auto& ShaderResources = *pShader->GetShaderResources();
+        const auto  ShaderType      = ShaderResources.GetShaderType();
+        VERIFY_EXPR(ShaderType == pShader->GetDesc().ShaderType);
 
         ShaderResources.ProcessResources(
             [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
             {
+                // Use default variable type and current shader type for shader stages
+                auto ShaderStages = ShaderType;
+                auto VarType      = LayoutDesc.DefaultVariableType;
+
                 const char* const SamplerSuffix =
                     (ShaderResources.IsUsingCombinedTextureSamplers() && Attribs.GetInputType() == D3D_SIT_SAMPLER) ?
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
-
-                // Use default variable type and current shader stages
-                auto ShaderStages = pShader->GetDesc().ShaderType;
-                auto VarType      = LayoutDesc.DefaultVariableType;
-
                 const auto VarIndex = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ShaderStages, SamplerSuffix);
                 if (VarIndex != InvalidPipelineResourceLayoutVariableIndex)
                 {
@@ -145,7 +117,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
                 }
                 else
                 {
-                    VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->Attribs, Attribs);
+                    VerifyD3DResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->Attribs, Attribs);
                 }
             } //
         );
@@ -178,8 +150,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
         ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
         ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
 
-        constexpr bool bIsDeviceInternal = true;
-        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, pSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
+        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, pSignature.DblPtr<IPipelineResourceSignature>());
 
         if (!pSignature)
             LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "'.");
@@ -228,14 +199,12 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 
         ValidateShaderResources(pShader);
 
-        CComPtr<ID3DBlob> pBlob;
-        D3DCreateBlob(pBytecode->GetBufferSize(), &pBlob);
-        memcpy(pBlob->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
+        auto& pPatchedBytecode = ByteCodes[s];
+        D3DCreateBlob(pBytecode->GetBufferSize(), &pPatchedBytecode);
+        memcpy(pPatchedBytecode->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
 
-        if (!DXBCUtils::RemapResourceBindings(ResourceMap, pBlob->GetBufferPointer(), pBlob->GetBufferSize()))
+        if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetBufferPointer(), pPatchedBytecode->GetBufferSize()))
             LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
-
-        ByteCodes[s] = pBlob;
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -349,8 +318,8 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
         if (GetD3D11VertexShader() == nullptr)
             LOG_ERROR_AND_THROW("Vertex shader is null");
 
-        auto& GraphicsPipeline = GetGraphicsPipelineDesc();
-        auto* pDeviceD3D11     = pRenderDeviceD3D11->GetD3D11Device();
+        const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
+        auto* const pDeviceD3D11     = pRenderDeviceD3D11->GetD3D11Device();
 
         D3D11_BLEND_DESC D3D11BSDesc = {};
         BlendStateDesc_To_D3D11_BLEND_DESC(GraphicsPipeline.BlendDesc, D3D11BSDesc);
@@ -515,15 +484,14 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(ShaderResourceBindingD3D11Imp
                                                    Uint32                            NumSRBs) const
 {
     // Verify SRB compatibility with this pipeline
-    const auto                  SignCount   = GetResourceSignatureCount();
     D3D11ShaderResourceCounters ResCounters = {};
-
     if (m_Desc.IsAnyGraphicsPipeline())
-        ResCounters[D3D11_RESOURCE_RANGE_UAV][GetShaderTypeIndex(SHADER_TYPE_PIXEL)] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);
+        ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = static_cast<Uint8>(GetGraphicsPipelineDesc().NumRenderTargets);
 
+    const auto SignCount = GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
-        // Get resource signature from the root signature
+        // Get resource signature from the PSO
         const auto* pSignature = GetResourceSignature(sign);
         if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue; // Skip null and empty signatures

@@ -55,8 +55,6 @@ namespace Diligent
 //   |  0 | 1 | ... | CBCount-1 | 0 | 1 | ...| CBCount-1 || 0 | 1 | ... | SRVCount-1 | 0 | 1 |  ... | SRVCount-1 || 0 | 1 | ... | SamplerCount-1 | 0 | 1 | ...| SamplerCount-1 ||0 | 1 | ... | UAVCount-1 | 0 | 1 | ...  | UAVCount-1 ||
 //    --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
-//
-// http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
 class ShaderResourceCacheD3D11
 {
 public:
@@ -251,10 +249,6 @@ public:
 
         return IsBound;
     }
-
-#ifdef DILIGENT_DEVELOPMENT
-    void DvpVerifyCacheConsistency();
-#endif
 
     // clang-format off
     __forceinline Uint32 GetCBCount     (Uint32 ShaderInd) const { return (m_Offsets[FirstCBOffsetIdx  + ShaderInd + 1] - m_Offsets[FirstCBOffsetIdx  + ShaderInd]) / (sizeof(CachedCB)       + sizeof(ID3D11Buffer*));             }

@@ -45,7 +45,6 @@ SamplerD3D11Impl::SamplerD3D11Impl(IReferenceCounters*    pRefCounters,
     }
 // clang-format on
 {
-    auto*              pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
     D3D11_SAMPLER_DESC D3D11SamplerDesc =
         {
             FilterTypeToD3D11Filter(SamplerDesc.MinFilter, SamplerDesc.MagFilter, SamplerDesc.MipFilter),
@@ -60,6 +59,7 @@ SamplerD3D11Impl::SamplerD3D11Impl(IReferenceCounters*    pRefCounters,
             SamplerDesc.MaxLOD // clang-format off
         }; // clang-format on
 
+    auto* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pd3d11Device->CreateSamplerState(&D3D11SamplerDesc, &m_pd3dSampler),
                            "Failed to create the Direct3D11 sampler");
 }
