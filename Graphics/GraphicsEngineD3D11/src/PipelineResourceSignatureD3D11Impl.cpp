@@ -73,7 +73,7 @@ void ValidatePipelineResourceSignatureDescD3D11(const PipelineResourceSignatureD
         {
             LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ",
                                 "Desc.Resources[", i, "].ShaderStages (", GetShaderStagesString(ResDesc.ShaderStages),
-                                ") is not valid in Direct3D11 as UAVs are not supported in shader stages ", GetShaderStagesString(ResDesc.ShaderStages & ~UAVStages));
+                                ") is not valid in Direct3D11 as UAVs are only supported in pixel and compute shader stages.");
         }
     }
 }
@@ -215,8 +215,6 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         const auto& ResDesc = GetResourceDesc(i);
         VERIFY(i == 0 || ResDesc.VarType >= m_Desc.Resources[i - 1].VarType, "Resources must be sorted by variable type");
 
-        const auto Range = ShaderResourceTypeToRange(ResDesc.ResourceType);
-
         auto AssignedSamplerInd     = TextureSrvToAssignedSamplerInd[i];
         auto SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[i];
         if (AssignedSamplerInd != ResourceAttribs::InvalidSamplerInd)
@@ -235,6 +233,8 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         // Do not allocate resource slot for immutable samplers that are also defined as resource
         if (!(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && SrcImmutableSamplerInd != InvalidImmutableSamplerIndex))
         {
+            const auto Range = ShaderResourceTypeToRange(ResDesc.ResourceType);
+
             AllocBindPoints(m_ResourceCounters, pAttrib->BindPoints, ResDesc.ShaderStages, ResDesc.ArraySize, Range);
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
@@ -251,7 +251,8 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         }
         else
         {
-            VERIFY_EXPR(AssignedSamplerInd == ResourceAttribs::InvalidSamplerInd);
+            VERIFY(AssignedSamplerInd == ResourceAttribs::InvalidSamplerInd, "Sampler can't be assigned to another sampler.");
+            // Use bind points from the immutable sampler.
             pAttrib->BindPoints = m_ImmutableSamplers[SrcImmutableSamplerInd].BindPoints;
             VERIFY_EXPR(!pAttrib->BindPoints.IsEmpty());
         }
@@ -320,7 +321,6 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
                 }
                 break;
             case D3D11_RESOURCE_RANGE_SAMPLER:
-                // Immutable samplers will be copied in InitSRBResourceCache().
                 if (!ResAttr.IsImmutableSamplerAssigned())
                 {
                     for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
@@ -329,6 +329,16 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
                             LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
                     }
                 }
+#ifdef DILIGENT_DEBUG
+                else
+                {
+                    for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                    {
+                        VERIFY(DstResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_SAMPLER>(ResAttr.BindPoints + ArrInd),
+                               "Immutable samplers must have been initialized by InitSRBResourceCache(). Null sampler is a bug.");
+                    }
+                }
+#endif
                 break;
             case D3D11_RESOURCE_RANGE_UAV:
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
@@ -392,6 +402,11 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
         }
     }
 
+    // Add immutable samplers to the map as there may be immutable samplers that are not defined as resources, e.g.:
+    //
+    //      PipelineResourceDesc Resources[] = {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, ...}
+    //      ImmutableSamplerDesc ImtblSams[] = {SHADER_TYPE_PIXEL, "g_Texture", ...}
+    //
     for (Uint32 samp = 0, SampCount = GetImmutableSamplerCount(); samp < SampCount; ++samp)
     {
         const auto& ImtblSam = GetImmutableSamplerDesc(samp);
@@ -421,7 +436,11 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
             {
                 const auto& ExistingBindInfo = it_inserted.first->second;
                 VERIFY(ExistingBindInfo.BindPoint == BindInfo.BindPoint,
-                       "Bind point defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
+                       "Bind point defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource. "
+                       "This may be a bug in CreateLayout().");
+                VERIFY(ExistingBindInfo.ArraySize >= BindInfo.ArraySize,
+                       "Array size defined by the immutable sampler attribs is smaller than the bind point defined by the sampler resource. "
+                       "This may be a bug in CreateLayout().");
             }
 #endif
         }

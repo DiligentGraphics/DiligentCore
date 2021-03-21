@@ -170,11 +170,11 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
-    D3D11ShaderResourceCounters BaseBindings = {};
+    D3D11ShaderResourceCounters ResCounters = {};
     if (m_Desc.IsAnyGraphicsPipeline())
     {
         // In Direct3D11, UAVs use the same register space as render targets
-        BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
+        ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
     }
 
     for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
@@ -184,11 +184,34 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             continue;
 
         VERIFY_EXPR(pSignature->GetDesc().BindingIndex == sign);
-        m_BaseBindings[sign] = BaseBindings;
-        pSignature->ShiftBindings(BaseBindings);
+        m_BaseBindings[sign] = ResCounters;
+        pSignature->ShiftBindings(ResCounters);
     }
 
-    m_NumPixelUAVs = BaseBindings[D3D11_RESOURCE_RANGE_UAV][PSInd];
+    m_NumPixelUAVs = ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd];
+
+#ifdef DILIGENT_DEVELOPMENT
+    for (Uint32 s = 0; s < D3D11ResourceBindPoints::NumShaderTypes; ++s)
+    {
+        const auto ShaderType = GetShaderTypeFromIndex(s);
+        DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_CBV][s] <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT,
+                      "Constant buffer count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_CBV][s]},
+                      " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
+                      D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT);
+        DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_SRV][s] <= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT,
+                      "SRV count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_SRV][s]},
+                      " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
+                      D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
+        DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_SAMPLER][s] <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT,
+                      "Sampler count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_SAMPLER][s]},
+                      " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
+                      D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT);
+        DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_UAV][s] <= D3D11_PS_CS_UAV_REGISTER_COUNT,
+                      "UAV count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_UAV][s]},
+                      " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
+                      D3D11_PS_CS_UAV_REGISTER_COUNT);
+    }
+#endif
 
     // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
     for (size_t s = 0; s < Shaders.size(); ++s)
@@ -223,43 +246,6 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         if (ShaderType == SHADER_TYPE_VERTEX)
             pVSByteCode = pPatchedBytecode;
     }
-
-#ifdef DILIGENT_DEVELOPMENT
-    {
-        D3D11ShaderResourceCounters ResCounters = {};
-
-        if (m_Desc.IsAnyGraphicsPipeline())
-            ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
-
-        for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
-        {
-            const auto& pSignature = m_Signatures[sign];
-            if (pSignature != nullptr)
-                pSignature->ShiftBindings(ResCounters);
-        }
-
-        for (Uint32 s = 0; s < D3D11ResourceBindPoints::NumShaderTypes; ++s)
-        {
-            const auto ShaderType = GetShaderTypeFromIndex(s);
-            DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_CBV][s] <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT,
-                          "Constant buffer count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_CBV][s]},
-                          " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
-                          D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT);
-            DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_SRV][s] <= D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT,
-                          "SRV count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_SRV][s]},
-                          " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
-                          D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
-            DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_SAMPLER][s] <= D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT,
-                          "Sampler count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_SAMPLER][s]},
-                          " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
-                          D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT);
-            DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_UAV][s] <= D3D11_PS_CS_UAV_REGISTER_COUNT,
-                          "UAV count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_UAV][s]},
-                          " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
-                          D3D11_PS_CS_UAV_REGISTER_COUNT);
-        }
-    }
-#endif
 }
 
 template <typename PSOCreateInfoType>
@@ -354,7 +340,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
     {
         CComPtr<ID3DBlob> pVSByteCode;
         InitInternalObjects(CreateInfo, pVSByteCode);
-        VERIFY_EXPR(!pVSByteCode);
+        VERIFY(!pVSByteCode, "There must be no VS in a compute pipeline.");
     }
     catch (...)
     {

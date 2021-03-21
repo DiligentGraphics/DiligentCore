@@ -220,7 +220,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
                 {
                     if (Mode == StateTransitionMode::Transition)
                     {
-                        Ctx.TransitionResource(pBuffer, RESOURCE_STATE_CONSTANT_BUFFER);
+                        Ctx.TransitionResource(*pBuffer, RESOURCE_STATE_CONSTANT_BUFFER);
                     }
                     else
                     {
@@ -253,7 +253,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
                 {
                     if (Mode == StateTransitionMode::Transition)
                     {
-                        Ctx.TransitionResource(pTexture, RESOURCE_STATE_SHADER_RESOURCE);
+                        Ctx.TransitionResource(*pTexture, RESOURCE_STATE_SHADER_RESOURCE);
                     }
                     else
                     {
@@ -269,7 +269,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
                 {
                     if (Mode == StateTransitionMode::Transition)
                     {
-                        Ctx.TransitionResource(pBuffer, RESOURCE_STATE_SHADER_RESOURCE);
+                        Ctx.TransitionResource(*pBuffer, RESOURCE_STATE_SHADER_RESOURCE);
                     }
                     else
                     {
@@ -307,7 +307,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
                 {
                     if (Mode == StateTransitionMode::Transition)
                     {
-                        Ctx.TransitionResource(pTexture, RESOURCE_STATE_UNORDERED_ACCESS);
+                        Ctx.TransitionResource(*pTexture, RESOURCE_STATE_UNORDERED_ACCESS);
                     }
                     else
                     {
@@ -323,7 +323,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
                 {
                     if (Mode == StateTransitionMode::Transition)
                     {
-                        Ctx.TransitionResource(pBuffer, RESOURCE_STATE_UNORDERED_ACCESS);
+                        Ctx.TransitionResource(*pBuffer, RESOURCE_STATE_UNORDERED_ACCESS);
                     }
                     else
                     {

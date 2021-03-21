@@ -87,6 +87,7 @@ public:
         return m_ImmutableSamplers[SampIndex];
     }
 
+    // Shifts resource bindings by the number of resources in each shader stage and resource range.
     __forceinline void ShiftBindings(D3D11ShaderResourceCounters& Bindings) const
     {
         for (Uint32 r = 0; r < D3D11_RESOURCE_RANGE_COUNT; ++r)

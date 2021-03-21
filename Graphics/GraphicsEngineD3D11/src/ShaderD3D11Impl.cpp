@@ -145,20 +145,16 @@ ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(ID3DBlob* pBlob) noexcept(fal
     CComPtr<ID3D11DeviceChild> pd3d11Shader;
     switch (m_Desc.ShaderType)
     {
-#define CREATE_SHADER(SHADER_NAME, ShaderName)                                                                                                            \
-    case SHADER_TYPE_##SHADER_NAME:                                                                                                                       \
-    {                                                                                                                                                     \
-        ID3D11##ShaderName##Shader* pd3d11SpecificShader = nullptr;                                                                                       \
-                                                                                                                                                          \
-        HRESULT hr = pd3d11Device->Create##ShaderName##Shader(pBlob->GetBufferPointer(), pBlob->GetBufferSize(),                                          \
-                                                              NULL, &pd3d11SpecificShader);                                                               \
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 shader");                                                                                      \
-        if (SUCCEEDED(hr))                                                                                                                                \
-        {                                                                                                                                                 \
-            pd3d11SpecificShader->QueryInterface(__uuidof(ID3D11DeviceChild), reinterpret_cast<void**>(static_cast<ID3D11DeviceChild**>(&pd3d11Shader))); \
-            pd3d11SpecificShader->Release();                                                                                                              \
-        }                                                                                                                                                 \
-        break;                                                                                                                                            \
+#define CREATE_SHADER(SHADER_NAME, ShaderName)                                                                                                        \
+    case SHADER_TYPE_##SHADER_NAME:                                                                                                                   \
+    {                                                                                                                                                 \
+        CComPtr<ID3D11##ShaderName##Shader> pd3d11SpecificShader;                                                                                     \
+                                                                                                                                                      \
+        HRESULT hr = pd3d11Device->Create##ShaderName##Shader(pBlob->GetBufferPointer(), pBlob->GetBufferSize(),                                      \
+                                                              NULL, &pd3d11SpecificShader);                                                           \
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 shader");                                                                                  \
+        pd3d11SpecificShader->QueryInterface(__uuidof(ID3D11DeviceChild), reinterpret_cast<void**>(static_cast<ID3D11DeviceChild**>(&pd3d11Shader))); \
+        break;                                                                                                                                        \
     }
 
         // clang-format off

@@ -88,7 +88,7 @@ struct D3D11ResourceBindPoints
 
     Uint8 operator[](Uint32 ShaderInd) const
     {
-        VERIFY(IsStageActive(ShaderInd), "Requesting bind point for inactive shader stage");
+        VERIFY(IsStageActive(ShaderInd), "Requesting bind point for inactive shader stage.");
         return Bindings[ShaderInd];
     }
 
@@ -158,7 +158,7 @@ private:
     Uint8 Set(Uint32 ShaderInd, Uint32 BindPoint)
     {
         VERIFY_EXPR(ShaderInd < NumShaderTypes);
-        VERIFY(BindPoint < InvalidBindPoint, "Bind point (", BindPoint, ") is out of range");
+        VERIFY(BindPoint < InvalidBindPoint, "Bind point (", BindPoint, ") is out of range.");
 
         Bindings[ShaderInd] = static_cast<Uint8>(BindPoint);
         ActiveStages |= Uint32{1} << ShaderInd;
@@ -193,7 +193,7 @@ struct D3D11ResourceRangeCounters
         {
             const Uint32 val0 = static_cast<const D3D11ResourceRangeCounters&>(*this)[s];
             const Uint32 val1 = rhs[s];
-            VERIFY(val0 + val1 <= MaxCounter, "The resulting value is out of range");
+            VERIFY(val0 + val1 <= MaxCounter, "The resulting value (", val0 + val1, ") is out of range.");
         }
 #endif
         PackedCounters += rhs.PackedCounters;
@@ -283,7 +283,7 @@ public:
 
     // clang-format off
     const Uint32 SamplerInd           : _SamplerIndBits;       // Index of the assigned sampler in m_Desc.Resources.
-    const Uint32 ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag.
+    const Uint32 ImtblSamplerAssigned : _SamplerAssignedBits;  // Immutable sampler flag for Texture SRV or Sampler.
     // clang-format on
     D3D11ResourceBindPoints BindPoints;
 
@@ -294,7 +294,7 @@ public:
             ImtblSamplerAssigned{_ImtblSamplerAssigned ? 1u : 0u}
     // clang-format on
     {
-        VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
+        VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value.");
     }
 
     bool IsSamplerAssigned() const { return SamplerInd != InvalidSamplerInd; }
@@ -302,7 +302,7 @@ public:
 
     bool IsCompatibleWith(const PipelineResourceAttribsD3D11& rhs) const
     {
-        // Ignore cache offset and sampler index.
+        // Ignore assigned sampler index.
         // clang-format off
         return IsImmutableSamplerAssigned() == rhs.IsImmutableSamplerAssigned() &&
                BindPoints                   == rhs.BindPoints;

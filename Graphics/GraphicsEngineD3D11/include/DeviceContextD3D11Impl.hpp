@@ -281,8 +281,8 @@ public:
     /// Unbinds all render targets. Used when resizing the swap chain.
     virtual void ResetRenderTargets() override final;
 
-    void TransitionResource(TextureBaseD3D11* pTexture, RESOURCE_STATE NewState, RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN, bool UpdateResourceState = true);
-    void TransitionResource(BufferD3D11Impl* pBuffer, RESOURCE_STATE NewState, RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN, bool UpdateResourceState = true);
+    void TransitionResource(TextureBaseD3D11& Texture, RESOURCE_STATE NewState, RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN, bool UpdateResourceState = true);
+    void TransitionResource(BufferD3D11Impl& Buffer, RESOURCE_STATE NewState, RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN, bool UpdateResourceState = true);
 
 private:
     /// Commits d3d11 index buffer to d3d11 device context.
@@ -416,6 +416,7 @@ private:
         Bitfield ActiveSRBMask = 0; // Indicates which SRBs are active in current PSO
         Bitfield StaleSRBMask  = 0; // Indicates stale SRBs that have resources that need to be bound
 
+        // Shader stages that are active in current PSO.
         SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
 
 #ifdef DILIGENT_DEVELOPMENT

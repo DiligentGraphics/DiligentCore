@@ -139,7 +139,7 @@ D3DShaderResourceCounters ShaderVariableManagerD3D11::CountResources(
                 case SHADER_RESOURCE_TYPE_BUFFER_UAV:       ++Counters.NumBufUAVs;  break;
                 case SHADER_RESOURCE_TYPE_SAMPLER:          ++Counters.NumSamplers; break;
                 case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: ++Counters.NumTexSRVs;  break;
-                    // clang-format on
+                // clang-format on
                 default:
                     UNEXPECTED("Unsupported resource type.");
             }

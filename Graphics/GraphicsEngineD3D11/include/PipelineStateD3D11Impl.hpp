@@ -130,7 +130,7 @@ private:
     }
 
 private:
-    // ShaderTypeIndex -> index in m_ppd3d11Shaders array
+    // ShaderTypeIndex (e.g. VSInd, PSInd, etc.) -> index in m_ppd3d11Shaders array
     std::array<Int8, D3D11ResourceBindPoints::NumShaderTypes> m_ShaderIndices = {-1, -1, -1, -1, -1, -1};
 
     // The number of shader stages in this pipeline
