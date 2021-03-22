@@ -71,7 +71,6 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
         pDeviceVkImpl,
         ContextId,
         CommandQueueId,
-        bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : EngineCI.NumCommandsToFlushCmdBuffer,
         bIsDeferred
     },
     m_CommandBuffer { pDeviceVkImpl->GetLogicalDevice().GetEnabledShaderStages() },
@@ -242,15 +241,6 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
     if (PipelineStateVkImpl::IsSameObject(m_pPipelineState, pPipelineStateVk))
         return;
-
-    if (m_State.NumCommands >= m_NumCommandsToFlush &&
-        !m_bIsDeferred &&           // Never flush deferred context
-        !m_pActiveRenderPass &&     // Never flush inside active render pass (https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#VUID-vkEndCommandBuffer-commandBuffer-00060)
-        m_ActiveQueriesCounter == 0 // A query must begin and end in the same command buffer (17.2)
-    )
-    {
-        Flush();
-    }
 
     const auto& PSODesc = pPipelineStateVk->GetDesc();
 
@@ -1695,14 +1685,6 @@ void DeviceContextVkImpl::EndRenderPass()
     TDeviceContextBase::EndRenderPass();
     // TDeviceContextBase::EndRenderPass calls ResetRenderTargets() that in turn
     // calls m_CommandBuffer.EndRenderPass()
-
-    if (m_State.NumCommands >= m_NumCommandsToFlush &&
-        !m_bIsDeferred &&           // Never flush deferred context
-        m_ActiveQueriesCounter == 0 // A query must begin and end in the same command buffer (17.2)
-    )
-    {
-        Flush();
-    }
 }
 
 void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuffVk,

@@ -73,7 +73,6 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         pDeviceD3D12Impl,
         ContextId,
         CommandQueueId,
-        bIsDeferred ? std::numeric_limits<decltype(m_NumCommandsToFlush)>::max() : EngineCI.NumCommandsToFlushCmdList,
         bIsDeferred
     },
     m_DynamicHeap
@@ -200,14 +199,6 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     auto* pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
     if (PipelineStateD3D12Impl::IsSameObject(m_pPipelineState, pPipelineStateD3D12))
         return;
-
-    // Never flush deferred context!
-    // For the query types which support both BeginQuery and EndQuery (all except for timestamp),
-    // a query for a given element must not span command list boundaries.
-    if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush && m_ActiveQueriesCounter == 0)
-    {
-        Flush(true);
-    }
 
     const auto& PSODesc = pPipelineStateD3D12->GetDesc();
 

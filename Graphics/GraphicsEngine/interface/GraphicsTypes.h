@@ -2105,11 +2105,6 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 #endif
     ;
 
-    /// Number of commands to flush the command list. Only draw/dispatch commands count
-    /// towards the limit. Command lists are only flushed when pipeline state is changed
-    /// or when backbuffer is presented.
-    Uint32 NumCommandsToFlushCmdList DEFAULT_INITIALIZER(2048);
-
     /// A device context uses dynamic heap when it needs to allocate temporary
     /// CPU-accessible memory to update a resource via IDeviceContext::UpdateBuffer() or
     /// IDeviceContext::UpdateTexture(), or to map dynamic resources.
@@ -2210,11 +2205,6 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Allocator used as pAllocator parameter in callse to Vulkan Create* functions
     void* pVkAllocator                          DEFAULT_INITIALIZER(nullptr);
 
-    /// Number of commands to flush the command buffer. Only draw/dispatch commands count
-    /// towards the limit. Command buffers are only flushed when pipeline state is changed
-    /// or when backbuffer is presented.
-    Uint32 NumCommandsToFlushCmdBuffer          DEFAULT_INITIALIZER(2048);
-        
     /// Size of the main descriptor pool that is used to allocate descriptor sets
     /// for static and mutable variables. If allocation from the current pool fails,
     /// the engine creates another one.

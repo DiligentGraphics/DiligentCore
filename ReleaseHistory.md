@@ -1,5 +1,7 @@
 ## Current Progress
 
+* Removed `EngineD3D12CreateInfo::NumCommandsToFlushCmdList` and `EngineVkCreateInfo::NumCommandsToFlushCmdBuffer` as flushing
+  the context based on the number of commands is unreasonable (API Version 240084)
 * Added pipeline resource signatures, enabled inline ray tracing, added indirect draw mesh command (API Version 240083)
 * Replaced `IDeviceContext::ExecuteCommandList()` with `IDeviceContext::ExecuteCommandLists()` method that takes
   an array of command lists instead of one (API Version 240082)

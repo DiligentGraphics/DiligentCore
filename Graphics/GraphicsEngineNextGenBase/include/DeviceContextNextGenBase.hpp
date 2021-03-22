@@ -52,13 +52,11 @@ public:
                              DeviceImplType*     pRenderDevice,
                              Uint32              ContextId,
                              Uint32              CommandQueueId,
-                             Uint32              NumCommandsToFlush,
                              bool                bIsDeferred) :
         // clang-format off
         TBase{pRefCounters, pRenderDevice, bIsDeferred},
         m_ContextId                   {ContextId         },
         m_CommandQueueId              {CommandQueueId    },
-        m_NumCommandsToFlush          {NumCommandsToFlush},
         m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId}}
     // clang-format on
     {
@@ -111,7 +109,6 @@ protected:
 
     const Uint32 m_ContextId;
     const Uint32 m_CommandQueueId;
-    const Uint32 m_NumCommandsToFlush;
 
     // This mask indicates which command queues command buffers from this context were submitted to.
     // For immediate context, this will always be 1 << m_CommandQueueId.
