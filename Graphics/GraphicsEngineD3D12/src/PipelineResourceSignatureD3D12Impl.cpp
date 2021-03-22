@@ -670,6 +670,11 @@ void PipelineResourceSignatureD3D12Impl::UpdateShaderResourceBindingMap(Resource
         }
     }
 
+    // Add immutable samplers to the map as there may be immutable samplers that are not defined as resources, e.g.:
+    //
+    //      PipelineResourceDesc Resources[] = {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, ...}
+    //      ImmutableSamplerDesc ImtblSams[] = {SHADER_TYPE_PIXEL, "g_Texture", ...}
+    //
     for (Uint32 samp = 0, SampCount = GetImmutableSamplerCount(); samp < SampCount; ++samp)
     {
         const auto& ImtblSam = GetImmutableSamplerDesc(samp);
@@ -697,7 +702,10 @@ void PipelineResourceSignatureD3D12Impl::UpdateShaderResourceBindingMap(Resource
                 VERIFY(ExistingBindInfo.BindPoint == BindInfo.BindPoint,
                        "Bind point defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
                 VERIFY(ExistingBindInfo.Space == BindInfo.Space,
-                       "Register space defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource.");
+                       "Register space defined by the immutable sampler attribs is inconsistent with the space defined by the sampler resource.");
+                VERIFY(ExistingBindInfo.ArraySize >= BindInfo.ArraySize,
+                       "Array size defined by the immutable sampler attribs is smaller than the size defined by the sampler resource. "
+                       "This may be a bug in AllocateRootParameters().");
             }
 #endif
         }

@@ -439,7 +439,7 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
                        "Bind point defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource. "
                        "This may be a bug in CreateLayout().");
                 VERIFY(ExistingBindInfo.ArraySize >= BindInfo.ArraySize,
-                       "Array size defined by the immutable sampler attribs is smaller than the bind point defined by the sampler resource. "
+                       "Array size defined by the immutable sampler attribs is smaller than the size defined by the sampler resource. "
                        "This may be a bug in CreateLayout().");
             }
 #endif

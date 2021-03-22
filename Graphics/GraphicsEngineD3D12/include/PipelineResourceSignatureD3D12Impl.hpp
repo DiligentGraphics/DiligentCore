@@ -104,8 +104,8 @@ public:
 
         bool IsValid() const
         {
-            return ShaderRegister != _InvalidShaderRegister &&
-                RegisterSpace != _InvalidRegisterSpace;
+            return (ShaderRegister != _InvalidShaderRegister &&
+                    RegisterSpace != _InvalidRegisterSpace);
         }
     };
 

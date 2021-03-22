@@ -251,7 +251,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         for (Uint32 i = 0, SignCount = pPipelineStateD3D12->GetResourceSignatureCount(); i < SignCount; ++i)
         {
             const auto* pSignature = pPipelineStateD3D12->GetResourceSignature(i);
-            if (pSignature != nullptr)
+            if (pSignature != nullptr && pSignature->GetTotalResourceCount() > 0)
                 RootInfo.ActiveSRBMask |= 1u << i;
         }
     }
@@ -1022,7 +1022,9 @@ void DeviceContextD3D12Impl::InvalidateState()
         LOG_WARNING_MESSAGE("Invalidating context that has outstanding commands in it. Call Flush() to submit commands for execution");
 
     TDeviceContextBase::InvalidateState();
-    m_State = State{};
+    m_State             = {};
+    m_GraphicsResources = {};
+    m_ComputeResources  = {};
 }
 
 void DeviceContextD3D12Impl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)

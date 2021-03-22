@@ -390,10 +390,10 @@ private:
         using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
 
-        Bitfield             ActiveSRBMask       = 0;     // Indicates which SRBs are active in current PSO
-        Bitfield             DynamicBuffersMask  = 0;     // Indicates which SRBs have dynamic buffers
+        Bitfield             ActiveSRBMask       = 0;     // Indicates which SRBs are active in current PSO.
+        Bitfield             DynamicBuffersMask  = 0;     // Indicates which SRBs have dynamic buffers.
         bool                 bRootViewsCommitted = false; // Indicates if root views have been committed since the time SRB  has been committed.
-        bool                 bRootTablesCommited = false;
+        bool                 bRootTablesCommited = false; // Indicates if root tables have been committed since the time SRB  has been committed.
         ID3D12RootSignature* pd3d12RootSig       = nullptr;
 
         std::array<class ShaderResourceBindingD3D12Impl*, MAX_RESOURCE_SIGNATURES> SRBs{};
