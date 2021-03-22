@@ -458,7 +458,9 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
 
 void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderResourcesGL> pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages)
 {
-    const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, SHADER_RESOURCE_TYPE AltResourceType, PIPELINE_RESOURCE_FLAGS Flags) //
+    const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs,
+                                    SHADER_RESOURCE_TYPE                        AltResourceType,
+                                    PIPELINE_RESOURCE_FLAGS                     Flags) //
     {
         const auto ResAttribution = GetResourceAttribution(Attribs.Name, ShaderStages);
 
@@ -550,8 +552,16 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
         AttribIter                    attrib_it;
         Uint32&                       shader_ind;
 
-        HandleResourceHelper(const PipelineStateGLImpl& _PSO, ShaderResourceBindingGLImpl** _ppSRBs, Uint32 _NumSRBs, AttribIter iter, Uint32& ind) :
-            PSO{_PSO}, ppSRBs{_ppSRBs}, NumSRBs{_NumSRBs}, attrib_it{iter}, shader_ind{ind}
+        HandleResourceHelper(const PipelineStateGLImpl&    _PSO,
+                             ShaderResourceBindingGLImpl** _ppSRBs,
+                             Uint32                        _NumSRBs,
+                             AttribIter                    _iter,
+                             Uint32&                       _ind) :
+            PSO{_PSO},
+            ppSRBs{_ppSRBs},
+            NumSRBs{_NumSRBs},
+            attrib_it{_iter},
+            shader_ind{_ind}
         {}
 
         void Validate(const ShaderResourcesGL::GLResourceAttribs& Attribs, RESOURCE_DIMENSION ResDim, bool IsMS)

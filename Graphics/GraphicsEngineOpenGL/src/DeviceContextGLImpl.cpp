@@ -169,7 +169,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    // Unbind incompatible SRB and SRB with a higher binding index.
+    // Unbind incompatible SRBs and SRBs with higher binding indices.
     // This is the same behavior as in Vulkan backend.
     for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs.data()); sign < SignCount; ++sign)
     {
@@ -195,8 +195,8 @@ void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0))
         return;
 
-    auto*      pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pShaderResourceBinding);
-    const auto SRBIndex            = pShaderResBindingGL->GetBindingIndex();
+    auto* const pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pShaderResourceBinding);
+    const auto  SRBIndex            = pShaderResBindingGL->GetBindingIndex();
 
     m_BindInfo.SRBs[SRBIndex] = pShaderResBindingGL;
     m_BindInfo.SetStaleSRBBit(SRBIndex);

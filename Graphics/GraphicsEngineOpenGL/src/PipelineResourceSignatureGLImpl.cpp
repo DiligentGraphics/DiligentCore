@@ -251,7 +251,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             {
                 auto UniformBlockIndex = glGetUniformBlockIndex(GLProgram, ResDesc.Name);
                 if (UniformBlockIndex == GL_INVALID_INDEX)
-                    break; // Uniform block is defined in resource signature, but not presented in shader program.
+                    break; // Uniform block is defined in the resource signature, but is not presented in the shader program.
 
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
@@ -264,7 +264,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             {
                 auto UniformLocation = glGetUniformLocation(GLProgram, ResDesc.Name);
                 if (UniformLocation < 0)
-                    break; // Uniform is defined in resource signature, but not presented in shader program.
+                    break; // Uniform is defined in the resource signature, but is not presented in the shader program.
 
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
@@ -278,7 +278,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             {
                 auto UniformLocation = glGetUniformLocation(GLProgram, ResDesc.Name);
                 if (UniformLocation < 0)
-                    break; // Uniform defined in resource signature, but not presented in shader program.
+                    break; // Uniform defined in the resource signature, but isnot presented in the shader program.
 
                 for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                 {
@@ -316,7 +316,7 @@ void PipelineResourceSignatureGLImpl::ApplyBindings(GLObjectWrappers::GLProgramO
             {
                 auto SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, ResDesc.Name);
                 if (SBIndex == GL_INVALID_INDEX)
-                    break; // Storage block defined in resource signature, but not presented in shader program.
+                    break; // Storage block is defined in the resource signature, but is not presented in the shader program.
 
                 if (glShaderStorageBlockBinding)
                 {
@@ -362,12 +362,12 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
 
     // SrcResourceCache contains only static resources.
     // DstResourceCache contains static, mutable and dynamic resources.
-    const auto& SrcResourceCache  = *m_pStaticResCache;
-    const auto  StaticResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    const auto& SrcResourceCache = *m_pStaticResCache;
 
     VERIFY_EXPR(SrcResourceCache.GetContentType() == ResourceCacheContentType::Signature);
     VERIFY_EXPR(DstResourceCache.GetContentType() == ResourceCacheContentType::SRB);
 
+    const auto StaticResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     for (Uint32 r = StaticResIdxRange.first; r < StaticResIdxRange.second; ++r)
     {
         const auto& ResDesc = GetResourceDesc(r);

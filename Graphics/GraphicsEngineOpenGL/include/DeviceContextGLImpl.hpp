@@ -47,9 +47,6 @@
 namespace Diligent
 {
 
-class TextureBaseGL;
-class ShaderResourceBindingGLImpl;
-
 /// Device context implementation in OpenGL backend.
 class DeviceContextGLImpl final : public DeviceContextBase<EngineGLImplTraits>
 {
@@ -314,7 +311,7 @@ private:
 #ifdef DILIGENT_DEVELOPMENT
         bool CommittedResourcesValidated = false;
 
-        // Binding offsets that was used in the last BindProgramResources() call.
+        // Binding offsets that were used in the last BindProgramResources() call.
         std::array<TBindings, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
 #endif
 

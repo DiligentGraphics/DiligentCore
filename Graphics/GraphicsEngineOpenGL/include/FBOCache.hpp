@@ -37,6 +37,7 @@ namespace Diligent
 {
 
 class TextureViewGLImpl;
+class GLContextState;
 
 class FBOCache
 {
@@ -51,15 +52,15 @@ public:
     FBOCache& operator = (      FBOCache&&) = delete;
     // clang-format on
 
-    static GLObjectWrappers::GLFrameBufferObj CreateFBO(class GLContextState& ContextState,
-                                                        Uint32                NumRenderTargets,
-                                                        TextureViewGLImpl*    ppRTVs[],
-                                                        TextureViewGLImpl*    pDSV);
+    static GLObjectWrappers::GLFrameBufferObj CreateFBO(GLContextState&    ContextState,
+                                                        Uint32             NumRenderTargets,
+                                                        TextureViewGLImpl* ppRTVs[],
+                                                        TextureViewGLImpl* pDSV);
 
-    const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32                NumRenderTargets,
-                                                     TextureViewGLImpl*    ppRTVs[],
-                                                     TextureViewGLImpl*    pDSV,
-                                                     class GLContextState& ContextState);
+    const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32             NumRenderTargets,
+                                                     TextureViewGLImpl* ppRTVs[],
+                                                     TextureViewGLImpl* pDSV,
+                                                     GLContextState&    ContextState);
 
     void OnReleaseTexture(ITexture* pTexture);
 

@@ -149,7 +149,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
         if (Tex.pTexture != nullptr)
         {
             auto* pTexViewGL = Tex.pView.RawPtr<TextureViewGLImpl>();
-            auto* pTextureGL = ValidatedCast<TextureBaseGL>(Tex.pTexture);
+            auto* pTextureGL = Tex.pTexture;
             VERIFY_EXPR(pTextureGL == pTexViewGL->GetTexture());
             GLState.BindTexture(binding, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
 
@@ -171,7 +171,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
         else if (Tex.pBuffer != nullptr)
         {
             auto* pBufViewGL = Tex.pView.RawPtr<BufferViewGLImpl>();
-            auto* pBufferGL  = ValidatedCast<BufferGLImpl>(Tex.pBuffer);
+            auto* pBufferGL  = Tex.pBuffer;
             VERIFY_EXPR(pBufferGL == pBufViewGL->GetBuffer());
 
             GLState.BindTexture(binding, GL_TEXTURE_BUFFER, pBufViewGL->GetTexBufferHandle());
@@ -196,7 +196,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
         if (Img.pTexture != nullptr)
         {
             auto* pTexViewGL = Img.pView.RawPtr<TextureViewGLImpl>();
-            auto* pTextureGL = ValidatedCast<TextureBaseGL>(Img.pTexture);
+            auto* pTextureGL = Img.pTexture;
             VERIFY_EXPR(pTextureGL == pTexViewGL->GetTexture());
 
             const auto& ViewDesc = pTexViewGL->GetDesc();
@@ -249,7 +249,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
         else if (Img.pBuffer != nullptr)
         {
             auto* pBuffViewGL = Img.pView.RawPtr<BufferViewGLImpl>();
-            auto* pBufferGL   = ValidatedCast<BufferGLImpl>(Img.pBuffer);
+            auto* pBufferGL   = Img.pBuffer;
             VERIFY_EXPR(pBufferGL == pBuffViewGL->GetBuffer());
 
             const auto& ViewDesc = pBuffViewGL->GetDesc();
