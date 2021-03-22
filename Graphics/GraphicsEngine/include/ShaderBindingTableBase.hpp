@@ -65,6 +65,9 @@ public:
     // Top-level AS implementation type (TopLevelASD3D12Impl, TopLevelASVkImpl, etc.).
     using TopLevelASImplType = typename EngineImplTraits::TopLevelASImplType;
 
+    // Buffer implementation type (BufferVkImpl, BufferD3D12Impl, etc.).
+    using BufferImplType = typename EngineImplTraits::BufferImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderBindingTableDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this SBT.
@@ -426,7 +429,10 @@ public:
 #endif // DILIGENT_DEVELOPMENT
     }
 
+    bool                  HasPendingData() const { return this->m_Changed; }
+    const BufferImplType* GetInternalBuffer() const { return this->m_pBuffer.template RawPtr<BufferImplType>(); }
 
+protected:
     struct BindingTable
     {
         const void* pData  = nullptr;
@@ -434,11 +440,11 @@ public:
         Uint32      Offset = 0;
         Uint32      Stride = 0;
     };
-    void GetData(IBuffer*&     pSBTBuffer,
-                 BindingTable& RaygenShaderBindingTable,
-                 BindingTable& MissShaderBindingTable,
-                 BindingTable& HitShaderBindingTable,
-                 BindingTable& CallableShaderBindingTable)
+    void GetData(BufferImplType*& pSBTBuffer,
+                 BindingTable&    RaygenShaderBindingTable,
+                 BindingTable&    MissShaderBindingTable,
+                 BindingTable&    HitShaderBindingTable,
+                 BindingTable&    CallableShaderBindingTable)
     {
         const auto ShaderGroupBaseAlignment = this->m_pDevice->GetProperties().ShaderGroupBaseAlignment;
 
@@ -452,10 +458,10 @@ public:
         const Uint32 CallableShadersOffset = AlignToLarger(HitGroupOffset + m_HitGroupsRecord.size());
         const Uint32 BufSize               = AlignToLarger(CallableShadersOffset + m_CallableShadersRecord.size());
 
-        // recreate buffer
-        if (this->m_pBuffer == nullptr || this->m_pBuffer->GetDesc().uiSizeInBytes < BufSize)
+        // Recreate buffer
+        if (m_pBuffer == nullptr || m_pBuffer->GetDesc().uiSizeInBytes < BufSize)
         {
-            this->m_pBuffer = nullptr;
+            m_pBuffer = nullptr;
 
             String     BuffName = String{this->m_Desc.Name} + " - internal buffer";
             BufferDesc BuffDesc;
@@ -464,18 +470,18 @@ public:
             BuffDesc.BindFlags     = BIND_RAY_TRACING;
             BuffDesc.uiSizeInBytes = BufSize;
 
-            this->m_pDevice->CreateBuffer(BuffDesc, nullptr, &this->m_pBuffer);
-            VERIFY_EXPR(this->m_pBuffer != nullptr);
+            this->m_pDevice->CreateBuffer(BuffDesc, nullptr, &m_pBuffer);
+            VERIFY_EXPR(m_pBuffer != nullptr);
         }
 
-        if (this->m_pBuffer == nullptr)
+        if (m_pBuffer == nullptr)
             return; // Something went wrong
 
-        pSBTBuffer = this->m_pBuffer;
+        pSBTBuffer = m_pBuffer.template RawPtr<BufferImplType>();
 
         if (!m_RayGenShaderRecord.empty())
         {
-            RaygenShaderBindingTable.pData  = this->m_Changed ? m_RayGenShaderRecord.data() : nullptr;
+            RaygenShaderBindingTable.pData  = m_Changed ? m_RayGenShaderRecord.data() : nullptr;
             RaygenShaderBindingTable.Offset = RayGenOffset;
             RaygenShaderBindingTable.Size   = static_cast<Uint32>(m_RayGenShaderRecord.size());
             RaygenShaderBindingTable.Stride = this->m_ShaderRecordStride;
@@ -483,7 +489,7 @@ public:
 
         if (!m_MissShadersRecord.empty())
         {
-            MissShaderBindingTable.pData  = this->m_Changed ? m_MissShadersRecord.data() : nullptr;
+            MissShaderBindingTable.pData  = m_Changed ? m_MissShadersRecord.data() : nullptr;
             MissShaderBindingTable.Offset = MissShaderOffset;
             MissShaderBindingTable.Size   = static_cast<Uint32>(m_MissShadersRecord.size());
             MissShaderBindingTable.Stride = this->m_ShaderRecordStride;
@@ -491,7 +497,7 @@ public:
 
         if (!m_HitGroupsRecord.empty())
         {
-            HitShaderBindingTable.pData  = this->m_Changed ? m_HitGroupsRecord.data() : nullptr;
+            HitShaderBindingTable.pData  = m_Changed ? m_HitGroupsRecord.data() : nullptr;
             HitShaderBindingTable.Offset = HitGroupOffset;
             HitShaderBindingTable.Size   = static_cast<Uint32>(m_HitGroupsRecord.size());
             HitShaderBindingTable.Stride = this->m_ShaderRecordStride;
@@ -499,18 +505,14 @@ public:
 
         if (!m_CallableShadersRecord.empty())
         {
-            CallableShaderBindingTable.pData  = this->m_Changed ? m_CallableShadersRecord.data() : nullptr;
+            CallableShaderBindingTable.pData  = m_Changed ? m_CallableShadersRecord.data() : nullptr;
             CallableShaderBindingTable.Offset = CallableShadersOffset;
             CallableShaderBindingTable.Size   = static_cast<Uint32>(m_CallableShadersRecord.size());
             CallableShaderBindingTable.Stride = this->m_ShaderRecordStride;
         }
 
-        if (!this->m_Changed)
-            return;
-
-        this->m_Changed = false;
+        m_Changed = false;
     }
-
 
 protected:
     std::vector<Uint8> m_RayGenShaderRecord;

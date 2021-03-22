@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Added UpdateSBT command (API Version 240085)
 * Removed `EngineD3D12CreateInfo::NumCommandsToFlushCmdList` and `EngineVkCreateInfo::NumCommandsToFlushCmdBuffer` as flushing
   the context based on the number of commands is unreasonable (API Version 240084)
 * Added pipeline resource signatures, enabled inline ray tracing, added indirect draw mesh command (API Version 240083)

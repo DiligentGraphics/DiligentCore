@@ -1267,7 +1267,7 @@ typedef struct WriteTLASCompactedSizeAttribs WriteTLASCompactedSizeAttribs;
 struct TraceRaysAttribs
 {
     /// Shader binding table.
-    IShaderBindingTable* pSBT        DEFAULT_INITIALIZER(nullptr);
+    const IShaderBindingTable* pSBT  DEFAULT_INITIALIZER(nullptr);
     
     Uint32               DimensionX  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in X direction.
     Uint32               DimensionY  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in Y direction.
@@ -1284,23 +1284,46 @@ typedef struct TraceRaysAttribs TraceRaysAttribs;
 struct TraceRaysIndirectAttribs
 {
     /// Shader binding table.
-    IShaderBindingTable* pSBT        DEFAULT_INITIALIZER(nullptr);
+    const IShaderBindingTable* pSBT  DEFAULT_INITIALIZER(nullptr);
 
     /// State transition mode for indirect trace rays attributes buffer.
     RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// The offset from the beginning of the buffer to the trace rays command arguments.
-    Uint32  ArgsByteOffset    DEFAULT_INITIALIZER(0);
-
-    /// For Direct3D12 backend size must be 104 bytes,
-    /// for Vulkan backend size must be 12 bytes (only uint3) or 104 bytes for D3D12 compatibility.
-    Uint32  ArgsByteSize      DEFAULT_INITIALIZER(104);
+    Uint32  ArgsByteOffset  DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     TraceRaysIndirectAttribs() noexcept {}
 #endif
 };
 typedef struct TraceRaysIndirectAttribs TraceRaysIndirectAttribs;
+
+
+/// This structure is used by IDeviceContext::UpdateSBT().
+struct UpdateIndirectRTBufferAttribs
+{
+    /// BUffer can be used by IDeviceContext::TraceRaysIndirect().
+    IBuffer* pAttribsBuffer DEFAULT_INITIALIZER(nullptr);
+
+    /// Offset in bytes from the beginning of the buffer where SBT data will be recorded.
+    Uint32 AttribsBufferOffset DEFAULT_INITIALIZER(0);
+
+    /// State transition mode of the attribs buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    RESOURCE_STATE_TRANSITION_MODE TransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    UpdateIndirectRTBufferAttribs() noexcept {}
+
+    explicit UpdateIndirectRTBufferAttribs(IBuffer*                       _pAttribsBuffer,
+                                           Uint32                         _AttribsBufferOffset = 0,
+                                           RESOURCE_STATE_TRANSITION_MODE _TransitionMode      = RESOURCE_STATE_TRANSITION_MODE_NONE) noexcept :
+        pAttribsBuffer     {_pAttribsBuffer     },
+        AttribsBufferOffset{_AttribsBufferOffset},
+        TransitionMode     {_TransitionMode     }
+    {}
+#endif
+};
+typedef struct UpdateIndirectRTBufferAttribs UpdateIndirectRTBufferAttribs;
 
 
 static const Uint32 REMAINING_MIP_LEVELS   = ~0u;
@@ -2295,22 +2318,46 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] Attribs - Trace rays command attributes, see Diligent::TraceRaysAttribs for details.
     ///
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
-    ///           to the shader binding table passed as an argument to the function.
+    ///           to the shader binding table (SBT) passed as an argument to the function.
+    ///           Functions TraceRays() and TraceRaysIndirect() have read access to the SBT and can run in parallel.
     VIRTUAL void METHOD(TraceRays)(THIS_
                                    const TraceRaysAttribs REF Attribs) PURE;
     
 
     /// Executes an indirect trace rays command.
-    ///
+    
     /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect trace rays attributes.
     ///                              The buffer must contain the following arguments at the specified offset:
     ///                                 [88 bytes reserved] - for Direct3D12 backend
     ///                                 Uint32 DimensionX;
     ///                                 Uint32 DimensionY;
     ///                                 Uint32 DimensionZ;
+    ///                              You must call IDeviceContext::UpdateSBT() to initialize first 88 bytes with the same shader binding table
+    ///                              as specified in TraceRaysIndirectAttribs::pSBT.
+    /// 
+    /// \remarks  The method is not thread-safe. An application must externally synchronize the access
+    ///           to the shader binding table (SBT) passed as an argument to the function.
+    ///           Functions TraceRays() and TraceRaysIndirect() have read access to the SBT and can run in parallel.
     VIRTUAL void METHOD(TraceRaysIndirect)(THIS_
                                            const TraceRaysIndirectAttribs REF Attribs,
                                            IBuffer*                           pAttribsBuffer) PURE;
+
+
+    /// Update SBT with a pending data that is recorded in IShaderBindingTable::Bind*** calls.
+    
+    /// \param [in] pSBT     - shader binding table that will be updated if have any pending data.
+    /// \param [in] pAttribs - optional, used to initialize data 
+    /// 
+    /// \note  In Direct3D12 backend pAttribsBuffer will be initialied with a D3D12_DISPATCH_RAYS_DESC structure that contains
+    ///        GPU addresses for the ray tracing shaders in first 88 bytes and 12 bytes for dimension (see IDeviceContext::TraceRaysIndirect() description).
+    ///        In Vulkan backend pAttribsBuffer kepd unmodified because SBT used directly in IDeviceContext::TraceRaysIndirect().
+    /// 
+    /// \remarks  The method is not thread-safe. An application must externally synchronize the access
+    ///           to the shader binding table (SBT) passed as an argument to the function.
+    ///           Function UpdateSBT() modifies data in SBT and must not run in parallel with any other commands that use SBT.
+    VIRTUAL void METHOD(UpdateSBT)(THIS_
+                                   IShaderBindingTable*                 pSBT,
+                                   const UpdateIndirectRTBufferAttribs* pAttribs DEFAULT_INITIALIZER(nullptr)) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -2371,6 +2418,7 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_WriteTLASCompactedSize(This, ...)    CALL_IFACE_METHOD(DeviceContext, WriteTLASCompactedSize,    This, __VA_ARGS__)
 #    define IDeviceContext_TraceRays(This, ...)                 CALL_IFACE_METHOD(DeviceContext, TraceRays,                 This, __VA_ARGS__)
 #    define IDeviceContext_TraceRaysIndirect(This, ...)         CALL_IFACE_METHOD(DeviceContext, TraceRaysIndirect,         This, __VA_ARGS__)
+#    define IDeviceContext_UpdateSBT(This, ...)                 CALL_IFACE_METHOD(DeviceContext, UpdateSBT,                 This, __VA_ARGS__)
 
 // clang-format on
 

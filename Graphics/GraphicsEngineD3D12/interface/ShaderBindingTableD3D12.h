@@ -47,19 +47,24 @@ static const INTERFACE_ID IID_ShaderBindingTableD3D12 =
     IShaderBindingTableD3D12Methods ShaderBindingTableD3D12
 // clang-format off
 
-#if DILIGENT_CPP_INTERFACE // Empty structs are not allwed in C
 
 /// Exposes Direct3D12-specific functionality of a shader binding table object.
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableD3D12, IShaderBindingTable)
 {
+    /// Returns the structure which can be used for ID3D12GraphicsCommandList4::DispatchRays() call.
+    /// 
+    /// \remarks  The method is not thread-safe. An application must externally synchronize the access
+    ///           to the shader binding table with the IDeviceContext::UpdateSBT(), with other commands and
+    ///           shader binding table methods this method can be used in parallel.
+    VIRTUAL const D3D12_DISPATCH_RAYS_DESC REF METHOD(GetD3D12BindingTable)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
-
-#endif
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
+
+#    define IShaderBindingTableD3D12_GetD3D12BindingTable(This) CALL_IFACE_METHOD(ShaderBindingTableD3D12, GetD3D12BindingTable, This)
 
 #endif
 

@@ -118,6 +118,7 @@ public:
     using RenderPassImplType            = typename EngineImplTraits::RenderPassImplType;
     using BottomLevelASType             = typename EngineImplTraits::BottomLevelASImplType;
     using TopLevelASType                = typename EngineImplTraits::TopLevelASImplType;
+    using ShaderBindingTableImplType    = typename EngineImplTraits::ShaderBindingTableImplType;
 
     /// \param pRefCounters  - Reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - Render device.
@@ -343,11 +344,13 @@ protected:
     bool WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const;
     bool TraceRays(const TraceRaysAttribs& Attribs, int) const;
     bool TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
+    bool UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs, int) const;
 
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(uint) * 3; // D3D12: 12 bytes (x, y, z dimension)
                                                                               // Vulkan: 8 bytes (task count, first task)
     static constexpr Uint32 TraceRaysIndirectCommandSBTSize = 88;             // D3D12: 88 bytes, size of SBT offsets
                                                                               // Vulkan: 0 bytes, SBT offsets placed directly into function call
+    static constexpr Uint32 TraceRaysIndirectCommandSize = 104;               // SBT (88 bytes) + Dimension (3*4 bytes) aligned to 8 bytes
 
     /// Strong reference to the device.
     RefCntAutoPtr<DeviceImplType> m_pDevice;
@@ -1673,6 +1676,20 @@ bool DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
         return false;
     }
 
+    const auto* pSBTImpl = ValidatedCast<const ShaderBindingTableImplType>(Attribs.pSBT);
+    if (pSBTImpl->HasPendingData())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '", pSBTImpl->GetDesc().Name, "' has uncommited changes, call UpdateSBT() first");
+        return false;
+    }
+
+    VERIFY(pSBTImpl->GetInternalBuffer() != nullptr,
+           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happens ",
+           "because HasPendingData() must return true and previous check returns from the function.");
+    VERIFY(pSBTImpl->GetInternalBuffer()->CheckState(RESOURCE_STATE_RAY_TRACING),
+           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
+           GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
+
     if ((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) > m_pDevice->GetProperties().MaxRayGenThreads)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: the dimension must not exceed the ", m_pDevice->GetProperties().MaxRayGenThreads, " threads");
@@ -1711,7 +1728,7 @@ bool DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
         return false;
     }
 
-    if (!VerifyTraceRaysIndirectAttribs(m_pDevice, Attribs, pAttribsBuffer, TraceRaysIndirectCommandSBTSize))
+    if (!VerifyTraceRaysIndirectAttribs(m_pDevice, Attribs, pAttribsBuffer, TraceRaysIndirectCommandSize))
         return false;
 
     if (!PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)))
@@ -1720,11 +1737,59 @@ bool DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
                           "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
         return false;
     }
+
+    const auto* pSBTImpl = ValidatedCast<const ShaderBindingTableImplType>(Attribs.pSBT);
+    if (pSBTImpl->HasPendingData())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '", pSBTImpl->GetDesc().Name, "' has uncommited changes, call UpdateSBT() first");
+        return false;
+    }
+
+    VERIFY(pSBTImpl->GetInternalBuffer() != nullptr,
+           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happens ",
+           "because HasPendingData() must return true and previous check returns from the function.");
+    VERIFY(pSBTImpl->GetInternalBuffer()->CheckState(RESOURCE_STATE_RAY_TRACING),
+           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
+           GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
 #endif
 
     return true;
 }
 
+template <typename ImplementationTraits>
+bool DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs, int) const
+{
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT must be performed outside of render pass");
+        return false;
+    }
+
+    if (pSBT == nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT command arguments are invalid: pSBT must not be null");
+        return false;
+    }
+
+    if (pAttribs != nullptr)
+    {
+        if (pAttribs->pAttribsBuffer == nullptr)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT command arguments are invalid: pAttribs->pAttribsBuffer must not be null");
+            return false;
+        }
+    }
+#endif
+
+    return true;
+}
 
 
 #ifdef DILIGENT_DEVELOPMENT

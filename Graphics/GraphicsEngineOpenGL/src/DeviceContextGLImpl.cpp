@@ -1637,4 +1637,9 @@ void DeviceContextGLImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attr
     UNSUPPORTED("TraceRaysIndirect is not supported in OpenGL");
 }
 
+void DeviceContextGLImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs)
+{
+    UNSUPPORTED("UpdateSBT is not supported in OpenGL");
+}
+
 } // namespace Diligent

@@ -3421,48 +3421,11 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
     if (!TDeviceContextBase::TraceRays(Attribs, 0))
         return;
 
-    auto*    pSBTVk  = ValidatedCast<ShaderBindingTableVkImpl>(Attribs.pSBT);
-    IBuffer* pBuffer = nullptr;
-
-    ShaderBindingTableVkImpl::BindingTable RayGenShaderRecord  = {};
-    ShaderBindingTableVkImpl::BindingTable MissShaderTable     = {};
-    ShaderBindingTableVkImpl::BindingTable HitGroupTable       = {};
-    ShaderBindingTableVkImpl::BindingTable CallableShaderTable = {};
-
-    pSBTVk->GetData(pBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
-
-    auto* pSBTBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
-
-    const char* OpName = "Trace rays (DeviceContextVkImpl::TraceRays)";
-
-    if (RayGenShaderRecord.pData || MissShaderTable.pData || HitGroupTable.pData || CallableShaderTable.pData)
-    {
-        TransitionOrVerifyBufferState(*pSBTBufferVk, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
-
-        // buffer ranges are not intersected, so we don't need to add barriers between them
-        if (RayGenShaderRecord.pData)
-            UpdateBuffer(pBuffer, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-
-        if (MissShaderTable.pData)
-            UpdateBuffer(pBuffer, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-
-        if (HitGroupTable.pData)
-            UpdateBuffer(pBuffer, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-
-        if (CallableShaderTable.pData)
-            UpdateBuffer(pBuffer, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-    }
-    TransitionOrVerifyBufferState(*pSBTBufferVk, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
-
-    // clang-format off
-    VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {pSBTBufferVk->GetVkDeviceAddress() + RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
-    VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {pSBTBufferVk->GetVkDeviceAddress() + MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
-    VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {pSBTBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
-    VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {pSBTBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
-    // clang-format on
+    const auto* pSBTVk       = ValidatedCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
+    const auto& BindingTable = pSBTVk->GetVkBindingTable();
 
     PrepareForRayTracing();
-    m_CommandBuffer.TraceRays(RaygenShaderBindingTable, MissShaderBindingTable, HitShaderBindingTable, CallableShaderBindingTable,
+    m_CommandBuffer.TraceRays(BindingTable.RaygenShader, BindingTable.MissShader, BindingTable.HitShader, BindingTable.CallableShader,
                               Attribs.DimensionX, Attribs.DimensionY, Attribs.DimensionZ);
     ++m_State.NumCommands;
 }
@@ -3472,51 +3435,59 @@ void DeviceContextVkImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attr
     if (!TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0))
         return;
 
-    auto*    pSBTVk  = ValidatedCast<ShaderBindingTableVkImpl>(Attribs.pSBT);
-    IBuffer* pBuffer = nullptr;
+    const auto* pSBTVk       = ValidatedCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
+    const auto& BindingTable = pSBTVk->GetVkBindingTable();
+
+    auto* const pIndirectAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, "Trace rays indirect (DeviceContextVkImpl::TraceRaysIndirect)");
+    const auto  IndirectBuffOffset = Attribs.ArgsByteOffset + TraceRaysIndirectCommandSBTSize;
+
+    PrepareForRayTracing();
+    m_CommandBuffer.TraceRaysIndirect(BindingTable.RaygenShader, BindingTable.MissShader, BindingTable.HitShader, BindingTable.CallableShader,
+                                      pIndirectAttribsVk->GetVkDeviceAddress() + IndirectBuffOffset);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextVkImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs)
+{
+    if (!TDeviceContextBase::UpdateSBT(pSBT, pAttribs, 0))
+        return;
+
+    auto*         pSBTVk       = ValidatedCast<ShaderBindingTableVkImpl>(pSBT);
+    BufferVkImpl* pSBTBufferVk = nullptr;
 
     ShaderBindingTableVkImpl::BindingTable RayGenShaderRecord  = {};
     ShaderBindingTableVkImpl::BindingTable MissShaderTable     = {};
     ShaderBindingTableVkImpl::BindingTable HitGroupTable       = {};
     ShaderBindingTableVkImpl::BindingTable CallableShaderTable = {};
 
-    pSBTVk->GetData(pBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
+    pSBTVk->GetData(pSBTBufferVk, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
 
-    const char* OpName             = "Trace rays indirect (DeviceContextVkImpl::TraceRaysIndirect)";
-    auto* const pSBTBufferVk       = ValidatedCast<BufferVkImpl>(pBuffer);
-    auto* const pIndirectAttribsVk = PrepareIndirectAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, OpName);
-    const auto  IndirectBuffOffset = Attribs.ArgsByteOffset + (Attribs.ArgsByteSize == sizeof(Uint32) * 3 ? 0 : TraceRaysIndirectCommandSBTSize);
+    const char* OpName = "Update shader binding table (DeviceContextVkImpl::UpdateSBT)";
 
     if (RayGenShaderRecord.pData || MissShaderTable.pData || HitGroupTable.pData || CallableShaderTable.pData)
     {
         TransitionOrVerifyBufferState(*pSBTBufferVk, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
 
-        // buffer ranges are not intersected, so we don't need to add barriers between them
+        // Buffer ranges are not intersected, so we don't need to add barriers between them
         if (RayGenShaderRecord.pData)
-            UpdateBuffer(pBuffer, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            UpdateBuffer(pSBTBufferVk, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
         if (MissShaderTable.pData)
-            UpdateBuffer(pBuffer, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            UpdateBuffer(pSBTBufferVk, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
         if (HitGroupTable.pData)
-            UpdateBuffer(pBuffer, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            UpdateBuffer(pSBTBufferVk, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
         if (CallableShaderTable.pData)
-            UpdateBuffer(pBuffer, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            UpdateBuffer(pSBTBufferVk, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+        TransitionOrVerifyBufferState(*pSBTBufferVk, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
     }
-    TransitionOrVerifyBufferState(*pSBTBufferVk, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
-
-    // clang-format off
-    VkStridedDeviceAddressRegionKHR RaygenShaderBindingTable   = {pSBTBufferVk->GetVkDeviceAddress() + RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
-    VkStridedDeviceAddressRegionKHR MissShaderBindingTable     = {pSBTBufferVk->GetVkDeviceAddress() + MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
-    VkStridedDeviceAddressRegionKHR HitShaderBindingTable      = {pSBTBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
-    VkStridedDeviceAddressRegionKHR CallableShaderBindingTable = {pSBTBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
-    // clang-format on
-
-    PrepareForRayTracing();
-    m_CommandBuffer.TraceRaysIndirect(RaygenShaderBindingTable, MissShaderBindingTable, HitShaderBindingTable, CallableShaderBindingTable,
-                                      pIndirectAttribsVk->GetVkDeviceAddress() + IndirectBuffOffset);
-    ++m_State.NumCommands;
+    else
+    {
+        // Ray tracing command can be used in parallel with the same SBT, so internal buffer state must be RESOURCE_STATE_RAY_TRACING to allow it.
+        VERIFY(pSBTBufferVk->CheckState(RESOURCE_STATE_RAY_TRACING), "SBT buffer must be always in RESOURCE_STATE_RAY_TRACING state");
+    }
 }
 
 } // namespace Diligent

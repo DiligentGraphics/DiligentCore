@@ -142,6 +142,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         hr                          = pd3d12Device->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pTraceRaysIndirectSignature), reinterpret_cast<void**>(static_cast<ID3D12CommandSignature**>(&m_pTraceRaysIndirectSignature)));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create trace rays indirect command signature");
         static_assert(TraceRaysIndirectCommandSBTSize == offsetof(D3D12_DISPATCH_RAYS_DESC, Width), "Invalid SBT offsets size");
+        static_assert(TraceRaysIndirectCommandSize == sizeof(D3D12_DISPATCH_RAYS_DESC), "Invalid trace ray indirect command size");
     }
 }
 
@@ -2734,60 +2735,14 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
     if (!TDeviceContextBase::TraceRays(Attribs, 0))
         return;
 
-    auto&    CmdCtx    = GetCmdContext().AsGraphicsContext4();
-    auto*    pSBTD3D12 = ValidatedCast<ShaderBindingTableD3D12Impl>(Attribs.pSBT);
-    IBuffer* pBuffer   = nullptr;
+    auto&       CmdCtx    = GetCmdContext().AsGraphicsContext4();
+    const auto* pSBTD3D12 = ValidatedCast<const ShaderBindingTableD3D12Impl>(Attribs.pSBT);
 
-    ShaderBindingTableD3D12Impl::BindingTable RayGenShaderRecord  = {};
-    ShaderBindingTableD3D12Impl::BindingTable MissShaderTable     = {};
-    ShaderBindingTableD3D12Impl::BindingTable HitGroupTable       = {};
-    ShaderBindingTableD3D12Impl::BindingTable CallableShaderTable = {};
-
-    pSBTD3D12->GetData(pBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
-
-    auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pBuffer);
-
-    const char* OpName = "Trace rays (DeviceContextD3D12Impl::TraceRays)";
-
-    if (RayGenShaderRecord.pData || MissShaderTable.pData || HitGroupTable.pData || CallableShaderTable.pData)
-    {
-        TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_COPY_DEST, OpName);
-
-        // buffer ranges are not intersected, so we don't need to add barriers between them
-        if (RayGenShaderRecord.pData)
-            UpdateBuffer(pBufferD3D12, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-
-        if (MissShaderTable.pData)
-            UpdateBuffer(pBufferD3D12, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-
-        if (HitGroupTable.pData)
-            UpdateBuffer(pBufferD3D12, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-
-        if (CallableShaderTable.pData)
-            UpdateBuffer(pBufferD3D12, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-    }
-    TransitionOrVerifyBufferState(CmdCtx, *pBufferD3D12, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_RAY_TRACING, OpName);
-
-    D3D12_DISPATCH_RAYS_DESC d3d12DispatchDesc = {};
+    D3D12_DISPATCH_RAYS_DESC d3d12DispatchDesc = pSBTD3D12->GetD3D12BindingTable();
 
     d3d12DispatchDesc.Width  = Attribs.DimensionX;
     d3d12DispatchDesc.Height = Attribs.DimensionY;
     d3d12DispatchDesc.Depth  = Attribs.DimensionZ;
-
-    d3d12DispatchDesc.RayGenerationShaderRecord.StartAddress = pBufferD3D12->GetGPUAddress() + RayGenShaderRecord.Offset;
-    d3d12DispatchDesc.RayGenerationShaderRecord.SizeInBytes  = RayGenShaderRecord.Size;
-
-    d3d12DispatchDesc.MissShaderTable.StartAddress  = pBufferD3D12->GetGPUAddress() + MissShaderTable.Offset;
-    d3d12DispatchDesc.MissShaderTable.SizeInBytes   = MissShaderTable.Size;
-    d3d12DispatchDesc.MissShaderTable.StrideInBytes = MissShaderTable.Stride;
-
-    d3d12DispatchDesc.HitGroupTable.StartAddress  = pBufferD3D12->GetGPUAddress() + HitGroupTable.Offset;
-    d3d12DispatchDesc.HitGroupTable.SizeInBytes   = HitGroupTable.Size;
-    d3d12DispatchDesc.HitGroupTable.StrideInBytes = HitGroupTable.Stride;
-
-    d3d12DispatchDesc.CallableShaderTable.StartAddress  = pBufferD3D12->GetGPUAddress() + CallableShaderTable.Offset;
-    d3d12DispatchDesc.CallableShaderTable.SizeInBytes   = CallableShaderTable.Size;
-    d3d12DispatchDesc.CallableShaderTable.StrideInBytes = CallableShaderTable.Stride;
 
     PrepareForDispatchRays(CmdCtx);
 
@@ -2800,20 +2755,33 @@ void DeviceContextD3D12Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& A
     if (!TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0))
         return;
 
-    auto&    CmdCtx     = GetCmdContext().AsGraphicsContext4();
-    auto*    pSBTD3D12  = ValidatedCast<ShaderBindingTableD3D12Impl>(Attribs.pSBT);
-    IBuffer* pSBTBuffer = nullptr;
+    auto&       CmdCtx              = GetCmdContext().AsGraphicsContext4();
+    auto*       pAttribsBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
+    const char* OpName              = "Trace rays indirect (DeviceContextD3D12Impl::TraceRaysIndirect)";
+    TransitionOrVerifyBufferState(CmdCtx, *pAttribsBufferD3D12, Attribs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT, OpName);
+
+    PrepareForDispatchRays(CmdCtx);
+
+    CmdCtx.ExecuteIndirect(m_pTraceRaysIndirectSignature, pAttribsBufferD3D12->GetD3D12Resource(), Attribs.ArgsByteOffset);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextD3D12Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs)
+{
+    if (!TDeviceContextBase::UpdateSBT(pSBT, pAttribs, 0))
+        return;
+
+    auto&            CmdCtx          = GetCmdContext().AsGraphicsContext();
+    const char*      OpName          = "Update shader binding table (DeviceContextD3D12Impl::UpdateSBT)";
+    auto*            pSBTD3D12       = ValidatedCast<ShaderBindingTableD3D12Impl>(pSBT);
+    BufferD3D12Impl* pSBTBufferD3D12 = nullptr;
 
     ShaderBindingTableD3D12Impl::BindingTable RayGenShaderRecord  = {};
     ShaderBindingTableD3D12Impl::BindingTable MissShaderTable     = {};
     ShaderBindingTableD3D12Impl::BindingTable HitGroupTable       = {};
     ShaderBindingTableD3D12Impl::BindingTable CallableShaderTable = {};
 
-    pSBTD3D12->GetData(pSBTBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
-
-    auto* pSBTBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pSBTBuffer);
-
-    const char* OpName = "Trace rays indirect (DeviceContextD3D12Impl::TraceRaysIndirect)";
+    pSBTD3D12->GetData(pSBTBufferD3D12, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
 
     if (RayGenShaderRecord.pData || MissShaderTable.pData || HitGroupTable.pData || CallableShaderTable.pData)
     {
@@ -2831,36 +2799,20 @@ void DeviceContextD3D12Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& A
 
         if (CallableShaderTable.pData)
             UpdateBuffer(pSBTBufferD3D12, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+        TransitionOrVerifyBufferState(CmdCtx, *pSBTBufferD3D12, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_RAY_TRACING, OpName);
     }
-    TransitionOrVerifyBufferState(CmdCtx, *pSBTBufferD3D12, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_RAY_TRACING, OpName);
+    else
+    {
+        // Ray tracing command can be used in parallel with the same SBT, so internal buffer state must be RESOURCE_STATE_RAY_TRACING to allow it.
+        VERIFY(pSBTBufferD3D12->CheckState(RESOURCE_STATE_RAY_TRACING), "SBT buffer must be always in RESOURCE_STATE_RAY_TRACING state");
+    }
 
-    D3D12_DISPATCH_RAYS_DESC d3d12DispatchDesc = {};
-
-    d3d12DispatchDesc.RayGenerationShaderRecord.StartAddress = pSBTBufferD3D12->GetGPUAddress() + RayGenShaderRecord.Offset;
-    d3d12DispatchDesc.RayGenerationShaderRecord.SizeInBytes  = RayGenShaderRecord.Size;
-
-    d3d12DispatchDesc.MissShaderTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + MissShaderTable.Offset;
-    d3d12DispatchDesc.MissShaderTable.SizeInBytes   = MissShaderTable.Size;
-    d3d12DispatchDesc.MissShaderTable.StrideInBytes = MissShaderTable.Stride;
-
-    d3d12DispatchDesc.HitGroupTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + HitGroupTable.Offset;
-    d3d12DispatchDesc.HitGroupTable.SizeInBytes   = HitGroupTable.Size;
-    d3d12DispatchDesc.HitGroupTable.StrideInBytes = HitGroupTable.Stride;
-
-    d3d12DispatchDesc.CallableShaderTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + CallableShaderTable.Offset;
-    d3d12DispatchDesc.CallableShaderTable.SizeInBytes   = CallableShaderTable.Size;
-    d3d12DispatchDesc.CallableShaderTable.StrideInBytes = CallableShaderTable.Stride;
-
-    // copy dispath description with shader table data and keep dimension
-    UpdateBuffer(pAttribsBuffer, Attribs.ArgsByteOffset, offsetof(D3D12_DISPATCH_RAYS_DESC, Width), &d3d12DispatchDesc, Attribs.IndirectAttribsBufferStateTransitionMode);
-
-    auto* pAttribsBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
-    TransitionOrVerifyBufferState(CmdCtx, *pAttribsBufferD3D12, Attribs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT, OpName);
-
-    PrepareForDispatchRays(CmdCtx);
-
-    CmdCtx.ExecuteIndirect(m_pTraceRaysIndirectSignature, pAttribsBufferD3D12->GetD3D12Resource(), Attribs.ArgsByteOffset);
-    ++m_State.NumCommands;
+    if (pAttribs != nullptr)
+    {
+        const auto& d3d12DispatchDesc = pSBTD3D12->GetD3D12BindingTable();
+        UpdateBuffer(pAttribs->pAttribsBuffer, pAttribs->AttribsBufferOffset, TraceRaysIndirectCommandSBTSize, &d3d12DispatchDesc, pAttribs->TransitionMode);
+    }
 }
 
 } // namespace Diligent

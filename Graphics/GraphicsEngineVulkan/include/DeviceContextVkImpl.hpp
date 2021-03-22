@@ -272,6 +272,9 @@ public:
     /// Implementation of IDeviceContext::TraceRaysIndirect() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
 
+    /// Implementation of IDeviceContext::UpdateSBT() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs) override final;
+
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal texture state is used as old state.

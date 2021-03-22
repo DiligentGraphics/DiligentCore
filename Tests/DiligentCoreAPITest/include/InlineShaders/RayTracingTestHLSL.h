@@ -90,10 +90,8 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
     payload.Color = float4(barycentrics, 1.0);
 }
 )hlsl";
-// clang-format on
 
 
-// clang-format off
 const std::string RayTracingTest2_RG = RayTracingTest_Payload +
 R"hlsl(
 RaytracingAccelerationStructure g_TLAS        : register(t0);
@@ -154,10 +152,8 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
         payload.Color += float4(barycentrics, 1.0) / 3.0;
 }
 )hlsl";
-// clang-format on
 
 
-// clang-format off
 const std::string RayTracingTest3_RG = RayTracingTest_Payload +
 R"hlsl(
 RaytracingAccelerationStructure g_TLAS        : register(t0);
@@ -239,10 +235,8 @@ void main()
     }
 }
 )hlsl";
-// clang-format on
 
 
-// clang-format off
 const std::string RayTracingTest4_RG = RayTracingTest_Payload +
 R"hlsl(
 RaytracingAccelerationStructure g_TLAS        : register(t0);
@@ -337,10 +331,8 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
     payload.Color = col;
 }
 )hlsl";
-// clang-format on
 
 
-// clang-format off
 const std::string RayTracingTest5_RG = RayTracingTest_Payload +
 R"hlsl(
 RaytracingAccelerationStructure g_TLAS;
@@ -425,10 +417,8 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
     payload.Color += payload2.Color;
 }
 )hlsl";
-// clang-format on
 
 
-// clang-format off
 const std::string RayTracingTest6_RG{R"hlsl(
 RaytracingAccelerationStructure g_TLAS;
 RWTexture2D<float4>             g_ColorBuffer;
@@ -476,10 +466,8 @@ void main()
     g_ColorBuffer[DispatchRaysIndex().xy] = Color;
 }
 )hlsl"};
-// clang-format on
 
 
-// clang-format offstruct PSInput
 const std::string RayTracingTest7_VS{R"hlsl(
 struct PSInput
 { 
@@ -503,7 +491,6 @@ struct PSInput
 };
 
 RaytracingAccelerationStructure g_TLAS;
-RWTexture2D<float4>             g_ColorBuffer;
 
 float4 HitShader(float2 attrBarycentrics)
 {
@@ -545,6 +532,60 @@ float4 main(in PSInput PSIn) : SV_Target
         Color = MissShader();
     }
     return Color;
+}
+)hlsl"};
+
+
+const std::string RayTracingTest8_CS{R"hlsl(
+RaytracingAccelerationStructure g_TLAS;
+RWTexture2D<float4>             g_ColorBuffer;
+
+float4 HitShader(float2 attrBarycentrics)
+{
+    float3 barycentrics = float3(1.0 - attrBarycentrics.x - attrBarycentrics.y, attrBarycentrics.x, attrBarycentrics.y);
+    return float4(barycentrics, 1.0);
+}
+
+float4 MissShader()
+{
+    return float4(1.0, 0.0, 0.0, 1.0);
+}
+
+[numthreads(16, 16, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
+{
+	uint2 Dim;
+	g_ColorBuffer.GetDimensions(Dim.x, Dim.y);
+	if (DTid.x >= Dim.x || DTid.y >= Dim.y)
+        return;
+
+    const float2 uv = (float2(DTid.xy) + 0.5) / float2(Dim.xy);
+
+    RayDesc ray;
+    ray.Origin    = float3(uv.x, 1.0 - uv.y, -1.0);
+    ray.Direction = float3(0.0, 0.0, 1.0);
+    ray.TMin      = 0.01;
+    ray.TMax      = 10.0;
+
+    RayQuery<RAY_FLAG_NONE> q;
+
+    q.TraceRayInline(g_TLAS,         // Acceleration Structure
+                     RAY_FLAG_NONE,  // Ray Flags
+                     ~0,             // Instance Inclusion Mask
+                     ray);
+
+    q.Proceed();
+
+    float4 Color;
+    if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+    {
+        Color = HitShader(q.CommittedTriangleBarycentrics());
+    }
+    else
+    {
+        Color = MissShader();
+    }
+    g_ColorBuffer[DTid.xy] = Color;
 }
 )hlsl"};
 // clang-format on

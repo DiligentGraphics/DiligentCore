@@ -103,6 +103,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \return     True if SBT content is valid, and false otherwise.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     ///       This method implemented only for development build and has no effect in release build.
     VIRTUAL Bool METHOD(Verify)(THIS_
                                 VERIFY_SBT_FLAGS Flags) CONST PURE;
@@ -111,6 +113,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// Resets the SBT with the new pipeline state. This is more effecient than creating a new SBT.
     
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     VIRTUAL void METHOD(Reset)(THIS_
                                IPipelineState* pPSO) PURE;
     
@@ -119,6 +123,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// you can reset hit groups only and keep ray-gen, miss and callable shader bindings intact.
     
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     VIRTUAL void METHOD(ResetHitGroups)(THIS) PURE;
     
 
@@ -130,6 +136,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \param [in] DataSize         - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     VIRTUAL void METHOD(BindRayGenShader)(THIS_
                                           const char* pShaderGroupName,
                                           const void* pData            DEFAULT_INITIALIZER(nullptr),
@@ -147,6 +155,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \param [in] DataSize         - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     VIRTUAL void METHOD(BindMissShader)(THIS_
                                         const char* pShaderGroupName,
                                         Uint32      MissIndex,
@@ -173,6 +183,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \param [in] DataSize                 - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     ///       Access to the TLAS must be externally synchronized.
     ///       Access to the BLAS that was used in the TLAS instance with name pInstanceName must be externally synchronized.
     VIRTUAL void METHOD(BindHitGroupForGeometry)(THIS_
@@ -195,6 +207,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \param [in] DataSize         - Shader record data size, should equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     /// 
     /// \remarks    Use IBottomLevelAS::GetGeometryIndex(), ITopLevelAS::GetBuildInfo(), 
     ///             ITopLevelAS::GetInstanceDesc().ContributionToHitGroupIndex to calculate the binding index.
@@ -221,6 +235,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \param [in] DataSize                 - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     ///       Access to the TLAS must be externally synchronized.
     VIRTUAL void METHOD(BindHitGroupForInstance)(THIS_
                                                  ITopLevelAS* pTLAS,
@@ -245,6 +261,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \param [in] DataSize                 - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     ///       Access to the TLAS must be externally synchronized.
     VIRTUAL void METHOD(BindHitGroupForTLAS)(THIS_
                                              ITopLevelAS* pTLAS,
@@ -265,6 +283,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     /// \param [in] DataSize         - Shader record data size, should be equal to RayTracingPipelineDesc::ShaderRecordSize.
     /// 
     /// \note Access to the SBT must be externally synchronized.
+    ///       Function modifies data that are not used by context commands IDeviceContext::TraceRays() and
+    ///       IDeviceContext::TraceRaysIndirect(), so these commands can run in parallel.
     VIRTUAL void METHOD(BindCallableShader)(THIS_
                                             const char* pShaderGroupName,
                                             Uint32      CallableIndex,
