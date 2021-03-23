@@ -61,7 +61,7 @@ public:
     {
         const PipelineStateGLImpl&            PSO;
         BufferGLImpl* const                   pIndexBuffer;
-        VertexStreamInfo<BufferGLImpl>* const VertexStreams = nullptr;
+        VertexStreamInfo<BufferGLImpl>* const VertexStreams;
         const Uint32                          NumVertexStreams;
     };
     const GLObjectWrappers::GLVertexArrayObj& GetVAO(const VAOAttribs&     Attribs,
