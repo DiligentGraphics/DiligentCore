@@ -145,7 +145,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI.DynamicHeapSize,
         ~Uint64{0}
     },
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath)},
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_VulkanInstance->GetVkVersion(), EngineCI.pDxCompilerPath)},
     m_Properties
     {
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupHandleSize,
@@ -158,12 +158,6 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 // clang-format on
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
-
-    // set device properties
-    {
-        static_assert(sizeof(DeviceProperties) == sizeof(Uint32) * 1, "Please set new properties below");
-        m_DeviceProperties.MaxRayTracingRecursionDepth = m_Properties.MaxRayTracingRecursionDepth;
-    }
 
     m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_VULKAN;
     m_DeviceCaps.MajorVersion = 1;
@@ -234,7 +228,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 34, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 35, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
 #endif
 
     const auto& vkDeviceLimits    = m_PhysicalDevice->GetProperties().limits;
@@ -259,6 +254,19 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     SamCaps.BorderSamplingModeSupported   = True;
     SamCaps.AnisotropicFilteringSupported = vkEnabledFeatures.samplerAnisotropy;
     SamCaps.LODBiasSupported              = True;
+
+    if (Features.RayTracing)
+    {
+        m_DeviceProperties.MaxRayTracingRecursionDepth = m_Properties.MaxRayTracingRecursionDepth;
+    }
+    if (Features.WaveOp)
+    {
+        const auto& vkWaveProps                   = m_PhysicalDevice->GetExtProperties().Subgroup;
+        m_DeviceProperties.WaveOp.MinSize         = vkWaveProps.subgroupSize;
+        m_DeviceProperties.WaveOp.MaxSize         = vkWaveProps.subgroupSize;
+        m_DeviceProperties.WaveOp.SupportedStages = VkShaderStageFlagsToShaderTypes(vkWaveProps.supportedStages);
+        m_DeviceProperties.WaveOp.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
+    }
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()

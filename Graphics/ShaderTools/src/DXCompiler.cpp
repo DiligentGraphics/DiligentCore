@@ -64,13 +64,17 @@ namespace Diligent
 
 namespace
 {
+constexpr Uint32 VK_API_VERSION_1_1 = (1u << 22) | (1u << 12);
+constexpr Uint32 VK_API_VERSION_1_2 = (1u << 22) | (2u << 12);
+
 
 class DXCompilerImpl final : public DXCompilerBase
 {
 public:
-    DXCompilerImpl(DXCompilerTarget Target, const char* pLibName) :
+    DXCompilerImpl(DXCompilerTarget Target, Uint32 APIVersion, const char* pLibName) :
         m_Target{Target},
-        m_LibName{pLibName ? pLibName : (Target == DXCompilerTarget::Direct3D12 ? "dxcompiler" : "spv_dxcompiler")}
+        m_LibName{pLibName ? pLibName : (Target == DXCompilerTarget::Direct3D12 ? "dxcompiler" : "spv_dxcompiler")},
+        m_APIVersion{APIVersion}
     {}
 
     ShaderVersion GetMaxShaderModel() override final
@@ -180,6 +184,7 @@ private:
     std::mutex             m_Guard;
     const String           m_LibName;
     const DXCompilerTarget m_Target;
+    const Uint32           m_APIVersion;
     // Compiler version
     UINT32 m_MajorVer = 0;
     UINT32 m_MinorVer = 0;
@@ -269,9 +274,9 @@ private:
 } // namespace
 
 
-std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
+std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, Uint32 APIVersion, const char* pLibraryName)
 {
-    return std::unique_ptr<IDXCompiler>{new DXCompilerImpl{Target, pLibraryName}};
+    return std::unique_ptr<IDXCompiler>{new DXCompilerImpl{Target, APIVersion, pLibraryName}};
 }
 
 bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
@@ -731,9 +736,6 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
         else
             DxilArgs.push_back(L"-Od"); // TODO: something goes wrong if optimization is enabled
 #endif
-        DEV_CHECK_ERR((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ENABLE_INLINE_RAY_TRACING) == 0 ||
-                          (ShaderModel.Major > 6 || (ShaderModel.Major == 6 && ShaderModel.Minor >= 5)),
-                      "Inline ray tracing requires Shader Model 6.5 and above");
     }
     else if (m_Target == DXCompilerTarget::Vulkan)
     {
@@ -745,10 +747,16 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
                 L"-O3", // Optimization level 3
             });
 
-        if ((ShaderCI.Desc.ShaderType & SHADER_TYPE_ALL_RAY_TRACING) != 0 ||
-            (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ENABLE_INLINE_RAY_TRACING) != 0)
+        if (m_APIVersion >= VK_API_VERSION_1_2 && ShaderModel >= ShaderVersion{6, 3})
         {
-            DxilArgs.push_back(L"-fspv-target-env=vulkan1.2"); // required for SPV_KHR_ray_tracing and SPV_KHR_ray_query
+            // Ray tracing requires SM 6.3 and Vulkan 1.2
+            // Inline ray tracing requires SM 6.5 and Vulkan 1.2
+            DxilArgs.push_back(L"-fspv-target-env=vulkan1.2");
+        }
+        else if (m_APIVersion >= VK_API_VERSION_1_1)
+        {
+            // Wave operations requires SM 6.0 and Vulkan 1.1
+            DxilArgs.push_back(L"-fspv-target-env=vulkan1.1");
         }
     }
     else

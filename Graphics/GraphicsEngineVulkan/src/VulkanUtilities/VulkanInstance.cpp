@@ -227,7 +227,7 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         for (size_t l = 0; l < _countof(VulkanUtilities::ValidationLayerNames); ++l)
         {
             auto*    pLayerName = VulkanUtilities::ValidationLayerNames[l];
-            uint32_t LayerVer   = 0;
+            uint32_t LayerVer   = ~0u; // Prevent warning if the layer is not found
             if (!IsLayerAvailable(pLayerName, LayerVer))
             {
                 ValidationLayersPresent = false;

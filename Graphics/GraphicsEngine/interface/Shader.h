@@ -42,48 +42,6 @@ static const INTERFACE_ID IID_Shader =
 
 // clang-format off
 
-/// Describes the shader type
-DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
-{
-    SHADER_TYPE_UNKNOWN          = 0x0000, ///< Unknown shader type
-    SHADER_TYPE_VERTEX           = 0x0001, ///< Vertex shader
-    SHADER_TYPE_PIXEL            = 0x0002, ///< Pixel (fragment) shader
-    SHADER_TYPE_GEOMETRY         = 0x0004, ///< Geometry shader
-    SHADER_TYPE_HULL             = 0x0008, ///< Hull (tessellation control) shader
-    SHADER_TYPE_DOMAIN           = 0x0010, ///< Domain (tessellation evaluation) shader
-    SHADER_TYPE_COMPUTE          = 0x0020, ///< Compute shader
-    SHADER_TYPE_AMPLIFICATION    = 0x0040, ///< Amplification (task) shader
-    SHADER_TYPE_MESH             = 0x0080, ///< Mesh shader
-    SHADER_TYPE_RAY_GEN          = 0x0100, ///< Ray generation shader
-    SHADER_TYPE_RAY_MISS         = 0x0200, ///< Ray miss shader
-    SHADER_TYPE_RAY_CLOSEST_HIT  = 0x0400, ///< Ray closest hit shader
-    SHADER_TYPE_RAY_ANY_HIT      = 0x0800, ///< Ray any hit shader
-    SHADER_TYPE_RAY_INTERSECTION = 0x1000, ///< Ray intersection shader
-    SHADER_TYPE_CALLABLE         = 0x2000, ///< Callable shader
-    SHADER_TYPE_LAST             = SHADER_TYPE_CALLABLE,
-
-    /// All graphics pipeline shader stages
-    SHADER_TYPE_ALL_GRAPHICS    = SHADER_TYPE_VERTEX   |
-                                  SHADER_TYPE_PIXEL    |
-                                  SHADER_TYPE_GEOMETRY | 
-                                  SHADER_TYPE_HULL     | 
-                                  SHADER_TYPE_DOMAIN,
-
-    /// All mesh shading pipeline stages
-    SHADER_TYPE_ALL_MESH        = SHADER_TYPE_AMPLIFICATION |
-                                  SHADER_TYPE_MESH |
-                                  SHADER_TYPE_PIXEL,
-
-    /// All ray-tracing pipeline shader stages
-    SHADER_TYPE_ALL_RAY_TRACING    = SHADER_TYPE_RAY_GEN          |
-                                     SHADER_TYPE_RAY_MISS         |
-                                     SHADER_TYPE_RAY_CLOSEST_HIT  |
-                                     SHADER_TYPE_RAY_ANY_HIT      |
-                                     SHADER_TYPE_RAY_INTERSECTION |
-                                     SHADER_TYPE_CALLABLE
-};
-DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
-
 /// Describes the shader source code language
 DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
 {
@@ -271,10 +229,6 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
 
     /// Enable unbounded resource arrays (e.g. Texture2D g_Texture[]).
     SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS = 0x01,
-
-    /// Enable inline ray tracing for graphics and compute shaders.
-    /// Requires RayTracing2 device feature.
-    SHADER_COMPILE_FLAG_ENABLE_INLINE_RAY_TRACING = 0x02,
 
     SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS
 };

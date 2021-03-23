@@ -131,17 +131,11 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     m_DynamicMemoryManager  {GetRawAllocator(), *this, EngineCI.NumDynamicHeapPagesToReserve, EngineCI.DynamicHeapPageSize},
     m_MipsGenerator         {pd3d12Device},
     m_QueryMgr              {pd3d12Device, EngineCI.QueryPoolSizes},
-    m_pDxCompiler           {CreateDXCompiler(DXCompilerTarget::Direct3D12, EngineCI.pDxCompilerPath)},
+    m_pDxCompiler           {CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, EngineCI.pDxCompilerPath)},
     m_RootSignatureAllocator{GetRawAllocator(), sizeof(RootSignatureD3D12), 128},
     m_RootSignatureCache    {*this}
 // clang-format on
 {
-    // set device properties
-    {
-        static_assert(sizeof(DeviceProperties) == sizeof(Uint32) * 1, "Please set new properties below");
-        m_DeviceProperties.MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
-    }
-
     try
     {
         m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D12;
@@ -241,22 +235,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                                 "Winodws is up to date (version 2004 or later is required)");
         }
 
-        m_DeviceCaps.Features.MeshShaders = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
-
-        {
-            D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features = {};
-            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &d3d12Features, sizeof(d3d12Features))))
-            {
-                if (d3d12Features.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
-                {
-                    m_DeviceCaps.Features.RayTracing = DEVICE_FEATURE_STATE_ENABLED;
-                }
-                if (d3d12Features.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
-                {
-                    m_DeviceCaps.Features.RayTracing2 = DEVICE_FEATURE_STATE_ENABLED;
-                }
-            }
-        }
+        m_DeviceCaps.Features.MeshShaders                = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+        m_DeviceCaps.Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_ENABLED;
 
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
@@ -267,9 +247,22 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                     m_DeviceCaps.Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
                 }
             }
-        }
 
-        {
+            D3D12_FEATURE_DATA_D3D12_OPTIONS1 d3d12Features1 = {};
+            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &d3d12Features1, sizeof(d3d12Features1))))
+            {
+                if (d3d12Features1.WaveOps != FALSE)
+                {
+                    m_DeviceCaps.Features.WaveOp              = DEVICE_FEATURE_STATE_ENABLED;
+                    m_DeviceProperties.WaveOp.MinSize         = d3d12Features1.WaveLaneCountMin;
+                    m_DeviceProperties.WaveOp.MaxSize         = d3d12Features1.WaveLaneCountMax;
+                    m_DeviceProperties.WaveOp.SupportedStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
+                    m_DeviceProperties.WaveOp.Features        = WAVE_FEATURE_BASIC | WAVE_FEATURE_VOTE | WAVE_FEATURE_ARITHMETIC | WAVE_FEATURE_BALLOUT | WAVE_FEATURE_QUAD;
+                    if (MeshShadersSupported)
+                        m_DeviceProperties.WaveOp.SupportedStages |= SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH;
+                }
+            }
+
             D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Features4 = {};
             if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &d3d12Features4, sizeof(d3d12Features4))))
             {
@@ -280,9 +273,21 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                     m_DeviceCaps.Features.ShaderInputOutput16       = DEVICE_FEATURE_STATE_ENABLED;
                 }
             }
-        }
 
-        m_DeviceCaps.Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_ENABLED;
+            D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features5 = {};
+            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &d3d12Features5, sizeof(d3d12Features5))))
+            {
+                if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
+                {
+                    m_DeviceCaps.Features.RayTracing               = DEVICE_FEATURE_STATE_ENABLED;
+                    m_DeviceProperties.MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+                }
+                if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
+                {
+                    m_DeviceCaps.Features.RayTracing2 = DEVICE_FEATURE_STATE_ENABLED;
+                }
+            }
+        }
 
 #define CHECK_REQUIRED_FEATURE(Feature, FeatureName)                           \
     do                                                                         \
@@ -302,13 +307,16 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         CHECK_REQUIRED_FEATURE(ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
         CHECK_REQUIRED_FEATURE(UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
 
-        CHECK_REQUIRED_FEATURE(RayTracing,               "ray tracing is");
-        CHECK_REQUIRED_FEATURE(RayTracing2,              "inline ray tracing is");
+        CHECK_REQUIRED_FEATURE(RayTracing,  "Ray tracing is");
+        CHECK_REQUIRED_FEATURE(RayTracing2, "Inline ray tracing is");
+
+        CHECK_REQUIRED_FEATURE(WaveOp, "Wave operations is");
         // clang-format on
 #undef CHECK_REQUIRED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 34, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 35, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
 #endif
 
         auto& TexCaps = m_DeviceCaps.TexCaps;

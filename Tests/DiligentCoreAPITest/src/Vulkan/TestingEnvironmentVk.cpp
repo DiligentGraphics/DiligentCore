@@ -47,8 +47,7 @@ void CreateTestingSwapChainVk(TestingEnvironmentVk* pEnv,
 
 TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
                                            const SwapChainDesc& SCDesc) :
-    TestingEnvironment{CI, SCDesc},
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, nullptr)}
+    TestingEnvironment{CI, SCDesc}
 {
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
@@ -61,6 +60,8 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice, IID_RenderDeviceVk};
     m_vkDevice         = pRenderDeviceVk->GetVkDevice();
     m_vkPhysicalDevice = pRenderDeviceVk->GetVkPhysicalDevice();
+
+    m_pDxCompiler = CreateDXCompiler(DXCompilerTarget::Vulkan, pRenderDeviceVk->GetVkVersion(), nullptr);
 
     volkLoadInstance(pRenderDeviceVk->GetVkInstance());
 

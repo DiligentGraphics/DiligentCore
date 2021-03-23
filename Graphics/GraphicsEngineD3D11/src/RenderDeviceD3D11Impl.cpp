@@ -147,6 +147,7 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     UNSUPPORTED_FEATURE(RayTracing,                        "Ray tracing is");
     UNSUPPORTED_FEATURE(RayTracing2,                       "Inline ray tracing is");
     UNSUPPORTED_FEATURE(ShaderResourceRuntimeArray,        "Runtime-sized array is");
+    UNSUPPORTED_FEATURE(WaveOp,                            "Wave operations is");
     // clang-format on
 
     {
@@ -177,7 +178,8 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
 #undef UNSUPPORTED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 34, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 35, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
 #endif
 
     auto& TexCaps = m_DeviceCaps.TexCaps;

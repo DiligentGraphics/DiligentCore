@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Added WaveOp device feature (API Version 240086)
 * Added UpdateSBT command (API Version 240085)
 * Removed `EngineD3D12CreateInfo::NumCommandsToFlushCmdList` and `EngineVkCreateInfo::NumCommandsToFlushCmdBuffer` as flushing
   the context based on the number of commands is unreasonable (API Version 240084)

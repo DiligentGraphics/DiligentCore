@@ -88,10 +88,13 @@ VkAccessFlags        AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags);
 
 VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType);
 VkShaderStageFlags    ShaderTypesToVkShaderStageFlags(SHADER_TYPE ShaderTypes);
+SHADER_TYPE           VkShaderStageFlagsToShaderTypes(VkShaderStageFlags StageFlags);
 
 VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags);
 VkGeometryFlagsKHR                   GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags);
 VkGeometryInstanceFlagsKHR           InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags);
 VkCopyAccelerationStructureModeKHR   CopyASModeToVkCopyAccelerationStructureMode(COPY_AS_MODE Mode);
+
+WAVE_FEATURE VkSubgroupFeatureFlagsToWaveFeatures(VkSubgroupFeatureFlags FeatureFlags);
 
 } // namespace Diligent

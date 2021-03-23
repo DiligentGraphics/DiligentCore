@@ -113,7 +113,7 @@ const wchar_t* DXCArgs[] = {
 
 TEST(DXCompilerTest, Reflection)
 {
-    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, nullptr);
+    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
     IDXCompiler::CompileAttribs CA;
@@ -181,7 +181,7 @@ TEST(DXCompilerTest, Reflection)
 
 TEST(DXCompilerTest, RemapBindingsRG)
 {
-    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, nullptr);
+    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
     IDXCompiler::CompileAttribs CA;
@@ -305,7 +305,7 @@ float4 main() : SV_TARGET
 }
 )hlsl";
 
-    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, nullptr);
+    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
     IDXCompiler::CompileAttribs CA;
@@ -445,7 +445,7 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
 }
 )hlsl";
 
-    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, nullptr);
+    auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
     IDXCompiler::CompileAttribs CA;

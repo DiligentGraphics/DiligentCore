@@ -111,7 +111,7 @@ public:
 // Use this function to load the DX Compiler library.
 // pLibraryName is an optional path to the library. If not provided, default
 // path is used.
-std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName);
+std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, Uint32 APIVersion, const char* pLibraryName);
 
 bool IsDXILBytecode(const void* pBytecode, size_t Size);
 

@@ -148,6 +148,9 @@ public:
     /// Implementation of IRenderDeviceVk::GetVkInstance().
     virtual VkInstance DILIGENT_CALL_TYPE GetVkInstance() override final { return m_VulkanInstance->GetVkInstance(); }
 
+    /// Implementation of IRenderDeviceVk::GetVkVersion().
+    virtual Uint32 DILIGENT_CALL_TYPE GetVkVersion() override final { return m_VulkanInstance->GetVkVersion(); }
+
     /// Implementation of IRenderDeviceVk::CreateTextureFromVulkanImage().
     virtual void DILIGENT_CALL_TYPE CreateTextureFromVulkanImage(VkImage            vkImage,
                                                                  const TextureDesc& TexDesc,

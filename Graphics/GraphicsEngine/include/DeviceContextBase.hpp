@@ -1704,7 +1704,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(
 
     DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.MeshShaders, "DrawMesh: mesh shaders are not supported by this device");
 
-    DEV_CHECK_ERR(!m_pPipelineState, "DrawMesh command arguments are invalid: no pipeline state is bound.");
+    DEV_CHECK_ERR(m_pPipelineState, "DrawMesh command arguments are invalid: no pipeline state is bound.");
 
     DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
                   "DrawMesh command arguments are invalid: pipeline state '",

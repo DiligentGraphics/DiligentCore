@@ -45,7 +45,7 @@ TestingEnvironmentD3D12::TestingEnvironmentD3D12(const CreateInfo&    CI,
                                                  const SwapChainDesc& SCDesc) :
     TestingEnvironment{CI, SCDesc},
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)},
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Direct3D12, nullptr)}
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr)}
 {
     RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{m_pDevice, IID_RenderDeviceD3D12};
     m_pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();

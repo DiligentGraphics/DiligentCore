@@ -1644,6 +1644,39 @@ VkShaderStageFlags ShaderTypesToVkShaderStageFlags(SHADER_TYPE ShaderTypes)
     return Result;
 }
 
+SHADER_TYPE VkShaderStageFlagsToShaderTypes(VkShaderStageFlags StageFlags)
+{
+    SHADER_TYPE Result = SHADER_TYPE_UNKNOWN;
+    while (StageFlags != 0)
+    {
+        auto Type = ExtractLSB(StageFlags);
+
+        static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+        switch (Type)
+        {
+            // clang-format off
+            case VK_SHADER_STAGE_VERTEX_BIT:                  Result |= SHADER_TYPE_VERTEX;           break;
+            case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:    Result |= SHADER_TYPE_HULL;             break;
+            case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: Result |= SHADER_TYPE_DOMAIN;           break;
+            case VK_SHADER_STAGE_GEOMETRY_BIT:                Result |= SHADER_TYPE_GEOMETRY;         break;
+            case VK_SHADER_STAGE_FRAGMENT_BIT:                Result |= SHADER_TYPE_PIXEL;            break;
+            case VK_SHADER_STAGE_COMPUTE_BIT:                 Result |= SHADER_TYPE_COMPUTE;          break;
+            case VK_SHADER_STAGE_TASK_BIT_NV:                 Result |= SHADER_TYPE_AMPLIFICATION;    break;
+            case VK_SHADER_STAGE_MESH_BIT_NV:                 Result |= SHADER_TYPE_MESH;             break;
+            case VK_SHADER_STAGE_RAYGEN_BIT_KHR:              Result |= SHADER_TYPE_RAY_GEN;          break;
+            case VK_SHADER_STAGE_MISS_BIT_KHR:                Result |= SHADER_TYPE_RAY_MISS;         break;
+            case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:         Result |= SHADER_TYPE_RAY_CLOSEST_HIT;  break;
+            case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:             Result |= SHADER_TYPE_RAY_ANY_HIT;      break;
+            case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:        Result |= SHADER_TYPE_RAY_INTERSECTION; break;
+            case VK_SHADER_STAGE_CALLABLE_BIT_KHR:            Result |= SHADER_TYPE_CALLABLE;         break;
+            // clang-format on
+            default:
+                UNEXPECTED("Unknown shader type");
+        }
+    }
+    return Result;
+}
+
 VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags)
 {
     static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == RAYTRACING_BUILD_AS_LOW_MEMORY,
@@ -1727,6 +1760,34 @@ VkCopyAccelerationStructureModeKHR CopyASModeToVkCopyAccelerationStructureMode(C
             UNEXPECTED("unknown AS copy mode");
             return VK_COPY_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
     }
+}
+
+WAVE_FEATURE VkSubgroupFeatureFlagsToWaveFeatures(VkSubgroupFeatureFlags FeatureFlags)
+{
+    WAVE_FEATURE Result = WAVE_FEATURE_UNKNOWN;
+    while (FeatureFlags != 0)
+    {
+        auto Feature = ExtractLSB(FeatureFlags);
+        static_assert(WAVE_FEATURE_LAST == WAVE_FEATURE_QUAD,
+                      "Please update the switch below to handle the new wave feature");
+        switch (Feature)
+        {
+            // clang-format off
+            case VK_SUBGROUP_FEATURE_BASIC_BIT:            Result |= WAVE_FEATURE_BASIC;            break;
+            case VK_SUBGROUP_FEATURE_VOTE_BIT:             Result |= WAVE_FEATURE_VOTE;             break;
+            case VK_SUBGROUP_FEATURE_ARITHMETIC_BIT:       Result |= WAVE_FEATURE_ARITHMETIC;       break;
+            case VK_SUBGROUP_FEATURE_BALLOT_BIT:           Result |= WAVE_FEATURE_BALLOUT;          break;
+            case VK_SUBGROUP_FEATURE_SHUFFLE_BIT:          Result |= WAVE_FEATURE_SHUFFLE;          break;
+            case VK_SUBGROUP_FEATURE_SHUFFLE_RELATIVE_BIT: Result |= WAVE_FEATURE_SHUFFLE_RELATIVE; break;
+            case VK_SUBGROUP_FEATURE_CLUSTERED_BIT:        Result |= WAVE_FEATURE_CLUSTERED;        break;
+            case VK_SUBGROUP_FEATURE_QUAD_BIT:             Result |= WAVE_FEATURE_QUAD;             break;
+            // clang-format on
+            default:
+                // Don't handle unknown features
+                break;
+        }
+    }
+    return Result;
 }
 
 } // namespace Diligent

@@ -206,6 +206,16 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         }
 #    endif
 
+        // Subgroup feature requires Vulkan 1.1 core.
+        if (Instance.GetVkVersion() >= VK_API_VERSION_1_1)
+        {
+            *NextProp = &m_ExtProperties.Subgroup;
+            NextProp  = &m_ExtProperties.Subgroup.pNext;
+
+            m_ExtFeatures.SubgroupOps      = true;
+            m_ExtProperties.Subgroup.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
+        }
+
         // make sure that last pNext is null
         *NextFeat = nullptr;
         *NextProp = nullptr;

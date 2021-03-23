@@ -138,8 +138,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
     try
     {
         Uint32 Version = VK_API_VERSION_1_0;
+        if (EngineCI.Features.WaveOp != DEVICE_FEATURE_STATE_DISABLED)
+            Version = VK_API_VERSION_1_1; // There is no alternative to subgroup extension in Vulkan 1.1 core
         if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED || EngineCI.Features.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
-            Version = VK_API_VERSION_1_2;
+            Version = VK_API_VERSION_1_2; // DXC requires Vulkan 1.2
 
         auto Instance = VulkanUtilities::VulkanInstance::Create(
             Version,
@@ -234,6 +236,15 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         // clang-format on
 #undef ENABLE_FEATURE
 
+        // Enable features that are not covered by DeviceFeatures but required for some operations.
+        EnabledFeatures.multiDrawIndirect                       = PhysicalDeviceFeatures.multiDrawIndirect;
+        EnabledFeatures.drawIndirectFirstInstance               = PhysicalDeviceFeatures.drawIndirectFirstInstance;
+        EnabledFeatures.shaderStorageImageWriteWithoutFormat    = PhysicalDeviceFeatures.shaderStorageImageWriteWithoutFormat;
+        EnabledFeatures.shaderUniformBufferArrayDynamicIndexing = PhysicalDeviceFeatures.shaderUniformBufferArrayDynamicIndexing;
+        EnabledFeatures.shaderSampledImageArrayDynamicIndexing  = PhysicalDeviceFeatures.shaderSampledImageArrayDynamicIndexing;
+        EnabledFeatures.shaderStorageBufferArrayDynamicIndexing = PhysicalDeviceFeatures.shaderStorageBufferArrayDynamicIndexing;
+        EnabledFeatures.shaderStorageImageArrayDynamicIndexing  = PhysicalDeviceFeatures.shaderStorageImageArrayDynamicIndexing;
+
         DeviceCreateInfo.pEnabledFeatures = &EnabledFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains
                                                               // boolean indicators of all the features to be enabled.
 
@@ -289,6 +300,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                        RayTracingFeats.rayTraversalPrimitiveCulling        != VK_FALSE &&
                        RayQueryFeats.rayQuery                              != VK_FALSE, RayTracing2, "Inline ray tracing is");
         // clang-format on
+
+        const auto& SubgroupProps         = PhysicalDevice->GetExtProperties().Subgroup;
+        const auto  RequiredSubgroupFeats = VK_SUBGROUP_FEATURE_BASIC_BIT | VK_SUBGROUP_FEATURE_VOTE_BIT;
+        ENABLE_FEATURE(Instance->GetVkVersion() >= VK_API_VERSION_1_1 && (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats, WaveOp, "Wave operations are");
 #undef FeatureSupport
 
 
@@ -492,12 +507,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             }
 #endif
 
+            if (EngineCI.Features.WaveOp != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                EnabledExtFeats.SubgroupOps = true;
+            }
+
             // make sure that last pNext is null
             *NextExt = nullptr;
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 34, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 35, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();

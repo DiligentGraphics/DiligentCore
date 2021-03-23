@@ -303,10 +303,11 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     } while (false)
 
     // clang-format off
-    SET_FEATURE_STATE(VertexPipelineUAVWritesAndAtomics, false, "Vertex pipeline UAV writes and atomics are");
-    SET_FEATURE_STATE(MeshShaders,                       false, "Mesh shaders are");
-    SET_FEATURE_STATE(RayTracing,                        false, "Ray tracing is");
-    SET_FEATURE_STATE(RayTracing2,                       false, "Inline ray tracing is");
+    SET_FEATURE_STATE(MeshShaders,                false, "Mesh shaders are");
+    SET_FEATURE_STATE(RayTracing,                 false, "Ray tracing is");
+    SET_FEATURE_STATE(RayTracing2,                false, "Inline ray tracing is");
+    SET_FEATURE_STATE(ShaderResourceRuntimeArray, false, "Runtime-sized array is");
+    SET_FEATURE_STATE(WaveOp,                     false, "Wave operations is");
     // clang-format on
 
     {
@@ -329,6 +330,21 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
     if (InitAttribs.ForceNonSeparablePrograms)
         LOG_INFO_MESSAGE("Forcing non-separable shader programs");
+
+    {
+        GLint MaxVertexSSBOs = 0;
+#if GL_ARB_shader_storage_buffer_object
+        bool IsGL43OrAbove   = (m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL) && ((MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 3));
+        bool IsGLES31OrAbove = (m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GLES) && ((MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 1));
+        if (IsGL43OrAbove || IsGLES31OrAbove)
+        {
+            glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &MaxVertexSSBOs);
+            if (glGetError() != GL_NO_ERROR)
+                MaxVertexSSBOs = 0;
+        }
+#endif
+        SET_FEATURE_STATE(VertexPipelineUAVWritesAndAtomics, MaxVertexSSBOs > 0, "Vertex pipeline UAV writes and atomics are");
+    }
 
     if (m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL)
     {
@@ -432,7 +448,6 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(ShaderInt8,                strstr(Extensions, "shader_explicit_arithmetic_types_int8"),    "8-bit integer shader operations are");
         SET_FEATURE_STATE(ResourceBuffer8BitAccess,  strstr(Extensions, "shader_8bit_storage"),                      "8-bit resoure buffer access is");
         SET_FEATURE_STATE(UniformBuffer8BitAccess,   strstr(Extensions, "shader_8bit_storage"),                      "8-bit uniform buffer access is");
-        SET_FEATURE_STATE(ShaderResourceRuntimeArray, false,                                                         "runtime-sized array is");
         // clang-format on
 
         TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
@@ -460,7 +475,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #undef SET_FEATURE_STATE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 34, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 35, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
 #endif
 
     // get device limits

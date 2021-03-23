@@ -1737,7 +1737,6 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.Desc.Name       = "PS";
         ShaderCI.Source          = HLSL::RayTracingTest7_PS.c_str();
-        ShaderCI.CompileFlags    = SHADER_COMPILE_FLAG_ENABLE_INLINE_RAY_TRACING;
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
     }
@@ -2089,7 +2088,6 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
         ShaderCI.Desc.Name       = "CS";
         ShaderCI.Source          = HLSL::RayTracingTest8_CS.c_str();
-        ShaderCI.CompileFlags    = SHADER_COMPILE_FLAG_ENABLE_INLINE_RAY_TRACING;
         pDevice->CreateShader(ShaderCI, &pCS);
         ASSERT_NE(pCS, nullptr);
     }

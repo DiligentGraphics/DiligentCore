@@ -1,0 +1,320 @@
+/*
+ *  Copyright 2019-2021 Diligent Graphics LLC
+ *  Copyright 2015-2019 Egor Yusov
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *  
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#include "TestingEnvironment.hpp"
+#include "ShaderMacroHelper.hpp"
+
+#include "Vulkan/TestingEnvironmentVk.hpp"
+
+#include "gtest/gtest.h"
+
+using namespace Diligent;
+using namespace Diligent::Testing;
+
+namespace Diligent
+{
+
+TEST(WaveOpTest, CompileShader_HLSL)
+{
+    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pDevice = pEnv->GetDevice();
+
+    if (!pDevice->GetDeviceCaps().Features.WaveOp)
+    {
+        GTEST_SKIP() << "Wave operations are not supported by this device";
+    }
+    if (!pEnv->HasDXCompiler())
+    {
+        GTEST_SKIP() << "HLSL source code with wave operations can be compiled only by DXC";
+    }
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    const auto& WaveOpProps = pDevice->GetDeviceProperties().WaveOp;
+
+    ASSERT_NE(WaveOpProps.Features, WAVE_FEATURE_UNKNOWN);
+    ASSERT_TRUE((WaveOpProps.Features & WAVE_FEATURE_BASIC) != 0);
+
+    ASSERT_NE(WaveOpProps.SupportedStages, SHADER_TYPE_UNKNOWN);
+    ASSERT_TRUE((WaveOpProps.SupportedStages & SHADER_TYPE_COMPUTE) != 0);
+
+    ASSERT_GT(WaveOpProps.MinSize, 0u);
+    ASSERT_GE(WaveOpProps.MaxSize, WaveOpProps.MinSize);
+
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("SUBGROUP_SIZE", WaveOpProps.MinSize);
+
+    // clang-format off
+    Macros.AddShaderMacro("WAVE_FEATURE_BASIC",      (WaveOpProps.Features & WAVE_FEATURE_BASIC)      != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_VOTE",       (WaveOpProps.Features & WAVE_FEATURE_VOTE)       != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_ARITHMETIC", (WaveOpProps.Features & WAVE_FEATURE_ARITHMETIC) != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_BALLOUT",    (WaveOpProps.Features & WAVE_FEATURE_BALLOUT)    != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_QUAD",       (WaveOpProps.Features & WAVE_FEATURE_QUAD)       != 0);
+    // clang-format on
+
+    static const char Source[] = R"(
+RWByteAddressBuffer g_RWBuffer;
+
+[numthreads(SUBGROUP_SIZE, 1, 1)]
+void main(uint DTid : SV_DispatchThreadID)
+{
+    uint Accum = 0;
+    #if WAVE_FEATURE_BASIC
+    {
+        uint  laneCount = WaveGetLaneCount();
+        uint  lineIndex = WaveGetLaneIndex();
+        Accum += (lineIndex % laneCount);
+    }
+    #endif
+    #if WAVE_FEATURE_VOTE
+    {
+        if (WaveActiveAllTrue(Accum > 0xFFFF))
+            Accum += 1;
+    }
+    #endif
+    #if WAVE_FEATURE_ARITHMETIC
+    {
+        uint sum = WaveActiveSum(DTid);
+        Accum += (sum & 1);
+    }
+    #endif
+    #if WAVE_FEATURE_BALLOUT
+    {
+        uint count = WaveActiveCountBits((DTid & 2) == 0);
+        Accum += (count & 1);
+    }
+    #endif
+    #if WAVE_FEATURE_QUAD
+    {
+        uint diag = QuadReadAcrossDiagonal(DTid);
+        Accum += (diag & 1);
+    }
+    #endif
+
+    if (DTid == 0)
+    {
+        g_RWBuffer.Store(0, Accum);
+    }
+}
+)";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler  = SHADER_COMPILER_DXC;
+    ShaderCI.HLSLVersion     = {6, 0};
+    ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+    ShaderCI.Desc.Name       = "Wave op test - CS";
+    ShaderCI.EntryPoint      = "main";
+    ShaderCI.Source          = Source;
+    ShaderCI.Macros          = Macros;
+
+    RefCntAutoPtr<IShader> pCS;
+    pDevice->CreateShader(ShaderCI, &pCS);
+    ASSERT_NE(pCS, nullptr);
+
+
+    ComputePipelineStateCreateInfo PSOCreateInfo;
+    PSOCreateInfo.PSODesc.Name = "Wave op test";
+    PSOCreateInfo.pCS          = pCS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+}
+
+
+TEST(WaveOpTest, CompileShader_GLSL)
+{
+    auto* const pEnv    = TestingEnvironment::GetInstance();
+    auto* const pDevice = pEnv->GetDevice();
+    const auto& Caps    = pDevice->GetDeviceCaps();
+
+    if (!Caps.IsVulkanDevice())
+    {
+        GTEST_SKIP();
+    }
+    if (!Caps.Features.WaveOp)
+    {
+        GTEST_SKIP() << "Wave operations are not supported by this device";
+    }
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    const auto& WaveOpProps = pDevice->GetDeviceProperties().WaveOp;
+
+    ASSERT_NE(WaveOpProps.Features, WAVE_FEATURE_UNKNOWN);
+    ASSERT_TRUE((WaveOpProps.Features & WAVE_FEATURE_BASIC) != 0);
+
+    ASSERT_NE(WaveOpProps.SupportedStages, SHADER_TYPE_UNKNOWN);
+    ASSERT_TRUE((WaveOpProps.SupportedStages & SHADER_TYPE_COMPUTE) != 0);
+
+    ASSERT_GT(WaveOpProps.MinSize, 0u);
+    ASSERT_GE(WaveOpProps.MaxSize, WaveOpProps.MinSize);
+
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("SUBGROUP_SIZE", WaveOpProps.MinSize);
+
+    // clang-format off
+    Macros.AddShaderMacro("WAVE_FEATURE_BASIC",            (WaveOpProps.Features & WAVE_FEATURE_BASIC)            != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_VOTE",             (WaveOpProps.Features & WAVE_FEATURE_VOTE)             != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_ARITHMETIC",       (WaveOpProps.Features & WAVE_FEATURE_ARITHMETIC)       != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_BALLOUT",          (WaveOpProps.Features & WAVE_FEATURE_BALLOUT)          != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_SHUFFLE",          (WaveOpProps.Features & WAVE_FEATURE_SHUFFLE)          != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_SHUFFLE_RELATIVE", (WaveOpProps.Features & WAVE_FEATURE_SHUFFLE_RELATIVE) != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_CLUSTERED",        (WaveOpProps.Features & WAVE_FEATURE_CLUSTERED)        != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_QUAD",             (WaveOpProps.Features & WAVE_FEATURE_QUAD)             != 0);
+    // clang-format on
+
+    static const char Source[] = R"(
+#version 460
+
+#if WAVE_FEATURE_BASIC
+#    extension GL_KHR_shader_subgroup_basic: enable
+#endif
+#if WAVE_FEATURE_VOTE
+#    extension GL_KHR_shader_subgroup_vote: enable
+#endif
+#if WAVE_FEATURE_BALLOUT
+#    extension GL_KHR_shader_subgroup_ballot: enable
+#endif
+#if WAVE_FEATURE_ARITHMETIC
+#    extension GL_KHR_shader_subgroup_arithmetic: enable
+#endif
+#if WAVE_FEATURE_SHUFFLE
+#    extension GL_KHR_shader_subgroup_shuffle: enable
+#endif
+#if WAVE_FEATURE_SHUFFLE_RELATIVE
+#    extension GL_KHR_shader_subgroup_shuffle_relative: enable
+#endif
+#if WAVE_FEATURE_CLUSTERED
+#    extension GL_KHR_shader_subgroup_clustered: enable
+#endif
+#if WAVE_FEATURE_QUAD
+#    extension GL_KHR_shader_subgroup_quad: enable
+#endif
+
+layout(local_size_x = SUBGROUP_SIZE, local_size_y = 1, local_size_z = 1) in;
+
+layout(std140) writeonly buffer WBuffer
+{
+    uint g_WBuffer[];
+};
+
+void main()
+{
+    const uint DTid = gl_LocalInvocationID.x;
+
+    uint Accum = 0;
+    #if WAVE_FEATURE_BASIC
+    {
+        uint  laneCount = gl_SubgroupSize;
+        uint  lineIndex = gl_SubgroupInvocationID;
+        Accum += (lineIndex % laneCount);
+    }
+    #endif
+    #if WAVE_FEATURE_VOTE
+    {
+        if (subgroupAll(Accum > 0xFFFF))
+            Accum += 1;
+    }
+    #endif
+    #if WAVE_FEATURE_ARITHMETIC
+    {
+        uint sum = subgroupAdd(DTid);
+        Accum += (sum & 1);
+    }
+    #endif
+    #if WAVE_FEATURE_BALLOUT
+    {
+        uint count = subgroupBallotExclusiveBitCount(subgroupBallot((DTid & 1) == 0));
+        Accum += (count & 1);
+    }
+    #endif
+    #if WAVE_FEATURE_SHUFFLE
+    {
+        vec4 temp      = vec4(float(DTid));
+        vec4 blendWith = subgroupShuffle(temp, (DTid + 5) & 7);
+        Accum += (dot(temp, temp) < 0.0 ? 1 : 0);
+    }
+    #endif
+    #if WAVE_FEATURE_SHUFFLE_RELATIVE
+    {
+        vec4 temp = vec4(float(DTid));
+        for (uint i = 2; i < gl_SubgroupSize; i *= 2)
+        {
+            vec4 other = subgroupShuffleUp(temp, i);
+
+            if (i <= gl_SubgroupInvocationID)
+                temp = temp * other;
+        }
+        Accum += (dot(temp, temp) > 0.5 ? 1 : 0);
+    }
+    #endif
+    #if WAVE_FEATURE_CLUSTERED
+    {
+        uint maxId = subgroupClusteredMax(DTid, 4*4);
+        Accum += (maxId+1 == SUBGROUP_SIZE ? 1 : 0);
+    }
+    #endif
+    #if WAVE_FEATURE_QUAD
+    {
+        uint diag = subgroupQuadSwapDiagonal(DTid);
+        Accum += (diag & 1);
+    }
+    #endif
+
+    if (DTid == 0)
+    {
+        g_WBuffer[0] = Accum;
+    }
+}
+)";
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+    ShaderCI.ShaderCompiler  = SHADER_COMPILER_GLSLANG;
+    ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+    ShaderCI.Desc.Name       = "Wave op test - CS";
+    ShaderCI.EntryPoint      = "main";
+    ShaderCI.Source          = Source;
+    ShaderCI.Macros          = Macros;
+
+    RefCntAutoPtr<IShader> pCS;
+    pDevice->CreateShader(ShaderCI, &pCS);
+    ASSERT_NE(pCS, nullptr);
+
+
+    ComputePipelineStateCreateInfo PSOCreateInfo;
+    PSOCreateInfo.PSODesc.Name = "Wave op test";
+    PSOCreateInfo.pCS          = pCS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+}
+
+} // namespace Diligent
