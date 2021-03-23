@@ -1364,13 +1364,17 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
                 if (Type != RES_TYPE_CBV)
                     continue;
 
-                const String CBName = String{"%"} + Name;
-                if (std::strncmp(&DXIL[pos], CBName.c_str(), CBName.length()) == 0)
+                const String CBName       = String{"%"} + Name;
+                const String LegacyCBName = String{"%dx.alignment.legacy."} + Name;
+                const bool   IsSameName   = std::strncmp(&DXIL[pos], CBName.c_str(), CBName.length()) == 0;
+                const bool   IsLegacyName = std::strncmp(&DXIL[pos], LegacyCBName.c_str(), LegacyCBName.length()) == 0;
+
+                if (IsSameName || IsLegacyName)
                 {
-                    const char c = DXIL[pos + CBName.length()];
+                    const char c = DXIL[pos + (IsLegacyName ? LegacyCBName.length() : CBName.length())];
 
                     if (IsWordSymbol(c))
-                        continue; // name partially equals
+                        continue; // name is partially equal, continue searching
 
                     VERIFY_EXPR((c == '*' && ResInfo.first->second.ArraySize == 1) || (c == ']' && ResInfo.first->second.ArraySize > 1));
 

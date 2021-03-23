@@ -287,6 +287,9 @@ SamplerState  g_TexSampler;
 cbuffer cbConstants1
 {
     float4 g_CBData1;
+
+    // compiler will use legacy alignment
+    column_major float4x4 g_Matrix;
 }
 
 cbuffer cbConstants2
