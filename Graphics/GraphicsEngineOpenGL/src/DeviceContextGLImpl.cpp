@@ -742,15 +742,22 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     m_pPipelineState->CommitProgram(m_ContextState);
     BindProgramResources();
 
-    auto        CurrNativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
+    const auto  CurrNativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
     const auto& PipelineDesc        = m_pPipelineState->GetGraphicsPipelineDesc();
     if (!m_ContextState.IsValidVAOBound())
     {
-        auto&    VAOCache     = m_pDevice->GetVAOCache(CurrNativeGLContext);
-        IBuffer* pIndexBuffer = IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
+        auto& VaoCache     = m_pDevice->GetVAOCache(CurrNativeGLContext);
+        auto* pIndexBuffer = IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
         if (PipelineDesc.InputLayout.NumElements > 0 || pIndexBuffer != nullptr)
         {
-            const auto& VAO = VAOCache.GetVAO(m_pPipelineState, pIndexBuffer, m_VertexStreams, m_NumVertexStreams, m_ContextState);
+            VAOCache::VAOAttribs vaoAttribs //
+                {
+                    *m_pPipelineState,
+                    pIndexBuffer,
+                    m_VertexStreams,
+                    m_NumVertexStreams //
+                };
+            const auto& VAO = VaoCache.GetVAO(vaoAttribs, m_ContextState);
             m_ContextState.BindVAO(VAO);
         }
         else
@@ -758,7 +765,7 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
             // Draw command will fail if no VAO is bound. If no vertex description is set
             // (which is the case if, for instance, the command only inputs VertexID),
             // use empty VAO
-            const auto& VAO = VAOCache.GetEmptyVAO();
+            const auto& VAO = VaoCache.GetEmptyVAO();
             m_ContextState.BindVAO(VAO);
         }
     }

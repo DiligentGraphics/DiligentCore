@@ -28,6 +28,8 @@
 #pragma once
 
 #include <cstring>
+#include <vector>
+#include <unordered_map>
 
 #include "GraphicsTypes.h"
 #include "Buffer.h"
@@ -38,6 +40,9 @@
 
 namespace Diligent
 {
+
+class PipelineStateGLImpl;
+class BufferGLImpl;
 
 class VAOCache
 {
@@ -52,27 +57,25 @@ public:
     VAOCache& operator = (      VAOCache&&) = delete;
     // clang-format on
 
-    const GLObjectWrappers::GLVertexArrayObj& GetVAO(IPipelineState*                      pPSO,
-                                                     IBuffer*                             pIndexBuffer,
-                                                     VertexStreamInfo<class BufferGLImpl> VertexStreams[],
-                                                     Uint32                               NumVertexStreams,
-                                                     class GLContextState&                GLContextState);
+    struct VAOAttribs
+    {
+        const PipelineStateGLImpl&            PSO;
+        BufferGLImpl* const                   pIndexBuffer;
+        VertexStreamInfo<BufferGLImpl>* const VertexStreams = nullptr;
+        const Uint32                          NumVertexStreams;
+    };
+    const GLObjectWrappers::GLVertexArrayObj& GetVAO(const VAOAttribs&     Attribs,
+                                                     class GLContextState& GLContextState);
     const GLObjectWrappers::GLVertexArrayObj& GetEmptyVAO();
 
-    void OnDestroyBuffer(IBuffer* pBuffer);
-    void OnDestroyPSO(IPipelineState* pPSO);
+    void OnDestroyBuffer(const BufferGLImpl& Buffer);
+    void OnDestroyPSO(const PipelineStateGLImpl& PSO);
 
 private:
     // This structure is used as the key to find VAO
-    struct VAOCacheKey
+    struct VAOHashKey
     {
-        VAOCacheKey(UniqueIdentifier pso_id, UniqueIdentifier ib_id) :
-            // clang-format off
-            PSOUId         {pso_id},
-            IndexBufferUId {ib_id },
-            NumUsedSlots   {0     }
-        // clang-format on
-        {}
+        VAOHashKey(const VAOAttribs& Attribs);
 
         // Note that using pointers is unsafe as they may (and will) be reused:
         // pBuffer->Release();
@@ -82,55 +85,46 @@ private:
         // PSO uniqly defines the layout (attrib pointers, divisors, etc.),
         // so we do not need to add individual layout elements to the key.
         // The key needs to contain all bound buffers.
-        const UniqueIdentifier PSOUId;
+        const UniqueIdentifier PsoUId;
         const UniqueIdentifier IndexBufferUId;
-        Uint32                 NumUsedSlots;
+
+        Uint32 UsedSlotsMask = 0;
+        static_assert(MAX_BUFFER_SLOTS <= sizeof(UsedSlotsMask) * 8, "Use more bits for UsedSlotsMask");
+
         struct StreamAttribs
         {
             UniqueIdentifier BufferUId;
-            Uint32           Stride;
             Uint32           Offset;
-        } Streams[MAX_BUFFER_SLOTS];
+            // Note that buffer stride is defined by the PSO, so no need to keep it here as
+            // it is already handled by the PsoUId
 
-        mutable size_t Hash = 0;
-
-        bool operator==(const VAOCacheKey& Key) const
-        {
-            return PSOUId == Key.PSOUId &&
-                IndexBufferUId == Key.IndexBufferUId &&
-                NumUsedSlots == Key.NumUsedSlots &&
-                std::memcmp(Streams, Key.Streams, sizeof(StreamAttribs) * NumUsedSlots) == 0;
-        }
-    };
-
-    struct VAOCacheKeyHashFunc
-    {
-        std::size_t operator()(const VAOCacheKey& Key) const
-        {
-            if (Key.Hash == 0)
+            bool operator!=(const StreamAttribs& rhs) const
             {
-                std::size_t Seed = 0;
-                HashCombine(Seed, Key.PSOUId, Key.IndexBufferUId, Key.NumUsedSlots);
-                for (Uint32 slot = 0; slot < Key.NumUsedSlots; ++slot)
-                {
-                    auto& CurrStream = Key.Streams[slot];
-                    HashCombine(Seed, CurrStream.BufferUId);
-                    HashCombine(Seed, CurrStream.Offset);
-                    HashCombine(Seed, CurrStream.Stride);
-                }
-                Key.Hash = Seed;
+                return BufferUId != rhs.BufferUId || Offset != rhs.Offset;
             }
-            return Key.Hash;
-        }
+        } Streams[MAX_BUFFER_SLOTS]; // Do not zero-out
+
+        size_t Hash = 0;
+
+        bool operator==(const VAOHashKey& Key) const;
+
+        struct Hasher
+        {
+            std::size_t operator()(const VAOHashKey& Key) const
+            {
+                return Key.Hash;
+            }
+        };
     };
 
+    // Clears stale entries from m_PSOToKey and m_BuffToKey when a VAO is removed from m_Cache
+    void ClearStaleKeys(const std::vector<VAOHashKey>& StaleKeys);
 
-    friend class RenderDeviceGLImpl;
-    ThreadingTools::LockFlag                                                                 m_CacheLockFlag;
-    std::unordered_map<VAOCacheKey, GLObjectWrappers::GLVertexArrayObj, VAOCacheKeyHashFunc> m_Cache;
+    ThreadingTools::LockFlag                                                               m_CacheLockFlag;
+    std::unordered_map<VAOHashKey, GLObjectWrappers::GLVertexArrayObj, VAOHashKey::Hasher> m_Cache;
 
-    std::unordered_multimap<const IPipelineState*, VAOCacheKey> m_PSOToKey;
-    std::unordered_multimap<const IBuffer*, VAOCacheKey>        m_BuffToKey;
+    std::unordered_multimap<UniqueIdentifier, VAOHashKey> m_PSOToKey;
+    std::unordered_multimap<UniqueIdentifier, VAOHashKey> m_BuffToKey;
 
     // Any draw command fails if no VAO is bound. We will use this empty
     // VAO for draw commands with null input layout, such as these that

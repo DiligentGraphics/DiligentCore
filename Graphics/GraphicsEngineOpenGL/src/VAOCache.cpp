@@ -29,6 +29,8 @@
 
 #include "VAOCache.hpp"
 
+#include <unordered_set>
+
 #include "RenderDeviceGLImpl.hpp"
 #include "BufferGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
@@ -36,6 +38,8 @@
 #include "GLObjectWrapper.hpp"
 #include "GLTypeConversions.hpp"
 #include "GLContextState.hpp"
+#include "BasicMath.hpp"
+#include "PlatformMisc.hpp"
 
 namespace Diligent
 {
@@ -55,104 +59,186 @@ VAOCache::~VAOCache()
     VERIFY(m_BuffToKey.empty(), "BuffToKey hash is not empty");
 }
 
-void VAOCache::OnDestroyBuffer(IBuffer* pBuffer)
+void VAOCache::OnDestroyBuffer(const BufferGLImpl& Buffer)
 {
-    ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
+    // Collect all stale keys that use this buffer.
+    std::vector<VAOHashKey> StaleKeys;
 
-    auto EqualRange = m_BuffToKey.equal_range(pBuffer);
-    for (auto It = EqualRange.first; It != EqualRange.second; ++It)
+    ThreadingTools::LockHelper CacheLock{m_CacheLockFlag};
+
+    const auto range = m_BuffToKey.equal_range(Buffer.GetUniqueID());
+    for (auto it = range.first; it != range.second; ++it)
     {
-        m_Cache.erase(It->second);
+        StaleKeys.push_back(it->second);
+        m_Cache.erase(it->second);
     }
-    m_BuffToKey.erase(EqualRange.first, EqualRange.second);
+    m_BuffToKey.erase(range.first, range.second);
+
+    // Clear stale entries in m_PSOToKey and m_BuffToKey that refer to dead VAOs
+    // to avoid memory leaks.
+    ClearStaleKeys(StaleKeys);
 }
 
-void VAOCache::OnDestroyPSO(IPipelineState* pPSO)
+void VAOCache::OnDestroyPSO(const PipelineStateGLImpl& PSO)
 {
-    ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
+    // Collect all stale keys that use this PSO.
+    std::vector<VAOHashKey> StaleKeys;
 
-    auto EqualRange = m_PSOToKey.equal_range(pPSO);
-    for (auto It = EqualRange.first; It != EqualRange.second; ++It)
+    ThreadingTools::LockHelper CacheLock{m_CacheLockFlag};
+
+    const auto range = m_PSOToKey.equal_range(PSO.GetUniqueID());
+    for (auto it = range.first; it != range.second; ++it)
     {
-        m_Cache.erase(It->second);
+        StaleKeys.push_back(it->second);
+        m_Cache.erase(it->second);
     }
-    m_PSOToKey.erase(EqualRange.first, EqualRange.second);
+    m_PSOToKey.erase(range.first, range.second);
+
+    // Clear stale entries in m_PSOToKey and m_BuffToKey that refer to dead VAOs
+    // to avoid memory leaks.
+    ClearStaleKeys(StaleKeys);
 }
 
-const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*                pPSO,
-                                                           IBuffer*                       pIndexBuffer,
-                                                           VertexStreamInfo<BufferGLImpl> VertexStreams[],
-                                                           Uint32                         NumVertexStreams,
-                                                           GLContextState&                GLState)
+void VAOCache::ClearStaleKeys(const std::vector<VAOHashKey>& StaleKeys)
+{
+    // Collect unique PSOs and buffers used in stale keys.
+    std::unordered_set<UniqueIdentifier> CandidatePSOs;
+    std::unordered_set<UniqueIdentifier> CandidateBuffers;
+    for (const auto& StaleKey : StaleKeys)
+    {
+        CandidatePSOs.emplace(StaleKey.PsoUId);
+
+        if (StaleKey.IndexBufferUId != 0)
+            CandidateBuffers.emplace(StaleKey.IndexBufferUId);
+
+        for (auto SlotMask = StaleKey.UsedSlotsMask; SlotMask != 0;)
+        {
+            const auto SlotBit = ExtractLSB(SlotMask);
+            const auto Slot    = PlatformMisc::GetLSB(SlotBit);
+            VERIFY_EXPR(StaleKey.Streams[Slot].BufferUId >= 0);
+            CandidateBuffers.emplace(StaleKey.Streams[Slot].BufferUId);
+        }
+    }
+
+    auto RemoveStaleEntries = [this](const std::unordered_set<UniqueIdentifier>&            CandidateIds,
+                                     std::unordered_multimap<UniqueIdentifier, VAOHashKey>& IdToKey) //
+    {
+        // Delete stale entries that reference dead keys
+        for (const auto Id : CandidateIds)
+        {
+            const auto range = IdToKey.equal_range(Id);
+            for (auto it = range.first; it != range.second;)
+            {
+                if (m_Cache.find(it->second) == m_Cache.end())
+                    it = IdToKey.erase(it); // There is no more VAO with this key
+                else
+                    ++it;
+            }
+        }
+    };
+    RemoveStaleEntries(CandidatePSOs, m_PSOToKey);
+    RemoveStaleEntries(CandidateBuffers, m_BuffToKey);
+}
+
+VAOCache::VAOHashKey::VAOHashKey(const VAOAttribs& Attribs) :
+    // clang-format off
+    PsoUId         {Attribs.PSO.GetUniqueID()},
+    IndexBufferUId {Attribs.pIndexBuffer ? Attribs.pIndexBuffer->GetUniqueID() : 0}
+// clang-format on
+{
+#ifdef DILIGENT_DEBUG
+    for (Uint32 i = 0; i < _countof(Streams); ++i)
+        Streams[i].BufferUId = -1;
+#endif
+
+    const auto& InputLayout    = Attribs.PSO.GetGraphicsPipelineDesc().InputLayout;
+    const auto* LayoutElements = InputLayout.LayoutElements;
+
+    Hash = ComputeHash(PsoUId, IndexBufferUId);
+    for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
+    {
+        const auto& LayoutElem = LayoutElements[i];
+        const auto  BufferSlot = LayoutElem.BufferSlot;
+        VERIFY_EXPR(BufferSlot < MAX_BUFFER_SLOTS);
+        DEV_CHECK_ERR(BufferSlot < Attribs.NumVertexStreams, "Input layout requires at least ", BufferSlot + 1, " buffer(s), but only ", Attribs.NumVertexStreams, " are bound.");
+
+        const auto& SrcStream = Attribs.VertexStreams[BufferSlot];
+        DEV_CHECK_ERR(SrcStream.pBuffer, "VAO requires buffer at slot ", BufferSlot, ", but none is bound in the context.");
+
+        const auto BuffId  = SrcStream.pBuffer ? SrcStream.pBuffer->GetUniqueID() : 0;
+        const auto SlotBit = 1u << BufferSlot;
+        if ((UsedSlotsMask & SlotBit) == 0)
+        {
+            auto& DstStream     = Streams[BufferSlot];
+            DstStream.BufferUId = BuffId;
+            DstStream.Offset    = SrcStream.Offset;
+            UsedSlotsMask |= SlotBit;
+            HashCombine(Hash, DstStream.BufferUId, DstStream.Offset);
+        }
+        else
+        {
+            const auto& DstStream = Streams[BufferSlot];
+            // The slot has already been initialized
+            VERIFY_EXPR(DstStream.BufferUId == BuffId);
+            VERIFY_EXPR(DstStream.Offset == SrcStream.Offset);
+        }
+    }
+    HashCombine(Hash, UsedSlotsMask);
+}
+
+bool VAOCache::VAOHashKey::operator==(const VAOHashKey& Key) const
+{
+    if (Hash != Key.Hash)
+        return false;
+
+    // clang-format off
+    if (PsoUId         != Key.PsoUId         ||
+        IndexBufferUId != Key.IndexBufferUId ||
+        UsedSlotsMask  != Key.UsedSlotsMask)
+        return false;
+    // clang-format on
+
+    for (auto SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
+    {
+        const auto SlotBit = ExtractLSB(SlotMask);
+        const auto Slot    = PlatformMisc::GetLSB(SlotBit);
+        VERIFY_EXPR(Streams[Slot].BufferUId >= 0 && Key.Streams[Slot].BufferUId >= 0);
+        if (Streams[Slot] != Key.Streams[Slot])
+            return false;
+    }
+
+    return true;
+}
+
+const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(const VAOAttribs& Attribs,
+                                                           GLContextState&   GLState)
 {
     // Lock the cache
     ThreadingTools::LockHelper CacheLock{m_CacheLockFlag};
 
-    BufferGLImpl* VertexBuffers[MAX_BUFFER_SLOTS];
-    for (Uint32 s = 0; s < NumVertexStreams; ++s)
-        VertexBuffers[s] = nullptr;
-
-    // Get layout
-    const auto* pPSOGL         = ValidatedCast<const PipelineStateGLImpl>(pPSO);
-    auto*       pIndexBufferGL = ValidatedCast<BufferGLImpl>(pIndexBuffer);
-    const auto& InputLayout    = pPSOGL->GetGraphicsPipelineDesc().InputLayout;
-    const auto* LayoutElems    = InputLayout.LayoutElements;
-    const auto  NumElems       = InputLayout.NumElements;
     // Construct the key
-    VAOCacheKey Key(pPSOGL->GetUniqueID(), pIndexBufferGL ? pIndexBufferGL->GetUniqueID() : 0);
+    VAOHashKey Key{Attribs};
 
+    for (auto SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
     {
-        auto LayoutIt = LayoutElems;
-        for (size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt)
-        {
-            auto BuffSlot = LayoutIt->BufferSlot;
-            if (BuffSlot >= NumVertexStreams)
-            {
-                UNEXPECTED("Input layout requires more buffers than bound to the pipeline");
-                continue;
-            }
-            if (BuffSlot >= MAX_BUFFER_SLOTS)
-            {
-                VERIFY(BuffSlot >= MAX_BUFFER_SLOTS, "Incorrect input slot");
-                continue;
-            }
-            auto MaxUsedSlot = std::max(Key.NumUsedSlots, BuffSlot + 1);
-            for (Uint32 s = Key.NumUsedSlots; s < MaxUsedSlot; ++s)
-                Key.Streams[s] = VAOCacheKey::StreamAttribs{};
-            Key.NumUsedSlots = MaxUsedSlot;
+        const auto SlotBit = ExtractLSB(SlotMask);
+        const auto Slot    = PlatformMisc::GetLSB(SlotBit);
 
-            auto& CurrStream    = VertexStreams[BuffSlot];
-            auto  Stride        = pPSOGL->GetBufferStride(BuffSlot);
-            auto& pCurrBuf      = VertexBuffers[BuffSlot];
-            auto& CurrStreamKey = Key.Streams[BuffSlot];
-            if (pCurrBuf == nullptr)
-            {
-                pCurrBuf = CurrStream.pBuffer;
-                VERIFY(pCurrBuf != nullptr, "No buffer bound to slot ", BuffSlot);
+        auto& pBuffer = Attribs.VertexStreams[Slot].pBuffer;
+        VERIFY_EXPR(pBuffer);
+        VERIFY_EXPR(Key.Streams[Slot].BufferUId == pBuffer->GetUniqueID());
 
-                ValidatedCast<BufferGLImpl>(pCurrBuf)->BufferMemoryBarrier(
-                    MEMORY_BARRIER_VERTEX_BUFFER, // Vertex data sourced from buffer objects after the barrier
-                                                  // will reflect data written by shaders prior to the barrier.
-                                                  // The set of buffer objects affected by this bit is derived
-                                                  // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
-                    GLState);
-
-                CurrStreamKey.BufferUId = pCurrBuf ? pCurrBuf->GetUniqueID() : 0;
-                CurrStreamKey.Stride    = Stride;
-                CurrStreamKey.Offset    = CurrStream.Offset;
-            }
-            else
-            {
-                VERIFY(pCurrBuf == CurrStream.pBuffer, "Buffer no longer exists");
-                VERIFY(CurrStreamKey.Stride == Stride, "Unexpected buffer stride");
-                VERIFY(CurrStreamKey.Offset == CurrStream.Offset, "Unexpected buffer offset");
-            }
-        }
+        pBuffer->BufferMemoryBarrier(
+            MEMORY_BARRIER_VERTEX_BUFFER, // Vertex data sourced from buffer objects after the barrier
+                                          // will reflect data written by shaders prior to the barrier.
+                                          // The set of buffer objects affected by this bit is derived
+                                          // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
+            GLState);
     }
 
-    if (pIndexBuffer)
+    if (Attribs.pIndexBuffer)
     {
-        pIndexBufferGL->BufferMemoryBarrier(
+        Attribs.pIndexBuffer->BufferMemoryBarrier(
             MEMORY_BARRIER_INDEX_BUFFER, // Vertex array indices sourced from buffer objects after the barrier
                                          // will reflect data written by shaders prior to the barrier.
                                          // The buffer objects affected by this bit are derived from the
@@ -168,70 +254,84 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
     }
     else
     {
-        // Create new VAO
-        GLObjectWrappers::GLVertexArrayObj NewVAO(true);
+        // Create a new VAO
+        GLObjectWrappers::GLVertexArrayObj NewVAO{true};
 
         // Initialize VAO
         GLState.BindVAO(NewVAO);
-        auto LayoutIt = LayoutElems;
-        for (size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt)
+
+        const auto& InputLayout = Attribs.PSO.GetGraphicsPipelineDesc().InputLayout;
+        const auto* LayoutElems = InputLayout.LayoutElements;
+        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
         {
-            auto BuffSlot = LayoutIt->BufferSlot;
-            if (BuffSlot >= NumVertexStreams || BuffSlot >= MAX_BUFFER_SLOTS)
-            {
-                UNEXPECTED("Incorrect input buffer slot");
-                continue;
-            }
+            const auto& LayoutElem = LayoutElems[i];
+            const auto  BuffSlot   = LayoutElem.BufferSlot;
+            VERIFY_EXPR(BuffSlot < Attribs.NumVertexStreams);
+
             // Get buffer through the strong reference. Note that we are not
             // using pointers stored in the key for safety
-            auto& CurrStream = VertexStreams[BuffSlot];
-            auto  Stride     = pPSOGL->GetBufferStride(BuffSlot);
-            auto* pBuff      = VertexBuffers[BuffSlot];
-            VERIFY(pBuff != nullptr, "Vertex buffer is null");
-            const BufferGLImpl* pBufferOGL = static_cast<const BufferGLImpl*>(pBuff);
+            const auto&   CurrStream = Attribs.VertexStreams[BuffSlot];
+            const auto    Stride     = Attribs.PSO.GetBufferStride(BuffSlot);
+            BufferGLImpl* pBuffer    = Attribs.VertexStreams[BuffSlot].pBuffer;
 
             constexpr bool ResetVAO = false;
-            GLState.BindBuffer(GL_ARRAY_BUFFER, pBufferOGL->m_GlBuffer, ResetVAO);
-            GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>(static_cast<size_t>(CurrStream.Offset) + static_cast<size_t>(LayoutIt->RelativeOffset));
-            auto    GlType          = TypeToGLType(LayoutIt->ValueType);
-            if (!LayoutIt->IsNormalized &&
-                (LayoutIt->ValueType == VT_INT8 ||
-                 LayoutIt->ValueType == VT_INT16 ||
-                 LayoutIt->ValueType == VT_INT32 ||
-                 LayoutIt->ValueType == VT_UINT8 ||
-                 LayoutIt->ValueType == VT_UINT16 ||
-                 LayoutIt->ValueType == VT_UINT32))
-                glVertexAttribIPointer(LayoutIt->InputIndex, LayoutIt->NumComponents, GlType, Stride, DataStartOffset);
-            else
-                glVertexAttribPointer(LayoutIt->InputIndex, LayoutIt->NumComponents, GlType, LayoutIt->IsNormalized, Stride, DataStartOffset);
+            GLState.BindBuffer(GL_ARRAY_BUFFER, pBuffer->m_GlBuffer, ResetVAO);
+            GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>(static_cast<size_t>(CurrStream.Offset) + static_cast<size_t>(LayoutElem.RelativeOffset));
 
-            if (LayoutIt->Frequency == INPUT_ELEMENT_FREQUENCY_PER_INSTANCE)
+            const auto GlType = TypeToGLType(LayoutElem.ValueType);
+            if (!LayoutElem.IsNormalized &&
+                (LayoutElem.ValueType == VT_INT8 ||
+                 LayoutElem.ValueType == VT_INT16 ||
+                 LayoutElem.ValueType == VT_INT32 ||
+                 LayoutElem.ValueType == VT_UINT8 ||
+                 LayoutElem.ValueType == VT_UINT16 ||
+                 LayoutElem.ValueType == VT_UINT32))
+                glVertexAttribIPointer(LayoutElem.InputIndex, LayoutElem.NumComponents, GlType, Stride, DataStartOffset);
+            else
+                glVertexAttribPointer(LayoutElem.InputIndex, LayoutElem.NumComponents, GlType, LayoutElem.IsNormalized, Stride, DataStartOffset);
+
+            if (LayoutElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_INSTANCE)
             {
                 // If divisor is zero, then the attribute acts like normal, being indexed by the array or index
                 // buffer. If divisor is non-zero, then the current instance is divided by this divisor, and
                 // the result of that is used to access the attribute array.
-                glVertexAttribDivisor(LayoutIt->InputIndex, LayoutIt->InstanceDataStepRate);
+                glVertexAttribDivisor(LayoutElem.InputIndex, LayoutElem.InstanceDataStepRate);
             }
-            glEnableVertexAttribArray(LayoutIt->InputIndex);
+            glEnableVertexAttribArray(LayoutElem.InputIndex);
         }
-        if (pIndexBuffer)
+        if (Attribs.pIndexBuffer)
         {
-            const BufferGLImpl* pIndBufferOGL = static_cast<const BufferGLImpl*>(pIndexBuffer);
-            constexpr bool      ResetVAO      = false;
-            GLState.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, pIndBufferOGL->m_GlBuffer, ResetVAO);
+            constexpr bool ResetVAO = false;
+            GLState.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, Attribs.pIndexBuffer->m_GlBuffer, ResetVAO);
         }
 
         auto NewElems = m_Cache.emplace(std::make_pair(Key, std::move(NewVAO)));
         // New element must be actually inserted
         VERIFY(NewElems.second, "New element was not inserted into the cache");
-        m_PSOToKey.insert(std::make_pair(pPSO, Key));
-        for (Uint32 Slot = 0; Slot < Key.NumUsedSlots; ++Slot)
+        VERIFY_EXPR(Key.PsoUId == Attribs.PSO.GetUniqueID());
+        m_PSOToKey.emplace(Key.PsoUId, Key);
+
+        if (Attribs.pIndexBuffer)
         {
-            auto* pCurrBuff = VertexBuffers[Slot];
-            if (pCurrBuff)
-                m_BuffToKey.insert(std::make_pair(pCurrBuff, Key));
+            VERIFY_EXPR(Key.IndexBufferUId == Attribs.pIndexBuffer->GetUniqueID());
+            m_BuffToKey.emplace(Key.IndexBufferUId, Key);
         }
 
+        for (auto SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
+        {
+            const auto SlotBit = ExtractLSB(SlotMask);
+            const auto Slot    = PlatformMisc::GetLSB(SlotBit);
+
+#ifdef DILIGENT_DEBUG
+            {
+                const auto& pBuffer = Attribs.VertexStreams[Slot].pBuffer;
+                VERIFY_EXPR(pBuffer);
+                VERIFY_EXPR(Key.Streams[Slot].BufferUId == pBuffer->GetUniqueID());
+            }
+#endif
+
+            m_BuffToKey.emplace(Key.Streams[Slot].BufferUId, Key);
+        }
         return NewElems.first->second;
     }
 }

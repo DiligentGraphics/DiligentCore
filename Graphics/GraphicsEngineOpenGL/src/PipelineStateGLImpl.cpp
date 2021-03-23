@@ -385,7 +385,7 @@ PipelineStateGLImpl::~PipelineStateGLImpl()
 
 void PipelineStateGLImpl::Destruct()
 {
-    GetDevice()->OnDestroyPSO(this);
+    GetDevice()->OnDestroyPSO(*this);
 
     if (m_GLPrograms)
     {

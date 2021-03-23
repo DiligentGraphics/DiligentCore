@@ -213,7 +213,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
 
 BufferGLImpl::~BufferGLImpl()
 {
-    static_cast<RenderDeviceGLImpl*>(GetDevice())->OnDestroyBuffer(this);
+    GetDevice()->OnDestroyBuffer(*this);
 }
 
 IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_BufferGL, TBufferBase)

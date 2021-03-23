@@ -1222,35 +1222,35 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
 FBOCache& RenderDeviceGLImpl::GetFBOCache(GLContext::NativeGLContextType Context)
 {
-    ThreadingTools::LockHelper FBOCacheLock(m_FBOCacheLockFlag);
+    ThreadingTools::LockHelper FBOCacheLock{m_FBOCacheLockFlag};
     return m_FBOCache[Context];
 }
 
 void RenderDeviceGLImpl::OnReleaseTexture(ITexture* pTexture)
 {
-    ThreadingTools::LockHelper FBOCacheLock(m_FBOCacheLockFlag);
+    ThreadingTools::LockHelper FBOCacheLock{m_FBOCacheLockFlag};
     for (auto& FBOCacheIt : m_FBOCache)
         FBOCacheIt.second.OnReleaseTexture(pTexture);
 }
 
 VAOCache& RenderDeviceGLImpl::GetVAOCache(GLContext::NativeGLContextType Context)
 {
-    ThreadingTools::LockHelper VAOCacheLock(m_VAOCacheLockFlag);
+    ThreadingTools::LockHelper VAOCacheLock{m_VAOCacheLockFlag};
     return m_VAOCache[Context];
 }
 
-void RenderDeviceGLImpl::OnDestroyPSO(IPipelineState* pPSO)
+void RenderDeviceGLImpl::OnDestroyPSO(PipelineStateGLImpl& PSO)
 {
-    ThreadingTools::LockHelper VAOCacheLock(m_VAOCacheLockFlag);
+    ThreadingTools::LockHelper VAOCacheLock{m_VAOCacheLockFlag};
     for (auto& VAOCacheIt : m_VAOCache)
-        VAOCacheIt.second.OnDestroyPSO(pPSO);
+        VAOCacheIt.second.OnDestroyPSO(PSO);
 }
 
-void RenderDeviceGLImpl::OnDestroyBuffer(IBuffer* pBuffer)
+void RenderDeviceGLImpl::OnDestroyBuffer(BufferGLImpl& Buffer)
 {
-    ThreadingTools::LockHelper VAOCacheLock(m_VAOCacheLockFlag);
+    ThreadingTools::LockHelper VAOCacheLock{m_VAOCacheLockFlag};
     for (auto& VAOCacheIt : m_VAOCache)
-        VAOCacheIt.second.OnDestroyBuffer(pBuffer);
+        VAOCacheIt.second.OnDestroyBuffer(Buffer);
 }
 
 void RenderDeviceGLImpl::IdleGPU()

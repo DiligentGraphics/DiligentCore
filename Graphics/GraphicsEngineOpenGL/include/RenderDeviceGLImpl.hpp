@@ -169,8 +169,8 @@ public:
     void      OnReleaseTexture(ITexture* pTexture);
 
     VAOCache& GetVAOCache(GLContext::NativeGLContextType Context);
-    void      OnDestroyPSO(IPipelineState* pPSO);
-    void      OnDestroyBuffer(IBuffer* pBuffer);
+    void      OnDestroyPSO(PipelineStateGLImpl& PSO);
+    void      OnDestroyBuffer(BufferGLImpl& Buffer);
 
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }
