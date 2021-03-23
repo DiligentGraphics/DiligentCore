@@ -236,6 +236,26 @@ struct ShaderVersion
     {
         return Major == rhs.Major && Minor == rhs.Minor;
     }
+
+    bool operator>(const ShaderVersion& rhs) const
+    {
+        return Major == rhs.Major ? Minor > rhs.Minor : Major > rhs.Major;
+    }
+
+    bool operator>=(const ShaderVersion& rhs) const
+    {
+        return Major == rhs.Major ? Minor >= rhs.Minor : Major >= rhs.Major;
+    }
+
+    bool operator<(const ShaderVersion& rhs) const
+    {
+        return Major == rhs.Major ? Minor < rhs.Minor : Major < rhs.Major;
+    }
+
+    bool operator<=(const ShaderVersion& rhs) const
+    {
+        return Major == rhs.Major ? Minor <= rhs.Minor : Major <= rhs.Major;
+    }
 #endif
 };
 typedef struct ShaderVersion ShaderVersion;

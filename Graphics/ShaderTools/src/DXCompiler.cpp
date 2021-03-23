@@ -699,8 +699,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
                          Uint32{ShaderModel.Major}, '_', Uint32{ShaderModel.Minor}, " to 6_0");
         ShaderModel = ShaderVersion{6, 0};
     }
-    else if ((ShaderModel.Major > MaxSM.Major) ||
-             (ShaderModel.Major == MaxSM.Major && ShaderModel.Minor > MaxSM.Minor))
+    else if (ShaderModel > MaxSM)
     {
         LOG_WARNING_MESSAGE("The maximum supported shader model by DXC is ", Uint32{MaxSM.Major}, '_', Uint32{MaxSM.Minor},
                             ". The specified shader model ", Uint32{ShaderModel.Major}, '_', Uint32{ShaderModel.Minor}, " will be downgraded.");

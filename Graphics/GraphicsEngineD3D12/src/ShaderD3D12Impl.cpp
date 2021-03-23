@@ -66,14 +66,13 @@ static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const S
         (DeviceSM.Minor < CompilerSM.Minor ? DeviceSM : CompilerSM) :
         (DeviceSM.Major < CompilerSM.Major ? DeviceSM : CompilerSM);
 
-    if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
+    if (HLSLVersion == ShaderVersion{0, 0})
     {
         return MaxSupportedSM;
     }
     else
     {
-        if (HLSLVersion.Major > MaxSupportedSM.Major ||
-            HLSLVersion.Major == MaxSupportedSM.Major && HLSLVersion.Minor > MaxSupportedSM.Minor)
+        if (HLSLVersion > MaxSupportedSM)
         {
             LOG_WARNING_MESSAGE("Requested shader model ", Uint32{HLSLVersion.Major}, '_', Uint32{HLSLVersion.Minor},
                                 " is not supported by the device/compiler. Downgrading to maximum supported version ",

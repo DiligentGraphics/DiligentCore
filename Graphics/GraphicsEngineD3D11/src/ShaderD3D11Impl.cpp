@@ -36,7 +36,7 @@ namespace Diligent
 static const ShaderVersion HLSLValidateShaderVersion(const ShaderVersion& Version, const ShaderVersion& MaxVersion)
 {
     ShaderVersion ModelVer;
-    if (Version.Major > MaxVersion.Major || (Version.Major == MaxVersion.Major && Version.Minor > MaxVersion.Minor))
+    if (Version > MaxVersion)
     {
         ModelVer = MaxVersion;
         LOG_ERROR_MESSAGE("Shader model ", Uint32{Version.Major}, "_", Uint32{Version.Minor},
@@ -64,17 +64,17 @@ static const ShaderVersion GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const
 #endif
         case D3D_FEATURE_LEVEL_11_1:
         case D3D_FEATURE_LEVEL_11_0:
-            return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
+            return (HLSLVersion == ShaderVersion{0, 0}) ?
                 ShaderVersion{5, 0} :
                 HLSLValidateShaderVersion(HLSLVersion, {5, 0});
 
         case D3D_FEATURE_LEVEL_10_1:
-            return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
+            return (HLSLVersion == ShaderVersion{0, 0}) ?
                 ShaderVersion{4, 1} :
                 HLSLValidateShaderVersion(HLSLVersion, {4, 1});
 
         case D3D_FEATURE_LEVEL_10_0:
-            return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
+            return (HLSLVersion == ShaderVersion{0, 0}) ?
                 ShaderVersion{4, 0} :
                 HLSLValidateShaderVersion(HLSLVersion, {4, 0});
 
