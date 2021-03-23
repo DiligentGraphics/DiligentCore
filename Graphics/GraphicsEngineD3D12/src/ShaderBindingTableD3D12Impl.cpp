@@ -28,8 +28,11 @@
 #include "pch.h"
 
 #include "ShaderBindingTableD3D12Impl.hpp"
+
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceContextD3D12Impl.hpp"
+#include "BufferD3D12Impl.hpp"
+
 #include "D3D12TypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 #include "DXGITypeConversions.hpp"
@@ -49,6 +52,35 @@ ShaderBindingTableD3D12Impl::ShaderBindingTableD3D12Impl(IReferenceCounters*    
 
 ShaderBindingTableD3D12Impl::~ShaderBindingTableD3D12Impl()
 {
+}
+
+void ShaderBindingTableD3D12Impl::GetData(BufferD3D12Impl*& pSBTBufferD3D12,
+                                          BindingTable&     RayGenShaderRecord,
+                                          BindingTable&     MissShaderTable,
+                                          BindingTable&     HitGroupTable,
+                                          BindingTable&     CallableShaderTable)
+{
+    TShaderBindingTableBase::GetData(pSBTBufferD3D12, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
+
+    m_d3d12DispatchDesc.RayGenerationShaderRecord.StartAddress = pSBTBufferD3D12->GetGPUAddress() + RayGenShaderRecord.Offset;
+    m_d3d12DispatchDesc.RayGenerationShaderRecord.SizeInBytes  = RayGenShaderRecord.Size;
+
+    m_d3d12DispatchDesc.MissShaderTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + MissShaderTable.Offset;
+    m_d3d12DispatchDesc.MissShaderTable.SizeInBytes   = MissShaderTable.Size;
+    m_d3d12DispatchDesc.MissShaderTable.StrideInBytes = MissShaderTable.Stride;
+
+    m_d3d12DispatchDesc.HitGroupTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + HitGroupTable.Offset;
+    m_d3d12DispatchDesc.HitGroupTable.SizeInBytes   = HitGroupTable.Size;
+    m_d3d12DispatchDesc.HitGroupTable.StrideInBytes = HitGroupTable.Stride;
+
+    m_d3d12DispatchDesc.CallableShaderTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + CallableShaderTable.Offset;
+    m_d3d12DispatchDesc.CallableShaderTable.SizeInBytes   = CallableShaderTable.Size;
+    m_d3d12DispatchDesc.CallableShaderTable.StrideInBytes = CallableShaderTable.Stride;
+
+    VERIFY_EXPR(m_d3d12DispatchDesc.RayGenerationShaderRecord.StartAddress % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0);
+    VERIFY_EXPR(m_d3d12DispatchDesc.MissShaderTable.StartAddress % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0);
+    VERIFY_EXPR(m_d3d12DispatchDesc.HitGroupTable.StartAddress % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0);
+    VERIFY_EXPR(m_d3d12DispatchDesc.CallableShaderTable.StartAddress % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0);
 }
 
 } // namespace Diligent

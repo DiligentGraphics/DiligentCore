@@ -430,7 +430,7 @@ public:
     }
 
     bool                  HasPendingData() const { return this->m_Changed; }
-    const BufferImplType* GetInternalBuffer() const { return this->m_pBuffer.template RawPtr<BufferImplType>(); }
+    const BufferImplType* GetInternalBuffer() const { return this->m_pBuffer; }
 
 protected:
     struct BindingTable
@@ -470,14 +470,14 @@ protected:
             BuffDesc.BindFlags     = BIND_RAY_TRACING;
             BuffDesc.uiSizeInBytes = BufSize;
 
-            this->m_pDevice->CreateBuffer(BuffDesc, nullptr, &m_pBuffer);
+            this->m_pDevice->CreateBuffer(BuffDesc, nullptr, m_pBuffer.DblPtr<IBuffer>());
             VERIFY_EXPR(m_pBuffer != nullptr);
         }
 
         if (m_pBuffer == nullptr)
             return; // Something went wrong
 
-        pSBTBuffer = m_pBuffer.template RawPtr<BufferImplType>();
+        pSBTBuffer = m_pBuffer;
 
         if (!m_RayGenShaderRecord.empty())
         {
@@ -521,7 +521,7 @@ protected:
     std::vector<Uint8> m_HitGroupsRecord;
 
     RefCntAutoPtr<PipelineStateImplType> m_pPSO;
-    RefCntAutoPtr<IBuffer>               m_pBuffer;
+    RefCntAutoPtr<BufferImplType>        m_pBuffer;
 
     Uint32 m_ShaderRecordSize   = 0;
     Uint32 m_ShaderRecordStride = 0;

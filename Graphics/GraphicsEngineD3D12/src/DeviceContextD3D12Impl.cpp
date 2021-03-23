@@ -2766,9 +2766,9 @@ void DeviceContextD3D12Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& A
     ++m_State.NumCommands;
 }
 
-void DeviceContextD3D12Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs)
+void DeviceContextD3D12Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs)
 {
-    if (!TDeviceContextBase::UpdateSBT(pSBT, pAttribs, 0))
+    if (!TDeviceContextBase::UpdateSBT(pSBT, pUpdateIndirectBufferAttribs, 0))
         return;
 
     auto&            CmdCtx          = GetCmdContext().AsGraphicsContext();
@@ -2787,7 +2787,7 @@ void DeviceContextD3D12Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIn
     {
         TransitionOrVerifyBufferState(CmdCtx, *pSBTBufferD3D12, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_COPY_DEST, OpName);
 
-        // buffer ranges are not intersected, so we don't need to add barriers between them
+        // Buffer ranges do not intersect, so we don't need to add barriers between them
         if (RayGenShaderRecord.pData)
             UpdateBuffer(pSBTBufferD3D12, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
@@ -2805,13 +2805,17 @@ void DeviceContextD3D12Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIn
     else
     {
         // Ray tracing command can be used in parallel with the same SBT, so internal buffer state must be RESOURCE_STATE_RAY_TRACING to allow it.
-        VERIFY(pSBTBufferD3D12->CheckState(RESOURCE_STATE_RAY_TRACING), "SBT buffer must be always in RESOURCE_STATE_RAY_TRACING state");
+        VERIFY(pSBTBufferD3D12->CheckState(RESOURCE_STATE_RAY_TRACING), "SBT buffer must always be in RESOURCE_STATE_RAY_TRACING state");
     }
 
-    if (pAttribs != nullptr)
+    if (pUpdateIndirectBufferAttribs != nullptr)
     {
         const auto& d3d12DispatchDesc = pSBTD3D12->GetD3D12BindingTable();
-        UpdateBuffer(pAttribs->pAttribsBuffer, pAttribs->AttribsBufferOffset, TraceRaysIndirectCommandSBTSize, &d3d12DispatchDesc, pAttribs->TransitionMode);
+        UpdateBuffer(pUpdateIndirectBufferAttribs->pAttribsBuffer,
+                     pUpdateIndirectBufferAttribs->AttribsBufferOffset,
+                     TraceRaysIndirectCommandSBTSize,
+                     &d3d12DispatchDesc,
+                     pUpdateIndirectBufferAttribs->TransitionMode);
     }
 }
 

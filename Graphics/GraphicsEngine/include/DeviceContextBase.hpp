@@ -344,7 +344,7 @@ protected:
     bool WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const;
     bool TraceRays(const TraceRaysAttribs& Attribs, int) const;
     bool TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
-    bool UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs, int) const;
+    bool UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const;
 
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(uint) * 3; // D3D12: 12 bytes (x, y, z dimension)
                                                                               // Vulkan: 8 bytes (task count, first task)
@@ -1684,10 +1684,10 @@ bool DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
     }
 
     VERIFY(pSBTImpl->GetInternalBuffer() != nullptr,
-           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happens ",
-           "because HasPendingData() must return true and previous check returns from the function.");
+           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happen, ",
+           "because HasPendingData() must return true and the previous check should've returned from the function.");
     VERIFY(pSBTImpl->GetInternalBuffer()->CheckState(RESOURCE_STATE_RAY_TRACING),
-           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
+           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer is expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
            GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
 
     if ((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) > m_pDevice->GetProperties().MaxRayGenThreads)
@@ -1746,10 +1746,10 @@ bool DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
     }
 
     VERIFY(pSBTImpl->GetInternalBuffer() != nullptr,
-           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happens ",
-           "because HasPendingData() must return true and previous check returns from the function.");
+           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happen, ",
+           "because HasPendingData() must return true and the previous check should've returned from the function.");
     VERIFY(pSBTImpl->GetInternalBuffer()->CheckState(RESOURCE_STATE_RAY_TRACING),
-           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
+           "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer is expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
            GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
 #endif
 
@@ -1757,7 +1757,7 @@ bool DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs, int) const
+bool DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const
 {
 #ifdef DILIGENT_DEVELOPMENT
     if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
@@ -1778,11 +1778,11 @@ bool DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSB
         return false;
     }
 
-    if (pAttribs != nullptr)
+    if (pUpdateIndirectBufferAttribs != nullptr)
     {
-        if (pAttribs->pAttribsBuffer == nullptr)
+        if (pUpdateIndirectBufferAttribs->pAttribsBuffer == nullptr)
         {
-            LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT command arguments are invalid: pAttribs->pAttribsBuffer must not be null");
+            LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT command arguments are invalid: pUpdateIndirectBufferAttribs->pAttribsBuffer must not be null");
             return false;
         }
     }

@@ -34,7 +34,6 @@
 #include "ShaderBindingTableBase.hpp"
 #include "TopLevelASD3D12Impl.hpp"
 #include "D3D12ResourceBase.hpp"
-#include "BufferD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -60,30 +59,7 @@ public:
                  BindingTable&     RayGenShaderRecord,
                  BindingTable&     MissShaderTable,
                  BindingTable&     HitGroupTable,
-                 BindingTable&     CallableShaderTable)
-    {
-        TShaderBindingTableBase::GetData(pSBTBufferD3D12, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
-
-        m_d3d12DispatchDesc.RayGenerationShaderRecord.StartAddress = pSBTBufferD3D12->GetGPUAddress() + RayGenShaderRecord.Offset;
-        m_d3d12DispatchDesc.RayGenerationShaderRecord.SizeInBytes  = RayGenShaderRecord.Size;
-
-        m_d3d12DispatchDesc.MissShaderTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + MissShaderTable.Offset;
-        m_d3d12DispatchDesc.MissShaderTable.SizeInBytes   = MissShaderTable.Size;
-        m_d3d12DispatchDesc.MissShaderTable.StrideInBytes = MissShaderTable.Stride;
-
-        m_d3d12DispatchDesc.HitGroupTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + HitGroupTable.Offset;
-        m_d3d12DispatchDesc.HitGroupTable.SizeInBytes   = HitGroupTable.Size;
-        m_d3d12DispatchDesc.HitGroupTable.StrideInBytes = HitGroupTable.Stride;
-
-        m_d3d12DispatchDesc.CallableShaderTable.StartAddress  = pSBTBufferD3D12->GetGPUAddress() + CallableShaderTable.Offset;
-        m_d3d12DispatchDesc.CallableShaderTable.SizeInBytes   = CallableShaderTable.Size;
-        m_d3d12DispatchDesc.CallableShaderTable.StrideInBytes = CallableShaderTable.Stride;
-
-        VERIFY_EXPR(m_d3d12DispatchDesc.RayGenerationShaderRecord.StartAddress % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0);
-        VERIFY_EXPR(m_d3d12DispatchDesc.MissShaderTable.StartAddress % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0);
-        VERIFY_EXPR(m_d3d12DispatchDesc.HitGroupTable.StartAddress % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0);
-        VERIFY_EXPR(m_d3d12DispatchDesc.CallableShaderTable.StartAddress % D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT == 0);
-    }
+                 BindingTable&     CallableShaderTable);
 
 private:
     D3D12_DISPATCH_RAYS_DESC m_d3d12DispatchDesc = {};

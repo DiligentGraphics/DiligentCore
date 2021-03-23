@@ -3447,9 +3447,9 @@ void DeviceContextVkImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attr
     ++m_State.NumCommands;
 }
 
-void DeviceContextVkImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs)
+void DeviceContextVkImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs)
 {
-    if (!TDeviceContextBase::UpdateSBT(pSBT, pAttribs, 0))
+    if (!TDeviceContextBase::UpdateSBT(pSBT, pUpdateIndirectBufferAttribs, 0))
         return;
 
     auto*         pSBTVk       = ValidatedCast<ShaderBindingTableVkImpl>(pSBT);
@@ -3468,7 +3468,7 @@ void DeviceContextVkImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
     {
         TransitionOrVerifyBufferState(*pSBTBufferVk, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
 
-        // Buffer ranges are not intersected, so we don't need to add barriers between them
+        // Buffer ranges do not intersect, so we don't need to add barriers between them
         if (RayGenShaderRecord.pData)
             UpdateBuffer(pSBTBufferVk, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
@@ -3486,7 +3486,7 @@ void DeviceContextVkImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
     else
     {
         // Ray tracing command can be used in parallel with the same SBT, so internal buffer state must be RESOURCE_STATE_RAY_TRACING to allow it.
-        VERIFY(pSBTBufferVk->CheckState(RESOURCE_STATE_RAY_TRACING), "SBT buffer must be always in RESOURCE_STATE_RAY_TRACING state");
+        VERIFY(pSBTBufferVk->CheckState(RESOURCE_STATE_RAY_TRACING), "SBT buffer must always be in RESOURCE_STATE_RAY_TRACING state");
     }
 }
 

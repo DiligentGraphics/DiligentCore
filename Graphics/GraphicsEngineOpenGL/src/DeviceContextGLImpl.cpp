@@ -1637,7 +1637,7 @@ void DeviceContextGLImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attr
     UNSUPPORTED("TraceRaysIndirect is not supported in OpenGL");
 }
 
-void DeviceContextGLImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pAttribs)
+void DeviceContextGLImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs)
 {
     UNSUPPORTED("UpdateSBT is not supported in OpenGL");
 }

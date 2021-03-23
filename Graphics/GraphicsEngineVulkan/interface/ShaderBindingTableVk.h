@@ -46,13 +46,13 @@ static const INTERFACE_ID IID_ShaderBindingTableVk =
     IShaderBindingTableInclusiveMethods;      \
     IShaderBindingTableVkMethods ShaderBindingTableVk
 
-/// This structure contains structures which can be used as input arguments for the vkCmdTraceRaysKHR() function.
+/// This structure contains the data that can be used as input arguments for vkCmdTraceRaysKHR() command.
 struct BindingTableVk
 {
-    VkStridedDeviceAddressRegionKHR RaygenShader;
-    VkStridedDeviceAddressRegionKHR MissShader;
-    VkStridedDeviceAddressRegionKHR HitShader;
-    VkStridedDeviceAddressRegionKHR CallableShader;
+    VkStridedDeviceAddressRegionKHR RaygenShader   DEFAULT_INITIALIZER({});
+    VkStridedDeviceAddressRegionKHR MissShader     DEFAULT_INITIALIZER({});
+    VkStridedDeviceAddressRegionKHR HitShader      DEFAULT_INITIALIZER({});
+    VkStridedDeviceAddressRegionKHR CallableShader DEFAULT_INITIALIZER({});
 };
 typedef struct BindingTableVk BindingTableVk;
 // clang-format off
@@ -60,11 +60,10 @@ typedef struct BindingTableVk BindingTableVk;
 /// Exposes Vulkan-specific functionality of a Shader binding table object.
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableVk, IShaderBindingTable)
 {
-    /// Returns the structure which can be used for vkCmdTraceRaysKHR() call.
+    /// Returns the data that can be used with vkCmdTraceRaysKHR() call.
     /// 
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
-    ///           to the shader binding table with the IDeviceContext::UpdateSBT(), with other commands and
-    ///           shader binding table methods this method can be used in parallel.
+    ///           to the shader binding table.
     VIRTUAL const BindingTableVk REF METHOD(GetVkBindingTable)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

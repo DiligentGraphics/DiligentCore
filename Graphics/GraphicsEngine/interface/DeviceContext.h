@@ -1302,7 +1302,7 @@ typedef struct TraceRaysIndirectAttribs TraceRaysIndirectAttribs;
 /// This structure is used by IDeviceContext::UpdateSBT().
 struct UpdateIndirectRTBufferAttribs
 {
-    /// BUffer can be used by IDeviceContext::TraceRaysIndirect().
+    /// Indirect buffer that can be used by IDeviceContext::TraceRaysIndirect() command.
     IBuffer* pAttribsBuffer DEFAULT_INITIALIZER(nullptr);
 
     /// Offset in bytes from the beginning of the buffer where SBT data will be recorded.
@@ -1310,7 +1310,7 @@ struct UpdateIndirectRTBufferAttribs
 
     /// State transition mode of the attribs buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE TransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
 #if DILIGENT_CPP_INTERFACE
     UpdateIndirectRTBufferAttribs() noexcept {}
 
@@ -2319,7 +2319,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
     ///           to the shader binding table (SBT) passed as an argument to the function.
-    ///           Functions TraceRays() and TraceRaysIndirect() have read access to the SBT and can run in parallel.
+    ///           The function does not modify the state of the SBT and can be executed in parallel with other
+    ///           functions that don't modify the SBT (e.g. TraceRaysIndirect).
     VIRTUAL void METHOD(TraceRays)(THIS_
                                    const TraceRaysAttribs REF Attribs) PURE;
     
@@ -2332,32 +2333,37 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                 Uint32 DimensionX;
     ///                                 Uint32 DimensionY;
     ///                                 Uint32 DimensionZ;
-    ///                              You must call IDeviceContext::UpdateSBT() to initialize first 88 bytes with the same shader binding table
-    ///                              as specified in TraceRaysIndirectAttribs::pSBT.
+    ///                              You must call IDeviceContext::UpdateSBT() to initialize the first 88 bytes with the
+    ///                              same shader binding table as specified in TraceRaysIndirectAttribs::pSBT.
     /// 
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
     ///           to the shader binding table (SBT) passed as an argument to the function.
-    ///           Functions TraceRays() and TraceRaysIndirect() have read access to the SBT and can run in parallel.
+    ///           The function does not modify the state of the SBT and can be executed in parallel with other
+    ///           functions that don't modify the SBT (e.g. TraceRays).
     VIRTUAL void METHOD(TraceRaysIndirect)(THIS_
                                            const TraceRaysIndirectAttribs REF Attribs,
                                            IBuffer*                           pAttribsBuffer) PURE;
 
 
-    /// Update SBT with a pending data that is recorded in IShaderBindingTable::Bind*** calls.
-    
-    /// \param [in] pSBT     - shader binding table that will be updated if have any pending data.
-    /// \param [in] pAttribs - optional, used to initialize data 
+    /// Updates SBT with the pending data that were recorded in IShaderBindingTable::Bind*** calls.
+
+    /// \param [in] pSBT                         - Shader binding table that will be updated if there are pending data.
+    /// \param [in] pUpdateIndirectBufferAttribs - Indirect ray tracing attributes buffer update attributes (optional, may be null).
     /// 
-    /// \note  In Direct3D12 backend pAttribsBuffer will be initialied with a D3D12_DISPATCH_RAYS_DESC structure that contains
-    ///        GPU addresses for the ray tracing shaders in first 88 bytes and 12 bytes for dimension (see IDeviceContext::TraceRaysIndirect() description).
-    ///        In Vulkan backend pAttribsBuffer kepd unmodified because SBT used directly in IDeviceContext::TraceRaysIndirect().
+    /// \note  When pUpdateIndirectBufferAttribs is not null, the indirect ray tracing attributes will be written to the pAttribsBuffer buffer
+    ///        specified by the structure and can be used by IDeviceContext::TraceRaysIndirect() command.
+    ///        In Direct3D12 backend, the pAttribsBuffer buffer will be initialized with D3D12_DISPATCH_RAYS_DESC structure that contains
+    ///        GPU addresses of the ray tracing shaders in the first 88 bytes and 12 bytes for dimension
+    ///        (see IDeviceContext::TraceRaysIndirect() description).
+    ///        In Vulkan backend, the pAttribsBuffer buffer will not be modified, because the SBT is used directly
+    ///        in IDeviceContext::TraceRaysIndirect().
     /// 
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
     ///           to the shader binding table (SBT) passed as an argument to the function.
-    ///           Function UpdateSBT() modifies data in SBT and must not run in parallel with any other commands that use SBT.
+    ///           The function modifies the data in the SBT and must not run in parallel with any other command that uses the same SBT.
     VIRTUAL void METHOD(UpdateSBT)(THIS_
                                    IShaderBindingTable*                 pSBT,
-                                   const UpdateIndirectRTBufferAttribs* pAttribs DEFAULT_INITIALIZER(nullptr)) PURE;
+                                   const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs DEFAULT_INITIALIZER(nullptr)) PURE;
 };
 DILIGENT_END_INTERFACE
 
