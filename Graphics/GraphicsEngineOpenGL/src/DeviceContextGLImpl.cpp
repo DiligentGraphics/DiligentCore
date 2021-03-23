@@ -239,6 +239,7 @@ void DeviceContextGLImpl::InvalidateState()
     TDeviceContextBase::InvalidateState();
 
     m_ContextState.Invalidate();
+    m_BindInfo.Invalidate();
     m_BoundWritableTextures.clear();
     m_BoundWritableBuffers.clear();
     m_IsDefaultFBOBound = false;

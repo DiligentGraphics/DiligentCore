@@ -1628,7 +1628,8 @@ void ReleaseCommittedPSUAVs(ID3D11UnorderedAccessView* CommittedD3D11UAVs[],
 
 void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
 {
-    m_BindInfo = {};
+    // Make sure all resources are committed next time
+    m_BindInfo.StaleSRBMask = 0xFFu;
 
     for (int ShaderType = 0; ShaderType < NumShaderTypes; ++ShaderType)
     {
@@ -1923,6 +1924,8 @@ void DeviceContextD3D11Impl::InvalidateState()
 
     m_CommittedD3D11PrimTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
     m_CommittedPrimitiveTopology = PRIMITIVE_TOPOLOGY_UNDEFINED;
+
+    m_BindInfo.Invalidate();
 }
 
 void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)

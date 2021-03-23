@@ -429,8 +429,10 @@ private:
         std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
 #endif
 
-        SRBState()
-        {}
+        void Invalidate()
+        {
+            *this = {};
+        }
 
         void SetStaleSRBBit(Uint32 Index) { StaleSRBMask |= static_cast<Bitfield>(1u << Index); }
         void ClearStaleSRBBit(Uint32 Index) { StaleSRBMask &= static_cast<Bitfield>(~(1u << Index)); }
