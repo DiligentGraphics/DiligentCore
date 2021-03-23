@@ -470,7 +470,7 @@ protected:
             BuffDesc.BindFlags     = BIND_RAY_TRACING;
             BuffDesc.uiSizeInBytes = BufSize;
 
-            this->m_pDevice->CreateBuffer(BuffDesc, nullptr, m_pBuffer.DblPtr<IBuffer>());
+            this->m_pDevice->CreateBuffer(BuffDesc, nullptr, m_pBuffer.template DblPtr<IBuffer>());
             VERIFY_EXPR(m_pBuffer != nullptr);
         }
 
