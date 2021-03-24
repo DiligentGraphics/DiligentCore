@@ -32,14 +32,9 @@
 namespace Diligent
 {
 
-#if DILIGENT_DEBUG
+#if DILIGENT_DEVELOPMENT
 
-#    define CHECK_PARAMETER(Expr, ...) \
-        do                             \
-        {                              \
-            VERIFY(Expr, __VA_ARGS__); \
-            if (!(Expr)) return false; \
-        } while (false)
+#    define CHECK_PARAMETER DEV_CHECK_ERR
 
 #else
 

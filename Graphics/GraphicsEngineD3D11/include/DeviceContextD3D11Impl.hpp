@@ -425,7 +425,7 @@ private:
 #ifdef DILIGENT_DEVELOPMENT
         bool CommittedResourcesValidated = false;
 
-        DvpSRBArrayType SRBs = {};
+        DvpSRBArrayType SRBs;
 
         // Base bindings that were used in the last BindShaderResources() call.
         std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES> BaseBindings = {};

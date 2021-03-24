@@ -316,7 +316,7 @@ private:
         // Binding offsets that were used in the last BindProgramResources() call.
         std::array<TBindings, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
 
-        DvpSRBArrayType SRBs = {};
+        DvpSRBArrayType SRBs;
 #endif
 
         void Invalidate()

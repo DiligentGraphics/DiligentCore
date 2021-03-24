@@ -469,19 +469,8 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
 
 void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderResourceBinding* pShaderResourceBinding)
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pActiveRenderPass)
-    {
-        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
-        return;
-    }
-
-    if (pShaderResourceBinding == nullptr)
-    {
-        LOG_ERROR_MESSAGE("pShaderResourceBinding must not be null");
-        return;
-    }
-#endif
+    DEV_CHECK_ERR(!m_pActiveRenderPass, "State transitions are not allowed inside a render pass.");
+    DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "pShaderResourceBinding must not be null");
 
     auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
@@ -491,8 +480,7 @@ void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderReso
 
 void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
-        return;
+    DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
 
     auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
@@ -780,8 +768,7 @@ void DeviceContextVkImpl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE Ind
 
 void DeviceContextVkImpl::Draw(const DrawAttribs& Attribs)
 {
-    if (!DvpVerifyDrawArguments(Attribs))
-        return;
+    DvpVerifyDrawArguments(Attribs);
 
     PrepareForDraw(Attribs.Flags);
 
@@ -791,8 +778,7 @@ void DeviceContextVkImpl::Draw(const DrawAttribs& Attribs)
 
 void DeviceContextVkImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
-    if (!DvpVerifyDrawIndexedArguments(Attribs))
-        return;
+    DvpVerifyDrawIndexedArguments(Attribs);
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
@@ -802,8 +788,7 @@ void DeviceContextVkImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 
 void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -817,8 +802,7 @@ void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuff
 
 void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -832,8 +816,7 @@ void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
 
 void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
 {
-    if (!DvpVerifyDrawMeshArguments(Attribs))
-        return;
+    DvpVerifyDrawMeshArguments(Attribs);
 
     PrepareForDraw(Attribs.Flags);
 
@@ -843,8 +826,7 @@ void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
 
 void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -858,8 +840,7 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
 
 void DeviceContextVkImpl::DrawMeshIndirectCount(const DrawMeshIndirectCountAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
 {
-    if (!DvpVerifyDrawMeshIndirectCountArguments(Attribs, pAttribsBuffer, pCountBuffer))
-        return;
+    DvpVerifyDrawMeshIndirectCountArguments(Attribs, pAttribsBuffer, pCountBuffer);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -914,8 +895,7 @@ void DeviceContextVkImpl::PrepareForRayTracing()
 
 void DeviceContextVkImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
-    if (!DvpVerifyDispatchArguments(Attribs))
-        return;
+    DvpVerifyDispatchArguments(Attribs);
 
     PrepareForDispatchCompute();
     m_CommandBuffer.Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
@@ -924,8 +904,7 @@ void DeviceContextVkImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 
 void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
 
     PrepareForDispatchCompute();
 
@@ -951,10 +930,7 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
                                             Uint8                          Stencil,
                                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!TDeviceContextBase::ClearDepthStencil(pView))
-        return;
-
-    VERIFY_EXPR(pView != nullptr);
+    TDeviceContextBase::ClearDepthStencil(pView);
 
     auto* pVkDSV = ValidatedCast<ITextureViewVk>(pView);
 
@@ -966,7 +942,7 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
     bool ClearAsAttachment = pVkDSV == m_pBoundDepthStencil;
     VERIFY(m_pActiveRenderPass == nullptr || ClearAsAttachment,
            "DSV was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearDepthStencil "
-           "checks if the DSV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
+           "checks if the DSV is bound as a framebuffer attachment and triggers an assert otherwise (in development mode).");
     if (ClearAsAttachment)
     {
         VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE);
@@ -1055,10 +1031,7 @@ VkClearColorValue ClearValueToVkClearValue(const float* RGBA, TEXTURE_FORMAT Tex
 
 void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!TDeviceContextBase::ClearRenderTarget(pView))
-        return;
-
-    VERIFY_EXPR(pView != nullptr);
+    TDeviceContextBase::ClearRenderTarget(pView);
 
     auto* pVkRTV = ValidatedCast<ITextureViewVk>(pView);
 
@@ -1086,7 +1059,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
 
     VERIFY(m_pActiveRenderPass == nullptr || attachmentIndex != InvalidAttachmentIndex,
            "Render target was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearRenderTarget "
-           "checks if the RTV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
+           "checks if the RTV is bound as a framebuffer attachment and triggers an assert otherwise (in development mode).");
 
     if (attachmentIndex != InvalidAttachmentIndex)
     {
@@ -1225,22 +1198,14 @@ void DeviceContextVkImpl::Flush()
 void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
                                 ICommandList* const* ppCommandLists)
 {
-    if (m_bIsDeferred)
-    {
-        LOG_ERROR_MESSAGE("Flush() should only be called for immediate contexts.");
-        return;
-    }
+    DEV_CHECK_ERR(!m_bIsDeferred, "Flush() should only be called for immediate contexts.");
 
-    if (m_ActiveQueriesCounter > 0)
-    {
-        LOG_ERROR_MESSAGE("Flushing device context that has ", m_ActiveQueriesCounter,
-                          " active queries. Vulkan requires that queries are begun and ended in the same command buffer.");
-    }
+    DEV_CHECK_ERR(m_ActiveQueriesCounter == 0,
+                  "Flushing device context that has ", m_ActiveQueriesCounter,
+                  " active queries. Vulkan requires that queries are begun and ended in the same command buffer.");
 
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr,
+                  "Flushing device context inside an active render pass.");
 
     // TODO: replace with small_vector
     std::vector<VkCommandBuffer>               vkCmdBuffs;
@@ -1530,13 +1495,7 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
                                            ITextureView*                  pDepthStencil,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
-        return;
-    }
-#endif
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
 
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
@@ -1673,12 +1632,8 @@ void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuf
                                              Uint64                         SrcOffset,
                                              RESOURCE_STATE_TRANSITION_MODE TransitionMode)
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (DstOffset + NumBytes > pBuffVk->GetDesc().uiSizeInBytes)
-    {
-        LOG_ERROR("Update region is out of buffer bounds which will result in an undefined behavior");
-    }
-#endif
+    DEV_CHECK_ERR(DstOffset + NumBytes <= pBuffVk->GetDesc().uiSizeInBytes,
+                  "Update region is out of buffer bounds which will result in an undefined behavior");
 
     EnsureVkCmdBuffer();
     TransitionOrVerifyBufferState(*pBuffVk, TransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, "Updating buffer (DeviceContextVkImpl::UpdateBufferRegion)");
@@ -1704,13 +1659,7 @@ void DeviceContextVkImpl::UpdateBuffer(IBuffer*                       pBuffer,
     // be resource barrier issues in the cmd list in the device context
     auto* pBuffVk = ValidatedCast<BufferVkImpl>(pBuffer);
 
-#ifdef DILIGENT_DEVELOPMENT
-    if (pBuffVk->GetDesc().Usage == USAGE_DYNAMIC)
-    {
-        LOG_ERROR("Dynamic buffers must be updated via Map()");
-        return;
-    }
-#endif
+    DEV_CHECK_ERR(pBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers must be updated via Map()");
 
     constexpr size_t Alignment = 4;
     // Source buffer offset must be multiple of 4 (18.4)
@@ -1734,13 +1683,7 @@ void DeviceContextVkImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
     auto* pSrcBuffVk = ValidatedCast<BufferVkImpl>(pSrcBuffer);
     auto* pDstBuffVk = ValidatedCast<BufferVkImpl>(pDstBuffer);
 
-#ifdef DILIGENT_DEVELOPMENT
-    if (pDstBuffVk->GetDesc().Usage == USAGE_DYNAMIC)
-    {
-        LOG_ERROR("Dynamic buffers cannot be copy destinations");
-        return;
-    }
-#endif
+    DEV_CHECK_ERR(pDstBuffVk->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be copy destinations");
 
     EnsureVkCmdBuffer();
     TransitionOrVerifyBufferState(*pSrcBuffVk, SrcBufferTransitionMode, RESOURCE_STATE_COPY_SOURCE, VK_ACCESS_TRANSFER_READ_BIT, "Using buffer as copy source (DeviceContextVkImpl::CopyBuffer)");
@@ -2371,7 +2314,7 @@ void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
 
 void DeviceContextVkImpl::FinishCommandList(class ICommandList** ppCommandList)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
     if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
     {
@@ -2396,11 +2339,7 @@ void DeviceContextVkImpl::FinishCommandList(class ICommandList** ppCommandList)
 void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLists,
                                               ICommandList* const* ppCommandLists)
 {
-    if (m_bIsDeferred)
-    {
-        LOG_ERROR_MESSAGE("Only immediate context can execute command list");
-        return;
-    }
+    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate context can execute command list");
 
     if (NumCommandLists == 0)
         return;
@@ -2413,13 +2352,13 @@ void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLis
 
 void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)
 {
-    VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be signaled from immediate context");
     m_PendingFences.emplace_back(std::make_pair(Value, pFence));
 }
 
 void DeviceContextVkImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
 {
-    VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be waited from immediate context");
     if (FlushContext)
         Flush();
     auto* pFenceVk = ValidatedCast<FenceVkImpl>(pFence);
@@ -2428,15 +2367,14 @@ void DeviceContextVkImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushC
 
 void DeviceContextVkImpl::WaitForIdle()
 {
-    VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate contexts can be idled");
     Flush();
     m_pDevice->IdleCommandQueue(m_CommandQueueId, true);
 }
 
 void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
 {
-    if (!TDeviceContextBase::BeginQuery(pQuery, 0))
-        return;
+    TDeviceContextBase::BeginQuery(pQuery, 0);
 
     auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
@@ -2479,8 +2417,7 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
 
 void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
 {
-    if (!TDeviceContextBase::EndQuery(pQuery, 0))
-        return;
+    TDeviceContextBase::EndQuery(pQuery, 0);
 
     auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
@@ -3013,8 +2950,7 @@ void DeviceContextVkImpl::ResolveTextureSubresource(ITexture*                   
 
 void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
 {
-    if (!TDeviceContextBase::BuildBLAS(Attribs, 0))
-        return;
+    TDeviceContextBase::BuildBLAS(Attribs, 0);
 
     auto* pBLASVk    = ValidatedCast<BottomLevelASVkImpl>(Attribs.pBLAS);
     auto* pScratchVk = ValidatedCast<BufferVkImpl>(Attribs.pScratchBuffer);
@@ -3175,8 +3111,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
 
 void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 {
-    if (!TDeviceContextBase::BuildTLAS(Attribs, 0))
-        return;
+    TDeviceContextBase::BuildTLAS(Attribs, 0);
 
     static_assert(TLAS_INSTANCE_DATA_SIZE == sizeof(VkAccelerationStructureInstanceKHR), "Value in TLAS_INSTANCE_DATA_SIZE doesn't match the actual instance description size");
 
@@ -3277,8 +3212,7 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
 void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
 {
-    if (!TDeviceContextBase::CopyBLAS(Attribs, 0))
-        return;
+    TDeviceContextBase::CopyBLAS(Attribs, 0);
 
     auto* pSrcVk = ValidatedCast<BottomLevelASVkImpl>(Attribs.pSrc);
     auto* pDstVk = ValidatedCast<BottomLevelASVkImpl>(Attribs.pDst);
@@ -3311,8 +3245,7 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
 
 void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
 {
-    if (!TDeviceContextBase::CopyTLAS(Attribs, 0))
-        return;
+    TDeviceContextBase::CopyTLAS(Attribs, 0);
 
     auto* pSrcVk = ValidatedCast<TopLevelASVkImpl>(Attribs.pSrc);
     auto* pDstVk = ValidatedCast<TopLevelASVkImpl>(Attribs.pDst);
@@ -3340,8 +3273,7 @@ void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
 
 void DeviceContextVkImpl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs)
 {
-    if (!TDeviceContextBase::WriteBLASCompactedSize(Attribs, 0))
-        return;
+    TDeviceContextBase::WriteBLASCompactedSize(Attribs, 0);
 
     const Uint32 QueryIndex  = 0;
     auto*        pBLASVk     = ValidatedCast<BottomLevelASVkImpl>(Attribs.pBLAS);
@@ -3361,8 +3293,7 @@ void DeviceContextVkImpl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAtt
 
 void DeviceContextVkImpl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs)
 {
-    if (!TDeviceContextBase::WriteTLASCompactedSize(Attribs, 0))
-        return;
+    TDeviceContextBase::WriteTLASCompactedSize(Attribs, 0);
 
     const Uint32 QueryIndex  = 0;
     auto*        pTLASVk     = ValidatedCast<TopLevelASVkImpl>(Attribs.pTLAS);
@@ -3397,8 +3328,7 @@ void DeviceContextVkImpl::CreateASCompactedSizeQueryPool()
 
 void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
 {
-    if (!TDeviceContextBase::TraceRays(Attribs, 0))
-        return;
+    TDeviceContextBase::TraceRays(Attribs, 0);
 
     const auto* pSBTVk       = ValidatedCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
     const auto& BindingTable = pSBTVk->GetVkBindingTable();
@@ -3411,8 +3341,7 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
 
 void DeviceContextVkImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0))
-        return;
+    TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0);
 
     const auto* pSBTVk       = ValidatedCast<const ShaderBindingTableVkImpl>(Attribs.pSBT);
     const auto& BindingTable = pSBTVk->GetVkBindingTable();
@@ -3428,8 +3357,7 @@ void DeviceContextVkImpl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attr
 
 void DeviceContextVkImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs)
 {
-    if (!TDeviceContextBase::UpdateSBT(pSBT, pUpdateIndirectBufferAttribs, 0))
-        return;
+    TDeviceContextBase::UpdateSBT(pSBT, pUpdateIndirectBufferAttribs, 0);
 
     auto*         pSBTVk       = ValidatedCast<ShaderBindingTableVkImpl>(pSBT);
     BufferVkImpl* pSBTBufferVk = nullptr;

@@ -512,7 +512,7 @@ private:
         ShaderResourceCacheArrayType ResourceCaches = {};
 
 #ifdef DILIGENT_DEVELOPMENT
-        DvpSRBArrayType SRBs = {};
+        DvpSRBArrayType SRBs;
 #endif
         using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");

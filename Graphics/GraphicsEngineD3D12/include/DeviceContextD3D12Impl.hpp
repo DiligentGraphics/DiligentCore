@@ -402,7 +402,7 @@ private:
         ShaderResourceCacheArrayType ResourceCaches = {};
 
 #ifdef DILIGENT_DEVELOPMENT
-        DvpSRBArrayType SRBs = {};
+        DvpSRBArrayType SRBs;
 #endif
 
         __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const

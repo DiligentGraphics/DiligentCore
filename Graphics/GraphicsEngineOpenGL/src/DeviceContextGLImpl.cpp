@@ -184,17 +184,12 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 
 void DeviceContextGLImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
-    if (m_pActiveRenderPass)
-    {
-        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
-        return;
-    }
+    DEV_CHECK_ERR(!m_pActiveRenderPass, "State transitions are not allowed inside a render pass.");
 }
 
 void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0))
-        return;
+    DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0);
 
     auto* const pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pShaderResourceBinding);
     const auto  SRBIndex            = pShaderResBindingGL->GetBindingIndex();
@@ -365,7 +360,7 @@ void DeviceContextGLImpl::SetSwapChain(ISwapChainGL* pSwapChain)
 
 void DeviceContextGLImpl::CommitRenderTargets()
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside render pass");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "This method must not be called inside render pass");
 
     if (!m_IsDefaultFBOBound && m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
         return;
@@ -421,13 +416,7 @@ void DeviceContextGLImpl::SetRenderTargets(Uint32                         NumRen
                                            ITextureView*                  pDepthStencil,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
-        return;
-    }
-#endif
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
 
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
@@ -816,8 +805,7 @@ void DeviceContextGLImpl::PostDraw()
 
 void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
 {
-    if (!DvpVerifyDrawArguments(Attribs))
-        return;
+    DvpVerifyDrawArguments(Attribs);
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, false, GlTopology);
@@ -840,8 +828,7 @@ void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
 
 void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
-    if (!DvpVerifyDrawIndexedArguments(Attribs))
-        return;
+    DvpVerifyDrawIndexedArguments(Attribs);
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
@@ -904,8 +891,7 @@ void DeviceContextGLImpl::PrepareForIndirectDraw(IBuffer* pAttribsBuffer)
 
 void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer);
 
 #if GL_ARB_draw_indirect
     GLenum GlTopology;
@@ -935,8 +921,7 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuff
 
 void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer);
 
 #if GL_ARB_draw_indirect
     GLenum GlTopology;
@@ -986,8 +971,7 @@ void DeviceContextGLImpl::DrawMeshIndirectCount(const DrawMeshIndirectCountAttri
 
 void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
-    if (!DvpVerifyDispatchArguments(Attribs))
-        return;
+    DvpVerifyDispatchArguments(Attribs);
 
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
@@ -1009,8 +993,7 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 
 void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
 
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
@@ -1052,10 +1035,7 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
                                             Uint8                          Stencil,
                                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!TDeviceContextBase::ClearDepthStencil(pView))
-        return;
-
-    VERIFY_EXPR(pView != nullptr);
+    TDeviceContextBase::ClearDepthStencil(pView);
 
     if (pView != m_pBoundDepthStencil)
     {
@@ -1089,10 +1069,7 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
 
 void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!TDeviceContextBase::ClearRenderTarget(pView))
-        return;
-
-    VERIFY_EXPR(pView != nullptr);
+    TDeviceContextBase::ClearRenderTarget(pView);
 
     Int32 RTIndex = -1;
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
@@ -1141,10 +1118,7 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
 
 void DeviceContextGLImpl::Flush()
 {
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Flushing device context inside an active render pass.");
 
     glFlush();
 
@@ -1181,22 +1155,21 @@ void DeviceContextGLImpl::SignalFence(IFence* pFence, Uint64 Value)
 
 void DeviceContextGLImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
 {
-    VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be waited from immediate context");
     auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
     pFenceGLImpl->Wait(Value, FlushContext);
 }
 
 void DeviceContextGLImpl::WaitForIdle()
 {
-    VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate contexts can be idled");
     Flush();
     glFinish();
 }
 
 void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
 {
-    if (!TDeviceContextBase::BeginQuery(pQuery, 0))
-        return;
+    TDeviceContextBase::BeginQuery(pQuery, 0);
 
     auto* pQueryGLImpl = ValidatedCast<QueryGLImpl>(pQuery);
     auto  QueryType    = pQueryGLImpl->GetDesc().Type;
@@ -1243,8 +1216,7 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
 
 void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
 {
-    if (!TDeviceContextBase::EndQuery(pQuery, 0))
-        return;
+    TDeviceContextBase::EndQuery(pQuery, 0);
 
     auto* pQueryGLImpl = ValidatedCast<QueryGLImpl>(pQuery);
     auto  QueryType    = pQueryGLImpl->GetDesc().Type;

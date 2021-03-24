@@ -219,8 +219,7 @@ void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState* pPipeline
 
 void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
-        return;
+    DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
 
     auto* const pShaderResBindingD3D11 = ValidatedCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
     const auto  SRBIndex               = pShaderResBindingD3D11->GetBindingIndex();
@@ -454,11 +453,7 @@ void DeviceContextD3D11Impl::SetBlendFactors(const float* pBlendFactors)
 
 void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType)
 {
-    if (!m_pIndexBuffer)
-    {
-        LOG_ERROR_MESSAGE("Index buffer is not set up for indexed draw command");
-        return;
-    }
+    DEV_CHECK_ERR(m_pIndexBuffer, "Index buffer is not set up for indexed draw command");
 
     if (m_CommittedD3D11IndexBuffer != m_pIndexBuffer->m_pd3d11Buffer ||
         m_CommittedIBFormat != IndexType ||
@@ -471,8 +466,7 @@ void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType)
             D3D11IndexFmt = DXGI_FORMAT_R16_UINT;
         else
         {
-            LOG_ERROR_MESSAGE("Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
-            return;
+            UNEXPECTED("Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
         }
 
         m_CommittedD3D11IndexBuffer          = m_pIndexBuffer->m_pd3d11Buffer;
@@ -613,8 +607,7 @@ void DeviceContextD3D11Impl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE 
 
 void DeviceContextD3D11Impl::Draw(const DrawAttribs& Attribs)
 {
-    if (!DvpVerifyDrawArguments(Attribs))
-        return;
+    DvpVerifyDrawArguments(Attribs);
 
     PrepareForDraw(Attribs.Flags);
 
@@ -626,8 +619,7 @@ void DeviceContextD3D11Impl::Draw(const DrawAttribs& Attribs)
 
 void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
-    if (!DvpVerifyDrawIndexedArguments(Attribs))
-        return;
+    DvpVerifyDrawIndexedArguments(Attribs);
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
@@ -639,8 +631,7 @@ void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 
 void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer);
 
     PrepareForDraw(Attribs.Flags);
 
@@ -652,8 +643,7 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IB
 
 void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer);
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
@@ -679,8 +669,7 @@ void DeviceContextD3D11Impl::DrawMeshIndirectCount(const DrawMeshIndirectCountAt
 
 void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
-    if (!DvpVerifyDispatchArguments(Attribs))
-        return;
+    DvpVerifyDispatchArguments(Attribs);
 
     BindShaderResources();
 
@@ -705,8 +694,7 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
 
 void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
 
     BindShaderResources();
 
@@ -737,8 +725,7 @@ void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pV
                                                Uint8                          Stencil,
                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!TDeviceContextBase::ClearDepthStencil(pView))
-        return;
+    TDeviceContextBase::ClearDepthStencil(pView);
 
     VERIFY_EXPR(pView != nullptr);
 
@@ -755,8 +742,7 @@ void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pV
 
 void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!TDeviceContextBase::ClearRenderTarget(pView))
-        return;
+    TDeviceContextBase::ClearRenderTarget(pView);
 
     VERIFY_EXPR(pView != nullptr);
 
@@ -1711,11 +1697,7 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
 void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommandLists,
                                                  ICommandList* const* ppCommandLists)
 {
-    if (m_bIsDeferred)
-    {
-        LOG_ERROR("Only immediate context can execute command list");
-        return;
-    }
+    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate context can execute command list");
 
     if (NumCommandLists == 0)
         return;
@@ -1773,7 +1755,7 @@ static CComPtr<ID3D11Query> CreateD3D11QueryEvent(ID3D11Device* pd3d11Device)
 
 void DeviceContextD3D11Impl::SignalFence(IFence* pFence, Uint64 Value)
 {
-    VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be signaled from immediate context");
     auto*                pd3d11Device = m_pDevice->GetD3D11Device();
     CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
     m_pd3d11DeviceContext->End(pd3d11Query);
@@ -1783,7 +1765,7 @@ void DeviceContextD3D11Impl::SignalFence(IFence* pFence, Uint64 Value)
 
 void DeviceContextD3D11Impl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
 {
-    VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be waited from immediate context");
     if (FlushContext)
         Flush();
     auto* pFenceD3D11Impl = ValidatedCast<FenceD3D11Impl>(pFence);
@@ -1792,7 +1774,7 @@ void DeviceContextD3D11Impl::WaitForFence(IFence* pFence, Uint64 Value, bool Flu
 
 void DeviceContextD3D11Impl::WaitForIdle()
 {
-    VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate contexts can be idled");
     Flush();
     auto*                pd3d11Device = m_pDevice->GetD3D11Device();
     CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
@@ -1816,8 +1798,7 @@ std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> DeviceContextD3D11Impl:
 
 void DeviceContextD3D11Impl::BeginQuery(IQuery* pQuery)
 {
-    if (!TDeviceContextBase::BeginQuery(pQuery, 0))
-        return;
+    TDeviceContextBase::BeginQuery(pQuery, 0);
 
     auto* const pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
     if (pQueryD3D11Impl->GetDesc().Type == QUERY_TYPE_DURATION)
@@ -1833,14 +1814,13 @@ void DeviceContextD3D11Impl::BeginQuery(IQuery* pQuery)
 
 void DeviceContextD3D11Impl::EndQuery(IQuery* pQuery)
 {
-    if (!TDeviceContextBase::EndQuery(pQuery, 0))
-        return;
+    TDeviceContextBase::EndQuery(pQuery, 0);
 
     auto* const pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
 
     const auto QueryType = pQueryD3D11Impl->GetDesc().Type;
-    VERIFY(QueryType != QUERY_TYPE_DURATION || m_ActiveDisjointQuery,
-           "There is no active disjoint query. Did you forget to call BeginQuery for the duration query?");
+    DEV_CHECK_ERR(QueryType != QUERY_TYPE_DURATION || m_ActiveDisjointQuery,
+                  "There is no active disjoint query. Did you forget to call BeginQuery for the duration query?");
     if (QueryType == QUERY_TYPE_TIMESTAMP)
     {
         pQueryD3D11Impl->SetDisjointQuery(BeginDisjointQuery());

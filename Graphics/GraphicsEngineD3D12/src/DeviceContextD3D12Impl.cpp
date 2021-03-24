@@ -355,11 +355,7 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo)
 void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
     DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must mot be null");
-    if (m_pActiveRenderPass)
-    {
-        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
-        return;
-    }
+    DEV_CHECK_ERR(!m_pActiveRenderPass, "State transitions are not allowed inside a render pass.");
 
     auto& CmdCtx               = GetCmdContext();
     auto* pResBindingD3D12Impl = ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding);
@@ -370,8 +366,7 @@ void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipeline
 
 void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
-        return;
+    DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
 
     auto* pResBindingD3D12Impl = ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding);
     auto& ResourceCache        = pResBindingD3D12Impl->GetResourceCache();
@@ -455,7 +450,7 @@ void DeviceContextD3D12Impl::SetBlendFactors(const float* pBlendFactors)
 
 void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, VALUE_TYPE IndexType)
 {
-    VERIFY(m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command");
+    DEV_CHECK_ERR(m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command");
 
     D3D12_INDEX_BUFFER_VIEW IBView;
     IBView.BufferLocation = m_pIndexBuffer->GetGPUAddress(m_ContextId, this) + m_IndexDataStartOffset;
@@ -605,8 +600,7 @@ void DeviceContextD3D12Impl::PrepareForIndexedDraw(GraphicsContext& GraphCtx, DR
 
 void DeviceContextD3D12Impl::Draw(const DrawAttribs& Attribs)
 {
-    if (!DvpVerifyDrawArguments(Attribs))
-        return;
+    DvpVerifyDrawArguments(Attribs);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -616,8 +610,7 @@ void DeviceContextD3D12Impl::Draw(const DrawAttribs& Attribs)
 
 void DeviceContextD3D12Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
-    if (!DvpVerifyDrawIndexedArguments(Attribs))
-        return;
+    DvpVerifyDrawIndexedArguments(Attribs);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
@@ -649,8 +642,7 @@ void DeviceContextD3D12Impl::PrepareIndirectAttribsBuffer(CommandContext&       
 
 void DeviceContextD3D12Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -666,8 +658,7 @@ void DeviceContextD3D12Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IB
 
 void DeviceContextD3D12Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
@@ -683,8 +674,7 @@ void DeviceContextD3D12Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
 
 void DeviceContextD3D12Impl::DrawMesh(const DrawMeshAttribs& Attribs)
 {
-    if (!DvpVerifyDrawMeshArguments(Attribs))
-        return;
+    DvpVerifyDrawMeshArguments(Attribs);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext6();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -695,8 +685,7 @@ void DeviceContextD3D12Impl::DrawMesh(const DrawMeshAttribs& Attribs)
 
 void DeviceContextD3D12Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -712,8 +701,7 @@ void DeviceContextD3D12Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Att
 
 void DeviceContextD3D12Impl::DrawMeshIndirectCount(const DrawMeshIndirectCountAttribs& Attribs, IBuffer* pAttribsBuffer, IBuffer* pCountBuffer)
 {
-    if (!DvpVerifyDrawMeshIndirectCountArguments(Attribs, pAttribsBuffer, pCountBuffer))
-        return;
+    DvpVerifyDrawMeshIndirectCountArguments(Attribs, pAttribsBuffer, pCountBuffer);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -761,8 +749,7 @@ void DeviceContextD3D12Impl::PrepareForDispatchRays(GraphicsContext& GraphCtx)
 
 void DeviceContextD3D12Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
-    if (!DvpVerifyDispatchArguments(Attribs))
-        return;
+    DvpVerifyDispatchArguments(Attribs);
 
     auto& ComputeCtx = GetCmdContext().AsComputeContext();
     PrepareForDispatchCompute(ComputeCtx);
@@ -772,8 +759,7 @@ void DeviceContextD3D12Impl::DispatchCompute(const DispatchComputeAttribs& Attri
 
 void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
-        return;
+    DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
 
     auto& ComputeCtx = GetCmdContext().AsComputeContext();
     PrepareForDispatchCompute(ComputeCtx);
@@ -793,16 +779,9 @@ void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pV
                                                Uint8                          Stencil,
                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Direct3D12 does not allow depth-stencil clears inside a render pass");
-        return;
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Direct3D12 does not allow depth-stencil clears inside a render pass");
 
-    if (!TDeviceContextBase::ClearDepthStencil(pView))
-        return;
-
-    VERIFY_EXPR(pView != nullptr);
+    TDeviceContextBase::ClearDepthStencil(pView);
 
     auto* pViewD3D12    = ValidatedCast<ITextureViewD3D12>(pView);
     auto* pTextureD3D12 = ValidatedCast<TextureD3D12Impl>(pViewD3D12->GetTexture());
@@ -821,18 +800,11 @@ void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pV
 
 void DeviceContextD3D12Impl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Direct3D12 does not allow render target clears inside a render pass");
-        return;
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Direct3D12 does not allow render target clears inside a render pass");
 
-    if (!TDeviceContextBase::ClearRenderTarget(pView))
-        return;
+    TDeviceContextBase::ClearRenderTarget(pView);
 
-    VERIFY_EXPR(pView != nullptr);
-
-    auto pViewD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
+    auto* pViewD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
 
     static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};
     if (RGBA == nullptr)
@@ -860,11 +832,9 @@ void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
 {
     VERIFY(!m_bIsDeferred || NumCommandLists == 0 && ppCommandLists == nullptr, "Only immediate context can execute command lists");
 
-    if (m_ActiveQueriesCounter > 0)
-    {
-        LOG_ERROR_MESSAGE("Flushing device context that has ", m_ActiveQueriesCounter,
-                          " active queries. Direct3D12 requires that queries are begun and ended in the same command list");
-    }
+    DEV_CHECK_ERR(m_ActiveQueriesCounter == 0,
+                  "Flushing device context that has ", m_ActiveQueriesCounter,
+                  " active queries. Direct3D12 requires that queries are begun and ended in the same command list");
 
     // TODO: use small_vector
     std::vector<RenderDeviceD3D12Impl::PooledCommandContext> Contexts;
@@ -923,16 +893,8 @@ void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
 
 void DeviceContextD3D12Impl::Flush()
 {
-    if (m_bIsDeferred)
-    {
-        LOG_ERROR_MESSAGE("Flush() should only be called for immediate contexts");
-        return;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
-    }
+    DEV_CHECK_ERR(!m_bIsDeferred, "Flush() should only be called for immediate contexts");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Flushing device context inside an active render pass.");
 
     Flush(true);
 }
@@ -1139,7 +1101,7 @@ void DeviceContextD3D12Impl::SetScissorRects(Uint32 NumRects, const Rect* pRects
 
 void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside a render pass");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "This method must not be called inside a render pass");
 
     const Uint32 MaxD3D12RTs      = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
     Uint32       NumRenderTargets = m_NumBoundRenderTargets;
@@ -1196,13 +1158,7 @@ void DeviceContextD3D12Impl::SetRenderTargets(Uint32                         Num
                                               ITextureView*                  pDepthStencil,
                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
-        return;
-    }
-#endif
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
 
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
@@ -2159,11 +2115,7 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
 void DeviceContextD3D12Impl::ExecuteCommandLists(Uint32               NumCommandLists,
                                                  ICommandList* const* ppCommandLists)
 {
-    if (m_bIsDeferred)
-    {
-        LOG_ERROR_MESSAGE("Only immediate context can execute command list");
-        return;
-    }
+    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate context can execute command list");
 
     if (NumCommandLists == 0)
         return;
@@ -2198,8 +2150,7 @@ void DeviceContextD3D12Impl::WaitForIdle()
 
 void DeviceContextD3D12Impl::BeginQuery(IQuery* pQuery)
 {
-    if (!TDeviceContextBase::BeginQuery(pQuery, 0))
-        return;
+    TDeviceContextBase::BeginQuery(pQuery, 0);
 
     auto*      pQueryD3D12Impl = ValidatedCast<QueryD3D12Impl>(pQuery);
     const auto QueryType       = pQueryD3D12Impl->GetDesc().Type;
@@ -2217,8 +2168,7 @@ void DeviceContextD3D12Impl::BeginQuery(IQuery* pQuery)
 
 void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
 {
-    if (!TDeviceContextBase::EndQuery(pQuery, 0))
-        return;
+    TDeviceContextBase::EndQuery(pQuery, 0);
 
     auto*      pQueryD3D12Impl = ValidatedCast<QueryD3D12Impl>(pQuery);
     const auto QueryType       = pQueryD3D12Impl->GetDesc().Type;
@@ -2236,7 +2186,7 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
 
 void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
 
     auto& CmdCtx = GetCmdContext();
     for (Uint32 i = 0; i < BarrierCount; ++i)
@@ -2397,8 +2347,7 @@ void DeviceContextD3D12Impl::ResolveTextureSubresource(ITexture*                
 
 void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
 {
-    if (!TDeviceContextBase::BuildBLAS(Attribs, 0))
-        return;
+    TDeviceContextBase::BuildBLAS(Attribs, 0);
 
     auto* const pBLASD3D12    = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pBLAS);
     auto* const pScratchD3D12 = ValidatedCast<BufferD3D12Impl>(Attribs.pScratchBuffer);
@@ -2549,8 +2498,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
 
 void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 {
-    if (!TDeviceContextBase::BuildTLAS(Attribs, 0))
-        return;
+    TDeviceContextBase::BuildTLAS(Attribs, 0);
 
     static_assert(TLAS_INSTANCE_DATA_SIZE == sizeof(D3D12_RAYTRACING_INSTANCE_DESC), "Value in TLAS_INSTANCE_DATA_SIZE doesn't match the actual instance description size");
 
@@ -2638,8 +2586,7 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
 void DeviceContextD3D12Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
 {
-    if (!TDeviceContextBase::CopyBLAS(Attribs, 0))
-        return;
+    TDeviceContextBase::CopyBLAS(Attribs, 0);
 
     auto* pSrcD3D12 = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pSrc);
     auto* pDstD3D12 = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pDst);
@@ -2665,8 +2612,7 @@ void DeviceContextD3D12Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
 
 void DeviceContextD3D12Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
 {
-    if (!TDeviceContextBase::CopyTLAS(Attribs, 0))
-        return;
+    TDeviceContextBase::CopyTLAS(Attribs, 0);
 
     auto* pSrcD3D12 = ValidatedCast<TopLevelASD3D12Impl>(Attribs.pSrc);
     auto* pDstD3D12 = ValidatedCast<TopLevelASD3D12Impl>(Attribs.pDst);
@@ -2687,8 +2633,7 @@ void DeviceContextD3D12Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
 
 void DeviceContextD3D12Impl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs)
 {
-    if (!TDeviceContextBase::WriteBLASCompactedSize(Attribs, 0))
-        return;
+    TDeviceContextBase::WriteBLASCompactedSize(Attribs, 0);
 
     static_assert(sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC) == sizeof(Uint64),
                   "Engine api specifies that compacted size is 64 bits");
@@ -2712,8 +2657,7 @@ void DeviceContextD3D12Impl::WriteBLASCompactedSize(const WriteBLASCompactedSize
 
 void DeviceContextD3D12Impl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs)
 {
-    if (!TDeviceContextBase::WriteTLASCompactedSize(Attribs, 0))
-        return;
+    TDeviceContextBase::WriteTLASCompactedSize(Attribs, 0);
 
     static_assert(sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC) == sizeof(Uint64),
                   "Engine api specifies that compacted size is 64 bits");
@@ -2737,8 +2681,7 @@ void DeviceContextD3D12Impl::WriteTLASCompactedSize(const WriteTLASCompactedSize
 
 void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
 {
-    if (!TDeviceContextBase::TraceRays(Attribs, 0))
-        return;
+    TDeviceContextBase::TraceRays(Attribs, 0);
 
     auto&       CmdCtx    = GetCmdContext().AsGraphicsContext4();
     const auto* pSBTD3D12 = ValidatedCast<const ShaderBindingTableD3D12Impl>(Attribs.pSBT);
@@ -2757,8 +2700,7 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
 
 void DeviceContextD3D12Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
 {
-    if (!TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0))
-        return;
+    TDeviceContextBase::TraceRaysIndirect(Attribs, pAttribsBuffer, 0);
 
     auto&       CmdCtx              = GetCmdContext().AsGraphicsContext4();
     auto*       pAttribsBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
@@ -2773,8 +2715,7 @@ void DeviceContextD3D12Impl::TraceRaysIndirect(const TraceRaysIndirectAttribs& A
 
 void DeviceContextD3D12Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs)
 {
-    if (!TDeviceContextBase::UpdateSBT(pSBT, pUpdateIndirectBufferAttribs, 0))
-        return;
+    TDeviceContextBase::UpdateSBT(pSBT, pUpdateIndirectBufferAttribs, 0);
 
     auto&            CmdCtx          = GetCmdContext().AsGraphicsContext();
     const char*      OpName          = "Update shader binding table (DeviceContextD3D12Impl::UpdateSBT)";

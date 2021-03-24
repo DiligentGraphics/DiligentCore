@@ -154,7 +154,7 @@ public:
     inline virtual void DILIGENT_CALL_TYPE InvalidateState() override = 0;
 
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
-    inline bool CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
+    inline void CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
                                       RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                       int);
 
@@ -285,13 +285,13 @@ protected:
     /// Updates the states of render pass attachments to match states within the gievn subpass
     void UpdateAttachmentStates(Uint32 SubpassIndex);
 
-    bool ClearDepthStencil(ITextureView* pView);
+    void ClearDepthStencil(ITextureView* pView);
 
-    bool ClearRenderTarget(ITextureView* pView);
+    void ClearRenderTarget(ITextureView* pView);
 
-    bool BeginQuery(IQuery* pQuery, int);
+    void BeginQuery(IQuery* pQuery, int);
 
-    bool EndQuery(IQuery* pQuery, int);
+    void EndQuery(IQuery* pQuery, int);
 
     void EndFrame()
     {
@@ -303,23 +303,23 @@ protected:
 
 #ifdef DILIGENT_DEVELOPMENT
     // clang-format off
-    bool DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const;
-    bool DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs) const;
-    bool DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const;
-    bool DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer) const;
-    bool DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer) const;
-    bool DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const;
-    bool DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const;
+    void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const;
+    void DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs) const;
+    void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const;
+    void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer) const;
+    void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer) const;
+    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer) const;
+    void DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const;
 
-    bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
-    bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
+    void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
+    void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
 
-    bool DvpVerifyRenderTargets() const;
-    bool DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const;
-    bool DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName) const;
-    bool DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName) const;
-    bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
-    bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
+    void DvpVerifyRenderTargets() const;
+    void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const;
+    void DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName) const;
+    void DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName) const;
+    void DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
+    void DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
 
     // The type of SRB array for every resource signature
     using DvpSRBArrayType = std::array<RefCntWeakPtr<ShaderResourceBindingImplType>, MAX_RESOURCE_SIGNATURES>;
@@ -352,15 +352,15 @@ protected:
     // clang-format on
 #endif
 
-    bool BuildBLAS(const BuildBLASAttribs& Attribs, int) const;
-    bool BuildTLAS(const BuildTLASAttribs& Attribs, int) const;
-    bool CopyBLAS(const CopyBLASAttribs& Attribs, int) const;
-    bool CopyTLAS(const CopyTLASAttribs& Attribs, int) const;
-    bool WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const;
-    bool WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const;
-    bool TraceRays(const TraceRaysAttribs& Attribs, int) const;
-    bool TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
-    bool UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const;
+    void BuildBLAS(const BuildBLASAttribs& Attribs, int) const;
+    void BuildTLAS(const BuildTLASAttribs& Attribs, int) const;
+    void CopyBLAS(const CopyBLASAttribs& Attribs, int) const;
+    void CopyTLAS(const CopyTLASAttribs& Attribs, int) const;
+    void WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const;
+    void WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const;
+    void TraceRays(const TraceRaysAttribs& Attribs, int) const;
+    void TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
+    void UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const;
 
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(uint) * 3; // D3D12: 12 bytes (x, y, z dimension)
                                                                               // Vulkan: 8 bytes (task count, first task)
@@ -461,23 +461,15 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
     SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (StartSlot >= MAX_BUFFER_SLOTS)
-    {
-        LOG_ERROR_MESSAGE("Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MAX_BUFFER_SLOTS - 1, "].");
-        return;
-    }
+    DEV_CHECK_ERR(StartSlot < MAX_BUFFER_SLOTS, "Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MAX_BUFFER_SLOTS - 1, "].");
 
-    if (StartSlot + NumBuffersSet > MAX_BUFFER_SLOTS)
-    {
-        LOG_ERROR_MESSAGE("The range of vertex buffer slots being set [", StartSlot, ", ", StartSlot + NumBuffersSet - 1, "] is out of allowed range  [0, ", MAX_BUFFER_SLOTS - 1, "].");
-        NumBuffersSet = MAX_BUFFER_SLOTS - StartSlot;
-    }
+    DEV_CHECK_ERR(StartSlot + NumBuffersSet <= MAX_BUFFER_SLOTS,
+                  "The range of vertex buffer slots being set [", StartSlot, ", ", StartSlot + NumBuffersSet - 1,
+                  "] is out of allowed range  [0, ", MAX_BUFFER_SLOTS - 1, "].");
 
-    VERIFY(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
-           "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
-           "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
-#endif
+    DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
+                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     if (Flags & SET_VERTEX_BUFFERS_FLAG_RESET)
     {
@@ -501,10 +493,9 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
         if (CurrStream.pBuffer)
         {
             const auto& BuffDesc = CurrStream.pBuffer->GetDesc();
-            if (!(BuffDesc.BindFlags & BIND_VERTEX_BUFFER))
-            {
-                LOG_ERROR_MESSAGE("Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as vertex buffer to slot ", Buff, " was not created with BIND_VERTEX_BUFFER flag");
-            }
+            DEV_CHECK_ERR((BuffDesc.BindFlags & BIND_VERTEX_BUFFER) != 0,
+                          "Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as vertex buffer to slot ", Buff,
+                          " was not created with BIND_VERTEX_BUFFER flag");
         }
 #endif
     }
@@ -522,31 +513,22 @@ inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::CommitShaderResources(
+inline void DeviceContextBase<ImplementationTraits>::CommitShaderResources(
     IShaderResourceBinding*        pShaderResourceBinding,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
     int)
 {
-#ifdef DILIGENT_DEVELOPMENT
     DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
                   "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
-    if (pShaderResourceBinding == nullptr)
-    {
-        LOG_ERROR_MESSAGE("pShaderResourceBinding must not be null");
-        return false;
-    }
-#endif
-
-    return true;
+    DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "pShaderResourceBinding must not be null");
 }
 
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::InvalidateState()
 {
-    if (m_pActiveRenderPass != nullptr)
-        LOG_ERROR_MESSAGE("Invalidating context inside an active render pass. Call EndRenderPass() to finish the pass.");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Invalidating context inside an active render pass. Call EndRenderPass() to finish the pass.");
 
     DeviceContextBase<ImplementationTraits>::ClearStateCache();
 }
@@ -559,6 +541,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
 {
     m_pIndexBuffer         = ValidatedCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
+
 #ifdef DILIGENT_DEVELOPMENT
     DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
                   "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
@@ -567,10 +550,8 @@ inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
     if (m_pIndexBuffer)
     {
         const auto& BuffDesc = m_pIndexBuffer->GetDesc();
-        if (!(BuffDesc.BindFlags & BIND_INDEX_BUFFER))
-        {
-            LOG_ERROR_MESSAGE("Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as index buffer was not created with BIND_INDEX_BUFFER flag");
-        }
+        DEV_CHECK_ERR((BuffDesc.BindFlags & BIND_INDEX_BUFFER) != 0,
+                      "Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as index buffer was not created with BIND_INDEX_BUFFER flag");
     }
 #endif
 }
@@ -719,10 +700,9 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
         if (pRTView)
         {
             const auto& RTVDesc = pRTView->GetDesc();
-#ifdef DILIGENT_DEVELOPMENT
-            if (RTVDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
-                LOG_ERROR_MESSAGE("Texture view object named '", RTVDesc.Name ? RTVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected");
-#endif
+            DEV_CHECK_ERR(RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET,
+                          "Texture view object named '", RTVDesc.Name ? RTVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected");
+
             // Use this RTV to set the render target size
             if (m_FramebufferWidth == 0)
             {
@@ -737,14 +717,14 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
             {
 #ifdef DILIGENT_DEVELOPMENT
                 const auto& TexDesc = pRTView->GetTexture()->GetDesc();
-                if (m_FramebufferWidth != std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U))
-                    LOG_ERROR_MESSAGE("Render target width (", std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
-                if (m_FramebufferHeight != std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U))
-                    LOG_ERROR_MESSAGE("Render target height (", std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
-                if (m_FramebufferSlices != RTVDesc.NumArraySlices)
-                    LOG_ERROR_MESSAGE("Number of slices (", RTVDesc.NumArraySlices, ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
-                if (m_FramebufferSamples != TexDesc.SampleCount)
-                    LOG_ERROR_MESSAGE("Sample count (", TexDesc.SampleCount, ") of RTV '", RTVDesc.Name, "' is inconsistent with the sample count of previously bound render targets (", m_FramebufferSamples, ")");
+                DEV_CHECK_ERR(m_FramebufferWidth == std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U),
+                              "Render target width (", std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
+                DEV_CHECK_ERR(m_FramebufferHeight == std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U),
+                              "Render target height (", std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
+                DEV_CHECK_ERR(m_FramebufferSlices == RTVDesc.NumArraySlices,
+                              "The number of slices (", RTVDesc.NumArraySlices, ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
+                DEV_CHECK_ERR(m_FramebufferSamples == TexDesc.SampleCount,
+                              "Sample count (", TexDesc.SampleCount, ") of RTV '", RTVDesc.Name, "' is inconsistent with the sample count of previously bound render targets (", m_FramebufferSamples, ")");
 #endif
             }
         }
@@ -762,10 +742,8 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
     if (pDepthStencil != nullptr)
     {
         const auto& DSVDesc = pDepthStencil->GetDesc();
-#ifdef DILIGENT_DEVELOPMENT
-        if (DSVDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
-            LOG_ERROR_MESSAGE("Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected");
-#endif
+        DEV_CHECK_ERR(DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL,
+                      "Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected");
 
         // Use depth stencil size to set render target size
         if (m_FramebufferWidth == 0)
@@ -781,14 +759,14 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
         {
 #ifdef DILIGENT_DEVELOPMENT
             const auto& TexDesc = pDepthStencil->GetTexture()->GetDesc();
-            if (m_FramebufferWidth != std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U))
-                LOG_ERROR_MESSAGE("Depth-stencil target width (", std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
-            if (m_FramebufferHeight != std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U))
-                LOG_ERROR_MESSAGE("Depth-stencil target height (", std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
-            if (m_FramebufferSlices != DSVDesc.NumArraySlices)
-                LOG_ERROR_MESSAGE("Number of slices (", DSVDesc.NumArraySlices, ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
-            if (m_FramebufferSamples != TexDesc.SampleCount)
-                LOG_ERROR_MESSAGE("Sample count (", TexDesc.SampleCount, ") of DSV '", DSVDesc.Name, "' is inconsistent with the sample count of previously bound render targets (", m_FramebufferSamples, ")");
+            DEV_CHECK_ERR(m_FramebufferWidth == std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U),
+                          "Depth-stencil target width (", std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
+            DEV_CHECK_ERR(m_FramebufferHeight == std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U),
+                          "Depth-stencil target height (", std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
+            DEV_CHECK_ERR(m_FramebufferSlices == DSVDesc.NumArraySlices,
+                          "The number of slices (", DSVDesc.NumArraySlices, ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
+            DEV_CHECK_ERR(m_FramebufferSamples == TexDesc.SampleCount,
+                          "Sample count (", TexDesc.SampleCount, ") of DSV '", DSVDesc.Name, "' is inconsistent with the sample count of previously bound render targets (", m_FramebufferSamples, ")");
 #endif
         }
     }
@@ -798,7 +776,6 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
         m_pBoundDepthStencil = ValidatedCast<TextureViewImplType>(pDepthStencil);
         bBindRenderTargets   = true;
     }
-
 
     VERIFY_EXPR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0 && m_FramebufferSlices > 0 && m_FramebufferSamples > 0);
 
@@ -877,7 +854,7 @@ inline void DeviceContextBase<ImplementationTraits>::GetRenderTargets(
     {
         for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
         {
-            VERIFY(ppRTVs[rt] == nullptr, "Non-null pointer found in RTV array element #", rt);
+            DEV_CHECK_ERR(ppRTVs[rt] == nullptr, "Non-null pointer found in RTV array element #", rt);
             auto pBoundRTV = m_pBoundRenderTargets[rt];
             if (pBoundRTV)
                 pBoundRTV->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppRTVs + rt));
@@ -886,14 +863,14 @@ inline void DeviceContextBase<ImplementationTraits>::GetRenderTargets(
         }
         for (Uint32 rt = NumRenderTargets; rt < MAX_RENDER_TARGETS; ++rt)
         {
-            VERIFY(ppRTVs[rt] == nullptr, "Non-null pointer found in RTV array element #", rt);
+            DEV_CHECK_ERR(ppRTVs[rt] == nullptr, "Non-null pointer found in RTV array element #", rt);
             ppRTVs[rt] = nullptr;
         }
     }
 
     if (ppDSV)
     {
-        VERIFY(*ppDSV == nullptr, "Non-null DSV pointer found");
+        DEV_CHECK_ERR(*ppDSV == nullptr, "Non-null DSV pointer found");
         if (m_pBoundDepthStencil)
             m_pBoundDepthStencil->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppDSV));
         else
@@ -969,7 +946,7 @@ bool DeviceContextBase<ImplementationTraits>::CheckIfBoundAsDepthStencil(Texture
 template <typename ImplementationTraits>
 bool DeviceContextBase<ImplementationTraits>::UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass.");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass.");
 
     if (pTexture == nullptr)
         return false;
@@ -1046,8 +1023,8 @@ void DeviceContextBase<ImplementationTraits>::ResetRenderTargets()
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
-    VERIFY(m_pBoundFramebuffer == nullptr, "Attempting to begin render pass while another framebuffer ('", m_pBoundFramebuffer->GetDesc().Name, "') is bound.");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
+    DEV_CHECK_ERR(m_pBoundFramebuffer == nullptr, "Attempting to begin render pass while another framebuffer ('", m_pBoundFramebuffer->GetDesc().Name, "') is bound.");
 
     VerifyBeginRenderPassAttribs(Attribs);
 
@@ -1060,9 +1037,9 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
     {
         const auto& RPDesc = pNewRenderPass->GetDesc();
         const auto& FBDesc = pNewFramebuffer->GetDesc();
-        VERIFY(RPDesc.AttachmentCount <= FBDesc.AttachmentCount,
-               "The number of attachments (", FBDesc.AttachmentCount,
-               ") in currently bound framebuffer is smaller than the number of attachments in the render pass (", RPDesc.AttachmentCount, ")");
+        DEV_CHECK_ERR(RPDesc.AttachmentCount <= FBDesc.AttachmentCount,
+                      "The number of attachments (", FBDesc.AttachmentCount,
+                      ") in currently bound framebuffer is smaller than the number of attachments in the render pass (", RPDesc.AttachmentCount, ")");
         for (Uint32 i = 0; i < FBDesc.AttachmentCount; ++i)
         {
             auto* pView = FBDesc.ppAttachments[i];
@@ -1098,7 +1075,7 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::NextSubpass()
 {
-    VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
+    DEV_CHECK_ERR(m_pActiveRenderPass != nullptr, "There is no active render pass");
     VERIFY(m_SubpassIndex + 1 < m_pActiveRenderPass->GetDesc().SubpassCount, "The render pass has reached the final subpass already");
     ++m_SubpassIndex;
     UpdateAttachmentStates(m_SubpassIndex);
@@ -1111,8 +1088,8 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateAttachmentStates(Uint
     if (m_RenderPassAttachmentsTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
         return;
 
-    VERIFY_EXPR(m_pActiveRenderPass != nullptr);
-    VERIFY_EXPR(m_pBoundFramebuffer != nullptr);
+    DEV_CHECK_ERR(m_pActiveRenderPass != nullptr, "There is no active render pass");
+    DEV_CHECK_ERR(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
 
     const auto& RPDesc = m_pActiveRenderPass->GetDesc();
     const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
@@ -1138,8 +1115,8 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateAttachmentStates(Uint
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::EndRenderPass()
 {
-    VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
-    VERIFY(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
+    DEV_CHECK_ERR(m_pActiveRenderPass != nullptr, "There is no active render pass");
+    DEV_CHECK_ERR(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
     VERIFY(m_pActiveRenderPass->GetDesc().SubpassCount == m_SubpassIndex + 1,
            "Ending render pass at subpass ", m_SubpassIndex, " before reaching the final subpass");
 
@@ -1154,39 +1131,29 @@ inline void DeviceContextBase<ImplementationTraits>::EndRenderPass()
 
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureView* pView)
+inline void DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureView* pView)
 {
-    if (pView == nullptr)
-    {
-        LOG_ERROR_MESSAGE("Depth-stencil view to clear must not be null");
-        return false;
-    }
+    DEV_CHECK_ERR(pView != nullptr, "Depth-stencil view to clear must not be null");
 
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& ViewDesc = pView->GetDesc();
-        if (ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
-        {
-            LOG_ERROR_MESSAGE("The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of the texture view '", ViewDesc.Name,
-                              "' is invalid: ClearDepthStencil command expects depth-stencil view (TEXTURE_VIEW_DEPTH_STENCIL).");
-            return false;
-        }
+        DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL,
+                      "The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of the texture view '", ViewDesc.Name,
+                      "' is invalid: ClearDepthStencil command expects depth-stencil view (TEXTURE_VIEW_DEPTH_STENCIL).");
 
         if (pView != m_pBoundDepthStencil)
         {
-            if (m_pActiveRenderPass != nullptr)
-            {
-                LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
-                                  "' is not bound as framebuffer attachment. ClearDepthStencil command inside a render pass "
-                                  "requires depth-stencil view to be bound as a framebuffer attachment.");
-                return false;
-            }
-            else if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            DEV_CHECK_ERR(m_pActiveRenderPass == nullptr,
+                          "Depth-stencil view '", ViewDesc.Name,
+                          "' is not bound as framebuffer attachment. ClearDepthStencil command inside a render pass "
+                          "requires depth-stencil view to be bound as a framebuffer attachment.");
+
+            if (m_pDevice->GetDeviceCaps().IsGLDevice())
             {
                 LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
                                   "' is not bound to the device context. ClearDepthStencil command requires "
                                   "depth-stencil view be bound to the device contex in OpenGL backend");
-                return false;
             }
             else
             {
@@ -1198,28 +1165,19 @@ inline bool DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureV
         }
     }
 #endif
-
-    return true;
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureView* pView)
+inline void DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureView* pView)
 {
-    if (pView == nullptr)
-    {
-        LOG_ERROR_MESSAGE("Render target view to clear must not be null");
-        return false;
-    }
+    DEV_CHECK_ERR(pView != nullptr, "Render target view to clear must not be null");
 
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& ViewDesc = pView->GetDesc();
-        if (ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
-        {
-            LOG_ERROR_MESSAGE("The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of texture view '", pView->GetDesc().Name,
-                              "' is invalid: ClearRenderTarget command expects render target view (TEXTURE_VIEW_RENDER_TARGET).");
-            return false;
-        }
+        DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET,
+                      "The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of texture view '", pView->GetDesc().Name,
+                      "' is invalid: ClearRenderTarget command expects render target view (TEXTURE_VIEW_RENDER_TARGET).");
 
         bool RTFound = false;
         for (Uint32 i = 0; i < m_NumBoundRenderTargets && !RTFound; ++i)
@@ -1229,19 +1187,16 @@ inline bool DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureV
 
         if (!RTFound)
         {
-            if (m_pActiveRenderPass != nullptr)
-            {
-                LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
-                                  "' is not bound as framebuffer attachment. ClearRenderTarget command inside a render pass "
-                                  "requires render target view to be bound as a framebuffer attachment.");
-                return false;
-            }
-            else if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            DEV_CHECK_ERR(m_pActiveRenderPass == nullptr,
+                          "Render target view '", ViewDesc.Name,
+                          "' is not bound as framebuffer attachment. ClearRenderTarget command inside a render pass "
+                          "requires render target view to be bound as a framebuffer attachment.");
+
+            if (m_pDevice->GetDeviceCaps().IsGLDevice())
             {
                 LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
                                   "' is not bound to the device context. ClearRenderTarget command "
                                   "requires render target view to be bound to the device contex in OpenGL backend");
-                return false;
             }
             else
             {
@@ -1252,60 +1207,29 @@ inline bool DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureV
         }
     }
 #endif
-
-    return true;
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, int)
+inline void DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, int)
 {
-    if (pQuery == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BeginQuery: pQuery must not be null");
-        return false;
-    }
+    DEV_CHECK_ERR(pQuery != nullptr, "IDeviceContext::BeginQuery: pQuery must not be null");
 
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_bIsDeferred)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BeginQuery: Deferred contexts do not support queries");
-        return false;
-    }
+    DEV_CHECK_ERR(!m_bIsDeferred, "IDeviceContext::BeginQuery: Deferred contexts do not support queries");
 
-    if (pQuery->GetDesc().Type == QUERY_TYPE_TIMESTAMP)
-    {
-        LOG_ERROR_MESSAGE("BeginQuery() is disabled for timestamp queries. Call EndQuery() to set the timestamp.");
-        return false;
-    }
-#endif
+    DEV_CHECK_ERR(pQuery->GetDesc().Type != QUERY_TYPE_TIMESTAMP,
+                  "BeginQuery() is disabled for timestamp queries. Call EndQuery() to set the timestamp.");
 
-    if (!ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(this))
-        return false;
-
-    return true;
+    ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(this);
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, int)
+inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, int)
 {
-    if (pQuery == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::EndQuery: pQuery must not be null");
-        return false;
-    }
+    DEV_CHECK_ERR(pQuery != nullptr, "IDeviceContext::EndQuery: pQuery must not be null");
 
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_bIsDeferred)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::EndQuery: Deferred contexts do not support queries");
-        return false;
-    }
-#endif
+    DEV_CHECK_ERR(!m_bIsDeferred, "IDeviceContext::EndQuery: Deferred contexts do not support queries");
 
-    if (!ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(this))
-        return false;
-
-    return true;
+    ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(this);
 }
 
 template <typename ImplementationTraits>
@@ -1511,527 +1435,279 @@ void DeviceContextBase<ImplementationTraits>::ResolveTextureSubresource(
 
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS command must be performed outside of render pass");
-        return false;
-    }
-
-    if (!VerifyBuildBLASAttribs(Attribs))
-        return false;
-#endif
-
-    return true;
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildBLAS command must be performed outside of render pass");
+    DEV_CHECK_ERR(VerifyBuildBLASAttribs(Attribs), "BuildBLASAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS command must be performed outside of render pass");
-        return false;
-    }
-
-    if (!VerifyBuildTLASAttribs(Attribs))
-        return false;
-#endif
-
-    return true;
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildTLAS command must be performed outside of render pass");
+    DEV_CHECK_ERR(VerifyBuildTLASAttribs(Attribs), "BuildTLASAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS command must be performed outside of render pass");
-        return false;
-    }
-
-    if (!VerifyCopyBLASAttribs(m_pDevice, Attribs))
-        return false;
-#endif
-
-    return true;
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyBLAS command must be performed outside of render pass");
+    DEV_CHECK_ERR(VerifyCopyBLASAttribs(m_pDevice, Attribs), "CopyBLASAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS command must be performed outside of render pass");
-        return false;
-    }
-
-    if (!VerifyCopyTLASAttribs(Attribs))
-        return false;
-
-    if (!ValidatedCast<TopLevelASType>(Attribs.pSrc)->ValidateContent())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
-        return false;
-    }
-#endif
-
-    return true;
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyTLAS command must be performed outside of render pass");
+    DEV_CHECK_ERR(VerifyCopyTLASAttribs(Attribs), "CopyTLASAttribs are invalid");
+    DEV_CHECK_ERR(ValidatedCast<TopLevelASType>(Attribs.pSrc)->ValidateContent(), "IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: command must be performed outside of render pass");
-        return false;
-    }
-
-    if (!VerifyWriteBLASCompactedSizeAttribs(m_pDevice, Attribs))
-        return false;
-#endif
-
-    return true;
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::WriteBLASCompactedSize: command must be performed outside of render pass");
+    DEV_CHECK_ERR(VerifyWriteBLASCompactedSizeAttribs(m_pDevice, Attribs), "WriteBLASCompactedSizeAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: command must be performed outside of render pass");
-        return false;
-    }
-
-    if (!VerifyWriteTLASCompactedSizeAttribs(m_pDevice, Attribs))
-        return false;
-#endif
-
-    return true;
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::WriteTLASCompactedSize: command must be performed outside of render pass");
+    DEV_CHECK_ERR(VerifyWriteTLASCompactedSizeAttribs(m_pDevice, Attribs), "WriteTLASCompactedSizeAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: ray tracing is not supported by this device");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing,
+                  "IDeviceContext::TraceRays: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pPipelineState,
+                  "IDeviceContext::TraceRays command arguments are invalid: no pipeline state is bound.");
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().IsRayTracingPipeline(),
+                  "IDeviceContext::TraceRays command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a ray tracing pipeline.");
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::TraceRays must be performed outside of render pass");
 
-    if (!m_pPipelineState->GetDesc().IsRayTracingPipeline())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a ray tracing pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(VerifyTraceRaysAttribs(Attribs), "TraceRaysAttribs are invalid");
 
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays must be performed outside of render pass");
-        return false;
-    }
-
-    if (!VerifyTraceRaysAttribs(Attribs))
-        return false;
-
-    if (!PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)))
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
-                          "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
-        return false;
-    }
+    DEV_CHECK_ERR(PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)),
+                  "IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
+                  "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
 
     const auto* pSBTImpl = ValidatedCast<const ShaderBindingTableImplType>(Attribs.pSBT);
-    if (pSBTImpl->HasPendingData())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '", pSBTImpl->GetDesc().Name, "' has uncommited changes, call UpdateSBT() first");
-        return false;
-    }
+    DEV_CHECK_ERR(!pSBTImpl->HasPendingData(), "IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '",
+                  pSBTImpl->GetDesc().Name, "' has uncommited changes, call UpdateSBT() first");
 
     VERIFY(pSBTImpl->GetInternalBuffer() != nullptr,
            "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happen, ",
-           "because HasPendingData() must return true and the previous check should've returned from the function.");
+           "because HasPendingData() must've returned true triggering the assert above.");
     VERIFY(pSBTImpl->GetInternalBuffer()->CheckState(RESOURCE_STATE_RAY_TRACING),
            "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer is expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
            GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
 
-    if ((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) > m_pDevice->GetProperties().MaxRayGenThreads)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: the dimension must not exceed the ", m_pDevice->GetProperties().MaxRayGenThreads, " threads");
-        return false;
-    }
-#endif
-
-    return true;
+    DEV_CHECK_ERR((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) <= m_pDevice->GetProperties().MaxRayGenThreads,
+                  "IDeviceContext::TraceRays command arguments are invalid: the dimension must not exceed the ",
+                  m_pDevice->GetProperties().MaxRayGenThreads, " threads");
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const
+void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing2 != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect: indirect trace rays is not supported by this device");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing2,
+                  "IDeviceContext::TraceRaysIndirect: indirect trace rays is not supported by this device");
+    DEV_CHECK_ERR(m_pPipelineState,
+                  "IDeviceContext::TraceRaysIndirect command arguments are invalid: no pipeline state is bound.");
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().IsRayTracingPipeline(),
+                  "IDeviceContext::TraceRaysIndirect command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name,
+                  "' is not a ray tracing pipeline.");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr,
+                  "IDeviceContext::TraceRaysIndirect must be performed outside of render pass");
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(VerifyTraceRaysIndirectAttribs(m_pDevice, Attribs, pAttribsBuffer, TraceRaysIndirectCommandSize),
+                  "TraceRaysIndirectAttribs are invalid");
 
-    if (!m_pPipelineState->GetDesc().IsRayTracingPipeline())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a ray tracing pipeline.");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect must be performed outside of render pass");
-        return false;
-    }
-
-    if (!VerifyTraceRaysIndirectAttribs(m_pDevice, Attribs, pAttribsBuffer, TraceRaysIndirectCommandSize))
-        return false;
-
-    if (!PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)))
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
-                          "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
-        return false;
-    }
+    DEV_CHECK_ERR(PipelineStateImplType::IsSameObject(m_pPipelineState, ValidatedCast<PipelineStateImplType>(Attribs.pSBT->GetDesc().pPSO)),
+                  "IDeviceContext::TraceRaysIndirect command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
+                  "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
 
     const auto* pSBTImpl = ValidatedCast<const ShaderBindingTableImplType>(Attribs.pSBT);
-    if (pSBTImpl->HasPendingData())
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '", pSBTImpl->GetDesc().Name, "' has uncommited changes, call UpdateSBT() first");
-        return false;
-    }
+    DEV_CHECK_ERR(!pSBTImpl->HasPendingData(),
+                  "IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '",
+                  pSBTImpl->GetDesc().Name, "' has uncommited changes, call UpdateSBT() first");
+
 
     VERIFY(pSBTImpl->GetInternalBuffer() != nullptr,
            "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happen, ",
-           "because HasPendingData() must return true and the previous check should've returned from the function.");
+           "because HasPendingData() must've returned true triggering the assert above.");
     VERIFY(pSBTImpl->GetInternalBuffer()->CheckState(RESOURCE_STATE_RAY_TRACING),
            "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer is expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
            GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
-#endif
-
-    return true;
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const
+void DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const
 {
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT: ray tracing is not supported by this device");
-        return false;
-    }
-
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT must be performed outside of render pass");
-        return false;
-    }
-
-    if (pSBT == nullptr)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT command arguments are invalid: pSBT must not be null");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::UpdateSBT: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::UpdateSBT must be performed outside of render pass");
+    DEV_CHECK_ERR(pSBT != nullptr, "IDeviceContext::UpdateSBT command arguments are invalid: pSBT must not be null");
 
     if (pUpdateIndirectBufferAttribs != nullptr)
     {
-        if (pUpdateIndirectBufferAttribs->pAttribsBuffer == nullptr)
-        {
-            LOG_ERROR_MESSAGE("IDeviceContext::UpdateSBT command arguments are invalid: pUpdateIndirectBufferAttribs->pAttribsBuffer must not be null");
-            return false;
-        }
+        DEV_CHECK_ERR(pUpdateIndirectBufferAttribs->pAttribsBuffer != nullptr,
+                      "IDeviceContext::UpdateSBT command arguments are invalid: pUpdateIndirectBufferAttribs->pAttribsBuffer must not be null");
     }
-#endif
-
-    return true;
 }
 
 
 #ifdef DILIGENT_DEVELOPMENT
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawArguments(const DrawAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawArguments(const DrawAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return true;
+        return;
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("Draw command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "Draw command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_GRAPHICS)
-    {
-        LOG_ERROR_MESSAGE("Draw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                  "Draw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
 
-    return VerifyDrawAttribs(Attribs);
+    DEV_CHECK_ERR(VerifyDrawAttribs(Attribs), "DrawAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedArguments(const DrawIndexedAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedArguments(const DrawIndexedAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return true;
+        return;
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "DrawIndexed command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_GRAPHICS)
-    {
-        LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                  "DrawIndexed command arguments are invalid: pipeline state '",
+                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
 
-    if (!m_pIndexBuffer)
-    {
-        LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: no index buffer is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pIndexBuffer, "DrawIndexed command arguments are invalid: no index buffer is bound.");
 
-    return VerifyDrawIndexedAttribs(Attribs);
+    DEV_CHECK_ERR(VerifyDrawIndexedAttribs(Attribs), "DrawIndexedAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return true;
+        return;
 
-    if (m_pDevice->GetDeviceCaps().Features.MeshShaders != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("DrawMesh: mesh shaders are not supported by this device");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.MeshShaders, "DrawMesh: mesh shaders are not supported by this device");
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("DrawMesh command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(!m_pPipelineState, "DrawMesh command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_MESH)
-    {
-        LOG_ERROR_MESSAGE("DrawMesh command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
+                  "DrawMesh command arguments are invalid: pipeline state '",
+                  m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
 
-    return VerifyDrawMeshAttribs(m_pDevice->GetProperties().MaxDrawMeshTasksCount, Attribs);
+    DEV_CHECK_ERR(VerifyDrawMeshAttribs(m_pDevice->GetProperties().MaxDrawMeshTasksCount, Attribs), "DrawMeshAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArguments(
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArguments(
     const DrawIndirectAttribs& Attribs,
     const IBuffer*             pAttribsBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return true;
+        return;
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "DrawIndirect command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_GRAPHICS)
-    {
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                  "DrawIndirect command arguments are invalid: pipeline state '",
+                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
 
-        LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.IndirectAttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
-    if (m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
-    {
-        LOG_ERROR_MESSAGE("Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
-                          "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
-        return false;
-    }
-
-    return VerifyDrawIndirectAttribs(Attribs, pAttribsBuffer);
+    DEV_CHECK_ERR(VerifyDrawIndirectAttribs(Attribs, pAttribsBuffer), "DrawIndirectAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirectArguments(
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirectArguments(
     const DrawIndexedIndirectAttribs& Attribs,
     const IBuffer*                    pAttribsBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return true;
+        return;
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_GRAPHICS)
-    {
-        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                  "DrawIndexedIndirect command arguments are invalid: pipeline state '",
+                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
 
-    if (!m_pIndexBuffer)
-    {
-        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: no index buffer is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pIndexBuffer, "DrawIndexedIndirect command arguments are invalid: no index buffer is bound.");
 
-    if (m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
-    {
-        LOG_ERROR_MESSAGE("Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
-                          "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.IndirectAttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
-    return VerifyDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer);
+    DEV_CHECK_ERR(VerifyDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer), "DrawIndexedIndirectAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectArguments(
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectArguments(
     const DrawMeshIndirectAttribs& Attribs,
     const IBuffer*                 pAttribsBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return true;
+        return;
 
-    if (m_pDevice->GetDeviceCaps().Features.MeshShaders != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("DrawMeshIndirect: mesh shaders are not supported by this device");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.MeshShaders, "DrawMeshIndirect: mesh shaders are not supported by this device");
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "DrawMeshIndirect command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_MESH)
-    {
-        LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
+                  "DrawMeshIndirect command arguments are invalid: pipeline state '",
+                  m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
 
-    return VerifyDrawMeshIndirectAttribs(Attribs, pAttribsBuffer);
+    DEV_CHECK_ERR(VerifyDrawMeshIndirectAttribs(Attribs, pAttribsBuffer), "DrawMeshIndirectAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectCountArguments(
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectCountArguments(
     const DrawMeshIndirectCountAttribs& Attribs,
     const IBuffer*                      pAttribsBuffer,
     const IBuffer*                      pCountBuff) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return true;
+        return;
 
-    if (m_pDevice->GetDeviceCaps().Features.MeshShaders != DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("DrawMeshIndirectCount: mesh shaders are not supported by this device");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.MeshShaders, "DrawMeshIndirectCount: mesh shaders are not supported by this device");
 
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("DrawMeshIndirectCount command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "DrawMeshIndirectCount command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_MESH)
-    {
-        LOG_ERROR_MESSAGE("DrawMeshIndirectCount command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
+                  "DrawMeshIndirectCount command arguments are invalid: pipeline state '",
+                  m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
 
-    return VerifyDrawMeshIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuff, DrawMeshIndirectCommandStride);
+    DEV_CHECK_ERR(VerifyDrawMeshIndirectCountAttribs(Attribs, pAttribsBuffer, pCountBuff, DrawMeshIndirectCommandStride),
+                  "DrawMeshIndirectCountAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() const
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() const
 {
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("No pipeline state is bound");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "No pipeline state is bound");
 
     const auto& PSODesc = m_pPipelineState->GetDesc();
-    if (!PSODesc.IsAnyGraphicsPipeline())
-    {
-        LOG_ERROR_MESSAGE("Pipeline state '", PSODesc.Name, "' is not a graphics pipeline");
-        return false;
-    }
+    DEV_CHECK_ERR(PSODesc.IsAnyGraphicsPipeline(),
+                  "Pipeline state '", PSODesc.Name, "' is not a graphics pipeline");
 
     TEXTURE_FORMAT BoundRTVFormats[8] = {TEX_FORMAT_UNKNOWN};
     TEXTURE_FORMAT BoundDSVFormat     = TEX_FORMAT_UNKNOWN;
@@ -2072,73 +1748,50 @@ inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
                                 "' (", GetTextureFormatAttribs(PSOFmt).Name, ").");
         }
     }
-
-    return true;
 }
 
 
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchArguments(const DispatchComputeAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchArguments(const DispatchComputeAttribs& Attribs) const
 {
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("DispatchCompute command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "DispatchCompute command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_COMPUTE)
-    {
-        LOG_ERROR_MESSAGE("DispatchCompute command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name,
-                          "' is not a compute pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_COMPUTE,
+                  "DispatchCompute command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name,
+                  "' is not a compute pipeline.");
 
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("DispatchCompute command must be performed outside of render pass");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr,
+                  "DispatchCompute command must be performed outside of render pass");
 
-    return VerifyDispatchComputeAttribs(Attribs);
+    DEV_CHECK_ERR(VerifyDispatchComputeAttribs(Attribs), "DispatchComputeAttribs attribs");
 }
 
 template <typename ImplementationTraits>
-inline bool DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectArguments(
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectArguments(
     const DispatchComputeIndirectAttribs& Attribs,
     const IBuffer*                        pAttribsBuffer) const
 {
-    if (!m_pPipelineState)
-    {
-        LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: no pipeline state is bound.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState, "DispatchComputeIndirect command arguments are invalid: no pipeline state is bound.");
 
-    if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_COMPUTE)
-    {
-        LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is not a compute pipeline.");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_COMPUTE,
+                  "DispatchComputeIndirect command arguments are invalid: pipeline state '",
+                  m_pPipelineState->GetDesc().Name, "' is not a compute pipeline.");
 
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("DispatchComputeIndirect command must be performed outside of render pass");
-        return false;
-    }
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "DispatchComputeIndirect command must be performed outside of render pass");
 
-    return VerifyDispatchComputeIndirectAttribs(Attribs, pAttribsBuffer);
+    DEV_CHECK_ERR(VerifyDispatchComputeIndirectAttribs(Attribs, pAttribsBuffer), "DispatchComputeIndirectAttribs are invalid");
 }
 
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
+void DeviceContextBase<ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
 {
-    return VerifyStateTransitionDesc(m_pDevice, Barrier);
+    DEV_CHECK_ERR(VerifyStateTransitionDesc(m_pDevice, Barrier), "StateTransitionDesc are invalid");
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::DvpVerifyTextureState(
+void DeviceContextBase<ImplementationTraits>::DvpVerifyTextureState(
     const TextureImplType& Texture,
     RESOURCE_STATE         RequiredState,
     const char*            OperationName) const
@@ -2148,14 +1801,11 @@ bool DeviceContextBase<ImplementationTraits>::DvpVerifyTextureState(
         LOG_ERROR_MESSAGE(OperationName, " requires texture '", Texture.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
                           " state. Actual texture state: ", GetResourceStateString(Texture.GetState()),
                           ". Use appropriate state transiton flags or explicitly transition the texture using IDeviceContext::TransitionResourceStates() method.");
-        return false;
     }
-
-    return true;
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::DvpVerifyBufferState(
+void DeviceContextBase<ImplementationTraits>::DvpVerifyBufferState(
     const BufferImplType& Buffer,
     RESOURCE_STATE        RequiredState,
     const char*           OperationName) const
@@ -2165,14 +1815,11 @@ bool DeviceContextBase<ImplementationTraits>::DvpVerifyBufferState(
         LOG_ERROR_MESSAGE(OperationName, " requires buffer '", Buffer.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
                           " state. Actual buffer state: ", GetResourceStateString(Buffer.GetState()),
                           ". Use appropriate state transiton flags or explicitly transition the buffer using IDeviceContext::TransitionResourceStates() method.");
-        return false;
     }
-
-    return true;
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::DvpVerifyBLASState(
+void DeviceContextBase<ImplementationTraits>::DvpVerifyBLASState(
     const BottomLevelASType& BLAS,
     RESOURCE_STATE           RequiredState,
     const char*              OperationName) const
@@ -2182,14 +1829,11 @@ bool DeviceContextBase<ImplementationTraits>::DvpVerifyBLASState(
         LOG_ERROR_MESSAGE(OperationName, " requires BLAS '", BLAS.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
                           " state. Actual BLAS state: ", GetResourceStateString(BLAS.GetState()),
                           ". Use appropriate state transiton flags or explicitly transition the BLAS using IDeviceContext::TransitionResourceStates() method.");
-        return false;
     }
-
-    return true;
 }
 
 template <typename ImplementationTraits>
-bool DeviceContextBase<ImplementationTraits>::DvpVerifyTLASState(
+void DeviceContextBase<ImplementationTraits>::DvpVerifyTLASState(
     const TopLevelASType& TLAS,
     RESOURCE_STATE        RequiredState,
     const char*           OperationName) const
@@ -2199,16 +1843,13 @@ bool DeviceContextBase<ImplementationTraits>::DvpVerifyTLASState(
         LOG_ERROR_MESSAGE(OperationName, " requires TLAS '", TLAS.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
                           " state. Actual TLAS state: ", GetResourceStateString(TLAS.GetState()),
                           ". Use appropriate state transiton flags or explicitly transition the TLAS using IDeviceContext::TransitionResourceStates() method.");
-        return false;
     }
-
-    return true;
 }
 
 template <typename ImplementationTraits>
 Uint32 DeviceContextBase<ImplementationTraits>::DvpGetCompatibleSignatureCount(DvpSRBArrayType& SRBs) const
 {
-    VERIFY_EXPR(m_pPipelineState);
+    DEV_CHECK_ERR(m_pPipelineState, "Pipeline state is null");
     const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
 
     Uint32 sign = 0;
