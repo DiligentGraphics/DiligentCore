@@ -302,8 +302,7 @@ private:
 
     struct SRBState
     {
-        // Do not use strong references!
-        std::array<ShaderResourceBindingGLImpl*, MAX_RESOURCE_SIGNATURES> SRBs = {};
+        ShaderResourceCacheArrayType ResourceCaches = {};
 
         using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
@@ -316,6 +315,8 @@ private:
 
         // Binding offsets that were used in the last BindProgramResources() call.
         std::array<TBindings, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
+
+        DvpSRBArrayType SRBs = {};
 #endif
 
         void Invalidate()

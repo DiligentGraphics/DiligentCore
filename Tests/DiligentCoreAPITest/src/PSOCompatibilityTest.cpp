@@ -29,6 +29,8 @@
 
 #include "gtest/gtest.h"
 
+#include "CommonlyUsedStates.h"
+
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -210,7 +212,7 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(TestingEnvironment* pEnv, const 
 
     PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
     GraphicsPipeline.NumRenderTargets             = 1;
-    GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM_SRGB;
+    GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     ShaderCreateInfo CreationAttrs;
@@ -277,8 +279,10 @@ RefCntAutoPtr<IPipelineState> CreateComputePSO(TestingEnvironment* pEnv, const c
 
 TEST(PSOCompatibility, IsCompatibleWith)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    auto* const pContext   = pEnv->GetDeviceContext();
+    auto* const pSwapChain = pEnv->GetSwapChain();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -303,7 +307,7 @@ TEST(PSOCompatibility, IsCompatibleWith)
     // From resource signature point of view, texture and texture array are compatible
     EXPECT_TRUE(PSO_Tex->IsCompatibleWith(PSO_TexArr));
 
-    VERIFY_EXPR(!PSO_Tex->IsCompatibleWith(PSO_ArrOfTex));
+    EXPECT_FALSE(PSO_Tex->IsCompatibleWith(PSO_ArrOfTex));
     // From resource signature point of view, texture and texture array are compatible
     EXPECT_TRUE(PSO_Tex2->IsCompatibleWith(PSO_TexArr));
     EXPECT_FALSE(PSO_Tex2->IsCompatibleWith(PSO_ArrOfTex));
@@ -330,6 +334,36 @@ TEST(PSOCompatibility, IsCompatibleWith)
         EXPECT_TRUE(PSO_RWBuff3);
         EXPECT_TRUE(PSO_RWBuff->IsCompatibleWith(PSO_RWBuff2));
         EXPECT_FALSE(PSO_RWBuff->IsCompatibleWith(PSO_RWBuff3));
+    }
+
+    {
+        auto  pTex     = pEnv->CreateTexture("PSOCompatibility test text", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 512, 512);
+        auto  pSampler = pEnv->CreateSampler(Sam_LinearClamp);
+        auto* pSRV     = pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+        pSRV->SetSampler(pSampler);
+        PSO_Tex->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2D")->Set(pSRV);
+        RefCntAutoPtr<IShaderResourceBinding> pSRB_Tex;
+        PSO_Tex->CreateShaderResourceBinding(&pSRB_Tex, true);
+
+        IDeviceObject* ppSRVs[] = {pSRV, pSRV};
+        PSO_ArrOfTex->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2D")->SetArray(ppSRVs, 0, 2);
+        RefCntAutoPtr<IShaderResourceBinding> pSRB_ArrOfTex;
+        PSO_ArrOfTex->CreateShaderResourceBinding(&pSRB_ArrOfTex, true);
+
+        ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+        pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pContext->SetPipelineState(PSO_Tex);
+        pContext->CommitShaderResources(pSRB_Tex, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+        pContext->Draw(drawAttrs);
+
+        pSRB_Tex.Release();
+
+        EXPECT_FALSE(PSO_Tex->IsCompatibleWith(PSO_ArrOfTex));
+        pContext->SetPipelineState(PSO_ArrOfTex);
+        pContext->CommitShaderResources(pSRB_ArrOfTex, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->Draw(drawAttrs);
     }
 }
 

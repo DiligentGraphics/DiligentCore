@@ -1071,10 +1071,8 @@ void PipelineStateVkImpl::Destruct()
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void PipelineStateVkImpl::DvpVerifySRBResources(const SRBArray& SRBs) const
+void PipelineStateVkImpl::DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const
 {
-    DvpVerifySRBCompatibility(SRBs.data());
-
     auto res_info = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)
     {
@@ -1084,17 +1082,11 @@ void PipelineStateVkImpl::DvpVerifySRBResources(const SRBArray& SRBs) const
                 if (!res_info->IsImmutableSampler()) // There are also immutable samplers in the list
                 {
                     VERIFY_EXPR(res_info->pSignature != nullptr);
-                    const auto& SignDesc      = res_info->pSignature->GetDesc();
-                    const auto  SignBindIndex = SignDesc.BindingIndex;
-                    if (auto* pSRB = SRBs[SignBindIndex])
-                    {
-                        res_info->pSignature->DvpValidateCommittedResource(ResAttribs, res_info->ResourceIndex, pSRB->GetResourceCache(),
-                                                                           pResources->GetShaderName(), m_Desc.Name);
-                    }
-                    else
-                    {
-                        LOG_ERROR_MESSAGE("No SRB is bound to binding index ", Uint32{SignBindIndex}, " for signature '", SignDesc.Name, '\'');
-                    }
+                    VERIFY_EXPR(res_info->pSignature->GetDesc().BindingIndex == res_info->SignatureIndex);
+                    const auto* pResourceCache = ResourceCaches[res_info->SignatureIndex];
+                    DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
+                    res_info->pSignature->DvpValidateCommittedResource(ResAttribs, res_info->ResourceIndex, *pResourceCache,
+                                                                       pResources->GetShaderName(), m_Desc.Name);
                 }
                 ++res_info;
             } //

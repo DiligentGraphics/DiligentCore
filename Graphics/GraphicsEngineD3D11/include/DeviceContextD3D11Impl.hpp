@@ -410,8 +410,8 @@ private:
 
     struct SRBState
     {
-        // Do not use strong references!
-        std::array<ShaderResourceBindingD3D11Impl*, MAX_RESOURCE_SIGNATURES> SRBs = {};
+        // Pointers to shader resource caches for every signature
+        ShaderResourceCacheArrayType ResourceCaches = {};
 
         using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
@@ -424,6 +424,8 @@ private:
 
 #ifdef DILIGENT_DEVELOPMENT
         bool CommittedResourcesValidated = false;
+
+        DvpSRBArrayType SRBs = {};
 
         // Base bindings that were used in the last BindShaderResources() call.
         std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES> BaseBindings = {};

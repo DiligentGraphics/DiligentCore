@@ -491,9 +491,6 @@ private:
     {
         struct ResourceInfo
         {
-            // The SRB's shader resource cache
-            ShaderResourceCacheVk* pResourceCache = nullptr;
-
             // Static/mutable and dynamic descriptor sets
             std::array<VkDescriptorSet, MAX_DESCR_SET_PER_SIGNATURE> vkSets = {};
 
@@ -511,9 +508,11 @@ private:
         };
         std::array<ResourceInfo, MAX_RESOURCE_SIGNATURES> Resources;
 
+        // Shader resource caches for every signature index.
+        ShaderResourceCacheArrayType ResourceCaches = {};
+
 #ifdef DILIGENT_DEVELOPMENT
-        // Do not use strong references!
-        std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES> SRBs = {};
+        DvpSRBArrayType SRBs = {};
 #endif
         using Bitfield = Uint8;
         static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");

@@ -99,8 +99,8 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
     // Performs validation of SRB resource parameters that are not possible to validate
     // when resource is bound.
-    using SRBArray = std::array<ShaderResourceBindingVkImpl*, MAX_RESOURCE_SIGNATURES>;
-    void DvpVerifySRBResources(const SRBArray& SRBs) const;
+    using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheVk*, MAX_RESOURCE_SIGNATURES>;
+    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const;
 
     void DvpValidateResourceLimits() const;
 #endif

@@ -31,6 +31,8 @@
 /// Implementation of the Diligent::DeviceContextBase template class and related structures
 
 #include <unordered_map>
+#include <array>
+#include <functional>
 
 #include "DeviceContext.h"
 #include "DeviceObjectBase.hpp"
@@ -105,20 +107,22 @@ template <typename EngineImplTraits>
 class DeviceContextBase : public ObjectBase<typename EngineImplTraits::DeviceContextInterface>
 {
 public:
-    using BaseInterface                 = typename EngineImplTraits::DeviceContextInterface;
-    using TObjectBase                   = ObjectBase<BaseInterface>;
-    using DeviceImplType                = typename EngineImplTraits::RenderDeviceImplType;
-    using BufferImplType                = typename EngineImplTraits::BufferImplType;
-    using TextureImplType               = typename EngineImplTraits::TextureImplType;
-    using PipelineStateImplType         = typename EngineImplTraits::PipelineStateImplType;
-    using ShaderResourceBindingImplType = typename EngineImplTraits::ShaderResourceBindingImplType;
-    using TextureViewImplType           = typename EngineImplTraits::TextureViewImplType;
-    using QueryImplType                 = typename EngineImplTraits::QueryImplType;
-    using FramebufferImplType           = typename EngineImplTraits::FramebufferImplType;
-    using RenderPassImplType            = typename EngineImplTraits::RenderPassImplType;
-    using BottomLevelASType             = typename EngineImplTraits::BottomLevelASImplType;
-    using TopLevelASType                = typename EngineImplTraits::TopLevelASImplType;
-    using ShaderBindingTableImplType    = typename EngineImplTraits::ShaderBindingTableImplType;
+    using BaseInterface                     = typename EngineImplTraits::DeviceContextInterface;
+    using TObjectBase                       = ObjectBase<BaseInterface>;
+    using DeviceImplType                    = typename EngineImplTraits::RenderDeviceImplType;
+    using BufferImplType                    = typename EngineImplTraits::BufferImplType;
+    using TextureImplType                   = typename EngineImplTraits::TextureImplType;
+    using PipelineStateImplType             = typename EngineImplTraits::PipelineStateImplType;
+    using ShaderResourceBindingImplType     = typename EngineImplTraits::ShaderResourceBindingImplType;
+    using TextureViewImplType               = typename EngineImplTraits::TextureViewImplType;
+    using QueryImplType                     = typename EngineImplTraits::QueryImplType;
+    using FramebufferImplType               = typename EngineImplTraits::FramebufferImplType;
+    using RenderPassImplType                = typename EngineImplTraits::RenderPassImplType;
+    using BottomLevelASType                 = typename EngineImplTraits::BottomLevelASImplType;
+    using TopLevelASType                    = typename EngineImplTraits::TopLevelASImplType;
+    using ShaderBindingTableImplType        = typename EngineImplTraits::ShaderBindingTableImplType;
+    using ShaderResourceCacheImplType       = typename EngineImplTraits::ShaderResourceCacheImplType;
+    using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
 
     /// \param pRefCounters  - Reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - Render device.
@@ -294,6 +298,9 @@ protected:
         ++m_FrameNumber;
     }
 
+    // The type of the shader resource cache array for every resource signature
+    using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheImplType*, MAX_RESOURCE_SIGNATURES>;
+
 #ifdef DILIGENT_DEVELOPMENT
     // clang-format off
     bool DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const;
@@ -314,7 +321,16 @@ protected:
     bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
     bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
 
-    Uint32 DvpGetCompatibleSignatureCount(ShaderResourceBindingImplType* pBoundSRBs[])const;
+    // The type of SRB array for every resource signature
+    using DvpSRBArrayType = std::array<RefCntWeakPtr<ShaderResourceBindingImplType>, MAX_RESOURCE_SIGNATURES>;
+    // Returns the number of SRBs compatible with the current pipeline state.
+    Uint32 DvpGetCompatibleSignatureCount(DvpSRBArrayType& SRBs)const;
+    
+    // Verifies compatibility between current PSO and SRBs
+    void DvpVerifySRBCompatibility(
+        DvpSRBArrayType&                                          SRBs,
+        ShaderResourceCacheArrayType&                             ResourceCaches,
+        std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature = nullptr) const;
 #else
     bool DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {return true;}
     bool DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs)const {return true;}
@@ -2190,7 +2206,7 @@ bool DeviceContextBase<ImplementationTraits>::DvpVerifyTLASState(
 }
 
 template <typename ImplementationTraits>
-Uint32 DeviceContextBase<ImplementationTraits>::DvpGetCompatibleSignatureCount(ShaderResourceBindingImplType* pBoundSRBs[]) const
+Uint32 DeviceContextBase<ImplementationTraits>::DvpGetCompatibleSignatureCount(DvpSRBArrayType& SRBs) const
 {
     VERIFY_EXPR(m_pPipelineState);
     const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
@@ -2198,8 +2214,10 @@ Uint32 DeviceContextBase<ImplementationTraits>::DvpGetCompatibleSignatureCount(S
     Uint32 sign = 0;
     for (; sign < SignCount; ++sign)
     {
+        const auto pSRB = SRBs[sign].Lock();
+
         const auto* pPSOSign = m_pPipelineState->GetResourceSignature(sign);
-        const auto* pSRBSign = pBoundSRBs[sign] != nullptr ? pBoundSRBs[sign]->GetSignature() : nullptr;
+        const auto* pSRBSign = pSRB ? pSRB->GetSignature() : nullptr;
 
         if ((pPSOSign == nullptr || pPSOSign->IsEmpty()) != (pSRBSign == nullptr || pSRBSign->IsEmpty()))
         {
@@ -2215,6 +2233,50 @@ Uint32 DeviceContextBase<ImplementationTraits>::DvpGetCompatibleSignatureCount(S
     }
 
     return sign;
+}
+
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::DvpVerifySRBCompatibility(
+    DvpSRBArrayType&                                          SRBs,
+    ShaderResourceCacheArrayType&                             ResourceCaches,
+    std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature) const
+{
+    DEV_CHECK_ERR(m_pPipelineState, "No PSO is bound in the context");
+
+    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
+    for (Uint32 sign = 0; sign < SignCount; ++sign)
+    {
+        const auto* const pPSOSign = CustomGetSignature ? CustomGetSignature(sign) : m_pPipelineState->GetResourceSignature(sign);
+        if (pPSOSign == nullptr || pPSOSign->GetTotalResourceCount() == 0)
+            continue; // Skip null and empty signatures
+
+        VERIFY_EXPR(sign < MAX_RESOURCE_SIGNATURES);
+        VERIFY_EXPR(pPSOSign->GetDesc().BindingIndex == sign);
+
+        const auto  pSRB   = SRBs[sign].Lock();
+        const auto* pCache = ResourceCaches[sign];
+        if (pCache != nullptr)
+        {
+            DEV_CHECK_ERR(pSRB, "Shader resource cache pointer at index ", sign,
+                          " is non-null, but the corresponding SRB is null. This indicates that the SRB has been released while still "
+                          "being used by the context commands. This usage is invalid. A resource must be released only after "
+                          "the last command that uses it.");
+        }
+        else
+        {
+            VERIFY(!pSRB, "Shader resource cache pointer is null, but SRB is not null. This is unexpected and is likely a bug.");
+        }
+
+        DEV_CHECK_ERR(pSRB, "Pipeline state '", m_pPipelineState->GetDesc().Name, "' requires SRB at index ", sign,
+                      ", but none is bound in the device context. Did you call CommitShaderResources()?");
+
+        VERIFY_EXPR(pCache == &pSRB->GetResourceCache());
+
+        const auto* const pSRBSign = pSRB->GetSignature();
+        DEV_CHECK_ERR(pPSOSign->IsCompatibleWith(pSRBSign), "Shader resource binding at index ", sign, " with signature '",
+                      pSRBSign->GetDesc().Name, "' is not compatible with the signature in PSO '",
+                      m_pPipelineState->GetDesc().Name, "'.");
+    }
 }
 
 #endif // DILIGENT_DEVELOPMENT

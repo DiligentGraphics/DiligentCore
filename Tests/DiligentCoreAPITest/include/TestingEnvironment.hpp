@@ -104,6 +104,8 @@ public:
 
     RefCntAutoPtr<ITexture> CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, void* pInitData = nullptr);
 
+    RefCntAutoPtr<ISampler> CreateSampler(const SamplerDesc& Desc);
+
     static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
 
     void            SetDefaultCompiler(SHADER_COMPILER compiler);

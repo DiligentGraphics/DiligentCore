@@ -399,7 +399,11 @@ private:
         bool                 bRootTablesCommited = false; // Indicates if root tables have been committed since the time SRB  has been committed.
         ID3D12RootSignature* pd3d12RootSig       = nullptr;
 
-        std::array<class ShaderResourceBindingD3D12Impl*, MAX_RESOURCE_SIGNATURES> SRBs{};
+        ShaderResourceCacheArrayType ResourceCaches = {};
+
+#ifdef DILIGENT_DEVELOPMENT
+        DvpSRBArrayType SRBs = {};
+#endif
 
         __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
         {

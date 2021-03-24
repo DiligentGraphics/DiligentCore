@@ -34,7 +34,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cstring>
-#include <functional>
 
 #include "PrivateConstants.h"
 #include "PipelineState.h"
@@ -111,9 +110,6 @@ private:
 
     // Pipeline resource signature implementation type (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.).
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
-
-    // Shader resource binding implementation type (ShaderResourceBindingD3D12Impl, ShaderResourceBindingVkImpl, etc.).
-    using ShaderResourceBindingImplType = typename EngineImplTraits::ShaderResourceBindingImplType;
 
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>;
 
@@ -893,42 +889,6 @@ protected:
         }
         return ResourceAttribution{};
     }
-
-#ifdef DILIGENT_DEVELOPMENT
-    bool DvpVerifySRBCompatibility(ShaderResourceBindingImplType* const                      pSRBs[],
-                                   std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature = nullptr) const
-    {
-        bool AllOK = true;
-
-        const auto SignCount = GetResourceSignatureCount();
-        for (Uint32 sign = 0; sign < SignCount; ++sign)
-        {
-            const auto* const pPSOSign = CustomGetSignature ? CustomGetSignature(sign) : GetResourceSignature(sign);
-            if (pPSOSign == nullptr || pPSOSign->GetTotalResourceCount() == 0)
-                continue; // Skip null and empty signatures
-
-            VERIFY_EXPR(pPSOSign->GetDesc().BindingIndex == sign);
-
-            const auto* const pSRB = pSRBs[sign];
-            if (pSRB == nullptr)
-            {
-                LOG_ERROR_MESSAGE("Pipeline state '", this->m_Desc.Name, "' requires SRB at index ", sign, ", but none is bound in the device context.");
-                AllOK = false;
-                continue;
-            }
-
-            const auto* const pSRBSign = pSRB->GetSignature();
-            if (!pPSOSign->IsCompatibleWith(pSRBSign))
-            {
-                LOG_ERROR_MESSAGE("Shader resource binding at index ", sign, " with signature '", pSRBSign->GetDesc().Name,
-                                  "' is not compatible with the signature in pipeline '", this->m_Desc.Name, "'.");
-                AllOK = false;
-            }
-        }
-
-        return AllOK;
-    }
-#endif
 
 private:
     static void ReserveResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, FixedLinearAllocator& MemPool) noexcept

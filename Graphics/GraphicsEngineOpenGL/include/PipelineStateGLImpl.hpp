@@ -70,7 +70,10 @@ public:
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    void DvpVerifySRBResources(class ShaderResourceBindingGLImpl* pSRBs[], const TBindings BaseBindings[], Uint32 NumSRBs) const;
+    using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheGL*, MAX_RESOURCE_SIGNATURES>;
+    using BaseBindingsArrayType        = std::array<TBindings, MAX_RESOURCE_SIGNATURES>;
+    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches,
+                               const BaseBindingsArrayType&        BaseBindings) const;
 #endif
 
 private:

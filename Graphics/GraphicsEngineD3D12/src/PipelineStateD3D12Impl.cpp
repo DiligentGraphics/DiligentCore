@@ -639,14 +639,8 @@ void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pSha
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void PipelineStateD3D12Impl::DvpVerifySRBResources(ShaderResourceBindingD3D12Impl* pSRBs[], Uint32 NumSRBs) const
+void PipelineStateD3D12Impl::DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const
 {
-    DvpVerifySRBCompatibility(pSRBs,
-                              [this](Uint32 idx) {
-                                  // Use signature from the root signature
-                                  return m_RootSig->GetResourceSignature(idx);
-                              });
-
     auto attrib_it = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)
     {
@@ -655,15 +649,12 @@ void PipelineStateD3D12Impl::DvpVerifySRBResources(ShaderResourceBindingD3D12Imp
             {
                 if (*attrib_it && !attrib_it->IsImmutableSampler())
                 {
-                    if (attrib_it->SignatureIndex >= NumSRBs || pSRBs[attrib_it->SignatureIndex] == nullptr)
-                    {
-                        LOG_ERROR_MESSAGE("No resource is bound to variable '", Attribs.Name, "' in shader '", pResources->GetShaderName(),
-                                          "' of PSO '", m_Desc.Name, "': SRB at index ", attrib_it->SignatureIndex, " is not bound in the context.");
-                        return;
-                    }
-
-                    const auto& SRBCache = pSRBs[attrib_it->SignatureIndex]->GetResourceCache();
-                    attrib_it->pSignature->DvpValidateCommittedResource(Attribs, attrib_it->ResourceIndex, SRBCache, pResources->GetShaderName(), m_Desc.Name);
+                    VERIFY_EXPR(attrib_it->pSignature != nullptr);
+                    VERIFY_EXPR(attrib_it->pSignature->GetDesc().BindingIndex == attrib_it->SignatureIndex);
+                    const auto* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
+                    DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", attrib_it->SignatureIndex, " is null.");
+                    attrib_it->pSignature->DvpValidateCommittedResource(Attribs, attrib_it->ResourceIndex, *pResourceCache,
+                                                                        pResources->GetShaderName(), m_Desc.Name);
                 }
                 ++attrib_it;
             } //

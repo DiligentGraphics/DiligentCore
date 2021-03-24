@@ -157,9 +157,10 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 #ifdef DILIGENT_DEVELOPMENT
     // Unbind incompatible SRBs and SRBs with higher binding indices.
     // This is the same behavior as in Vulkan backend.
-    for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs.data()); sign < SignCount; ++sign)
+    for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs); sign < SignCount; ++sign)
     {
-        m_BindInfo.SRBs[sign] = nullptr;
+        m_BindInfo.SRBs[sign]           = nullptr;
+        m_BindInfo.ResourceCaches[sign] = nullptr;
         m_BindInfo.ClearStaleSRBBit(sign);
     }
 
@@ -225,10 +226,11 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
     const auto  SRBIndex               = pShaderResBindingD3D11->GetBindingIndex();
     auto&       ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
 
-    m_BindInfo.SRBs[SRBIndex] = pShaderResBindingD3D11;
+    m_BindInfo.ResourceCaches[SRBIndex] = &ResourceCache;
     m_BindInfo.SetStaleSRBBit(SRBIndex);
 
 #ifdef DILIGENT_DEVELOPMENT
+    m_BindInfo.SRBs[SRBIndex]              = pShaderResBindingD3D11;
     m_BindInfo.CommittedResourcesValidated = false;
 #endif
 
@@ -362,9 +364,9 @@ void DeviceContextD3D11Impl::BindShaderResources()
 #ifdef DILIGENT_DEVELOPMENT
         m_BindInfo.BaseBindings[sign] = BaseBindings;
 #endif
-        auto* pSRB = m_BindInfo.SRBs[sign];
-        VERIFY_EXPR(pSRB);
-        BindCacheResources(pSRB->GetResourceCache(), BaseBindings, PsUavBindMode);
+        auto* pResourceCache = m_BindInfo.ResourceCaches[sign];
+        DEV_CHECK_ERR(pResourceCache != nullptr, "Shader resource cache at index ", sign, " is null.");
+        BindCacheResources(*pResourceCache, BaseBindings, PsUavBindMode);
     }
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 
@@ -417,7 +419,9 @@ void DeviceContextD3D11Impl::DvpValidateCommittedShaderResources()
     if (m_BindInfo.CommittedResourcesValidated)
         return;
 
-    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.SRBs.data(), m_BindInfo.BaseBindings.data(), static_cast<Uint32>(m_BindInfo.SRBs.size()));
+    DvpVerifySRBCompatibility(m_BindInfo.SRBs, m_BindInfo.ResourceCaches);
+
+    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.ResourceCaches, m_BindInfo.BaseBindings);
     m_BindInfo.CommittedResourcesValidated = true;
 }
 #endif

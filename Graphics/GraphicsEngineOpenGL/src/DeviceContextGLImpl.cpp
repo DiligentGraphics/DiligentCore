@@ -171,9 +171,10 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 #ifdef DILIGENT_DEVELOPMENT
     // Unbind incompatible SRBs and SRBs with higher binding indices.
     // This is the same behavior as in Vulkan backend.
-    for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs.data()); sign < SignCount; ++sign)
+    for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs); sign < SignCount; ++sign)
     {
-        m_BindInfo.SRBs[sign] = nullptr;
+        m_BindInfo.SRBs[sign]           = nullptr;
+        m_BindInfo.ResourceCaches[sign] = nullptr;
         m_BindInfo.ClearStaleSRBBit(sign);
     }
 
@@ -198,10 +199,11 @@ void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     auto* const pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pShaderResourceBinding);
     const auto  SRBIndex            = pShaderResBindingGL->GetBindingIndex();
 
-    m_BindInfo.SRBs[SRBIndex] = pShaderResBindingGL;
+    m_BindInfo.ResourceCaches[SRBIndex] = &pShaderResBindingGL->GetResourceCache();
     m_BindInfo.SetStaleSRBBit(SRBIndex);
 
 #ifdef DILIGENT_DEVELOPMENT
+    m_BindInfo.SRBs[SRBIndex]              = pShaderResBindingGL;
     m_BindInfo.CommittedResourcesValidated = false;
 #endif
 }
@@ -668,7 +670,9 @@ void DeviceContextGLImpl::DvpValidateCommittedShaderResources()
     if (m_BindInfo.CommittedResourcesValidated)
         return;
 
-    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.SRBs.data(), m_BindInfo.BaseBindings.data(), static_cast<Uint32>(m_BindInfo.SRBs.size()));
+    DvpVerifySRBCompatibility(m_BindInfo.SRBs, m_BindInfo.ResourceCaches);
+
+    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.ResourceCaches, m_BindInfo.BaseBindings);
     m_BindInfo.CommittedResourcesValidated = true;
 }
 #endif
@@ -698,10 +702,9 @@ void DeviceContextGLImpl::BindProgramResources()
         m_BindInfo.BaseBindings[sign] = BaseBindings;
 #endif
 
-        const auto* pSRB = m_BindInfo.SRBs[sign];
-        DEV_CHECK_ERR(pSRB != nullptr, "No SRB is bound for index ", sign);
-        auto& ResoureCache = pSRB->GetResourceCache();
-        ResoureCache.BindResources(GetContextState(), BaseBindings, m_BoundWritableTextures, m_BoundWritableBuffers);
+        const auto* pResourceCache = m_BindInfo.ResourceCaches[sign];
+        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null");
+        pResourceCache->BindResources(GetContextState(), BaseBindings, m_BoundWritableTextures, m_BoundWritableBuffers);
     }
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 

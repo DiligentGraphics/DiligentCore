@@ -315,21 +315,16 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo)
         if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue;
 
-        auto* const pSRB = RootInfo.SRBs[s];
-        DEV_CHECK_ERR(pSRB != nullptr, "No SRB is committed at binding index ", s);
-        if (pSRB == nullptr)
-            continue;
+        auto* pResourceCache = RootInfo.ResourceCaches[s];
+        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", s, " is null.");
 
-        VERIFY_EXPR(pSRB->GetBindingIndex() == s);
-
-        const auto& ResourceCache          = pSRB->GetResourceCache();
-        const auto  DynamicRootBuffersMask = ResourceCache.GetDynamicRootBuffersMask();
+        const auto DynamicRootBuffersMask = pResourceCache->GetDynamicRootBuffersMask();
         if (DynamicRootBuffersMask == 0 && RootInfo.bRootTablesCommited)
             continue;
 
         PipelineResourceSignatureD3D12Impl::CommitCacheResourcesAttribs CommitAttribs //
             {
-                ResourceCache,
+                *pResourceCache,
                 CmdCtx,
                 this,
                 GetContextId(),
@@ -401,7 +396,11 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
     const auto SRBIndex = pResBindingD3D12Impl->GetBindingIndex();
     auto&      RootInfo = GetRootTableInfo(pSignature->GetPipelineType());
 
+    RootInfo.ResourceCaches[SRBIndex] = &pResBindingD3D12Impl->GetResourceCache();
+
+#ifdef DILIGENT_DEVELOPMENT
     RootInfo.SRBs[SRBIndex] = pResBindingD3D12Impl;
+#endif
 
     if (ResourceCache.GetDynamicRootBuffersMask() != 0)
         RootInfo.SetDynamicBufferBit(SRBIndex);
@@ -427,7 +426,13 @@ void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources()
         return;
 
     auto& RootInfo = GetRootTableInfo(m_pPipelineState->GetDesc().PipelineType);
-    m_pPipelineState->DvpVerifySRBResources(RootInfo.SRBs.data(), static_cast<Uint32>(RootInfo.SRBs.size()));
+    DvpVerifySRBCompatibility(RootInfo.SRBs, RootInfo.ResourceCaches,
+                              [this](Uint32 idx) {
+                                  // Use signature from the root signature
+                                  return m_pPipelineState->GetRootSignature().GetResourceSignature(idx);
+                              });
+
+    m_pPipelineState->DvpVerifySRBResources(RootInfo.ResourceCaches);
     m_State.CommittedResourcesValidated = true;
 }
 #endif

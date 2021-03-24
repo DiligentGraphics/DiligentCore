@@ -342,14 +342,13 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     // A consequence of layout compatibility is that when the implementation compiles a pipeline
     // layout and maps pipeline resources to implementation resources, the mechanism for set N
     // should only be a function of sets [0..N].
-    for (auto sign = DvpGetCompatibleSignatureCount(BindInfo.SRBs.data()); sign < SignCount; ++sign)
+    for (auto sign = DvpGetCompatibleSignatureCount(BindInfo.SRBs); sign < SignCount; ++sign)
     {
-        BindInfo.SRBs[sign] = nullptr;
+        BindInfo.SRBs[sign]           = nullptr;
+        BindInfo.ResourceCaches[sign] = nullptr;
 
-        auto& ResInfo          = BindInfo.Resources[sign];
-        ResInfo.pResourceCache = nullptr;
-        ResInfo.vkSets.fill(VK_NULL_HANDLE);
         // Do not clear DescriptorSetBaseInd and DynamicOffsetCount!
+        BindInfo.Resources[sign].vkSets.fill(VK_NULL_HANDLE);
 
         BindInfo.ClearStaleSRBBit(sign);
         BindInfo.ClearDynamicBufferBit(sign);
@@ -390,21 +389,22 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
         StaleSRBFlags &= ~(Uint32{1} << sign);
 
-        auto& ResInfo = BindInfo.Resources[sign];
-        VERIFY_EXPR(ResInfo.pResourceCache != nullptr);
+        auto* pResourceCache = BindInfo.ResourceCaches[sign];
+        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null");
 
+        auto& ResInfo = BindInfo.Resources[sign];
         VERIFY(ResInfo.vkSets[0] != VK_NULL_HANDLE,
                "At least one descriptor set in the stale SRB must not be NULL. Empty SRBs should not be marked as stale by CommitShaderResources()");
         const Uint32 SetCount = 1 + (ResInfo.vkSets[1] != VK_NULL_HANDLE ? 1 : 0);
 
-        VERIFY_EXPR(SetCount == ResInfo.pResourceCache->GetNumDescriptorSets());
+        VERIFY_EXPR(SetCount == pResourceCache->GetNumDescriptorSets());
 
         if (ResInfo.DynamicOffsetCount > 0)
         {
             VERIFY(m_DynamicBufferOffsets.size() >= ResInfo.DynamicOffsetCount,
                    "m_DynamicBufferOffsets must've been resized by CommitShaderResources() to have enough space");
 
-            auto NumOffsetsWritten = ResInfo.pResourceCache->GetDynamicBufferOffsets(m_ContextId, this, m_DynamicBufferOffsets);
+            auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(m_ContextId, this, m_DynamicBufferOffsets);
             VERIFY_EXPR(NumOffsetsWritten == ResInfo.DynamicOffsetCount);
         }
 
@@ -434,36 +434,15 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
     if (m_State.CommittedResourcesValidated)
         return;
 
-    const auto& BindInfo  = GetDescriptorSetBindInfo(m_pPipelineState->GetDesc().PipelineType);
-    const auto  SignCount = m_pPipelineState->GetResourceSignatureCount();
+    auto& BindInfo = GetDescriptorSetBindInfo(m_pPipelineState->GetDesc().PipelineType);
+    DvpVerifySRBCompatibility(BindInfo.SRBs, BindInfo.ResourceCaches);
 
+    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         const auto* pSign = m_pPipelineState->GetResourceSignature(i);
-        if (pSign == nullptr)
-            continue;
-
-        if (pSign->GetNumDescriptorSets() == 0)
-        {
-            // Skip signatures without any resources
-            continue;
-        }
-
-        const auto* pSRB = BindInfo.SRBs[i];
-        if (pSRB == nullptr)
-        {
-            LOG_ERROR_MESSAGE("Shader resource binding is not bound to index ", i, ". Did you call CommitShaderResources()?");
-            continue;
-        }
-
-        const auto* pSRBSign = pSRB->GetSignature();
-        DEV_CHECK_ERR(pSRBSign != nullptr, "SRB must not be null");
-
-        if (!pSign->IsCompatibleWith(pSRBSign))
-        {
-            LOG_ERROR_MESSAGE("Shader resource binding at index ", i, " with signature '", pSRBSign->GetDesc().Name,
-                              "' is not compatible with pipeline layout in current pipeline '", m_pPipelineState->GetDesc().Name, "'.");
-        }
+        if (pSign == nullptr || pSign->GetNumDescriptorSets() == 0)
+            continue; // Skip null and empty signatures
 
         DEV_CHECK_ERR((BindInfo.StaleSRBMask & BindInfo.ActiveSRBMask) == 0, "CommitDescriptorSets() must be called before validation.");
 
@@ -482,7 +461,7 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
                       "; one of the resource signatures with lower binding index is not compatible.");
     }
 
-    m_pPipelineState->DvpVerifySRBResources(BindInfo.SRBs);
+    m_pPipelineState->DvpVerifySRBResources(BindInfo.ResourceCaches);
 
     m_State.CommittedResourcesValidated = true;
 }
@@ -543,7 +522,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     auto&       BindInfo   = GetDescriptorSetBindInfo(pResBindingVkImpl->GetPipelineType());
     auto&       ResInfo    = BindInfo.Resources[SRBIndex];
 
-    ResInfo.pResourceCache = &ResourceCache;
+    BindInfo.ResourceCaches[SRBIndex] = &ResourceCache;
     BindInfo.SetStaleSRBBit(SRBIndex);
     // We must not clear entire ResInfo as DescriptorSetBaseInd and DynamicOffsetCount
     // are set by SetPipelineState().

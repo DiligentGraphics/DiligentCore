@@ -525,12 +525,9 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSRBs[],
-                                                const TBindings              BaseBindings[],
-                                                Uint32                       NumSRBs) const
+void PipelineStateGLImpl::DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches,
+                                                const BaseBindingsArrayType&        BaseBindings) const
 {
-    DvpVerifySRBCompatibility(pSRBs);
-
     // Verify base bindings
     const auto SignCount = GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < SignCount; ++sign)
@@ -546,20 +543,17 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
     using AttribIter = std::vector<ResourceAttribution>::const_iterator;
     struct HandleResourceHelper
     {
-        PipelineStateGLImpl const&    PSO;
-        ShaderResourceBindingGLImpl** ppSRBs;
-        const Uint32                  NumSRBs;
-        AttribIter                    attrib_it;
-        Uint32&                       shader_ind;
+        PipelineStateGLImpl const&          PSO;
+        const ShaderResourceCacheArrayType& ResourceCaches;
+        AttribIter                          attrib_it;
+        Uint32&                             shader_ind;
 
-        HandleResourceHelper(const PipelineStateGLImpl&    _PSO,
-                             ShaderResourceBindingGLImpl** _ppSRBs,
-                             Uint32                        _NumSRBs,
-                             AttribIter                    _iter,
-                             Uint32&                       _ind) :
+        HandleResourceHelper(const PipelineStateGLImpl&          _PSO,
+                             const ShaderResourceCacheArrayType& _ResourceCaches,
+                             AttribIter                          _iter,
+                             Uint32&                             _ind) :
             PSO{_PSO},
-            ppSRBs{_ppSRBs},
-            NumSRBs{_NumSRBs},
+            ResourceCaches{_ResourceCaches},
             attrib_it{_iter},
             shader_ind{_ind}
         {}
@@ -568,16 +562,10 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
         {
             if (*attrib_it && !attrib_it->IsImmutableSampler())
             {
-                if (attrib_it->SignatureIndex >= NumSRBs || ppSRBs[attrib_it->SignatureIndex] == nullptr)
-                {
-                    LOG_ERROR_MESSAGE("No resource is bound to variable '", Attribs.Name, "' in shader '", PSO.m_ShaderNames[shader_ind],
-                                      "' of PSO '", PSO.m_Desc.Name, "': SRB at index ", attrib_it->SignatureIndex, " is not bound in the context.");
-                    return;
-                }
-
-                const auto& SRBCache = ppSRBs[attrib_it->SignatureIndex]->GetResourceCache();
-                attrib_it->pSignature->DvpValidateCommittedResource(Attribs, ResDim, IsMS, attrib_it->ResourceIndex,
-                                                                    SRBCache, PSO.m_ShaderNames[shader_ind].c_str(), PSO.m_Desc.Name);
+                const auto* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
+                DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", attrib_it->SignatureIndex, " is null.");
+                attrib_it->pSignature->DvpValidateCommittedResource(Attribs, ResDim, IsMS, attrib_it->ResourceIndex, *pResourceCache,
+                                                                    PSO.m_ShaderNames[shader_ind].c_str(), PSO.m_Desc.Name);
             }
             ++attrib_it;
         }
@@ -589,7 +577,7 @@ void PipelineStateGLImpl::DvpVerifySRBResources(ShaderResourceBindingGLImpl* pSR
     };
 
     Uint32               ShaderInd = 0;
-    HandleResourceHelper HandleResource{*this, pSRBs, NumSRBs, m_ResourceAttibutions.begin(), ShaderInd};
+    HandleResourceHelper HandleResource{*this, ResourceCaches, m_ResourceAttibutions.begin(), ShaderInd};
 
     VERIFY_EXPR(m_ShaderResources.size() == m_ShaderNames.size());
     for (; ShaderInd < m_ShaderResources.size(); ++ShaderInd)

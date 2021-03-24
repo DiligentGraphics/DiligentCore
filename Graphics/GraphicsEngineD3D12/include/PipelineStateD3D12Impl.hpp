@@ -70,7 +70,8 @@ public:
     const RootSignatureD3D12& GetRootSignature() const { return *m_RootSig; }
 
 #ifdef DILIGENT_DEVELOPMENT
-    void DvpVerifySRBResources(ShaderResourceBindingD3D12Impl* pSRBs[], Uint32 NumSRBs) const;
+    using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheD3D12*, MAX_RESOURCE_SIGNATURES>;
+    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const;
 #endif
 
 private:

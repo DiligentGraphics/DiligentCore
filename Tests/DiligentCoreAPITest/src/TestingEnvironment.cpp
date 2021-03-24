@@ -477,6 +477,13 @@ RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXT
     return pTexture;
 }
 
+RefCntAutoPtr<ISampler> TestingEnvironment::CreateSampler(const SamplerDesc& Desc)
+{
+    RefCntAutoPtr<ISampler> pSampler;
+    m_pDevice->CreateSampler(Desc, &pSampler);
+    return pSampler;
+}
+
 void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
 {
     switch (m_pDevice->GetDeviceCaps().DevType)
