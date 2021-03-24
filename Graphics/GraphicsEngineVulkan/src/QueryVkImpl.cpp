@@ -103,16 +103,14 @@ bool QueryVkImpl::AllocateQueries()
 
 bool QueryVkImpl::OnBeginQuery(IDeviceContext* pContext)
 {
-    if (!TQueryBase::OnBeginQuery(pContext))
-        return false;
+    TQueryBase::OnBeginQuery(pContext);
 
     return AllocateQueries();
 }
 
 bool QueryVkImpl::OnEndQuery(IDeviceContext* pContext)
 {
-    if (!TQueryBase::OnEndQuery(pContext))
-        return false;
+    TQueryBase::OnEndQuery(pContext);
 
     if (m_Desc.Type == QUERY_TYPE_TIMESTAMP)
     {
@@ -134,6 +132,8 @@ bool QueryVkImpl::OnEndQuery(IDeviceContext* pContext)
 
 bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
+    TQueryBase::CheckQueryDataPtr(pData, DataSize);
+
     auto CmdQueueId          = m_pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId();
     auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
     bool DataAvailable       = false;

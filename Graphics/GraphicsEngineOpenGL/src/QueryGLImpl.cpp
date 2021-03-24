@@ -55,8 +55,7 @@ QueryGLImpl::~QueryGLImpl()
 
 bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
-    if (!TQueryBase::CheckQueryDataPtr(pData, DataSize))
-        return false;
+    TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
     GLuint ResultAvailable = GL_FALSE;
 

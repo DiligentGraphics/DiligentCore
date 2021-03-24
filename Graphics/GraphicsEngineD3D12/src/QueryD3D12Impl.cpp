@@ -73,8 +73,7 @@ QueryD3D12Impl::~QueryD3D12Impl()
 
 bool QueryD3D12Impl::OnEndQuery(IDeviceContext* pContext)
 {
-    if (!TQueryBase::OnEndQuery(pContext))
-        return false;
+    TQueryBase::OnEndQuery(pContext);
 
     auto CmdQueueId      = m_pContext.RawPtr<DeviceContextD3D12Impl>()->GetCommandQueueId();
     m_QueryEndFenceValue = m_pDevice->GetNextFenceValue(CmdQueueId);
@@ -84,6 +83,8 @@ bool QueryD3D12Impl::OnEndQuery(IDeviceContext* pContext)
 
 bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
+    TQueryBase::CheckQueryDataPtr(pData, DataSize);
+
     auto CmdQueueId          = m_pContext.RawPtr<DeviceContextD3D12Impl>()->GetCommandQueueId();
     auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
     if (CompletedFenceValue >= m_QueryEndFenceValue)

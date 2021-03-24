@@ -121,56 +121,40 @@ public:
         m_State = QueryState::Inactive;
     }
 
-    bool OnBeginQuery(struct IDeviceContext* pContext)
+    void OnBeginQuery(struct IDeviceContext* pContext)
     {
-        if (this->m_Desc.Type == QUERY_TYPE_TIMESTAMP)
-        {
-            LOG_ERROR_MESSAGE("BeginQuery cannot be called on timestamp query '", this->m_Desc.Name,
-                              "'. Call EndQuery to set the timestamp.");
-            return false;
-        }
+        DEV_CHECK_ERR(this->m_Desc.Type != QUERY_TYPE_TIMESTAMP,
+                      "BeginQuery cannot be called on timestamp query '", this->m_Desc.Name,
+                      "'. Call EndQuery to set the timestamp.");
 
-        if (m_State == QueryState::Querying)
-        {
-            LOG_ERROR_MESSAGE("Attempting to begin query '", this->m_Desc.Name,
-                              "' twice. A query must be ended before it can be begun again.");
-            return false;
-        }
+        DEV_CHECK_ERR(m_State != QueryState::Querying,
+                      "Attempting to begin query '", this->m_Desc.Name,
+                      "' twice. A query must be ended before it can be begun again.");
 
         m_pContext = pContext;
         m_State    = QueryState::Querying;
-        return true;
     }
 
-    bool OnEndQuery(IDeviceContext* pContext)
+    void OnEndQuery(IDeviceContext* pContext)
     {
         if (this->m_Desc.Type != QUERY_TYPE_TIMESTAMP)
         {
-            if (m_State != QueryState::Querying)
-            {
-                LOG_ERROR_MESSAGE("Attempting to end query '", this->m_Desc.Name, "' that has not been begun.");
-                return false;
-            }
+            DEV_CHECK_ERR(m_State == QueryState::Querying,
+                          "Attempting to end query '", this->m_Desc.Name, "' that has not been begun.");
         }
 
         if (m_pContext == nullptr)
         {
-            if (this->m_Desc.Type != QUERY_TYPE_TIMESTAMP)
-            {
-                LOG_ERROR_MESSAGE("Ending query '", this->m_Desc.Name, "' that has not been begun.");
-                return false;
-            }
-
+            DEV_CHECK_ERR(this->m_Desc.Type == QUERY_TYPE_TIMESTAMP,
+                          "Ending query '", this->m_Desc.Name, "' that has not been begun.");
             m_pContext = pContext;
         }
-        else if (m_pContext != pContext)
+        else
         {
-            LOG_ERROR_MESSAGE("Query '", this->m_Desc.Name, "' has been begun by another context.");
-            return false;
+            DEV_CHECK_ERR(m_pContext == pContext, "Query '", this->m_Desc.Name, "' has been begun by another context.");
         }
 
         m_State = QueryState::Ended;
-        return true;
     }
 
     QueryState GetState() const
@@ -178,76 +162,51 @@ public:
         return m_State;
     }
 
-    bool CheckQueryDataPtr(void* pData, Uint32 DataSize)
+    void CheckQueryDataPtr(void* pData, Uint32 DataSize)
     {
-        if (m_State != QueryState::Ended)
-        {
-            LOG_ERROR_MESSAGE("Attempting to get data of query '", this->m_Desc.Name, "' that has not been ended.");
-            return false;
-        }
+        DEV_CHECK_ERR(m_State == QueryState::Ended,
+                      "Attempting to get data of query '", this->m_Desc.Name, "' that has not been ended.");
 
         if (pData != nullptr)
         {
-            if (*reinterpret_cast<QUERY_TYPE*>(pData) != this->m_Desc.Type)
-            {
-                LOG_ERROR_MESSAGE("Incorrect query data structure type.");
-                return false;
-            }
+            DEV_CHECK_ERR(*reinterpret_cast<QUERY_TYPE*>(pData) == this->m_Desc.Type, "Incorrect query data structure type.");
 
             static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below.");
             switch (this->m_Desc.Type)
             {
                 case QUERY_TYPE_UNDEFINED:
                     UNEXPECTED("Undefined query type is unexpected.");
-                    return false;
+                    break;
 
                 case QUERY_TYPE_OCCLUSION:
-                    if (DataSize != sizeof(QueryDataOcclusion))
-                    {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataOcclusion), " (aka sizeof(QueryDataOcclusion)) is expected.");
-                        return false;
-                    }
+                    DEV_CHECK_ERR(DataSize == sizeof(QueryDataOcclusion),
+                                  "The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataOcclusion), " (aka sizeof(QueryDataOcclusion)) is expected.");
                     break;
 
                 case QUERY_TYPE_BINARY_OCCLUSION:
-                    if (DataSize != sizeof(QueryDataBinaryOcclusion))
-                    {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataBinaryOcclusion), " (aka sizeof(QueryDataBinaryOcclusion)) is expected.");
-                        return false;
-                    }
+                    DEV_CHECK_ERR(DataSize == sizeof(QueryDataBinaryOcclusion),
+                                  "The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataBinaryOcclusion), " (aka sizeof(QueryDataBinaryOcclusion)) is expected.");
                     break;
 
                 case QUERY_TYPE_TIMESTAMP:
-                    if (DataSize != sizeof(QueryDataTimestamp))
-                    {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataTimestamp), " (aka sizeof(QueryDataTimestamp)) is expected.");
-                        return false;
-                    }
+                    DEV_CHECK_ERR(DataSize == sizeof(QueryDataTimestamp),
+                                  "The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataTimestamp), " (aka sizeof(QueryDataTimestamp)) is expected.");
                     break;
 
                 case QUERY_TYPE_PIPELINE_STATISTICS:
-                    if (DataSize != sizeof(QueryDataPipelineStatistics))
-                    {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataPipelineStatistics), " (aka sizeof(QueryDataPipelineStatistics)) is expected.");
-                        return false;
-                    }
+                    DEV_CHECK_ERR(DataSize == sizeof(QueryDataPipelineStatistics),
+                                  "The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataPipelineStatistics), " (aka sizeof(QueryDataPipelineStatistics)) is expected.");
                     break;
 
                 case QUERY_TYPE_DURATION:
-                    if (DataSize != sizeof(QueryDataDuration))
-                    {
-                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataDuration), " (aka sizeof(QueryDataDuration)) is expected.");
-                        return false;
-                    }
+                    DEV_CHECK_ERR(DataSize == sizeof(QueryDataDuration),
+                                  "The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataDuration), " (aka sizeof(QueryDataDuration)) is expected.");
                     break;
 
                 default:
                     UNEXPECTED("Unexpected query type.");
-                    return false;
             }
         }
-
-        return true;
     }
 
 protected:
