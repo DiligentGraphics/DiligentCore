@@ -36,6 +36,7 @@
 #include "DataBlobImpl.hpp"
 #include "GLSLUtils.hpp"
 #include "ShaderToolsCommon.hpp"
+#include "GLTypeConversions.hpp"
 
 using namespace Diligent;
 

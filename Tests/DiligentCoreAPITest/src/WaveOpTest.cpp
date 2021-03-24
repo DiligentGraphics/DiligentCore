@@ -115,10 +115,7 @@ void main(uint DTid : SV_DispatchThreadID)
     }
     #endif
 
-    if (DTid == 0)
-    {
-        g_RWBuffer.Store(0, Accum);
-    }
+    g_RWBuffer.Store(DTid, Accum);
 }
 )";
 
@@ -153,7 +150,7 @@ TEST(WaveOpTest, CompileShader_GLSL)
     auto* const pDevice = pEnv->GetDevice();
     const auto& Caps    = pDevice->GetDeviceCaps();
 
-    if (!Caps.IsVulkanDevice())
+    if (!Caps.IsVulkanDevice() && !Caps.IsGLDevice())
     {
         GTEST_SKIP();
     }
@@ -175,23 +172,22 @@ TEST(WaveOpTest, CompileShader_GLSL)
     ASSERT_GT(WaveOpProps.MinSize, 0u);
     ASSERT_GE(WaveOpProps.MaxSize, WaveOpProps.MinSize);
 
-    ShaderMacroHelper Macros;
-    Macros.AddShaderMacro("SUBGROUP_SIZE", WaveOpProps.MinSize);
+    std::stringstream ShaderSourceStream;
+    ShaderSourceStream << "#version 450\n\n";
+    ShaderSourceStream << "#define SUBGROUP_SIZE " << WaveOpProps.MinSize << "\n";
 
     // clang-format off
-    Macros.AddShaderMacro("WAVE_FEATURE_BASIC",            (WaveOpProps.Features & WAVE_FEATURE_BASIC)            != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_VOTE",             (WaveOpProps.Features & WAVE_FEATURE_VOTE)             != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_ARITHMETIC",       (WaveOpProps.Features & WAVE_FEATURE_ARITHMETIC)       != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_BALLOUT",          (WaveOpProps.Features & WAVE_FEATURE_BALLOUT)          != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_SHUFFLE",          (WaveOpProps.Features & WAVE_FEATURE_SHUFFLE)          != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_SHUFFLE_RELATIVE", (WaveOpProps.Features & WAVE_FEATURE_SHUFFLE_RELATIVE) != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_CLUSTERED",        (WaveOpProps.Features & WAVE_FEATURE_CLUSTERED)        != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_QUAD",             (WaveOpProps.Features & WAVE_FEATURE_QUAD)             != 0);
+    ShaderSourceStream << "#define WAVE_FEATURE_BASIC "            << int{(WaveOpProps.Features & WAVE_FEATURE_BASIC)            != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_VOTE "             << int{(WaveOpProps.Features & WAVE_FEATURE_VOTE)             != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_ARITHMETIC "       << int{(WaveOpProps.Features & WAVE_FEATURE_ARITHMETIC)       != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_BALLOUT "          << int{(WaveOpProps.Features & WAVE_FEATURE_BALLOUT)          != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_SHUFFLE "          << int{(WaveOpProps.Features & WAVE_FEATURE_SHUFFLE)          != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_SHUFFLE_RELATIVE " << int{(WaveOpProps.Features & WAVE_FEATURE_SHUFFLE_RELATIVE) != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_CLUSTERED "        << int{(WaveOpProps.Features & WAVE_FEATURE_CLUSTERED)        != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_QUAD "             << int{(WaveOpProps.Features & WAVE_FEATURE_QUAD)             != 0} << "\n";
     // clang-format on
 
-    static const char Source[] = R"(
-#version 460
-
+    static const char ShaderBody[] = R"(
 #if WAVE_FEATURE_BASIC
 #    extension GL_KHR_shader_subgroup_basic: enable
 #endif
@@ -287,21 +283,18 @@ void main()
     }
     #endif
 
-    if (DTid == 0)
-    {
-        g_WBuffer[0] = Accum;
-    }
+    g_WBuffer[DTid] = Accum;
 }
 )";
+    ShaderSourceStream << ShaderBody;
+    const String Source = ShaderSourceStream.str();
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
-    ShaderCI.ShaderCompiler  = SHADER_COMPILER_GLSLANG;
     ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
     ShaderCI.Desc.Name       = "Wave op test - CS";
     ShaderCI.EntryPoint      = "main";
-    ShaderCI.Source          = Source;
-    ShaderCI.Macros          = Macros;
+    ShaderCI.Source          = Source.c_str();
 
     RefCntAutoPtr<IShader> pCS;
     pDevice->CreateShader(ShaderCI, &pCS);

@@ -18,6 +18,7 @@ set(INCLUDE
     include/ShaderVariableManagerGL.hpp
     include/ShaderResourcesGL.hpp
     include/GLTypeConversions.hpp
+    include/GLStubs.h
     include/pch.h
     include/PipelineStateGLImpl.hpp
     include/PipelineResourceSignatureGLImpl.hpp

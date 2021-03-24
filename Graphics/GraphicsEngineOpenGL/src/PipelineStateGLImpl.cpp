@@ -36,6 +36,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "ShaderResourceBindingGLImpl.hpp"
+#include "GLTypeConversions.hpp"
 
 #include "EngineMemory.h"
 

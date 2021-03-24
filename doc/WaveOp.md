@@ -4,7 +4,7 @@
 
 | GLSL | HLSL | Description |
 |---|---|---|
-| Subgroup | Wave | a set of lanes (threads) executed simultaneously in the processor |
+| Subgroup | Wave | a set of lanes (threads) executed simultaneously in the processor. Other names: wavefront (AMD), warp (NVidia). |
 | Invocation | Lane | a single thread of execution |
 | ..Inclusive.. | - | function with these suffix includes lanes from 0 to `LaneIndex` |
 | ..Exclusive.. | ..Prefix.. | function with these suffix includes lanes from 0 to `LaneIndex` but current lane is not included |

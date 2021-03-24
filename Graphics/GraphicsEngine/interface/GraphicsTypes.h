@@ -1952,6 +1952,9 @@ struct WaveOpProperties
     Uint32       MinSize         DEFAULT_INITIALIZER(0);
 
     /// Maximum supported size of the wave.
+    /// If variable wave size is not supported then this value is equal to MinSize.
+    /// Direct3D12 backend: requires shader model 6.6.
+    /// Vulkan backend: requires VK_EXT_subgroup_size_control.
     Uint32       MaxSize         DEFAULT_INITIALIZER(0);
 
     /// Shader stages in which wave operations can be used.

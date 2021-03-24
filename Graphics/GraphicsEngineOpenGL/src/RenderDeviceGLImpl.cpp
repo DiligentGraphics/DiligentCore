@@ -307,7 +307,6 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     SET_FEATURE_STATE(RayTracing,                 false, "Ray tracing is");
     SET_FEATURE_STATE(RayTracing2,                false, "Inline ray tracing is");
     SET_FEATURE_STATE(ShaderResourceRuntimeArray, false, "Runtime-sized array is");
-    SET_FEATURE_STATE(WaveOp,                     false, "Wave operations is");
     // clang-format on
 
     {
@@ -339,8 +338,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         if (IsGL43OrAbove || IsGLES31OrAbove)
         {
             glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &MaxVertexSSBOs);
-            if (glGetError() != GL_NO_ERROR)
-                MaxVertexSSBOs = 0;
+            CHECK_GL_ERROR("glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS)");
         }
 #endif
         SET_FEATURE_STATE(VertexPipelineUAVWritesAndAtomics, MaxVertexSSBOs > 0, "Vertex pipeline UAV writes and atomics are");
@@ -464,6 +462,34 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SamCaps.BorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
         SamCaps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && strstr(Extensions, "texture_filter_anisotropic");
         SamCaps.LODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
+    }
+
+#ifdef GL_KHR_shader_subgroup
+    if (CheckExtension("GL_KHR_shader_subgroup"))
+    {
+        GLint SubgroupSize = 0;
+        glGetIntegerv(GL_SUBGROUP_SIZE_KHR, &SubgroupSize);
+        CHECK_GL_ERROR("glGetIntegerv(GL_SUBGROUP_SIZE_KHR)");
+
+        GLint SubgroupStages = 0;
+        glGetIntegerv(GL_SUBGROUP_SUPPORTED_STAGES_KHR, &SubgroupStages);
+        CHECK_GL_ERROR("glGetIntegerv(GL_SUBGROUP_SUPPORTED_STAGES_KHR)");
+
+        GLint SubgroupFeatures = 0;
+        glGetIntegerv(GL_SUBGROUP_SUPPORTED_FEATURES_KHR, &SubgroupFeatures);
+        CHECK_GL_ERROR("glGetIntegerv(GL_SUBGROUP_SUPPORTED_FEATURES_KHR)");
+
+        m_DeviceProperties.WaveOp.MinSize         = static_cast<Uint32>(SubgroupSize);
+        m_DeviceProperties.WaveOp.MaxSize         = static_cast<Uint32>(SubgroupSize);
+        m_DeviceProperties.WaveOp.SupportedStages = GLShaderBitsToShaderTypes(SubgroupStages);
+        m_DeviceProperties.WaveOp.Features        = GLSubgroupFeatureBitsToWaveFeatures(SubgroupFeatures);
+
+        SET_FEATURE_STATE(WaveOp, true, "Wave operations is");
+    }
+    else
+#endif
+    {
+        SET_FEATURE_STATE(WaveOp, false, "Wave operations is");
     }
 
     const bool bRGTC = CheckExtension("GL_ARB_texture_compression_rgtc");

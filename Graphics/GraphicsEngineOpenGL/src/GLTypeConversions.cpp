@@ -30,6 +30,7 @@
 
 #include "GLTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
+#include "BasicMath.hpp"
 
 namespace Diligent
 {
@@ -704,6 +705,53 @@ void GLTextureTypeToResourceDim(GLenum TextureType, RESOURCE_DIMENSION& ResDim, 
             return;
 #endif
     }
+}
+
+
+SHADER_TYPE GLShaderBitsToShaderTypes(GLenum ShaderBits)
+{
+    SHADER_TYPE Result = SHADER_TYPE_UNKNOWN;
+    while (ShaderBits != 0)
+    {
+        auto Type = ExtractLSB(ShaderBits);
+        switch (Type)
+        {
+            // clang-format off
+            case GL_VERTEX_SHADER_BIT:          Result |= SHADER_TYPE_VERTEX;   break;
+            case GL_FRAGMENT_SHADER_BIT:        Result |= SHADER_TYPE_PIXEL;    break;
+            case GL_GEOMETRY_SHADER_BIT:        Result |= SHADER_TYPE_GEOMETRY; break;
+            #ifndef PLATFORM_IOS
+            case GL_TESS_CONTROL_SHADER_BIT:    Result |= SHADER_TYPE_HULL;     break;
+            case GL_TESS_EVALUATION_SHADER_BIT: Result |= SHADER_TYPE_DOMAIN;   break;
+            case GL_COMPUTE_SHADER_BIT:         Result |= SHADER_TYPE_COMPUTE;  break;
+            #endif
+                // clang-format on
+        }
+    }
+    return Result;
+}
+
+WAVE_FEATURE GLSubgroupFeatureBitsToWaveFeatures(GLenum FeatureBits)
+{
+    WAVE_FEATURE Result = WAVE_FEATURE_UNKNOWN;
+    while (FeatureBits != 0)
+    {
+        auto Feature = ExtractLSB(FeatureBits);
+        switch (Feature)
+        {
+            // clang-format off
+            case GL_SUBGROUP_FEATURE_BASIC_BIT_KHR:            Result |= WAVE_FEATURE_BASIC;            break;
+            case GL_SUBGROUP_FEATURE_VOTE_BIT_KHR:             Result |= WAVE_FEATURE_VOTE;             break;
+            case GL_SUBGROUP_FEATURE_ARITHMETIC_BIT_KHR:       Result |= WAVE_FEATURE_ARITHMETIC;       break;
+            case GL_SUBGROUP_FEATURE_BALLOT_BIT_KHR:           Result |= WAVE_FEATURE_BALLOUT;          break;
+            case GL_SUBGROUP_FEATURE_SHUFFLE_BIT_KHR:          Result |= WAVE_FEATURE_SHUFFLE;          break;
+            case GL_SUBGROUP_FEATURE_SHUFFLE_RELATIVE_BIT_KHR: Result |= WAVE_FEATURE_SHUFFLE_RELATIVE; break;
+            case GL_SUBGROUP_FEATURE_CLUSTERED_BIT_KHR:        Result |= WAVE_FEATURE_CLUSTERED;        break;
+            case GL_SUBGROUP_FEATURE_QUAD_BIT_KHR:             Result |= WAVE_FEATURE_QUAD;             break;
+                // clang-format on
+        }
+    }
+    return Result;
 }
 
 } // namespace Diligent

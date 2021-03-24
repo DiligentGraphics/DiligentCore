@@ -113,6 +113,8 @@
 #    error Unsupported platform
 #endif
 
+#include "GLStubs.h"
+
 #include "Errors.hpp"
 
 #include "PlatformDefinitions.h"
