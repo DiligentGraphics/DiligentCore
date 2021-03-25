@@ -388,30 +388,20 @@ private:
                                                     Uint64&                        BuffDataStartByteOffset,
                                                     const char*                    OpName);
 
-    struct RootTableInfo
+    struct RootTableInfo : CommittedShaderResources
     {
-        using Bitfield = Uint8;
-        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
-
-        Bitfield             ActiveSRBMask       = 0;     // Indicates which SRBs are active in current PSO.
-        Bitfield             DynamicBuffersMask  = 0;     // Indicates which SRBs have dynamic buffers.
+        SRBMaskType          DynamicBuffersMask  = 0;     // Indicates which SRBs have dynamic buffers.
         bool                 bRootViewsCommitted = false; // Indicates if root views have been committed since the time SRB  has been committed.
         bool                 bRootTablesCommited = false; // Indicates if root tables have been committed since the time SRB  has been committed.
         ID3D12RootSignature* pd3d12RootSig       = nullptr;
-
-        ShaderResourceCacheArrayType ResourceCaches = {};
-
-#ifdef DILIGENT_DEVELOPMENT
-        DvpSRBArrayType SRBs;
-#endif
 
         __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
         {
             return !bRootViewsCommitted || !bRootTablesCommited || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
         }
 
-        void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<Bitfield>(1u << Index); }
-        void ClearDynamicBufferBit(Uint32 Index) { DynamicBuffersMask &= static_cast<Bitfield>(~(1u << Index)); }
+        void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<SRBMaskType>(1u << Index); }
+        void ClearDynamicBufferBit(Uint32 Index) { DynamicBuffersMask &= static_cast<SRBMaskType>(~(1u << Index)); }
     };
     __forceinline RootTableInfo& GetRootTableInfo(PIPELINE_TYPE PipelineType);
 
@@ -419,7 +409,7 @@ private:
     __forceinline void CommitRootTablesAndViews(RootTableInfo& RootInfo);
 
 #ifdef DILIGENT_DEVELOPMENT
-    void DvpValidateCommittedShaderResources();
+    void DvpValidateCommittedShaderResources(RootTableInfo& RootInfo);
 #endif
 
     struct TextureUploadSpace
@@ -459,9 +449,6 @@ private:
 
         // Indicates if currently committed D3D12 index buffer is up to date
         bool bCommittedD3D12IBUpToDate = false;
-
-        // Indicates if currently committed resources have been validated
-        bool CommittedResourcesValidated = false;
     } m_State;
 
     RootTableInfo m_GraphicsResources;

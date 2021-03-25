@@ -475,8 +475,6 @@ private:
         /// Flag indicating if currently committed index buffer is up to date
         bool CommittedIBUpToDate = false;
 
-        bool CommittedResourcesValidated = false;
-
         Uint32 NumCommands = 0;
 
         VkPipelineBindPoint vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
@@ -487,44 +485,33 @@ private:
 
     static constexpr Uint32 MAX_DESCR_SET_PER_SIGNATURE = PipelineResourceSignatureVkImpl::MAX_DESCRIPTOR_SETS;
 
-    struct DescriptorSetBindInfo
+    struct ResourceBindInfo : CommittedShaderResources
     {
-        struct ResourceInfo
+        struct DescriptorSetInfo
         {
             // Static/mutable and dynamic descriptor sets
             std::array<VkDescriptorSet, MAX_DESCR_SET_PER_SIGNATURE> vkSets = {};
 
             // Descriptor set base index given by Layout.GetFirstDescrSetIndex
-            Uint32 DescriptorSetBaseInd = 0;
+            Uint32 BaseInd = 0;
 
             // The total number of descriptors with dynamic offset, given by pSignature->GetDynamicOffsetCount().
             // Note that this is not the actual number of dynamic buffers in the resource cache.
             Uint32 DynamicOffsetCount = 0;
 
 #ifdef DILIGENT_DEVELOPMENT
-            // The DescriptorSetBaseInd that was used in the last BindDescriptorSets() call
-            Uint32 LastBoundDSBaseInd = ~0u;
+            // The descriptor set base indext that was used in the last BindDescriptorSets() call
+            Uint32 LastBoundBaseInd = ~0u;
 #endif
         };
-        std::array<ResourceInfo, MAX_RESOURCE_SIGNATURES> Resources;
+        std::array<DescriptorSetInfo, MAX_RESOURCE_SIGNATURES> SetInfo;
 
-        // Shader resource caches for every signature index.
-        ShaderResourceCacheArrayType ResourceCaches = {};
-
-#ifdef DILIGENT_DEVELOPMENT
-        DvpSRBArrayType SRBs;
-#endif
-        using Bitfield = Uint8;
-        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
-
-        Bitfield ActiveSRBMask      = 0; // Indicates which SRBs are active in current PSO
-        Bitfield StaleSRBMask       = 0; // Indicates stale SRBs that have descriptor sets that need to be bound
-        Bitfield DynamicBuffersMask = 0; // Indicates which SRBs have dynamic buffers
+        SRBMaskType DynamicBuffersMask = 0; // Indicates which SRBs have dynamic buffers
 
         // Pipeline layout of the currently bound pipeline
         VkPipelineLayout vkPipelineLayout = VK_NULL_HANDLE;
 
-        DescriptorSetBindInfo()
+        ResourceBindInfo()
         {}
 
         __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
@@ -532,22 +519,19 @@ private:
             return (StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
         }
 
-        void SetStaleSRBBit(Uint32 Index) { StaleSRBMask |= static_cast<Bitfield>(1u << Index); }
-        void ClearStaleSRBBit(Uint32 Index) { StaleSRBMask &= static_cast<Bitfield>(~(1u << Index)); }
-
-        void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<Bitfield>(1u << Index); }
-        void ClearDynamicBufferBit(Uint32 Index) { DynamicBuffersMask &= static_cast<Bitfield>(~(1u << Index)); }
+        void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<SRBMaskType>(1u << Index); }
+        void ClearDynamicBufferBit(Uint32 Index) { DynamicBuffersMask &= static_cast<SRBMaskType>(~(1u << Index)); }
     };
 
-    __forceinline DescriptorSetBindInfo& GetDescriptorSetBindInfo(PIPELINE_TYPE Type);
+    __forceinline ResourceBindInfo& GetBindInfo(PIPELINE_TYPE Type);
 
-    __forceinline void CommitDescriptorSets(DescriptorSetBindInfo& DescrSetBindInfo);
+    __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo);
 #ifdef DILIGENT_DEVELOPMENT
-    void DvpValidateCommittedShaderResources();
+    void DvpValidateCommittedShaderResources(ResourceBindInfo& BindInfo);
 #endif
 
-    /// Descriptor set binding information for each pipeline type (graphics/mesh, compute, ray tracing)
-    std::array<DescriptorSetBindInfo, NUM_PIPELINE_BIND_POINTS> m_DescrSetBindInfo;
+    /// Resource binding information for each pipeline type (graphics/mesh, compute, ray tracing)
+    std::array<ResourceBindInfo, NUM_PIPELINE_BIND_POINTS> m_BindInfo;
 
     /// Memory to store dynamic buffer offsets for descriptor sets.
     std::vector<Uint32> m_DynamicBufferOffsets;

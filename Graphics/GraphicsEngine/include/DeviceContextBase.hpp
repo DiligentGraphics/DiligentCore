@@ -260,6 +260,50 @@ public:
     bool HasActiveRenderPass() const { return m_pActiveRenderPass != nullptr; }
 
 protected:
+    /// Committed shader resources for each resource signature
+    struct CommittedShaderResources
+    {
+        // Pointers to shader resource caches for each signature
+        std::array<ShaderResourceCacheImplType*, MAX_RESOURCE_SIGNATURES> ResourceCaches = {};
+
+#ifdef DILIGENT_DEVELOPMENT
+        // SRB array for each resource signature, corresponding to ResourceCaches
+        std::array<RefCntWeakPtr<ShaderResourceBindingImplType>, MAX_RESOURCE_SIGNATURES> SRBs;
+
+        // Indicates if the resources have been validated since they were committed
+        bool ResourcesValidated = false;
+#endif
+
+        using SRBMaskType = Uint8;
+        static_assert(sizeof(SRBMaskType) * 8 >= MAX_RESOURCE_SIGNATURES, "Not enought space to store MAX_RESOURCE_SIGNATURES bits");
+
+        SRBMaskType ActiveSRBMask = 0; // Indicates which SRBs are active in current PSO
+        SRBMaskType StaleSRBMask  = 0; // Indicates stale SRBs that have not been committed yet
+
+        void Set(Uint32 Index, ShaderResourceBindingImplType* pSRB)
+        {
+            VERIFY_EXPR(Index < MAX_RESOURCE_SIGNATURES);
+            ResourceCaches[Index] = pSRB != nullptr ? &pSRB->GetResourceCache() : nullptr;
+
+            const auto SRBBit = static_cast<SRBMaskType>(1u << Index);
+            if (ResourceCaches[Index] != nullptr)
+                StaleSRBMask |= SRBBit;
+            else
+                StaleSRBMask &= ~SRBBit;
+
+#ifdef DILIGENT_DEVELOPMENT
+            SRBs[Index] = pSRB;
+            if (pSRB != nullptr)
+                ResourcesValidated = false;
+#endif
+        }
+
+        void MakeAllStale()
+        {
+            StaleSRBMask = 0xFFu;
+        }
+    };
+
     /// Caches the render target and depth stencil views. Returns true if any view is different
     /// from the cached value and false otherwise.
     inline bool SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil);
@@ -298,8 +342,7 @@ protected:
         ++m_FrameNumber;
     }
 
-    // The type of the shader resource cache array for every resource signature
-    using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheImplType*, MAX_RESOURCE_SIGNATURES>;
+    void PrepareCommittedResources(CommittedShaderResources& Resources, Uint32& DvpCompatibleSRBCount);
 
 #ifdef DILIGENT_DEVELOPMENT
     // clang-format off
@@ -320,16 +363,10 @@ protected:
     void DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName) const;
     void DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
     void DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
-
-    // The type of SRB array for every resource signature
-    using DvpSRBArrayType = std::array<RefCntWeakPtr<ShaderResourceBindingImplType>, MAX_RESOURCE_SIGNATURES>;
-    // Returns the number of SRBs compatible with the current pipeline state.
-    Uint32 DvpGetCompatibleSignatureCount(DvpSRBArrayType& SRBs)const;
-    
+ 
     // Verifies compatibility between current PSO and SRBs
     void DvpVerifySRBCompatibility(
-        DvpSRBArrayType&                                          SRBs,
-        ShaderResourceCacheArrayType&                             ResourceCaches,
+        CommittedShaderResources&                                 Resources,
         std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature = nullptr) const;
 #else
     bool DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {return true;}
@@ -1566,6 +1603,66 @@ void DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSB
 }
 
 
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::PrepareCommittedResources(CommittedShaderResources& Resources, Uint32& DvpCompatibleSRBCount)
+{
+    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
+
+    Resources.ActiveSRBMask = 0;
+    for (Uint32 i = 0; i < SignCount; ++i)
+    {
+        const auto* pSignature = m_pPipelineState->GetResourceSignature(i);
+        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
+            continue;
+
+        Resources.ActiveSRBMask |= 1u << i;
+    }
+
+    DvpCompatibleSRBCount = 0;
+
+#ifdef DILIGENT_DEVELOPMENT
+    // Layout compatibility means that descriptor sets can be bound to a command buffer
+    // for use by any pipeline created with a compatible pipeline layout, and without having bound
+    // a particular pipeline first. It also means that descriptor sets can remain valid across
+    // a pipeline change, and the same resources will be accessible to the newly bound pipeline.
+    // (14.2.2. Pipeline Layouts, clause 'Pipeline Layout Compatibility')
+    // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets-compatibility
+
+    // Find the number of SRBs compatible with signatures in the current pipeline
+    for (; DvpCompatibleSRBCount < SignCount; ++DvpCompatibleSRBCount)
+    {
+        const auto pSRB = Resources.SRBs[DvpCompatibleSRBCount].Lock();
+
+        const auto* pPSOSign = m_pPipelineState->GetResourceSignature(DvpCompatibleSRBCount);
+        const auto* pSRBSign = pSRB ? pSRB->GetSignature() : nullptr;
+
+        if ((pPSOSign == nullptr || pPSOSign->GetTotalResourceCount() == 0) !=
+            (pSRBSign == nullptr || pSRBSign->GetTotalResourceCount() == 0))
+        {
+            // One signature is null or empty while the other is not - SRB is not compatible with the PSO.
+            break;
+        }
+
+        if (pPSOSign != nullptr && pSRBSign != nullptr && pPSOSign->IsIncompatibleWith(*pSRBSign))
+        {
+            // Signatures are incompatible
+            break;
+        }
+    }
+
+    // Unbind incompatible shader resources
+    // A consequence of layout compatibility is that when the implementation compiles a pipeline
+    // layout and maps pipeline resources to implementation resources, the mechanism for set N
+    // should only be a function of sets [0..N].
+    for (Uint32 sign = DvpCompatibleSRBCount; sign < SignCount; ++sign)
+    {
+        Resources.Set(sign, nullptr);
+    }
+
+    Resources.ResourcesValidated = false;
+#endif
+}
+
 #ifdef DILIGENT_DEVELOPMENT
 
 template <typename ImplementationTraits>
@@ -1847,39 +1944,8 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifyTLASState(
 }
 
 template <typename ImplementationTraits>
-Uint32 DeviceContextBase<ImplementationTraits>::DvpGetCompatibleSignatureCount(DvpSRBArrayType& SRBs) const
-{
-    DEV_CHECK_ERR(m_pPipelineState, "Pipeline state is null");
-    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
-
-    Uint32 sign = 0;
-    for (; sign < SignCount; ++sign)
-    {
-        const auto pSRB = SRBs[sign].Lock();
-
-        const auto* pPSOSign = m_pPipelineState->GetResourceSignature(sign);
-        const auto* pSRBSign = pSRB ? pSRB->GetSignature() : nullptr;
-
-        if ((pPSOSign == nullptr || pPSOSign->IsEmpty()) != (pSRBSign == nullptr || pSRBSign->IsEmpty()))
-        {
-            // One signature is null or empty while the other is not - SRB is not compatible with the PSO.
-            break;
-        }
-
-        if (pPSOSign != nullptr && pSRBSign != nullptr && pPSOSign->IsIncompatibleWith(*pSRBSign))
-        {
-            // Signatures are incompatible
-            break;
-        }
-    }
-
-    return sign;
-}
-
-template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::DvpVerifySRBCompatibility(
-    DvpSRBArrayType&                                          SRBs,
-    ShaderResourceCacheArrayType&                             ResourceCaches,
+    CommittedShaderResources&                                 Resources,
     std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature) const
 {
     DEV_CHECK_ERR(m_pPipelineState, "No PSO is bound in the context");
@@ -1894,8 +1960,8 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifySRBCompatibility(
         VERIFY_EXPR(sign < MAX_RESOURCE_SIGNATURES);
         VERIFY_EXPR(pPSOSign->GetDesc().BindingIndex == sign);
 
-        const auto  pSRB   = SRBs[sign].Lock();
-        const auto* pCache = ResourceCaches[sign];
+        const auto  pSRB   = Resources.SRBs[sign].Lock();
+        const auto* pCache = Resources.ResourceCaches[sign];
         if (pCache != nullptr)
         {
             DEV_CHECK_ERR(pSRB, "Shader resource cache pointer at index ", sign,

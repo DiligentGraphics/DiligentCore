@@ -408,37 +408,19 @@ private:
 
     CComPtr<ID3D11DeviceContext> m_pd3d11DeviceContext; ///< D3D11 device context
 
-    struct SRBState
+    struct BindInfo : CommittedShaderResources
     {
-        // Pointers to shader resource caches for every signature
-        ShaderResourceCacheArrayType ResourceCaches = {};
-
-        using Bitfield = Uint8;
-        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
-
-        Bitfield ActiveSRBMask = 0; // Indicates which SRBs are active in current PSO
-        Bitfield StaleSRBMask  = 0; // Indicates stale SRBs that have resources that need to be bound
-
         // Shader stages that are active in current PSO.
         SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
 
 #ifdef DILIGENT_DEVELOPMENT
-        bool CommittedResourcesValidated = false;
-
-        DvpSRBArrayType SRBs;
-
         // Base bindings that were used in the last BindShaderResources() call.
         std::array<D3D11ShaderResourceCounters, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
 #endif
-
         void Invalidate()
         {
             *this = {};
         }
-
-        void SetStaleSRBBit(Uint32 Index) { StaleSRBMask |= static_cast<Bitfield>(1u << Index); }
-        void ClearStaleSRBBit(Uint32 Index) { StaleSRBMask &= static_cast<Bitfield>(~(1u << Index)); }
-
     } m_BindInfo;
 
     TCommittedResources m_CommittedRes;

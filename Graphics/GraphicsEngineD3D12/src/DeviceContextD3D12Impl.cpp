@@ -234,11 +234,13 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     if (RootInfo.pd3d12RootSig != pd3d12RootSig)
     {
         // When root signature changes, all root resoruces must be committed
-        RootInfo.pd3d12RootSig              = pd3d12RootSig;
-        RootInfo.bRootTablesCommited        = false;
-        RootInfo.bRootViewsCommitted        = false;
-        RootInfo.ActiveSRBMask              = 0;
-        m_State.CommittedResourcesValidated = false;
+        RootInfo.pd3d12RootSig       = pd3d12RootSig;
+        RootInfo.bRootTablesCommited = false;
+        RootInfo.bRootViewsCommitted = false;
+        RootInfo.ActiveSRBMask       = 0;
+#ifdef DILIGENT_DEVELOPMENT
+        RootInfo.ResourcesValidated = false;
+#endif
 
         for (Uint32 i = 0, SignCount = pPipelineStateD3D12->GetResourceSignatureCount(); i < SignCount; ++i)
         {
@@ -391,20 +393,15 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
     const auto SRBIndex = pResBindingD3D12Impl->GetBindingIndex();
     auto&      RootInfo = GetRootTableInfo(pSignature->GetPipelineType());
 
-    RootInfo.ResourceCaches[SRBIndex] = &pResBindingD3D12Impl->GetResourceCache();
-
-#ifdef DILIGENT_DEVELOPMENT
-    RootInfo.SRBs[SRBIndex] = pResBindingD3D12Impl;
-#endif
+    RootInfo.Set(SRBIndex, pResBindingD3D12Impl);
 
     if (ResourceCache.GetDynamicRootBuffersMask() != 0)
         RootInfo.SetDynamicBufferBit(SRBIndex);
     else
         RootInfo.ClearDynamicBufferBit(SRBIndex);
 
-    RootInfo.bRootTablesCommited        = false;
-    RootInfo.bRootViewsCommitted        = false;
-    m_State.CommittedResourcesValidated = false;
+    RootInfo.bRootTablesCommited = false;
+    RootInfo.bRootViewsCommitted = false;
 }
 
 DeviceContextD3D12Impl::RootTableInfo& DeviceContextD3D12Impl::GetRootTableInfo(PIPELINE_TYPE PipelineType)
@@ -415,20 +412,19 @@ DeviceContextD3D12Impl::RootTableInfo& DeviceContextD3D12Impl::GetRootTableInfo(
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources()
+void DeviceContextD3D12Impl::DvpValidateCommittedShaderResources(RootTableInfo& RootInfo)
 {
-    if (m_State.CommittedResourcesValidated)
+    if (RootInfo.ResourcesValidated)
         return;
 
-    auto& RootInfo = GetRootTableInfo(m_pPipelineState->GetDesc().PipelineType);
-    DvpVerifySRBCompatibility(RootInfo.SRBs, RootInfo.ResourceCaches,
+    DvpVerifySRBCompatibility(RootInfo,
                               [this](Uint32 idx) {
                                   // Use signature from the root signature
                                   return m_pPipelineState->GetRootSignature().GetResourceSignature(idx);
                               });
 
     m_pPipelineState->DvpVerifySRBResources(RootInfo.ResourceCaches);
-    m_State.CommittedResourcesValidated = true;
+    RootInfo.ResourcesValidated = true;
 }
 #endif
 
@@ -577,7 +573,7 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
+    DvpValidateCommittedShaderResources(RootInfo);
 #endif
 }
 
@@ -730,7 +726,7 @@ void DeviceContextD3D12Impl::PrepareForDispatchCompute(ComputeContext& ComputeCt
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
+    DvpValidateCommittedShaderResources(RootInfo);
 #endif
 }
 
@@ -743,7 +739,7 @@ void DeviceContextD3D12Impl::PrepareForDispatchRays(GraphicsContext& GraphCtx)
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
+    DvpValidateCommittedShaderResources(RootInfo);
 #endif
 }
 

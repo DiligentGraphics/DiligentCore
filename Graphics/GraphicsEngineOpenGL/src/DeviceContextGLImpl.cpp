@@ -156,30 +156,8 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     // the draw command.
     m_pPipelineState->CommitProgram(m_ContextState);
 
-    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
-
-    m_BindInfo.ActiveSRBMask = 0;
-    for (Uint32 s = 0; s < SignCount; ++s)
-    {
-        const auto* pSignature = m_pPipelineState->GetResourceSignature(s);
-        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
-            continue;
-
-        m_BindInfo.ActiveSRBMask |= (1u << s);
-    }
-
-#ifdef DILIGENT_DEVELOPMENT
-    // Unbind incompatible SRBs and SRBs with higher binding indices.
-    // This is the same behavior as in Vulkan backend.
-    for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs); sign < SignCount; ++sign)
-    {
-        m_BindInfo.SRBs[sign]           = nullptr;
-        m_BindInfo.ResourceCaches[sign] = nullptr;
-        m_BindInfo.ClearStaleSRBBit(sign);
-    }
-
-    m_BindInfo.CommittedResourcesValidated = false;
-#endif
+    Uint32 DvpCompatibleSRBCount = 0;
+    PrepareCommittedResources(m_BindInfo, DvpCompatibleSRBCount);
 }
 
 void DeviceContextGLImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
@@ -194,13 +172,7 @@ void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     auto* const pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pShaderResourceBinding);
     const auto  SRBIndex            = pShaderResBindingGL->GetBindingIndex();
 
-    m_BindInfo.ResourceCaches[SRBIndex] = &pShaderResBindingGL->GetResourceCache();
-    m_BindInfo.SetStaleSRBBit(SRBIndex);
-
-#ifdef DILIGENT_DEVELOPMENT
-    m_BindInfo.SRBs[SRBIndex]              = pShaderResBindingGL;
-    m_BindInfo.CommittedResourcesValidated = false;
-#endif
+    m_BindInfo.Set(SRBIndex, pShaderResBindingGL);
 }
 
 void DeviceContextGLImpl::SetStencilRef(Uint32 StencilRef)
@@ -656,13 +628,13 @@ void DeviceContextGLImpl::EndRenderPass()
 #ifdef DILIGENT_DEVELOPMENT
 void DeviceContextGLImpl::DvpValidateCommittedShaderResources()
 {
-    if (m_BindInfo.CommittedResourcesValidated)
+    if (m_BindInfo.ResourcesValidated)
         return;
 
-    DvpVerifySRBCompatibility(m_BindInfo.SRBs, m_BindInfo.ResourceCaches);
+    DvpVerifySRBCompatibility(m_BindInfo);
 
     m_pPipelineState->DvpVerifySRBResources(m_BindInfo.ResourceCaches, m_BindInfo.BaseBindings);
-    m_BindInfo.CommittedResourcesValidated = true;
+    m_BindInfo.ResourcesValidated = true;
 }
 #endif
 

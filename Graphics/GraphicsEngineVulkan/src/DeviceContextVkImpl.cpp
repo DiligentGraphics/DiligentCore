@@ -310,55 +310,38 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     }
 
     const auto& Layout    = pPipelineStateVk->GetPipelineLayout();
-    auto&       BindInfo  = GetDescriptorSetBindInfo(PSODesc.PipelineType);
     const auto  SignCount = pPipelineStateVk->GetResourceSignatureCount();
+    auto&       BindInfo  = GetBindInfo(PSODesc.PipelineType);
+
+    Uint32 DvpCompatibleSRBCount = 0;
+    PrepareCommittedResources(BindInfo, DvpCompatibleSRBCount);
+#ifdef DILIGENT_DEVELOPMENT
+    for (auto sign = DvpCompatibleSRBCount; sign < SignCount; ++sign)
+    {
+        // Do not clear DescriptorSetBaseInd and DynamicOffsetCount!
+        BindInfo.SetInfo[sign].vkSets.fill(VK_NULL_HANDLE);
+        BindInfo.ClearDynamicBufferBit(sign);
+    }
+#endif
 
     BindInfo.vkPipelineLayout = Layout.GetVkPipelineLayout();
 
-    BindInfo.ActiveSRBMask = 0;
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         auto* pSignature = pPipelineStateVk->GetResourceSignature(i);
         if (pSignature == nullptr || pSignature->GetNumDescriptorSets() == 0)
             continue;
 
-        BindInfo.ActiveSRBMask |= 1u << i;
+        VERIFY_EXPR(BindInfo.ActiveSRBMask & (1u << i));
 
-        auto& ResInfo = BindInfo.Resources[i];
+        auto& SetInfo = BindInfo.SetInfo[i];
 
-        ResInfo.DescriptorSetBaseInd = Layout.GetFirstDescrSetIndex(pSignature->GetDesc().BindingIndex);
-        ResInfo.DynamicOffsetCount   = pSignature->GetDynamicOffsetCount();
+        SetInfo.BaseInd            = Layout.GetFirstDescrSetIndex(pSignature->GetDesc().BindingIndex);
+        SetInfo.DynamicOffsetCount = pSignature->GetDynamicOffsetCount();
     }
-
-#ifdef DILIGENT_DEVELOPMENT
-    // Layout compatibility means that descriptor sets can be bound to a command buffer
-    // for use by any pipeline created with a compatible pipeline layout, and without having bound
-    // a particular pipeline first. It also means that descriptor sets can remain valid across
-    // a pipeline change, and the same resources will be accessible to the newly bound pipeline.
-    // (14.2.2. Pipeline Layouts, clause 'Pipeline Layout Compatibility')
-    // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#descriptorsets-compatibility
-
-    // Unbind incompatible shader resources
-    // A consequence of layout compatibility is that when the implementation compiles a pipeline
-    // layout and maps pipeline resources to implementation resources, the mechanism for set N
-    // should only be a function of sets [0..N].
-    for (auto sign = DvpGetCompatibleSignatureCount(BindInfo.SRBs); sign < SignCount; ++sign)
-    {
-        BindInfo.SRBs[sign]           = nullptr;
-        BindInfo.ResourceCaches[sign] = nullptr;
-
-        // Do not clear DescriptorSetBaseInd and DynamicOffsetCount!
-        BindInfo.Resources[sign].vkSets.fill(VK_NULL_HANDLE);
-
-        BindInfo.ClearStaleSRBBit(sign);
-        BindInfo.ClearDynamicBufferBit(sign);
-    }
-#endif
-
-    m_State.CommittedResourcesValidated = false;
 }
 
-DeviceContextVkImpl::DescriptorSetBindInfo& DeviceContextVkImpl::GetDescriptorSetBindInfo(PIPELINE_TYPE Type)
+DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE_TYPE Type)
 {
     VERIFY_EXPR(Type != PIPELINE_TYPE_INVALID);
 
@@ -376,10 +359,10 @@ DeviceContextVkImpl::DescriptorSetBindInfo& DeviceContextVkImpl::GetDescriptorSe
     };
     static_assert(_countof(Indices) == Uint32{PIPELINE_TYPE_LAST} + 1, "Please add the new pipeline type to the list above");
 
-    return m_DescrSetBindInfo[Indices[Uint32{Type}]];
+    return m_BindInfo[Indices[Uint32{Type}]];
 }
 
-void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
+void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo)
 {
     // Commit all stale descriptor sets or these that have dynamic buffers, which are used by the PSO
     auto StaleSRBFlags = (Uint32{BindInfo.StaleSRBMask} | Uint32{BindInfo.DynamicBuffersMask}) & Uint32{BindInfo.ActiveSRBMask};
@@ -392,20 +375,20 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
         auto* pResourceCache = BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null");
 
-        auto& ResInfo = BindInfo.Resources[sign];
-        VERIFY(ResInfo.vkSets[0] != VK_NULL_HANDLE,
+        auto& SetInfo = BindInfo.SetInfo[sign];
+        VERIFY(SetInfo.vkSets[0] != VK_NULL_HANDLE,
                "At least one descriptor set in the stale SRB must not be NULL. Empty SRBs should not be marked as stale by CommitShaderResources()");
-        const Uint32 SetCount = 1 + (ResInfo.vkSets[1] != VK_NULL_HANDLE ? 1 : 0);
+        const Uint32 SetCount = 1 + (SetInfo.vkSets[1] != VK_NULL_HANDLE ? 1 : 0);
 
         VERIFY_EXPR(SetCount == pResourceCache->GetNumDescriptorSets());
 
-        if (ResInfo.DynamicOffsetCount > 0)
+        if (SetInfo.DynamicOffsetCount > 0)
         {
-            VERIFY(m_DynamicBufferOffsets.size() >= ResInfo.DynamicOffsetCount,
+            VERIFY(m_DynamicBufferOffsets.size() >= SetInfo.DynamicOffsetCount,
                    "m_DynamicBufferOffsets must've been resized by CommitShaderResources() to have enough space");
 
             auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(m_ContextId, this, m_DynamicBufferOffsets);
-            VERIFY_EXPR(NumOffsetsWritten == ResInfo.DynamicOffsetCount);
+            VERIFY_EXPR(NumOffsetsWritten == SetInfo.DynamicOffsetCount);
         }
 
         // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
@@ -416,11 +399,11 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
         // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
         // applied via these sets are no longer valid (13.2.5)
         VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
-        m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, ResInfo.DescriptorSetBaseInd, SetCount,
-                                           ResInfo.vkSets.data(), ResInfo.DynamicOffsetCount, m_DynamicBufferOffsets.data());
+        m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, SetInfo.BaseInd, SetCount,
+                                           SetInfo.vkSets.data(), SetInfo.DynamicOffsetCount, m_DynamicBufferOffsets.data());
 
 #ifdef DILIGENT_DEVELOPMENT
-        ResInfo.LastBoundDSBaseInd = ResInfo.DescriptorSetBaseInd;
+        SetInfo.LastBoundBaseInd = SetInfo.BaseInd;
 #endif
     }
 
@@ -429,13 +412,12 @@ void DeviceContextVkImpl::CommitDescriptorSets(DescriptorSetBindInfo& BindInfo)
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
+void DeviceContextVkImpl::DvpValidateCommittedShaderResources(ResourceBindInfo& BindInfo)
 {
-    if (m_State.CommittedResourcesValidated)
+    if (BindInfo.ResourcesValidated)
         return;
 
-    auto& BindInfo = GetDescriptorSetBindInfo(m_pPipelineState->GetDesc().PipelineType);
-    DvpVerifySRBCompatibility(BindInfo.SRBs, BindInfo.ResourceCaches);
+    DvpVerifySRBCompatibility(BindInfo);
 
     const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
     for (Uint32 i = 0; i < SignCount; ++i)
@@ -446,24 +428,24 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources()
 
         DEV_CHECK_ERR((BindInfo.StaleSRBMask & BindInfo.ActiveSRBMask) == 0, "CommitDescriptorSets() must be called before validation.");
 
-        const auto& ResInfo = BindInfo.Resources[i];
+        const auto& SetInfo = BindInfo.SetInfo[i];
         const auto  DSCount = pSign->GetNumDescriptorSets();
         for (Uint32 s = 0; s < DSCount; ++s)
         {
-            DEV_CHECK_ERR(ResInfo.vkSets[s] != VK_NULL_HANDLE,
+            DEV_CHECK_ERR(SetInfo.vkSets[s] != VK_NULL_HANDLE,
                           "descriptor set with index ", s, " is not bound for resource signature '",
                           pSign->GetDesc().Name, "', binding index ", i, ".");
         }
 
-        DEV_CHECK_ERR(ResInfo.LastBoundDSBaseInd == ResInfo.DescriptorSetBaseInd,
-                      "Shader resource binding at index ", i, " has descriptor set base offset ", ResInfo.DescriptorSetBaseInd,
-                      ", but currently bound descriptor sets have base offset ", ResInfo.LastBoundDSBaseInd,
+        DEV_CHECK_ERR(SetInfo.LastBoundBaseInd == SetInfo.BaseInd,
+                      "Shader resource binding at index ", i, " has descriptor set base offset ", SetInfo.BaseInd,
+                      ", but currently bound descriptor sets have base offset ", SetInfo.LastBoundBaseInd,
                       "; one of the resource signatures with lower binding index is not compatible.");
     }
 
     m_pPipelineState->DvpVerifySRBResources(BindInfo.ResourceCaches);
 
-    m_State.CommittedResourcesValidated = true;
+    BindInfo.ResourcesValidated = true;
 }
 #endif
 
@@ -507,14 +489,13 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
     const auto  SRBIndex   = pResBindingVkImpl->GetBindingIndex();
     const auto* pSignature = pResBindingVkImpl->GetSignature();
-    auto&       BindInfo   = GetDescriptorSetBindInfo(pResBindingVkImpl->GetPipelineType());
-    auto&       ResInfo    = BindInfo.Resources[SRBIndex];
+    auto&       BindInfo   = GetBindInfo(pResBindingVkImpl->GetPipelineType());
+    auto&       SetInfo    = BindInfo.SetInfo[SRBIndex];
 
-    BindInfo.ResourceCaches[SRBIndex] = &ResourceCache;
-    BindInfo.SetStaleSRBBit(SRBIndex);
+    BindInfo.Set(SRBIndex, pResBindingVkImpl);
     // We must not clear entire ResInfo as DescriptorSetBaseInd and DynamicOffsetCount
     // are set by SetPipelineState().
-    ResInfo.vkSets = {};
+    SetInfo.vkSets = {};
 
     if (ResourceCache.GetNumDynamicBuffers() > 0)
         BindInfo.SetDynamicBufferBit(SRBIndex);
@@ -527,7 +508,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         VERIFY_EXPR(DSIndex == pSignature->GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>());
         const auto& CahedDescrSet = const_cast<const ShaderResourceCacheVk&>(ResourceCache).GetDescriptorSet(DSIndex);
         VERIFY_EXPR(CahedDescrSet.GetVkDescriptorSet() != VK_NULL_HANDLE);
-        ResInfo.vkSets[DSIndex] = CahedDescrSet.GetVkDescriptorSet();
+        SetInfo.vkSets[DSIndex] = CahedDescrSet.GetVkDescriptorSet();
         ++DSIndex;
     }
 
@@ -553,19 +534,13 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         // Commit all dynamic resource descriptors
         pSignature->CommitDynamicResources(ResourceCache, vkDynamicDescrSet);
 
-        ResInfo.vkSets[DSIndex] = vkDynamicDescrSet;
+        SetInfo.vkSets[DSIndex] = vkDynamicDescrSet;
         ++DSIndex;
     }
 
     VERIFY_EXPR(DSIndex == ResourceCache.GetNumDescriptorSets());
 
-#ifdef DILIGENT_DEVELOPMENT
-    BindInfo.SRBs[SRBIndex] = pResBindingVkImpl;
-#endif
-
     m_DynamicBufferOffsets.resize(std::max<size_t>(m_DynamicBufferOffsets.size(), pSignature->GetDynamicOffsetCount()));
-
-    m_State.CommittedResourcesValidated = false;
 }
 
 void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -705,13 +680,13 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     }
 #endif
 
-    auto& DescrSetBindInfo = GetDescriptorSetBindInfo(PIPELINE_TYPE_GRAPHICS);
+    auto& BindInfo = GetBindInfo(PIPELINE_TYPE_GRAPHICS);
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // cals we do not need to bind the sets again.
-    if (DescrSetBindInfo.RequireUpdate(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    if (BindInfo.RequireUpdate(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
     {
-        CommitDescriptorSets(DescrSetBindInfo);
+        CommitDescriptorSets(BindInfo);
     }
 
     if (m_pPipelineState->GetGraphicsPipelineDesc().pRenderPass == nullptr)
@@ -729,7 +704,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
+    DvpValidateCommittedShaderResources(BindInfo);
 #endif
 }
 
@@ -867,14 +842,14 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         m_CommandBuffer.EndRenderPass();
 
-    auto& DescrSetBindInfo = GetDescriptorSetBindInfo(PIPELINE_TYPE_COMPUTE);
-    if (DescrSetBindInfo.RequireUpdate())
+    auto& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
+    if (BindInfo.RequireUpdate())
     {
-        CommitDescriptorSets(DescrSetBindInfo);
+        CommitDescriptorSets(BindInfo);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
+    DvpValidateCommittedShaderResources(BindInfo);
 #endif
 }
 
@@ -882,14 +857,14 @@ void DeviceContextVkImpl::PrepareForRayTracing()
 {
     EnsureVkCmdBuffer();
 
-    auto& DescrSetBindInfo = GetDescriptorSetBindInfo(PIPELINE_TYPE_RAY_TRACING);
-    if (DescrSetBindInfo.RequireUpdate())
+    auto& BindInfo = GetBindInfo(PIPELINE_TYPE_RAY_TRACING);
+    if (BindInfo.RequireUpdate())
     {
-        CommitDescriptorSets(DescrSetBindInfo);
+        CommitDescriptorSets(BindInfo);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
+    DvpValidateCommittedShaderResources(BindInfo);
 #endif
 }
 
@@ -1294,10 +1269,8 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     }
     VERIFY_EXPR(buff_idx == vkCmdBuffs.size());
 
-    for (auto& BindInfo : m_DescrSetBindInfo)
-        BindInfo = DescriptorSetBindInfo{};
-
-    m_State = ContextState{};
+    m_State    = {};
+    m_BindInfo = {};
     m_CommandBuffer.Reset();
     m_pPipelineState    = nullptr;
     m_pActiveRenderPass = nullptr;
@@ -1330,12 +1303,10 @@ void DeviceContextVkImpl::InvalidateState()
         LOG_WARNING_MESSAGE("Invalidating context that has outstanding commands in it. Call Flush() to submit commands for execution");
 
     TDeviceContextBase::InvalidateState();
-    m_State         = ContextState{};
+    m_State         = {};
+    m_BindInfo      = {};
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
-
-    for (auto& BindInfo : m_DescrSetBindInfo)
-        BindInfo = DescriptorSetBindInfo{};
 
     VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unifinished render pass");
     m_CommandBuffer.Reset();

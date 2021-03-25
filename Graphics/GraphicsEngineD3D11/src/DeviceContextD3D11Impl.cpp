@@ -134,38 +134,16 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
         UNEXPECTED(GetPipelineTypeString(Desc.PipelineType), " pipelines '", Desc.Name, "' are not supported in OpenGL");
     }
 
-    const auto SignCount    = m_pPipelineState->GetResourceSignatureCount();
+    Uint32 DvpCompatibleSRBCount = 0;
+    PrepareCommittedResources(m_BindInfo, DvpCompatibleSRBCount);
+
     const auto ActiveStages = m_pPipelineState->GetActiveShaderStages();
-
-    m_BindInfo.ActiveSRBMask = 0;
-    for (Uint32 s = 0; s < SignCount; ++s)
-    {
-        const auto* pSignature = m_pPipelineState->GetResourceSignature(s);
-        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
-            continue;
-
-        m_BindInfo.ActiveSRBMask |= (1u << s);
-    }
-
     if (m_BindInfo.ActiveStages != ActiveStages)
     {
         m_BindInfo.ActiveStages = ActiveStages;
-        // Reset SRBs if the new pipeline have different shader stages.
-        m_BindInfo.StaleSRBMask = 0xFFu;
+        // Reset all SRBs if the new pipeline have different shader stages.
+        m_BindInfo.MakeAllStale();
     }
-
-#ifdef DILIGENT_DEVELOPMENT
-    // Unbind incompatible SRBs and SRBs with higher binding indices.
-    // This is the same behavior as in Vulkan backend.
-    for (auto sign = DvpGetCompatibleSignatureCount(m_BindInfo.SRBs); sign < SignCount; ++sign)
-    {
-        m_BindInfo.SRBs[sign]           = nullptr;
-        m_BindInfo.ResourceCaches[sign] = nullptr;
-        m_BindInfo.ClearStaleSRBBit(sign);
-    }
-
-    m_BindInfo.CommittedResourcesValidated = false;
-#endif
 }
 
 // clang-format off
@@ -225,13 +203,7 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
     const auto  SRBIndex               = pShaderResBindingD3D11->GetBindingIndex();
     auto&       ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
 
-    m_BindInfo.ResourceCaches[SRBIndex] = &ResourceCache;
-    m_BindInfo.SetStaleSRBBit(SRBIndex);
-
-#ifdef DILIGENT_DEVELOPMENT
-    m_BindInfo.SRBs[SRBIndex]              = pShaderResBindingD3D11;
-    m_BindInfo.CommittedResourcesValidated = false;
-#endif
+    m_BindInfo.Set(SRBIndex, pShaderResBindingD3D11);
 
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
@@ -415,13 +387,13 @@ void DeviceContextD3D11Impl::BindShaderResources()
 #ifdef DILIGENT_DEVELOPMENT
 void DeviceContextD3D11Impl::DvpValidateCommittedShaderResources()
 {
-    if (m_BindInfo.CommittedResourcesValidated)
+    if (m_BindInfo.ResourcesValidated)
         return;
 
-    DvpVerifySRBCompatibility(m_BindInfo.SRBs, m_BindInfo.ResourceCaches);
+    DvpVerifySRBCompatibility(m_BindInfo);
 
     m_pPipelineState->DvpVerifySRBResources(m_BindInfo.ResourceCaches, m_BindInfo.BaseBindings);
-    m_BindInfo.CommittedResourcesValidated = true;
+    m_BindInfo.ResourcesValidated = true;
 }
 #endif
 
@@ -1619,7 +1591,7 @@ void ReleaseCommittedPSUAVs(ID3D11UnorderedAccessView* CommittedD3D11UAVs[],
 void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
 {
     // Make sure all resources are committed next time
-    m_BindInfo.StaleSRBMask = 0xFFu;
+    m_BindInfo.MakeAllStale();
 
     for (int ShaderType = 0; ShaderType < NumShaderTypes; ++ShaderType)
     {

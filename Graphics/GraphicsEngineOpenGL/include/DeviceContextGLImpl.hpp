@@ -300,32 +300,17 @@ private:
     void BeginSubpass();
     void EndSubpass();
 
-    struct SRBState
+    struct BindInfo : CommittedShaderResources
     {
-        ShaderResourceCacheArrayType ResourceCaches = {};
-
-        using Bitfield = Uint8;
-        static_assert(sizeof(Bitfield) * 8 >= MAX_RESOURCE_SIGNATURES, "not enought space to store MAX_RESOURCE_SIGNATURES bits");
-
-        Bitfield ActiveSRBMask = 0; // Indicates which SRBs are active in current PSO
-        Bitfield StaleSRBMask  = 0; // Indicates stale SRBs that have descriptor sets that need to be bound
-
 #ifdef DILIGENT_DEVELOPMENT
-        bool CommittedResourcesValidated = false;
-
         // Binding offsets that were used in the last BindProgramResources() call.
         std::array<TBindings, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
-
-        DvpSRBArrayType SRBs;
 #endif
 
         void Invalidate()
         {
             *this = {};
         }
-
-        void SetStaleSRBBit(Uint32 Index) { StaleSRBMask |= static_cast<Bitfield>(1u << Index); }
-        void ClearStaleSRBBit(Uint32 Index) { StaleSRBMask &= static_cast<Bitfield>(~(1u << Index)); }
     } m_BindInfo;
 
     MEMORY_BARRIER m_CommitedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
