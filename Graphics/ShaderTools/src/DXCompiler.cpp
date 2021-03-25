@@ -1186,22 +1186,46 @@ void DXCompilerImpl::PatchResourceDeclarationRT(const TResourceBindingMap& Resou
 
 void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL)
 {
-    static const String i32              = "i32 ";
-    static const String NumberSymbols    = "+-0123456789";
-    static const String ResourceRecStart = "= !{";
-
     // This resource patching method is valid for optimized shaders without metadata.
-    static const String ResNameDecl        = ", !\"";
-    static const String SamplerPart        = "%struct.SamplerState";
-    static const String TexturePart        = "%\"class.Texture";
-    static const String RWTexturePart      = "%\"class.RWTexture";
-    static const String AccelStructPart    = "%struct.RaytracingAccelerationStructure";
-    static const String StructBufferPart   = "%\"class.StructuredBuffer";
-    static const String RWStructBufferPart = "%\"class.RWStructuredBuffer";
-    static const String ByteAddrBufPart    = "%struct.ByteAddressBuffer";
-    static const String RWByteAddrBufPart  = "%struct.RWByteAddressBuffer";
-    static const String TexBufferPart      = "%\"class.Buffer<";
-    static const String RWFmtBufferPart    = "%\"class.RWBuffer<";
+
+    static const String i32                   = "i32 ";
+    static const String NumberSymbols         = "+-0123456789";
+    static const String ResourceRecStart      = "= !{";
+    static const String ResNameDecl           = ", !\"";
+    static const String SamplerPart           = "SamplerState";
+    static const String TexturePart           = "Texture";
+    static const String RWTexturePart         = "RWTexture";
+    static const String AccelStructPart       = "RaytracingAccelerationStructure";
+    static const String StructBufferPart      = "StructuredBuffer<";
+    static const String RWStructBufferPart    = "RWStructuredBuffer<";
+    static const String ByteAddrBufPart       = "ByteAddressBuffer";
+    static const String RWByteAddrBufPart     = "RWByteAddressBuffer";
+    static const String TexBufferPart         = "Buffer<";
+    static const String RWFmtBufferPart       = "RWBuffer<";
+    static const String DxAlignmentLegacyPart = "dx.alignment.legacy.";
+    static const String StructPart            = "struct.";
+    static const String ClassPart             = "class.";
+
+    enum
+    {
+        ALIGNMENT_LEGACY_PART = 1 << 0,
+        STRUCT_PART           = 1 << 1,
+        CLASS_PART            = 1 << 2,
+        STRING_PART           = 1 << 3,
+    };
+
+    const auto IsTextureSuffix = [](const char* Str) //
+    {
+        return std::strncmp(Str, "1D<", 3) == 0 ||
+            std::strncmp(Str, "1DArray<", 8) == 0 ||
+            std::strncmp(Str, "2D<", 3) == 0 ||
+            std::strncmp(Str, "2DArray<", 8) == 0 ||
+            std::strncmp(Str, "3D<", 3) == 0 ||
+            std::strncmp(Str, "2DMS<", 5) == 0 ||
+            std::strncmp(Str, "2DMSArray<", 10) == 0 ||
+            std::strncmp(Str, "Cube<", 5) == 0 ||
+            std::strncmp(Str, "CubeArray<", 10) == 0;
+    };
 
     const auto ReadRecord = [&DXIL](size_t& pos, Uint32& CurValue) //
     {
@@ -1338,11 +1362,39 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
         }
 
         // !{i32 0, %"class.Texture2D<...  or  !{i32 0, [4 x %"class.Texture2D<...
-        //          ^                                        ^
+        //           ^                                        ^
+        ++pos;
+
+        Uint32 NameParts = 0;
+        if (DXIL[pos] == '"')
+        {
+            ++pos;
+            NameParts |= STRING_PART;
+        }
+
+        if (std::strncmp(&DXIL[pos], DxAlignmentLegacyPart.c_str(), DxAlignmentLegacyPart.length()) == 0)
+        {
+            pos += DxAlignmentLegacyPart.length();
+            NameParts |= ALIGNMENT_LEGACY_PART;
+        }
+        if (std::strncmp(&DXIL[pos], StructPart.c_str(), StructPart.length()) == 0)
+        {
+            pos += StructPart.length();
+            NameParts |= STRUCT_PART;
+        }
+        if (std::strncmp(&DXIL[pos], ClassPart.c_str(), ClassPart.length()) == 0)
+        {
+            pos += ClassPart.length();
+            NameParts |= CLASS_PART;
+        }
+
+        // !{i32 0, %"class.Texture2D<...
+        //                  ^
+
         RES_TYPE ResType = RES_TYPE_INVALID;
         if (std::strncmp(&DXIL[pos], SamplerPart.c_str(), SamplerPart.length()) == 0)
             ResType = RES_TYPE_SAMPLER;
-        else if (std::strncmp(&DXIL[pos], TexturePart.c_str(), TexturePart.length()) == 0)
+        else if (std::strncmp(&DXIL[pos], TexturePart.c_str(), TexturePart.length()) == 0 && IsTextureSuffix(&DXIL[pos + TexturePart.length()]))
             ResType = RES_TYPE_SRV;
         else if (std::strncmp(&DXIL[pos], StructBufferPart.c_str(), StructBufferPart.length()) == 0)
             ResType = RES_TYPE_SRV;
@@ -1352,7 +1404,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
             ResType = RES_TYPE_SRV;
         else if (std::strncmp(&DXIL[pos], AccelStructPart.c_str(), AccelStructPart.length()) == 0)
             ResType = RES_TYPE_SRV;
-        else if (std::strncmp(&DXIL[pos], RWTexturePart.c_str(), RWTexturePart.length()) == 0)
+        else if (std::strncmp(&DXIL[pos], RWTexturePart.c_str(), RWTexturePart.length()) == 0 && IsTextureSuffix(&DXIL[pos + RWTexturePart.length()]))
             ResType = RES_TYPE_UAV;
         else if (std::strncmp(&DXIL[pos], RWStructBufferPart.c_str(), RWStructBufferPart.length()) == 0)
             ResType = RES_TYPE_UAV;
@@ -1360,25 +1412,24 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
             ResType = RES_TYPE_UAV;
         else if (std::strncmp(&DXIL[pos], RWFmtBufferPart.c_str(), RWFmtBufferPart.length()) == 0)
             ResType = RES_TYPE_UAV;
-        else
+        else if ((NameParts & ~ALIGNMENT_LEGACY_PART) == 0)
         {
+            // !{i32 0, %Constants* undef,  or  !{i32 0, %dx.alignment.legacy.Constants* undef,
+            //           ^                                                    ^
+
             // Try to find constant buffer.
             for (auto& ResInfo : ExtResMap)
             {
-                const char*    Name = ResInfo.first->first.GetStr();
                 const RES_TYPE Type = ResInfo.second.Type;
 
                 if (Type != RES_TYPE_CBV)
                     continue;
 
-                const String CBName       = String{"%"} + Name;
-                const String LegacyCBName = String{"%dx.alignment.legacy."} + Name;
-                const bool   IsSameName   = std::strncmp(&DXIL[pos], CBName.c_str(), CBName.length()) == 0;
-                const bool   IsLegacyName = std::strncmp(&DXIL[pos], LegacyCBName.c_str(), LegacyCBName.length()) == 0;
-
-                if (IsSameName || IsLegacyName)
+                const char*  Name    = ResInfo.first->first.GetStr();
+                const size_t NameLen = strlen(Name);
+                if (std::strncmp(&DXIL[pos], Name, NameLen) == 0)
                 {
-                    const char c = DXIL[pos + (IsLegacyName ? LegacyCBName.length() : CBName.length())];
+                    const char c = DXIL[pos + NameLen];
 
                     if (IsWordSymbol(c))
                         continue; // name is partially equal, continue searching

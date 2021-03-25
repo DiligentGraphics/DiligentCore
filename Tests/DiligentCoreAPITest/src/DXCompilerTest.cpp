@@ -417,7 +417,15 @@ RWTexture2D<float4> g_ColorBuffer3;
 StructuredBuffer<float4> g_Buffer1[5];
 RWByteAddressBuffer      g_Buffer2[] : register(u0, space1);
 
-cbuffer Constants
+struct Matrix
+{
+    // compiler will use legacy alignment
+    column_major float4x4 m;
+};
+StructuredBuffer<Matrix> g_MatrixBuffer;
+
+// try to break resource type detection
+cbuffer Texture2DConstants
 {
     uint2 Range1;
     uint2 Range2;
@@ -441,7 +449,8 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
     return g_Tex[0].Sample(g_TexSampler, UV) *
            g_Tex[2].Sample(g_TexSampler, UV) +
            g_Tex3D.Sample(g_TexSampler, UV.xxy) +
-           g_Buffer1[1][9] * g_Buffer1[4][100];
+           g_Buffer1[1][9] * g_Buffer1[4][100] +
+           g_MatrixBuffer[3].m[0];
 }
 )hlsl";
 
@@ -464,16 +473,17 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
 
     IDXCompiler::TResourceBindingMap BindigMap;
     // clang-format off
-    BindigMap["g_Tex"]          = {101, 0,  4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_Tex3D"]        = { 22, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"]   = {  0, 0,  1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["g_Buffer1"]      = {  9, 0,  5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
-    BindigMap["g_Buffer2"]      = {  0, 1, 10, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
-    BindigMap["g_ColorBuffer1"] = {180, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_ColorBuffer2"] = {333, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_ColorBuffer3"] = {  1, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["Constants"]      = {  8, 0,  1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["g_AnotherRes"]   = {567, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_Tex"]              = {101, 0,  4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_Tex3D"]            = { 22, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_TexSampler"]       = {  0, 0,  1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["g_Buffer1"]          = {  9, 0,  5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+    BindigMap["g_Buffer2"]          = {  0, 1, 10, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
+    BindigMap["g_ColorBuffer1"]     = {180, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_ColorBuffer2"]     = {333, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_ColorBuffer3"]     = {  1, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["Texture2DConstants"] = {  8, 0,  1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["g_MatrixBuffer"]     = { 14, 0,  1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+    BindigMap["g_AnotherRes"]       = {567, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
     // clang-format on
     CComPtr<IDxcBlob> pRemappedDXIL;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
@@ -517,23 +527,28 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         EXPECT_EQ(BindDesc.BindPoint, 1U);
         EXPECT_EQ(BindDesc.Space, 0U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Constants", &BindDesc));
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Texture2DConstants", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 8U);
+        EXPECT_EQ(BindDesc.Space, 0U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_MatrixBuffer", &BindDesc));
+        EXPECT_EQ(BindDesc.BindPoint, 14U);
         EXPECT_EQ(BindDesc.Space, 0U);
     }
 
     BindigMap.clear();
     // clang-format off
-    BindigMap["g_Tex"]          = { 77,   1,   4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_Tex3D"]        = { 90,   1,   1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"]   = {  0,   1,   1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["g_Buffer1"]      = { 15,   6,   5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
-    BindigMap["g_Buffer2"]      = {  2,   7, 100, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
-    BindigMap["g_ColorBuffer1"] = { 33,   6,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_ColorBuffer2"] = { 10, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_ColorBuffer3"] = { 11, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["Constants"]      = {  9,   3,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["g_AnotherRes"]   = {567,   0,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["g_Tex"]              = { 77,   1,   4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_Tex3D"]            = { 90,   1,   1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+    BindigMap["g_TexSampler"]       = {  0,   1,   1, SHADER_RESOURCE_TYPE_SAMPLER        };
+    BindigMap["g_Buffer1"]          = { 15,   6,   5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+    BindigMap["g_Buffer2"]          = {  2,   7, 100, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
+    BindigMap["g_ColorBuffer1"]     = { 33,   6,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_ColorBuffer2"]     = { 10, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["g_ColorBuffer3"]     = { 11, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+    BindigMap["Texture2DConstants"] = {  9,   3,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+    BindigMap["g_MatrixBuffer"]     = { 10,   5,   1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+    BindigMap["g_AnotherRes"]       = {567,   0,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
     // clang-format on
     pRemappedDXIL = nullptr;
     pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
@@ -577,9 +592,13 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         EXPECT_EQ(BindDesc.BindPoint, 11U);
         EXPECT_EQ(BindDesc.Space, 100U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Constants", &BindDesc));
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Texture2DConstants", &BindDesc));
         EXPECT_EQ(BindDesc.BindPoint, 9U);
         EXPECT_EQ(BindDesc.Space, 3U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_MatrixBuffer", &BindDesc));
+        EXPECT_EQ(BindDesc.BindPoint, 10U);
+        EXPECT_EQ(BindDesc.Space, 5U);
     }
 }
 } // namespace
