@@ -755,7 +755,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
         }
         else if (m_APIVersion >= VK_API_VERSION_1_1)
         {
-            // Wave operations requires SM 6.0 and Vulkan 1.1
+            // Wave operations require SM 6.0 and Vulkan 1.1
             DxilArgs.push_back(L"-fspv-target-env=vulkan1.1");
         }
     }

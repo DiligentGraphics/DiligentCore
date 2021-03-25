@@ -138,7 +138,7 @@ protected:
         auto* const pDevice = pEnv->GetDevice();
 
         sm_HasMeshShader = pDevice->GetDeviceCaps().Features.MeshShaders && pEnv->HasDXCompiler();
-        sm_HasRayTracing = pDevice->GetDeviceCaps().Features.RayTracing && pEnv->HasDXCompiler();
+        sm_HasRayTracing = pEnv->SupportsRayTracing();
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.Source                     = g_TrivialVSSource;
@@ -162,8 +162,6 @@ protected:
         ShaderCI.Desc.Name       = "TexturePS (PSOCreationFailureTest)";
         pDevice->CreateShader(ShaderCI, &sm_pTexturePS);
         ASSERT_TRUE(sm_pTexturePS);
-
-
 
         ShaderCI.Source          = g_TrivialCSSource;
         ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;

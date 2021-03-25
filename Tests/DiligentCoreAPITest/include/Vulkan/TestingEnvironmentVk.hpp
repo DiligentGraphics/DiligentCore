@@ -78,10 +78,12 @@ public:
         return m_vkPhysicalDevice;
     }
 
-    bool HasDXCompiler() const override final
+    virtual bool HasDXCompiler() const override final
     {
         return m_pDxCompiler != nullptr && m_pDxCompiler->IsLoaded();
     }
+
+    virtual bool SupportsRayTracing() const override final;
 
     VkShaderModule CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource);
 

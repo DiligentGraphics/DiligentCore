@@ -570,14 +570,14 @@ class RT1 : public testing::TestWithParam<int>
 
 TEST_P(RT1, TriangleClosestHitShader)
 {
-    Uint32 TestId  = GetParam();
-    auto*  pEnv    = TestingEnvironment::GetInstance();
-    auto*  pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.RayTracing)
+    Uint32 TestId = GetParam();
+    auto*  pEnv   = TestingEnvironment::GetInstance();
+    if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
 
+    auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
@@ -754,14 +754,14 @@ class RT2 : public testing::TestWithParam<int>
 
 TEST_P(RT2, TriangleAnyHitShader)
 {
-    Uint32 TestId  = GetParam();
-    auto*  pEnv    = TestingEnvironment::GetInstance();
-    auto*  pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.RayTracing)
+    Uint32 TestId = GetParam();
+    auto*  pEnv   = TestingEnvironment::GetInstance();
+    if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
 
+    auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
@@ -948,14 +948,14 @@ class RT3 : public testing::TestWithParam<int>
 
 TEST_P(RT3, ProceduralIntersection)
 {
-    Uint32 TestId  = GetParam();
-    auto*  pEnv    = TestingEnvironment::GetInstance();
-    auto*  pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.RayTracing)
+    Uint32 TestId = GetParam();
+    auto*  pEnv   = TestingEnvironment::GetInstance();
+    if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
 
+    auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
@@ -1140,14 +1140,14 @@ class RT4 : public testing::TestWithParam<int>
 
 TEST_P(RT4, MultiGeometry)
 {
-    Uint32 TestId  = GetParam();
-    auto*  pEnv    = TestingEnvironment::GetInstance();
-    auto*  pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.RayTracing)
+    Uint32 TestId = GetParam();
+    auto*  pEnv   = TestingEnvironment::GetInstance();
+    if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
 
+    auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
@@ -1406,7 +1406,7 @@ TEST(RayTracingTest, ResourceBinding)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.RayTracing)
+    if (!pEnv->SupportsRayTracing())
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
@@ -1508,7 +1508,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }
@@ -1667,7 +1667,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
     // TODO: bag in NVidia DX12 driver - can not use TLAS from descriptor table in pixel shader.
-    if (!pDevice->GetDeviceCaps().Features.RayTracing2 || !pDevice->GetDeviceCaps().IsVulkanDevice())
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2 || !pDevice->GetDeviceCaps().IsVulkanDevice())
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }
@@ -1821,7 +1821,7 @@ TEST_P(RT7, TraceRaysIndirect)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2)
     {
         GTEST_SKIP() << "Indirect ray tracing is not supported by this device";
     }
@@ -2032,8 +2032,7 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-
-    if (!pDevice->GetDeviceCaps().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }

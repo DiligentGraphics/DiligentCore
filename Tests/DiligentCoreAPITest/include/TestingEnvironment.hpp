@@ -70,6 +70,7 @@ public:
     virtual void Reset();
 
     virtual bool HasDXCompiler() const { return false; }
+    virtual bool SupportsRayTracing() const { return false; }
 
     void ReleaseResources();
 

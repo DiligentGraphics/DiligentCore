@@ -80,6 +80,11 @@ public:
         return m_pDxCompiler != nullptr && m_pDxCompiler->IsLoaded();
     }
 
+    virtual bool SupportsRayTracing() const override final
+    {
+        return m_pDevice->GetDeviceCaps().Features.RayTracing && HasDXCompiler();
+    }
+
     HRESULT CompileDXILShader(const std::string& Source,
                               LPCWSTR            strFunctionName,
                               const DxcDefine*   Defines,

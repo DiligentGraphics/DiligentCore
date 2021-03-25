@@ -71,10 +71,9 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     auto  QueueFamilyIndex = pQeueVk->GetQueueFamilyIndex();
     pContextVk->UnlockCommandQueue();
 
-    auto vkPhysicalDevice = pRenderDeviceVk->GetVkPhysicalDevice();
-    vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, &m_MemoryProperties);
+    vkGetPhysicalDeviceMemoryProperties(m_vkPhysicalDevice, &m_MemoryProperties);
 
-    vkGetPhysicalDeviceProperties(vkPhysicalDevice, &DeviceProps);
+    vkGetPhysicalDeviceProperties(m_vkPhysicalDevice, &DeviceProps);
 
     {
         // Enumerate available extensions
@@ -109,7 +108,7 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
                 DescriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
             }
 
-            vkGetPhysicalDeviceFeatures2KHR(vkPhysicalDevice, &Feats2);
+            vkGetPhysicalDeviceFeatures2KHR(m_vkPhysicalDevice, &Feats2);
         }
     }
 
@@ -727,6 +726,15 @@ void TestingEnvironmentVk::TransitionImageLayout(VkCommandBuffer                
                          &ImgBarrier);
 
     CurrentLayout = NewLayout;
+}
+
+bool TestingEnvironmentVk::SupportsRayTracing() const
+{
+    // DXC requires Vulkan 1.2 othervise tests will fail.
+    RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice.RawPtr<IRenderDevice>(), IID_RenderDeviceVk};
+    return pRenderDeviceVk->GetDeviceCaps().Features.RayTracing &&
+        pRenderDeviceVk->GetVkVersion() >= VK_API_VERSION_1_2 &&
+        HasDXCompiler();
 }
 
 TestingEnvironment* CreateTestingEnvironmentVk(const TestingEnvironment::CreateInfo& CI,

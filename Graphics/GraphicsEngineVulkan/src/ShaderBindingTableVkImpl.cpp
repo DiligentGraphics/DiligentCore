@@ -56,16 +56,16 @@ void ShaderBindingTableVkImpl::GetData(BufferVkImpl*& pSBTBufferVk,
     TShaderBindingTableBase::GetData(pSBTBufferVk, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
 
     // clang-format off
-        m_VkBindingTable.RaygenShader   = {pSBTBufferVk->GetVkDeviceAddress() + RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
-        m_VkBindingTable.MissShader     = {pSBTBufferVk->GetVkDeviceAddress() + MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
-        m_VkBindingTable.HitShader      = {pSBTBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
-        m_VkBindingTable.CallableShader = {pSBTBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
+    m_VkBindingTable.RaygenShader   = {pSBTBufferVk->GetVkDeviceAddress() + RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
+    m_VkBindingTable.MissShader     = {pSBTBufferVk->GetVkDeviceAddress() + MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
+    m_VkBindingTable.HitShader      = {pSBTBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
+    m_VkBindingTable.CallableShader = {pSBTBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
 
-        const auto ShaderGroupBaseAlignment = m_pDevice->GetProperties().ShaderGroupBaseAlignment;
-        VERIFY_EXPR(m_VkBindingTable.RaygenShader.deviceAddress   % ShaderGroupBaseAlignment == 0);
-        VERIFY_EXPR(m_VkBindingTable.MissShader.deviceAddress     % ShaderGroupBaseAlignment == 0);
-        VERIFY_EXPR(m_VkBindingTable.HitShader.deviceAddress      % ShaderGroupBaseAlignment == 0);
-        VERIFY_EXPR(m_VkBindingTable.CallableShader.deviceAddress % ShaderGroupBaseAlignment == 0);
+    const auto ShaderGroupBaseAlignment = m_pDevice->GetProperties().ShaderGroupBaseAlignment;
+    VERIFY_EXPR(m_VkBindingTable.RaygenShader.deviceAddress   % ShaderGroupBaseAlignment == 0);
+    VERIFY_EXPR(m_VkBindingTable.MissShader.deviceAddress     % ShaderGroupBaseAlignment == 0);
+    VERIFY_EXPR(m_VkBindingTable.HitShader.deviceAddress      % ShaderGroupBaseAlignment == 0);
+    VERIFY_EXPR(m_VkBindingTable.CallableShader.deviceAddress % ShaderGroupBaseAlignment == 0);
     // clang-format on
 }
 
