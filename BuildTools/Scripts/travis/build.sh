@@ -11,7 +11,7 @@ fi
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
   if [ "$IOS" = "true" ]; then 
     cmake .. -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DVULKAN_SDK="$VULKAN_SDK" $1 -G "Xcode" || return
-    XCODE_BUILD_SETTINGS="CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO"
+    XCODE_BUILD_SETTINGS="CODE_SIGNING_ALLOWED=NO"
   else
     cmake .. $1 -G "Xcode" || return
     XCODE_BUILD_SETTINGS=""
