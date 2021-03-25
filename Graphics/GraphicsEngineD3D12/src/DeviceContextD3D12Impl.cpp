@@ -313,6 +313,7 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, b
         StaleSRBFlags |= Uint32{RootInfo.DynamicBuffersMask};
     }
     StaleSRBFlags &= Uint32{RootInfo.ActiveSRBMask};
+    VERIFY(StaleSRBFlags != 0, "This method should not be called when there is nothing to commit");
 
     while (StaleSRBFlags != 0)
     {

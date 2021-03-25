@@ -322,7 +322,7 @@ public:
     }
 
     // Called by mapIO.addStage to set shader stage mask to mark a stage be added to this pipeline
-    virtual void addStage(EShLanguage stage) override final
+    virtual void addStage(EShLanguage stage, ::glslang::TIntermediate& stageIntermediate) override final
     {
     }
 };

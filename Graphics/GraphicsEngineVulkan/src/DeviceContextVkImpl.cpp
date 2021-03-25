@@ -372,6 +372,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, bool 
         StaleSRBFlags |= Uint32{BindInfo.DynamicBuffersMask};
     }
     StaleSRBFlags &= Uint32{BindInfo.ActiveSRBMask};
+    VERIFY(StaleSRBFlags != 0, "This method should not be called when there is nothing to commit");
 
     while (StaleSRBFlags != 0)
     {
