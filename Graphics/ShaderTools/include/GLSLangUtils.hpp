@@ -42,7 +42,7 @@ enum class SpirvVersion
     Vk100,         // SPIRV 1.0
     Vk110,         // SPIRV 1.3
     Vk110_Spirv14, // SPIRV 1.4 (extension)
-    Vk120,         // SPIRV 1.4
+    Vk120,         // SPIRV 1.5
 };
 
 void InitializeGlslang();

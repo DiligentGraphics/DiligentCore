@@ -602,7 +602,7 @@ std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderTyp
         case SpirvVersion::Vk120:
             Shader.setEnvInput(::glslang::EShSourceGlsl, ShLang, ::glslang::EShClientVulkan, 120);
             Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_2);
-            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_4);
+            Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_5);
             spvTarget = SPV_ENV_VULKAN_1_2;
             break;
         default:

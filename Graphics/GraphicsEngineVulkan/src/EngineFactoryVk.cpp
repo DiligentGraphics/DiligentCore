@@ -256,6 +256,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
         const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
         VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures        EnabledExtFeats   = {};
+        const auto                                                      VkVersion         = Instance->GetVkVersion();
 
 #define ENABLE_FEATURE(IsFeatureSupported, Feature, FeatureName)                         \
     do                                                                                   \
@@ -292,18 +293,24 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         const auto& RayTracingFeats  = DeviceExtFeatures.RayTracingPipeline;
         const auto& RayQueryFeats    = DeviceExtFeatures.RayQuery;
         // clang-format off
-        ENABLE_FEATURE(AccelStructFeats.accelerationStructure != VK_FALSE &&
+        ENABLE_FEATURE(VkVersion                              >= VK_API_VERSION_1_1 &&
+                       AccelStructFeats.accelerationStructure != VK_FALSE           &&
                        RayTracingFeats.rayTracingPipeline     != VK_FALSE, RayTracing, "Ray tracing is");
-        ENABLE_FEATURE(AccelStructFeats.accelerationStructure              != VK_FALSE &&
-                       RayTracingFeats.rayTracingPipeline                  != VK_FALSE &&
-                       RayTracingFeats.rayTracingPipelineTraceRaysIndirect != VK_FALSE &&
-                       RayTracingFeats.rayTraversalPrimitiveCulling        != VK_FALSE &&
+        ENABLE_FEATURE(VkVersion                                           >= VK_API_VERSION_1_1 &&
+                       AccelStructFeats.accelerationStructure              != VK_FALSE           &&
+                       RayTracingFeats.rayTracingPipeline                  != VK_FALSE           &&
+                       RayTracingFeats.rayTracingPipelineTraceRaysIndirect != VK_FALSE           &&
+                       RayTracingFeats.rayTraversalPrimitiveCulling        != VK_FALSE           &&
                        RayQueryFeats.rayQuery                              != VK_FALSE, RayTracing2, "Inline ray tracing is");
         // clang-format on
 
-        const auto& SubgroupProps         = PhysicalDevice->GetExtProperties().Subgroup;
-        const auto  RequiredSubgroupFeats = VK_SUBGROUP_FEATURE_BASIC_BIT | VK_SUBGROUP_FEATURE_VOTE_BIT;
-        ENABLE_FEATURE(Instance->GetVkVersion() >= VK_API_VERSION_1_1 && (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats, WaveOp, "Wave operations are");
+        const auto& SubgroupProps          = PhysicalDevice->GetExtProperties().Subgroup;
+        const auto  RequiredSubgroupFeats  = VK_SUBGROUP_FEATURE_BASIC_BIT;
+        const auto  RequiredSubgroupStages = VK_SHADER_STAGE_COMPUTE_BIT;
+        ENABLE_FEATURE((VkVersion >= VK_API_VERSION_1_1 &&
+                        (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
+                        (SubgroupProps.supportedStages & RequiredSubgroupStages) == RequiredSubgroupStages),
+                       WaveOp, "Wave operations are");
 #undef FeatureSupport
 
 

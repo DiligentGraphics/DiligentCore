@@ -69,20 +69,22 @@ bool StripReflection(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
 #if DILIGENT_NO_HLSL
     return true;
 #else
-    std::vector<uint32_t> StrippedSPIRV;
-    spv_target_env        Target   = SPV_ENV_VULKAN_1_0;
-    const auto&           ExtFeats = LogicalDevice.GetEnabledExtFeatures();
+    spv_target_env Target = SPV_ENV_VULKAN_1_0;
 
-    if (ExtFeats.Spirv15)
-        Target = SPV_ENV_VULKAN_1_2;
-    else if (ExtFeats.Spirv14)
-        Target = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
+#    define SPV_SPIRV_VERSION_WORD(MAJOR, MINOR) ((uint32_t(uint8_t(MAJOR)) << 16) | (uint32_t(uint8_t(MINOR)) << 8))
+    switch (SPIRV[1])
+    {
+        case SPV_SPIRV_VERSION_WORD(1, 3): Target = SPV_ENV_VULKAN_1_1; break;
+        case SPV_SPIRV_VERSION_WORD(1, 4): Target = SPV_ENV_VULKAN_1_1_SPIRV_1_4; break;
+        case SPV_SPIRV_VERSION_WORD(1, 5): Target = SPV_ENV_VULKAN_1_2; break;
+    }
 
-    spvtools::Optimizer SpirvOptimizer(Target);
+    spvtools::Optimizer SpirvOptimizer{Target};
     SpirvOptimizer.SetMessageConsumer(GLSLangUtils::SpvOptimizerMessageConsumer);
     // Decorations defined in SPV_GOOGLE_hlsl_functionality1 are the only instructions
     // removed by strip-reflect-info pass. SPIRV offsets become INVALID after this operation.
     SpirvOptimizer.RegisterPass(spvtools::CreateStripReflectInfoPass());
+    std::vector<uint32_t> StrippedSPIRV;
     if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &StrippedSPIRV))
     {
         SPIRV = std::move(StrippedSPIRV);
