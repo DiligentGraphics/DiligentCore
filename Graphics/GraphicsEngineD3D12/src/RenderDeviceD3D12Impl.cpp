@@ -316,7 +316,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(DeviceFeatures) == 35, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-        static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
+        static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
 #endif
 
         auto& TexCaps = m_DeviceCaps.TexCaps;

@@ -392,8 +392,8 @@ inline GLenum GetGLShaderType(SHADER_TYPE ShaderType)
         case SHADER_TYPE_HULL:      return GL_TESS_CONTROL_SHADER;    break;
         case SHADER_TYPE_DOMAIN:    return GL_TESS_EVALUATION_SHADER; break;
         case SHADER_TYPE_COMPUTE:   return GL_COMPUTE_SHADER;         break;
+        // clang-format on
         default: return 0;
-            // clang-format on
     }
 }
 
@@ -408,8 +408,8 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
         case SHADER_TYPE_HULL:      return GL_TESS_CONTROL_SHADER_BIT;    break;
         case SHADER_TYPE_DOMAIN:    return GL_TESS_EVALUATION_SHADER_BIT; break;
         case SHADER_TYPE_COMPUTE:   return GL_COMPUTE_SHADER_BIT;         break;
+        // clang-format on
         default: return 0;
-            // clang-format on
     }
 }
 

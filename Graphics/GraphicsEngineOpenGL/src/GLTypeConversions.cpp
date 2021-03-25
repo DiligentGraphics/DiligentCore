@@ -720,11 +720,9 @@ SHADER_TYPE GLShaderBitsToShaderTypes(GLenum ShaderBits)
             case GL_VERTEX_SHADER_BIT:          Result |= SHADER_TYPE_VERTEX;   break;
             case GL_FRAGMENT_SHADER_BIT:        Result |= SHADER_TYPE_PIXEL;    break;
             case GL_GEOMETRY_SHADER_BIT:        Result |= SHADER_TYPE_GEOMETRY; break;
-            #ifndef PLATFORM_IOS
             case GL_TESS_CONTROL_SHADER_BIT:    Result |= SHADER_TYPE_HULL;     break;
             case GL_TESS_EVALUATION_SHADER_BIT: Result |= SHADER_TYPE_DOMAIN;   break;
             case GL_COMPUTE_SHADER_BIT:         Result |= SHADER_TYPE_COMPUTE;  break;
-            #endif
                 // clang-format on
         }
     }
