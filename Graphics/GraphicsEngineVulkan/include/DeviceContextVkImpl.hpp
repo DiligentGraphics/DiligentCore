@@ -525,7 +525,7 @@ private:
 
     __forceinline ResourceBindInfo& GetBindInfo(PIPELINE_TYPE Type);
 
-    __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo);
+    __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo, bool DynamicBuffersIntact = false);
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources(ResourceBindInfo& BindInfo);
 #endif

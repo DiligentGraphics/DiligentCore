@@ -390,14 +390,13 @@ private:
 
     struct RootTableInfo : CommittedShaderResources
     {
-        SRBMaskType          DynamicBuffersMask  = 0;     // Indicates which SRBs have dynamic buffers.
-        bool                 bRootViewsCommitted = false; // Indicates if root views have been committed since the time SRB  has been committed.
-        bool                 bRootTablesCommited = false; // Indicates if root tables have been committed since the time SRB  has been committed.
-        ID3D12RootSignature* pd3d12RootSig       = nullptr;
+        SRBMaskType DynamicBuffersMask = 0; // Indicates which SRBs have dynamic root buffers.
+
+        ID3D12RootSignature* pd3d12RootSig = nullptr;
 
         __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
         {
-            return !bRootViewsCommitted || !bRootTablesCommited || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
+            return (StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
         }
 
         void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<SRBMaskType>(1u << Index); }
@@ -406,7 +405,7 @@ private:
     __forceinline RootTableInfo& GetRootTableInfo(PIPELINE_TYPE PipelineType);
 
     template <bool IsCompute>
-    __forceinline void CommitRootTablesAndViews(RootTableInfo& RootInfo);
+    __forceinline void CommitRootTablesAndViews(RootTableInfo& RootInfo, bool RootViewsIntact = false);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources(RootTableInfo& RootInfo);

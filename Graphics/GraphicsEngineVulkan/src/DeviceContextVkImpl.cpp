@@ -362,10 +362,17 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
     return m_BindInfo[Indices[Uint32{Type}]];
 }
 
-void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo)
+void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, bool DynamicBuffersIntact)
 {
-    // Commit all stale descriptor sets or these that have dynamic buffers, which are used by the PSO
-    auto StaleSRBFlags = (Uint32{BindInfo.StaleSRBMask} | Uint32{BindInfo.DynamicBuffersMask}) & Uint32{BindInfo.ActiveSRBMask};
+    // Process all stale descriptor sets
+    auto StaleSRBFlags = Uint32{BindInfo.StaleSRBMask};
+    if (!DynamicBuffersIntact)
+    {
+        // If dynamic buffers are not intact, also process all SRBs with dynamic sets
+        StaleSRBFlags |= Uint32{BindInfo.DynamicBuffersMask};
+    }
+    StaleSRBFlags &= Uint32{BindInfo.ActiveSRBMask};
+
     while (StaleSRBFlags != 0)
     {
         Uint32 sign = PlatformMisc::GetLSB(StaleSRBFlags);
@@ -686,7 +693,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     // cals we do not need to bind the sets again.
     if (BindInfo.RequireUpdate(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
     {
-        CommitDescriptorSets(BindInfo);
+        CommitDescriptorSets(BindInfo, Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT);
     }
 
     if (m_pPipelineState->GetGraphicsPipelineDesc().pRenderPass == nullptr)

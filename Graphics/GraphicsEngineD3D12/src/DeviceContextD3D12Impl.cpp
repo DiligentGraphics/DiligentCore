@@ -233,21 +233,13 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 
     if (RootInfo.pd3d12RootSig != pd3d12RootSig)
     {
-        // When root signature changes, all root resoruces must be committed
-        RootInfo.pd3d12RootSig       = pd3d12RootSig;
-        RootInfo.bRootTablesCommited = false;
-        RootInfo.bRootViewsCommitted = false;
-        RootInfo.ActiveSRBMask       = 0;
-#ifdef DILIGENT_DEVELOPMENT
-        RootInfo.ResourcesValidated = false;
-#endif
+        RootInfo.pd3d12RootSig = pd3d12RootSig;
 
-        for (Uint32 i = 0, SignCount = pPipelineStateD3D12->GetResourceSignatureCount(); i < SignCount; ++i)
-        {
-            const auto* pSignature = pPipelineStateD3D12->GetResourceSignature(i);
-            if (pSignature != nullptr && pSignature->GetTotalResourceCount() > 0)
-                RootInfo.ActiveSRBMask |= 1u << i;
-        }
+        Uint32 DvpCompatibleSRBCount = 0;
+        PrepareCommittedResources(RootInfo, DvpCompatibleSRBCount);
+
+        // When root signature changes, all resoruces must be committed anew
+        RootInfo.MakeAllStale();
     }
 
     switch (PSODesc.PipelineType)
@@ -306,23 +298,33 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 }
 
 template <bool IsCompute>
-void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo)
+void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, bool RootViewsIntact)
 {
     const auto& RootSig = m_pPipelineState->GetRootSignature();
 
     auto& CmdCtx = GetCmdContext();
-    for (Uint32 s = 0; s < RootSig.GetSignatureCount(); ++s)
+
+    // Process all stale SRBs
+    auto StaleSRBFlags = Uint32{RootInfo.StaleSRBMask};
+    if (!RootViewsIntact)
     {
-        const auto* const pSignature = RootSig.GetResourceSignature(s);
-        if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
-            continue;
+        // If root views are not intact, also process all SRBs with root views.
+        // Note that the first time an SRB is committed, its root views are always committed.
+        StaleSRBFlags |= Uint32{RootInfo.DynamicBuffersMask};
+    }
+    StaleSRBFlags &= Uint32{RootInfo.ActiveSRBMask};
 
-        auto* pResourceCache = RootInfo.ResourceCaches[s];
-        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", s, " is null.");
+    while (StaleSRBFlags != 0)
+    {
+        const auto SignBit = ExtractLSB(StaleSRBFlags);
+        const auto sign    = PlatformMisc::GetLSB(SignBit);
+        VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
 
-        const auto DynamicRootBuffersMask = pResourceCache->GetDynamicRootBuffersMask();
-        if (DynamicRootBuffersMask == 0 && RootInfo.bRootTablesCommited)
-            continue;
+        const auto* const pSignature = RootSig.GetResourceSignature(sign);
+        VERIFY_EXPR(pSignature != nullptr && pSignature->GetTotalResourceCount() > 0);
+
+        auto* pResourceCache = RootInfo.ResourceCaches[sign];
+        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null.");
 
         PipelineResourceSignatureD3D12Impl::CommitCacheResourcesAttribs CommitAttribs //
             {
@@ -331,27 +333,29 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo)
                 this,
                 GetContextId(),
                 IsCompute,
-                RootSig.GetBaseRootIndex(s) //
+                RootSig.GetBaseRootIndex(sign) //
             };
-        if (!RootInfo.bRootTablesCommited)
+        if ((RootInfo.StaleSRBMask & SignBit) != 0)
         {
+            // Commit root views for stale SRBs only
             pSignature->CommitRootTables(CommitAttribs);
         }
 
-        // Always commit root views even when bRootViewsCommitted is true.
-        // This method is not called if root views are up to date.
-        if (DynamicRootBuffersMask != 0)
+        // Always commit root views. If the root view is up-to-date (e.g. it is not stale and is intact),
+        // the bit should not be set in StaleSRBFlags.
+        if (auto DynamicRootBuffersMask = pResourceCache->GetDynamicRootBuffersMask())
         {
+            VERIFY((RootInfo.DynamicBuffersMask & SignBit) != 0, "There are dynamic root buffers in the cache, but the bit in DynamicBuffersMask is not set");
             pSignature->CommitRootViews(CommitAttribs, DynamicRootBuffersMask);
         }
         else
         {
-            VERIFY((RootInfo.DynamicBuffersMask & (Uint64{1} << s)) == 0, "There are no dynamic root buffers in the cache, but the bit in DynamicBuffersMask is set");
+            VERIFY((RootInfo.DynamicBuffersMask & SignBit) == 0, "There are no dynamic root buffers in the cache, but the bit in DynamicBuffersMask is set");
         }
     }
 
-    RootInfo.bRootTablesCommited = true;
-    RootInfo.bRootViewsCommitted = true;
+    VERIFY_EXPR((StaleSRBFlags & RootInfo.ActiveSRBMask) == 0);
+    RootInfo.StaleSRBMask &= ~RootInfo.ActiveSRBMask;
 }
 
 void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
@@ -399,9 +403,6 @@ void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShad
         RootInfo.SetDynamicBufferBit(SRBIndex);
     else
         RootInfo.ClearDynamicBufferBit(SRBIndex);
-
-    RootInfo.bRootTablesCommited = false;
-    RootInfo.bRootViewsCommitted = false;
 }
 
 DeviceContextD3D12Impl::RootTableInfo& DeviceContextD3D12Impl::GetRootTableInfo(PIPELINE_TYPE PipelineType)
@@ -569,7 +570,7 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
     auto& RootInfo = GetRootTableInfo(PIPELINE_TYPE_GRAPHICS);
     if (RootInfo.RequireUpdate(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
     {
-        CommitRootTablesAndViews<false>(RootInfo);
+        CommitRootTablesAndViews<false>(RootInfo, Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
