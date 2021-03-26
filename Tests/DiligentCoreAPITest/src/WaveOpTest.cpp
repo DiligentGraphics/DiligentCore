@@ -61,7 +61,7 @@ TEST(WaveOpTest, CompileShader_HLSL)
     Uint32 DxcMajorVer = 0;
     Uint32 DxcMinorVer = 0;
     pEnv->GetDXCompilerVersion(DxcMajorVer, DxcMinorVer);
-    if (!(DxcMajorVer >= 2 || DxcMajorVer >= 1 && DxcMinorVer >= 5))
+    if (!(DxcMajorVer >= 2 || (DxcMajorVer == 1 && DxcMinorVer >= 5)))
     {
         // There is a bug in older versions of DXC that causes the following error:
         //      opcode 'QuadReadAcross' should only be used in 'Pixel Shader'
