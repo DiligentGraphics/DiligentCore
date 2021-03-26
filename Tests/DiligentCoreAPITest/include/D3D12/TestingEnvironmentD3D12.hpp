@@ -80,6 +80,12 @@ public:
         return m_pDxCompiler != nullptr && m_pDxCompiler->IsLoaded();
     }
 
+    virtual void GetDXCompilerVersion(Uint32& MajorVersion, Uint32& MinorVersion) const override final
+    {
+        if (m_pDxCompiler != nullptr)
+            m_pDxCompiler->GetVersion(MajorVersion, MinorVersion);
+    }
+
     virtual bool SupportsRayTracing() const override final
     {
         return m_pDevice->GetDeviceCaps().Features.RayTracing && HasDXCompiler();

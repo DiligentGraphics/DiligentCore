@@ -61,6 +61,8 @@ public:
 
     virtual bool IsLoaded() = 0;
 
+    virtual void GetVersion(Uint32& MajorVersion, Uint32& MinorVersion) const = 0;
+
     struct CompileAttribs
     {
         const char*                      Source                     = nullptr;

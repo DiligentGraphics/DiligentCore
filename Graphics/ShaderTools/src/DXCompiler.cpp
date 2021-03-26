@@ -94,6 +94,12 @@ public:
         return Load();
     }
 
+    virtual void GetVersion(Uint32& MajorVersion, Uint32& MinorVersion) const override final
+    {
+        MajorVersion = m_MajorVer;
+        MinorVersion = m_MinorVer;
+    }
+
     bool Compile(const CompileAttribs& Attribs) override final;
 
     virtual void Compile(const ShaderCreateInfo& ShaderCI,

@@ -72,6 +72,12 @@ public:
     virtual bool HasDXCompiler() const { return false; }
     virtual bool SupportsRayTracing() const { return false; }
 
+    virtual void GetDXCompilerVersion(Uint32& MajorVersion, Uint32& MinorVersion) const
+    {
+        MajorVersion = 0;
+        MinorVersion = 0;
+    }
+
     void ReleaseResources();
 
     class ScopedReset

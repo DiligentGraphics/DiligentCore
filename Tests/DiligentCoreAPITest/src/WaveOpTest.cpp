@@ -56,8 +56,20 @@ TEST(WaveOpTest, CompileShader_HLSL)
 
     const auto& WaveOpProps = pDevice->GetDeviceProperties().WaveOp;
 
-    ASSERT_NE(WaveOpProps.Features, WAVE_FEATURE_UNKNOWN);
-    ASSERT_TRUE((WaveOpProps.Features & WAVE_FEATURE_BASIC) != 0);
+    auto WaveOpFeatures = WaveOpProps.Features;
+
+    Uint32 DxcMajorVer = 0;
+    Uint32 DxcMinorVer = 0;
+    pEnv->GetDXCompilerVersion(DxcMajorVer, DxcMinorVer);
+    if (!(DxcMajorVer >= 2 || DxcMajorVer >= 1 && DxcMinorVer >= 5))
+    {
+        // There is a bug in older versions of DXC that causes the following error:
+        //      opcode 'QuadReadAcross' should only be used in 'Pixel Shader'
+        WaveOpFeatures &= ~WAVE_FEATURE_QUAD;
+    }
+
+    ASSERT_NE(WaveOpFeatures, WAVE_FEATURE_UNKNOWN);
+    ASSERT_TRUE((WaveOpFeatures & WAVE_FEATURE_BASIC) != 0);
 
     ASSERT_NE(WaveOpProps.SupportedStages, SHADER_TYPE_UNKNOWN);
     ASSERT_TRUE((WaveOpProps.SupportedStages & SHADER_TYPE_COMPUTE) != 0);
@@ -69,11 +81,11 @@ TEST(WaveOpTest, CompileShader_HLSL)
     Macros.AddShaderMacro("SUBGROUP_SIZE", WaveOpProps.MinSize);
 
     // clang-format off
-    Macros.AddShaderMacro("WAVE_FEATURE_BASIC",      (WaveOpProps.Features & WAVE_FEATURE_BASIC)      != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_VOTE",       (WaveOpProps.Features & WAVE_FEATURE_VOTE)       != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_ARITHMETIC", (WaveOpProps.Features & WAVE_FEATURE_ARITHMETIC) != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_BALLOUT",    (WaveOpProps.Features & WAVE_FEATURE_BALLOUT)    != 0);
-    Macros.AddShaderMacro("WAVE_FEATURE_QUAD",       (WaveOpProps.Features & WAVE_FEATURE_QUAD)       != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_BASIC",      (WaveOpFeatures & WAVE_FEATURE_BASIC)      != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_VOTE",       (WaveOpFeatures & WAVE_FEATURE_VOTE)       != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_ARITHMETIC", (WaveOpFeatures & WAVE_FEATURE_ARITHMETIC) != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_BALLOUT",    (WaveOpFeatures & WAVE_FEATURE_BALLOUT)    != 0);
+    Macros.AddShaderMacro("WAVE_FEATURE_QUAD",       (WaveOpFeatures & WAVE_FEATURE_QUAD)       != 0);
     // clang-format on
 
     static const char Source[] = R"(
