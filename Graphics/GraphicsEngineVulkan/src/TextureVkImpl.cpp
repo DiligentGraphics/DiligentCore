@@ -682,8 +682,13 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     TEXTURE_FORMAT CorrectedViewFormat = ViewDesc.Format;
     if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
         CorrectedViewFormat = GetDefaultTextureViewFormat(CorrectedViewFormat, TEXTURE_VIEW_DEPTH_STENCIL, m_Desc.BindFlags);
-    ImageViewCI.format                        = TexFormatToVkFormat(CorrectedViewFormat);
-    ImageViewCI.components                    = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
+    ImageViewCI.format     = TexFormatToVkFormat(CorrectedViewFormat);
+    ImageViewCI.components = {
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY //
+    };
     ImageViewCI.subresourceRange.baseMipLevel = ViewDesc.MostDetailedMip;
     ImageViewCI.subresourceRange.levelCount   = ViewDesc.NumMipLevels;
     if (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY ||
