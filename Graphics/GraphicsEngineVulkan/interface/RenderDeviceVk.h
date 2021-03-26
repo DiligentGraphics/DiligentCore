@@ -61,8 +61,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
 
     /// Returns Vulkan API version
 
-    /// \note This version is what was used to create the instance,
-    ///       VkPhysicalDeviceProperties::apiVersion is the maximum version which is supported by physical device.
+    /// \note This version is the minimum of the instance version and what the physical device supports.
     VIRTUAL Uint32 METHOD(GetVkVersion)(THIS) PURE;
 
     /// Returns the fence value that will be signaled by the GPU command queue next

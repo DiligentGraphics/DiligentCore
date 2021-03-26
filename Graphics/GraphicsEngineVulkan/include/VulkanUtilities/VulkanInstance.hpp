@@ -68,9 +68,9 @@ public:
 
     VkPhysicalDevice SelectPhysicalDevice(uint32_t AdapterId)const;
 
-    VkAllocationCallbacks* GetVkAllocator()const{return m_pVkAllocator;}
-    VkInstance             GetVkInstance() const{return m_VkInstance;  }
-    uint32_t               GetVkVersion()  const{return m_VkVersion;   }
+    VkAllocationCallbacks* GetVkAllocator() const {return m_pVkAllocator;}
+    VkInstance             GetVkInstance()  const {return m_VkInstance;  }
+    uint32_t               GetVersion()     const {return m_VkVersion;   } // Warning: instance version may be greater than physical device version
     // clang-format on
 
 private:

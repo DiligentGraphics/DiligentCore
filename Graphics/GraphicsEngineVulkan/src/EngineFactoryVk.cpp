@@ -137,18 +137,20 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
     try
     {
-        Uint32 Version = VK_API_VERSION_1_0;
+        Uint32 InstanceVersion = VK_API_VERSION_1_0;
         if (EngineCI.Features.WaveOp != DEVICE_FEATURE_STATE_DISABLED)
-            Version = VK_API_VERSION_1_1; // There is no alternative to subgroup extension in Vulkan 1.1 core
+            InstanceVersion = VK_API_VERSION_1_1; // There is no alternative to subgroup extension in Vulkan 1.1 core
         if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED || EngineCI.Features.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
-            Version = VK_API_VERSION_1_2; // DXC requires Vulkan 1.2
+            InstanceVersion = VK_API_VERSION_1_2; // DXC requires Vulkan 1.2
 
         auto Instance = VulkanUtilities::VulkanInstance::Create(
-            Version,
+            InstanceVersion,
             EngineCI.EnableValidation,
             EngineCI.GlobalExtensionCount,
             EngineCI.ppGlobalExtensionNames,
             reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator));
+        // Actual instance version may be lower than requested.
+        InstanceVersion = Instance->GetVersion();
 
         auto        vkDevice               = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
         auto        PhysicalDevice         = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, *Instance);
@@ -254,9 +256,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
             };
 
-        const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
-        VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures        EnabledExtFeats   = {};
-        const auto                                                      VkVersion         = Instance->GetVkVersion();
+        const auto& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
+        auto        EnabledExtFeats   = VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures{};
+        const auto  VkApiVersion      = std::min(InstanceVersion, PhysicalDevice->GetProperties().apiVersion);
 
 #define ENABLE_FEATURE(IsFeatureSupported, Feature, FeatureName)                         \
     do                                                                                   \
@@ -293,10 +295,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         const auto& RayTracingFeats  = DeviceExtFeatures.RayTracingPipeline;
         const auto& RayQueryFeats    = DeviceExtFeatures.RayQuery;
         // clang-format off
-        ENABLE_FEATURE(VkVersion                              >= VK_API_VERSION_1_1 &&
+        ENABLE_FEATURE(VkApiVersion                           >= VK_API_VERSION_1_1 &&
                        AccelStructFeats.accelerationStructure != VK_FALSE           &&
                        RayTracingFeats.rayTracingPipeline     != VK_FALSE, RayTracing, "Ray tracing is");
-        ENABLE_FEATURE(VkVersion                                           >= VK_API_VERSION_1_1 &&
+        ENABLE_FEATURE(VkApiVersion                                        >= VK_API_VERSION_1_1 &&
                        AccelStructFeats.accelerationStructure              != VK_FALSE           &&
                        RayTracingFeats.rayTracingPipeline                  != VK_FALSE           &&
                        RayTracingFeats.rayTracingPipelineTraceRaysIndirect != VK_FALSE           &&
@@ -307,7 +309,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         const auto& SubgroupProps          = PhysicalDevice->GetExtProperties().Subgroup;
         const auto  RequiredSubgroupFeats  = VK_SUBGROUP_FEATURE_BASIC_BIT;
         const auto  RequiredSubgroupStages = VK_SHADER_STAGE_COMPUTE_BIT;
-        ENABLE_FEATURE((VkVersion >= VK_API_VERSION_1_1 &&
+        ENABLE_FEATURE((VkApiVersion >= VK_API_VERSION_1_1 &&
                         (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
                         (SubgroupProps.supportedStages & RequiredSubgroupStages) == RequiredSubgroupStages),
                        WaveOp, "Wave operations are");

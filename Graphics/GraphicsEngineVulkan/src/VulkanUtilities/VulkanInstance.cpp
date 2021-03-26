@@ -200,6 +200,14 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         ApiVersion = std::min(ApiVersion, MaxApiVersion);
         LOG_INFO_MESSAGE("Using Vulkan API version ", VK_VERSION_MAJOR(ApiVersion), ".", VK_VERSION_MINOR(ApiVersion));
     }
+    else
+    {
+        // Only Vulkan 1.0 is supported.
+        ApiVersion = VK_API_VERSION_1_0;
+    }
+#else
+    // Without Volk we can only use Vulkan 1.0
+    ApiVersion = VK_API_VERSION_1_0;
 #endif
 
     VkApplicationInfo appInfo = {};

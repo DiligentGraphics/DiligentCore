@@ -71,10 +71,11 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 #if DILIGENT_USE_VOLK
     if (Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
-        VkPhysicalDeviceFeatures2   Feats2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-        VkPhysicalDeviceProperties2 Props2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-        void**                      NextFeat = &Feats2.pNext;
-        void**                      NextProp = &Props2.pNext;
+        auto       Feats2    = VkPhysicalDeviceFeatures2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+        auto       Props2    = VkPhysicalDeviceProperties2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+        void**     NextFeat  = &Feats2.pNext;
+        void**     NextProp  = &Props2.pNext;
+        const auto VkVersion = std::min(Instance.GetVersion(), m_Properties.apiVersion);
 
         if (IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
         {
@@ -182,8 +183,8 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         if (IsExtensionSupported(VK_KHR_SPIRV_1_4_EXTENSION_NAME))
             m_ExtFeatures.Spirv14 = true;
 
-        // Some features requires SPIRV 1.4 or 1.5 that added to Vulkan 1.2 core.
-        if (Instance.GetVkVersion() >= VK_API_VERSION_1_2)
+        // Some features require SPIRV 1.4 or 1.5 which was added to the Vulkan 1.2 core.
+        if (VkVersion >= VK_API_VERSION_1_2)
         {
             m_ExtFeatures.Spirv14 = true;
             m_ExtFeatures.Spirv15 = true;
@@ -207,7 +208,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 #    endif
 
         // Subgroup feature requires Vulkan 1.1 core.
-        if (Instance.GetVkVersion() >= VK_API_VERSION_1_1)
+        if (VkVersion >= VK_API_VERSION_1_1)
         {
             *NextProp = &m_ExtProperties.Subgroup;
             NextProp  = &m_ExtProperties.Subgroup.pNext;

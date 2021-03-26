@@ -145,7 +145,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI.DynamicHeapSize,
         ~Uint64{0}
     },
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_VulkanInstance->GetVkVersion(), EngineCI.pDxCompilerPath)},
+    m_VkVersion{std::min(m_VulkanInstance->GetVersion(), m_PhysicalDevice->GetProperties().apiVersion)},
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_VkVersion, EngineCI.pDxCompilerPath)},
     m_Properties
     {
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupHandleSize,

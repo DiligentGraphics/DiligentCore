@@ -149,7 +149,7 @@ public:
     virtual VkInstance DILIGENT_CALL_TYPE GetVkInstance() override final { return m_VulkanInstance->GetVkInstance(); }
 
     /// Implementation of IRenderDeviceVk::GetVkVersion().
-    virtual Uint32 DILIGENT_CALL_TYPE GetVkVersion() override final { return m_VulkanInstance->GetVkVersion(); }
+    virtual Uint32 DILIGENT_CALL_TYPE GetVkVersion() override final { return m_VkVersion; }
 
     /// Implementation of IRenderDeviceVk::CreateTextureFromVulkanImage().
     virtual void DILIGENT_CALL_TYPE CreateTextureFromVulkanImage(VkImage            vkImage,
@@ -272,6 +272,7 @@ private:
 
     VulkanDynamicMemoryManager m_DynamicMemoryManager;
 
+    const Uint32                 m_VkVersion; // Must be defined before m_pDxCompiler
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
 
     Properties m_Properties;
