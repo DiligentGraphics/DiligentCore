@@ -75,12 +75,29 @@ public:
 
     ShaderMacroHelper() = default;
 
-    // NB: string pointers in m_Macros may become invalid after the
-    //     copy or move due to short string optimization in std::string
-    ShaderMacroHelper(const ShaderMacroHelper&) = delete;
-    ShaderMacroHelper(ShaderMacroHelper&&)      = delete;
-    ShaderMacroHelper& operator=(const ShaderMacroHelper&) = delete;
-    ShaderMacroHelper& operator=(ShaderMacroHelper&&) = delete;
+    // NB: we need to make sure that string pointers in m_Macros don't become invalid
+    //     after the copy or move due to short string optimization in std::string
+    ShaderMacroHelper(const ShaderMacroHelper& rhs) :
+        m_Macros{rhs.m_Macros},
+        m_bIsFinalized{rhs.m_bIsFinalized}
+    {
+        for (auto& Macros : m_Macros)
+        {
+            if (Macros.Definition != nullptr)
+                Macros.Definition = m_StringPool.insert(Macros.Definition).first->c_str();
+            if (Macros.Name != nullptr)
+                Macros.Name = m_StringPool.insert(Macros.Name).first->c_str();
+        }
+    }
+
+    ShaderMacroHelper& operator=(const ShaderMacroHelper& rhs)
+    {
+        *this = std::move(ShaderMacroHelper{rhs});
+        return *this;
+    }
+
+    ShaderMacroHelper(ShaderMacroHelper&&) = default;
+    ShaderMacroHelper& operator=(ShaderMacroHelper&&) = default;
 
     void Finalize()
     {
