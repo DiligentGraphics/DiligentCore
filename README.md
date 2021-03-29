@@ -739,7 +739,7 @@ on how to set up clang-format and automatic code formatting.
 
 [API Basics](http://diligentgraphics.com/diligent-engine/api-basics/)
 
-[API Reference][doc/html/index.html]
+[API Reference][https://jcpulido97.github.io/DiligentEngineDoc/html/index.html]
 
 <a name="release_history"></a>
 # Release History
