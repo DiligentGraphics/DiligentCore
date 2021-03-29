@@ -58,7 +58,7 @@ git clone --recursive https://github.com/DiligentGraphics/DiligentCore.git
 To build the module, see 
 [build instructions](https://github.com/DiligentGraphics/DiligentEngine/blob/master/README.md#build-and-run-instructions) 
 in the master repository.
- 
+
 <a name="api_basics"></a>
 # API Basics
 
@@ -739,7 +739,7 @@ on how to set up clang-format and automatic code formatting.
 
 [API Basics](http://diligentgraphics.com/diligent-engine/api-basics/)
 
-[API Reference][1]
+[API Reference][doc/html/index.html]
 
 <a name="release_history"></a>
 # Release History
