@@ -37,6 +37,8 @@
 #    include "GLContextMacOS.hpp"
 #elif PLATFORM_IOS
 #    include "GLContextIOS.hpp"
+#elif PLATFORM_EMSCRIPTEN
+#    include "GLContextEmscripten.hpp"
 #else
 #    error Unsupported platform
 #endif
