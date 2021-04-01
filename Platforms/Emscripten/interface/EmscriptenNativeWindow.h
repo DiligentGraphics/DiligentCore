@@ -27,18 +27,22 @@
 
 #pragma once
 
-#if PLATFORM_WIN32
-#    include "GLContextWindows.hpp"
-#elif PLATFORM_ANDROID
-#    include "GLContextAndroid.hpp"
-#elif PLATFORM_LINUX
-#    include "GLContextLinux.hpp"
-#elif PLATFORM_MACOS
-#    include "GLContextMacOS.hpp"
-#elif PLATFORM_IOS
-#    include "GLContextIOS.hpp"
-#elif PLATFORM_EMSCRIPTEN
-#    include "GLContextEmscripten.hpp"
-#else
-#    error Unsupported platform
+#include "../../../Primitives/interface/CommonDefinitions.h"
+#include "../../../Primitives/interface/BasicTypes.h"
+
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+struct EmscriptenNativeWindow
+{
+    const char* pCanvasId DEFAULT_INITIALIZER(nullptr);
+#if DILIGENT_CPP_INTERFACE
+    EmscriptenNativeWindow() noexcept
+    {}
+
+    explicit EmscriptenNativeWindow(const char* _pCanvasId) noexcept :
+        pCanvasId(_pCanvasId)
+    {}
 #endif
+};
+
+DILIGENT_END_NAMESPACE // namespace Diligent

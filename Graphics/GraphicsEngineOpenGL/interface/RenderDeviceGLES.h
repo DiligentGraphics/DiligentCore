@@ -31,8 +31,13 @@
 /// Definition of the Diligent::IRenderDeviceGLES interface
 
 #include "RenderDeviceGL.h"
-#include <android/native_window.h>
-#include <EGL/egl.h>
+#if PLATFORM_ANDROID
+#    include <android/native_window.h>
+#    include <EGL/egl.h>
+#elif PLATFORM_EMSCRIPTEN
+#else
+#    error Unsupported platform
+#endif
 
 namespace Diligent
 {
@@ -49,7 +54,12 @@ public:
 
     virtual void Suspend() = 0;
 
+#if PLATFORM_ANDROID
     virtual EGLint Resume(ANativeWindow* window) = 0;
+#elif PLATFORM_EMSCRIPTEN
+#else
+#    error Unsupported platform
+#endif
 };
 
 } // namespace Diligent

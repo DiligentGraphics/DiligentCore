@@ -56,6 +56,16 @@
     
     DILIGENT_END_NAMESPACE
 
+#elif PLATFORM_EMSCRIPTEN
+
+#   include "RenderDeviceGLES.h"
+    DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+        typedef IRenderDeviceGLES IGLDeviceBaseInterface;
+
+    DILIGENT_END_NAMESPACE
+
+
 #else
 
 #   error Unsupported platform

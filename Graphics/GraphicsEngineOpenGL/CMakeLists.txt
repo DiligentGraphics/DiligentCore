@@ -129,6 +129,17 @@ elseif(PLATFORM_IOS)
     list(APPEND INCLUDE include/GLStubsIOS.h)
     list(APPEND SOURCE src/SwapChainGLIOS.mm)
     list(APPEND INCLUDE include/SwapChainGLIOS.hpp)
+elseif(PLATFORM_EMSCRIPTEN)
+    list(APPEND SOURCE src/GLContextEmscripten.cpp)
+    list(APPEND SOURCE src/RenderDeviceGLESImpl.cpp)
+    list(APPEND SOURCE src/SwapChainGLImpl.cpp)
+
+    list(APPEND INCLUDE include/GLContextEmscripten.hpp)
+    list(APPEND INCLUDE include/GLStubsEmscripten.h)
+    list(APPEND INCLUDE include/RenderDeviceGLESImpl.hpp)
+    list(APPEND INCLUDE include/SwapChainGLImpl.hpp)
+
+    list(APPEND INTERFACE interface/RenderDeviceGLES.h)
 else()
     message(FATAL_ERROR "Unknown platform")
 endif()
@@ -195,6 +206,7 @@ elseif(PLATFORM_MACOS)
     set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} glew-static ${OPENGL_LIBRARY})
 elseif(PLATFORM_IOS)
     set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} ${OPENGLES})
+elseif(PLATFORM_EMSCRIPTEN)
 else()
     message(FATAL_ERROR "Unknown platform")
 endif()
@@ -223,6 +235,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
             src/Texture1D_GL.cpp
         PROPERTIES
             COMPILE_FLAGS -Wno-unused-variable
+        )
+    endif()
+    if(PLATFORM_EMSCRIPTEN)
+        set_property(TARGET Diligent-GraphicsEngineOpenGL-shared APPEND_STRING PROPERTY
+            LINK_FLAGS "-s FULL_ES3=1 -s OFFSCREEN_FRAMEBUFFER=1"
         )
     endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")

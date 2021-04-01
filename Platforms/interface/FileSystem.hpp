@@ -59,8 +59,14 @@ using CFile      = LinuxFile;
 using FileSystem = AppleFileSystem;
 using CFile      = AppleFile;
 
+#elif PLATFORM_EMSCRIPTEN
+
+#    include "../Emscripten/interface/EmscriptenFileSystem.hpp"
+using FileSystem = EmscriptenFileSystem;
+using CFile      = EmscriptenFile;
+
 #else
 
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_EMSCRIPTEN.
 
 #endif

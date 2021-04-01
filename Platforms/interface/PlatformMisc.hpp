@@ -45,8 +45,12 @@ using PlatformMisc = LinuxMisc;
 #    include "../Apple/interface/ApplePlatformMisc.hpp"
 using PlatformMisc = AppleMisc;
 
+#elif PLATFORM_EMSCRIPTEN
+#    include "../Emscripten/interface/EmscriptenPlatformMisc.hpp"
+using PlatformMisc = EmscriptenMisc;
+
 #else
 
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_EMSCRIPTEN.
 
 #endif

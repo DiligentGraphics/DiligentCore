@@ -53,9 +53,11 @@ void RenderDeviceGLESImpl::Suspend()
     m_GLContext.Suspend();
 }
 
+#if PLATFORM_ANDROID
 EGLint RenderDeviceGLESImpl::Resume(ANativeWindow* window)
 {
     return m_GLContext.Resume(window);
 }
+#endif
 
 } // namespace Diligent
