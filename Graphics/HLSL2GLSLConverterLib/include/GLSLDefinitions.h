@@ -196,23 +196,26 @@ vec2  f16tof32( ivec2 i2 ){ return f16tof32( uvec2( i2 ) ); }
 vec3  f16tof32( ivec3 i3 ){ return f16tof32( uvec3( i3 ) ); }
 vec4  f16tof32( ivec4 i4 ){ return f16tof32( uvec4( i4 ) ); }
 
-uint f32tof16( float f )
+uint _f32tof16( float f )
 { 
     return packHalf2x16( vec2( f, 0.0 ) ) & 0x0ffffu;
 }
-uvec2 f32tof16( vec2 f2 )
+uvec2 _f32tof16( vec2 f2 )
 { 
     uint u2PackedHalf = packHalf2x16( f2 );
     return uvec2( u2PackedHalf & 0x0ffffu, u2PackedHalf >> 16u );
 }
-uvec3 f32tof16( vec3 f3 )
+uvec3 _f32tof16( vec3 f3 )
 {
-    return uvec3( f32tof16( f3.xy ), f32tof16( f3.z ) );
+    return uvec3( _f32tof16( f3.xy ), _f32tof16( f3.z ) );
 }
-uvec4 f32tof16( vec4 f4 )
+uvec4 _f32tof16( vec4 f4 )
 {
-    return uvec4( f32tof16( f4.xy ), f32tof16( f4.zw ) );
+    return uvec4( _f32tof16( f4.xy ), _f32tof16( f4.zw ) );
 }
+
+// AMD compiler has its own f32tof16 function.
+#define f32tof16 _f32tof16
 #endif
 
 // Use #define as double is not supported on GLES
