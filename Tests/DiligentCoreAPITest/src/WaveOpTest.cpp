@@ -28,8 +28,6 @@
 #include "TestingEnvironment.hpp"
 #include "ShaderMacroHelper.hpp"
 
-#include "Vulkan/TestingEnvironmentVk.hpp"
-
 #include "gtest/gtest.h"
 
 using namespace Diligent;

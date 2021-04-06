@@ -399,11 +399,11 @@ protected:
     void TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
     void UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const;
 
-    static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(uint) * 3; // D3D12: 12 bytes (x, y, z dimension)
-                                                                              // Vulkan: 8 bytes (task count, first task)
-    static constexpr Uint32 TraceRaysIndirectCommandSBTSize = 88;             // D3D12: 88 bytes, size of SBT offsets
-                                                                              // Vulkan: 0 bytes, SBT offsets placed directly into function call
-    static constexpr Uint32 TraceRaysIndirectCommandSize = 104;               // SBT (88 bytes) + Dimension (3*4 bytes) aligned to 8 bytes
+    static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(Uint32) * 3; // D3D12: 12 bytes (x, y, z dimension)
+                                                                                // Vulkan: 8 bytes (task count, first task)
+    static constexpr Uint32 TraceRaysIndirectCommandSBTSize = 88;               // D3D12: 88 bytes, size of SBT offsets
+                                                                                // Vulkan: 0 bytes, SBT offsets placed directly into function call
+    static constexpr Uint32 TraceRaysIndirectCommandSize = 104;                 // SBT (88 bytes) + Dimension (3*4 bytes) aligned to 8 bytes
 
     /// Strong reference to the device.
     RefCntAutoPtr<DeviceImplType> m_pDevice;

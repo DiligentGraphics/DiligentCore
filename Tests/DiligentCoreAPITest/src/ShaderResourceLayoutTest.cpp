@@ -37,7 +37,9 @@
 #include "ResourceLayoutTestCommon.hpp"
 #include "TestingSwapChainBase.hpp"
 
-#include "Vulkan/TestingEnvironmentVk.hpp"
+#if VULKAN_SUPPORTED
+#    include "Vulkan/TestingEnvironmentVk.hpp"
+#endif
 
 #include "gtest/gtest.h"
 
@@ -769,6 +771,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
             UseReducedUAVCount = true;
             break;
 
+#if VULKAN_SUPPORTED
         case RENDER_DEVICE_TYPE_VULKAN:
         {
             const auto* pEnvVk = static_cast<const TestingEnvironmentVk*>(pEnv);
@@ -781,6 +784,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
                 UseReducedUAVCount = true;
             break;
         }
+#endif
 
         case RENDER_DEVICE_TYPE_D3D12:
         case RENDER_DEVICE_TYPE_METAL:
@@ -977,6 +981,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
             UseReducedUAVCount = true;
             break;
 
+#if VULKAN_SUPPORTED
         case RENDER_DEVICE_TYPE_VULKAN:
         {
             const auto* pEnvVk = static_cast<TestingEnvironmentVk*>(pEnv);
@@ -989,6 +994,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
                 UseReducedUAVCount = true;
             break;
         }
+#endif
 
         case RENDER_DEVICE_TYPE_D3D12:
         case RENDER_DEVICE_TYPE_METAL:

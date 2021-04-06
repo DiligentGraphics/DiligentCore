@@ -34,7 +34,9 @@
 #include "GraphicsAccessories.hpp"
 #include "ResourceLayoutTestCommon.hpp"
 
-#include "Vulkan/TestingEnvironmentVk.hpp"
+#if VULKAN_SUPPORTED
+#    include "Vulkan/TestingEnvironmentVk.hpp"
+#endif
 
 #include "gtest/gtest.h"
 
@@ -1571,6 +1573,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     bool SRVTextureNonUniformIndexing     = true;
     bool UAVTextureNonUniformIndexing     = true;
 
+#if VULKAN_SUPPORTED
     if (pDevice->GetDeviceCaps().IsVulkanDevice())
     {
         auto* pEnvVk                     = static_cast<TestingEnvironmentVk*>(pEnv);
@@ -1580,6 +1583,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         SRVTextureNonUniformIndexing     = (pEnvVk->DescriptorIndexing.shaderSampledImageArrayNonUniformIndexing == VK_TRUE);
         UAVTextureNonUniformIndexing     = (pEnvVk->DescriptorIndexing.shaderStorageImageArrayNonUniformIndexing == VK_TRUE);
     }
+#endif
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 

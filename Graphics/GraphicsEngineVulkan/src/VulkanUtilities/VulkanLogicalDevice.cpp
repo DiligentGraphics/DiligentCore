@@ -514,8 +514,7 @@ void VulkanLogicalDevice::GetAccelerationStructureBuildSizes(const VkAcceleratio
 #if DILIGENT_USE_VOLK
     vkGetAccelerationStructureBuildSizesKHR(m_VkDevice, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &BuildInfo, pMaxPrimitiveCounts, &SizeInfo);
 #else
-    UNSUPPORTED("vkGetAccelerationStructureDeviceAddressKHR is only available through Volk");
-    return VK_ERROR_FEATURE_NOT_PRESENT;
+    UNSUPPORTED("vkGetAccelerationStructureBuildSizesKHR is only available through Volk");
 #endif
 }
 
