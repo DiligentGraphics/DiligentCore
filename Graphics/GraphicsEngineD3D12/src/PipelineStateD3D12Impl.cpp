@@ -32,7 +32,6 @@
 #include <array>
 #include <sstream>
 #include <unordered_map>
-#include <unordered_set>
 #include <d3dcompiler.h>
 
 #ifdef FindResource
@@ -342,25 +341,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
 {
     const auto& LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
 
-    struct UniqueResource
-    {
-        const D3DShaderResourceAttribs& Attribs;
-        const SHADER_TYPE               ShaderStages;
-
-        bool operator==(const UniqueResource& Res) const
-        {
-            return strcmp(Attribs.Name, Res.Attribs.Name) == 0 && ShaderStages == Res.ShaderStages;
-        }
-
-        struct Hasher
-        {
-            size_t operator()(const UniqueResource& Res) const
-            {
-                return ComputeHash(CStringHash<Char>{}(Res.Attribs.Name), Uint32{Res.ShaderStages});
-            }
-        };
-    };
-    std::unordered_set<UniqueResource, UniqueResource::Hasher> UniqueResources;
+    std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
     std::vector<PipelineResourceDesc> Resources;
     const char*                       pCombinedSamplerSuffix = nullptr;
@@ -395,7 +376,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
                         VarType      = Var.Type;
                     }
 
-                    auto IterAndAssigned = UniqueResources.emplace(UniqueResource{Attribs, ShaderStages});
+                    auto IterAndAssigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, ShaderStages}, Attribs);
                     if (IterAndAssigned.second)
                     {
                         SHADER_RESOURCE_TYPE    ResType = SHADER_RESOURCE_TYPE_UNKNOWN;
@@ -412,7 +393,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
                     }
                     else
                     {
-                        VerifyD3DResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->Attribs, Attribs);
+                        VerifyD3DResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->second, Attribs);
                     }
                 } //
             );

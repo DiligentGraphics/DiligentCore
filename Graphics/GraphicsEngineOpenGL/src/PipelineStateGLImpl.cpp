@@ -33,6 +33,8 @@
 
 #include "PipelineStateGLImpl.hpp"
 
+#include <unordered_map>
+
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "ShaderResourceBindingGLImpl.hpp"
@@ -72,25 +74,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     const auto& LayoutDesc     = CreateInfo.PSODesc.ResourceLayout;
     const auto  DefaultVarType = LayoutDesc.DefaultVariableType;
 
-    struct UniqueResource
-    {
-        const ShaderResourcesGL::GLResourceAttribs& Attribs;
-        const SHADER_TYPE                           ShaderStages;
-
-        bool operator==(const UniqueResource& Res) const
-        {
-            return strcmp(Attribs.Name, Res.Attribs.Name) == 0 && ShaderStages == Res.ShaderStages;
-        }
-
-        struct Hasher
-        {
-            size_t operator()(const UniqueResource& Res) const
-            {
-                return ComputeHash(CStringHash<Char>{}(Res.Attribs.Name), Uint32{Res.ShaderStages});
-            }
-        };
-    };
-    std::unordered_set<UniqueResource, UniqueResource::Hasher> UniqueResources;
+    std::unordered_map<ShaderResourceHashKey, const ShaderResourcesGL::GLResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, PIPELINE_RESOURCE_FLAGS Flags) //
     {
@@ -111,14 +95,14 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
             ResDesc.VarType      = Var.Type;
         }
 
-        auto IterAndAssigned = UniqueResources.emplace(UniqueResource{Attribs, ResDesc.ShaderStages});
+        auto IterAndAssigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, ResDesc.ShaderStages}, Attribs);
         if (IterAndAssigned.second)
         {
             Resources.push_back(ResDesc);
         }
         else
         {
-            VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->Attribs, Attribs);
+            VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->second, Attribs);
         }
     };
     const auto HandleUB = [&](const ShaderResourcesGL::UniformBufferInfo& Attribs) {

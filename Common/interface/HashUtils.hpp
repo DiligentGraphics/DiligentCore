@@ -68,7 +68,7 @@ struct CStringHash
     {
         // http://www.cse.yorku.ca/~oz/hash.html
         std::size_t Seed = 0;
-        while (size_t Ch = *(str++))
+        while (std::size_t Ch = *(str++))
             Seed = Seed * 65599 + Ch;
         return Seed;
     }

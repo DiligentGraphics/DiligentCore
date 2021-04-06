@@ -92,6 +92,42 @@ Uint32 FindPipelineResourceLayoutVariable(const PipelineResourceLayoutDesc& Layo
                                           SHADER_TYPE                       ShaderStage,
                                           const char*                       CombinedSamplerSuffix);
 
+
+/// Hash map key that identifies shader resource by its name and shader stages
+struct ShaderResourceHashKey
+{
+    const char*       Name;
+    const SHADER_TYPE ShaderStages;
+    const size_t      Hash;
+
+    ShaderResourceHashKey(const char*       _Name,
+                          const SHADER_TYPE _ShaderStages) noexcept :
+        Name{_Name},
+        ShaderStages{_ShaderStages},
+        Hash{ComputeHash(CStringHash<char>{}(_Name), Uint32{_ShaderStages})}
+    {}
+
+    bool operator==(const ShaderResourceHashKey& rhs) const
+    {
+        if (Hash != rhs.Hash)
+        {
+            VERIFY_EXPR(ShaderStages != rhs.ShaderStages || strcmp(Name, rhs.Name) != 0);
+            return false;
+        }
+
+        return ShaderStages == rhs.ShaderStages && strcmp(Name, rhs.Name) == 0;
+    }
+
+    struct Hasher
+    {
+        size_t operator()(const ShaderResourceHashKey& Key) const
+        {
+            return Key.Hash;
+        }
+    };
+};
+
+
 /// Template class implementing base functionality of the pipeline state object.
 
 /// \tparam EngineImplTraits - Engine implementation type traits.

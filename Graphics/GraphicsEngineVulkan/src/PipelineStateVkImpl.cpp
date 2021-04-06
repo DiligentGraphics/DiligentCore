@@ -30,7 +30,7 @@
 #include "PipelineStateVkImpl.hpp"
 
 #include <array>
-#include <unordered_set>
+#include <unordered_map>
 
 #include "RenderDeviceVkImpl.hpp"
 #include "DeviceContextVkImpl.hpp"
@@ -742,25 +742,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
     const PipelineStateCreateInfo& CreateInfo,
     const TShaderStages&           ShaderStages)
 {
-    struct UniqueResource
-    {
-        const SPIRVShaderResourceAttribs& Attribs;
-        const SHADER_TYPE                 ShaderStages;
-
-        bool operator==(const UniqueResource& Res) const
-        {
-            return strcmp(Attribs.Name, Res.Attribs.Name) == 0 && ShaderStages == Res.ShaderStages;
-        }
-
-        struct Hasher
-        {
-            size_t operator()(const UniqueResource& Res) const
-            {
-                return ComputeHash(CStringHash<Char>{}(Res.Attribs.Name), Uint32{Res.ShaderStages});
-            }
-        };
-    };
-    std::unordered_set<UniqueResource, UniqueResource::Hasher> UniqueResources;
+    std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
     const auto&                       LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
     std::vector<PipelineResourceDesc> Resources;
@@ -803,7 +785,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                         VarType      = Var.Type;
                     }
 
-                    auto IterAndAssigned = UniqueResources.emplace(UniqueResource{Attribs, ShaderStages});
+                    auto IterAndAssigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, ShaderStages}, Attribs);
                     if (IterAndAssigned.second)
                     {
                         if (Attribs.ArraySize == 0)
@@ -820,7 +802,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                     }
                     else
                     {
-                        VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->Attribs, Attribs);
+                        VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->second, Attribs);
                     }
                 });
 
