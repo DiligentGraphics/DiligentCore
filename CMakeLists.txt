@@ -283,6 +283,25 @@ else()
     set(NO_WHOLE_ARCHIVE_FLAG "")
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(Diligent-BuildSettings INTERFACE
+    	# errors
+        -Werror=init-self -Werror=parentheses -Werror=return-stack-address -Werror=return-type -Werror=unsupported-friend
+        -Werror=array-bounds -Werror=div-by-zero -Werror=address -Werror=unknown-warning-option -Werror=keyword-macro
+        -Werror=instantiation-after-specialization -Werror=method-signatures -Werror=self-assign -Werror=self-move -Werror=infinite-recursion
+        -Werror=pessimizing-move -Werror=dangling-else
+        # warnings
+        -Wchar-subscripts -Wformat -Wmissing-braces -Wmissing-include-dirs -Wuninitialized
+        -Wconditional-uninitialized -Wstrict-aliasing -Wstrict-overflow -Wendif-labels
+        -Wpointer-arith -Wwrite-strings -Wconversion-null
+        -Wsizeof-pointer-memaccess -Wlogical-op-parentheses -Wloop-analysis -Wincrement-bool
+        # very noisy warnings
+        #-Wcast-qual -Wcast-align -Wmissing-field-initializers -Wenum-compare -Wsign-compare -Wmain -Wlarge-by-value-copy
+        # disable warnings
+        -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unknown-pragmas -Wno-zero-as-null-pointer-constant
+    )
+    target_compile_options(Diligent-BuildSettings INTERFACE $<$<CONFIG:Debug>: -Wunused >)
+endif()
 
 if(PLATFORM_MACOS)
     find_library(APP_KIT AppKit)
