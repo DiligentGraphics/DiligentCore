@@ -38,8 +38,8 @@ struct LinuxMisc : public BasicPlatformMisc
 
         // Returns the number of leading 0-bits in x, starting at the
         // most significant bit position. If x is 0, the result is undefined.
-        auto LeadingZeros = __builtin_clz(Val);
-        auto MSB          = 31 - LeadingZeros;
+        int  LeadingZeros = __builtin_clz(Val);
+        auto MSB          = static_cast<Diligent::Uint32>(31 - LeadingZeros);
         VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
 
         return MSB;
@@ -52,7 +52,7 @@ struct LinuxMisc : public BasicPlatformMisc
         // Returns the number of trailing 0-bits in x, starting at the
         // least significant bit position. If x is 0, the result is undefined.
         auto TrailingZeros = __builtin_ctz(Val);
-        auto LSB           = TrailingZeros;
+        auto LSB           = static_cast<Diligent::Uint32>(TrailingZeros);
         VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
 
         return LSB;
@@ -64,8 +64,8 @@ struct LinuxMisc : public BasicPlatformMisc
 
         // Returns the number of leading 0-bits in x, starting at the
         // most significant bit position. If x is 0, the result is undefined.
-        auto LeadingZeros = __builtin_clzll(Val);
-        auto MSB          = 63 - LeadingZeros;
+        int  LeadingZeros = __builtin_clzll(Val);
+        auto MSB          = static_cast<Diligent::Uint32>(63 - LeadingZeros);
         VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
 
         return MSB;
@@ -78,7 +78,7 @@ struct LinuxMisc : public BasicPlatformMisc
         // Returns the number of trailing 0-bits in x, starting at the
         // least significant bit position. If x is 0, the result is undefined.
         auto TrailingZeros = __builtin_ctzll(Val);
-        auto LSB           = TrailingZeros;
+        auto LSB           = static_cast<Diligent::Uint32>(TrailingZeros);
         VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
 
         return LSB;
@@ -87,7 +87,7 @@ struct LinuxMisc : public BasicPlatformMisc
     static Diligent::Uint32 CountOneBits(Diligent::Uint32 Val)
     {
         // Returns the number of 1-bits in x.
-        auto bits = __builtin_popcount(Val);
+        auto bits = static_cast<Diligent::Uint32>(__builtin_popcount(Val));
         VERIFY_EXPR(bits == BasicPlatformMisc::CountOneBits(Val));
         return bits;
     }
@@ -95,7 +95,7 @@ struct LinuxMisc : public BasicPlatformMisc
     static Diligent::Uint32 CountOneBits(Diligent::Uint64 Val)
     {
         // Returns the number of 1-bits in x.
-        auto bits = __builtin_popcountll(Val);
+        auto bits = static_cast<Diligent::Uint32>(__builtin_popcountll(Val));
         VERIFY_EXPR(bits == BasicPlatformMisc::CountOneBits(Val));
         return bits;
     }

@@ -404,7 +404,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     }
     else
     {
-        const auto* Extensions = (char*)glGetString(GL_EXTENSIONS);
+        const auto* Extensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
         LOG_INFO_MESSAGE("Supported extensions: \n", Extensions);
 
         VERIFY(m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GLES, "Unexpected device type: OpenGLES expected");

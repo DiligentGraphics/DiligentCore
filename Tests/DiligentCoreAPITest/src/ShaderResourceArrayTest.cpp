@@ -172,7 +172,7 @@ TEST(ShaderResourceLayout, ResourceArray)
     SamplerDesc             SamDesc;
     pDevice->CreateSampler(SamDesc, &pSampler);
     RefCntAutoPtr<ITexture> pTextures[8];
-    for (auto t = 0; t < _countof(pTextures); ++t)
+    for (Uint32 t = 0; t < _countof(pTextures); ++t)
     {
         TextureDesc TexDesc;
         TexDesc.Type      = RESOURCE_DIM_TEX_2D;

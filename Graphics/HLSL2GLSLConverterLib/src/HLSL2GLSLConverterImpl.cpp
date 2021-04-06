@@ -528,7 +528,7 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
     //                          sampler  usampler  isampler sampler*Shadow
     const String Prefixes[] = {"", "u", "i", ""};
     const String Suffixes[] = {"", "", "", "Shadow"};
-    for (int i = 0; i < _countof(Prefixes); ++i)
+    for (size_t i = 0; i < _countof(Prefixes); ++i)
     {
         const auto& Pref = Prefixes[i];
         const auto& Suff = Suffixes[i];
@@ -586,7 +586,7 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
     }
 
     String Dimensions[] = {"1D", "1DArray", "2D", "2DArray", "3D", "Cube", "CubeArray"};
-    for (int d = 0; d < _countof(Dimensions); ++d)
+    for (size_t d = 0; d < _countof(Dimensions); ++d)
     {
         String Dim = Dimensions[d];
         for (int i = 0; i < 3; ++i)
@@ -3380,7 +3380,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(st
                     {
                         const auto& Semantic   = Param.Semantic;
                         auto        RTIndexPos = Semantic.begin();
-                        int         RTIndex    = -1;
+                        Uint32      RTIndex    = ~0u;
                         if (SkipPrefix("sv_target", RTIndexPos, Semantic.end()))
                         {
                             if (RTIndexPos != Semantic.end())
@@ -3389,14 +3389,14 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(st
                                 {
                                     RTIndex = *RTIndexPos - '0';
                                     if ((RTIndexPos + 1) != Semantic.end())
-                                        RTIndex = -1;
+                                        RTIndex = ~0u;
                                 }
                             }
                             else
                                 RTIndex = 0;
                         }
 
-                        if (RTIndex >= 0 && RTIndex < MAX_RENDER_TARGETS)
+                        if (RTIndex < MAX_RENDER_TARGETS)
                         {
                             // Layout location qualifiers are allowed on FS outputs even in GLES3.0
                             String OutVarName = BuildParameterName(MemberStack, '_', "_psout_");

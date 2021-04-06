@@ -170,7 +170,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
     RefCntAutoPtr<IBuffer> pUniformBuffs[2];
     IDeviceObject*         pUBs[2];
-    for (int i = 0; i < _countof(pUniformBuffs); ++i)
+    for (size_t i = 0; i < _countof(pUniformBuffs); ++i)
     {
         pDevice->CreateBuffer(BuffDesc, nullptr, &(pUniformBuffs[i]));
         pUBs[i] = pUniformBuffs[i];

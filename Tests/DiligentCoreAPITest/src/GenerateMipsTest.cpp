@@ -50,7 +50,7 @@ TEST(GenerateMipsTest, GenerateMips)
             TEX_FORMAT_RGBA32_FLOAT //
         };
 
-    for (auto f = 0; f < _countof(TestFormats); ++f)
+    for (size_t f = 0; f < _countof(TestFormats); ++f)
     {
         TextureDesc TexDesc;
         TexDesc.Name      = "Mips generation test texture";

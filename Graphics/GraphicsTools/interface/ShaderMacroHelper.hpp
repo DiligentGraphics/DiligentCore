@@ -92,7 +92,7 @@ public:
 
     ShaderMacroHelper& operator=(const ShaderMacroHelper& rhs)
     {
-        *this = std::move(ShaderMacroHelper{rhs});
+        *this = ShaderMacroHelper{rhs};
         return *this;
     }
 

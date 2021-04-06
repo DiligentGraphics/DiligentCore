@@ -48,7 +48,7 @@ public:
         auto* pEnv = TestingEnvironmentGL::GetInstance();
 
         GLuint glShaders[2] = {};
-        for (int i = 0; i < _countof(glShaders); ++i)
+        for (size_t i = 0; i < _countof(glShaders); ++i)
         {
             if (glShaders[i] != 0)
                 glDeleteShader(glShaders[i]);
@@ -61,7 +61,7 @@ public:
         m_glProg = pEnv->LinkProgram(glShaders, 2);
         VERIFY_EXPR(m_glProg != 0u);
 
-        for (int i = 0; i < _countof(glShaders); ++i)
+        for (size_t i = 0; i < _countof(glShaders); ++i)
         {
             if (glShaders[i] != 0)
                 glDeleteShader(glShaders[i]);

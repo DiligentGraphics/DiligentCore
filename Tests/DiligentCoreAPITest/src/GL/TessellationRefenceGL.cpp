@@ -79,7 +79,7 @@ void TessellationReferenceGL(ISwapChain* pSwapChain)
 
     ASSERT_TRUE(glGetError() == GL_NO_ERROR);
 
-    for (int i = 0; i < _countof(glShaders); ++i)
+    for (size_t i = 0; i < _countof(glShaders); ++i)
     {
         if (glShaders[i] != 0)
             glDeleteShader(glShaders[i]);

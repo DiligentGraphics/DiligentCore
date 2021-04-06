@@ -81,7 +81,7 @@ TEST(CopyTexture, Texture2D)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    for (auto f = 0; f < _countof(TestFormats); ++f)
+    for (size_t f = 0; f < _countof(TestFormats); ++f)
     {
         TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 
@@ -145,7 +145,7 @@ TEST(CopyTexture, Texture2DArray)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    for (auto f = 0; f < _countof(TestFormats); ++f)
+    for (size_t f = 0; f < _countof(TestFormats); ++f)
     {
         TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 
@@ -218,7 +218,7 @@ TEST(CopyTexture, Texture3D)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    for (auto f = 0; f < _countof(TestFormats); ++f)
+    for (size_t f = 0; f < _countof(TestFormats); ++f)
     {
         TestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 

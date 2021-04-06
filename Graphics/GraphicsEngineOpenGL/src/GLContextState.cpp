@@ -834,7 +834,7 @@ void GLContextState::SetColorWriteMask(Uint32 RTIndex, Uint32 WriteMask, Bool bI
                 (WriteMask & COLOR_MASK_ALPHA) ? GL_TRUE : GL_FALSE);
             DEV_CHECK_GL_ERROR("Failed to set GL color mask");
 
-            for (int rt = 0; rt < _countof(m_ColorWriteMasks); ++rt)
+            for (size_t rt = 0; rt < _countof(m_ColorWriteMasks); ++rt)
                 m_ColorWriteMasks[rt] = WriteMask;
         }
         m_bIndependentWriteMasks = bIsIndependent;
