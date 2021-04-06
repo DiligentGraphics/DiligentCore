@@ -39,7 +39,7 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const D3D11ShaderResourceCounters& ResCount)
+size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResourceCounters& ResCount)
 {
     size_t MemSize = 0;
     // clang-format off
@@ -56,7 +56,7 @@ size_t ShaderResourceCacheD3D11::GetRequriedMemorySize(const D3D11ShaderResource
         MemSize = AlignUp(MemSize + (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)) * ResCount[D3D11_RESOURCE_RANGE_UAV][ShaderInd],     MaxAlignment);
     // clang-format on
 
-    VERIFY(MemSize < std::numeric_limits<OffsetType>::max(), "Memory size exeed the maximum allowed size.");
+    VERIFY(MemSize < std::numeric_limits<OffsetType>::max(), "Memory size exceed the maximum allowed size.");
     return MemSize;
 }
 
@@ -95,7 +95,7 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters& Res
     const size_t BufferSize = MemOffset;
 
     VERIFY_EXPR(m_pResourceData == nullptr);
-    VERIFY_EXPR(BufferSize == GetRequriedMemorySize(ResCount));
+    VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount));
 
     if (BufferSize > 0)
     {

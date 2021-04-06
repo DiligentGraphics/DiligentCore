@@ -290,8 +290,8 @@ public:
     PipelineResourceAttribsD3D11(Uint32 _SamplerInd,
                                  bool   _ImtblSamplerAssigned) noexcept :
         // clang-format off
-            SamplerInd          {_SamplerInd                    },
-            ImtblSamplerAssigned{_ImtblSamplerAssigned ? 1u : 0u}
+        SamplerInd          {_SamplerInd                    },
+        ImtblSamplerAssigned{_ImtblSamplerAssigned ? 1u : 0u}
     // clang-format on
     {
         VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value.");

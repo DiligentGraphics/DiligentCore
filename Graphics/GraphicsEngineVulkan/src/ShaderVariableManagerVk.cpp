@@ -177,7 +177,7 @@ const PipelineResourceDesc& ShaderVariableManagerVk::GetResourceDesc(Uint32 Inde
     return m_pSignature->GetResourceDesc(Index);
 }
 
-const ShaderVariableManagerVk::ResourceAttribs& ShaderVariableManagerVk::GetAttribs(Uint32 Index) const
+const ShaderVariableManagerVk::ResourceAttribs& ShaderVariableManagerVk::GetResourceAttribs(Uint32 Index) const
 {
     VERIFY_EXPR(m_pSignature);
     return m_pSignature->GetResourceAttribs(Index);
@@ -649,7 +649,7 @@ void ShaderVariableManagerVk::BindResource(IDeviceObject* pObj, Uint32 ArrayInde
 bool ShaderVariableManagerVk::IsBound(Uint32 ArrayIndex, Uint32 ResIndex) const
 {
     const auto&  ResDesc     = GetResourceDesc(ResIndex);
-    const auto&  Attribs     = GetAttribs(ResIndex);
+    const auto&  Attribs     = GetResourceAttribs(ResIndex);
     const Uint32 CacheOffset = Attribs.CacheOffset(m_ResourceCache.GetContentType());
 
     VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);

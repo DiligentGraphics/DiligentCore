@@ -77,7 +77,7 @@ public:
     using ResourceAttribs = PipelineResourceAttribsD3D11;
 
     const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
-    const ResourceAttribs&      GetAttribs(Uint32 Index) const;
+    const ResourceAttribs&      GetResourceAttribs(Uint32 Index) const;
 
 
     template <typename ThisImplType, D3D11_RESOURCE_RANGE ResRange>
@@ -95,8 +95,7 @@ public:
         ShaderVariableD3D11Base& operator= (      ShaderVariableD3D11Base&&) = delete;
         // clang-format on
 
-        const PipelineResourceDesc& GetDesc() const { return m_ParentManager.GetResourceDesc(m_ResIndex); }
-        const ResourceAttribs&      GetAttribs() const { return m_ParentManager.GetAttribs(m_ResIndex); }
+        const ResourceAttribs& GetAttribs() const { return m_ParentManager.GetResourceAttribs(m_ResIndex); }
 
         virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
         {

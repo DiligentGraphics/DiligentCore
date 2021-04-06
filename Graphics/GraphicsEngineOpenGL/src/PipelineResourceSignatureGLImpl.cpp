@@ -119,7 +119,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
                 ShaderVariableDataSizes[s] = ShaderVariableManagerGL::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s));
             }
 
-            const size_t CacheMemorySize = ShaderResourceCacheGL::GetRequriedMemorySize(m_BindingCount);
+            const size_t CacheMemorySize = ShaderResourceCacheGL::GetRequiredMemorySize(m_BindingCount);
             m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
         }
 

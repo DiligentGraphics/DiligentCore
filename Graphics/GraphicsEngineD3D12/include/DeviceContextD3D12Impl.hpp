@@ -227,7 +227,7 @@ public:
                                                               const ResolveTextureSubresourceAttribs& ResolveAttribs) override final;
 
     /// Implementation of IDeviceContext::FinishCommandList() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE FinishCommandList(class ICommandList** ppCommandList) override final;
+    virtual void DILIGENT_CALL_TYPE FinishCommandList(ICommandList** ppCommandList) override final;
 
     /// Implementation of IDeviceContext::ExecuteCommandLists() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE ExecuteCommandLists(Uint32               NumCommandLists,

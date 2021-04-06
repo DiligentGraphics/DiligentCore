@@ -1102,7 +1102,7 @@ void DeviceContextGLImpl::FinishFrame()
     TDeviceContextBase::EndFrame();
 }
 
-void DeviceContextGLImpl::FinishCommandList(class ICommandList** ppCommandList)
+void DeviceContextGLImpl::FinishCommandList(ICommandList** ppCommandList)
 {
     LOG_ERROR("Deferred contexts are not supported in OpenGL mode");
 }

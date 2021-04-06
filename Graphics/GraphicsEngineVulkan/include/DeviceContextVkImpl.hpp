@@ -224,7 +224,7 @@ public:
     virtual void DILIGENT_CALL_TYPE UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice) override final;
 
     /// Implementation of IDeviceContext::FinishCommandList() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE FinishCommandList(class ICommandList** ppCommandList) override final;
+    virtual void DILIGENT_CALL_TYPE FinishCommandList(ICommandList** ppCommandList) override final;
 
     /// Implementation of IDeviceContext::ExecuteCommandLists() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE ExecuteCommandLists(Uint32               NumCommandLists,

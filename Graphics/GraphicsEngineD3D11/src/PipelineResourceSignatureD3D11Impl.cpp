@@ -127,7 +127,7 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
                 ShaderVariableDataSizes[s] = ShaderVariableManagerD3D11::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s));
             }
 
-            const size_t CacheMemorySize = ShaderResourceCacheD3D11::GetRequriedMemorySize(m_ResourceCounters);
+            const size_t CacheMemorySize = ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters);
             m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
         }
 

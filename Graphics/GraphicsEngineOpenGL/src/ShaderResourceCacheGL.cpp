@@ -34,7 +34,7 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheGL::GetRequriedMemorySize(const TResourceCount& ResCount)
+size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCount)
 {
     static_assert(std::is_same<TResourceCount, PipelineResourceSignatureGLImpl::TBindings>::value,
                   "ShaderResourceCacheGL::TResourceCount must be the same type as PipelineResourceSignatureGLImpl::TBindings");
@@ -45,7 +45,7 @@ size_t ShaderResourceCacheGL::GetRequriedMemorySize(const TResourceCount& ResCou
                 sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]          + 
                 sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER];
     // clang-format on
-    VERIFY(MemSize < InvalidResourceOffset, "Memory size exeed the maximum allowed size.");
+    VERIFY(MemSize < InvalidResourceOffset, "Memory size exceed the maximum allowed size.");
     return MemSize;
 }
 
@@ -69,7 +69,7 @@ void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAl
     VERIFY_EXPR(m_pResourceData == nullptr);
     size_t BufferSize = m_MemoryEndOffset;
 
-    VERIFY_EXPR(BufferSize == GetRequriedMemorySize(ResCount));
+    VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount));
 
     if (BufferSize > 0)
     {

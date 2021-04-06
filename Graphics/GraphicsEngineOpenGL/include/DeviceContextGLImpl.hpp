@@ -214,7 +214,7 @@ public:
                                                               const ResolveTextureSubresourceAttribs& ResolveAttribs) override final;
 
     /// Implementation of IDeviceContext::FinishCommandList() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE FinishCommandList(class ICommandList** ppCommandList) override final;
+    virtual void DILIGENT_CALL_TYPE FinishCommandList(ICommandList** ppCommandList) override final;
 
     /// Implementation of IDeviceContext::ExecuteCommandLists() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE ExecuteCommandLists(Uint32               NumCommandLists,
@@ -306,6 +306,8 @@ private:
         // Binding offsets that were used in the last BindProgramResources() call.
         std::array<TBindings, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
 #endif
+        BindInfo()
+        {}
 
         void Invalidate()
         {

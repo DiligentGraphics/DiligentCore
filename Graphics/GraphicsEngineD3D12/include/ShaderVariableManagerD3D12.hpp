@@ -193,11 +193,6 @@ public:
         HLSLResDesc.ShaderRegister = GetAttribs().Register;
     }
 
-    const PipelineResourceDesc& GetDesc() const
-    {
-        return m_ParentManager.GetResourceDesc(m_ResIndex);
-    }
-
     void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
     {
         m_ParentManager.BindResource(pObj, ArrayIndex, m_ResIndex);

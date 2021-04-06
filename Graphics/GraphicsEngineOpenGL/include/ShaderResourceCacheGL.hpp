@@ -118,7 +118,7 @@ public:
     };
 
     using TResourceCount = std::array<Uint16, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
-    static size_t GetRequriedMemorySize(const TResourceCount& ResCount);
+    static size_t GetRequiredMemorySize(const TResourceCount& ResCount);
 
     void Initialize(const TResourceCount& Count, IMemoryAllocator& MemAllocator);
 

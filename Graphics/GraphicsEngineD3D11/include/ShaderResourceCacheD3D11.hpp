@@ -51,7 +51,7 @@ namespace Diligent
 // All resources are stored in the continuous memory using the following layout:
 //
 //   |         CachedCB         |      ID3D11Buffer*     ||       CachedResource     | ID3D11ShaderResourceView* ||         CachedSampler        |      ID3D11SamplerState*    ||      CachedResource     | ID3D11UnorderedAccessView*||
-//   |---------------------------------------------------||--------------------------|---------------------------||------------------------------|-----------------------------||-------------------------|---------------------------||
+//   |--------------------------|------------------------||--------------------------|---------------------------||------------------------------|-----------------------------||-------------------------|---------------------------||
 //   |  0 | 1 | ... | CBCount-1 | 0 | 1 | ...| CBCount-1 || 0 | 1 | ... | SRVCount-1 | 0 | 1 |  ... | SRVCount-1 || 0 | 1 | ... | SamplerCount-1 | 0 | 1 | ...| SamplerCount-1 ||0 | 1 | ... | UAVCount-1 | 0 | 1 | ...  | UAVCount-1 ||
 //    --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
@@ -154,7 +154,7 @@ public:
     template <D3D11_RESOURCE_RANGE>
     struct CachedResourceTraits;
 
-    static size_t GetRequriedMemorySize(const D3D11ShaderResourceCounters& ResCount);
+    static size_t GetRequiredMemorySize(const D3D11ShaderResourceCounters& ResCount);
 
     void Initialize(const D3D11ShaderResourceCounters& ResCount, IMemoryAllocator& MemAllocator);
 

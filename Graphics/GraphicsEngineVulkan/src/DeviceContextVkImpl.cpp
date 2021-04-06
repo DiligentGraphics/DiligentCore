@@ -2291,7 +2291,7 @@ void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
     }
 }
 
-void DeviceContextVkImpl::FinishCommandList(class ICommandList** ppCommandList)
+void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 

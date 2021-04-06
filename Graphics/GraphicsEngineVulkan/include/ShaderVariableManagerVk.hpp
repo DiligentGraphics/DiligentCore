@@ -123,7 +123,7 @@ private:
 
     // These two methods can't be implemented in the header because they depend on PipelineResourceSignatureVkImpl
     const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
-    const ResourceAttribs&      GetAttribs(Uint32 Index) const;
+    const ResourceAttribs&      GetResourceAttribs(Uint32 Index) const;
 
 private:
     PipelineResourceSignatureVkImpl const* m_pSignature = nullptr;

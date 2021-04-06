@@ -691,9 +691,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
     {
         for (auto* pShader : Stage.Shaders)
         {
-            const auto  DefaultVarType  = LayoutDesc.DefaultVariableType;
             const auto& ShaderResources = *pShader->GetShaderResources();
-
             ShaderResources.ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& Attribs, Uint32) //
                 {

@@ -32,7 +32,7 @@
 namespace Diligent
 {
 
-#if DILIGENT_DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 
 #    define CHECK_PARAMETER DEV_CHECK_ERR
 

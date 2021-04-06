@@ -110,7 +110,7 @@ const PipelineResourceDesc& ShaderVariableManagerD3D11::GetResourceDesc(Uint32 I
     return m_pSignature->GetResourceDesc(Index);
 }
 
-const PipelineResourceAttribsD3D11& ShaderVariableManagerD3D11::GetAttribs(Uint32 Index) const
+const PipelineResourceAttribsD3D11& ShaderVariableManagerD3D11::GetResourceAttribs(Uint32 Index) const
 {
     VERIFY_EXPR(m_pSignature);
     return m_pSignature->GetResourceAttribs(Index);
@@ -326,7 +326,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
 
     if (Attr.IsSamplerAssigned() && !Attr.IsImmutableSamplerAssigned())
     {
-        const auto& SampAttr = m_ParentManager.GetAttribs(Attr.SamplerInd);
+        const auto& SampAttr = m_ParentManager.GetResourceAttribs(Attr.SamplerInd);
         const auto& SampDesc = m_ParentManager.GetResourceDesc(Attr.SamplerInd);
         VERIFY_EXPR(SampDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
         VERIFY(!SampAttr.IsImmutableSamplerAssigned(),
