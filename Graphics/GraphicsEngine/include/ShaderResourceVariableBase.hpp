@@ -37,6 +37,7 @@
 #include "PipelineState.h"
 #include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
