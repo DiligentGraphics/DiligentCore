@@ -89,11 +89,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
     static_assert(BIND_FLAGS_LAST == 0x400, "Please update this function to handle the new bind flags");
 
-    for (Uint32 BindFlag = 1; BindFlag <= m_Desc.BindFlags; BindFlag <<= 1)
+    for (auto BindFlags = m_Desc.BindFlags; BindFlags != 0;)
     {
-        if ((m_Desc.BindFlags & BindFlag) != BindFlag)
-            continue;
-
+        auto BindFlag = ExtractLSB(BindFlags);
         switch (BindFlag)
         {
             case BIND_SHADER_RESOURCE:
@@ -258,14 +256,38 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
             LOG_ERROR_AND_THROW("Failed to find suitable memory type for buffer '", m_Desc.Name, '\'');
 
-        VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
-        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, AllocateFlags);
+        VkDeviceSize RequiredAlignment = MemReqs.alignment;
+        if ((m_Desc.BindFlags & BIND_RAY_TRACING) != 0)
+        {
+            // geometry.triangles.vertexData.deviceAddress must be aligned to the size in bytes of the smallest component of the format in vertexFormat (which is 4 bytes)
+            // geometry.triangles.indexData.deviceAddress must be aligned to the size in bytes of the type in indexType (which is 4 bytes)
+            // if geometry.triangles.transformData.deviceAddress is not 0, it must be aligned to 16 bytes
+            // geometry.aabbs.data.deviceAddress must be aligned to 8 bytes
+            const VkDeviceSize ReadOnlyRTBufferAlign = 16u;
+            const VkDeviceSize ScratchBufferAlign    = PhysicalDevice.GetExtProperties().AccelStruct.minAccelerationStructureScratchOffsetAlignment;
+            RequiredAlignment                        = std::max(RequiredAlignment, std::max(ScratchBufferAlign, ReadOnlyRTBufferAlign));
+            VERIFY_EXPR(RequiredAlignment % MemReqs.alignment == 0);
+        }
 
-        m_BufferMemoryAlignedOffset = AlignUp(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
+        VERIFY(IsPowerOfTwo(RequiredAlignment), "Alignment is not power of 2!");
+        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, RequiredAlignment, MemoryTypeIndex, AllocateFlags);
+
+        m_BufferMemoryAlignedOffset = AlignUp(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, RequiredAlignment);
         VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_BufferMemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
         auto Memory = m_MemoryAllocation.Page->GetVkMemory();
         auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_BufferMemoryAlignedOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
+
+#ifdef DILIGENT_DEBUG
+        if ((m_Desc.BindFlags & BIND_RAY_TRACING) != 0)
+        {
+            const VkDeviceSize ReadOnlyRTBufferAlign = 16u;
+            const VkDeviceSize ScratchBufferAlign    = PhysicalDevice.GetExtProperties().AccelStruct.minAccelerationStructureScratchOffsetAlignment;
+            const VkDeviceSize MinRTBufferAlign      = std::max(ScratchBufferAlign, ReadOnlyRTBufferAlign);
+            const auto         DeviceAddress         = GetVkDeviceAddress();
+            VERIFY(DeviceAddress % MinRTBufferAlign == 0, "Address is not properly aligned for ray tracing usage");
+        }
+#endif
 
         bool           bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
         RESOURCE_STATE InitialState      = RESOURCE_STATE_UNDEFINED;

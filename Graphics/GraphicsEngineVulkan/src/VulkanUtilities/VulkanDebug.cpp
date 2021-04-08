@@ -57,7 +57,13 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
 #if 1
     if (callbackData->pMessageIdName)
     {
-        if (std::string{"VUID-vkCmdPipelineBarrier-dstAccessMask-02816"} == callbackData->pMessageIdName)
+        if (strcmp("VUID-vkCmdPipelineBarrier-srcAccessMask-02815", callbackData->pMessageIdName) == 0)
+        {
+            std::string msg{callbackData->pMessage};
+            if (msg.find("srcAccessMask bit VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR is not supported by stage mask (VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR)") != std::string::npos)
+                return VK_FALSE;
+        }
+        if (strcmp("VUID-vkCmdPipelineBarrier-dstAccessMask-02816", callbackData->pMessageIdName) == 0)
         {
             std::string msg{callbackData->pMessage};
             if (msg.find("dstAccessMask bit VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR is not supported by stage mask (VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR)") != std::string::npos)

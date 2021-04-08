@@ -2983,6 +2983,9 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             vkTris.maxVertex                = SrcTris.VertexCount;
             vkTris.vertexData.deviceAddress = pVB->GetVkDeviceAddress() + SrcTris.VertexOffset;
 
+            // geometry.triangles.vertexData.deviceAddress must be aligned to the size in bytes of the smallest component of the format in vertexFormat
+            VERIFY(vkTris.vertexData.deviceAddress % GetValueSize(TriDesc.VertexValueType) == 0, "Vertex buffer start address is not properly aligned");
+
             TransitionOrVerifyBufferState(*pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
 
             if (SrcTris.pIndexBuffer)
@@ -2992,6 +2995,9 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
                 // index type in SrcTris may be undefined, so use index type from description
                 vkTris.indexType               = TypeToVkIndexType(TriDesc.IndexType);
                 vkTris.indexData.deviceAddress = pIB->GetVkDeviceAddress() + SrcTris.IndexOffset;
+
+                // geometry.triangles.indexData.deviceAddress must be aligned to the size in bytes of the type in indexType
+                VERIFY(vkTris.indexData.deviceAddress % GetValueSize(TriDesc.IndexType) == 0, "Index buffer start address is not properly aligned");
 
                 TransitionOrVerifyBufferState(*pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
             }
@@ -3005,6 +3011,9 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             {
                 auto* const pTB                    = ValidatedCast<BufferVkImpl>(SrcTris.pTransformBuffer);
                 vkTris.transformData.deviceAddress = pTB->GetVkDeviceAddress() + SrcTris.TransformBufferOffset;
+
+                // If geometry.triangles.transformData.deviceAddress is not 0, it must be aligned to 16 bytes
+                VERIFY(vkTris.indexData.deviceAddress % 16 == 0, "Transform buffer start address is not properly aligned");
 
                 TransitionOrVerifyBufferState(*pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
             }
@@ -3052,6 +3061,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             vkAABBs.stride             = SrcBoxes.BoxStride;
             vkAABBs.data.deviceAddress = pBB->GetVkDeviceAddress() + SrcBoxes.BoxOffset;
 
+            // geometry.aabbs.data.deviceAddress must be aligned to 8 bytes
             VERIFY(vkAABBs.data.deviceAddress % 8 == 0, "AABB start address is not properly aligned");
 
             TransitionOrVerifyBufferState(*pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_SHADER_READ_BIT, OpName);
@@ -3169,6 +3179,7 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
     vkASInst.arrayOfPointers    = VK_FALSE;
     vkASInst.data.deviceAddress = pInstancesVk->GetVkDeviceAddress() + Attribs.InstanceBufferOffset;
 
+    // if geometry.arrayOfPointers is VK_FALSE, geometry.instances.data.deviceAddress must be aligned to 16 bytes
     VERIFY(vkASInst.data.deviceAddress % 16 == 0, "Instance data address is not properly aligned");
 
     vkASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
