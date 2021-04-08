@@ -1404,9 +1404,11 @@ INSTANTIATE_TEST_SUITE_P(RayTracingTest, RT4, TestParamRange, TestIdToString);
 
 TEST(RayTracingTest, ResourceBinding)
 {
+    constexpr auto RayTracingDepth = 2;
+
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing())
+    if (!pEnv->SupportsRayTracing() || pDevice->GetDeviceProperties().MaxRayTracingRecursionDepth < RayTracingDepth)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
@@ -1469,7 +1471,7 @@ TEST(RayTracingTest, ResourceBinding)
     PSOCreateInfo.pTriangleHitShaders    = TriangleHitShaders;
     PSOCreateInfo.TriangleHitShaderCount = _countof(TriangleHitShaders);
 
-    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth = 1;
+    PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth = RayTracingDepth;
 
     SamplerDesc SamLinearWrapDesc{
         FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
