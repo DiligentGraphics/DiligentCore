@@ -307,8 +307,6 @@ private:
             HandleSampler(GetConstResource<SamplerBindInfo>(s));
     }
 
-    void SetSampler(Uint32 ResIdx, class SamplerD3D11Impl* pSamplerD3D11, Uint32 ArrayIndex);
-
     friend class ShaderVariableIndexLocator;
     friend class ShaderVariableLocator;
 

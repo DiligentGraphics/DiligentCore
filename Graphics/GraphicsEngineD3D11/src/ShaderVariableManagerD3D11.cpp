@@ -341,7 +341,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
             auto* pSamplerD3D11Impl = ValidatedCast<SamplerD3D11Impl>(pViewD3D11->GetSampler());
             if (pSamplerD3D11Impl != nullptr)
             {
-                m_ParentManager.SetSampler(Attr.SamplerInd, pSamplerD3D11Impl, SampArrayIndex);
+                ResourceCache.SetSampler(SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
             }
             else
             {
@@ -352,51 +352,26 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
     ResourceCache.SetTexSRV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
-void ShaderVariableManagerD3D11::SetSampler(Uint32 ResIdx, SamplerD3D11Impl* pSamplerD3D11, Uint32 ArrayIndex)
-{
-    const auto& Desc = GetResourceDesc(ResIdx);
-    const auto& Attr = GetAttribs(ResIdx);
-    VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
-    VERIFY_EXPR(ArrayIndex < Desc.ArraySize);
-    VERIFY(!Attr.IsImmutableSamplerAssigned(), "Sampler must not be assigned to an immutable sampler.");
-
-#ifdef DILIGENT_DEVELOPMENT
-    if (Desc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-    {
-        const auto& CachedSampler = m_ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + ArrayIndex);
-        if (CachedSampler.pSampler != nullptr && CachedSampler.pSampler != pSamplerD3D11)
-        {
-            LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", GetShaderVariableTypeLiteralName(Desc.VarType),
-                              " shader variable '", GetShaderResourcePrintName(Desc, ArrayIndex),
-                              "'. Attempting to bind another sampler or null is an error and may cause unpredicted behavior. "
-                              "Use another shader resource binding instance or label the variable as dynamic.");
-        }
-    }
-#endif
-
-    m_ResourceCache.SetSampler(Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
-}
-
 void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSampler, Uint32 ArrayIndex)
 {
     const auto& Desc = GetDesc();
+    const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+    VERIFY(!Attr.IsImmutableSamplerAssigned(), "Sampler must not be assigned to an immutable sampler.");
     VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+
+    auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{pSampler, IID_SamplerD3D11};
-    if (pSamplerD3D11)
+#ifdef DILIGENT_DEVELOPMENT
     {
-        m_ParentManager.SetSampler(m_ResIndex, std::move(pSamplerD3D11), ArrayIndex);
+        const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + ArrayIndex);
+        VerifySamplerBinding(Desc, ArrayIndex, pSampler, pSamplerD3D11.RawPtr(), CachedSampler.pSampler, m_ParentManager.m_pSignature->GetDesc().Name);
     }
-    else
-    {
-        if (pSampler != nullptr)
-        {
-            LOG_ERROR_MESSAGE("Failed to bind object '", Desc.Name, "' to variable '", GetShaderResourcePrintName(Desc, ArrayIndex),
-                              "''. Incorect object type: sampler is expected.");
-        }
-    }
+#endif
+
+    ResourceCache.SetSampler(Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
 }
 
 void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)

@@ -590,18 +590,7 @@ void BindResourceHelper::CacheSeparateSampler(IDeviceObject* pSampler) const
 
     RefCntAutoPtr<SamplerVkImpl> pSamplerVk{pSampler, IID_Sampler};
 #ifdef DILIGENT_DEVELOPMENT
-    if (pSampler != nullptr && pSamplerVk == nullptr)
-    {
-        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '",
-                          GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex), "'. Unexpected object type: sampler is expected");
-    }
-    if (m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && m_DstRes.pObject != nullptr && m_DstRes.pObject != pSamplerVk)
-    {
-        auto VarTypeStr = GetShaderVariableTypeLiteralName(m_ResDesc.VarType);
-        LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex),
-                          "'. Attempting to bind another sampler or null is an error and may "
-                          "cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.");
-    }
+    VerifySamplerBinding(m_ResDesc, m_ArrayIndex, pSampler, pSamplerVk.RawPtr(), m_DstRes.pObject, m_Signature.GetDesc().Name);
 #endif
 
     UpdateCachedResource(std::move(pSamplerVk));

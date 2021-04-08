@@ -355,18 +355,13 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
 void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
 {
     RefCntAutoPtr<ISamplerD3D12> pSamplerD3D12{pSampler, IID_SamplerD3D12};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifySamplerBinding(m_ResDesc, m_ArrayIndex, pSampler, pSamplerD3D12.RawPtr(), m_DstRes.pObject, m_Signature.GetDesc().Name);
+#endif
     if (pSamplerD3D12)
     {
         if (m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && m_DstRes.pObject != nullptr)
         {
-            if (m_DstRes.pObject != pSampler)
-            {
-                auto VarTypeStr = GetShaderVariableTypeLiteralName(m_ResDesc.VarType);
-                LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex),
-                                  "'. Attempting to bind another sampler is an error and will be ignored. ",
-                                  "Use another shader resource binding instance or label the variable as dynamic.");
-            }
-
             // Do not update resource if one is already bound unless it is dynamic. This may be
             // dangerous as CopyDescriptorsSimple() may interfere with GPU reading the same descriptor.
             return;
@@ -378,11 +373,6 @@ void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
                "Samplers in SRB cache must always be allocated in root tables and thus assigned descriptor in the table");
 
         SetResource(CPUDescriptorHandle, std::move(pSamplerD3D12));
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '",
-                          GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex), "'. Incorect object type: sampler is expected.");
     }
 }
 

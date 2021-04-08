@@ -121,6 +121,65 @@ inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVar
     return AllowedTypeBits;
 }
 
+
+template <typename ResourceImplType>
+bool VerifyResourceBinding(const char*                 ExpectedResourceTypeName,
+                           const PipelineResourceDesc& ResDesc,
+                           Uint32                      ArrayIndex,
+                           const IDeviceObject*        pResource,     // Resource being set
+                           const ResourceImplType*     pResourceImpl, // Expected resource implementation
+                           const IDeviceObject*        pCachedObject, // Object already set in the cache
+                           const char*                 SignatureName)
+{
+    if (pResource != nullptr && pResourceImpl == nullptr)
+    {
+        std::stringstream ss;
+        ss << "Failed to bind resource '" << pResource->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
+        if (SignatureName != nullptr)
+        {
+            ss << " defined by signature '" << SignatureName << '\'';
+        }
+        ss << ". Invalid resource type: " << ExpectedResourceTypeName << " is expected.";
+        LOG_ERROR_MESSAGE(ss.str());
+
+        return false;
+    }
+
+    if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedObject != nullptr && pCachedObject != pResourceImpl)
+    {
+        auto VarTypeStr = GetShaderVariableTypeLiteralName(ResDesc.VarType);
+
+        std::stringstream ss;
+        ss << "Non-null " << ExpectedResourceTypeName << " '" << pCachedObject->GetDesc().Name << "' is already bound to " << VarTypeStr
+           << " shader variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
+        if (SignatureName != nullptr)
+        {
+            ss << " defined by signature '" << SignatureName << '\'';
+        }
+        ss << ". Attempting to bind ";
+        if (pResourceImpl != nullptr)
+        {
+            ss << "another resource ('" << pResourceImpl->GetDesc().Name << "')";
+        }
+        else
+        {
+            ss << "null";
+        }
+        ss << " is an error and may cause unpredicted behavior.";
+
+        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            ss << " Label the variable as mutable and use another shader resource binding instance, or label the variable as dynamic.";
+        else if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+            ss << " Use another shader resource binding instance or label the variable as dynamic.";
+
+        LOG_ERROR_MESSAGE(ss.str());
+
+        return false;
+    }
+
+    return true;
+}
+
 template <typename BufferImplType>
 bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                                  Uint32                      ArrayIndex,
@@ -129,20 +188,8 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                                  const IDeviceObject*        pCachedBuffer,
                                  const char*                 SignatureName)
 {
-    if (pBuffer != nullptr && pBufferImpl == nullptr)
-    {
-        std::stringstream ss;
-        ss << "Failed to bind resource '" << pBuffer->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (SignatureName != nullptr)
-        {
-            ss << " defined by signature '" << SignatureName << '\'';
-        }
-        ss << ". Invalid resource type: buffer is expected.";
-        LOG_ERROR_MESSAGE(ss.str());
-        return false;
-    }
+    bool BindingOK = VerifyResourceBinding("buffer", ResDesc, ArrayIndex, pBuffer, pBufferImpl, pCachedBuffer, SignatureName);
 
-    bool BindingOK = true;
     if (pBufferImpl != nullptr)
     {
         const auto& BuffDesc = pBufferImpl->GetDesc();
@@ -171,36 +218,6 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
             LOG_ERROR_MESSAGE(ss.str());
             BindingOK = false;
         }
-    }
-
-    if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedBuffer != nullptr && pCachedBuffer != pBufferImpl)
-    {
-        auto VarTypeStr = GetShaderVariableTypeLiteralName(ResDesc.VarType);
-
-        std::stringstream ss;
-        ss << "Non-null constant (uniform) buffer '" << pCachedBuffer->GetDesc().Name << "' is already bound to " << VarTypeStr
-           << " shader variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (SignatureName != nullptr)
-        {
-            ss << " defined by signature '" << SignatureName << '\'';
-        }
-        ss << ". Attempting to bind ";
-        if (pBufferImpl)
-        {
-            ss << "another resource ('" << pBufferImpl->GetDesc().Name << "')";
-        }
-        else
-        {
-            ss << "null";
-        }
-        ss << " is an error and may cause unpredicted behavior.";
-
-        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
-            ss << " Use another shader resource binding instance or label the variable as dynamic.";
-
-        LOG_ERROR_MESSAGE(ss.str());
-
-        BindingOK = false;
     }
 
     return BindingOK;
@@ -301,20 +318,8 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
 {
     const char* ExpectedResourceType = GetResourceTypeName<ViewTypeEnumType>();
 
-    if (pView != nullptr && pViewImpl == nullptr)
-    {
-        std::stringstream ss;
-        ss << "Failed to bind resource '" << pView->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (SignatureName != nullptr)
-        {
-            ss << " defined by signature '" << SignatureName << '\'';
-        }
-        ss << ". Invalid resource type: " << ExpectedResourceType << " is expected.";
-        LOG_ERROR_MESSAGE(ss.str());
-        return false;
-    }
+    bool BindingOK = VerifyResourceBinding(ExpectedResourceType, ResDesc, ArrayIndex, pView, pViewImpl, pCachedView, SignatureName);
 
-    bool BindingOK = true;
     if (pViewImpl)
     {
         auto ViewType           = pViewImpl->GetDesc().ViewType;
@@ -357,36 +362,6 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
         }
     }
 
-    if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedView != nullptr && pCachedView != pViewImpl)
-    {
-        const auto* VarTypeStr = GetShaderVariableTypeLiteralName(ResDesc.VarType);
-
-        std::stringstream ss;
-        ss << "Non-null resource '" << pCachedView->GetDesc().Name << "' is already bound to " << VarTypeStr
-           << " shader variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (SignatureName != nullptr)
-        {
-            ss << " defined by signature '" << SignatureName << '\'';
-        }
-        ss << ". Attempting to bind ";
-        if (pViewImpl)
-        {
-            ss << "another resource ('" << pViewImpl->GetDesc().Name << "')";
-        }
-        else
-        {
-            ss << "null";
-        }
-        ss << " is an error and may cause unpredicted behavior.";
-
-        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
-            ss << " Use another shader resource binding instance or label the variable as dynamic.";
-
-        LOG_ERROR_MESSAGE(ss.str());
-
-        BindingOK = false;
-    }
-
     return BindingOK;
 }
 
@@ -423,6 +398,17 @@ bool ValidateBufferMode(const PipelineResourceDesc& ResDesc,
 }
 
 
+template <typename SamplerImplType>
+bool VerifySamplerBinding(const PipelineResourceDesc& ResDesc,
+                          Uint32                      ArrayIndex,
+                          const IDeviceObject*        pSampler,
+                          const SamplerImplType*      pSamplerImpl,
+                          const IDeviceObject*        pCachedSampler,
+                          const char*                 SignatureName)
+{
+    return VerifyResourceBinding("sampler", ResDesc, ArrayIndex, pSampler, pSamplerImpl, pCachedSampler, SignatureName);
+}
+
 template <typename TLASImplType>
 bool VerifyTLASResourceBinding(const PipelineResourceDesc& ResDesc,
                                Uint32                      ArrayIndex,
@@ -431,52 +417,7 @@ bool VerifyTLASResourceBinding(const PipelineResourceDesc& ResDesc,
                                const IDeviceObject*        pCachedAS,
                                const char*                 SignatureName)
 {
-    if (pTLAS != nullptr && pTLASImpl == nullptr)
-    {
-        std::stringstream ss;
-        ss << "Failed to bind resource '" << pCachedAS->GetDesc().Name << "' to variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (SignatureName != nullptr)
-        {
-            ss << " defined by signature '" << SignatureName << '\'';
-        }
-        ss << ". Invalid resource type: TLAS is expected.";
-        LOG_ERROR_MESSAGE(ss.str());
-        return false;
-    }
-
-    bool BindingOK = true;
-
-    if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedAS != nullptr && pCachedAS != pTLAS)
-    {
-        const auto* VarTypeStr = GetShaderVariableTypeLiteralName(ResDesc.VarType);
-
-        std::stringstream ss;
-        ss << "Non-null resource '" << pCachedAS->GetDesc().Name << "' is already bound to " << VarTypeStr
-           << " shader variable '" << GetShaderResourcePrintName(ResDesc, ArrayIndex) << '\'';
-        if (SignatureName != nullptr)
-        {
-            ss << " defined by signature '" << SignatureName << '\'';
-        }
-        ss << ". Attempting to bind ";
-        if (pTLAS)
-        {
-            ss << "another resource ('" << pTLAS->GetDesc().Name << "')";
-        }
-        else
-        {
-            ss << "null";
-        }
-        ss << " is an error and may cause unpredicted behavior.";
-
-        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
-            ss << " Use another shader resource binding instance or label the variable as dynamic.";
-
-        LOG_ERROR_MESSAGE(ss.str());
-
-        BindingOK = false;
-    }
-
-    return BindingOK;
+    return VerifyResourceBinding("TLAS", ResDesc, ArrayIndex, pTLAS, pTLASImpl, pCachedAS, SignatureName);
 }
 
 inline void VerifyAndCorrectSetArrayArguments(const char* Name, Uint32 ArraySize, Uint32& FirstElement, Uint32& NumElements)
