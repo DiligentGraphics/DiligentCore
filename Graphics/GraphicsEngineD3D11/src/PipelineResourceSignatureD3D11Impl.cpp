@@ -459,11 +459,11 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
     switch (ShaderResourceTypeToRange(ResDesc.ResourceType))
     {
         case D3D11_RESOURCE_RANGE_CBV:
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < D3DAttribs.BindCount; ++ArrInd)
             {
                 if (!ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_CBV>(ResAttr.BindPoints + ArrInd))
                 {
-                    LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(ResDesc, ArrInd),
+                    LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(D3DAttribs.Name, D3DAttribs.BindCount, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
                     BindingsOK = false;
                 }
@@ -471,11 +471,11 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
             break;
 
         case D3D11_RESOURCE_RANGE_SAMPLER:
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < D3DAttribs.BindCount; ++ArrInd)
             {
                 if (!ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_SAMPLER>(ResAttr.BindPoints + ArrInd))
                 {
-                    LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(ResDesc, ArrInd),
+                    LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(D3DAttribs.Name, D3DAttribs.BindCount, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
                     BindingsOK = false;
                 }
@@ -483,11 +483,11 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
             break;
 
         case D3D11_RESOURCE_RANGE_SRV:
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < D3DAttribs.BindCount; ++ArrInd)
             {
                 if (!ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_SRV>(ResAttr.BindPoints + ArrInd))
                 {
-                    LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(ResDesc, ArrInd),
+                    LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(D3DAttribs.Name, D3DAttribs.BindCount, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
                     BindingsOK = false;
                     continue;
@@ -496,7 +496,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                 const auto& SRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(ResAttr.BindPoints + ArrInd);
                 if (SRV.pTexture)
                 {
-                    if (!ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, SRV.pView.RawPtr<TextureViewD3D11Impl>(),
+                    if (!ValidateResourceViewDimension(D3DAttribs.Name, D3DAttribs.BindCount, ArrInd, SRV.pView.RawPtr<TextureViewD3D11Impl>(),
                                                        D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample()))
                         BindingsOK = false;
                 }
@@ -510,11 +510,11 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
             break;
 
         case D3D11_RESOURCE_RANGE_UAV:
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < D3DAttribs.BindCount; ++ArrInd)
             {
                 if (!ResourceCache.IsResourceBound<D3D11_RESOURCE_RANGE_UAV>(ResAttr.BindPoints + ArrInd))
                 {
-                    LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(ResDesc, ArrInd),
+                    LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(D3DAttribs.Name, D3DAttribs.BindCount, ArrInd),
                                       "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
                     BindingsOK = false;
                     continue;
@@ -522,7 +522,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                 const auto& UAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(ResAttr.BindPoints + ArrInd);
                 if (UAV.pTexture)
                 {
-                    if (!ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, UAV.pView.RawPtr<TextureViewD3D11Impl>(),
+                    if (!ValidateResourceViewDimension(D3DAttribs.Name, D3DAttribs.BindCount, ArrInd, UAV.pView.RawPtr<TextureViewD3D11Impl>(),
                                                        D3DAttribs.GetResourceDimension(), D3DAttribs.IsMultisample()))
                         BindingsOK = false;
                 }

@@ -508,7 +508,7 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
     switch (PipelineResourceToBindingRange(ResDesc))
     {
         case BINDING_RANGE_UNIFORM_BUFFER:
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < GLAttribs.ArraySize; ++ArrInd)
             {
                 if (!ResourceCache.IsUBBound(ResAttr.CacheOffset + ArrInd))
                 {
@@ -520,7 +520,7 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
             break;
 
         case BINDING_RANGE_STORAGE_BUFFER:
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < GLAttribs.ArraySize; ++ArrInd)
             {
                 if (!ResourceCache.IsSSBOBound(ResAttr.CacheOffset + ArrInd))
                 {
@@ -532,7 +532,7 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
             break;
 
         case BINDING_RANGE_TEXTURE:
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < GLAttribs.ArraySize; ++ArrInd)
             {
                 const bool IsTexView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
                 if (!ResourceCache.IsTextureBound(ResAttr.CacheOffset + ArrInd, IsTexView))
@@ -545,9 +545,9 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
 
                 const auto& Tex = ResourceCache.GetConstTexture(ResAttr.CacheOffset + ArrInd);
                 if (Tex.pTexture)
-                    ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, Tex.pView.RawPtr<ITextureView>(), ResourceDim, IsMultisample);
+                    ValidateResourceViewDimension(GLAttribs.Name, GLAttribs.ArraySize, ArrInd, Tex.pView.RawPtr<ITextureView>(), ResourceDim, IsMultisample);
                 else
-                    ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, Tex.pView.RawPtr<IBufferView>(), ResourceDim, IsMultisample);
+                    ValidateResourceViewDimension(GLAttribs.Name, GLAttribs.ArraySize, ArrInd, Tex.pView.RawPtr<IBufferView>(), ResourceDim, IsMultisample);
 
                 const auto ImmutableSamplerIdx = GetImmutableSamplerIdx(ResAttr);
                 if (ImmutableSamplerIdx != InvalidImmutableSamplerIndex)
@@ -559,7 +559,7 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
             break;
 
         case BINDING_RANGE_IMAGE:
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            for (Uint32 ArrInd = 0; ArrInd < GLAttribs.ArraySize; ++ArrInd)
             {
                 const bool IsTexView = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
                 if (!ResourceCache.IsImageBound(ResAttr.CacheOffset + ArrInd, IsTexView))
@@ -572,9 +572,9 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
 
                 const auto& Img = ResourceCache.GetConstImage(ResAttr.CacheOffset + ArrInd);
                 if (Img.pTexture)
-                    ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, Img.pView.RawPtr<ITextureView>(), ResourceDim, IsMultisample);
+                    ValidateResourceViewDimension(GLAttribs.Name, GLAttribs.ArraySize, ArrInd, Img.pView.RawPtr<ITextureView>(), ResourceDim, IsMultisample);
                 else
-                    ValidateResourceViewDimension(ResDesc.Name, ResDesc.ArraySize, ArrInd, Img.pView.RawPtr<IBufferView>(), ResourceDim, IsMultisample);
+                    ValidateResourceViewDimension(GLAttribs.Name, GLAttribs.ArraySize, ArrInd, Img.pView.RawPtr<IBufferView>(), ResourceDim, IsMultisample);
             }
             break;
 
