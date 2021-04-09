@@ -323,6 +323,8 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureD3D12Impl&
 
 void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
 {
+    VERIFY(pBuffer != nullptr, "Setting buffer to null is handled by BindResourceHelper::operator()");
+
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12{pBuffer, IID_BufferD3D12};
 #ifdef DILIGENT_DEVELOPMENT
@@ -354,6 +356,8 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
 
 void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
 {
+    VERIFY(pSampler != nullptr, "Setting sampler to null is handled by BindResourceHelper::operator()");
+
     RefCntAutoPtr<ISamplerD3D12> pSamplerD3D12{pSampler, IID_SamplerD3D12};
 #ifdef DILIGENT_DEVELOPMENT
     VerifySamplerBinding(m_ResDesc, m_ArrayIndex, pSampler, pSamplerD3D12.RawPtr(), m_DstRes.pObject, m_Signature.GetDesc().Name);
@@ -379,6 +383,8 @@ void BindResourceHelper::CacheSampler(IDeviceObject* pSampler) const
 
 void BindResourceHelper::CacheAccelStruct(IDeviceObject* pTLAS) const
 {
+    VERIFY(pTLAS != nullptr, "Setting TLAS to null is handled by BindResourceHelper::operator()");
+
     RefCntAutoPtr<ITopLevelASD3D12> pTLASD3D12{pTLAS, IID_TopLevelASD3D12};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyTLASResourceBinding(m_ResDesc, m_ArrayIndex, pTLAS, pTLASD3D12.RawPtr(), m_DstRes.pObject.RawPtr(),
@@ -453,6 +459,8 @@ template <typename TResourceViewType,
 void BindResourceHelper::CacheResourceView(IDeviceObject* pView,
                                            TViewTypeEnum  dbgExpectedViewType) const
 {
+    VERIFY(pView != nullptr, "Setting resource view to null is handled by BindResourceHelper::operator()");
+
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TResourceViewType> pViewD3D12{pView, ResourceViewTraits<TResourceViewType>::IID};
 #ifdef DILIGENT_DEVELOPMENT
@@ -487,6 +495,8 @@ void BindResourceHelper::CacheResourceView(IDeviceObject* pView,
 
 void BindResourceHelper::BindCombinedSampler(TextureViewD3D12Impl* pTexView) const
 {
+    VERIFY_EXPR(pTexView != nullptr);
+
     if (m_ResDesc.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
     {
         VERIFY(!m_Attribs.IsCombinedWithSampler(), "Only texture SRVs can be combined with sampler");

@@ -338,9 +338,15 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
 
         if (pViewD3D11)
         {
-            auto* pSamplerD3D11Impl = ValidatedCast<SamplerD3D11Impl>(pViewD3D11->GetSampler());
+            auto* const pSamplerD3D11Impl = ValidatedCast<SamplerD3D11Impl>(pViewD3D11->GetSampler());
             if (pSamplerD3D11Impl != nullptr)
             {
+#ifdef DILIGENT_DEVELOPMENT
+                {
+                    const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex);
+                    VerifySamplerBinding(SampDesc, SampArrayIndex, pSamplerD3D11Impl, pSamplerD3D11Impl, CachedSampler.pSampler, nullptr);
+                }
+#endif
                 ResourceCache.SetSampler(SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
             }
             else

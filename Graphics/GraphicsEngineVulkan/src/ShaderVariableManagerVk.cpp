@@ -434,6 +434,7 @@ bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObjec
 
 void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer) const
 {
+    VERIFY(pBuffer != nullptr, "Setting uniform buffer to null is handled by BindResourceHelper::operator()");
     VERIFY((m_DstRes.Type == DescriptorType::UniformBuffer ||
             m_DstRes.Type == DescriptorType::UniformBufferDynamic),
            "Uniform buffer resource is expected");
@@ -450,6 +451,7 @@ void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer) const
 
 void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView) const
 {
+    VERIFY(pBufferView != nullptr, "Setting storage buffer to null is handled by BindResourceHelper::operator()");
     VERIFY((m_DstRes.Type == DescriptorType::StorageBuffer ||
             m_DstRes.Type == DescriptorType::StorageBuffer_ReadOnly ||
             m_DstRes.Type == DescriptorType::StorageBufferDynamic ||
@@ -480,6 +482,7 @@ void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView) const
 
 void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView) const
 {
+    VERIFY(pBufferView != nullptr, "Setting texel buffer to null is handled by BindResourceHelper::operator()");
     VERIFY((m_DstRes.Type == DescriptorType::UniformTexelBuffer ||
             m_DstRes.Type == DescriptorType::StorageTexelBuffer ||
             m_DstRes.Type == DescriptorType::StorageTexelBuffer_ReadOnly),
@@ -509,6 +512,7 @@ void BindResourceHelper::CacheTexelBuffer(IDeviceObject* pBufferView) const
 
 void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
 {
+    VERIFY(pTexView != nullptr, "Setting image to null is handled by BindResourceHelper::operator()");
     VERIFY((m_DstRes.Type == DescriptorType::StorageImage ||
             m_DstRes.Type == DescriptorType::SeparateImage ||
             m_DstRes.Type == DescriptorType::CombinedImageSampler),
@@ -585,6 +589,7 @@ void BindResourceHelper::CacheImage(IDeviceObject* pTexView) const
 
 void BindResourceHelper::CacheSeparateSampler(IDeviceObject* pSampler) const
 {
+    VERIFY(pSampler != nullptr, "Setting separate sampler to null is handled by BindResourceHelper::operator()");
     VERIFY(m_DstRes.Type == DescriptorType::Sampler, "Separate sampler resource is expected");
     VERIFY(!m_Attribs.IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler");
 
@@ -598,6 +603,7 @@ void BindResourceHelper::CacheSeparateSampler(IDeviceObject* pSampler) const
 
 void BindResourceHelper::CacheInputAttachment(IDeviceObject* pTexView) const
 {
+    VERIFY(pTexView != nullptr, "Setting input attachment to null is handled by BindResourceHelper::operator()");
     VERIFY(m_DstRes.Type == DescriptorType::InputAttachment, "Input attachment resource is expected");
     RefCntAutoPtr<TextureViewVkImpl> pTexViewVk{pTexView, IID_TextureViewVk};
 #ifdef DILIGENT_DEVELOPMENT
@@ -615,6 +621,7 @@ void BindResourceHelper::CacheInputAttachment(IDeviceObject* pTexView) const
 
 void BindResourceHelper::CacheAccelerationStructure(IDeviceObject* pTLAS) const
 {
+    VERIFY(pTLAS != nullptr, "Setting acceleration structure to null is handled by BindResourceHelper::operator()");
     VERIFY(m_DstRes.Type == DescriptorType::AccelerationStructure, "Acceleration Structure resource is expected");
     RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
 #ifdef DILIGENT_DEVELOPMENT
