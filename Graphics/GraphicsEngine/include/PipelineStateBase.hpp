@@ -34,6 +34,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <cstring>
+#include <vector>
 
 #include "PrivateConstants.h"
 #include "PipelineState.h"
@@ -924,6 +925,38 @@ protected:
             }
         }
         return ResourceAttribution{};
+    }
+
+    RefCntAutoPtr<PipelineResourceSignatureImplType> CreateDefaultSignature(
+        const std::vector<PipelineResourceDesc>& Resources,
+        const char*                              pCombinedSamplerSuffix,
+        bool                                     bIsDeviceInternal,
+        const ImmutableSamplerDesc*              pImmutableSamplers = nullptr)
+    {
+        VERIFY_EXPR(m_UsingImplicitSignature);
+
+        VERIFY_EXPR(this->m_Desc.Name != nullptr);
+        const String SignName{String{"Implicit signature of PSO '"} + this->m_Desc.Name + '\''};
+        const auto&  LayoutDesc = this->m_Desc.ResourceLayout;
+
+        PipelineResourceSignatureDesc SignDesc;
+        SignDesc.Name                       = SignName.c_str();
+        SignDesc.NumResources               = static_cast<Uint32>(Resources.size());
+        SignDesc.Resources                  = SignDesc.NumResources > 0 ? Resources.data() : nullptr;
+        SignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
+        SignDesc.ImmutableSamplers          = pImmutableSamplers != nullptr ? pImmutableSamplers : LayoutDesc.ImmutableSamplers;
+        SignDesc.BindingIndex               = 0;
+        SignDesc.SRBAllocationGranularity   = this->m_Desc.SRBAllocationGranularity;
+        SignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
+        SignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
+
+        RefCntAutoPtr<PipelineResourceSignatureImplType> pImplicitSignature;
+        this->GetDevice()->CreatePipelineResourceSignature(SignDesc, pImplicitSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
+
+        if (!pImplicitSignature)
+            LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", this->m_Desc.Name, "'.");
+
+        return pImplicitSignature;
     }
 
 private:

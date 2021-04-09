@@ -84,14 +84,12 @@ private:
     template <typename PSOCreateInfoType>
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages);
 
-    void InitResourceLayout(const PipelineStateCreateInfo& CreateInfo,
-                            const TShaderStages&           ShaderStages,
-                            SHADER_TYPE                    ActiveStages);
+    void InitResourceLayout(const TShaderStages& ShaderStages,
+                            SHADER_TYPE          ActiveStages);
 
     RefCntAutoPtr<PipelineResourceSignatureGLImpl> CreateDefaultSignature(
-        const PipelineStateCreateInfo& CreateInfo,
-        const TShaderStages&           ShaderStages,
-        SHADER_TYPE                    ActiveStages);
+        const TShaderStages& ShaderStages,
+        SHADER_TYPE          ActiveStages);
 
     void Destruct();
 

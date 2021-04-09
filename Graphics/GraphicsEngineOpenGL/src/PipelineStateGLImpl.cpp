@@ -65,13 +65,12 @@ static void VerifyResourceMerge(const PipelineStateDesc&                    PSOD
 }
 
 RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaultSignature(
-    const PipelineStateCreateInfo& CreateInfo,
-    const TShaderStages&           ShaderStages,
-    SHADER_TYPE                    ActiveStages)
+    const TShaderStages& ShaderStages,
+    SHADER_TYPE          ActiveStages)
 {
     std::vector<PipelineResourceDesc> Resources;
 
-    const auto& LayoutDesc     = CreateInfo.PSODesc.ResourceLayout;
+    const auto& LayoutDesc     = m_Desc.ResourceLayout;
     const auto  DefaultVarType = LayoutDesc.DefaultVariableType;
 
     std::unordered_map<ShaderResourceHashKey, const ShaderResourcesGL::GLResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
@@ -102,7 +101,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         }
         else
         {
-            VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->second, Attribs);
+            VerifyResourceMerge(m_Desc, IterAndAssigned.first->second, Attribs);
         }
     };
     const auto HandleUB = [&](const ShaderResourcesGL::UniformBufferInfo& Attribs) {
@@ -137,58 +136,35 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
         ProgramResources.ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);
     }
 
-    RefCntAutoPtr<PipelineResourceSignatureGLImpl> pSignature;
-    if (Resources.size())
+    const auto* pImmutableSamplers = LayoutDesc.ImmutableSamplers;
+
+    std::vector<ImmutableSamplerDesc> ImmutableSamplers;
+    if (!m_IsProgramPipelineSupported)
     {
-        String SignName = String{"Implicit signature of PSO '"} + m_Desc.Name + '\'';
-
-        PipelineResourceSignatureDesc ResSignDesc{};
-        ResSignDesc.Name                       = SignName.c_str();
-        ResSignDesc.Resources                  = Resources.data();
-        ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
-        ResSignDesc.BindingIndex               = 0;
-        ResSignDesc.SRBAllocationGranularity   = CreateInfo.PSODesc.SRBAllocationGranularity;
-        ResSignDesc.UseCombinedTextureSamplers = true;
-
-        std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-        if (m_IsProgramPipelineSupported)
+        // Apply each immutable sampler to all shader stages
+        ImmutableSamplers.resize(LayoutDesc.NumImmutableSamplers);
+        for (Uint32 i = 0; i < LayoutDesc.NumImmutableSamplers; ++i)
         {
-            ResSignDesc.ImmutableSamplers = LayoutDesc.ImmutableSamplers;
+            ImmutableSamplers[i]              = LayoutDesc.ImmutableSamplers[i];
+            ImmutableSamplers[i].ShaderStages = ActiveStages;
         }
-        else
-        {
-            // Apply each immutable sampler to all shader stages
-            ImmutableSamplers.resize(LayoutDesc.NumImmutableSamplers);
-            for (Uint32 i = 0; i < LayoutDesc.NumImmutableSamplers; ++i)
-            {
-                ImmutableSamplers[i]              = LayoutDesc.ImmutableSamplers[i];
-                ImmutableSamplers[i].ShaderStages = ActiveStages;
-            }
-            ResSignDesc.ImmutableSamplers = ImmutableSamplers.data();
-        }
-        ResSignDesc.NumImmutableSamplers = LayoutDesc.NumImmutableSamplers;
-
-        // Always initialize default resource signature as internal device object.
-        // This is necessary to avoud cyclic references from TexRegionRenderer.
-        // This may never be a problem as the PSO keeps the reference to the device if necessary.
-        constexpr bool bIsDeviceInternal = true;
-        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, pSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
-
-        if (!pSignature)
-            LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
+        pImmutableSamplers = !ImmutableSamplers.empty() ? ImmutableSamplers.data() : nullptr;
     }
 
-    return pSignature;
+    // Always initialize default resource signature as internal device object.
+    // This is necessary to avoud cyclic references from TexRegionRenderer.
+    // This may never be a problem as the PSO keeps the reference to the device if necessary.
+    constexpr bool bIsDeviceInternal = true;
+    return TPipelineStateBase::CreateDefaultSignature(Resources, PipelineResourceSignatureDesc{}.CombinedSamplerSuffix, bIsDeviceInternal, pImmutableSamplers);
 }
 
-void PipelineStateGLImpl::InitResourceLayout(const PipelineStateCreateInfo& CreateInfo,
-                                             const TShaderStages&           ShaderStages,
-                                             SHADER_TYPE                    ActiveStages)
+void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
+                                             SHADER_TYPE          ActiveStages)
 {
     if (m_UsingImplicitSignature)
     {
         VERIFY_EXPR(m_SignatureCount == 1);
-        m_Signatures[0] = CreateDefaultSignature(CreateInfo, ShaderStages, ActiveStages);
+        m_Signatures[0] = CreateDefaultSignature(ShaderStages, ActiveStages);
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
@@ -289,7 +265,7 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
         m_ShaderTypes[0] = ActiveStages;
     }
 
-    InitResourceLayout(CreateInfo, ShaderStages, ActiveStages);
+    InitResourceLayout(ShaderStages, ActiveStages);
 }
 
 PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,

@@ -748,13 +748,11 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
     return RPDesc;
 }
 
-RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(
-    const PipelineStateCreateInfo& CreateInfo,
-    const TShaderStages&           ShaderStages)
+RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaultSignature(const TShaderStages& ShaderStages)
 {
     std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
-    const auto&                       LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
+    const auto&                       LayoutDesc = m_Desc.ResourceLayout;
     std::vector<PipelineResourceDesc> Resources;
     const char*                       pCombinedSamplerSuffix = nullptr;
 
@@ -812,7 +810,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                     }
                     else
                     {
-                        VerifyResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->second, Attribs);
+                        VerifyResourceMerge(m_Desc, IterAndAssigned.first->second, Attribs);
                     }
                 });
 
@@ -832,42 +830,19 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
         }
     }
 
-    RefCntAutoPtr<PipelineResourceSignatureVkImpl> pSignature;
-    if (Resources.size())
-    {
-        String SignName = String{"Implicit signature of PSO '"} + m_Desc.Name + '\'';
-
-        PipelineResourceSignatureDesc ResSignDesc;
-        ResSignDesc.Name                       = SignName.c_str();
-        ResSignDesc.Resources                  = Resources.data();
-        ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
-        ResSignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;
-        ResSignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
-        ResSignDesc.BindingIndex               = 0;
-        ResSignDesc.SRBAllocationGranularity   = CreateInfo.PSODesc.SRBAllocationGranularity;
-        ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
-        ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
-
-        // Always initialize default resource signature as internal device object.
-        // This is necessary to avoud cyclic references.
-        // This may never be a problem as the PSO keeps the reference to the device if necessary.
-        constexpr bool bIsDeviceInternal = true;
-        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, pSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
-
-        if (pSignature == nullptr)
-            LOG_ERROR_AND_THROW("Failed to create resource signature for pipeline state");
-    }
-
-    return pSignature;
+    // Always initialize default resource signature as internal device object.
+    // This is necessary to avoid cyclic references.
+    // This may never be a problem as the PSO keeps the reference to the device if necessary.
+    constexpr bool bIsDeviceInternal = true;
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, bIsDeviceInternal);
 }
 
-void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
-                                             TShaderStages&                 ShaderStages)
+void PipelineStateVkImpl::InitPipelineLayout(TShaderStages& ShaderStages)
 {
     if (m_UsingImplicitSignature)
     {
         VERIFY_EXPR(m_SignatureCount == 1);
-        m_Signatures[0] = CreateDefaultSignature(CreateInfo, ShaderStages);
+        m_Signatures[0] = CreateDefaultSignature(ShaderStages);
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
@@ -975,7 +950,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
-    InitPipelineLayout(CreateInfo, ShaderStages);
+    InitPipelineLayout(ShaderStages);
 
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, vkShaderStages);

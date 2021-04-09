@@ -46,11 +46,9 @@ __forceinline SHADER_TYPE GetShaderStageType(const ShaderD3D11Impl* pShader)
     return pShader->GetDesc().ShaderType;
 }
 
-RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::CreateDefaultResourceSignature(
-    const PipelineStateCreateInfo&       CreateInfo,
-    const std::vector<ShaderD3D11Impl*>& Shaders)
+RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::CreateDefaultResourceSignature(const std::vector<ShaderD3D11Impl*>& Shaders)
 {
-    const auto& LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
+    const auto& LayoutDesc = m_Desc.ResourceLayout;
 
     std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
@@ -100,7 +98,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
                 }
                 else
                 {
-                    VerifyD3DResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->second, Attribs);
+                    VerifyD3DResourceMerge(m_Desc, IterAndAssigned.first->second, Attribs);
                 }
             } //
         );
@@ -120,36 +118,17 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
         }
     }
 
-    RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> pSignature;
-    if (Resources.size())
-    {
-        PipelineResourceSignatureDesc ResSignDesc;
-        ResSignDesc.Resources                  = Resources.data();
-        ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
-        ResSignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;
-        ResSignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
-        ResSignDesc.BindingIndex               = 0;
-        ResSignDesc.SRBAllocationGranularity   = CreateInfo.PSODesc.SRBAllocationGranularity;
-        ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
-        ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
-
-        GetDevice()->CreatePipelineResourceSignature(ResSignDesc, pSignature.DblPtr<IPipelineResourceSignature>());
-
-        if (!pSignature)
-            LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "'.");
-    }
-
-    return pSignature;
+    constexpr bool bIsDeviceInternal = false;
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, bIsDeviceInternal);
 }
 
-void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
-                                                 const std::vector<ShaderD3D11Impl*>& Shaders,
+void PipelineStateD3D11Impl::InitResourceLayouts(const std::vector<ShaderD3D11Impl*>& Shaders,
                                                  CComPtr<ID3DBlob>&                   pVSByteCode)
 {
     if (m_UsingImplicitSignature)
     {
         VERIFY_EXPR(m_SignatureCount == 1);
-        m_Signatures[0] = CreateDefaultResourceSignature(CreateInfo, Shaders);
+        m_Signatures[0] = CreateDefaultResourceSignature(Shaders);
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
@@ -261,7 +240,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
     m_ppd3d11Shaders = MemPool.ConstructArray<D3D11ShaderAutoPtrType>(m_NumShaders);
     m_BaseBindings   = MemPool.ConstructArray<D3D11ShaderResourceCounters>(SignCount);
 
-    InitResourceLayouts(CreateInfo, Shaders, pVSByteCode);
+    InitResourceLayouts(Shaders, pVSByteCode);
 }
 
 

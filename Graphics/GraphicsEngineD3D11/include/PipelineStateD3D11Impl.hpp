@@ -113,13 +113,10 @@ private:
     void InitInternalObjects(const PSOCreateInfoType& CreateInfo,
                              CComPtr<ID3DBlob>&       pVSByteCode);
 
-    void InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
-                             const std::vector<ShaderD3D11Impl*>& Shaders,
+    void InitResourceLayouts(const std::vector<ShaderD3D11Impl*>& Shaders,
                              CComPtr<ID3DBlob>&                   pVSByteCode);
 
-    RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> CreateDefaultResourceSignature(
-        const PipelineStateCreateInfo&       CreateInfo,
-        const std::vector<ShaderD3D11Impl*>& Shaders);
+    RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> CreateDefaultResourceSignature(const std::vector<ShaderD3D11Impl*>& Shaders);
 
     void Destruct();
 

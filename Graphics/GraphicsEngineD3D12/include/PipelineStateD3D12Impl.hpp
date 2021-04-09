@@ -96,15 +96,12 @@ private:
                              TShaderStages&           ShaderStages,
                              LocalRootSignatureD3D12* pLocalRootSig = nullptr);
 
-    void InitRootSignature(const PipelineStateCreateInfo& CreateInfo,
-                           TShaderStages&                 ShaderStages,
-                           LocalRootSignatureD3D12*       pLocalRootSig);
+    void InitRootSignature(TShaderStages&           ShaderStages,
+                           LocalRootSignatureD3D12* pLocalRootSig);
 
-    static RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> CreateDefaultResourceSignature(
-        RenderDeviceD3D12Impl*         pDevice,
-        const PipelineStateCreateInfo& CreateInfo,
-        TShaderStages&                 ShaderStages,
-        LocalRootSignatureD3D12*       pLocalRootSig);
+    RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> CreateDefaultResourceSignature(
+        TShaderStages&           ShaderStages,
+        LocalRootSignatureD3D12* pLocalRootSig);
 
     void Destruct();
 

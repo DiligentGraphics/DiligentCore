@@ -334,12 +334,10 @@ size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
 
 
 RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::CreateDefaultResourceSignature(
-    RenderDeviceD3D12Impl*         pDevice,
-    const PipelineStateCreateInfo& CreateInfo,
-    TShaderStages&                 ShaderStages,
-    LocalRootSignatureD3D12*       pLocalRootSig)
+    TShaderStages&           ShaderStages,
+    LocalRootSignatureD3D12* pLocalRootSig)
 {
-    const auto& LayoutDesc = CreateInfo.PSODesc.ResourceLayout;
+    const auto& LayoutDesc = m_Desc.ResourceLayout;
 
     std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
@@ -393,7 +391,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
                     }
                     else
                     {
-                        VerifyD3DResourceMerge(CreateInfo.PSODesc, IterAndAssigned.first->second, Attribs);
+                        VerifyD3DResourceMerge(m_Desc, IterAndAssigned.first->second, Attribs);
                     }
                 } //
             );
@@ -414,43 +412,20 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
         }
     }
 
-    RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> pImplicitSignature;
-    if (Resources.size())
-    {
-        String SignName = String{"Implicit signature of PSO '"} + (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : "") + '\'';
-
-        PipelineResourceSignatureDesc ResSignDesc;
-        ResSignDesc.Name                       = SignName.c_str();
-        ResSignDesc.Resources                  = Resources.data();
-        ResSignDesc.NumResources               = static_cast<Uint32>(Resources.size());
-        ResSignDesc.ImmutableSamplers          = LayoutDesc.ImmutableSamplers;
-        ResSignDesc.NumImmutableSamplers       = LayoutDesc.NumImmutableSamplers;
-        ResSignDesc.BindingIndex               = 0;
-        ResSignDesc.SRBAllocationGranularity   = CreateInfo.PSODesc.SRBAllocationGranularity;
-        ResSignDesc.UseCombinedTextureSamplers = pCombinedSamplerSuffix != nullptr;
-        ResSignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
-
-        // Always initialize default resource signature as internal device object.
-        // This is necessary to avoud cyclic references from GenerateMips.
-        // This may never be a problem as the PSO keeps the reference to the device if necessary.
-        constexpr bool bIsDeviceInternal = true;
-        pDevice->CreatePipelineResourceSignature(ResSignDesc, pImplicitSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
-
-        if (!pImplicitSignature)
-            LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "'.");
-    }
-
-    return pImplicitSignature;
+    // Always initialize default resource signature as internal device object.
+    // This is necessary to avoid cyclic references from GenerateMips.
+    // This may never be a problem as the PSO keeps the reference to the device if necessary.
+    constexpr bool bIsDeviceInternal = true;
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, bIsDeviceInternal);
 }
 
-void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& CreateInfo,
-                                               TShaderStages&                 ShaderStages,
-                                               LocalRootSignatureD3D12*       pLocalRootSig)
+void PipelineStateD3D12Impl::InitRootSignature(TShaderStages&           ShaderStages,
+                                               LocalRootSignatureD3D12* pLocalRootSig)
 {
     if (m_UsingImplicitSignature)
     {
         VERIFY_EXPR(m_SignatureCount == 1);
-        m_Signatures[0] = CreateDefaultResourceSignature(GetDevice(), CreateInfo, ShaderStages, pLocalRootSig);
+        m_Signatures[0] = CreateDefaultResourceSignature(ShaderStages, pLocalRootSig);
         VERIFY_EXPR(!m_Signatures[0] || m_Signatures[0]->GetDesc().BindingIndex == 0);
     }
 
@@ -665,7 +640,7 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
 
-    InitRootSignature(CreateInfo, ShaderStages, pLocalRootSig);
+    InitRootSignature(ShaderStages, pLocalRootSig);
 }
 
 

@@ -111,12 +111,9 @@ private:
                                       std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
                                       std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules);
 
-    void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
-                            TShaderStages&                 ShaderStages);
+    void InitPipelineLayout(TShaderStages& ShaderStages);
 
-    RefCntAutoPtr<PipelineResourceSignatureVkImpl> CreateDefaultSignature(
-        const PipelineStateCreateInfo& CreateInfo,
-        const TShaderStages&           ShaderStages);
+    RefCntAutoPtr<PipelineResourceSignatureVkImpl> CreateDefaultSignature(const TShaderStages& ShaderStages);
 
     void Destruct();
 
