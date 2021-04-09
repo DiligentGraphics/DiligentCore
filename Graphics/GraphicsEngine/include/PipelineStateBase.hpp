@@ -931,7 +931,7 @@ protected:
     RefCntAutoPtr<PipelineResourceSignatureImplType> CreateDefaultSignature(
         const std::vector<PipelineResourceDesc>& Resources,
         const char*                              pCombinedSamplerSuffix,
-        const ImmutableSamplerDesc*              pImmutableSamplers = nullptr,
+        const ImmutableSamplerDesc*              pImmutableSamplers,
         const ExtraArgsType&... ExtraArgs)
     {
         VERIFY_EXPR(m_UsingImplicitSignature);
