@@ -71,13 +71,7 @@ public:
                                     bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureGLImpl();
 
-    using ResourceAttribs = PipelineResourceAttribsGL;
-
-    const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
-    {
-        VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-        return m_pResourceAttribs[ResIndex];
-    }
+    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
 
     using TBindings = std::array<Uint16, BINDING_RANGE_COUNT>;
 
@@ -135,8 +129,6 @@ private:
 
 private:
     TBindings m_BindingCount = {};
-
-    ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
     using SamplerPtr                = RefCntAutoPtr<ISampler>;
     SamplerPtr* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]

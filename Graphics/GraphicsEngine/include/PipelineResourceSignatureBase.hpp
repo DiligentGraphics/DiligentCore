@@ -96,6 +96,9 @@ public:
     // Pipeline resource signature implementation type (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.)
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
 
+    // Pipeline resource attribs type (PipelineResourceAttribsD3D12, PipelineResourceAttribsVk, etc.)
+    using PipelineResourceAttribsType = typename EngineImplTraits::PipelineResourceAttribsType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineResourceSignatureDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this resource signature.
@@ -390,6 +393,12 @@ public:
         return this->m_Desc.ImmutableSamplers[SampIndex];
     }
 
+    const PipelineResourceAttribsType& GetResourceAttribs(Uint32 ResIndex) const
+    {
+        VERIFY_EXPR(ResIndex < m_Desc.NumResources);
+        return m_pResourceAttribs[ResIndex];
+    }
+
     static bool SignaturesCompatible(const PipelineResourceSignatureImplType* pSign0,
                                      const PipelineResourceSignatureImplType* pSign1)
     {
@@ -457,6 +466,8 @@ protected:
 
         ReserveSpaceForDescription(Allocator, Desc);
 
+        Allocator.AddSpace<PipelineResourceAttribsType>(Desc.NumResources);
+
         const auto NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
@@ -471,6 +482,11 @@ protected:
         m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
 
         CopyDescription(Allocator, Desc);
+
+        // Objects will be contructed by the specific implementation
+        static_assert(std::is_trivially_destructible<PipelineResourceAttribsType>::value,
+                      "PipelineResourceAttribsType objects must be constructed to be properly destructed in case an excpetion is thrown");
+        m_pResourceAttribs = Allocator.Allocate<PipelineResourceAttribsType>(Desc.NumResources);
 
         if (NumStaticResStages > 0)
         {
@@ -599,6 +615,9 @@ protected:
 
         m_StaticResStageIndex.fill(-1);
 
+        static_assert(std::is_trivially_destructible<PipelineResourceAttribsType>::value, "Destructors for m_pResourceAttribs[] are required");
+        m_pResourceAttribs = nullptr;
+
         m_pRawMemory.reset();
 
 #if DILIGENT_DEBUG
@@ -649,6 +668,9 @@ protected:
 
 protected:
     std::unique_ptr<void, STDDeleterRawMem<void>> m_pRawMemory;
+
+    // Pipeline resource attributes
+    PipelineResourceAttribsType* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
     // Static resource cache for all static resources
     ShaderResourceCacheImplType* m_pStaticResCache = nullptr;

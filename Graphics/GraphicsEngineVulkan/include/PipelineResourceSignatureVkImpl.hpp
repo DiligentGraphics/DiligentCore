@@ -56,7 +56,7 @@ class PipelineResourceSignatureVkImpl final : public PipelineResourceSignatureBa
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineVkImplTraits>;
 
-    using ResourceAttribs = PipelineResourceAttribsVk;
+    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
 
     // Descriptor set identifier (this is not the descriptor set index in the set layout!)
     enum DESCRIPTOR_SET_ID : size_t
@@ -88,12 +88,6 @@ public:
     {
         static_assert(DESCRIPTOR_SET_ID_NUM_SETS == 2, "Please update this method with new descriptor set id");
         return (HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) ? 1 : 0) + (HasDescriptorSet(DESCRIPTOR_SET_ID_DYNAMIC) ? 1 : 0);
-    }
-
-    const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
-    {
-        VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-        return m_pResourceAttribs[ResIndex];
     }
 
     struct ImmutableSamplerAttribs
@@ -172,8 +166,6 @@ private:
 
     // Descriptor set sizes indexed by the set index in the layout (not DESCRIPTOR_SET_ID!)
     std::array<Uint32, MAX_DESCRIPTOR_SETS> m_DescriptorSetSizes = {~0U, ~0U};
-
-    ResourceAttribs* m_pResourceAttribs = nullptr; // [m_Desc.NumResources]
 
     // The total number of uniform buffers with dynamic offsets in both descriptor sets,
     // accounting for array size.

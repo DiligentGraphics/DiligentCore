@@ -63,13 +63,7 @@ public:
                                        bool                                 bIsDeviceInternal = false);
     ~PipelineResourceSignatureD3D12Impl();
 
-    using ResourceAttribs = PipelineResourceAttribsD3D12;
-
-    const ResourceAttribs& GetResourceAttribs(Uint32 ResIndex) const
-    {
-        VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-        return m_pResourceAttribs[ResIndex];
-    }
+    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
 
     struct ImmutableSamplerAttribs
     {
@@ -173,7 +167,6 @@ private:
     void Destruct();
 
 private:
-    ResourceAttribs*         m_pResourceAttribs  = nullptr; // [m_Desc.NumResources]
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 
     RootParamsManager m_RootParams;

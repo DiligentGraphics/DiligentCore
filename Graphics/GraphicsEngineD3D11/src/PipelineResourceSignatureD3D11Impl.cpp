@@ -94,13 +94,9 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
         auto  MemPool = AllocateInternalObjects(RawAllocator, Desc,
                                                [&Desc](FixedLinearAllocator& MemPool) //
                                                {
-                                                   MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
                                                    MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
                                                });
 
-        static_assert(std::is_trivially_destructible<ResourceAttribs>::value,
-                      "ResourceAttribs objects must be constructed to be properly destructed in case an excpetion is thrown");
-        m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(m_Desc.NumResources);
         m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
 
         CreateLayout();
@@ -279,8 +275,6 @@ void PipelineResourceSignatureD3D11Impl::Destruct()
 
         m_ImmutableSamplers = nullptr;
     }
-
-    m_pResourceAttribs = nullptr;
 
     TPipelineResourceSignatureBase::Destruct();
 }

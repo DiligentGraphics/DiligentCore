@@ -79,6 +79,8 @@ class FixedBlockMemoryAllocator;
 class ShaderResourceCacheVk;
 class ShaderVariableManagerVk;
 
+struct PipelineResourceAttribsVk;
+
 struct EngineVkImplTraits
 {
     using RenderDeviceInterface              = IRenderDeviceVk;
@@ -127,6 +129,8 @@ struct EngineVkImplTraits
 
     using ShaderResourceCacheImplType   = ShaderResourceCacheVk;
     using ShaderVariableManagerImplType = ShaderVariableManagerVk;
+
+    using PipelineResourceAttribsType = PipelineResourceAttribsVk;
 };
 
 } // namespace Diligent

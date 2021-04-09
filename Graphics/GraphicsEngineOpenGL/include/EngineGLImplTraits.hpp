@@ -74,6 +74,8 @@ class FixedBlockMemoryAllocator;
 class ShaderResourceCacheGL;
 class ShaderVariableManagerGL;
 
+struct PipelineResourceAttribsGL;
+
 struct EngineGLImplTraits
 {
     using RenderDeviceInterface              = IGLDeviceBaseInterface;
@@ -116,6 +118,8 @@ struct EngineGLImplTraits
 
     using ShaderResourceCacheImplType   = ShaderResourceCacheGL;
     using ShaderVariableManagerImplType = ShaderVariableManagerGL;
+
+    using PipelineResourceAttribsType = PipelineResourceAttribsGL;
 };
 
 } // namespace Diligent

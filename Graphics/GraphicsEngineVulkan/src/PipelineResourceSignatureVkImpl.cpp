@@ -149,11 +149,9 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
         auto  MemPool = AllocateInternalObjects(RawAllocator, Desc,
                                                [&Desc](FixedLinearAllocator& MemPool) //
                                                {
-                                                   MemPool.AddSpace<ResourceAttribs>(Desc.NumResources);
                                                    MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
                                                });
 
-        m_pResourceAttribs  = MemPool.Allocate<ResourceAttribs>(m_Desc.NumResources);
         m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
 
         const auto NumStaticResStages = GetNumStaticResStages();
@@ -491,8 +489,6 @@ void PipelineResourceSignatureVkImpl::Destruct()
         }
         m_ImmutableSamplers = nullptr;
     }
-
-    m_pResourceAttribs = nullptr;
 
     TPipelineResourceSignatureBase::Destruct();
 }

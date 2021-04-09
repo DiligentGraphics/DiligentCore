@@ -75,6 +75,8 @@ class FixedBlockMemoryAllocator;
 class ShaderResourceCacheD3D11;
 class ShaderVariableManagerD3D11;
 
+struct PipelineResourceAttribsD3D11;
+
 struct EngineD3D11ImplTraits
 {
     using RenderDeviceInterface              = IRenderDeviceD3D11;
@@ -119,6 +121,8 @@ struct EngineD3D11ImplTraits
 
     using ShaderResourceCacheImplType   = ShaderResourceCacheD3D11;
     using ShaderVariableManagerImplType = ShaderVariableManagerD3D11;
+
+    using PipelineResourceAttribsType = PipelineResourceAttribsD3D11;
 };
 
 } // namespace Diligent
