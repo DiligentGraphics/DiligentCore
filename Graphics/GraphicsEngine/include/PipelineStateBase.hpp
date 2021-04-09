@@ -951,7 +951,7 @@ protected:
         SignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
 
         RefCntAutoPtr<PipelineResourceSignatureImplType> pImplicitSignature;
-        this->GetDevice()->CreatePipelineResourceSignature(SignDesc, pImplicitSignature.DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
+        this->GetDevice()->CreatePipelineResourceSignature(SignDesc, pImplicitSignature.template DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
 
         if (!pImplicitSignature)
             LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", this->m_Desc.Name, "'.");

@@ -152,7 +152,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     }
 
     // Always initialize default resource signature as internal device object.
-    // This is necessary to avoud cyclic references from TexRegionRenderer.
+    // This is necessary to avoid cyclic references from TexRegionRenderer.
     // This may never be a problem as the PSO keeps the reference to the device if necessary.
     constexpr bool bIsDeviceInternal = true;
     return TPipelineStateBase::CreateDefaultSignature(Resources, PipelineResourceSignatureDesc{}.CombinedSamplerSuffix, bIsDeviceInternal, pImmutableSamplers);
