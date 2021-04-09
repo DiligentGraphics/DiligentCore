@@ -139,7 +139,7 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
     const auto* pImmutableSamplers = LayoutDesc.ImmutableSamplers;
 
     std::vector<ImmutableSamplerDesc> ImmutableSamplers;
-    if (!m_IsProgramPipelineSupported)
+    if (!m_IsProgramPipelineSupported && LayoutDesc.NumImmutableSamplers > 0)
     {
         // Apply each immutable sampler to all shader stages
         ImmutableSamplers.resize(LayoutDesc.NumImmutableSamplers);
@@ -148,14 +148,14 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
             ImmutableSamplers[i]              = LayoutDesc.ImmutableSamplers[i];
             ImmutableSamplers[i].ShaderStages = ActiveStages;
         }
-        pImmutableSamplers = !ImmutableSamplers.empty() ? ImmutableSamplers.data() : nullptr;
+        pImmutableSamplers = ImmutableSamplers.data();
     }
 
     // Always initialize default resource signature as internal device object.
     // This is necessary to avoid cyclic references from TexRegionRenderer.
     // This may never be a problem as the PSO keeps the reference to the device if necessary.
     constexpr bool bIsDeviceInternal = true;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, PipelineResourceSignatureDesc{}.CombinedSamplerSuffix, bIsDeviceInternal, pImmutableSamplers);
+    return TPipelineStateBase::CreateDefaultSignature(Resources, PipelineResourceSignatureDesc{}.CombinedSamplerSuffix, pImmutableSamplers, bIsDeviceInternal);
 }
 
 void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,

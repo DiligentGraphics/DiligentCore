@@ -834,7 +834,9 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
     // This is necessary to avoid cyclic references.
     // This may never be a problem as the PSO keeps the reference to the device if necessary.
     constexpr bool bIsDeviceInternal = true;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, bIsDeviceInternal);
+    // Use immutable samplers from ResourceLayout.
+    constexpr ImmutableSamplerDesc* pImmutableSamplers = nullptr;
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, bIsDeviceInternal);
 }
 
 void PipelineStateVkImpl::InitPipelineLayout(TShaderStages& ShaderStages)

@@ -416,7 +416,9 @@ RefCntAutoPtr<PipelineResourceSignatureD3D12Impl> PipelineStateD3D12Impl::Create
     // This is necessary to avoid cyclic references from GenerateMips.
     // This may never be a problem as the PSO keeps the reference to the device if necessary.
     constexpr bool bIsDeviceInternal = true;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, bIsDeviceInternal);
+    // Use immutable samplers from ResourceLayout.
+    constexpr ImmutableSamplerDesc* pImmutableSamplers = nullptr;
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, pImmutableSamplers, bIsDeviceInternal);
 }
 
 void PipelineStateD3D12Impl::InitRootSignature(TShaderStages&           ShaderStages,

@@ -927,11 +927,12 @@ protected:
         return ResourceAttribution{};
     }
 
+    template <typename... ExtraArgsType>
     RefCntAutoPtr<PipelineResourceSignatureImplType> CreateDefaultSignature(
         const std::vector<PipelineResourceDesc>& Resources,
         const char*                              pCombinedSamplerSuffix,
-        bool                                     bIsDeviceInternal,
-        const ImmutableSamplerDesc*              pImmutableSamplers = nullptr)
+        const ImmutableSamplerDesc*              pImmutableSamplers = nullptr,
+        const ExtraArgsType&... ExtraArgs)
     {
         VERIFY_EXPR(m_UsingImplicitSignature);
 
@@ -951,7 +952,7 @@ protected:
         SignDesc.CombinedSamplerSuffix      = pCombinedSamplerSuffix;
 
         RefCntAutoPtr<PipelineResourceSignatureImplType> pImplicitSignature;
-        this->GetDevice()->CreatePipelineResourceSignature(SignDesc, pImplicitSignature.template DblPtr<IPipelineResourceSignature>(), bIsDeviceInternal);
+        this->GetDevice()->CreatePipelineResourceSignature(SignDesc, pImplicitSignature.template DblPtr<IPipelineResourceSignature>(), ExtraArgs...);
 
         if (!pImplicitSignature)
             LOG_ERROR_AND_THROW("Failed to create implicit resource signature for pipeline state '", this->m_Desc.Name, "'.");

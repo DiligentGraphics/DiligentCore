@@ -118,8 +118,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
         }
     }
 
-    constexpr bool bIsDeviceInternal = false;
-    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix, bIsDeviceInternal);
+    return TPipelineStateBase::CreateDefaultSignature(Resources, pCombinedSamplerSuffix);
 }
 
 void PipelineStateD3D11Impl::InitResourceLayouts(const std::vector<ShaderD3D11Impl*>& Shaders,
