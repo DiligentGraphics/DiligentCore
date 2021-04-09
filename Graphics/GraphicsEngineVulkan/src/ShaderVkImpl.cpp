@@ -174,7 +174,6 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     auto* pResources       = new (pRawMem) SPIRVShaderResources //
         {
             Allocator,
-            pRenderDeviceVk,
             m_SPIRV,
             m_Desc,
             ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr,

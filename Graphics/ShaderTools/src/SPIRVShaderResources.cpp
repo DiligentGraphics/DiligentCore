@@ -242,7 +242,6 @@ const std::string& GetUBName(diligent_spirv_cross::Compiler&               Compi
 }
 
 SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
-                                           IRenderDevice*        pRenderDevice,
                                            std::vector<uint32_t> spirv_binary,
                                            const ShaderDesc&     shaderDesc,
                                            const char*           CombinedSamplerSuffix,

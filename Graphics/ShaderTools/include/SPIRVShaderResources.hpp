@@ -41,7 +41,6 @@
 #include <sstream>
 
 #include "Shader.h"
-#include "RenderDevice.h"
 #include "STDAllocator.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "StringPool.hpp"
@@ -140,7 +139,6 @@ class SPIRVShaderResources
 {
 public:
     SPIRVShaderResources(IMemoryAllocator&     Allocator,
-                         IRenderDevice*        pRenderDevice,
                          std::vector<uint32_t> spirv_binary,
                          const ShaderDesc&     shaderDesc,
                          const char*           CombinedSamplerSuffix,
