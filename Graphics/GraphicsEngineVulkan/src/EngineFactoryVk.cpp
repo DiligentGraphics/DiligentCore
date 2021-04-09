@@ -313,7 +313,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                         (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
                         (SubgroupProps.supportedStages & RequiredSubgroupStages) == RequiredSubgroupStages),
                        WaveOp, "Wave operations are");
-#undef FeatureSupport
+
+        const auto& VertexAttribDivisorFeats = PhysicalDevice->GetExtFeatures().VertexAttributeDivisor;
+        ENABLE_FEATURE((VertexAttribDivisorFeats.vertexAttributeInstanceRateDivisor != VK_FALSE &&
+                        VertexAttribDivisorFeats.vertexAttributeInstanceRateZeroDivisor != VK_FALSE),
+                       InstanceDataStepRate, "Instance data step rate is");
+#undef ENABLE_FEATURE
 
 
         // To enable some device extensions you must enable instance extension VK_KHR_get_physical_device_properties2
@@ -521,12 +526,23 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 EnabledExtFeats.SubgroupOps = true;
             }
 
+            if (EngineCI.Features.InstanceDataStepRate != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME));
+                DeviceExtensions.push_back(VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME);
+
+                EnabledExtFeats.VertexAttributeDivisor = VertexAttribDivisorFeats;
+
+                *NextExt = &EnabledExtFeats.VertexAttributeDivisor;
+                NextExt  = &EnabledExtFeats.VertexAttributeDivisor.pNext;
+            }
+
             // make sure that last pNext is null
             *NextExt = nullptr;
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 35, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();

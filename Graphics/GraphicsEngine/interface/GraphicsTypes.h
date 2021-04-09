@@ -1701,6 +1701,9 @@ struct DeviceFeatures
     /// Indicates if device supports wave ops (Direct3D12) or subgroups (Vulkan).
     DEVICE_FEATURE_STATE WaveOp                           DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports instance data step rates other than 1.
+    DEVICE_FEATURE_STATE InstanceDataStepRate             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     DeviceFeatures() noexcept {}
 
@@ -1739,10 +1742,11 @@ struct DeviceFeatures
         ResourceBuffer8BitAccess          {State},
         UniformBuffer8BitAccess           {State},
         ShaderResourceRuntimeArray        {State},
-        WaveOp                            {State}
+        WaveOp                            {State},
+        InstanceDataStepRate              {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 35, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 36, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif

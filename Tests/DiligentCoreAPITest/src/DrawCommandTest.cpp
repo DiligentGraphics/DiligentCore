@@ -323,7 +323,7 @@ layout(std140) readonly buffer g_Buffers
 #ifndef GL_ES
 out gl_PerVertex
 {
-	vec4 gl_Position;
+    vec4 gl_Position;
 };
 #endif
 
@@ -1667,6 +1667,103 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
     DrawIndexedIndirectAttribs drawAttrs{VT_UINT32, DRAW_FLAG_VERIFY_ALL, RESOURCE_STATE_TRANSITION_MODE_TRANSITION};
     drawAttrs.IndirectDrawArgsOffset = 5 * sizeof(Uint32);
     pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceCaps().Features.InstanceDataStepRate)
+        GTEST_SKIP() << "InstanceDataStepRate is not supported";
+
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+    GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.UseCombinedTextureSamplers = true;
+
+    RefCntAutoPtr<IShader> pInstancedVS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Draw command test instanced vertex shader";
+        ShaderCI.Source          = HLSL::DrawTest_VSInstanced.c_str();
+        pDevice->CreateShader(ShaderCI, &pInstancedVS);
+        ASSERT_NE(pInstancedVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Draw command test pixel shader";
+        ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    // clang-format off
+    LayoutElement InstancedElems[] =
+    {
+        LayoutElement{ 0, 0, 4, VT_FLOAT32},
+        LayoutElement{ 1, 0, 3, VT_FLOAT32},
+        LayoutElement{ 2, 1, 4, VT_FLOAT32, false, INPUT_ELEMENT_FREQUENCY_PER_INSTANCE, 2}
+    };
+    // clang-format on
+
+    GraphicsPipeline.InputLayout.LayoutElements = InstancedElems;
+    GraphicsPipeline.InputLayout.NumElements    = _countof(InstancedElems);
+
+    PSOCreateInfo.pVS = pInstancedVS;
+    PSOCreateInfo.pPS = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+
+    SetRenderTargets(pPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        VertInst[0], VertInst[1], VertInst[2]
+    };
+    const float4 InstancedData[] = 
+    {
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f},
+        float4{0.1f,  0.1f,  -0.5f, -0.75f}, // These should not 
+        float4{0.1f,  0.1f,  +0.5f, -0.75f}  // be used
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances = 4; // Draw two instances of triangles 0 and 1
+    pContext->Draw(drawAttrs);
 
     Present();
 }

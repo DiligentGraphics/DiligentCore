@@ -39,30 +39,32 @@ class VulkanPhysicalDevice
 public:
     struct ExtensionFeatures
     {
-        VkPhysicalDeviceMeshShaderFeaturesNV             MeshShader           = {};
-        VkPhysicalDevice16BitStorageFeaturesKHR          Storage16Bit         = {};
-        VkPhysicalDevice8BitStorageFeaturesKHR           Storage8Bit          = {};
-        VkPhysicalDeviceShaderFloat16Int8FeaturesKHR     ShaderFloat16Int8    = {};
-        VkPhysicalDeviceAccelerationStructureFeaturesKHR AccelStruct          = {};
-        VkPhysicalDeviceRayTracingPipelineFeaturesKHR    RayTracingPipeline   = {};
-        VkPhysicalDeviceRayQueryFeaturesKHR              RayQuery             = {};
-        bool                                             Spirv14              = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
-        bool                                             Spirv15              = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
-        bool                                             SubgroupOps          = false; // Requires Vulkan 1.1
-        VkPhysicalDeviceBufferDeviceAddressFeaturesKHR   BufferDeviceAddress  = {};
-        VkPhysicalDeviceDescriptorIndexingFeaturesEXT    DescriptorIndexing   = {};
-        bool                                             HasPortabilitySubset = false;
-        VkPhysicalDevicePortabilitySubsetFeaturesKHR     PortabilitySubset    = {};
+        VkPhysicalDeviceMeshShaderFeaturesNV              MeshShader             = {};
+        VkPhysicalDevice16BitStorageFeaturesKHR           Storage16Bit           = {};
+        VkPhysicalDevice8BitStorageFeaturesKHR            Storage8Bit            = {};
+        VkPhysicalDeviceShaderFloat16Int8FeaturesKHR      ShaderFloat16Int8      = {};
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR  AccelStruct            = {};
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR     RayTracingPipeline     = {};
+        VkPhysicalDeviceRayQueryFeaturesKHR               RayQuery               = {};
+        bool                                              Spirv14                = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
+        bool                                              Spirv15                = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
+        bool                                              SubgroupOps            = false; // Requires Vulkan 1.1
+        bool                                              HasPortabilitySubset   = false;
+        VkPhysicalDeviceBufferDeviceAddressFeaturesKHR    BufferDeviceAddress    = {};
+        VkPhysicalDeviceDescriptorIndexingFeaturesEXT     DescriptorIndexing     = {};
+        VkPhysicalDevicePortabilitySubsetFeaturesKHR      PortabilitySubset      = {};
+        VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT VertexAttributeDivisor = {};
     };
 
     struct ExtensionProperties
     {
-        VkPhysicalDeviceMeshShaderPropertiesNV             MeshShader         = {};
-        VkPhysicalDeviceAccelerationStructurePropertiesKHR AccelStruct        = {};
-        VkPhysicalDeviceRayTracingPipelinePropertiesKHR    RayTracingPipeline = {};
-        VkPhysicalDeviceDescriptorIndexingPropertiesEXT    DescriptorIndexing = {};
-        VkPhysicalDevicePortabilitySubsetPropertiesKHR     PortabilitySubset  = {};
-        VkPhysicalDeviceSubgroupProperties                 Subgroup           = {};
+        VkPhysicalDeviceMeshShaderPropertiesNV              MeshShader             = {};
+        VkPhysicalDeviceAccelerationStructurePropertiesKHR  AccelStruct            = {};
+        VkPhysicalDeviceRayTracingPipelinePropertiesKHR     RayTracingPipeline     = {};
+        VkPhysicalDeviceDescriptorIndexingPropertiesEXT     DescriptorIndexing     = {};
+        VkPhysicalDevicePortabilitySubsetPropertiesKHR      PortabilitySubset      = {};
+        VkPhysicalDeviceSubgroupProperties                  Subgroup               = {};
+        VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT VertexAttributeDivisor = {};
     };
 
 public:

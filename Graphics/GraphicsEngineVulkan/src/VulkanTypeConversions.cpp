@@ -974,10 +974,12 @@ VkVertexInputRate LayoutElemFrequencyToVkInputRate(INPUT_ELEMENT_FREQUENCY frequ
     }
 }
 
-void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&                                              LayoutDesc,
-                                             VkPipelineVertexInputStateCreateInfo&                               VertexInputStateCI,
-                                             std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>&   BindingDescriptions,
-                                             std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS>& AttributeDescription)
+void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&                                                      LayoutDesc,
+                                             VkPipelineVertexInputStateCreateInfo&                                       VertexInputStateCI,
+                                             VkPipelineVertexInputDivisorStateCreateInfoEXT&                             VertexInputDivisorCI,
+                                             std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>&           BindingDescriptions,
+                                             std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS>&         AttributeDescription,
+                                             std::array<VkVertexInputBindingDivisorDescriptionEXT, MAX_LAYOUT_ELEMENTS>& VertexBindingDivisors)
 {
     // Vertex input description (20.2)
     VertexInputStateCI.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -987,6 +989,12 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&             
     VertexInputStateCI.pVertexBindingDescriptions      = BindingDescriptions.data();
     VertexInputStateCI.vertexAttributeDescriptionCount = LayoutDesc.NumElements;
     VertexInputStateCI.pVertexAttributeDescriptions    = AttributeDescription.data();
+
+    VertexInputDivisorCI.sType                     = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_DIVISOR_STATE_CREATE_INFO_EXT;
+    VertexInputDivisorCI.pNext                     = nullptr;
+    VertexInputDivisorCI.vertexBindingDivisorCount = 0;
+    VertexInputDivisorCI.pVertexBindingDivisors    = VertexBindingDivisors.data();
+
     std::array<Int32, MAX_LAYOUT_ELEMENTS> BufferSlot2BindingDescInd;
     BufferSlot2BindingDescInd.fill(-1);
     for (Uint32 elem = 0; elem < LayoutDesc.NumElements; ++elem)
@@ -1012,6 +1020,13 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&             
         AttribDesc.location = LayoutElem.InputIndex;
         AttribDesc.format   = TypeToVkFormat(LayoutElem.ValueType, LayoutElem.NumComponents, LayoutElem.IsNormalized);
         AttribDesc.offset   = LayoutElem.RelativeOffset;
+
+        if (LayoutElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_INSTANCE && LayoutElem.InstanceDataStepRate != 1)
+        {
+            auto& AttribDivisor   = VertexBindingDivisors[VertexInputDivisorCI.vertexBindingDivisorCount++];
+            AttribDivisor.binding = BindingDesc.binding;
+            AttribDivisor.divisor = LayoutElem.InstanceDataStepRate;
+        }
     }
 }
 

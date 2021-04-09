@@ -309,6 +309,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     SET_FEATURE_STATE(ShaderResourceRuntimeArray, false, "Runtime-sized array is");
     // clang-format on
 
+    Features.InstanceDataStepRate = DEVICE_FEATURE_STATE_ENABLED;
+
     {
         bool WireframeFillSupported = (glPolygonMode != nullptr);
         if (WireframeFillSupported)
@@ -501,7 +503,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #undef SET_FEATURE_STATE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 35, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
     static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
 #endif
 

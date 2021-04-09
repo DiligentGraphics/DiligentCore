@@ -179,6 +179,7 @@ public:
         Features.TextureCompressionBC          = DEVICE_FEATURE_STATE_ENABLED;
         Features.PixelUAVWritesAndAtomics      = DEVICE_FEATURE_STATE_ENABLED;
         Features.TextureUAVExtendedFormats     = DEVICE_FEATURE_STATE_ENABLED;
+        Features.InstanceDataStepRate          = DEVICE_FEATURE_STATE_ENABLED;
     }
 
 protected:

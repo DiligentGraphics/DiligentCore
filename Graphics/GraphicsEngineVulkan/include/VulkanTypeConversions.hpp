@@ -50,10 +50,12 @@ void BlendStateDesc_To_VkBlendStateCI(const struct BlendStateDesc&              
                                       VkPipelineColorBlendStateCreateInfo&              ColorBlendStateCI,
                                       std::vector<VkPipelineColorBlendAttachmentState>& ColorBlendAttachments);
 
-void InputLayoutDesc_To_VkVertexInputStateCI(const struct InputLayoutDesc&                                       LayoutDesc,
-                                             VkPipelineVertexInputStateCreateInfo&                               VertexInputStateCI,
-                                             std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>&   BindingDescriptions,
-                                             std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS>& AttributeDescription);
+void InputLayoutDesc_To_VkVertexInputStateCI(const struct InputLayoutDesc&                                               LayoutDesc,
+                                             VkPipelineVertexInputStateCreateInfo&                                       VertexInputStateCI,
+                                             VkPipelineVertexInputDivisorStateCreateInfoEXT&                             VertexInputDivisorCI,
+                                             std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>&           BindingDescriptions,
+                                             std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS>&         AttributeDescription,
+                                             std::array<VkVertexInputBindingDivisorDescriptionEXT, MAX_LAYOUT_ELEMENTS>& VertexBindingDivisors);
 
 void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY   PrimTopology,
                                                              VkPrimitiveTopology& VkPrimTopology,

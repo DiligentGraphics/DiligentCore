@@ -86,6 +86,11 @@ void MeshShaderDrawReferenceVk(ISwapChain* pSwapChain)
     PipelineCI.layout = vkLayout;
 
 
+    // NB: this is only necessary to avoid validation layer crash
+    VkPipelineVertexInputStateCreateInfo VertexInputStateCI{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+    PipelineCI.pVertexInputState = &VertexInputStateCI;
+
+
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
 
     InputAssemblyCI.sType          = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -251,6 +256,11 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain)
     vkCreatePipelineLayout(vkDevice, &PipelineLayoutCI, nullptr, &vkLayout);
     ASSERT_TRUE(vkLayout != VK_NULL_HANDLE);
     PipelineCI.layout = vkLayout;
+
+
+    // NB: this is only necessary to avoid validation layer crash
+    VkPipelineVertexInputStateCreateInfo VertexInputStateCI{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+    PipelineCI.pVertexInputState = &VertexInputStateCI;
 
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
@@ -445,6 +455,11 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
     vkCreatePipelineLayout(vkDevice, &PipelineLayoutCI, nullptr, &vkLayout);
     ASSERT_TRUE(vkLayout != VK_NULL_HANDLE);
     PipelineCI.layout = vkLayout;
+
+
+    // NB: this is only necessary to avoid validation layer crash
+    VkPipelineVertexInputStateCreateInfo VertexInputStateCI{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+    PipelineCI.pVertexInputState = &VertexInputStateCI;
 
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};

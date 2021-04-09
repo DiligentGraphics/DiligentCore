@@ -208,13 +208,22 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     PipelineCI.pStages    = Stages.data();
     PipelineCI.layout     = Layout.GetVkPipelineLayout();
 
-    VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
+    VkPipelineVertexInputStateCreateInfo           VertexInputStateCI   = {};
+    VkPipelineVertexInputDivisorStateCreateInfoEXT VertexInputDivisorCI = {};
 
-    std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>   BindingDescriptions;
-    std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS> AttributeDescription;
-    InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, BindingDescriptions, AttributeDescription);
+    std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>           BindingDescriptions;
+    std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS>         AttributeDescription;
+    std::array<VkVertexInputBindingDivisorDescriptionEXT, MAX_LAYOUT_ELEMENTS> VertexBindingDivisors;
+    InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, VertexInputDivisorCI, BindingDescriptions, AttributeDescription, VertexBindingDivisors);
     PipelineCI.pVertexInputState = &VertexInputStateCI;
 
+    if (VertexInputDivisorCI.vertexBindingDivisorCount > 0)
+    {
+        if (!pDeviceVk->GetDeviceCaps().Features.InstanceDataStepRate)
+            LOG_ERROR_MESSAGE("InstanceDataStepRate device feature is not enabled");
+
+        VertexInputStateCI.pNext = &VertexInputDivisorCI;
+    }
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
 
@@ -238,8 +247,9 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         // Validation layers may generate a warning if point_list topology is used, so use MAX_ENUM value.
         InputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 
-        // Vertex input state and tessellation state are ignored in a mesh pipeline and should be null.
-        PipelineCI.pVertexInputState  = nullptr;
+        // Vertex input state and tessellation state are ignored in a mesh pipeline and should be null,
+        // but there is a bug in validation layers that makes them crash.
+        //PipelineCI.pVertexInputState  = nullptr;
         PipelineCI.pTessellationState = nullptr;
     }
     else

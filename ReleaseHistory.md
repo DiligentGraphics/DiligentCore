@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Added InstanceDataStepRate device feature (API Version 240087)
 * Added WaveOp device feature (API Version 240086)
 * Added UpdateSBT command (API Version 240085)
 * Removed `EngineD3D12CreateInfo::NumCommandsToFlushCmdList` and `EngineVkCreateInfo::NumCommandsToFlushCmdBuffer` as flushing

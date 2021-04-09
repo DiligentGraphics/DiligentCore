@@ -217,6 +217,19 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtProperties.Subgroup.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
         }
 
+        if (IsExtensionSupported(VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.VertexAttributeDivisor;
+            NextFeat  = &m_ExtFeatures.VertexAttributeDivisor.pNext;
+
+            m_ExtFeatures.VertexAttributeDivisor.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT;
+
+            *NextProp = &m_ExtProperties.VertexAttributeDivisor;
+            NextProp  = &m_ExtProperties.VertexAttributeDivisor.pNext;
+
+            m_ExtProperties.VertexAttributeDivisor.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_PROPERTIES_EXT;
+        }
+
         // make sure that last pNext is null
         *NextFeat = nullptr;
         *NextProp = nullptr;
