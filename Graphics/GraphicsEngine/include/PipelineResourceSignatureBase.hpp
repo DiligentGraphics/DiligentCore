@@ -395,7 +395,7 @@ public:
 
     const PipelineResourceAttribsType& GetResourceAttribs(Uint32 ResIndex) const
     {
-        VERIFY_EXPR(ResIndex < m_Desc.NumResources);
+        VERIFY_EXPR(ResIndex < this->m_Desc.NumResources);
         return m_pResourceAttribs[ResIndex];
     }
 
