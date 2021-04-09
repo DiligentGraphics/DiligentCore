@@ -134,10 +134,11 @@ class PSOCreationFailureTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* const pEnv    = TestingEnvironment::GetInstance();
-        auto* const pDevice = pEnv->GetDevice();
+        auto* const pEnv       = TestingEnvironment::GetInstance();
+        auto* const pDevice    = pEnv->GetDevice();
+        const auto& deviceCaps = pDevice->GetDeviceCaps();
 
-        sm_HasMeshShader = pDevice->GetDeviceCaps().Features.MeshShaders && pEnv->HasDXCompiler();
+        sm_HasMeshShader = deviceCaps.Features.MeshShaders && pEnv->HasDXCompiler();
         sm_HasRayTracing = pEnv->SupportsRayTracing();
 
         ShaderCreateInfo ShaderCI;
@@ -340,6 +341,7 @@ protected:
             ASSERT_TRUE(sm_pSignature0A);
         }
 
+        if (deviceCaps.Features.GeometryShaders)
         {
             PipelineResourceDesc Resources[] = //
                 {
@@ -354,6 +356,7 @@ protected:
             ASSERT_TRUE(sm_pSignature1);
         }
 
+        if (deviceCaps.Features.GeometryShaders)
         {
             PipelineResourceDesc Resources[] = //
                 {
@@ -975,6 +978,9 @@ TEST_F(PSOCreationFailureTest, ConflictingSignatureBindIndex)
 
 TEST_F(PSOCreationFailureTest, ConflictingSignatureResourceStages)
 {
+    if (!sm_pSignature1)
+        GTEST_SKIP();
+
     auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - conflicting signature resource stages", true)};
 
     IPipelineResourceSignature* pSignatures[] = {sm_pSignature0, sm_pSignature1};
@@ -985,6 +991,9 @@ TEST_F(PSOCreationFailureTest, ConflictingSignatureResourceStages)
 
 TEST_F(PSOCreationFailureTest, ConflictingImmutableSamplerStages)
 {
+    if (!sm_pSignature1A)
+        GTEST_SKIP();
+
     auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - conflicting signature immutable sampler stages", true)};
 
     IPipelineResourceSignature* pSignatures[] = {sm_pSignature0, sm_pSignature1A};
