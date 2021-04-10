@@ -39,8 +39,10 @@
 #include <memory>
 #include <vector>
 #include <sstream>
+#include <array>
 
 #include "Shader.h"
+#include "PipelineResourceSignature.h"
 #include "STDAllocator.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "StringPool.hpp"
@@ -74,7 +76,8 @@ struct SPIRVShaderResourceAttribs
         NumResourceTypes
     };
 
-    static SHADER_RESOURCE_TYPE GetShaderResourceType(ResourceType Type);
+    static SHADER_RESOURCE_TYPE    GetShaderResourceType(ResourceType Type);
+    static PIPELINE_RESOURCE_FLAGS GetPipelineResourceFlags(ResourceType Type);
 
     // clang-format off
 
@@ -202,6 +205,11 @@ public:
     };
 
     SHADER_TYPE GetShaderType() const noexcept { return m_ShaderType; }
+
+    const std::array<Uint32, 3>& GetComputeGroupSize() const
+    {
+        return m_ComputeGroupSize;
+    }
 
     // Process only resources listed in AllowedVarTypes
     template <typename THandleUB,
@@ -363,6 +371,8 @@ private:
     OffsetType m_NumShaderStageInputs  = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
+
+    std::array<Uint32, 3> m_ComputeGroupSize = {};
 
     // Inidicates if the shader was compiled from HLSL source.
     bool m_IsHLSLSource = false;

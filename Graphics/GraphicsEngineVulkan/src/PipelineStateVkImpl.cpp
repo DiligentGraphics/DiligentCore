@@ -532,75 +532,6 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
     return ShaderGroups;
 }
 
-void GetShaderResourceTypeAndFlags(SPIRVShaderResourceAttribs::ResourceType Type,
-                                   SHADER_RESOURCE_TYPE&                    OutType,
-                                   PIPELINE_RESOURCE_FLAGS&                 OutFlags)
-{
-    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type below");
-    OutFlags = PIPELINE_RESOURCE_FLAG_UNKNOWN;
-    switch (Type)
-    {
-        case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
-            OutType = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
-            // Read-only storage buffers map to buffer SRV
-            // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide#read-write-vs-read-only-resources-for-hlsl
-            OutType = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
-            OutType = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
-            OutType  = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            OutFlags = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
-            OutType  = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            OutFlags = PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
-            OutType = SHADER_RESOURCE_TYPE_TEXTURE_UAV;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
-            OutType  = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            OutFlags = PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
-            LOG_WARNING_MESSAGE("There is no appropriate shader resource type for atomic counter");
-            OutType = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
-            OutType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
-            OutType = SHADER_RESOURCE_TYPE_SAMPLER;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::InputAttachment:
-            OutType = SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT;
-            break;
-
-        case SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure:
-            OutType = SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
-            break;
-
-        default:
-            UNEXPECTED("Unknown SPIRV resource type");
-            OutType = SHADER_RESOURCE_TYPE_UNKNOWN;
-            break;
-    }
-}
-
 void VerifyResourceMerge(const PipelineStateDesc&          PSODesc,
                          const SPIRVShaderResourceAttribs& ExistingRes,
                          const SPIRVShaderResourceAttribs& NewResAttribs)
@@ -802,10 +733,8 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                                                 "You must use explicit resource signature to specify the array size.");
                         }
 
-                        SHADER_RESOURCE_TYPE    ResType = SHADER_RESOURCE_TYPE_UNKNOWN;
-                        PIPELINE_RESOURCE_FLAGS Flags   = PIPELINE_RESOURCE_FLAG_UNKNOWN;
-                        GetShaderResourceTypeAndFlags(Attribs.Type, ResType, Flags);
-
+                        const auto ResType = SPIRVShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
+                        const auto Flags   = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type);
                         Resources.emplace_back(ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarType, Flags);
                     }
                     else
@@ -886,17 +815,15 @@ void PipelineStateVkImpl::InitPipelineLayout(TShaderStages& ShaderStages)
                     }
 
                     const auto& SignDesc = ResAttribution.pSignature->GetDesc();
-
-                    SHADER_RESOURCE_TYPE    Type;
-                    PIPELINE_RESOURCE_FLAGS Flags;
-                    GetShaderResourceTypeAndFlags(SPIRVAttribs.Type, Type, Flags);
+                    const auto  ResType  = SPIRVShaderResourceAttribs::GetShaderResourceType(SPIRVAttribs.Type);
+                    const auto  Flags    = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(SPIRVAttribs.Type);
 
                     Uint32 ResourceBinding = ~0u;
                     Uint32 DescriptorSet   = ~0u;
                     if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
                     {
                         const auto& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
-                        ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, SPIRVAttribs.ArraySize,
+                        ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
                                                               pShader->GetDesc().Name, SignDesc.Name);
 
                         const auto& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
@@ -905,10 +832,10 @@ void PipelineStateVkImpl::InitPipelineLayout(TShaderStages& ShaderStages)
                     }
                     else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
                     {
-                        if (Type != SHADER_RESOURCE_TYPE_SAMPLER)
+                        if (ResType != SHADER_RESOURCE_TYPE_SAMPLER)
                         {
                             LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", SPIRVAttribs.Name,
-                                                "' and type '", GetShaderResourceTypeLiteralName(Type),
+                                                "' and type '", GetShaderResourceTypeLiteralName(ResType),
                                                 "' that is not compatible with immutable sampler defined in pipeline resource signature '",
                                                 SignDesc.Name, "'.");
                         }

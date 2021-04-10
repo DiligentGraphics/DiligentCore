@@ -175,8 +175,24 @@ SHADER_RESOURCE_TYPE SPIRVShaderResourceAttribs::GetShaderResourceType(ResourceT
     }
 }
 
+PIPELINE_RESOURCE_FLAGS SPIRVShaderResourceAttribs::GetPipelineResourceFlags(ResourceType Type)
+{
+    static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please handle the new resource type below");
+    switch (Type)
+    {
+        case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
+        case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
+            return PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER;
 
-static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
+        case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
+            return PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
+
+        default:
+            return PIPELINE_RESOURCE_FLAG_UNKNOWN;
+    }
+}
+
+spv::ExecutionModel ShaderTypeToSpvExecutionModel(SHADER_TYPE ShaderType)
 {
     static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please handle the new shader type in the switch below");
     switch (ShaderType)
@@ -256,7 +272,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     m_IsHLSLSource            = ParsedIRSource.hlsl;
     diligent_spirv_cross::Compiler Compiler(std::move(parser.get_parsed_ir()));
 
-    spv::ExecutionModel ExecutionModel = ShaderTypeToExecutionModel(shaderDesc.ShaderType);
+    spv::ExecutionModel ExecutionModel = ShaderTypeToSpvExecutionModel(shaderDesc.ShaderType);
     auto                EntryPoints    = Compiler.get_entry_points_and_stages();
     for (const auto& CurrEntryPoint : EntryPoints)
     {
@@ -560,6 +576,12 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     }
 
     VERIFY(ResourceNamesPool.GetRemainingSize() == 0, "Names pool must be empty");
+
+    if (shaderDesc.ShaderType == SHADER_TYPE_COMPUTE)
+    {
+        for (uint32_t i = 0; i < m_ComputeGroupSize.size(); ++i)
+            m_ComputeGroupSize[i] = Compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, i);
+    }
 
     //LOG_INFO_MESSAGE(DumpResources());
 }
