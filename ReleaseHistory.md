@@ -1,5 +1,7 @@
 ## Current Progress
 
+* Added `MtlThreadGroupSizeX`, `MtlThreadGroupSizeY`, and `MtlThreadGroupSizeZ` members to
+  `DispatchComputeAttribs` and `DispatchComputeIndirectAttribs` structs (API Version 240088)
 * Added InstanceDataStepRate device feature (API Version 240087)
 * Added WaveOp device feature (API Version 240086)
 * Added UpdateSBT command (API Version 240085)

@@ -109,7 +109,7 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///          The flag has no effect in D3D11 and OpenGL backends.
     ///
     ///          Implementation details
-    ///         
+    ///
     ///          Vulkan backend allocates VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptors for all uniform (constant), 
     ///          buffers and VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptors for storage buffers.
     ///          Note that HLSL structured buffers are mapped to read-only storage buffers in SPIRV and RW buffers
@@ -138,7 +138,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE_TRANSITION_MODE, Uint8)
     /// Perform no state transitions and no state validation. 
     /// Resource states are not accessed (either read or written) by the command.
     RESOURCE_STATE_TRANSITION_MODE_NONE = 0,
-    
+
     /// Transition resources to the states required by the specific command.
     /// Resources in unknown state are ignored.
     ///
@@ -298,7 +298,7 @@ struct DrawIndirectAttribs
 
     /// Offset from the beginning of the buffer to the location of draw command attributes.
     Uint32 IndirectDrawArgsOffset   DEFAULT_INITIALIZER(0);
-    
+
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values
@@ -499,9 +499,28 @@ DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 /// This structure is used by IDeviceContext::DispatchCompute().
 struct DispatchComputeAttribs
 {
-    Uint32 ThreadGroupCountX DEFAULT_INITIALIZER(1); ///< Number of groups dispatched in X direction.
-    Uint32 ThreadGroupCountY DEFAULT_INITIALIZER(1); ///< Number of groups dispatched in Y direction.
-    Uint32 ThreadGroupCountZ DEFAULT_INITIALIZER(1); ///< Number of groups dispatched in Z direction.
+    /// The number of groups dispatched in X direction.
+    Uint32 ThreadGroupCountX DEFAULT_INITIALIZER(1);
+
+    /// The number of groups dispatched in Y direction.
+    Uint32 ThreadGroupCountY DEFAULT_INITIALIZER(1);
+
+    /// The number of groups dispatched in Z direction.
+    Uint32 ThreadGroupCountZ DEFAULT_INITIALIZER(1);
+
+
+    /// Compute group X size. This member is only used
+    /// by Metal backend and is ignored by others.
+    Uint32 MtlThreadGroupSizeX DEFAULT_INITIALIZER(0);
+
+    /// Compute group Y size. This member is only used
+    /// by Metal backend and is ignored by others.
+    Uint32 MtlThreadGroupSizeY DEFAULT_INITIALIZER(0);
+
+    /// Compute group Z size. This member is only used
+    /// by Metal backend and is ignored by others.
+    Uint32 MtlThreadGroupSizeZ DEFAULT_INITIALIZER(0);
+
 
 #if DILIGENT_CPP_INTERFACE
     DispatchComputeAttribs()noexcept{}
@@ -527,6 +546,20 @@ struct DispatchComputeIndirectAttribs
 
     /// The offset from the beginning of the buffer to the dispatch command arguments.
     Uint32  DispatchArgsByteOffset    DEFAULT_INITIALIZER(0);
+
+
+    /// Compute group X size. This member is only used
+    /// by Metal backend and is ignored by others.
+    Uint32 MtlThreadGroupSizeX DEFAULT_INITIALIZER(0);
+
+    /// Compute group Y size. This member is only used
+    /// by Metal backend and is ignored by others.
+    Uint32 MtlThreadGroupSizeY DEFAULT_INITIALIZER(0);
+
+    /// Compute group Z size. This member is only used
+    /// by Metal backend and is ignored by others.
+    Uint32 MtlThreadGroupSizeZ DEFAULT_INITIALIZER(0);
+
 
 #if DILIGENT_CPP_INTERFACE
     DispatchComputeIndirectAttribs()noexcept{}
@@ -679,10 +712,10 @@ struct CopyTextureAttribs
 
     /// Array slice of the source texture to copy data from. Must be 0 for non-array textures.
     Uint32                         SrcSlice                 DEFAULT_INITIALIZER(0);
-    
+
     /// Source region to copy. Use nullptr to copy the entire subresource.
     const Box*                     pSrcBox                  DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Source texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
@@ -831,22 +864,22 @@ struct BLASBuildTriangleData
     /// Geometry name used to map a geometry to a hit group in the shader binding table.
     /// Add geometry data to the geometry that is allocated by BLASTriangleDesc with the same name.
     const char* GeometryName          DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Triangle vertices data source.
     /// Triangles are considered "inactive" if the x component of each vertex is NaN.
     /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*    pVertexBuffer         DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Data offset in bytes in pVertexBuffer.
     Uint32      VertexOffset          DEFAULT_INITIALIZER(0);
-    
+
     /// Stride in bytes between vertices.
     Uint32      VertexStride          DEFAULT_INITIALIZER(0);
-    
+
     /// The number of triangle vertices.
     /// Must be less than or equal to BLASTriangleDesc::MaxVertexCount.
     Uint32      VertexCount           DEFAULT_INITIALIZER(0);
-    
+
     /// The type of the vertex components.
     /// This is an optional value. Must be undefined or same as in BLASTriangleDesc. 
     VALUE_TYPE  VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
@@ -854,7 +887,7 @@ struct BLASBuildTriangleData
     /// The number of vertex components.
     /// This is an optional value. Must be undefined or same as in BLASTriangleDesc. 
     Uint8       VertexComponentCount  DEFAULT_INITIALIZER(0);
-    
+
     /// The number of triangles.
     /// Must equal to VertexCount / 3 if pIndexBuffer is null or must be equal to index count / 3.
     Uint32      PrimitiveCount        DEFAULT_INITIALIZER(0);
@@ -863,24 +896,24 @@ struct BLASBuildTriangleData
     /// Must be null if BLASTriangleDesc::IndexType is undefined.
     /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*    pIndexBuffer          DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Data offset in bytes in pIndexBuffer.
     Uint32      IndexOffset           DEFAULT_INITIALIZER(0);
-    
+
     /// The type of triangle indices, see Diligent::VALUE_TYPE.
     /// This is an optional value. Must be undefined or same as in BLASTriangleDesc.
     VALUE_TYPE  IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
-    
+
     /// Geometry transformation data source.
     /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*    pTransformBuffer      DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Data offset in bytes in pTransformBuffer.
     Uint32      TransformBufferOffset DEFAULT_INITIALIZER(0);
 
     /// Geometry flags, se Diligent::RAYTRACING_GEOMETRY_FLAGS.
     RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_FLAG_NONE);
-    
+
 #if DILIGENT_CPP_INTERFACE
     BLASBuildTriangleData() noexcept {}
 #endif
@@ -894,26 +927,26 @@ struct BLASBuildBoundingBoxData
     /// Geometry name used to map geometry to hit group in shader binding table.
     /// Put geometry data to geometry that allocated by BLASBoundingBoxDesc with the same name.
     const char* GeometryName DEFAULT_INITIALIZER(nullptr);
-    
+
     /// AABB data source.
     /// Each AABB defined as { float3 Min; float3 Max } structure.
     /// AABB are considered inactive if AABB.Min.x is NaN.
     /// Buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*    pBoxBuffer   DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Data offset in bytes in pBoxBuffer.
     Uint32      BoxOffset    DEFAULT_INITIALIZER(0);
-    
+
     /// Stride in bytes between each AABB.
     Uint32      BoxStride    DEFAULT_INITIALIZER(0);
-    
+
     /// Number of AABBs.
     /// Must be less than or equal to BLASBoundingBoxDesc::MaxBoxCount.
     Uint32      BoxCount     DEFAULT_INITIALIZER(0);
-    
+
     /// Geometry flags, see Diligent::RAYTRACING_GEOMETRY_FLAGS.
     RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_FLAG_NONE);
-    
+
 #if DILIGENT_CPP_INTERFACE
     BLASBuildBoundingBoxData() noexcept {}
 #endif
@@ -952,23 +985,23 @@ struct BuildBLASAttribs
     ///     - All other content in BLASBuildBoundingBoxData must be same as used to build BLAS.
     ///     - To disable geometry make all AAABBs inactive, see BLASBuildBoundingBoxData::pBoxBuffer description.
     BLASBuildBoundingBoxData const* pBoxData                    DEFAULT_INITIALIZER(nullptr);
-    
+
     /// The number of AABB geometries.
     /// Must be less than or equal to BottomLevelASDesc::BoxCount.
     /// If Update is true then the count must be the same as the one used to build BLAS.
     Uint32                          BoxDataCount                DEFAULT_INITIALIZER(0);
-    
+
     /// The buffer that is used for acceleration structure building.
     /// Must be created with BIND_RAY_TRACING.
     /// Call IBottomLevelAS::GetScratchBufferSizes().Build to get the minimal size for the scratch buffer.
     IBuffer*                        pScratchBuffer              DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Offset from the beginning of the buffer.
     Uint32                          ScratchBufferOffset         DEFAULT_INITIALIZER(0);
-    
+
     /// Scratch buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
     /// if false then BLAS will be built from scratch.
     /// If true then previous content of BLAS will be updated.
     /// pBLAS must be created with RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
@@ -1013,7 +1046,7 @@ struct InstanceMatrix
     {}
 
     InstanceMatrix(const InstanceMatrix&) noexcept = default;
-    
+
     /// Sets the translation part.
     InstanceMatrix& SetTranslation(float x, float y, float z) noexcept
     {
@@ -1041,31 +1074,31 @@ struct TLASBuildInstanceData
 {
     /// Instance name that is used to map an instance to a hit group in shader binding table.
     const char*               InstanceName    DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Bottom-level AS that represents instance geometry.
     /// Once built, TLAS will hold strong reference to pBLAS until next build or copy operation.
     /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*           pBLAS           DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Instace to world transformation.
     InstanceMatrix            Transform;
-    
+
     /// User-defined value that can be accessed in the shader via InstanceID() in HLSL and gl_InstanceCustomIndex in GLSL.
     /// Only the lower 24 bits are used.
     Uint32                    CustomId        DEFAULT_INITIALIZER(0);
-    
+
     /// Instance flags, see Diligent::RAYTRACING_INSTANCE_FLAGS.
     RAYTRACING_INSTANCE_FLAGS Flags           DEFAULT_INITIALIZER(RAYTRACING_INSTANCE_NONE);
 
     /// Visibility mask for the geometry, the instance may only be hit if rayMask & instance.Mask != 0.
     /// ('rayMask' in GLSL is a 'cullMask' argument of traceRay(), 'rayMask' in HLSL is an 'InstanceInclusionMask' argument of TraceRay()).
     Uint8                     Mask            DEFAULT_INITIALIZER(0xFF);
-    
+
     /// The index used to calculate the hit group location in the shader binding table.
     /// Must be TLAS_INSTANCE_OFFSET_AUTO if BuildTLASAttribs::BindingMode is not SHADER_BINDING_USER_DEFINED.
     /// Only the lower 24 bits are used.
     Uint32                    ContributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO);
-    
+
 #if DILIGENT_CPP_INTERFACE
     TLASBuildInstanceData() noexcept {}
 #endif
@@ -1084,42 +1117,42 @@ struct BuildTLASAttribs
     /// Target top-level AS.
     /// Access to the TLAS must be externally synchronized.
     ITopLevelAS*                    pTLAS                         DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Top-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  TLASTransitionMode            DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
     /// Bottom-level AS (in TLASBuildInstanceData::pBLAS) state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  BLASTransitionMode            DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
     /// A pointer to an array of InstanceCount TLASBuildInstanceData structures that contain instance data.
     /// If Update is true:
     ///     - Any instance data can be changed.
     ///     - To disable an instance set TLASBuildInstanceData::Mask to zero or set empty TLASBuildInstanceData::BLAS to pBLAS.
     TLASBuildInstanceData const*    pInstances                    DEFAULT_INITIALIZER(nullptr);
-    
+
     /// The number of instances.
     /// Must be less than or equal to TopLevelASDesc::MaxInstanceCount.
     /// If Update is true then count must be the same as used to build TLAS.
     Uint32                          InstanceCount                 DEFAULT_INITIALIZER(0);
-    
+
     /// The buffer that will be used to store instance data during AS building.
     /// The buffer size must be at least TLAS_INSTANCE_DATA_SIZE * InstanceCount.
     /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*                        pInstanceBuffer               DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Offset from the beginning of the buffer to the location of instance data.
     Uint32                          InstanceBufferOffset          DEFAULT_INITIALIZER(0);
-    
+
     /// Instance buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  InstanceBufferTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
     /// The number of hit shaders that can be bound for a single geometry or an instance (depends on BindingMode).
     ///   - Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
     ///   - Ignored if BindingMode is SHADER_BINDING_USER_DEFINED.
     /// You should use the same value in a shader:
     /// 'MultiplierForGeometryContributionToHitGroupIndex' argument in TraceRay() in HLSL, 'sbtRecordStride' argument in traceRay() in GLSL.
     Uint32                          HitGroupStride         DEFAULT_INITIALIZER(1);
-    
+
     /// Base offset for the hit group location.
     /// Can be used to bind hit shaders for multiple acceleration structures, see IShaderBindingTable::BindHitGroupForGeometry().
     ///   - Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
@@ -1129,25 +1162,25 @@ struct BuildTLASAttribs
     /// Hit shader binding mode, see Diligent::SHADER_BINDING_MODE.
     /// Used to calculate TLASBuildInstanceData::ContributionToHitGroupIndex.
     HIT_GROUP_BINDING_MODE          BindingMode                   DEFAULT_INITIALIZER(HIT_GROUP_BINDING_MODE_PER_GEOMETRY);
-    
+
     /// Buffer that is used for acceleration structure building.
     /// Must be created with BIND_RAY_TRACING.
     /// Call ITopLevelAS::GetScratchBufferSizes().Build to get the minimal size for the scratch buffer.
     /// Access to the TLAS must be externally synchronized.
     IBuffer*                        pScratchBuffer                DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Offset from the beginning of the buffer.
     Uint32                          ScratchBufferOffset           DEFAULT_INITIALIZER(0);
-    
+
     /// Scratch buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
     /// if false then TLAS will be built from scratch.
     /// If true then previous content of TLAS will be updated.
     /// pTLAS must be created with RAYTRACING_BUILD_AS_ALLOW_UPDATE flag.
     /// An update will be faster than building an acceleration structure from scratch.
     Bool                            Update                        DEFAULT_INITIALIZER(False);
-    
+
 #if DILIGENT_CPP_INTERFACE
     BuildTLASAttribs() noexcept {}
 #endif
@@ -1190,22 +1223,22 @@ struct CopyTLASAttribs
     /// Source top-level AS.
     /// Access to the TLAS must be externally synchronized.
     ITopLevelAS*                   pSrc              DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Destination top-level AS.
     /// If Mode is COPY_AS_MODE_COMPACT then pDst must be created with CompactedSize
     /// that is greater or equal to size that returned by IDeviceContext::WriteTLASCompactedSize.
     /// Access to the TLAS must be externally synchronized.
     ITopLevelAS*                   pDst              DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Acceleration structure copy mode, see Diligent::COPY_AS_MODE.
     COPY_AS_MODE                   Mode              DEFAULT_INITIALIZER(COPY_AS_MODE_CLONE);
-    
+
     /// Source top-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE SrcTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
     /// Destination top-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE DstTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
 #if DILIGENT_CPP_INTERFACE
     CopyTLASAttribs() noexcept {}
 #endif
@@ -1218,19 +1251,19 @@ struct WriteBLASCompactedSizeAttribs
 {
     /// Bottom-level AS.
     IBottomLevelAS*                pBLAS                DEFAULT_INITIALIZER(nullptr);
-    
+
     /// The destination buffer into which a 64-bit value representing the acceleration structure compacted size will be written to.
     IBuffer*                       pDestBuffer          DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Offset from the beginning of the buffer to the location of the AS compacted size.
     Uint32                         DestBufferOffset     DEFAULT_INITIALIZER(0);
-    
+
     /// Bottom-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE BLASTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Destination buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE BufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
 #if DILIGENT_CPP_INTERFACE
     WriteBLASCompactedSizeAttribs() noexcept {}
 #endif
@@ -1243,19 +1276,19 @@ struct WriteTLASCompactedSizeAttribs
 {
     /// Top-level AS.
     ITopLevelAS*                   pTLAS                DEFAULT_INITIALIZER(nullptr);
-    
+
     /// The destination buffer into which a 64-bit value representing the acceleration structure compacted size will be written to.
     IBuffer*                       pDestBuffer          DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Offset from the beginning of the buffer to the location of the AS compacted size.
     Uint32                         DestBufferOffset     DEFAULT_INITIALIZER(0);
-    
+
     /// Top-level AS state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE TLASTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Destination buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE BufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-    
+
 #if DILIGENT_CPP_INTERFACE
     WriteTLASCompactedSizeAttribs() noexcept {}
 #endif
@@ -1268,11 +1301,11 @@ struct TraceRaysAttribs
 {
     /// Shader binding table.
     const IShaderBindingTable* pSBT  DEFAULT_INITIALIZER(nullptr);
-    
+
     Uint32               DimensionX  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in X direction.
     Uint32               DimensionY  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in Y direction.
     Uint32               DimensionZ  DEFAULT_INITIALIZER(1); ///< The number of rays dispatched in Z direction.
-        
+
 #if DILIGENT_CPP_INTERFACE
     TraceRaysAttribs() noexcept {}
 #endif
@@ -1335,7 +1368,7 @@ struct StateTransitionDesc
     /// Resource to transition.
     /// Can be ITexture, IBuffer, IBottomLevelAS, ITopLevelAS.
     struct IDeviceObject* pResource DEFAULT_INITIALIZER(nullptr);
-        
+
     /// When transitioning a texture, first mip level of the subresource range to transition.
     Uint32 FirstMipLevel     DEFAULT_INITIALIZER(0);
 
@@ -1419,7 +1452,7 @@ struct StateTransitionDesc
         NewState            {_NewState   },
         UpdateResourceState {_UpdateState}
     {}
-    
+
     StateTransitionDesc(IBottomLevelAS* _pBLAS, 
                         RESOURCE_STATE  _OldState,
                         RESOURCE_STATE  _NewState,
@@ -1535,7 +1568,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     VIRTUAL void METHOD(SetStencilRef)(THIS_
                                        Uint32 StencilRef) PURE;
 
-    
+
     /// \param [in] pBlendFactors - Array of four blend factors, one for each RGBA component. 
     ///                             Theses factors are used if the blend state uses one of the 
     ///                             Diligent::BLEND_FACTOR_BLEND_FACTOR or 
@@ -1560,7 +1593,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                   used. If this parameter is nullptr, zero offsets for all buffers will be used.
     /// \param [in] StateTransitionMode - State transition mode for buffers being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     /// \param [in] Flags               - Additional flags. See Diligent::SET_VERTEX_BUFFERS_FLAGS for a list of allowed values.
-    ///                                   
+    ///
     /// \remarks The device context keeps strong references to all bound vertex buffers.
     ///          Thus a buffer cannot be released until it is unbound from the context.\n
     ///          It is suggested to specify Diligent::SET_VERTEX_BUFFERS_FLAG_RESET flag
@@ -1593,7 +1626,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
 
     /// Binds an index buffer to the pipeline.
-    
+
     /// \param [in] pIndexBuffer        - Pointer to the index buffer. The buffer must have been created 
     ///                                   with the Diligent::BIND_INDEX_BUFFER flag.
     /// \param [in] ByteOffset          - Offset from the beginning of the buffer to 
@@ -1676,7 +1709,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                   bind to the device. The view type must be
     ///                                   Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
     /// \param [in] StateTransitionMode - State transition mode of the render targets and depth stencil buffer being set (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    /// 
+    ///
     /// \remarks     The device context will keep strong references to all bound render target 
     ///              and depth-stencil views. Thus these views (and consequently referenced textures) 
     ///              cannot be released until they are unbound from the context.\n
@@ -1704,7 +1737,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] Attribs - The command attributes, see Diligent::BeginRenderPassAttribs for details.
     VIRTUAL void METHOD(BeginRenderPass)(THIS_
                                          const BeginRenderPassAttribs REF Attribs) PURE;
-    
+
 
     /// Transitions to the next subpass in the render pass instance.
     VIRTUAL void METHOD(NextSubpass)(THIS) PURE;
@@ -1721,7 +1754,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks  If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
-    ///          
+    ///
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     VIRTUAL void METHOD(Draw)(THIS_
@@ -1735,7 +1768,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks  If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
-    ///          
+    ///
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     VIRTUAL void METHOD(DrawIndexed)(THIS_
@@ -1759,7 +1792,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
-    ///          
+    ///
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     VIRTUAL void METHOD(DrawIndirect)(THIS_
@@ -1785,16 +1818,16 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
     ///           buffers, so no other threads are allowed to alter the states of the same resources.
     ///           It is OK to read these states.
-    ///          
+    ///
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     VIRTUAL void METHOD(DrawIndexedIndirect)(THIS_
                                              const DrawIndexedIndirectAttribs REF Attribs,
                                              IBuffer*                             pAttribsBuffer) PURE;
-    
+
 
     /// Executes a mesh draw command.
-    
+
     /// \param [in] Attribs - Draw command attributes, see Diligent::DrawMeshAttribs for details.
     /// 
     /// \remarks  For compatibility between Direct3D12 and Vulkan, only a single work group dimension is used.
@@ -1802,10 +1835,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///           for example: '[numthreads(ThreadCount, 1, 1)]' or 'layout(local_size_x = ThreadCount) in'.
     VIRTUAL void METHOD(DrawMesh)(THIS_
                                   const DrawMeshAttribs REF Attribs) PURE;
-    
+
 
     /// Executes an mesh indirect draw command.
-    
+
     /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawMeshIndirectAttribs for details.
     /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
     ///                              The buffer must contain the following arguments at the specified offset:
@@ -1816,14 +1849,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                Vulkan:
     ///                                     Uint32 TaskCount;
     ///                                     Uint32 FirstTask;
-    /// 
+    ///
     /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use the first element in the structure,
     ///           for example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
-    /// 
+    ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
     ///           so no other thread is allowed to read or write the state of the buffer.
-    /// 
+    ///
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     VIRTUAL void METHOD(DrawMeshIndirect)(THIS_
@@ -1845,14 +1878,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                     Uint32 FirstTask;
     ///                              Size of the buffer must be sizeof(Uint32[3]) * Attribs.MaxDrawCommands.
     /// \param [in] pCountBuffer   - Pointer to the buffer, from which Uint32 value with draw count will be read.
-    /// 
+    ///
     /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use the first element in the structure,
     ///           for example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
-    /// 
+    ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
     ///           so no other thread is allowed to read or write the state of the buffer.
-    /// 
+    ///
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     VIRTUAL void METHOD(DrawMeshIndirectCount)(THIS_
@@ -1864,12 +1897,18 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Executes a dispatch compute command.
 
     /// \param [in] Attribs - Dispatch command attributes, see Diligent::DispatchComputeAttribs for details.
+    ///
+    /// \remarks    In Metal, the compute group sizes are defined by the dispatch command rather than by
+    ///             the compute shader. When the shader is compiled from HLSL or GLSL, the engine will
+    ///             use the group size information from the shader. When using MSL, an application should
+    ///             provide the compute group dimensions through MtlThreadGroupSizeX, MtlThreadGroupSizeY, 
+    ///             and MtlThreadGroupSizeZ members.
     VIRTUAL void METHOD(DispatchCompute)(THIS_
                                          const DispatchComputeAttribs REF Attribs) PURE;
 
 
     /// Executes an indirect dispatch compute command.
-    
+
     /// \param [in] Attribs        - The command attributes, see Diligent::DispatchComputeIndirectAttribs for details.
     /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect dispatch attributes.
     ///                              The buffer must contain the following arguments at the specified offset:
@@ -1880,16 +1919,22 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of indirect dispatch arguments buffer. This is not a thread safe operation, 
     ///           so no other thread is allowed to read or write the state of the same resource.
-    ///          
+    ///
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    ///
+    ///           In Metal, the compute group sizes are defined by the dispatch command rather than by
+    ///           the compute shader. When the shader is compiled from HLSL or GLSL, the engine will
+    ///           use the group size information from the shader. When using MSL, an application should
+    ///           provide the compute group dimensions through MtlThreadGroupSizeX, MtlThreadGroupSizeY, 
+    ///           and MtlThreadGroupSizeZ members.
     VIRTUAL void METHOD(DispatchComputeIndirect)(THIS_
                                                  const DispatchComputeIndirectAttribs REF Attribs,
                                                  IBuffer*                                 pAttribsBuffer) PURE;
 
 
     /// Clears a depth-stencil view.
-    
+
     /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be 
     ///                                   Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
     /// \param [in] StateTransitionMode - state transition mode of the depth-stencil buffer to clear.
