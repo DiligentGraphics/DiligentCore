@@ -217,13 +217,17 @@ void main(in  uint    VertId : SV_VertexID,
 
 const std::string DrawTest_VSStructuredBuffers{
 R"(
-struct BufferData
+struct PosData
+{
+    float4 data;
+};
+struct ColData
 {
     float4 data;
 };
 
-StructuredBuffer<BufferData> g_Positions;
-StructuredBuffer<BufferData> g_Colors;
+StructuredBuffer<PosData> g_Positions;
+StructuredBuffer<ColData> g_Colors;
 
 struct PSInput 
 { 
@@ -327,12 +331,12 @@ out gl_PerVertex
 };
 #endif
 
-layout(location = 0)out vec4 out_Color;
+layout(location = 0)out vec3 out_Color;
 
 void main()
 {
     gl_Position = g_StorageBuffers[0].data[gl_VertexID];
-    out_Color = g_StorageBuffers[1].data[gl_VertexID];
+    out_Color = g_StorageBuffers[1].data[gl_VertexID].rgb;
 }
 )"
 };
