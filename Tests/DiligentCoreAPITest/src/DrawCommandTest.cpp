@@ -27,12 +27,14 @@
 
 #include <thread>
 #include <array>
+#include <atomic>
 
 #include "TestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
 #include "MapHelper.hpp"
 #include "FastRand.hpp"
+#include "ThreadSignal.hpp"
 
 #include "gtest/gtest.h"
 
@@ -1806,6 +1808,10 @@ TEST_F(DrawCommandTest, DeferredContexts)
     std::array<std::thread, NumThreads>                 WorkerThreads;
     std::array<RefCntAutoPtr<ICommandList>, NumThreads> CmdLists;
     std::array<ICommandList*, NumThreads>               CmdListPtrs;
+
+    std::atomic_uint32_t   NumCmdListsReady{0};
+    ThreadingTools::Signal FinishFrameSignal;
+    ThreadingTools::Signal ExecuteCommandListsSignal;
     for (Uint32 i = 0; i < NumThreads; ++i)
     {
         WorkerThreads[i] = std::thread(
@@ -1828,17 +1834,29 @@ TEST_F(DrawCommandTest, DeferredContexts)
 
                 pCtx->FinishCommandList(&CmdLists[thread_id]);
                 CmdListPtrs[thread_id] = CmdLists[thread_id];
+
+                // Atomically increment the number of completed threads
+                const auto NumReadyLists = NumCmdListsReady.fetch_add(1) + 1;
+                if (NumReadyLists == NumThreads)
+                    ExecuteCommandListsSignal.Trigger();
+
+                FinishFrameSignal.Wait(true, NumThreads);
+
+                // IMPORTANT: In Metal backend FinishFrame must be called from the same
+                //            thread that issued rendering commands.
+                pCtx->FinishFrame();
             },
             i);
     }
 
-    for (auto& t : WorkerThreads)
-        t.join();
+    // Wait for the worker threads
+    ExecuteCommandListsSignal.Wait(true, 1);
 
     pImmediateCtx->ExecuteCommandLists(NumThreads, CmdListPtrs.data());
 
-    for (size_t i = 0; i < NumThreads; ++i)
-        pEnv->GetDeviceContext(i + 1)->FinishFrame();
+    FinishFrameSignal.Trigger(true);
+    for (auto& t : WorkerThreads)
+        t.join();
 
     Present();
 }
