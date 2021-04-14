@@ -208,14 +208,14 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     try
     {
         // Enable the D3D12 debug layer.
-        if (EngineCI.EnableDebugLayer)
+        if (EngineCI.EnableValidation)
         {
             CComPtr<ID3D12Debug> debugController;
             if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(debugController), reinterpret_cast<void**>(static_cast<ID3D12Debug**>(&debugController)))))
             {
                 debugController->EnableDebugLayer();
                 //static_cast<ID3D12Debug1*>(debugController.p)->SetEnableSynchronizedCommandQueueValidation(FALSE);
-                if (EngineCI.EnableGPUBasedValidation)
+                if (EngineCI.D3D12ValidationFlags & D3D12_VALIDATION_FLAG_ENABLE_GPU_BASED_VALIDATION)
                 {
                     CComPtr<ID3D12Debug1> debugController1;
                     debugController->QueryInterface(IID_PPV_ARGS(&debugController1));
@@ -293,7 +293,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device");
         }
 
-        if (EngineCI.EnableDebugLayer)
+        if (EngineCI.EnableValidation)
         {
             CComPtr<ID3D12InfoQueue> pInfoQueue;
             hr = d3d12Device.QueryInterface(&pInfoQueue);
@@ -333,13 +333,13 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
                 hr = pInfoQueue->PushStorageFilter(&NewFilter);
                 VERIFY(SUCCEEDED(hr), "Failed to push storage filter");
 
-                if (EngineCI.BreakOnCorruption)
+                if (EngineCI.D3D12ValidationFlags & D3D12_VALIDATION_FLAG_BREAK_ON_CORRUPTION)
                 {
                     hr = pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
                     VERIFY(SUCCEEDED(hr), "Failed to set break on corruption");
                 }
 
-                if (EngineCI.BreakOnError)
+                if (EngineCI.D3D12ValidationFlags & D3D12_VALIDATION_FLAG_BREAK_ON_ERROR)
                 {
                     hr = pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
                     VERIFY(SUCCEEDED(hr), "Failed to set break on error");

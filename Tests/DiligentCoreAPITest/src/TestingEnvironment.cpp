@@ -186,13 +186,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             EngineD3D11CreateInfo CreateInfo;
             CreateInfo.DebugMessageCallback = MessageCallback;
             CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
-
-#    ifdef DILIGENT_DEBUG
-            CreateInfo.DebugFlags =
-                D3D11_DEBUG_FLAG_CREATE_DEBUG_DEVICE |
-                D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE |
-                D3D11_DEBUG_FLAG_VERIFY_COMMITTED_SHADER_RESOURCES;
+#    ifdef DILIGENT_DEVELOPMENT
+            CreateInfo.SetValidationLevel(VALIDATION_LEVEL_2);
 #    endif
+
             auto*  pFactoryD3D11 = GetEngineFactoryD3D11();
             Uint32 NumAdapters   = 0;
             pFactoryD3D11->EnumerateAdapters(DIRECT3D_FEATURE_LEVEL_11_0, NumAdapters, 0);
@@ -249,6 +246,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             pFactoryD3D12->EnumerateAdapters(DIRECT3D_FEATURE_LEVEL_11_0, NumAdapters, Adapters.data());
 
             EngineD3D12CreateInfo CreateInfo;
+
+            // Always enable validation
+            CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
+
             CreateInfo.DebugMessageCallback = MessageCallback;
             CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
@@ -271,7 +272,6 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
             CreateInfo.AdapterId = FindAdapater(Adapters, CI.AdapterType, CI.AdapterId);
 
-            CreateInfo.EnableDebugLayer = true;
             //CreateInfo.EnableGPUBasedValidation                = true;
             CreateInfo.CPUDescriptorHeapAllocationSize[0]      = 64; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
             CreateInfo.CPUDescriptorHeapAllocationSize[1]      = 32; // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
@@ -306,9 +306,12 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             auto Window = CreateNativeWindow();
 
             EngineGLCreateInfo CreateInfo;
+
+            // Always enable validation
+            CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
+
             CreateInfo.DebugMessageCallback      = MessageCallback;
             CreateInfo.Window                    = Window;
-            CreateInfo.CreateDebugContext        = true;
             CreateInfo.Features                  = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
             CreateInfo.ForceNonSeparablePrograms = CI.ForceNonSeparablePrograms;
             NumDeferredCtx                       = 0;
@@ -333,9 +336,12 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 #    endif
 
             EngineVkCreateInfo CreateInfo;
+
+            // Always enable validation
+            CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
+
             CreateInfo.AdapterId                 = CI.AdapterId;
             CreateInfo.DebugMessageCallback      = MessageCallback;
-            CreateInfo.EnableValidation          = true;
             CreateInfo.MainDescriptorPoolSize    = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16, 16};
             CreateInfo.DynamicDescriptorPoolSize = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16, 16};
             CreateInfo.UploadHeapPageSize        = 32 * 1024;
@@ -355,14 +361,17 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 #if METAL_SUPPORTED
         case RENDER_DEVICE_TYPE_METAL:
         {
-            EngineMtlCreateInfo MtlAttribs;
+            EngineMtlCreateInfo CreateInfo;
 
-            MtlAttribs.DebugMessageCallback = MessageCallback;
+            // Always enable validation
+            CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
+
+            CreateInfo.DebugMessageCallback = MessageCallback;
             NumDeferredCtx                  = CI.NumDeferredContexts;
-            MtlAttribs.NumDeferredContexts  = NumDeferredCtx;
+            CreateInfo.NumDeferredContexts  = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
             auto* pFactoryMtl = GetEngineFactoryMtl();
-            pFactoryMtl->CreateDeviceAndContextsMtl(MtlAttribs, &m_pDevice, ppContexts.data());
+            pFactoryMtl->CreateDeviceAndContextsMtl(CreateInfo, &m_pDevice, ppContexts.data());
         }
         break;
 #endif

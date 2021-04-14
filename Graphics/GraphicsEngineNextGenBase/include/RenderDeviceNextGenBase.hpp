@@ -43,24 +43,26 @@
 namespace Diligent
 {
 
+struct EngineCreateInfo;
+
 /// Base implementation of the render device for next-generation backends.
 
 template <class TBase, typename CommandQueueType>
 class RenderDeviceNextGenBase : public TBase
 {
 public:
-    RenderDeviceNextGenBase(IReferenceCounters* pRefCounters,
-                            IMemoryAllocator&   RawMemAllocator,
-                            IEngineFactory*     pEngineFactory,
-                            size_t              CmdQueueCount,
-                            CommandQueueType**  Queues,
-                            Uint32              NumDeferredContexts) :
-        TBase{pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts},
+    RenderDeviceNextGenBase(IReferenceCounters*     pRefCounters,
+                            IMemoryAllocator&       RawMemAllocator,
+                            IEngineFactory*         pEngineFactory,
+                            size_t                  CmdQueueCount,
+                            CommandQueueType**      Queues,
+                            const EngineCreateInfo& EngineCI) :
+        TBase{pRefCounters, RawMemAllocator, pEngineFactory, EngineCI},
         m_CmdQueueCount{CmdQueueCount}
     {
         m_CommandQueues = ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", CommandQueue, m_CmdQueueCount);
         for (size_t q = 0; q < m_CmdQueueCount; ++q)
-            new (m_CommandQueues + q) CommandQueue(RefCntAutoPtr<CommandQueueType>(Queues[q]), this->m_RawMemAllocator);
+            new (m_CommandQueues + q) CommandQueue{RefCntAutoPtr<CommandQueueType>(Queues[q]), this->m_RawMemAllocator};
     }
 
     ~RenderDeviceNextGenBase()

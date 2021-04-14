@@ -136,7 +136,7 @@ class ShaderBindingTableGLImpl
 RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                                        IMemoryAllocator&         RawMemAllocator,
                                        IEngineFactory*           pEngineFactory,
-                                       const EngineGLCreateInfo& InitAttribs,
+                                       const EngineGLCreateInfo& EngineCI,
                                        const SwapChainDesc*      pSCDesc) :
     // clang-format off
     TRenderDeviceBase
@@ -144,12 +144,14 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         pRefCounters,
         RawMemAllocator,
         pEngineFactory,
-        0
+        EngineCI
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
-    m_GLContext{InitAttribs, m_DeviceCaps, pSCDesc}
+    m_GLContext{EngineCI, m_DeviceCaps, pSCDesc}
 // clang-format on
 {
+    VERIFY(EngineCI.NumDeferredContexts == 0, "EngineCI.NumDeferredContexts > 0 should've been caught by CreateDeviceAndSwapChainGL() or AttachToActiveGLContext()");
+
     GLint NumExtensions = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &NumExtensions);
     CHECK_GL_ERROR("Failed to get the number of extensions");
@@ -162,7 +164,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     }
 
 #if GL_KHR_debug
-    if (InitAttribs.CreateDebugContext && glDebugMessageCallback != nullptr)
+    if (EngineCI.CreateDebugContext && glDebugMessageCallback != nullptr)
     {
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -282,7 +284,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #define SET_FEATURE_STATE(Feature, IsSupported, FeatureName)                           \
     do                                                                                 \
     {                                                                                  \
-        switch (InitAttribs.Features.Feature)                                          \
+        switch (EngineCI.Features.Feature)                                             \
         {                                                                              \
             case DEVICE_FEATURE_STATE_ENABLED:                                         \
             {                                                                          \
@@ -329,7 +331,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(WireframeFill, WireframeFillSupported, "Wireframe fill is");
     }
 
-    if (InitAttribs.ForceNonSeparablePrograms)
+    if (EngineCI.ForceNonSeparablePrograms)
         LOG_INFO_MESSAGE("Forcing non-separable shader programs");
 
     {
@@ -353,7 +355,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         const bool IsGL42OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 2);
         const bool IsGL41OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 1);
 
-        SET_FEATURE_STATE(SeparablePrograms, !InitAttribs.ForceNonSeparablePrograms, "Separable programs are");
+        SET_FEATURE_STATE(SeparablePrograms, !EngineCI.ForceNonSeparablePrograms, "Separable programs are");
         SET_FEATURE_STATE(ShaderResourceQueries, Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED, "Shader resource queries are");
         Features.IndirectRendering = DEVICE_FEATURE_STATE_ENABLED;
         Features.WireframeFill     = DEVICE_FEATURE_STATE_ENABLED;
@@ -413,7 +415,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         bool IsGLES32OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 2);
 
         // clang-format off
-        SET_FEATURE_STATE(SeparablePrograms,             (IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects")) && !InitAttribs.ForceNonSeparablePrograms, "Separable programs are");
+        SET_FEATURE_STATE(SeparablePrograms,             (IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects")) && !EngineCI.ForceNonSeparablePrograms, "Separable programs are");
         SET_FEATURE_STATE(ShaderResourceQueries,         Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED,      "Shader resource queries are");
         SET_FEATURE_STATE(IndirectRendering,             IsGLES31OrAbove || strstr(Extensions, "draw_indirect"),           "Indirect rendering is");
         SET_FEATURE_STATE(WireframeFill,                 false, "Wireframe fill is");

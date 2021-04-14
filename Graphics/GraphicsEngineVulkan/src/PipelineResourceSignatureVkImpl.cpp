@@ -859,7 +859,8 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                 // is bound. It will be null if the type is incorrect.
                 if (const auto* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>())
                 {
-                    if (pBufferVk->GetDesc().uiSizeInBytes < SPIRVAttribs.BufferStaticSize)
+                    if ((pBufferVk->GetDesc().uiSizeInBytes < SPIRVAttribs.BufferStaticSize) &&
+                        (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
                     {
                         // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                         LOG_WARNING_MESSAGE("The size of uniform buffer '",
@@ -886,7 +887,8 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
 
                     if (BuffDesc.ElementByteStride == 0)
                     {
-                        if (ViewDesc.ByteWidth < SPIRVAttribs.BufferStaticSize)
+                        if ((ViewDesc.ByteWidth < SPIRVAttribs.BufferStaticSize) &&
+                            (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
                         {
                             // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                             LOG_WARNING_MESSAGE("The size of buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
@@ -896,7 +898,8 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const SPIRVSh
                     }
                     else
                     {
-                        if (ViewDesc.ByteWidth < SPIRVAttribs.BufferStaticSize || (ViewDesc.ByteWidth - SPIRVAttribs.BufferStaticSize) % BuffDesc.ElementByteStride != 0)
+                        if ((ViewDesc.ByteWidth < SPIRVAttribs.BufferStaticSize || (ViewDesc.ByteWidth - SPIRVAttribs.BufferStaticSize) % BuffDesc.ElementByteStride != 0) &&
+                            (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
                         {
                             // For buffers with dynamic arrays we know only static part size and array element stride.
                             // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.

@@ -58,9 +58,9 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
         pDevice,
         bIsDeferred
     },
-    m_pd3d11DeviceContext{pd3d11DeviceContext        },
-    m_DebugFlags         {EngineAttribs.DebugFlags   },
-    m_CmdListAllocator   {GetRawAllocator(), sizeof(CommandListD3D11Impl), 64}
+    m_pd3d11DeviceContext {pd3d11DeviceContext                },
+    m_D3D11ValidationFlags{EngineAttribs.D3D11ValidationFlags },
+    m_CmdListAllocator    {GetRawAllocator(), sizeof(CommandListD3D11Impl), 64}
 // clang-format on
 {
 }
@@ -236,8 +236,8 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                 (m_pd3d11DeviceContext->*SetCBMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11CBs + Slots.MinSlot);
                 m_CommittedRes.NumCBs[ShaderInd] = std::max(m_CommittedRes.NumCBs[ShaderInd], static_cast<Uint8>(Slots.MaxSlot + 1));
             }
-#ifdef VERIFY_CONTEXT_BINDINGS
-            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+#ifdef DILIGENT_DEVELOPMENT
+            if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
             {
                 DvpVerifyCommittedCBs(ShaderType);
             }
@@ -254,8 +254,8 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                 (m_pd3d11DeviceContext->*SetSRVMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11SRVs + Slots.MinSlot);
                 m_CommittedRes.NumSRVs[ShaderInd] = std::max(m_CommittedRes.NumSRVs[ShaderInd], static_cast<Uint8>(Slots.MaxSlot + 1));
             }
-#ifdef VERIFY_CONTEXT_BINDINGS
-            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+#ifdef DILIGENT_DEVELOPMENT
+            if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
             {
                 DvpVerifyCommittedSRVs(ShaderType);
             }
@@ -271,8 +271,8 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                 (m_pd3d11DeviceContext->*SetSamplerMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11Samplers + Slots.MinSlot);
                 m_CommittedRes.NumSamplers[ShaderInd] = std::max(m_CommittedRes.NumSamplers[ShaderInd], static_cast<Uint8>(Slots.MaxSlot + 1));
             }
-#ifdef VERIFY_CONTEXT_BINDINGS
-            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+#ifdef DILIGENT_DEVELOPMENT
+            if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
             {
                 DvpVerifyCommittedSamplers(ShaderType);
             }
@@ -304,8 +304,8 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                     UNEXPECTED("UAV is not supported in shader that is not pixel or compute");
                 }
             }
-#ifdef VERIFY_CONTEXT_BINDINGS
-            if ((m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0 && ShaderInd == CSInd)
+#ifdef DILIGENT_DEVELOPMENT
+            if ((m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0 && ShaderInd == CSInd)
             {
                 DvpVerifyCommittedUAVs(ShaderType);
             }
@@ -517,7 +517,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
 
     BindShaderResources();
 
-#ifdef VERIFY_CONTEXT_BINDINGS
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
         for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
@@ -534,7 +534,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
             }
         }
 
-        if ((m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0)
+        if ((m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0)
         {
             // Verify bindings after all resources are set
             const auto ActiveStages = m_pPipelineState->GetActiveShaderStages();
@@ -645,8 +645,8 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
 
     BindShaderResources();
 
-#ifdef VERIFY_CONTEXT_BINDINGS
-    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
         DvpVerifyCommittedSRVs(SHADER_TYPE_COMPUTE);
@@ -670,8 +670,8 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
 
     BindShaderResources();
 
-#ifdef VERIFY_CONTEXT_BINDINGS
-    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
         DvpVerifyCommittedSRVs(SHADER_TYPE_COMPUTE);
@@ -1614,8 +1614,8 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
         m_CommittedRes.NumUAVs[ShaderType]     = 0;
     }
 
-#ifdef VERIFY_CONTEXT_BINDINGS
-    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         constexpr auto AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
         DvpVerifyCommittedSRVs(AllStages);
@@ -1650,8 +1650,8 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
     // Device context is now in default state
     InvalidateState();
 
-#ifdef VERIFY_CONTEXT_BINDINGS
-    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
         constexpr auto AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
@@ -1692,8 +1692,8 @@ void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommand
     // Device context is now in default state
     InvalidateState();
 
-#ifdef VERIFY_CONTEXT_BINDINGS
-    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
         constexpr auto AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
@@ -2090,7 +2090,7 @@ void DeviceContextD3D11Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIn
 }
 
 // clang-format off
-#ifdef VERIFY_CONTEXT_BINDINGS
+#ifdef DILIGENT_DEVELOPMENT
     DEFINE_D3D11CTX_FUNC_POINTERS(GetCBMethods,      GetConstantBuffers)
     DEFINE_D3D11CTX_FUNC_POINTERS(GetSRVMethods,     GetShaderResources)
     DEFINE_D3D11CTX_FUNC_POINTERS(GetSamplerMethods, GetSamplers)
@@ -2297,6 +2297,6 @@ void DeviceContextD3D11Impl::DvpVerifyCommittedShaders()
     VERIFY_SHADER(COMPUTE, Compute, C);
 }
 
-#endif // VERIFY_CONTEXT_BINDINGS
+#endif // DILIGENT_DEVELOPMENT
 
 } // namespace Diligent

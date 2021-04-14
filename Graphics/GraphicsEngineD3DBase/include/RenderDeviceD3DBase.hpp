@@ -43,11 +43,11 @@ template <typename EngineImplTraits>
 class RenderDeviceD3DBase : public RenderDeviceBase<EngineImplTraits>
 {
 public:
-    RenderDeviceD3DBase(IReferenceCounters* pRefCounters,
-                        IMemoryAllocator&   RawMemAllocator,
-                        IEngineFactory*     pEngineFactory,
-                        Uint32              NumDeferredContexts) :
-        RenderDeviceBase<EngineImplTraits>{pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts}
+    RenderDeviceD3DBase(IReferenceCounters*     pRefCounters,
+                        IMemoryAllocator&       RawMemAllocator,
+                        IEngineFactory*         pEngineFactory,
+                        const EngineCreateInfo& EngineCI) :
+        RenderDeviceBase<EngineImplTraits>{pRefCounters, RawMemAllocator, pEngineFactory, EngineCI}
     {
         // Flag texture formats always supported in D3D11 and D3D12
 

@@ -68,7 +68,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         pEngineFactory,
         CommandQueueCount,
         CmdQueues,
-        EngineCI.NumDeferredContexts
+        EngineCI
     },
     m_VulkanInstance         {Instance                 },
     m_PhysicalDevice         {std::move(PhysicalDevice)},

@@ -110,10 +110,9 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         pEngineFactory,
         CommandQueueCount,
         ppCmdQueues,
-        EngineCI.NumDeferredContexts
+        EngineCI
     },
     m_pd3d12Device  {pd3d12Device},
-    m_EngineAttribs {EngineCI    },
     m_CmdListManager{*this       },
     m_CPUDescriptorHeaps
     {

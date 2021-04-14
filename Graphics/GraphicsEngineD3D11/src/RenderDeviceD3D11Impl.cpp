@@ -89,7 +89,7 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D11Device(ID3D11Device* pd3d11Dev
 RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
                                              IEngineFactory*              pEngineFactory,
-                                             const EngineD3D11CreateInfo& EngineAttribs,
+                                             const EngineD3D11CreateInfo& EngineCI,
                                              ID3D11Device*                pd3d11Device,
                                              Uint32                       NumDeferredContexts) :
     // clang-format off
@@ -98,10 +98,9 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
         pRefCounters,
         RawMemAllocator,
         pEngineFactory,
-        NumDeferredContexts
+        EngineCI
     },
-    m_EngineAttribs{EngineAttribs},
-    m_pd3d11Device {pd3d11Device }
+    m_pd3d11Device{pd3d11Device }
 // clang-format on
 {
     m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D11;
@@ -132,7 +131,7 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
 #define UNSUPPORTED_FEATURE(Feature, Name)                                   \
     do                                                                       \
     {                                                                        \
-        if (EngineAttribs.Features.Feature == DEVICE_FEATURE_STATE_ENABLED)  \
+        if (EngineCI.Features.Feature == DEVICE_FEATURE_STATE_ENABLED)       \
             LOG_ERROR_AND_THROW(Name " not supported by Direct3D11 device"); \
         m_DeviceCaps.Features.Feature = DEVICE_FEATURE_STATE_DISABLED;       \
     } while (false)
@@ -160,7 +159,7 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
                 (d3d11MinPrecisionSupport.PixelShaderMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0 &&
                 (d3d11MinPrecisionSupport.AllOtherShaderStagesMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0;
         }
-        if (EngineAttribs.Features.ShaderFloat16 == DEVICE_FEATURE_STATE_ENABLED && !ShaderFloat16Supported)
+        if (EngineCI.Features.ShaderFloat16 == DEVICE_FEATURE_STATE_ENABLED && !ShaderFloat16Supported)
             LOG_ERROR_AND_THROW("16-bit float shader operations are");
         m_DeviceCaps.Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
     }

@@ -213,17 +213,18 @@ public:
     ///
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
     ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
-    RenderDeviceBase(IReferenceCounters* pRefCounters,
-                     IMemoryAllocator&   RawMemAllocator,
-                     IEngineFactory*     pEngineFactory,
-                     Uint32              NumDeferredContexts) :
+    RenderDeviceBase(IReferenceCounters*     pRefCounters,
+                     IMemoryAllocator&       RawMemAllocator,
+                     IEngineFactory*         pEngineFactory,
+                     const EngineCreateInfo& EngineCI) :
         // clang-format off
         TObjectBase             {pRefCounters},
         m_pEngineFactory        {pEngineFactory},
+        m_ValidationFlags       {EngineCI.ValidationFlags},
         m_SamplersRegistry      {RawMemAllocator, "sampler"},
         m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
-        m_wpDeferredContexts    (NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
+        m_wpDeferredContexts    (EngineCI.NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
         m_RawMemAllocator       {RawMemAllocator},
         m_TexObjAllocator       {RawMemAllocator, sizeof(TextureImplType),                    64},
         m_TexViewObjAllocator   {RawMemAllocator, sizeof(TextureViewImplType),                64},
@@ -396,6 +397,8 @@ public:
     FixedBlockMemoryAllocator& GetTexViewObjAllocator() { return m_TexViewObjAllocator; }
     FixedBlockMemoryAllocator& GetBuffViewObjAllocator() { return m_BuffViewObjAllocator; }
     FixedBlockMemoryAllocator& GetSRBAllocator() { return m_SRBAllocator; }
+
+    VALIDATION_FLAGS GetValidationFlags() const { return m_ValidationFlags; }
 
 protected:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) = 0;
@@ -605,6 +608,8 @@ protected:
 
 protected:
     RefCntAutoPtr<IEngineFactory> m_pEngineFactory;
+
+    const VALIDATION_FLAGS m_ValidationFlags;
 
     DeviceCaps       m_DeviceCaps;
     DeviceProperties m_DeviceProperties;

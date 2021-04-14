@@ -45,10 +45,6 @@
 #include "TopLevelASBase.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
 
-#ifdef DILIGENT_DEVELOPMENT
-#    define VERIFY_CONTEXT_BINDINGS
-#endif
-
 namespace Diligent
 {
 
@@ -460,7 +456,7 @@ private:
     /// Strong references to committed D3D11 shaders
     CComPtr<ID3D11DeviceChild> m_CommittedD3DShaders[NumShaderTypes];
 
-    const Uint32 m_DebugFlags;
+    const D3D11_VALIDATION_FLAGS m_D3D11ValidationFlags;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
@@ -469,7 +465,7 @@ private:
 
     std::vector<OptimizedClearValue> m_AttachmentClearValues;
 
-#ifdef VERIFY_CONTEXT_BINDINGS
+#ifdef DILIGENT_DEVELOPMENT
 
     /// Helper template function used to facilitate context verification
     template <UINT MaxResources, typename TD3D11ResourceType, typename TGetD3D11ResourcesType>
@@ -518,7 +514,7 @@ private:
     /// device context
     void DvpVerifyCommittedShaders();
 
-#endif // VERIFY_CONTEXT_BINDINGS
+#endif // DILIGENT_DEVELOPMENT
 };
 
 } // namespace Diligent

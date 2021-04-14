@@ -260,8 +260,6 @@ private:
 
     CComPtr<ID3D12Device> m_pd3d12Device;
 
-    EngineD3D12CreateInfo m_EngineAttribs;
-
     CPUDescriptorHeap m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
     GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0
                                                // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1

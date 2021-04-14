@@ -1,5 +1,11 @@
 ## Current Progress
 
+* Rework validation options (API240089)
+  * Added `VALIDATION_FLAGS` and `D3D12_VALIDATION_FLAGS` enums; renamed `D3D11_DEBUG_FLAGS` to `D3D11_VALIDATION_FLAGS`
+  * Added `VALIDATION_FLAGS ValidationFlags` and `bool EnableValidation` to `EngineCreateInfo`
+  * Added `D3D12_VALIDATION_FLAGS D3D12ValidationFlags` to `EngineD3D12CreateInfo`; removed `EnableDebugLayer`, `EnableGPUBasedValidation`,
+    `BreakOnError`, `BreakOnCorruption`
+  * Added `VALIDATION_LEVEL` enum and `SetValidationLevel()` create info structs' helper functions
 * Added `MtlThreadGroupSizeX`, `MtlThreadGroupSizeY`, and `MtlThreadGroupSizeZ` members to
   `DispatchComputeAttribs` and `DispatchComputeIndirectAttribs` structs (API Version 240088)
 * Added InstanceDataStepRate device feature (API Version 240087)

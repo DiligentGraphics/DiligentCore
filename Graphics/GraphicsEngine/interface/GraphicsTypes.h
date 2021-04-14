@@ -1949,6 +1949,21 @@ DILIGENT_TYPED_ENUM(WAVE_FEATURE, Uint32)
 DEFINE_FLAG_ENUM_OPERATORS(WAVE_FEATURE);
 
 
+/// Common validation levels that translate to specific settings for different backends.
+DILIGENT_TYPED_ENUM(VALIDATION_LEVEL, Uint8)
+{
+    /// Validation is disabled.
+    VALIDATION_LEVEL_DISABLED = 0,
+
+    /// Standard validation options are enabled.
+    VALIDATION_LEVEL_1,
+
+    /// All validation options are enabled.
+    /// Note that enabling this level may add a significant overhead.
+    VALIDATION_LEVEL_2
+};
+
+
 /// Wave operation properties
 struct WaveOpProperties
 {
@@ -1982,6 +1997,24 @@ struct DeviceProperties
 typedef struct DeviceProperties DeviceProperties;
 
 
+
+/// Commomn validation options.
+DILIGENT_TYPED_ENUM(VALIDATION_FLAGS, Uint32)
+{
+    /// Extra validation is disabled.
+    VALIDATION_FLAG_NONE                        = 0x00,
+
+    /// Verify that constant or structured buffer size is not smaller than what is expected by the shader.
+    ///
+    /// \remarks  This flag only has effect in Debug/Development builds.
+    ///           This type of validation is never performed in Release builds.
+    ///
+    /// \note   This option is currently supported by Vulkan backend only.
+    VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE    = 0x01
+};
+DEFINE_FLAG_ENUM_OPERATORS(VALIDATION_FLAGS)
+
+
 /// Engine creation attibutes
 struct EngineCreateInfo
 {
@@ -2006,12 +2039,40 @@ struct EngineCreateInfo
     ///             The actual feature state can be queried from DeviceCaps structure.
     DeviceFeatures Features;
 
+    /// Enable backend-specific validation (e.g. use Direct3D11 debug device, enable
+    /// Direct3D12 debug layer, enable Vulkan validation layers, etc.).
+    /// The validation is enabled by default in Debug/Development builds and disabled
+    /// in release builds.
+    bool                EnableValidation            DEFAULT_INITIALIZER(false);
+
+    /// Validation options, see Diligent::VALIDATION_FLAGS.
+    VALIDATION_FLAGS    ValidationFlags             DEFAULT_INITIALIZER(VALIDATION_FLAG_NONE);
+
     /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
     /// operations in the engine
     struct IMemoryAllocator* pRawMemAllocator       DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the user-specified debug message callback function
     DebugMessageCallbackType DebugMessageCallback   DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    EngineCreateInfo() noexcept
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        SetValidationLevel(VALIDATION_LEVEL_1);
+#endif
+    }
+
+    /// Sets the validation options corresponding to the specified level, see Diligent::VALIDATION_LEVEL.
+    void SetValidationLevel(VALIDATION_LEVEL Level)
+    {
+        EnableValidation = (Level > VALIDATION_LEVEL_DISABLED);
+        if (Level >= VALIDATION_LEVEL_1)
+        {
+            ValidationFlags |= VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE;
+        }
+    }
+#endif
 };
 typedef struct EngineCreateInfo EngineCreateInfo;
 
@@ -2036,27 +2097,23 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 typedef struct EngineGLCreateInfo EngineGLCreateInfo;
 
 
-/// Debug flags that can be specified when creating Direct3D11-based engine implementation.
-///
-/// \sa CreateDeviceAndContextsD3D11Type, CreateSwapChainD3D11Type, LoadGraphicsEngineD3D11
-DILIGENT_TYPED_ENUM(D3D11_DEBUG_FLAGS, Uint32)
+/// Direct3D11-specific validation options.
+DILIGENT_TYPED_ENUM(D3D11_VALIDATION_FLAGS, Uint32)
 {
-    /// No debug flag
-    D3D11_DEBUG_FLAG_NONE                                = 0x00,
-
-    /// Whether to create Direct3D11 debug device
-    D3D11_DEBUG_FLAG_CREATE_DEBUG_DEVICE                 = 0x01,
-
-    /// Before executing draw/dispatch command, verify that
-    /// all required shader resources are bound to the device context
-    D3D11_DEBUG_FLAG_VERIFY_COMMITTED_SHADER_RESOURCES   = 0x02,
+    /// Direct3D11-specific validation is disabled.
+    D3D11_VALIDATION_FLAG_NONE                                = 0x00,
 
     /// Verify that all committed cotext resources are relevant,
     /// i.e. they are consistent with the committed resource cache.
-    /// This is very expensive and should generally not be necessary.
-    D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE = 0x04
+    /// This is very expensive and should only be used for engine debugging.
+    /// This option is enabled in validation level 2 (see Diligent::VALIDATION_LEVEL).
+    ///
+    /// \remarks  This flag only has effect in Debug/Development builds.
+    ///           This type of validation is never performed in Release builds.
+    D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE = 0x01
 };
-DEFINE_FLAG_ENUM_OPERATORS(D3D11_DEBUG_FLAGS)
+DEFINE_FLAG_ENUM_OPERATORS(D3D11_VALIDATION_FLAGS)
+
 
 /// Direct3D11/12 feature level
 DILIGENT_TYPED_ENUM(DIRECT3D_FEATURE_LEVEL, Uint8)
@@ -2084,20 +2141,65 @@ static const Uint32 DEFAULT_ADAPTER_ID = 0xFFFFFFFFU;
 
 /// Attributes specific to D3D11 engine
 struct EngineD3D11CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
-           
+
     /// Id of the hardware adapter the engine should be initialized on.
     Uint32                 AdapterId           DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
 
     /// Minimum required Direct3D feature level.
     DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel DEFAULT_INITIALIZER(DIRECT3D_FEATURE_LEVEL_11_0);
 
-    /// Debug flags. See Diligent::D3D11_DEBUG_FLAGS for a list of allowed values.
-    ///
-    /// \sa CreateDeviceAndContextsD3D11Type, CreateSwapChainD3D11Type, LoadGraphicsEngineD3D11
-    D3D11_DEBUG_FLAGS      DebugFlags          DEFAULT_INITIALIZER(D3D11_DEBUG_FLAG_NONE);
+    /// Direct3D11-specific validation options, see Diligent::D3D11_VALIDATION_FLAGS.
+    D3D11_VALIDATION_FLAGS D3D11ValidationFlags DEFAULT_INITIALIZER(D3D11_VALIDATION_FLAG_NONE);
+
+#if DILIGENT_CPP_INTERFACE
+    EngineD3D11CreateInfo() noexcept
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        SetValidationLevel(VALIDATION_LEVEL_1);
+#endif
+    }
+
+    /// Sets the validation options corresponding to the specified level, see Diligent::VALIDATION_LEVEL.
+    void SetValidationLevel(VALIDATION_LEVEL Level)
+    {
+        EngineCreateInfo::SetValidationLevel(Level);
+
+        if (Level >= VALIDATION_LEVEL_2)
+        {
+            D3D11ValidationFlags |= D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE;
+        }
+    }
+#endif
 };
 typedef struct EngineD3D11CreateInfo EngineD3D11CreateInfo;
 
+
+
+/// Direct3D12-specific validation flags.
+DILIGENT_TYPED_ENUM(D3D12_VALIDATION_FLAGS, Uint32)
+{
+    /// Direct3D12-specific validation is disabled.
+    D3D12_VALIDATION_FLAG_NONE                              = 0x00,
+
+    /// Whether to break execution when D3D12 debug layer detects an error.
+    /// This flag only has effect if validation is enabled (EngineCreateInfo.EnableValidation is true).
+    /// This option is disabled by default in all validation levels. 
+    D3D12_VALIDATION_FLAG_BREAK_ON_ERROR                    = 0x01,
+
+    /// Whether to break execution when D3D12 debug layer detects a memory corruption.
+    /// This flag only has effect if validation is enabled (EngineCreateInfo.EnableValidation is true).
+    /// This option is enabled by default when validation is enabled. 
+    D3D12_VALIDATION_FLAG_BREAK_ON_CORRUPTION               = 0x02,
+
+    /// Enable validation on the GPU timeline.
+    /// See https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-d3d12-debug-layer-gpu-based-validation
+    /// This flag only has effect if validation is enabled (EngineCreateInfo.EnableValidation is true).
+    /// This option is enabled in validation level 2 (see Diligent::VALIDATION_LEVEL). 
+    ///
+    /// \note Enabling this option may slow things down a lot.
+    D3D12_VALIDATION_FLAG_ENABLE_GPU_BASED_VALIDATION       = 0x04
+};
+DEFINE_FLAG_ENUM_OPERATORS(D3D12_VALIDATION_FLAGS)
 
 /// Attributes specific to D3D12 engine
 struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
@@ -2111,22 +2213,8 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Minimum required Direct3D feature level.
     DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel DEFAULT_INITIALIZER(DIRECT3D_FEATURE_LEVEL_11_0);
 
-    /// Enable Direct3D12 debug layer.
-    bool EnableDebugLayer           DEFAULT_INITIALIZER(false);
-
-    /// Enable validation on the GPU timeline.
-    /// See https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-d3d12-debug-layer-gpu-based-validation
-    /// This flag only has effect if EnableDebugLayer is true.
-    /// \note Enabling this option may slow things down a lot.
-    bool EnableGPUBasedValidation   DEFAULT_INITIALIZER(false);
-
-    /// Whether to break execution when D3D12 debug layer detects an error.
-    /// This flag only has effect if EnableDebugLayer is true.
-    bool BreakOnError               DEFAULT_INITIALIZER(false);
-
-    /// Whether to break execution when D3D12 debug layer detects a memory corruption.
-    /// This flag only has effect if EnableDebugLayer is true.
-    bool BreakOnCorruption          DEFAULT_INITIALIZER(true);
+    /// Direct3D12-specific validation options, see Diligent::D3D12_VALIDATION_FLAGS.
+    D3D12_VALIDATION_FLAGS D3D12ValidationFlags DEFAULT_INITIALIZER(D3D12_VALIDATION_FLAG_BREAK_ON_CORRUPTION);
 
     /// Size of the CPU descriptor heap allocations for different heap types.
     Uint32 CPUDescriptorHeapAllocationSize[4]
@@ -2229,6 +2317,31 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+ features.
     /// By default, the engine will search for "dxcompiler.dll".
     const char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    EngineD3D12CreateInfo() noexcept
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        SetValidationLevel(VALIDATION_LEVEL_1);
+#endif
+    }
+
+    /// Sets the validation options corresponding to the specified level, see Diligent::VALIDATION_LEVEL.
+    void SetValidationLevel(VALIDATION_LEVEL Level)
+    {
+        EngineCreateInfo::SetValidationLevel(Level);
+
+        if (Level >= VALIDATION_LEVEL_1)
+        {
+            D3D12ValidationFlags |= D3D12_VALIDATION_FLAG_BREAK_ON_CORRUPTION;
+        }
+
+        if (Level >= VALIDATION_LEVEL_2)
+        {
+            D3D12ValidationFlags |= D3D12_VALIDATION_FLAG_ENABLE_GPU_BASED_VALIDATION;
+        }
+    }
+#endif
 };
 typedef struct EngineD3D12CreateInfo EngineD3D12CreateInfo;
 
@@ -2284,13 +2397,10 @@ typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
 
 /// Attributes specific to Vulkan engine
 struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
-    
+
     /// Id of the hardware adapter the engine should be initialized on.
     Uint32             AdapterId                DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
 
-    /// Enable Vulkan validation layers.
-    bool               EnableValidation         DEFAULT_INITIALIZER(false);
-        
     /// Number of global Vulkan extensions
     Uint32             GlobalExtensionCount     DEFAULT_INITIALIZER(0);
 
@@ -2314,7 +2424,7 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// for dynamic variables. Every device context has its own dynamic descriptor set allocator.
     /// The allocator requests pools from global dynamic descriptor pool manager, and then 
     /// performs lock-free suballocations from the pool.
-    
+
     VulkanDescriptorPoolSize DynamicDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
         //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt  AccelSt

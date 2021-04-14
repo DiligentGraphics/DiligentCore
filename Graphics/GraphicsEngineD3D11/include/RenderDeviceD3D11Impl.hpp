@@ -149,8 +149,6 @@ public:
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
-    EngineD3D11CreateInfo m_EngineAttribs;
-
     /// D3D11 device
     CComPtr<ID3D11Device> m_pd3d11Device;
 };
