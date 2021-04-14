@@ -262,7 +262,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     display_(EGL_NO_DISPLAY),
     surface_(EGL_NO_SURFACE),
     context_(EGL_NO_CONTEXT),
-    create_debug_context_(InitAttribs.CreateDebugContext),
+    create_debug_context_(InitAttribs.EnableValidation),
     egl_context_initialized_(false),
     gles_initialized_(false),
     major_version_(0),

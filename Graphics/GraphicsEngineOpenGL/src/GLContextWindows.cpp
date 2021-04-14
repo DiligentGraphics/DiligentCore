@@ -143,7 +143,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
                         0, 0 //
                     };
 
-                if (InitAttribs.CreateDebugContext)
+                if (InitAttribs.EnableValidation)
                 {
                     attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
                 }

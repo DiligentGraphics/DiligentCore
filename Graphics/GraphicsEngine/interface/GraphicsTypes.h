@@ -2039,8 +2039,8 @@ struct EngineCreateInfo
     ///             The actual feature state can be queried from DeviceCaps structure.
     DeviceFeatures Features;
 
-    /// Enable backend-specific validation (e.g. use Direct3D11 debug device, enable
-    /// Direct3D12 debug layer, enable Vulkan validation layers, etc.).
+    /// Enable backend-specific validation (e.g. use Direct3D11 debug device, enable Direct3D12
+    /// debug layer, enable Vulkan validation layers, create debug OpenGL context, etc.).
     /// The validation is enabled by default in Debug/Development builds and disabled
     /// in release builds.
     bool                EnableValidation            DEFAULT_INITIALIZER(false);
@@ -2081,13 +2081,6 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Native window wrapper
     NativeWindow Window;
-
-    /// Create debug OpenGL context and enable debug output.
-
-    /// Debug contexts are intended for use during application development, and
-    /// provide additional runtime checking, validation, and logging
-    /// functionality while possibly incurring performance penalties
-    bool CreateDebugContext     DEFAULT_INITIALIZER(false);
 
     /// Force using non-separable programs.
 

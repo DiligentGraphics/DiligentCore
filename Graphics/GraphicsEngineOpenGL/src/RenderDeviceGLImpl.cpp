@@ -164,7 +164,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     }
 
 #if GL_KHR_debug
-    if (EngineCI.CreateDebugContext && glDebugMessageCallback != nullptr)
+    if (EngineCI.EnableValidation && glDebugMessageCallback != nullptr)
     {
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
