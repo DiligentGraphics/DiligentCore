@@ -2067,6 +2067,8 @@ struct EngineCreateInfo
     void SetValidationLevel(VALIDATION_LEVEL Level)
     {
         EnableValidation = (Level > VALIDATION_LEVEL_DISABLED);
+        
+        ValidationFlags = VALIDATION_FLAG_NONE;
         if (Level >= VALIDATION_LEVEL_1)
         {
             ValidationFlags |= VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE;
@@ -2156,7 +2158,8 @@ struct EngineD3D11CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     void SetValidationLevel(VALIDATION_LEVEL Level)
     {
         EngineCreateInfo::SetValidationLevel(Level);
-
+        
+        D3D11ValidationFlags = D3D11_VALIDATION_FLAG_NONE;
         if (Level >= VALIDATION_LEVEL_2)
         {
             D3D11ValidationFlags |= D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE;
@@ -2324,11 +2327,11 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     {
         EngineCreateInfo::SetValidationLevel(Level);
 
+        D3D12ValidationFlags = D3D12_VALIDATION_FLAG_NONE;
         if (Level >= VALIDATION_LEVEL_1)
         {
             D3D12ValidationFlags |= D3D12_VALIDATION_FLAG_BREAK_ON_CORRUPTION;
         }
-
         if (Level >= VALIDATION_LEVEL_2)
         {
             D3D12ValidationFlags |= D3D12_VALIDATION_FLAG_ENABLE_GPU_BASED_VALIDATION;
