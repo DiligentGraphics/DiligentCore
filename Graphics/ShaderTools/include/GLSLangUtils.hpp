@@ -48,13 +48,19 @@ enum class SpirvVersion
 void InitializeGlslang();
 void FinalizeGlslang();
 
-std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderType,
-                                      const char*                      ShaderSource,
-                                      int                              SourceCodeLen,
-                                      const ShaderMacro*               Macros,
-                                      IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                                      SpirvVersion                     Version,
-                                      IDataBlob**                      ppCompilerOutput);
+struct GLSLtoSPIRVAttribs
+{
+    SHADER_TYPE                      ShaderType                 = SHADER_TYPE_UNKNOWN;
+    const char*                      ShaderSource               = nullptr;
+    int                              SourceCodeLen              = 0;
+    const ShaderMacro*               Macros                     = nullptr;
+    IShaderSourceInputStreamFactory* pShaderSourceStreamFactory = nullptr;
+    SpirvVersion                     Version                    = SpirvVersion::Vk100;
+    IDataBlob**                      ppCompilerOutput           = nullptr;
+    bool                             AssignBindings             = true;
+};
+
+std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs);
 
 std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
                                       const char*             ExtraDefinitions,

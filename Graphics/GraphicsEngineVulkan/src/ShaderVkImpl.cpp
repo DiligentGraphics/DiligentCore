@@ -127,17 +127,22 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                     const auto& ExtFeats  = GetDevice()->GetLogicalDevice().GetEnabledExtFeatures();
                     const auto  VkVersion = GetDevice()->GetVkVersion();
 
-                    auto spvVersion = GLSLangUtils::SpirvVersion::Vk100;
-                    if (VkVersion >= VK_API_VERSION_1_2)
-                        spvVersion = GLSLangUtils::SpirvVersion::Vk120;
-                    else if (VkVersion == VK_API_VERSION_1_1)
-                        spvVersion = ExtFeats.Spirv14 ? GLSLangUtils::SpirvVersion::Vk110_Spirv14 : GLSLangUtils::SpirvVersion::Vk110;
+                    GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
+                    Attribs.ShaderType                 = m_Desc.ShaderType;
+                    Attribs.ShaderSource               = ShaderSource;
+                    Attribs.SourceCodeLen              = static_cast<int>(SourceLength);
+                    Attribs.Version                    = GLSLangUtils::SpirvVersion::Vk100;
+                    Attribs.Macros                     = Macros;
+                    Attribs.AssignBindings             = true;
+                    Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
+                    Attribs.ppCompilerOutput           = ShaderCI.ppCompilerOutput;
 
-                    m_SPIRV = GLSLangUtils::GLSLtoSPIRV(m_Desc.ShaderType, ShaderSource,
-                                                        static_cast<int>(SourceLength), Macros,
-                                                        ShaderCI.pShaderSourceStreamFactory,
-                                                        spvVersion,
-                                                        ShaderCI.ppCompilerOutput);
+                    if (VkVersion >= VK_API_VERSION_1_2)
+                        Attribs.Version = GLSLangUtils::SpirvVersion::Vk120;
+                    else if (VkVersion >= VK_API_VERSION_1_1)
+                        Attribs.Version = ExtFeats.Spirv14 ? GLSLangUtils::SpirvVersion::Vk110_Spirv14 : GLSLangUtils::SpirvVersion::Vk110;
+
+                    m_SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
                 }
 #endif
                 break;

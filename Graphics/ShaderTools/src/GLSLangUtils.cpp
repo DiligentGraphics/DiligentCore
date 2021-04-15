@@ -238,6 +238,7 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
                                                 ::glslang::TShader::Includer* pIncluder,
                                                 const char*                   ShaderSource,
                                                 size_t                        SourceCodeLen,
+                                                bool                          AssignBindings,
                                                 IDataBlob**                   ppCompilerOutput)
 {
     Shader.setAutoMapBindings(true);
@@ -261,7 +262,8 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
     }
 
     // This step is essential to set bindings and descriptor sets
-    Program.mapIO();
+    if (AssignBindings)
+        Program.mapIO();
 
     std::vector<unsigned int> spirv;
     ::glslang::GlslangToSpv(*Program.getIntermediate(Shader.getStage()), spirv);
@@ -426,7 +428,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     IncluderImpl Includer{ShaderCI.pShaderSourceStreamFactory};
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
+    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, true, ppCompilerOutput);
     if (SPIRV.empty())
         return SPIRV;
 
@@ -448,21 +450,15 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     }
 }
 
-std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderType,
-                                      const char*                      ShaderSource,
-                                      int                              SourceCodeLen,
-                                      const ShaderMacro*               Macros,
-                                      IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                                      SpirvVersion                     Version,
-                                      IDataBlob**                      ppCompilerOutput)
+std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
 {
-    VERIFY_EXPR(ShaderSource != nullptr && SourceCodeLen > 0);
+    VERIFY_EXPR(Attribs.ShaderSource != nullptr && Attribs.SourceCodeLen > 0);
 
-    EShLanguage        ShLang = ShaderTypeToShLanguage(ShaderType);
+    EShLanguage        ShLang = ShaderTypeToShLanguage(Attribs.ShaderType);
     ::glslang::TShader Shader(ShLang);
     spv_target_env     spvTarget = SPV_ENV_VULKAN_1_0;
 
-    switch (Version)
+    switch (Attribs.Version)
     {
         case SpirvVersion::Vk100:
             // keep default
@@ -491,20 +487,20 @@ std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderTyp
 
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
-    const char* ShaderStrings[] = {ShaderSource};
-    int         Lenghts[]       = {SourceCodeLen};
+    const char* ShaderStrings[] = {Attribs.ShaderSource};
+    int         Lenghts[]       = {Attribs.SourceCodeLen};
     Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
 
     std::string Defines{"#define GLSLANG\n\n"};
-    if (Macros != nullptr)
+    if (Attribs.Macros != nullptr)
     {
-        AppendShaderMacros(Defines, Macros);
+        AppendShaderMacros(Defines, Attribs.Macros);
         Shader.setPreamble(Defines.c_str());
     }
 
-    IncluderImpl Includer{pShaderSourceStreamFactory};
+    IncluderImpl Includer{Attribs.pShaderSourceStreamFactory};
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, ShaderSource, SourceCodeLen, ppCompilerOutput);
+    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, Attribs.ShaderSource, Attribs.SourceCodeLen, Attribs.AssignBindings, Attribs.ppCompilerOutput);
     if (SPIRV.empty())
         return SPIRV;
 

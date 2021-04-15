@@ -372,11 +372,14 @@ VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE Shader
     LOG_ERROR("GLSLang was not built. Shader compilaton is not possible.");
     return VK_NULL_HANDLE;
 #else
-    GLSLangUtils::SpirvVersion spvVersion = GLSLangUtils::SpirvVersion::Vk100;
-    if (ShaderType >= SHADER_TYPE_RAY_GEN)
-        spvVersion = GLSLangUtils::SpirvVersion::Vk120;
+    GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
+    Attribs.ShaderType     = ShaderType;
+    Attribs.ShaderSource   = ShaderSource.c_str();
+    Attribs.SourceCodeLen  = static_cast<int>(ShaderSource.length());
+    Attribs.Version        = (ShaderType >= SHADER_TYPE_RAY_GEN ? GLSLangUtils::SpirvVersion::Vk120 : GLSLangUtils::SpirvVersion::Vk100);
+    Attribs.AssignBindings = false;
 
-    auto Bytecode = GLSLangUtils::GLSLtoSPIRV(ShaderType, ShaderSource.c_str(), static_cast<int>(ShaderSource.length()), nullptr, nullptr, spvVersion, nullptr);
+    auto Bytecode = GLSLangUtils::GLSLtoSPIRV(Attribs);
     VERIFY_EXPR(!Bytecode.empty());
     if (Bytecode.empty())
         return VK_NULL_HANDLE;
