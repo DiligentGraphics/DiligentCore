@@ -710,7 +710,8 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                         ShaderResources.GetCombinedSamplerSuffix() :
                         nullptr;
 
-                    const auto VarDesc     = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Stage.Type, SamplerSuffix);
+                    const auto VarDesc = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Stage.Type, SamplerSuffix);
+                    // Note that Attribs.Name != VarDesc.Name for combined samplers
                     const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
                     if (it_assigned.second)
                     {

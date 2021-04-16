@@ -69,19 +69,19 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
 
-                const auto VarDesc     = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ShaderType, SamplerSuffix);
+                const auto VarDesc = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ShaderType, SamplerSuffix);
+                // Note that Attribs.Name != VarDesc.Name for combined samplers
                 const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
                 if (it_assigned.second)
                 {
-                    const auto ResType  = Attribs.GetShaderResourceType();
-                    const auto ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-
                     if (Attribs.BindCount == 0)
                     {
                         LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
                                             "Use explicit resource signature to specify the array size.");
                     }
 
+                    const auto ResType  = Attribs.GetShaderResourceType();
+                    const auto ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
                     Resources.emplace_back(VarDesc.ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarDesc.Type, ResFlags);
                 }
                 else

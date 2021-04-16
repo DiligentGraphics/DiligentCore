@@ -76,20 +76,12 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
 
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, PIPELINE_RESOURCE_FLAGS Flags) //
     {
-        const auto VarDesc = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Attribs.ShaderStages, nullptr);
-
-        PipelineResourceDesc ResDesc{};
-        ResDesc.Name         = Attribs.Name;
-        ResDesc.ShaderStages = VarDesc.ShaderStages;
-        ResDesc.ArraySize    = Attribs.ArraySize;
-        ResDesc.ResourceType = Attribs.ResourceType;
-        ResDesc.VarType      = VarDesc.Type;
-        ResDesc.Flags        = Flags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-
-        const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, ResDesc.ShaderStages}, Attribs);
+        const auto VarDesc     = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Attribs.ShaderStages, nullptr);
+        const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
         if (it_assigned.second)
         {
-            Resources.push_back(ResDesc);
+            Flags |= ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+            Resources.emplace_back(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, Attribs.ResourceType, VarDesc.Type, Flags);
         }
         else
         {
