@@ -1,0 +1,33 @@
+
+# Shader Resource Variables
+
+Diligent Engine uses three variable types:
+
+- *Static* variables can be set only once in each pipeline state object or pipeline resource signature.
+  Once bound, the resource can't be changed.
+- *Mutable* variables can be set only once in each shader resource binding instance.
+  Once bound, the resource can't be changed.
+- *Dynamic* variables can be bound any number of times.
+
+Internally, static and mutable variables are implemented in the same way. Static variable bindings are copied
+from PSO or Signature to the SRB either when the SRB is created or when `IPipelineState::InitializeStaticSRBResources()`
+method is called.
+
+Dynamic variables introduce some overhead every time an SRB is committed (even if no bindings have changed). Prefer static/mutable
+variables over dynamic ones whenever possible.
+
+
+# Dynamic Buffers
+
+`USAGE_DYNAMIC` buffers introduce some overhead in every draw or dispatch command that uses an SRB with dynamic buffers.
+Note that extra work is performed even if none of the dynamic buffers have been mapped between the commands. If this
+is the case, an application should use `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` flag to tell the engine that
+none of the dynamic buffers have been updated between the commands. Note that the first time an SRB is bound,
+dynamic buffers are properly bound regardless of the `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` flag.
+
+An application should try to use as few dyanmic buffers as possible. On some implementations the number of dynamic
+buffers may be limited by as few as 8 buffers. If an application knows that no dynamic buffers will be bound to
+a shader resource variable, it should use the `SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS` flag when defining
+the variables through the PSO layout or `PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS` when defining the varible
+through pipeline resource signature. It is an error to bind `USAGE_DYNAMIC` buffer to a variable that was
+created with `NO_DYNAMIC_BUFFERS` flag.
