@@ -1178,10 +1178,10 @@ const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
 
 String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName /*= false*/, const char* DelimeterString /*= "|"*/)
 {
-    if (Flags == PIPELINE_RESOURCE_FLAG_UNKNOWN)
-        return GetFullName ? "PIPELINE_RESOURCE_FLAG_UNKNOWN" : "UNKNOWN";
+    if (Flags == PIPELINE_RESOURCE_FLAG_NONE)
+        return GetFullName ? "PIPELINE_RESOURCE_FLAG_NONE" : "UNKNOWN";
     String Str;
-    while (Flags != PIPELINE_RESOURCE_FLAG_UNKNOWN)
+    while (Flags != PIPELINE_RESOURCE_FLAG_NONE)
     {
         if (!Str.empty())
             Str += DelimeterString;
@@ -1238,14 +1238,31 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
             return PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
 
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
-            return PIPELINE_RESOURCE_FLAG_UNKNOWN;
+            return PIPELINE_RESOURCE_FLAG_NONE;
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
             return PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;
 
         default:
             UNEXPECTED("Unexpected resource type");
-            return PIPELINE_RESOURCE_FLAG_UNKNOWN;
+            return PIPELINE_RESOURCE_FLAG_NONE;
+    }
+}
+
+PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIABLE_FLAGS Flags)
+{
+    static_assert(SHADER_VARIABLE_FLAG_LAST == 1, "Please update the switch below to handle the new shader variable flags");
+    switch (Flags)
+    {
+        case SHADER_VARIABLE_FLAG_NONE:
+            return PIPELINE_RESOURCE_FLAG_NONE;
+
+        case SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS:
+            return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS;
+
+        default:
+            UNEXPECTED("Unexpected shader variable flag");
+            return PIPELINE_RESOURCE_FLAG_NONE;
     }
 }
 

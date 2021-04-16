@@ -645,10 +645,11 @@ void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcep
     CorrectDepthStencilDesc(GraphicsPipeline);
 }
 
-Uint32 FindPipelineResourceLayoutVariable(const PipelineResourceLayoutDesc& LayoutDesc,
-                                          const char*                       Name,
-                                          SHADER_TYPE                       ShaderStage,
-                                          const char*                       CombinedSamplerSuffix)
+ShaderResourceVariableDesc FindPipelineResourceLayoutVariable(
+    const PipelineResourceLayoutDesc& LayoutDesc,
+    const char*                       Name,
+    SHADER_TYPE                       ShaderStage,
+    const char*                       CombinedSamplerSuffix)
 {
     for (Uint32 i = 0; i < LayoutDesc.NumVariables; ++i)
     {
@@ -664,11 +665,12 @@ Uint32 FindPipelineResourceLayoutVariable(const PipelineResourceLayoutDesc& Layo
                        "This error should've been caught by ValidatePipelineResourceLayoutDesc().");
             }
 #endif
-            return i;
+            return Var;
         }
     }
 
-    return InvalidPipelineResourceLayoutVariableIndex;
+    // Use default properties
+    return {ShaderStage, Name, LayoutDesc.DefaultVariableType};
 }
 
 } // namespace Diligent

@@ -677,8 +677,8 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineResourceFlagsString)
 {
     static_assert(PIPELINE_RESOURCE_FLAG_LAST == 0x08, "Please add a test for the new flag here");
 
-    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_UNKNOWN, true).c_str(), "PIPELINE_RESOURCE_FLAG_UNKNOWN");
-    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_UNKNOWN).c_str(), "UNKNOWN");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NONE, true).c_str(), "PIPELINE_RESOURCE_FLAG_NONE");
+    EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NONE).c_str(), "UNKNOWN");
 
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS, true).c_str(), "PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS");
     EXPECT_STREQ(GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, true).c_str(), "PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER");

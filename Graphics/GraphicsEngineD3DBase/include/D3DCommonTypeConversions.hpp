@@ -35,10 +35,9 @@
 
 namespace Diligent
 {
+struct D3DShaderResourceAttribs;
 
 RESOURCE_DIMENSION D3DSrvDimensionToResourceDimension(D3D_SRV_DIMENSION SrvDim);
-
-void GetShaderResourceTypeAndFlags(const struct D3DShaderResourceAttribs& Attribs, SHADER_RESOURCE_TYPE& OutType, PIPELINE_RESOURCE_FLAGS& OutFlags);
 
 /// Verifies that two pipeline resources are compatible and throws an exception in case of an error
 void VerifyD3DResourceMerge(const PipelineStateDesc&        PSODesc,

@@ -1,6 +1,7 @@
 ## Current Progress
 
-* Rework validation options (API240089)
+* Added `SHADER_VARIABLE_FLAGS` enum and `SHADER_VARIABLE_FLAGS Flags` member to ShaderResourceVariableDesc struct (API240090)
+* Reworked validation options (API240089)
   * Added `VALIDATION_FLAGS` and `D3D12_VALIDATION_FLAGS` enums; renamed `D3D11_DEBUG_FLAGS` to `D3D11_VALIDATION_FLAGS`
   * Added `VALIDATION_FLAGS ValidationFlags` and `bool EnableValidation` to `EngineCreateInfo`
   * Added `D3D12_VALIDATION_FLAGS D3D12ValidationFlags` to `EngineD3D12CreateInfo`; removed `EnableDebugLayer`, `EnableGPUBasedValidation`,

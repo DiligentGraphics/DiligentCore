@@ -710,20 +710,9 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                         ShaderResources.GetCombinedSamplerSuffix() :
                         nullptr;
 
-                    auto ShaderStages = Stage.Type;
-                    auto VarType      = LayoutDesc.DefaultVariableType;
-
-                    const auto VarIndex = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Stage.Type, SamplerSuffix);
-                    if (VarIndex != InvalidPipelineResourceLayoutVariableIndex)
-                    {
-                        const auto& Var = LayoutDesc.Variables[VarIndex];
-
-                        ShaderStages = Var.ShaderStages;
-                        VarType      = Var.Type;
-                    }
-
-                    auto IterAndAssigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, ShaderStages}, Attribs);
-                    if (IterAndAssigned.second)
+                    const auto VarDesc     = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Stage.Type, SamplerSuffix);
+                    const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
+                    if (it_assigned.second)
                     {
                         if (Attribs.ArraySize == 0)
                         {
@@ -732,12 +721,12 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                         }
 
                         const auto ResType = SPIRVShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
-                        const auto Flags   = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type);
-                        Resources.emplace_back(ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarType, Flags);
+                        const auto Flags   = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+                        Resources.emplace_back(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarDesc.Type, Flags);
                     }
                     else
                     {
-                        VerifyResourceMerge(m_Desc, IterAndAssigned.first->second, Attribs);
+                        VerifyResourceMerge(m_Desc, it_assigned.first->second, Attribs);
                     }
                 });
 

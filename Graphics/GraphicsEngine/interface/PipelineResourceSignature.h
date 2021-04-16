@@ -75,11 +75,11 @@ struct ImmutableSamplerDesc
 typedef struct ImmutableSamplerDesc ImmutableSamplerDesc;
 
 
-/// Flags that define pipeline resource properties
+/// Pipeline resource property flags.
 DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
 {
     /// Resource has no special properties
-    PIPELINE_RESOURCE_FLAG_UNKNOWN            = 0x00,
+    PIPELINE_RESOURCE_FLAG_NONE            = 0x00,
 
     /// Indicates that dynamic buffers will never be bound to the resource
     /// variable. Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, 
@@ -139,7 +139,7 @@ struct PipelineResourceDesc
     SHADER_RESOURCE_VARIABLE_TYPE  VarType       DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
     
     /// Special resource flags, see Diligent::PIPELINE_RESOURCE_FLAGS.
-    PIPELINE_RESOURCE_FLAGS        Flags         DEFAULT_INITIALIZER(PIPELINE_RESOURCE_FLAG_UNKNOWN);
+    PIPELINE_RESOURCE_FLAGS        Flags         DEFAULT_INITIALIZER(PIPELINE_RESOURCE_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
     PipelineResourceDesc()noexcept{}
@@ -149,7 +149,7 @@ struct PipelineResourceDesc
                          Uint32                        _ArraySize,
                          SHADER_RESOURCE_TYPE          _ResourceType,
                          SHADER_RESOURCE_VARIABLE_TYPE _VarType,
-                         PIPELINE_RESOURCE_FLAGS       _Flags = PIPELINE_RESOURCE_FLAG_UNKNOWN)noexcept : 
+                         PIPELINE_RESOURCE_FLAGS       _Flags = PIPELINE_RESOURCE_FLAG_NONE)noexcept : 
         Name        {_Name        },
         ArraySize   {_ArraySize   },
         ResourceType{_ResourceType},

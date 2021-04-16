@@ -81,17 +81,17 @@ void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32, HashMap
 void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept;
 
 
-static constexpr Uint32 InvalidPipelineResourceLayoutVariableIndex = ~0u;
 /// Finds a pipeline resource layout variable with the name 'Name' in shader stage 'ShaderStage'
 /// in the list of variables of 'LayoutDesc'. If CombinedSamplerSuffix != null, the
 /// variable is treated as a combined sampler and the suffix is added to the names of
 /// variables from 'LayoutDesc' when comparing with 'Name'.
-/// If the variable is found, returns its index in LayoutDesc.Variables.
-/// Otherwise returns InvalidPipelineResourceLayoutVariableIndex.
-Uint32 FindPipelineResourceLayoutVariable(const PipelineResourceLayoutDesc& LayoutDesc,
-                                          const char*                       Name,
-                                          SHADER_TYPE                       ShaderStage,
-                                          const char*                       CombinedSamplerSuffix);
+/// If the variable is not found, returns default variable
+/// {ShaderStage, Name, LayoutDesc.DefaultVariableType}.
+ShaderResourceVariableDesc FindPipelineResourceLayoutVariable(
+    const PipelineResourceLayoutDesc& LayoutDesc,
+    const char*                       Name,
+    SHADER_TYPE                       ShaderStage,
+    const char*                       CombinedSamplerSuffix);
 
 
 /// Hash map key that identifies shader resource by its name and shader stages

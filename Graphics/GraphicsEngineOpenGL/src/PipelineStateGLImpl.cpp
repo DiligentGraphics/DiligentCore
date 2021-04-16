@@ -70,51 +70,43 @@ RefCntAutoPtr<PipelineResourceSignatureGLImpl> PipelineStateGLImpl::CreateDefaul
 {
     std::vector<PipelineResourceDesc> Resources;
 
-    const auto& LayoutDesc     = m_Desc.ResourceLayout;
-    const auto  DefaultVarType = LayoutDesc.DefaultVariableType;
+    const auto& LayoutDesc = m_Desc.ResourceLayout;
 
     std::unordered_map<ShaderResourceHashKey, const ShaderResourcesGL::GLResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs, PIPELINE_RESOURCE_FLAGS Flags) //
     {
-        PipelineResourceDesc ResDesc = {};
+        const auto VarDesc = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Attribs.ShaderStages, nullptr);
 
+        PipelineResourceDesc ResDesc{};
         ResDesc.Name         = Attribs.Name;
-        ResDesc.ShaderStages = Attribs.ShaderStages;
+        ResDesc.ShaderStages = VarDesc.ShaderStages;
         ResDesc.ArraySize    = Attribs.ArraySize;
         ResDesc.ResourceType = Attribs.ResourceType;
-        ResDesc.VarType      = DefaultVarType;
-        ResDesc.Flags        = Flags;
+        ResDesc.VarType      = VarDesc.Type;
+        ResDesc.Flags        = Flags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
 
-        const auto VarIndex = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ResDesc.ShaderStages, nullptr);
-        if (VarIndex != InvalidPipelineResourceLayoutVariableIndex)
-        {
-            const auto& Var      = LayoutDesc.Variables[VarIndex];
-            ResDesc.ShaderStages = Var.ShaderStages;
-            ResDesc.VarType      = Var.Type;
-        }
-
-        auto IterAndAssigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, ResDesc.ShaderStages}, Attribs);
-        if (IterAndAssigned.second)
+        const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, ResDesc.ShaderStages}, Attribs);
+        if (it_assigned.second)
         {
             Resources.push_back(ResDesc);
         }
         else
         {
-            VerifyResourceMerge(m_Desc, IterAndAssigned.first->second, Attribs);
+            VerifyResourceMerge(m_Desc, it_assigned.first->second, Attribs);
         }
     };
     const auto HandleUB = [&](const ShaderResourcesGL::UniformBufferInfo& Attribs) {
-        HandleResource(Attribs, PIPELINE_RESOURCE_FLAG_UNKNOWN);
+        HandleResource(Attribs, PIPELINE_RESOURCE_FLAG_NONE);
     };
     const auto HandleTexture = [&](const ShaderResourcesGL::TextureInfo& Attribs) {
         HandleResource(Attribs, Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ? PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER : PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER);
     };
     const auto HandleImage = [&](const ShaderResourcesGL::ImageInfo& Attribs) {
-        HandleResource(Attribs, Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV ? PIPELINE_RESOURCE_FLAG_UNKNOWN : PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER);
+        HandleResource(Attribs, Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV ? PIPELINE_RESOURCE_FLAG_NONE : PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER);
     };
     const auto HandleSB = [&](const ShaderResourcesGL::StorageBlockInfo& Attribs) {
-        HandleResource(Attribs, PIPELINE_RESOURCE_FLAG_UNKNOWN);
+        HandleResource(Attribs, PIPELINE_RESOURCE_FLAG_NONE);
     };
 
     ShaderResourcesGL ProgramResources;
@@ -456,7 +448,7 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
     };
 
     const auto HandleUB = [&](const ShaderResourcesGL::UniformBufferInfo& Attribs) {
-        HandleResource(Attribs, Attribs.ResourceType, PIPELINE_RESOURCE_FLAG_UNKNOWN);
+        HandleResource(Attribs, Attribs.ResourceType, PIPELINE_RESOURCE_FLAG_NONE);
     };
 
     const auto HandleTexture = [&](const ShaderResourcesGL::TextureInfo& Attribs) {
@@ -470,11 +462,11 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
         const bool IsImageBuffer = (Attribs.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_UAV);
         HandleResource(Attribs,
                        IsImageBuffer ? SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV,
-                       IsImageBuffer ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_UNKNOWN);
+                       IsImageBuffer ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_NONE);
     };
 
     const auto HandleSB = [&](const ShaderResourcesGL::StorageBlockInfo& Attribs) {
-        HandleResource(Attribs, SHADER_RESOURCE_TYPE_BUFFER_SRV, PIPELINE_RESOURCE_FLAG_UNKNOWN);
+        HandleResource(Attribs, SHADER_RESOURCE_TYPE_BUFFER_SRV, PIPELINE_RESOURCE_FLAG_NONE);
     };
 
     pShaderResources->ProcessConstResources(HandleUB, HandleTexture, HandleImage, HandleSB);

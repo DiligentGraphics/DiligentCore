@@ -188,7 +188,7 @@ PIPELINE_RESOURCE_FLAGS SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Res
             return PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
 
         default:
-            return PIPELINE_RESOURCE_FLAG_UNKNOWN;
+            return PIPELINE_RESOURCE_FLAG_NONE;
     }
 }
 

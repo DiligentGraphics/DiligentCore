@@ -1488,7 +1488,7 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
     PRSDesc.Name = "Formatted buffer test";
 
     constexpr auto SHADER_TYPE_VS_PS   = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
-    const auto     FormattedBufferFlag = BufferMode == BUFFER_MODE_FORMATTED ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_UNKNOWN;
+    const auto     FormattedBufferFlag = BufferMode == BUFFER_MODE_FORMATTED ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_NONE;
     // clang-format off
     PipelineResourceDesc Resources[]
     {

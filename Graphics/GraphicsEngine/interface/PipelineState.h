@@ -72,6 +72,25 @@ struct SampleDesc
 typedef struct SampleDesc SampleDesc;
 
 
+/// Shader variable property flags.
+DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
+{
+    /// Shader variable has no special properties.
+    SHADER_VARIABLE_FLAG_NONE               = 0x00,
+
+    /// Indicates that dynamic buffers will never be bound to the resource
+    /// variable. Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+    /// SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_TYPE_BUFFER_SRV resources.
+    ///
+    /// \remarks    This flag directly translates to the PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS
+    ///             flag in the internal pipeline resource signature.
+    SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS = 0x01,
+
+    SHADER_VARIABLE_FLAG_LAST               = SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS
+};
+DEFINE_FLAG_ENUM_OPERATORS(SHADER_VARIABLE_FLAGS);
+
+
 /// Describes shader variable
 struct ShaderResourceVariableDesc
 {
@@ -86,13 +105,19 @@ struct ShaderResourceVariableDesc
     /// Shader variable type. See Diligent::SHADER_RESOURCE_VARIABLE_TYPE for a list of allowed types
     SHADER_RESOURCE_VARIABLE_TYPE Type         DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
+    SHADER_VARIABLE_FLAGS         Flags        DEFAULT_INITIALIZER(SHADER_VARIABLE_FLAG_NONE);
+
 #if DILIGENT_CPP_INTERFACE
     ShaderResourceVariableDesc()noexcept{}
 
-    ShaderResourceVariableDesc(SHADER_TYPE _ShaderStages, const Char* _Name, SHADER_RESOURCE_VARIABLE_TYPE _Type)noexcept : 
+    ShaderResourceVariableDesc(SHADER_TYPE                   _ShaderStages, 
+                               const Char*                   _Name,
+                               SHADER_RESOURCE_VARIABLE_TYPE _Type,
+                               SHADER_VARIABLE_FLAGS         _Flags = SHADER_VARIABLE_FLAG_NONE) noexcept :
         ShaderStages{_ShaderStages},
         Name        {_Name        },
-        Type        {_Type        }
+        Type        {_Type        },
+        Flags       {_Flags       }
     {}
 #endif
 };

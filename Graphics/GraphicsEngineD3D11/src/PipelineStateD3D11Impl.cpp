@@ -64,29 +64,17 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
         ShaderResources.ProcessResources(
             [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
             {
-                // Use default variable type and current shader type for shader stages
-                auto ShaderStages = ShaderType;
-                auto VarType      = LayoutDesc.DefaultVariableType;
-
                 const char* const SamplerSuffix =
                     (ShaderResources.IsUsingCombinedTextureSamplers() && Attribs.GetInputType() == D3D_SIT_SAMPLER) ?
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
-                const auto VarIndex = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ShaderStages, SamplerSuffix);
-                if (VarIndex != InvalidPipelineResourceLayoutVariableIndex)
-                {
-                    const auto& Var = LayoutDesc.Variables[VarIndex];
-                    // Use shader stages and variable type from the variable desc
-                    ShaderStages = Var.ShaderStages;
-                    VarType      = Var.Type;
-                }
 
-                auto IterAndAssigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, ShaderStages}, Attribs);
-                if (IterAndAssigned.second)
+                const auto VarDesc     = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ShaderType, SamplerSuffix);
+                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
+                if (it_assigned.second)
                 {
-                    SHADER_RESOURCE_TYPE    ResType = SHADER_RESOURCE_TYPE_UNKNOWN;
-                    PIPELINE_RESOURCE_FLAGS Flags   = PIPELINE_RESOURCE_FLAG_UNKNOWN;
-                    GetShaderResourceTypeAndFlags(Attribs, ResType, Flags);
+                    const auto ResType  = Attribs.GetShaderResourceType();
+                    const auto ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
 
                     if (Attribs.BindCount == 0)
                     {
@@ -94,11 +82,11 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
                                             "Use explicit resource signature to specify the array size.");
                     }
 
-                    Resources.emplace_back(ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarType, Flags);
+                    Resources.emplace_back(VarDesc.ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarDesc.Type, ResFlags);
                 }
                 else
                 {
-                    VerifyD3DResourceMerge(m_Desc, IterAndAssigned.first->second, Attribs);
+                    VerifyD3DResourceMerge(m_Desc, it_assigned.first->second, Attribs);
                 }
             } //
         );
@@ -380,9 +368,8 @@ void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pSha
                                     m_Desc.Name, "'.");
             }
 
-            SHADER_RESOURCE_TYPE    Type  = SHADER_RESOURCE_TYPE_UNKNOWN;
-            PIPELINE_RESOURCE_FLAGS Flags = PIPELINE_RESOURCE_FLAG_UNKNOWN;
-            GetShaderResourceTypeAndFlags(Attribs, Type, Flags);
+            const auto ResType  = Attribs.GetShaderResourceType();
+            const auto ResFlags = Attribs.GetPipelineResourceFlags();
 
             const auto* const pSignature = ResAttribution.pSignature;
             VERIFY_EXPR(pSignature != nullptr);
@@ -397,15 +384,15 @@ void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pSha
                 VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0,
                        "Runtime-sized array flag is not supported in Direct3D11, this error must be handled by ValidatePipelineResourceSignatureDesc()");
 
-                ValidatePipelineResourceCompatibility(ResDesc, Type, Flags, Attribs.BindCount,
+                ValidatePipelineResourceCompatibility(ResDesc, ResType, ResFlags, Attribs.BindCount,
                                                       pShader->GetDesc().Name, pSignature->GetDesc().Name);
             }
             else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
             {
-                if (Type != SHADER_RESOURCE_TYPE_SAMPLER)
+                if (ResType != SHADER_RESOURCE_TYPE_SAMPLER)
                 {
                     LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", Attribs.Name,
-                                        "' and type '", GetShaderResourceTypeLiteralName(Type),
+                                        "' and type '", GetShaderResourceTypeLiteralName(ResType),
                                         "' that is not compatible with immutable sampler defined in pipeline resource signature '",
                                         pSignature->GetDesc().Name, "'.");
                 }

@@ -235,13 +235,25 @@ public:
         return ComputeHash(BindPoint, BindCount, InputType, SRVDimension, SamplerOrTexSRVId);
     }
 
-    HLSLShaderResourceDesc GetHLSLResourceDesc() const;
+    HLSLShaderResourceDesc GetHLSLResourceDesc() const
+    {
+        HLSLShaderResourceDesc ResourceDesc;
+        ResourceDesc.Name           = Name;
+        ResourceDesc.ArraySize      = BindCount;
+        ResourceDesc.ShaderRegister = BindPoint;
+        ResourceDesc.Type           = GetShaderResourceType();
+
+        return ResourceDesc;
+    }
 
     Uint32 GetCombinedSamplerId() const
     {
         VERIFY(GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER, "Invalid input type: D3D_SIT_TEXTURE is expected");
         return SamplerOrTexSRVId;
     }
+
+    SHADER_RESOURCE_TYPE    GetShaderResourceType() const;
+    PIPELINE_RESOURCE_FLAGS GetPipelineResourceFlags() const;
 
 private:
     friend class ShaderResources;
