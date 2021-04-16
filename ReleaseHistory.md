@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Added `IDeviceContext::SetUserData()` and `IDeviceContext::GetUserData()` methods (API240091)
 * Added `SHADER_VARIABLE_FLAGS` enum and `SHADER_VARIABLE_FLAGS Flags` member to ShaderResourceVariableDesc struct (API240090)
 * Reworked validation options (API240089)
   * Added `VALIDATION_FLAGS` and `D3D12_VALIDATION_FLAGS` enums; renamed `D3D11_DEBUG_FLAGS` to `D3D11_VALIDATION_FLAGS`

@@ -2409,6 +2409,31 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     VIRTUAL void METHOD(UpdateSBT)(THIS_
                                    IShaderBindingTable*                 pSBT,
                                    const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs DEFAULT_INITIALIZER(nullptr)) PURE;
+
+
+    /// Stores a pointer to the user-provided data object, which
+    /// may later be retreived through GetUserData().
+    ///
+    /// \param [in] pUserData - Pointer to the user data object to store.
+    ///
+    /// \note   The method is not thread-safe and an application
+    ///         must externally synchronize the access.
+    ///
+    ///         The metod keeps strong reference to the user data object.
+    ///         If an application needs to release the object, it
+    ///         should call SetUserData(nullptr);
+    VIRTUAL void METHOD(SetUserData)(THIS_
+                                     IObject* pUserData) PURE;
+
+
+    /// Returns a pointer to the user data object previously
+    /// set with SetUserData() method.
+    ///
+    /// \return     The pointer to the user data object.
+    /// 
+    /// \remarks    The method does *NOT* call AddRef()
+    ///             for the object being returned.
+    VIRTUAL IObject* METHOD(GetUserData)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -2470,6 +2495,8 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_TraceRays(This, ...)                 CALL_IFACE_METHOD(DeviceContext, TraceRays,                 This, __VA_ARGS__)
 #    define IDeviceContext_TraceRaysIndirect(This, ...)         CALL_IFACE_METHOD(DeviceContext, TraceRaysIndirect,         This, __VA_ARGS__)
 #    define IDeviceContext_UpdateSBT(This, ...)                 CALL_IFACE_METHOD(DeviceContext, UpdateSBT,                 This, __VA_ARGS__)
+#    define IDeviceContext_SetUserData(This, ...)               CALL_IFACE_METHOD(DeviceContext, SetUserData,               This, __VA_ARGS__)
+#    define IDeviceContext_GetUserData(This)                    CALL_IFACE_METHOD(DeviceContext, GetUserData,               This)
 
 // clang-format on
 

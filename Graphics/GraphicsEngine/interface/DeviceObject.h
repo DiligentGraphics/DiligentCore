@@ -81,6 +81,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceObject, IObject)
     ///
     /// \note   The method is not thread-safe and an application
     ///         must externally synchronize the access.
+    ///
+    ///         The metod keeps strong reference to the user data object.
+    ///         If an application needs to release the object, it
+    ///         should call SetUserData(nullptr);
     VIRTUAL void METHOD(SetUserData)(THIS_
                                      IObject* pUserData) PURE;
 

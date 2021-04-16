@@ -74,4 +74,8 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
 
     struct TraceRaysIndirectAttribs traceRaysIndirectAttribs = {0};
     IDeviceContext_TraceRaysIndirect(pCtx, &traceRaysIndirectAttribs, pIndirectBuffer);
+
+    struct IObject* pUserData = NULL;
+    IDeviceContext_SetUserData(pCtx, pUserData);
+    pUserData = IDeviceContext_GetUserData(pCtx);
 }

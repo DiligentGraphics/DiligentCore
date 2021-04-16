@@ -237,6 +237,18 @@ public:
         return m_FrameNumber;
     }
 
+    /// Implementation of IDeviceContext::SetUserData.
+    virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final
+    {
+        m_pUserData = pUserData;
+    }
+
+    /// Implementation of IDeviceContext::GetUserData.
+    virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final
+    {
+        return m_pUserData.RawPtr<IObject>();
+    }
+
     /// Returns currently bound pipeline state and blend factors
     inline void GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef);
 
@@ -399,6 +411,7 @@ protected:
     void TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
     void UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const;
 
+protected:
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(Uint32) * 3; // D3D12: 12 bytes (x, y, z dimension)
                                                                                 // Vulkan: 8 bytes (task count, first task)
     static constexpr Uint32 TraceRaysIndirectCommandSBTSize = 88;               // D3D12: 88 bytes, size of SBT offsets
@@ -476,6 +489,8 @@ protected:
     const bool m_bIsDeferred = false;
 
     Uint64 m_FrameNumber = 0;
+
+    RefCntAutoPtr<IObject> m_pUserData;
 
 #ifdef DILIGENT_DEBUG
     // std::unordered_map is unbelievably slow. Keeping track of mapped buffers
