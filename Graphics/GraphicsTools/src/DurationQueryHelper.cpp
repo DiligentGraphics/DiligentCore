@@ -74,7 +74,7 @@ bool DurationQueryHelper::End(IDeviceContext* pCtx, double& Duration)
 {
     if (m_PendingQueries.empty())
     {
-        LOG_ERROR_MESSAGE("There are no pending queries, which likely indicates incosistent Begin()/End() calls");
+        LOG_ERROR_MESSAGE("There are no pending queries, which likely indicates inconsistent Begin()/End() calls");
         return false;
     }
 

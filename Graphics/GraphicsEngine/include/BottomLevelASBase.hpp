@@ -146,7 +146,7 @@ public:
     /// Implementation of IBottomLevelAS::GetGeometryIndex()
     virtual Uint32 DILIGENT_CALL_TYPE GetGeometryIndex(const char* Name) const override final
     {
-        DEV_CHECK_ERR(Name != nullptr && Name[0] != '\0', "Geometry name must not be emtpy");
+        DEV_CHECK_ERR(Name != nullptr && Name[0] != '\0', "Geometry name must not be empty");
 
         auto iter = m_NameToIndex.find(Name);
         if (iter != m_NameToIndex.end())

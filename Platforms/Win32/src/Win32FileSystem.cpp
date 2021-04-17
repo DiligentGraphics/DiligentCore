@@ -99,7 +99,7 @@ WindowsFile::WindowsFile(const FileOpenAttribs& OpenAttribs) :
             char errstr[128];
             strerror_s(errstr, _countof(errstr), err);
             LOG_ERROR_AND_THROW("Failed to open file ", m_OpenAttribs.strFilePath,
-                                "\nThe following error occured: ", errstr);
+                                "\nThe following error occurred: ", errstr);
         }
     }
 }

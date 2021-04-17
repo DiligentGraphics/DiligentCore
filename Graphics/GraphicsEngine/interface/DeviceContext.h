@@ -70,7 +70,7 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     /// No flags.
     DRAW_FLAG_NONE                            = 0x00,
 
-    /// Verify the sate of index and vertex buffers (if any) used by the draw 
+    /// Verify the state of index and vertex buffers (if any) used by the draw 
     /// command. State validation is only performed in debug and development builds 
     /// and the flag has no effect in release build.
     DRAW_FLAG_VERIFY_STATES                   = 0x01,
@@ -1080,7 +1080,7 @@ struct TLASBuildInstanceData
     /// Access to the BLAS must be externally synchronized.
     IBottomLevelAS*           pBLAS           DEFAULT_INITIALIZER(nullptr);
 
-    /// Instace to world transformation.
+    /// Instance to world transformation.
     InstanceMatrix            Transform;
 
     /// User-defined value that can be accessed in the shader via InstanceID() in HLSL and gl_InstanceCustomIndex in GLSL.
@@ -1570,7 +1570,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
 
     /// \param [in] pBlendFactors - Array of four blend factors, one for each RGBA component. 
-    ///                             Theses factors are used if the blend state uses one of the 
+    ///                             These factors are used if the blend state uses one of the 
     ///                             Diligent::BLEND_FACTOR_BLEND_FACTOR or 
     ///                             Diligent::BLEND_FACTOR_INV_BLEND_FACTOR 
     ///                             blend factors. If nullptr is provided,
@@ -1631,7 +1631,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                   with the Diligent::BIND_INDEX_BUFFER flag.
     /// \param [in] ByteOffset          - Offset from the beginning of the buffer to 
     ///                                   the start of index data.
-    /// \param [in] StateTransitionMode - State transiton mode for the index buffer to bind (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
+    /// \param [in] StateTransitionMode - State transition mode for the index buffer to bind (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     ///
     /// \remarks The device context keeps strong reference to the index buffer.
     ///          Thus an index buffer object cannot be released until it is unbound 
@@ -1662,7 +1662,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks
     /// DirectX and OpenGL use different window coordinate systems. In DirectX, the coordinate system origin
     /// is in the left top corner of the screen with Y axis pointing down. In OpenGL, the origin
-    /// is in the left bottom corener of the screen with Y axis pointing up. Render target size is 
+    /// is in the left bottom corner of the screen with Y axis pointing up. Render target size is 
     /// required to convert viewport from DirectX to OpenGL coordinate system if OpenGL device is used.\n\n
     /// All viewports must be set atomically as one operation. Any viewports not 
     /// defined by the call are disabled.\n\n
@@ -1687,7 +1687,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks
     /// DirectX and OpenGL use different window coordinate systems. In DirectX, the coordinate system origin
     /// is in the left top corner of the screen with Y axis pointing down. In OpenGL, the origin
-    /// is in the left bottom corener of the screen with Y axis pointing up. Render target size is 
+    /// is in the left bottom corner of the screen with Y axis pointing up. Render target size is 
     /// required to convert viewport from DirectX to OpenGL coordinate system if OpenGL device is used.\n\n
     /// All scissor rects must be set atomically as one operation. Any rects not 
     /// defined by the call are disabled.
@@ -1938,7 +1938,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be 
     ///                                   Diligent::TEXTURE_VIEW_DEPTH_STENCIL.
     /// \param [in] StateTransitionMode - state transition mode of the depth-stencil buffer to clear.
-    /// \param [in] ClearFlags          - Idicates which parts of the buffer to clear, see Diligent::CLEAR_DEPTH_STENCIL_FLAGS.
+    /// \param [in] ClearFlags          - Indicates which parts of the buffer to clear, see Diligent::CLEAR_DEPTH_STENCIL_FLAGS.
     /// \param [in] fDepth              - Value to clear depth part of the view with.
     /// \param [in] Stencil             - Value to clear stencil part of the view with.
     ///
@@ -2071,7 +2071,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///             subpass of a render pass instance, or must both begin and end outside of
     ///             a render pass instance. This means that an application must either begin
     ///             and end a query while preserving render targets, or begin it when no render
-    ///             targets are bound to the context. In the latter case the engine will automaticaly
+    ///             targets are bound to the context. In the latter case the engine will automatically
     ///             end the render pass, if needed, when the query is ended.
     ///             Also note that resource transitions must be performed outside of a render pass,
     ///             and may thus require ending current render pass.
@@ -2277,7 +2277,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///          (Diligent::RESOURCE_STATE_UNKNOWN) to disable automatic state management in the engine.
     ///          
     ///          When StateTransitionDesc::UpdateResourceState is set to true, the method may update the state of the
-    ///          corresponding resource which is not thread safe. No other threads should read or write the sate of that 
+    ///          corresponding resource which is not thread safe. No other threads should read or write the state of that 
     ///          resource.
     ///
     /// \note    Any method that uses Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode may alter
@@ -2412,14 +2412,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
 
     /// Stores a pointer to the user-provided data object, which
-    /// may later be retreived through GetUserData().
+    /// may later be retrieved through GetUserData().
     ///
     /// \param [in] pUserData - Pointer to the user data object to store.
     ///
     /// \note   The method is not thread-safe and an application
     ///         must externally synchronize the access.
     ///
-    ///         The metod keeps strong reference to the user data object.
+    ///         The method keeps strong reference to the user data object.
     ///         If an application needs to release the object, it
     ///         should call SetUserData(nullptr);
     VIRTUAL void METHOD(SetUserData)(THIS_

@@ -180,7 +180,7 @@ struct TextureSubResData
     Uint32 Stride               DEFAULT_INITIALIZER(0);
 
     /// For 3D textures, depth slice stride in bytes
-    /// \note On OpenGL, this must be a mutliple of Stride
+    /// \note On OpenGL, this must be a multiple of Stride
     Uint32 DepthStride          DEFAULT_INITIALIZER(0);
 
 
@@ -269,7 +269,7 @@ typedef struct MappedTextureSubresource MappedTextureSubresource;
     IDeviceObjectInclusiveMethods; \
     ITextureMethods Texture
 
-/// Texture inteface
+/// Texture interface
 DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE

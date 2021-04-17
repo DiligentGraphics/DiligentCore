@@ -118,7 +118,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///                          one reference.
     /// \remarks
     /// To create all mip levels, set the TexDesc.MipLevels to zero.\n
-    /// Multisampled resources cannot be initialzed with data when they are created. \n
+    /// Multisampled resources cannot be initialized with data when they are created. \n
     /// If initial data is provided, number of subresources must exactly match the number
     /// of subresources in the texture (which is the number of mip levels times the number of array slices.
     /// For a 3D texture, this is just the number of mip levels).

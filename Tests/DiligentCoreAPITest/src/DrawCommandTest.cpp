@@ -2150,7 +2150,7 @@ void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                 
                                                            SHADER_RESOURCE_VARIABLE_TYPE ColBuffType)
 {
     if (UseArray)
-        VERIFY(ColBuffType == 0, "Color buffer type is ingored when arrays are used");
+        VERIFY(ColBuffType == 0, "Color buffer type is ignored when arrays are used");
 
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pContext   = pEnv->GetDeviceContext();

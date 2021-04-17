@@ -1402,7 +1402,7 @@ void DeviceContextD3D11Impl::BeginSubpass()
     const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
 
     // Unbind these attachments that will be used for output by the subpass.
-    // There is no need to unbind textures from output as the new subpass atachments
+    // There is no need to unbind textures from output as the new subpass attachments
     // will be committed as render target/depth stencil anyway, so these that can be used for
     // input will be unbound.
 

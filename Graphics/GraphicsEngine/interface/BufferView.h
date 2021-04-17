@@ -95,7 +95,7 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// (default value).
     struct BufferFormat Format;
 
-    /// Offset in bytes from the beginnig of the buffer to the start of the
+    /// Offset in bytes from the beginning of the buffer to the start of the
     /// buffer region referenced by the view
     Uint32 ByteOffset       DEFAULT_INITIALIZER(0);
 

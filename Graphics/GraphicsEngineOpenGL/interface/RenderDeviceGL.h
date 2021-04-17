@@ -57,7 +57,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
     /// \param [in] GLBindTarget  - OpenGL bind target. If this parameter is null, the engine will
     ///                             automatically select the target based on texture
     ///                             type (e.g. RESOURCE_DIM_TEX_2D will map to GL_TEXTURE_2D).
-    ///                             An application should typically use this paramter when the texture
+    ///                             An application should typically use this parameter when the texture
     ///                             has non-standard bind target such as, GL_TEXTURE_EXTERNAL_OES.
     /// \param [in] TexDesc       - Texture description. The engine can automatically
     ///                             set texture width, height, depth, mip levels count, and format.

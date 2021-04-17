@@ -247,7 +247,7 @@ elseif(PLATFORM_MACOS)
     if (VULKAN_LIB_PATH)
         message("Using Vulkan library path: " ${VULKAN_LIB_PATH})
     else()
-        message(WARNING "Vulkan library is not found. Executables may fail to start bcause the library may not be in rpath. Define VULKAN_SDK environment or CMake variable to specify the SDK path.")
+        message(WARNING "Vulkan library is not found. Executables may fail to start because the library may not be in rpath. Define VULKAN_SDK environment or CMake variable to specify the SDK path.")
     endif()
 endif()
 

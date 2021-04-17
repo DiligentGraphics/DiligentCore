@@ -187,7 +187,7 @@ public:
         DescrSet.m_DescriptorSetAllocation = std::move(Allocation);
     }
 
-    // Sets the resource at the given desriptor set index and offset
+    // Sets the resource at the given descriptor set index and offset
     const Resource& SetResource(const VulkanUtilities::VulkanLogicalDevice* pLogicalDevice,
                                 Uint32                                      SetIndex,
                                 Uint32                                      Offset,

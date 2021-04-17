@@ -131,7 +131,7 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
     auto AdvanceOffset = [&CurrentOffset](Uint32 NumResources) //
     {
         constexpr Uint32 MaxOffset = std::numeric_limits<OffsetType>::max();
-        VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
+        VERIFY(CurrentOffset <= MaxOffset, "Current offset (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
         auto Offset = static_cast<OffsetType>(CurrentOffset);
         CurrentOffset += NumResources;
         return Offset;

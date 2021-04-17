@@ -284,7 +284,7 @@ public:
                                          const char* /*includerName*/,
                                          size_t /*inclusionDepth*/)
     {
-        DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source conains #include directives, but no input stream factory was provided");
+        DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source contains #include directives, but no input stream factory was provided");
         RefCntAutoPtr<IFileStream> pSourceStream;
         m_pInputStreamFactory->CreateInputStream(headerName, &pSourceStream);
         if (pSourceStream == nullptr)

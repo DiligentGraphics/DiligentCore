@@ -317,7 +317,7 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
                     break;
 
                 default:
-                    UNEXPECTED("Only constant bufers and buffer SRVs/UAVs can be bound as root views.");
+                    UNEXPECTED("Only constant buffers and buffer SRVs/UAVs can be bound as root views.");
                     break;
             }
         }
@@ -397,7 +397,7 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
                         break;
 
                     default:
-                        UNEXPECTED("Only constant bufers and buffer SRVs/UAVs can be bound as root views.");
+                        UNEXPECTED("Only constant buffers and buffer SRVs/UAVs can be bound as root views.");
                         break;
                 }
             }

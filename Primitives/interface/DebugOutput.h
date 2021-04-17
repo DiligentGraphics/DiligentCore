@@ -48,7 +48,7 @@ enum DEBUG_MESSAGE_SEVERITY
 };
 
 
-/// Type of the debug messag callback function
+/// Type of the debug message callback function
 
 /// \param [in] Severity - Message severity
 /// \param [in] Message - Debug message

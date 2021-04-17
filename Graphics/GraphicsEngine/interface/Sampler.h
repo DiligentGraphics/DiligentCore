@@ -91,7 +91,7 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Maximum anisotropy level for the anisotropic filter. Default value: 0.
     Uint32 MaxAnisotropy                DEFAULT_INITIALIZER(0);
 
-    /// A function that compares sampled data against existing sampled data when comparsion
+    /// A function that compares sampled data against existing sampled data when comparison
     /// filter is used. Default value: Diligent::COMPARISON_FUNC_NEVER.
     COMPARISON_FUNCTION ComparisonFunc  DEFAULT_INITIALIZER(COMPARISON_FUNC_NEVER);
 

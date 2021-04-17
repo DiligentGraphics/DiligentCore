@@ -50,13 +50,13 @@ void ValidateTextureDesc(const TextureDesc& TexDesc) noexcept(false);
 /// Validates and corrects texture view description; throws an exception in case of an error.
 void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewDesc& ViewDesc) noexcept(false);
 
-/// Validates update texture command paramters.
+/// Validates update texture command parameters.
 void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData);
 
-/// Validates copy texture command paramters.
+/// Validates copy texture command parameters.
 void ValidateCopyTextureParams(const CopyTextureAttribs& CopyAttribs);
 
-/// Validates map texture command paramters.
+/// Validates map texture command parameters.
 void ValidateMapTextureParams(const TextureDesc& TexDesc,
                               Uint32             MipLevel,
                               Uint32             ArraySlice,
@@ -146,7 +146,7 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Texture, TDeviceObjectBase)
 
-    /// Implementaiton of ITexture::CreateView(); calls CreateViewInternal() virtual function that
+    /// Implementation of ITexture::CreateView(); calls CreateViewInternal() virtual function that
     /// creates texture view for the specific engine implementation.
     virtual void DILIGENT_CALL_TYPE CreateView(const struct TextureViewDesc& ViewDesc, ITextureView** ppView) override
     {

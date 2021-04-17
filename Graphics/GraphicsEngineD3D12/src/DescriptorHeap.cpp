@@ -203,7 +203,7 @@ DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Coun
     VERIFY_EXPR(Allocation.Size == Count);
 
     // Compute the first CPU and GPU descriptor handles in the allocation by
-    // offseting the first CPU and GPU descriptor handle in the range
+    // offsetting the first CPU and GPU descriptor handle in the range
     auto CPUHandle = m_FirstCPUHandle;
     CPUHandle.ptr += Allocation.UnalignedOffset * m_DescriptorSize;
 
@@ -314,7 +314,7 @@ int32_t CPUDescriptorHeap::DvpGetTotalAllocationCount()
 DescriptorHeapAllocation CPUDescriptorHeap::Allocate(uint32_t Count)
 {
     std::lock_guard<std::mutex> LockGuard(m_HeapPoolMutex);
-    // Note that every DescriptorHeapAllocationManager object instance is itslef
+    // Note that every DescriptorHeapAllocationManager object instance is itself
     // thread-safe. Nested mutexes cannot cause a deadlock
 
     DescriptorHeapAllocation Allocation;
@@ -341,7 +341,7 @@ DescriptorHeapAllocation CPUDescriptorHeap::Allocate(uint32_t Count)
     // to suffice the allocation request, create a new manager
     if (Allocation.IsNull())
     {
-        // Make sure the heap is large enough to accomodate the requested number of descriptors
+        // Make sure the heap is large enough to accommodate the requested number of descriptors
         if (Count > m_HeapDesc.NumDescriptors)
         {
             LOG_INFO_MESSAGE("Number of requested CPU descriptors handles (", Count, ") exceeds the descriptor heap size (", m_HeapDesc.NumDescriptors, "). Increasing the number of descriptors in the heap");

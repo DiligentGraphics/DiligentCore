@@ -58,7 +58,7 @@ void main ()
 {
     const uint I = gl_LocalInvocationID.x;
 
-    // only one thread writes output primitve count
+    // only one thread writes output primitive count
     if (I == 0)
     {
         gl_PrimitiveCountNV = 2;

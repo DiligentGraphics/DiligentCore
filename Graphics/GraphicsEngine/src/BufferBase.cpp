@@ -134,7 +134,7 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
     {
         if (pBuffData != nullptr && pBuffData->pData != nullptr && (Desc.CPUAccessFlags & CPU_ACCESS_WRITE) == 0)
         {
-            LOG_BUFFER_ERROR_AND_THROW("CPU_ACCESS_WRITE flag is required to intialize a unified buffer.");
+            LOG_BUFFER_ERROR_AND_THROW("CPU_ACCESS_WRITE flag is required to initialize a unified buffer.");
         }
     }
 }

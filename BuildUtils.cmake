@@ -372,7 +372,7 @@ function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
     elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
         set(RUN_VALIDATION_SCRIPT ./validate_format_mac.sh)
     else()
-        mesage(FATAL_ERROR "Unexpected host system")
+        message(FATAL_ERROR "Unexpected host system")
     endif()
 
     # Run the format validation script

@@ -25,9 +25,9 @@ is the case, an application should use `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTAC
 none of the dynamic buffers have been updated between the commands. Note that the first time an SRB is bound,
 dynamic buffers are properly bound regardless of the `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` flag.
 
-An application should try to use as few dyanmic buffers as possible. On some implementations the number of dynamic
+An application should try to use as few dynamic buffers as possible. On some implementations the number of dynamic
 buffers may be limited by as few as 8 buffers. If an application knows that no dynamic buffers will be bound to
 a shader resource variable, it should use the `SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS` flag when defining
-the variables through the PSO layout or `PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS` when defining the varible
+the variables through the PSO layout or `PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS` when defining the variable
 through pipeline resource signature. It is an error to bind `USAGE_DYNAMIC` buffer to a variable that was
 created with `NO_DYNAMIC_BUFFERS` flag.

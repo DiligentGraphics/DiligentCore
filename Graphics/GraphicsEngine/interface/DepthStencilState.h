@@ -169,7 +169,7 @@ struct DepthStencilStateDesc
     /// Default value: Diligent::COMPARISON_FUNC_LESS.
     COMPARISON_FUNCTION DepthFunc           DEFAULT_INITIALIZER(COMPARISON_FUNC_LESS);
 
-    /// Enable stencil opertaions. Default value: False.
+    /// Enable stencil operations. Default value: False.
     Bool                StencilEnable       DEFAULT_INITIALIZER(False);
     
     /// Identify which bits of the depth-stencil buffer are accessed when reading stencil data.

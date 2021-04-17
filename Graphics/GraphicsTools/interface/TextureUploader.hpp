@@ -75,7 +75,7 @@ struct TextureUploaderStats
     Uint32 NumPendingOperations = 0;
 };
 
-/// Asynchronous texture uplader
+/// Asynchronous texture uploader
 class ITextureUploader : public IObject
 {
 public:

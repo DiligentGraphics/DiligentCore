@@ -276,7 +276,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     else
     {
         const auto& Props = PhysicalDevice.GetProperties();
-        // There are limitiations on the viewport width and height (23.5), but
+        // There are limitations on the viewport width and height (23.5), but
         // it is not clear if there are limitations on the scissor rect width and
         // height
         ScissorRect.extent.width  = Props.limits.maxViewportDimensions[0];
@@ -581,7 +581,7 @@ void PipelineStateVkImpl::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
     else
     {
         VERIFY(Type == NewShaderType, "The type (", GetShaderTypeLiteralName(NewShaderType),
-               ") of shader '", pShader->GetDesc().Name, "' being added to the stage is incosistent with the stage type (",
+               ") of shader '", pShader->GetDesc().Name, "' being added to the stage is inconsistent with the stage type (",
                GetShaderTypeLiteralName(Type), ").");
     }
     Shaders.push_back(pShader);

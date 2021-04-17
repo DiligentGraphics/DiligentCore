@@ -239,7 +239,7 @@
 * Added `SHADER_RESOURCE_TYPE` enum
 * Moved shader variable type and static sampler definition from shader creation to PSO creation stage:
   * Removed `IShader::GetVariable`, `IShader::GetVariableCount`, and `IShader::BindResources` methods
-  * Added `IPipelineState::BindStaticResoruces`, `IPipelineState::GetStaticVariableCount`,
+  * Added `IPipelineState::BindStaticResources`, `IPipelineState::GetStaticVariableCount`,
     and `IPipelineState::GetStaticShaderVariable` methods
   * Added `PipelineResourceLayoutDesc` structure and `ResourceLayout` member to `PipelineStateDesc`
 * Added `ShaderResourceDesc` structure
@@ -374,7 +374,7 @@ m_pPSO->GetStaticShaderVariable(SHADER_TYPE_VERTEX, "Constants")->Set(m_VSConsta
   * Replaced `COMMIT_SHADER_RESOURCES_FLAGS` enum with `RESOURCE_STATE_TRANSITION_MODE`
   * Added `ITextureD3D12::GetD3D12ResourceState()`, `IBufferD3D12::GetD3D12ResourceState()`,
     `IBufferVk::GetAccessFlags()`, and `ITextureVk::GetLayout()` methods
-  * Added `CopyTextureAttribs` structure that combines all paramters of `IDeviceContext::CopyTexture()` method
+  * Added `CopyTextureAttribs` structure that combines all parameters of `IDeviceContext::CopyTexture()` method
 
 ## v2.3.b
 
@@ -456,7 +456,7 @@ m_pPSO->GetStaticShaderVariable(SHADER_TYPE_VERTEX, "Constants")->Set(m_VSConsta
 
 * Interoperability with native API
   * Accessing internal objects and handles
-  * Createing diligent engine buffers/textures from native resources
+  * Creating diligent engine buffers/textures from native resources
   * Attaching to existing D3D11/D3D12 device or GL context
   * Resource state and command queue synchronization for D3D12
 * Integraion with Unity

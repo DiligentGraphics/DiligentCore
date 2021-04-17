@@ -62,7 +62,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
     /// Loads D3D12 DLL and entry points.
 
     /// \param [in] DllName - D3D12 dll name.
-    /// \return               true if the library and entry points are loaded sucessfully and false otherwise.
+    /// \return               true if the library and entry points are loaded successfully and false otherwise.
     ///
     /// \remarks IEngineFactoryD3D12::CreateDeviceAndContextsD3D12() and
     ///          IEngineFactoryD3D12::AttachToD3D12Device() functions will automatically

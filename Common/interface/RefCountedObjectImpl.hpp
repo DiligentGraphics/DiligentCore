@@ -46,7 +46,7 @@ class RefCountersImpl final : public IReferenceCounters
 public:
     inline virtual ReferenceCounterValueType AddStrongRef() override final
     {
-        VERIFY(m_ObjectState == ObjectState::Alive, "Attempting to increment strong reference counter for a destroyed or not itialized object!");
+        VERIFY(m_ObjectState == ObjectState::Alive, "Attempting to increment strong reference counter for a destroyed or not initialized object!");
         VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
         return Atomics::AtomicIncrement(m_lNumStrongReferences);
     }
@@ -127,7 +127,7 @@ public:
         //    }
         //    catch(...)
         //    {
-        //       Destory ref counters second time
+        //       Destroy ref counters second time
         //    }
         //
         if (NumWeakReferences == 0 && /*m_lNumStrongReferences == 0 &&*/ m_ObjectState == ObjectState::Destroyed)

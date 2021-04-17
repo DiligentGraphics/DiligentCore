@@ -362,12 +362,12 @@ private:
         /// not need to keep strong references.
         ID3D11UnorderedAccessView* d3d11UAVs    [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
 
-        /// An array of D3D11 resources commited as SRV to D3D11 device context,
+        /// An array of D3D11 resources committed as SRV to D3D11 device context,
         /// for each shader type. The context addref's all bound resources, so we do 
         /// not need to keep strong references.
         ID3D11Resource*  d3d11SRVResources      [NumShaderTypes][D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
 
-        /// An array of D3D11 resources commited as UAV to D3D11 device context,
+        /// An array of D3D11 resources committed as UAV to D3D11 device context,
         /// for each shader type. The context addref's all bound resources, so we do 
         /// not need to keep strong references.
         ID3D11Resource*  d3d11UAVResources      [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};

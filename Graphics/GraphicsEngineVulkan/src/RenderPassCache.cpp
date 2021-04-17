@@ -46,7 +46,7 @@ RenderPassCache::RenderPassCache(RenderDeviceVkImpl& DeviceVk) noexcept :
 RenderPassCache::~RenderPassCache()
 {
     // Render pass cache is part of the render device, so we can't release
-    // render pass objects from here as their destructors will attmept to
+    // render pass objects from here as their destructors will attempt to
     // call SafeReleaseDeviceObject.
     VERIFY(m_Cache.empty(), "Render pass cache is not empty. Did you call Destroy?");
 }

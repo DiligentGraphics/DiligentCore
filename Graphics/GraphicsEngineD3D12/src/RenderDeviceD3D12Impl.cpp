@@ -298,12 +298,12 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         // clang-format off
         CHECK_REQUIRED_FEATURE(ShaderFloat16,             "16-bit float shader operations are");
-        CHECK_REQUIRED_FEATURE(ResourceBuffer16BitAccess, "16-bit resoure buffer access is");
+        CHECK_REQUIRED_FEATURE(ResourceBuffer16BitAccess, "16-bit resource buffer access is");
         CHECK_REQUIRED_FEATURE(UniformBuffer16BitAccess,  "16-bit uniform buffer access is");
         CHECK_REQUIRED_FEATURE(ShaderInputOutput16,       "16-bit shader inputs/outputs are");
 
         CHECK_REQUIRED_FEATURE(ShaderInt8,               "8-bit shader operations are");
-        CHECK_REQUIRED_FEATURE(ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
+        CHECK_REQUIRED_FEATURE(ResourceBuffer8BitAccess, "8-bit resource buffer access is");
         CHECK_REQUIRED_FEATURE(UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
 
         CHECK_REQUIRED_FEATURE(RayTracing,  "Ray tracing is");

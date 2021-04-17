@@ -482,7 +482,7 @@ T HermiteSpline(T f0, // F(0)
     return (2 * x3 - 3 * x2 + 1) * f0 + (x3 - 2 * x2 + x) * t0 + (-2 * x3 + 3 * x2) * f1 + (x3 - x2) * t1;
 }
 
-// Retuns the minimum bounding sphere of a view frustum
+// Returns the minimum bounding sphere of a view frustum
 inline void GetFrustumMinimumBoundingSphere(float   Proj_00,   // cot(HorzFOV / 2)
                                             float   Proj_11,   // cot(VertFOV / 2) == proj_00 / AspectRatio
                                             float   NearPlane, // Near clip plane

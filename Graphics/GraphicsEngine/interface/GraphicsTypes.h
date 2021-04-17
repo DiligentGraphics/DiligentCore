@@ -30,7 +30,7 @@
 // clang-format off
 
 /// \file
-/// Contains basic graphics engine type defintions
+/// Contains basic graphics engine type definitions
 
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Primitives/interface/DebugOutput.h"
@@ -169,12 +169,12 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// A resource residing in a unified memory (e.g. memory shared between CPU and GPU),
     /// that can be read and written by GPU and can also be directly accessed by CPU.
     ///
-    /// \remarks An application should check if unified memory is available on the device by quering
+    /// \remarks An application should check if unified memory is available on the device by querying
     ///          the device caps (see Diligent::IRenderDevice::GetDeviceCaps and Diligent::GraphicsAdapterInfo).
     ///          If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
     /// 
     ///          Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
-    ///          An application should check supported unified memory CPU access types by quering the device caps.
+    ///          An application should check supported unified memory CPU access types by querying the device caps.
     ///          (see Diligent::GraphicsAdapterInfo::UnifiedMemoryCPUAccess).
     USAGE_UNIFIED,
 
@@ -607,12 +607,12 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
 
     /// Single-component 8-bit unsigned-normalized-integer format for alpha only. \n
     /// D3D counterpart: DXGI_FORMAT_A8_UNORM
-    /// \warning This format is not availanle in OpenGL
+    /// \warning This format is not available in OpenGL
     TEX_FORMAT_A8_UNORM, 
 
     /// Single-component 1-bit format. \n
     /// D3D counterpart: DXGI_FORMAT_R1_UNORM
-    /// \warning This format is not availanle in OpenGL
+    /// \warning This format is not available in OpenGL
     TEX_FORMAT_R1_UNORM, 
 
     /// Three partial-precision floating pointer numbers sharing single exponent encoded into a 32-bit value. \n
@@ -621,12 +621,12 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
 
     /// Four-component unsigned-normalized integer format analogous to UYVY encoding. \n
     /// D3D counterpart: DXGI_FORMAT_R8G8_B8G8_UNORM
-    /// \warning This format is not availanle in OpenGL
+    /// \warning This format is not available in OpenGL
     TEX_FORMAT_RG8_B8G8_UNORM, 
 
     /// Four-component unsigned-normalized integer format analogous to YUY2 encoding. \n
     /// D3D counterpart: DXGI_FORMAT_G8R8_G8B8_UNORM
-    /// \warning This format is not availanle in OpenGL
+    /// \warning This format is not available in OpenGL
     TEX_FORMAT_G8R8_G8B8_UNORM, 
 
     /// Four-component typeless block-compression format with 1:8 compression ratio.\n
@@ -1314,7 +1314,7 @@ DILIGENT_TYPED_ENUM(SWAP_CHAIN_USAGE_FLAGS, Uint32)
     /// No allowed usage
     SWAP_CHAIN_USAGE_NONE             = 0x00L,
         
-    /// Swap chain can be used as render target ouput
+    /// Swap chain can be used as render target output
     SWAP_CHAIN_USAGE_RENDER_TARGET    = 0x01L,
 
     /// Swap chain images can be used as shader inputs
@@ -1414,7 +1414,7 @@ struct SwapChainDesc
 #endif
     }
 
-    /// Constructor intializes the structure members with default values
+    /// Constructor initializes the structure members with default values
     SwapChainDesc(Uint32         _Width,
                   Uint32         _Height,
                   TEXTURE_FORMAT _ColorBufferFormat,
@@ -1474,7 +1474,7 @@ enum QUERY_TYPE
     /// IQuery::GetData fills a Diligent::QueryDataBinaryOcclusion struct.
     QUERY_TYPE_BINARY_OCCLUSION,
 
-    /// Gets the GPU timestamp corresponding to IDeviceContext::EndQuery call. Fot this query
+    /// Gets the GPU timestamp corresponding to IDeviceContext::EndQuery call. For this query
     /// type IDeviceContext::BeginQuery is disabled. IQuery::GetData fills a Diligent::QueryDataTimestamp struct.
     QUERY_TYPE_TIMESTAMP,
 
@@ -1565,7 +1565,7 @@ DILIGENT_TYPED_ENUM(DEVICE_FEATURE_STATE, Uint8)
     /// Device feature is enabled.
 
     /// If a feature is requested to be enabled during the initialization through
-    /// EngineCreateInfo::Feautures, but is not supported by the device/driver/platform,
+    /// EngineCreateInfo::Features, but is not supported by the device/driver/platform,
     /// the engine will fail to initialize.
     DEVICE_FEATURE_STATE_ENABLED = 1,
 
@@ -2032,7 +2032,7 @@ DILIGENT_TYPED_ENUM(VALIDATION_FLAGS, Uint32)
 DEFINE_FLAG_ENUM_OPERATORS(VALIDATION_FLAGS)
 
 
-/// Engine creation attibutes
+/// Engine creation attributes
 struct EngineCreateInfo
 {
     /// API version number.
@@ -2050,7 +2050,7 @@ struct EngineCreateInfo
     /// \remarks    If a feature is requested to be enabled, but is not supported
     ///             by the device/driver/platform, the engine will fail to initialize.
     ///
-    ///             If a feature is requested to be optioanl, the engine will attempt to enable the feature.
+    ///             If a feature is requested to be optional, the engine will attempt to enable the feature.
     ///             If the feature is not supported by the device/driver/platform,
     ///             the engine will successfully be initialized, but the feature will be disabled.
     ///             The actual feature state can be queried from DeviceCaps structure.
@@ -2264,7 +2264,7 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// shader resource variables.
     /// Every Shader Resource Binding object allocates one descriptor
     /// per any dynamic shader resource variable (every array element counts)
-    /// every time the object is commited via IDeviceContext::CommitShaderResources.
+    /// every time the object is committed via IDeviceContext::CommitShaderResources.
     /// All used dynamic descriptors are discarded at the end of the frame
     /// and recycled when they are no longer used by the GPU.
     /// GPUDescriptorHeapDynamicSize defines the total number of descriptors
@@ -2285,7 +2285,7 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// The size of the chunk that dynamic descriptor allocations manager
     /// requests from the main GPU descriptor heap.
-    /// The total number of dynamic descriptors avaialble across all frames in flight is 
+    /// The total number of dynamic descriptors available across all frames in flight is 
     /// defined by GPUDescriptorHeapDynamicSize. Every device context allocates dynamic
     /// descriptors in two stages: it first requests a chunk from the global heap, and the 
     /// performs linear suballocations from this chunk in a lock-free manner. The size of 
@@ -2915,7 +2915,7 @@ DILIGENT_TYPED_ENUM(ACCESS_FLAGS, Uint32)
     /// Read access to a predicate as part of conditional rendering.
     ACCESS_FLAG_CONDITIONAL_RENDERING_READ   = 0x00100000,
 
-    /// Read access to a shading rate texture as part of a drawing comman.
+    /// Read access to a shading rate texture as part of a drawing command.
     ACCESS_FLAG_SHADING_RATE_TEXTURE_READ    = 0x00800000,
 
     /// Read access to an acceleration structure as part of a trace or build command.

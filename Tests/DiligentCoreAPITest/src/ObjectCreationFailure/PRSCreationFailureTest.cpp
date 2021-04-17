@@ -77,7 +77,7 @@ TEST(PRSCreationFailureTest, InvalidNumResources)
 TEST(PRSCreationFailureTest, NullResources)
 {
     PipelineResourceSignatureDesc PRSDesc;
-    PRSDesc.Name         = "Null Resoruces";
+    PRSDesc.Name         = "Null Resources";
     PRSDesc.NumResources = 10;
     PRSDesc.Resources    = nullptr;
     TestCreatePRSFailure(PRSDesc, "Desc.NumResources (10) is not zero, but Desc.Resources is null");
@@ -86,7 +86,7 @@ TEST(PRSCreationFailureTest, NullResources)
 TEST(PRSCreationFailureTest, NullImmutableSamplers)
 {
     PipelineResourceSignatureDesc PRSDesc;
-    PRSDesc.Name                 = "Null Resoruces";
+    PRSDesc.Name                 = "Null Resources";
     PRSDesc.NumImmutableSamplers = 12;
     PRSDesc.ImmutableSamplers    = nullptr;
     TestCreatePRSFailure(PRSDesc, "Desc.NumImmutableSamplers (12) is not zero, but Desc.ImmutableSamplers is null");

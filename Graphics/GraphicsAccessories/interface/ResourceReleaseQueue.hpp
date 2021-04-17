@@ -299,7 +299,7 @@ public:
 
     /// Adds multiple resources directly to the release queue
     /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
-    /// \param [in] Iterator    - Iterator that returns resources to be relased.
+    /// \param [in] Iterator    - Iterator that returns resources to be released.
     template <typename ResourceType, typename IteratorType>
     void DiscardResources(Uint64 FenceValue, IteratorType Iterator)
     {

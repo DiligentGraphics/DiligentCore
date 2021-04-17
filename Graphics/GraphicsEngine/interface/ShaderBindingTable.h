@@ -110,7 +110,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
                                 VERIFY_SBT_FLAGS Flags) CONST PURE;
     
 
-    /// Resets the SBT with the new pipeline state. This is more effecient than creating a new SBT.
+    /// Resets the SBT with the new pipeline state. This is more efficient than creating a new SBT.
     
     /// \note Access to the SBT must be externally synchronized.
     ///       The function does not modify the data used by IDeviceContext::TraceRays() and

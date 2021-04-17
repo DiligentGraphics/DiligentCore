@@ -130,7 +130,7 @@ void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc&                BuffDesc,
     {
         // Raw buffer view
         UINT ElementByteStride = 4;
-        DEV_CHECK_ERR((SRVDesc.ByteOffset % 16) == 0, "Byte offest (", SRVDesc.ByteOffset, ") is not multiple of 16");
+        DEV_CHECK_ERR((SRVDesc.ByteOffset % 16) == 0, "Byte offset (", SRVDesc.ByteOffset, ") is not multiple of 16");
         DEV_CHECK_ERR((SRVDesc.ByteWidth % ElementByteStride) == 0, "Byte width (", SRVDesc.ByteWidth, ") is not multiple of 4");
         D3D11SRVDesc.BufferEx.FirstElement = SRVDesc.ByteOffset / ElementByteStride;
         D3D11SRVDesc.BufferEx.NumElements  = SRVDesc.ByteWidth / ElementByteStride;

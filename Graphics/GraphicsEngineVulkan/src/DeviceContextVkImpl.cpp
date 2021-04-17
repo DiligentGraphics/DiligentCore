@@ -620,7 +620,7 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
     const auto& GrPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
 
     std::stringstream ss;
-    ss << "Active render pass is incomaptible with PSO '" << Desc.Name
+    ss << "Active render pass is incompatible with PSO '" << Desc.Name
        << "'. This indicates the mismatch between the number and/or format of bound render "
           "targets and/or depth stencil buffer and the PSO. Vulkand requires exact match.\n"
           "    Bound render targets ("
@@ -1995,7 +1995,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
     auto Allocation = m_UploadHeap.Allocate(CopyInfo.MemorySize, BufferOffsetAlignment);
     // The allocation will stay in the upload heap until the end of the frame at which point all upload
     // pages will be discarded
-    VERIFY((Allocation.AlignedOffset % BufferOffsetAlignment) == 0, "Allocation offset must be at least 32-bit algined");
+    VERIFY((Allocation.AlignedOffset % BufferOffsetAlignment) == 0, "Allocation offset must be at least 32-bit aligned");
 
 #ifdef DILIGENT_DEBUG
     {
@@ -2086,7 +2086,7 @@ static VkBufferImageCopy GetBufferImageCopyInfo(Uint32             BufferOffset,
             static_cast<int32_t>(Region.MinZ) //
         };
     VERIFY(Region.MaxX > Region.MinX && Region.MaxY - Region.MinY && Region.MaxZ > Region.MinZ,
-           "[", Region.MinX, " .. ", Region.MaxX, ") x [", Region.MinY, " .. ", Region.MaxY, ") x [", Region.MinZ, " .. ", Region.MaxZ, ") is not a vaild region");
+           "[", Region.MinX, " .. ", Region.MaxX, ") x [", Region.MinY, " .. ", Region.MaxY, ") x [", Region.MinZ, " .. ", Region.MaxZ, ") is not a valid region");
     CopyRegion.imageExtent =
         VkExtent3D //
         {

@@ -58,7 +58,7 @@ public:
     // This structure is used as the key to find framebuffer
     struct FramebufferCacheKey
     {
-        // Default memeber initialization is intentionally omitted
+        // Default member initialization is intentionally omitted
         VkRenderPass Pass;
         Uint32       NumRenderTargets;
         VkImageView  DSV;

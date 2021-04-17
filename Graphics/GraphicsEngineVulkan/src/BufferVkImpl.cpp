@@ -356,7 +356,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 memcpy(StagingData + AlignedStagingMemOffset, pBuffData->pData, pBuffData->DataSize);
 
                 err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
-                CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
+                CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
                 VulkanUtilities::CommandPoolWrapper CmdPool;
                 VkCommandBuffer                     vkCmdBuff;
@@ -502,7 +502,7 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
     else if (m_Desc.Mode == BUFFER_MODE_STRUCTURED ||
              m_Desc.Mode == BUFFER_MODE_RAW)
     {
-        // Strucutred and raw buffers are mapped to storage buffers in GLSL
+        // Structured and raw buffers are mapped to storage buffers in GLSL
     }
 
     return BuffView;

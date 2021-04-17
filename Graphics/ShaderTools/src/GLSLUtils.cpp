@@ -242,7 +242,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
 #endif
 
     // It would be much more convenient to use row_major matrices.
-    // But unfortunatelly on NVIDIA, the following directive
+    // But unfortunately on NVIDIA, the following directive
     // layout(std140, row_major) uniform;
     // does not have any effect on matrices that are part of structures
     // So we have to use column-major matrices which are default in both

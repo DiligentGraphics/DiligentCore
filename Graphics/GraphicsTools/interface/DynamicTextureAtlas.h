@@ -69,7 +69,7 @@ struct ITextureAtlasSuballocation : public IObject
     virtual IDynamicTextureAtlas* GetAtlas() = 0;
 
     /// Stores a pointer to the user-provided data object, which
-    /// may later be retreived through GetUserData().
+    /// may later be retrieved through GetUserData().
     ///
     /// \param [in] pUserData - Pointer to the user data object to store.
     ///
@@ -112,7 +112,7 @@ struct IDynamicTextureAtlas : public IObject
     ///
     /// \remarks    The method is thread-safe and can be called from multiple threads simultaneously.
     ///
-    ///             Internal texture array may need to be extended after the allocation happend.
+    ///             Internal texture array may need to be extended after the allocation happened.
     ///             An application may call GetTexture() to ensure that the texture is resized and old
     ///             contents is copied.
     virtual void Allocate(Uint32                       Width,
@@ -161,7 +161,7 @@ struct DynamicTextureAtlasCreateInfo
     /// Allocation granularity for ITextureAtlasSuballocation objects.
 
     /// Texture atlas uses FixedBlockMemoryAllocator to allocate instances
-    /// of ITextureAtlasSuballocation implementation class. This memeber defines
+    /// of ITextureAtlasSuballocation implementation class. This member defines
     /// the number of objects in one page.
     Uint32 SuballocationObjAllocationGranularity = 64;
 };

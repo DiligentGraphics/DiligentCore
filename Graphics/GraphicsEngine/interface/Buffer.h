@@ -50,7 +50,7 @@ DILIGENT_TYPED_ENUM(BUFFER_MODE, Uint8)
     /// Undefined mode.
     BUFFER_MODE_UNDEFINED = 0,
 
-    /// Formated buffer. Access to the buffer will use format conversion operations.
+    /// Formatted buffer. Access to the buffer will use format conversion operations.
     /// In this mode, ElementByteStride member of BufferDesc defines the buffer element size.
     /// Buffer views can use different formats, but the format size must match ElementByteStride.
     BUFFER_MODE_FORMATTED,

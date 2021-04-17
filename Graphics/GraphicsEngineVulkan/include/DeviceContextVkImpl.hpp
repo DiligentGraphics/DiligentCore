@@ -500,7 +500,7 @@ private:
             Uint32 DynamicOffsetCount = 0;
 
 #ifdef DILIGENT_DEVELOPMENT
-            // The descriptor set base indext that was used in the last BindDescriptorSets() call
+            // The descriptor set base index that was used in the last BindDescriptorSets() call
             Uint32 LastBoundBaseInd = ~0u;
 #endif
         };

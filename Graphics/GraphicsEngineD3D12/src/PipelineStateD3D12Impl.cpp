@@ -318,7 +318,7 @@ void PipelineStateD3D12Impl::ShaderStageInfo::Append(ShaderD3D12Impl* pShader)
     else
     {
         VERIFY(Type == NewShaderType, "The type (", GetShaderTypeLiteralName(NewShaderType),
-               ") of shader '", pShader->GetDesc().Name, "' being added to the stage is incosistent with the stage type (",
+               ") of shader '", pShader->GetDesc().Name, "' being added to the stage is inconsistent with the stage type (",
                GetShaderTypeLiteralName(Type), ").");
     }
 

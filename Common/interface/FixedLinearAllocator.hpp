@@ -153,7 +153,7 @@ public:
     void Reserve(size_t size)
     {
         VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
-        VERIFY(m_ReservedSize == 0, "Space has been added to the allocator and will be overriden");
+        VERIFY(m_ReservedSize == 0, "Space has been added to the allocator and will be overridden");
         m_ReservedSize = size;
         Reserve();
     }

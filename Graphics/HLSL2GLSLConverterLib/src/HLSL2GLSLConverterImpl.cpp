@@ -897,7 +897,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::PrintTokenContext(IteratorType&
             }
         }
 
-        // Acumulate spaces until we encounter current token
+        // Accumulate spaces until we encounter current token
         if (Token == TargetToken)
             AccumWhiteSpaces = false;
 
@@ -1645,7 +1645,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RegisterStruct(TokenListType::ite
 // hash table. The hash table indicates if the sampler is comparison or not. It is required to
 // match HLSL texture declaration to sampler* or sampler*Shadow.
 //
-// GLSL only allows samplers as uniform variables and function agruments. It does not allow
+// GLSL only allows samplers as uniform variables and function arguments. It does not allow
 // local variables of sampler type. So the two possible scopes the function can process are
 // global scope and the function argument list.
 //
@@ -2686,7 +2686,7 @@ bool HLSL2GLSLConverterImpl::ConversionStream::ProcessRWTextureLoad(TokenListTyp
 
     Token = OpenStapleToken;
 
-    // Note that 'Location' may require furhter conversion
+    // Note that 'Location' may require further conversion
 
     return true;
 }
@@ -2786,7 +2786,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessAtomics(const TokenListTyp
                 // InterlockedAdd(Tex2D[GTid.xy], 1, iOldVal);
                 //                ^
                 auto StubIt = m_Converter.m_GLSLStubs.find(FunctionStubHashKey("image", OperationToken->Literal.c_str(), NumArguments));
-                VERIFY_PARSER_STATE(OperationToken, StubIt != m_Converter.m_GLSLStubs.end(), "Unable to find function stub for funciton ", OperationToken->Literal, " with ", NumArguments, " arguments");
+                VERIFY_PARSER_STATE(OperationToken, StubIt != m_Converter.m_GLSLStubs.end(), "Unable to find function stub for function ", OperationToken->Literal, " with ", NumArguments, " arguments");
 
                 // Find first comma
                 int NumOpenBrackets = 1;
@@ -2836,7 +2836,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessAtomics(const TokenListTyp
                 // InterlockedAdd(g_i4SharedArray[GTid.x].x, 1, iOldVal);
                 //                ^
                 auto StubIt = m_Converter.m_GLSLStubs.find(FunctionStubHashKey("shared_var", OperationToken->Literal.c_str(), NumArguments));
-                VERIFY_PARSER_STATE(OperationToken, StubIt != m_Converter.m_GLSLStubs.end(), "Unable to find function stub for funciton ", OperationToken->Literal, " with ", NumArguments, " arguments");
+                VERIFY_PARSER_STATE(OperationToken, StubIt != m_Converter.m_GLSLStubs.end(), "Unable to find function stub for function ", OperationToken->Literal, " with ", NumArguments, " arguments");
                 OperationToken->Literal = StubIt->second.Name;
                 // InterlockedAddSharedVar_3(g_i4SharedArray[GTid.x].x, 1, iOldVal);
             }
@@ -3512,7 +3512,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments(To
     ProcessShaderAttributes(Token, Attributes);
     auto MaxVertexCountIt = Attributes.find("maxvertexcount");
     if (MaxVertexCountIt == Attributes.end())
-        LOG_ERROR_AND_THROW("Geomtry shader \"", Token->Literal, "\" misses \"maxvertexcount\" attribute");
+        LOG_ERROR_AND_THROW("Geometry shader \"", Token->Literal, "\" misses \"maxvertexcount\" attribute");
     const Char* MaxVertexCount = MaxVertexCountIt->second.c_str();
 
     stringstream GlobalVarsSS, PrologueSS, InterfaceVarsInSS, InterfaceVarsOutSS, EmitVertexDefineSS;
@@ -4242,7 +4242,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments(Toke
     auto PartitioningIt = Attributes.find("partitioning");
     if (PartitioningIt == Attributes.end())
         LOG_ERROR_AND_THROW("Undefined partitioning. In GLSL, partitioning is specified by the tessellation evaluation shader (domain shader) rather than by the tessellation control shader (hull shader)\n"
-                            "Please use the following comment right above the function declaration to deine partitioning and output topology:\n"
+                            "Please use the following comment right above the function declaration to define partitioning and output topology:\n"
                             "/* partitioning = {integer|fractional_even|fractional_odd}, outputtopology = {triangle_cw|triangle_ccw} */");
 
     if (PartitioningIt->second == "integer")
@@ -4262,7 +4262,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessDomainShaderArguments(Toke
     auto TopologyIt = Attributes.find("outputtopology");
     if (TopologyIt == Attributes.end())
         LOG_ERROR_AND_THROW("Undefined outputtopology. In GLSL, outputtopology is specified by the tessellation evaluation shader (domain shader) rather than by the tessellation control shader (hull shader)\n"
-                            "Please use the following comment right above the function declaration to deine partitioning and output topology:\n"
+                            "Please use the following comment right above the function declaration to define partitioning and output topology:\n"
                             "/* partitioning = {integer|fractional_even|fractional_odd}, outputtopology = {triangle_cw|triangle_ccw} */");
 
     if (TopologyIt->second == "point")

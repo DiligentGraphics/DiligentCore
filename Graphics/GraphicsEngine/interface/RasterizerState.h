@@ -95,11 +95,11 @@ DILIGENT_TYPED_ENUM(CULL_MODE, Int8)
 /// This structure describes the rasterizer state and is part of the GraphicsPipelineDesc.
 struct RasterizerStateDesc
 {
-    /// Determines traingle fill mode, see Diligent::FILL_MODE for details.
+    /// Determines triangle fill mode, see Diligent::FILL_MODE for details.
     /// Default value: Diligent::FILL_MODE_SOLID.
     FILL_MODE FillMode              DEFAULT_INITIALIZER(FILL_MODE_SOLID);
 
-    /// Determines traingle cull mode, see Diligent::CULL_MODE for details.
+    /// Determines triangle cull mode, see Diligent::CULL_MODE for details.
     /// Default value: Diligent::CULL_MODE_BACK.
     CULL_MODE CullMode              DEFAULT_INITIALIZER(CULL_MODE_BACK);
 

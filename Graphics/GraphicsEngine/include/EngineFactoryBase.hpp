@@ -41,7 +41,7 @@ const APIInfo& GetAPIInfo();
 
 /// Template class implementing base functionality of the engine factory
 
-/// \tparam BaseInterface - Base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inherit
 ///                         (Diligent::IEngineFactoryD3D11, Diligent::IEngineFactoryD3D12,
 ///                          Diligent::IEngineFactoryVk or Diligent::IEngineFactoryOpenGL).
 template <class BaseInterface>

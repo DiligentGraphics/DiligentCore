@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
     fclose(pDstFile);
     fclose(pSrcFile);
 
-    printf( "File2String: sucessfully converted %s to %s\n", SrcFile, DstFile );
+    printf( "File2String: successfully converted %s to %s\n", SrcFile, DstFile );
 
 	return 0;
 }
