@@ -282,6 +282,13 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             VERIFY_EXPR(RequiredAlignment % MemReqs.alignment == 0);
         }
 
+        if ((m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) != 0 && (m_MemoryProperties & MEMORY_PROPERTY_HOST_COHERENT) == 0)
+        {
+            // Just in case, make sure that the allocation is properly aligned for non-coherent memory access
+            // (if for some reason MemReqs.alignment is not large enough).
+            RequiredAlignment = std::max(RequiredAlignment, DeviceLimits.nonCoherentAtomSize);
+        }
+
         VERIFY(IsPowerOfTwo(RequiredAlignment), "Alignment is not power of 2!");
         m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, RequiredAlignment, MemoryTypeIndex, AllocateFlags);
 
