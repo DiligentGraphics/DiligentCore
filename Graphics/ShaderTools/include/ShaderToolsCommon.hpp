@@ -49,8 +49,8 @@ const ShaderMacro* GetShaderTypeMacros(SHADER_TYPE Type);
 
 /// Appends shader macro definitions to the end of the source string:
 ///
-///     #define Name[0] Definitoin[0]
-///     #define Name[1] Definitoin[1]
+///     #define Name[0] Definition[0]
+///     #define Name[1] Definition[1]
 ///     ...
 void AppendShaderMacros(std::string& Source, const ShaderMacro* Macros);
 

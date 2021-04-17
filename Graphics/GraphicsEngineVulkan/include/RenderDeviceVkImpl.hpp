@@ -242,7 +242,7 @@ private:
     // Submits command buffer(s) for execution to the command queue and
     // returns the submitted command buffer(s) number and the fence value.
     // If SubmitInfo contains multiple command buffers, they all are treated
-    // like one and sumbitted atomically.
+    // like one and submitted atomically.
     // Parameters:
     //      * SubmittedCmdBuffNumber - submitted command buffer number
     //      * SubmittedFenceValue    - fence value associated with the submitted command buffer

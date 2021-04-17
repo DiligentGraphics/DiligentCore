@@ -83,7 +83,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
                                                       RESOURCE_STATE  InitialState,
                                                       ITexture**      ppTexture) PURE;
 
-    /// Creates a buffer object from native d3d12 resoruce
+    /// Creates a buffer object from native d3d12 resource
 
     /// \param [in]  pd3d12Buffer - Pointer to the native d3d12 buffer resource
     /// \param [in]  BuffDesc     - Buffer description. The system can recover buffer size, but
@@ -100,7 +100,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
                                                      RESOURCE_STATE       InitialState,
                                                      IBuffer**            ppBuffer) PURE;
     
-    /// Creates a bottom-level AS object from native d3d12 resoruce
+    /// Creates a bottom-level AS object from native d3d12 resource
 
     /// \param [in]  pd3d12BLAS   - Pointer to the native d3d12 acceleration structure resource
     /// \param [in]  Desc         - Bottom-level AS description.
@@ -116,7 +116,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
                                                    RESOURCE_STATE              InitialState,
                                                    IBottomLevelAS**            ppBLAS) PURE;
 
-    /// Creates a top-level AS object from native d3d12 resoruce
+    /// Creates a top-level AS object from native d3d12 resource
 
     /// \param [in]  pd3d12TLAS   - Pointer to the native d3d12 acceleration structure resource
     /// \param [in]  Desc         - Top-level AS description.

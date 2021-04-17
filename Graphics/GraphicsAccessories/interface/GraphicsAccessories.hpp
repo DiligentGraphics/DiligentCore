@@ -166,7 +166,7 @@ const TextureFormatAttribs& GetTextureFormatAttribs(TEXTURE_FORMAT Format);
 
 /// The default view is defined as follows:
 /// * For a fully qualified texture format, the SRV/RTV/UAV view format is the same as texture format;
-///   DSV format, if avaialble, is adjusted accrodingly (R32_FLOAT -> D32_FLOAT)
+///   DSV format, if available, is adjusted accordingly (R32_FLOAT -> D32_FLOAT)
 /// * For 32-bit typeless formats, default view is XXXX32_FLOAT (where XXXX are the actual format components)\n
 /// * For 16-bit typeless formats, default view is XXXX16_FLOAT (where XXXX are the actual format components)\n
 /// ** R16_TYPELESS is special. If BIND_DEPTH_STENCIL flag is set, it is translated to R16_UNORM/D16_UNORM;

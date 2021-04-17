@@ -47,7 +47,7 @@ TEST(Common_FastRand, Distribution)
     {
         auto x = Rnd();
         ++Counter[x];
-        EXPECT_LE(Counter[x], 4) << x << " occured total " << Counter[x] << " times";
+        EXPECT_LE(Counter[x], 4) << x << " occurred total " << Counter[x] << " times";
     }
 }
 
@@ -63,7 +63,7 @@ TEST(Common_FastRand, FastRandFloat)
         EXPECT_LE(x, 1.f);
 
         ++Counter[x];
-        EXPECT_LE(Counter[x], 4) << x << " occured total " << Counter[x] << " times";
+        EXPECT_LE(Counter[x], 4) << x << " occurred total " << Counter[x] << " times";
     }
 }
 
@@ -82,7 +82,7 @@ TEST(Common_FastRand, FastRandInt)
         EXPECT_LE(x, Max);
 
         ++Counter[x - Min];
-        EXPECT_LE(Counter[x - Min], 2) << x << " occured total " << Counter[x - Min] << " times";
+        EXPECT_LE(Counter[x - Min], 2) << x << " occurred total " << Counter[x - Min] << " times";
     }
 }
 

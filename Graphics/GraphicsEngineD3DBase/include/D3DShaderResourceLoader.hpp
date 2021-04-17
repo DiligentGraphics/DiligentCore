@@ -157,7 +157,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
                     UINT Ind  = atoi(ArrElemBindingDesc.Name + OpenBracketPos + 1);
                     BindCount = std::max(BindCount, Ind + 1);
                     VERIFY(ArrElemBindingDesc.BindPoint == BindingDesc.BindPoint + Ind,
-                           "Array elements are expected to use contigous bind points.\n",
+                           "Array elements are expected to use contiguous bind points.\n",
                            BindingDesc.Name, " uses slot ", BindingDesc.BindPoint, ", so ", ArrElemBindingDesc.Name,
                            " is expected to use slot ", BindingDesc.BindPoint + Ind, " while ", ArrElemBindingDesc.BindPoint,
                            " is actually used");

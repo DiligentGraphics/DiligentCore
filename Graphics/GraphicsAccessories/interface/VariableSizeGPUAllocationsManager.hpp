@@ -37,7 +37,7 @@
 namespace Diligent
 {
 // Class extends basic variable-size memory block allocator by deferring deallocation
-// of freed blocks untill the corresponding frame is completed
+// of freed blocks until the corresponding frame is completed
 class VariableSizeGPUAllocationsManager : public VariableSizeAllocationsManager
 {
 private:

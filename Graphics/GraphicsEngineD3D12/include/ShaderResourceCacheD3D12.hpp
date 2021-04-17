@@ -49,7 +49,7 @@
 //  Nrt = m_NumTables
 //
 //
-// The cache is also assigned decriptor heap space to store descriptor handles.
+// The cache is also assigned descriptor heap space to store descriptor handles.
 // Static and mutable table resources are stored in shader-visible heap.
 // Dynamic table resources are stored in CPU-only heap.
 // Root views are not assigned descriptor space.

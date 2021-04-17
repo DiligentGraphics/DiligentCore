@@ -327,7 +327,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     ///                                      with the shader resource binding object.
     ///
     /// \note   If static resources have already been initialized in the SRB and the method
-    ///         is called again, it will have no effect and a warning messge will be displayed.
+    ///         is called again, it will have no effect and a warning message will be displayed.
     VIRTUAL void METHOD(InitializeStaticSRBResources)(THIS_
                                                       struct IShaderResourceBinding* pShaderResourceBinding) CONST PURE;
 

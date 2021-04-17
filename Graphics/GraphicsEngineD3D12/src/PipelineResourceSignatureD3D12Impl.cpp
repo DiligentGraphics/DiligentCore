@@ -534,7 +534,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(const CommitCacheResou
 
     auto* const pd3d12Device = GetDevice()->GetD3D12Device();
 
-    // Having an array of actual DescriptorHeapAllocation objects introduces unncessary overhead when
+    // Having an array of actual DescriptorHeapAllocation objects introduces unnecessary overhead when
     // there are no dynamic variables as constructors and desctructors are always called. To avoid this
     // overhead we will construct DescriptorHeapAllocation in-place only when they are really needed.
     std::array<DescriptorHeapAllocation*, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> pDynamicDescriptorAllocations{};

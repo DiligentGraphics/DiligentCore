@@ -22,7 +22,7 @@ so it must always be handled first.
 
 # Table of Contents
 
-- [Clonning the Repository](#clonning)
+- [Cloning the Repository](#cloning)
 - [API Basics](#api_basics)
   - [Initializing the Engine](#initialization)
     - [Win32](#initialization_win32)
@@ -46,8 +46,8 @@ so it must always be handled first.
 - [Release History](#release_history)
 
 
-<a name="clonning"></a>
-# Clonning the Repository
+<a name="cloning"></a>
+# Cloning the Repository
 
 To get the repository and all submodules, use the following command:
 
@@ -472,7 +472,7 @@ PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_STATI
 
 When creating a pipeline state, textures can be permanently assigned static samplers. If a static sampler is assigned to a texture,
 it will always be used instead of the one initialized in the texture shader resource view. To define static samplers,
-prepare an array of `StaticSamplerDesc` structures and intialize `PSODesc.ResourceLayout.StaticSamplers` and
+prepare an array of `StaticSamplerDesc` structures and initialize `PSODesc.ResourceLayout.StaticSamplers` and
 `PSODesc.ResourceLayout.NumStaticSamplers` members. Notice that static samplers can be assigned to a texture variable of any type,
 not necessarily static, so that the texture binding can be changed at run-time, while the sampler will stay immutable.
 It is highly recommended to use static samplers whenever possible.
@@ -608,7 +608,7 @@ as parameter. The enum defines the following modes:
 * `RESOURCE_STATE_TRANSITION_MODE_TRANSITION` - Transition resources to the states required by the command.
 * `RESOURCE_STATE_TRANSITION_MODE_VERIFY` - Do not transition, but verify that states are correct.
 
-The final step is to committ shader resources to the device context. This is accomplished by
+The final step is to commit shader resources to the device context. This is accomplished by
 the `IDeviceContext::CommitShaderResources()` method:
 
 ```cpp
@@ -727,7 +727,7 @@ In submitting any content to this repository,
 and you agree that the content is free of any Intellectual Property claims and you have the right to license it under those terms. 
 
 Diligent Engine uses [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to ensure
-consistent source code style throught the code base. The format is validated by appveyor and travis
+consistent source code style throughout the code base. The format is validated by appveyor and travis
 for each commit and pull request, and the build will fail if any code formatting issue is found. Please refer
 to [this page](https://github.com/DiligentGraphics/DiligentCore/blob/master/doc/code_formatting.md) for instructions
 on how to set up clang-format and automatic code formatting.

@@ -123,7 +123,7 @@ void ShaderVariableManagerD3D12::Destroy(IMemoryAllocator& Allocator)
 {
     if (m_pVariables != nullptr)
     {
-        VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
+        VERIFY(m_pDbgAllocator == &Allocator, "Inconsistent allocator");
 
         for (Uint32 v = 0; v < m_NumVariables; ++v)
             m_pVariables[v].~ShaderVariableD3D12Impl();

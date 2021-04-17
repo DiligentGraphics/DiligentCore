@@ -59,7 +59,7 @@
 
 | GLSL | HLSL | Description |
 |---|---|---|
-| uvec4&nbsp;subgroupBallot(bool&nbsp;value) | uint4&nbsp;WaveActiveBallot(bool&nbsp;value) | each lane contributes a single bit to the resulting `uvec4` correponding to `value` |
+| uvec4&nbsp;subgroupBallot(bool&nbsp;value) | uint4&nbsp;WaveActiveBallot(bool&nbsp;value) | each lane contributes a single bit to the resulting `uvec4` corresponding to `value` |
 | T&nbsp;subgroupBroadcast(T&nbsp;value,&nbsp;uint&nbsp;id) | T&nbsp;WaveReadLaneAt(T&nbsp;value,&nbsp;uint&nbsp;id) | broadcasts the `value` whose `LaneIndex == id` to all other lanes (id must be a compile time constant) |
 | T&nbsp;subgroupBroadcastFirst(T&nbsp;value) | T&nbsp;WaveReadLaneFirst(T&nbsp;value) | broadcasts the `value` whose `LaneIndex` is the lowest active to all other lanes |
 | bool&nbsp;subgroupInverseBallot(uvec4&nbsp;value) | - | returns true if this lanes bit in `value` is true |
@@ -95,7 +95,7 @@
 |---|---|---|
 | T&nbsp;subgroupClusteredAdd(T&nbsp;value,&nbsp;uint&nbsp;clusterSize) | - | returns the summation of all active lanes `value`'s across clusters of size `clusterSize` |
 | T&nbsp;subgroupClusteredMul(T&nbsp;value,&nbsp;uint&nbsp;clusterSize) | - | returns the multiplication of all active lanes `value`'s across clusters of size `clusterSize` |
-| T&nbsp;subgroupClusteredMin(T&nbsp;value,&nbsp;uint&nbsp;clusterSize) | - | returns the mininum value of all active lanes `value`'s across clusters of size `clusterSize` |
+| T&nbsp;subgroupClusteredMin(T&nbsp;value,&nbsp;uint&nbsp;clusterSize) | - | returns the minimum value of all active lanes `value`'s across clusters of size `clusterSize` |
 | T&nbsp;subgroupClusteredMax(T&nbsp;value,&nbsp;uint&nbsp;clusterSize) | - | returns the maximum value of all active lanes `value`'s across clusters of size `clusterSize` |
 | T&nbsp;subgroupClusteredAnd(T&nbsp;value,&nbsp;uint&nbsp;clusterSize) | - | returns the binary AND of all active lanes `value`'s across clusters of size `clusterSize` |
 | T&nbsp;subgroupClusteredOr(T&nbsp;value,&nbsp;uint&nbsp;clusterSize)  | - | returns the binary OR of all active lanes `value`'s across clusters of size `clusterSize` |
@@ -108,9 +108,9 @@ Quad operations executes on 2x2 grid in pixel and compute shaders.
 | GLSL | HLSL | Description |
 |---|---|---|
 | T&nbsp;subgroupQuadBroadcast(T&nbsp;value,&nbsp;uint&nbsp;id) | T&nbsp;QuadReadLaneAt(T&nbsp;value,&nbsp;uint&nbsp;id) | returns the `value` in the quad whose `LaneIndex` modulus 4 is equal to `id` |
-| T&nbsp;subgroupQuadSwapHorizontal(T&nbsp;value) | T&nbsp;QuadReadAcrossX(T&nbsp;value) | swaps `value`'s witin the quad horizontally |
-| T&nbsp;subgroupQuadSwapVertical(T&nbsp;value) | T&nbsp;QuadReadAcrossY(T&nbsp;value) | swaps `value`'s witin the quad vertically |
-| T&nbsp;subgroupQuadSwapDiagonal(T&nbsp;value) | T&nbsp;QuadReadAcrossDiagonal(T&nbsp;value) | swaps `value`'s witin the quad diagonally |
+| T&nbsp;subgroupQuadSwapHorizontal(T&nbsp;value) | T&nbsp;QuadReadAcrossX(T&nbsp;value) | swaps `value`'s within the quad horizontally |
+| T&nbsp;subgroupQuadSwapVertical(T&nbsp;value) | T&nbsp;QuadReadAcrossY(T&nbsp;value) | swaps `value`'s within the quad vertically |
+| T&nbsp;subgroupQuadSwapDiagonal(T&nbsp;value) | T&nbsp;QuadReadAcrossDiagonal(T&nbsp;value) | swaps `value`'s within the quad diagonally |
  
  
 ## References

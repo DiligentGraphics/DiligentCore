@@ -473,7 +473,7 @@ public:
     }
 
     /// Implementation of IPipelineState::IsCompatibleWith().
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override // May be overriden
+    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override // May be overridden
     {
         DEV_CHECK_ERR(pPSO != nullptr, "pPSO must not be null");
 
@@ -810,7 +810,7 @@ protected:
                 {
                     LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot,
                                       " is smaller than the minimum stride ", TightStrides[BuffSlot],
-                                      " required to accomodate all input elements.");
+                                      " required to accommodate all input elements.");
                 }
             }
             if (LayoutElem.Stride == LAYOUT_ELEMENT_AUTO_STRIDE)

@@ -290,7 +290,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
                     break;
                 }
             }
-            CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device");
+            CHECK_D3D_RESULT_THROW(hr, "Failed to create warp device");
         }
 
         if (EngineCI.EnableValidation)

@@ -45,7 +45,7 @@ namespace DynamicHeap
 
 
 // Having global ring buffer shared between all contexts is inconvinient because all contexts
-// must share the same frame. Having individual ring bufer per context may result in a lot of unused
+// must share the same frame. Having individual ring buffer per context may result in a lot of unused
 // memory. As a result, ring buffer is not currently used for dynamic memory management.
 // Instead, every dynamic heap allocates pages from the global dynamic memory manager.
 class MasterBlockRingBufferBasedManager

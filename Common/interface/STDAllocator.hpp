@@ -106,9 +106,9 @@ struct STDAllocator
         // initialized.
         DEV_CHECK_ERR(&m_Allocator == &other.m_Allocator, "Inconsistent allocators");
 #ifdef DILIGENT_DEVELOPMENT
-        DEV_CHECK_ERR(m_dvpDescription == other.m_dvpDescription, "Incosistent allocator descriptions");
-        DEV_CHECK_ERR(m_dvpFileName == other.m_dvpFileName, "Incosistent allocator file names");
-        DEV_CHECK_ERR(m_dvpLineNumber == other.m_dvpLineNumber, "Incosistent allocator line numbers");
+        DEV_CHECK_ERR(m_dvpDescription == other.m_dvpDescription, "Inconsistent allocator descriptions");
+        DEV_CHECK_ERR(m_dvpFileName == other.m_dvpFileName, "Inconsistent allocator file names");
+        DEV_CHECK_ERR(m_dvpLineNumber == other.m_dvpLineNumber, "Inconsistent allocator line numbers");
 #endif
         return *this;
     }

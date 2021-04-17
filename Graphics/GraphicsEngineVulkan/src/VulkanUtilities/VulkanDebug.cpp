@@ -155,7 +155,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
 
     LOG_DEBUG_MESSAGE(MsgSeverity, debugMessage.str().c_str());
 
-    // The return value of this callback controls wether the Vulkan call that caused
+    // The return value of this callback controls whether the Vulkan call that caused
     // the validation message will be aborted or not
     // We return VK_FALSE as we DON'T want Vulkan calls that cause a validation message
     // (and return a VkResult) to abort

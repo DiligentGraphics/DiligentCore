@@ -140,7 +140,7 @@ public:
             delete[] Str;
     }
 
-    // Disable copy constuctor and assignments. The struct is designed
+    // Disable copy constructor and assignments. The struct is designed
     // to be initialized at creation time only.
     // clang-format off
     HashMapStringKey           (const HashMapStringKey&) = delete;

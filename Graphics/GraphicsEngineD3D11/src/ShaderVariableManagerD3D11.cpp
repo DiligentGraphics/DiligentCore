@@ -77,7 +77,7 @@ void ShaderVariableManagerD3D11::Destroy(IMemoryAllocator& Allocator)
     if (m_ResourceBuffer == nullptr)
         return;
 
-    VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
+    VERIFY(m_pDbgAllocator == &Allocator, "Inconsistent allocator");
 
     HandleResources(
         [&](ConstBuffBindInfo& cb) {
@@ -186,7 +186,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
     auto AdvanceOffset = [&CurrentOffset](size_t NumBytes) //
     {
         constexpr size_t MaxOffset = std::numeric_limits<OffsetType>::max();
-        VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
+        VERIFY(CurrentOffset <= MaxOffset, "Current offset (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
         auto Offset = static_cast<OffsetType>(CurrentOffset);
         CurrentOffset += NumBytes;
         return Offset;

@@ -98,7 +98,7 @@ struct VertexStreamInfo
 /// Base implementation of the device context.
 
 /// \tparam EngineImplTraits     - Engine implementation traits that define specific implementation details
-///                                 (texture implemenation type, buffer implementation type, etc.)
+///                                 (texture implementation type, buffer implementation type, etc.)
 /// \remarks Device context keeps strong references to all objects currently bound to
 ///          the pipeline: buffers, tetxures, states, SRBs, etc.
 ///          The context also keeps strong references to the device and
@@ -200,7 +200,7 @@ public:
     /// Base implementation of IDeviceContext::UnmapBuffer()
     virtual void DILIGENT_CALL_TYPE UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType) override = 0;
 
-    /// Base implementaiton of IDeviceContext::UpdateData(); validates input parameters
+    /// Base implementation of IDeviceContext::UpdateData(); validates input parameters
     virtual void DILIGENT_CALL_TYPE UpdateTexture(ITexture*                      pTexture,
                                                   Uint32                         MipLevel,
                                                   Uint32                         Slice,
@@ -209,10 +209,10 @@ public:
                                                   RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                                   RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode) override = 0;
 
-    /// Base implementaiton of IDeviceContext::CopyTexture(); validates input parameters
+    /// Base implementation of IDeviceContext::CopyTexture(); validates input parameters
     virtual void DILIGENT_CALL_TYPE CopyTexture(const CopyTextureAttribs& CopyAttribs) override = 0;
 
-    /// Base implementaiton of IDeviceContext::MapTextureSubresource()
+    /// Base implementation of IDeviceContext::MapTextureSubresource()
     virtual void DILIGENT_CALL_TYPE MapTextureSubresource(ITexture*                 pTexture,
                                                           Uint32                    MipLevel,
                                                           Uint32                    ArraySlice,
@@ -221,7 +221,7 @@ public:
                                                           const Box*                pMapRegion,
                                                           MappedTextureSubresource& MappedData) override = 0;
 
-    /// Base implementaiton of IDeviceContext::UnmapTextureSubresource()
+    /// Base implementation of IDeviceContext::UnmapTextureSubresource()
     virtual void DILIGENT_CALL_TYPE UnmapTextureSubresource(ITexture* pTexture,
                                                             Uint32    MipLevel,
                                                             Uint32    ArraySlice) override = 0;
@@ -287,7 +287,7 @@ protected:
 #endif
 
         using SRBMaskType = Uint8;
-        static_assert(sizeof(SRBMaskType) * 8 >= MAX_RESOURCE_SIGNATURES, "Not enought space to store MAX_RESOURCE_SIGNATURES bits");
+        static_assert(sizeof(SRBMaskType) * 8 >= MAX_RESOURCE_SIGNATURES, "Not enough space to store MAX_RESOURCE_SIGNATURES bits");
 
         SRBMaskType ActiveSRBMask = 0; // Indicates which SRBs are active in current PSO
         SRBMaskType StaleSRBMask  = 0; // Indicates stale SRBs that have not been committed yet
@@ -443,7 +443,7 @@ protected:
     /// Current stencil reference value
     Uint32 m_StencilRef = 0;
 
-    /// Curent blend factors
+    /// Current blend factors
     Float32 m_BlendFactors[4] = {-1, -1, -1, -1};
 
     /// Current viewports
@@ -520,7 +520,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
                   "] is out of allowed range  [0, ", MAX_BUFFER_SLOTS - 1, "].");
 
     DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
-                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     if (Flags & SET_VERTEX_BUFFERS_FLAG_RESET)
@@ -571,7 +571,7 @@ inline void DeviceContextBase<ImplementationTraits>::CommitShaderResources(
     int)
 {
     DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
-                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "pShaderResourceBinding must not be null");
@@ -596,7 +596,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
 
 #ifdef DILIGENT_DEVELOPMENT
     DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
-                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     if (m_pIndexBuffer)
@@ -1205,7 +1205,7 @@ inline void DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureV
             {
                 LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
                                   "' is not bound to the device context. ClearDepthStencil command requires "
-                                  "depth-stencil view be bound to the device contex in OpenGL backend");
+                                  "depth-stencil view be bound to the device context in OpenGL backend");
             }
             else
             {
@@ -1248,7 +1248,7 @@ inline void DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureV
             {
                 LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
                                   "' is not bound to the device context. ClearRenderTarget command "
-                                  "requires render target view to be bound to the device contex in OpenGL backend");
+                                  "requires render target view to be bound to the device context in OpenGL backend");
             }
             else
             {
@@ -1555,7 +1555,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
 
     const auto* pSBTImpl = ValidatedCast<const ShaderBindingTableImplType>(Attribs.pSBT);
     DEV_CHECK_ERR(!pSBTImpl->HasPendingData(), "IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '",
-                  pSBTImpl->GetDesc().Name, "' has uncommited changes, call UpdateSBT() first");
+                  pSBTImpl->GetDesc().Name, "' has uncommitted changes, call UpdateSBT() first");
 
     VERIFY(pSBTImpl->GetInternalBuffer() != nullptr,
            "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer must not be null, this should never happen, ",
@@ -1592,7 +1592,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
     const auto* pSBTImpl = ValidatedCast<const ShaderBindingTableImplType>(Attribs.pSBT);
     DEV_CHECK_ERR(!pSBTImpl->HasPendingData(),
                   "IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '",
-                  pSBTImpl->GetDesc().Name, "' has uncommited changes, call UpdateSBT() first");
+                  pSBTImpl->GetDesc().Name, "' has uncommitted changes, call UpdateSBT() first");
 
 
     VERIFY(pSBTImpl->GetInternalBuffer() != nullptr,
@@ -1743,7 +1743,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArgume
                   m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
 
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.IndirectAttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     DEV_CHECK_ERR(VerifyDrawIndirectAttribs(Attribs, pAttribsBuffer), "DrawIndirectAttribs are invalid");
@@ -1766,7 +1766,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirec
     DEV_CHECK_ERR(m_pIndexBuffer, "DrawIndexedIndirect command arguments are invalid: no index buffer is bound.");
 
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.IndirectAttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                  "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     DEV_CHECK_ERR(VerifyDrawIndexedIndirectAttribs(Attribs, pAttribsBuffer), "DrawIndexedIndirectAttribs are invalid");
@@ -1912,7 +1912,7 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifyTextureState(
     {
         LOG_ERROR_MESSAGE(OperationName, " requires texture '", Texture.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
                           " state. Actual texture state: ", GetResourceStateString(Texture.GetState()),
-                          ". Use appropriate state transiton flags or explicitly transition the texture using IDeviceContext::TransitionResourceStates() method.");
+                          ". Use appropriate state transition flags or explicitly transition the texture using IDeviceContext::TransitionResourceStates() method.");
     }
 }
 
@@ -1926,7 +1926,7 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifyBufferState(
     {
         LOG_ERROR_MESSAGE(OperationName, " requires buffer '", Buffer.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
                           " state. Actual buffer state: ", GetResourceStateString(Buffer.GetState()),
-                          ". Use appropriate state transiton flags or explicitly transition the buffer using IDeviceContext::TransitionResourceStates() method.");
+                          ". Use appropriate state transition flags or explicitly transition the buffer using IDeviceContext::TransitionResourceStates() method.");
     }
 }
 
@@ -1940,7 +1940,7 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifyBLASState(
     {
         LOG_ERROR_MESSAGE(OperationName, " requires BLAS '", BLAS.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
                           " state. Actual BLAS state: ", GetResourceStateString(BLAS.GetState()),
-                          ". Use appropriate state transiton flags or explicitly transition the BLAS using IDeviceContext::TransitionResourceStates() method.");
+                          ". Use appropriate state transition flags or explicitly transition the BLAS using IDeviceContext::TransitionResourceStates() method.");
     }
 }
 
@@ -1954,7 +1954,7 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifyTLASState(
     {
         LOG_ERROR_MESSAGE(OperationName, " requires TLAS '", TLAS.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
                           " state. Actual TLAS state: ", GetResourceStateString(TLAS.GetState()),
-                          ". Use appropriate state transiton flags or explicitly transition the TLAS using IDeviceContext::TransitionResourceStates() method.");
+                          ". Use appropriate state transition flags or explicitly transition the TLAS using IDeviceContext::TransitionResourceStates() method.");
     }
 }
 

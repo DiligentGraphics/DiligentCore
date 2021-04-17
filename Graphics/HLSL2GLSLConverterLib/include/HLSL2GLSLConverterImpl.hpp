@@ -566,7 +566,7 @@ private:
 // HLSL converter allows HLSL shader files to be converted into GLSL source.
 // The entire shader development can thus be performed using HLSL tools. Since no intermediate
 // representation is used, shader files can be directly compiled by the HLSL compiler.
-// All tools available for HLSL shader devlopment, analysis and optimization can be
+// All tools available for HLSL shader development, analysis and optimization can be
 // used. The source can then be transaprently converted to GLSL.
 //
 //

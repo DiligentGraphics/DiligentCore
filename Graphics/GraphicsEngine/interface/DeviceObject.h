@@ -75,14 +75,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceObject, IObject)
 
 
     /// Stores a pointer to the user-provided data object, which
-    /// may later be retreived through GetUserData().
+    /// may later be retrieved through GetUserData().
     ///
     /// \param [in] pUserData - Pointer to the user data object to store.
     ///
     /// \note   The method is not thread-safe and an application
     ///         must externally synchronize the access.
     ///
-    ///         The metod keeps strong reference to the user data object.
+    ///         The method keeps strong reference to the user data object.
     ///         If an application needs to release the object, it
     ///         should call SetUserData(nullptr);
     VIRTUAL void METHOD(SetUserData)(THIS_

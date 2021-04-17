@@ -1013,7 +1013,7 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&             
         const auto& BindingDesc = BindingDescriptions[BindingDescInd];
         VERIFY(BindingDesc.binding == LayoutElem.BufferSlot, "Inconsistent buffer slot");
         VERIFY(BindingDesc.stride == LayoutElem.Stride, "Inconsistent strides");
-        VERIFY(BindingDesc.inputRate == LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency), "Incosistent layout element frequency");
+        VERIFY(BindingDesc.inputRate == LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency), "Inconsistent layout element frequency");
 
         auto& AttribDesc    = AttributeDescription[elem];
         AttribDesc.binding  = BindingDesc.binding;

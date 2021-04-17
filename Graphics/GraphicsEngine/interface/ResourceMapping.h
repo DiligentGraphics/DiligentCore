@@ -99,7 +99,7 @@ typedef struct ResourceMappingDesc ResourceMappingDesc;
 
 // clang-format off
 
-/// Resouce mapping
+/// Resource mapping
 
 /// This interface provides mapping between literal names and resource pointers.
 /// It is created by IRenderDevice::CreateResourceMapping().

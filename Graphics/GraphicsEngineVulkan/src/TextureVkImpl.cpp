@@ -349,7 +349,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             VERIFY_EXPR(subres == pInitData->NumSubresources);
 
             err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
-            CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
+            CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
             VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledShaderStages);
 
@@ -461,7 +461,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         VERIFY_EXPR(m_MemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - m_MemoryAllocation.UnalignedOffset));
 
         auto err = LogicalDevice.BindBufferMemory(m_StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
+        CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
         m_StagingDataAlignedOffset = AlignedStagingMemOffset;
 
@@ -671,7 +671,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
             ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
             break;
 
-        default: UNEXPECTED("Unexpcted view dimension");
+        default: UNEXPECTED("Unexpected view dimension");
     }
 
     TEXTURE_FORMAT CorrectedViewFormat = ViewDesc.Format;

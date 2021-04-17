@@ -531,7 +531,7 @@ protected:
     static constexpr Uint8 EmptyElem = 0xA7;
 #else
     // In release mode clear uninitialized data by zeros.
-    // This makes shader inactive, wich hides errors but prevents crashes.
+    // This makes shader inactive, which hides errors but prevents crashes.
     static constexpr Uint8 EmptyElem = 0;
 #endif
 

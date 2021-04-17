@@ -177,7 +177,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                 GL_DONT_CARE, // Type of debug messages to enable or disable
                 GL_DONT_CARE, // Severity of debug messages to enable or disable
                 0,            // The length of the array ids
-                &unusedIds,   // Array of unsigned integers contianing the ids of the messages to enable or disable
+                &unusedIds,   // Array of unsigned integers containing the ids of the messages to enable or disable
                 GL_TRUE       // Flag determining whether the selected messages should be enabled or disabled
             );
         }
@@ -381,11 +381,11 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(TextureUAVExtendedFormats, false,                                                             "Texture UAV extended formats are");
 
         SET_FEATURE_STATE(ShaderFloat16,             CheckExtension("GL_EXT_shader_explicit_arithmetic_types_float16"), "16-bit float shader operations are");
-        SET_FEATURE_STATE(ResourceBuffer16BitAccess, CheckExtension("GL_EXT_shader_16bit_storage"),                     "16-bit resoure buffer access is");
+        SET_FEATURE_STATE(ResourceBuffer16BitAccess, CheckExtension("GL_EXT_shader_16bit_storage"),                     "16-bit resource buffer access is");
         SET_FEATURE_STATE(UniformBuffer16BitAccess,  CheckExtension("GL_EXT_shader_16bit_storage"),                     "16-bit uniform buffer access is");
         SET_FEATURE_STATE(ShaderInputOutput16,       false,                                                             "16-bit shader inputs/outputs are");
         SET_FEATURE_STATE(ShaderInt8,                CheckExtension("GL_EXT_shader_explicit_arithmetic_types_int8"),    "8-bit integer shader operations are");
-        SET_FEATURE_STATE(ResourceBuffer8BitAccess,  CheckExtension("GL_EXT_shader_8bit_storage"),                      "8-bit resoure buffer access is");
+        SET_FEATURE_STATE(ResourceBuffer8BitAccess,  CheckExtension("GL_EXT_shader_8bit_storage"),                      "8-bit resource buffer access is");
         SET_FEATURE_STATE(UniformBuffer8BitAccess,   CheckExtension("GL_EXT_shader_8bit_storage"),                      "8-bit uniform buffer access is");
         // clang-format on
 
@@ -444,11 +444,11 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(TextureUAVExtendedFormats, false, "Texture UAV extended formats");
 
         SET_FEATURE_STATE(ShaderFloat16,             strstr(Extensions, "shader_explicit_arithmetic_types_float16"), "16-bit float shader operations are");
-        SET_FEATURE_STATE(ResourceBuffer16BitAccess, strstr(Extensions, "shader_16bit_storage"),                     "16-bit resoure buffer access is");
+        SET_FEATURE_STATE(ResourceBuffer16BitAccess, strstr(Extensions, "shader_16bit_storage"),                     "16-bit resource buffer access is");
         SET_FEATURE_STATE(UniformBuffer16BitAccess,  strstr(Extensions, "shader_16bit_storage"),                     "16-bit uniform buffer access is");
         SET_FEATURE_STATE(ShaderInputOutput16,       false,                                                          "16-bit shader inputs/outputs are");
         SET_FEATURE_STATE(ShaderInt8,                strstr(Extensions, "shader_explicit_arithmetic_types_int8"),    "8-bit integer shader operations are");
-        SET_FEATURE_STATE(ResourceBuffer8BitAccess,  strstr(Extensions, "shader_8bit_storage"),                      "8-bit resoure buffer access is");
+        SET_FEATURE_STATE(ResourceBuffer8BitAccess,  strstr(Extensions, "shader_8bit_storage"),                      "8-bit resource buffer access is");
         SET_FEATURE_STATE(UniformBuffer8BitAccess,   strstr(Extensions, "shader_8bit_storage"),                      "8-bit uniform buffer access is");
         // clang-format on
 

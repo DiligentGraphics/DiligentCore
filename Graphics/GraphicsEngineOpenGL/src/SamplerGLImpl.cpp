@@ -53,8 +53,8 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     FilterTypeToGLFilterType(SamplerDesc.MinFilter, GLMinFilter, bMinAnisotropic, bMinComparison);
     FilterTypeToGLFilterType(SamplerDesc.MagFilter, GLMagFilter, bMagAnisotropic, bMagComparison);
     FilterTypeToGLFilterType(SamplerDesc.MipFilter, GLMipFilter, bMipAnisotropic, bMipComparison);
-    VERIFY(bMinAnisotropic == bMagAnisotropic && bMagAnisotropic == bMipAnisotropic, "Incosistent anisotropy filter setting");
-    VERIFY(bMinComparison == bMagComparison && bMagComparison == bMipComparison, "Incosistent comparison filter setting");
+    VERIFY(bMinAnisotropic == bMagAnisotropic && bMagAnisotropic == bMipAnisotropic, "Inconsistent anisotropy filter setting");
+    VERIFY(bMinComparison == bMagComparison && bMagComparison == bMipComparison, "Inconsistent comparison filter setting");
 
     glSamplerParameteri(m_GlSampler, GL_TEXTURE_MAG_FILTER, GLMagFilter);
 

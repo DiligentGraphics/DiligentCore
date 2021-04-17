@@ -92,7 +92,7 @@ inline GLenum UsageToGLUsage(const BufferDesc& Desc)
             else
                 return GL_STATIC_COPY;
 
-        default: UNEXPECTED( "Unknow usage" ); return 0;
+        default: UNEXPECTED( "Unknown usage" ); return 0;
             // clang-format on
     }
 }
@@ -249,7 +249,7 @@ inline Uint32 GetNumPixelFormatComponents(GLenum Format)
         case GL_DEPTH_STENCIL:
             return 1;
 
-        default: UNEXPECTED("Unknonw pixel format"); return 0;
+        default: UNEXPECTED("Unknown pixel format"); return 0;
     };
 }
 
@@ -282,7 +282,7 @@ inline Uint32 GetPixelTypeSize(GLenum Type)
         
         case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:return sizeof(GLfloat) + sizeof(GLuint);
 
-        default: UNEXPECTED( "Unknonw pixel type" ); return 0;
+        default: UNEXPECTED( "Unknown pixel type" ); return 0;
             // clang-format on
     }
 }

@@ -84,7 +84,7 @@ inline D3D11_USAGE UsageToD3D11Usage(USAGE Usage)
         case USAGE_DYNAMIC:     return D3D11_USAGE_DYNAMIC;
         case USAGE_STAGING:     return D3D11_USAGE_STAGING;
         // clang-format on
-        default: UNEXPECTED("Unknow usage"); return D3D11_USAGE_DEFAULT;
+        default: UNEXPECTED("Unknown usage"); return D3D11_USAGE_DEFAULT;
     }
 }
 
@@ -98,7 +98,7 @@ inline USAGE D3D11UsageToUsage(D3D11_USAGE D3D11Usage)
         case D3D11_USAGE_DYNAMIC:   return USAGE_DYNAMIC;
         case D3D11_USAGE_STAGING:   return USAGE_STAGING;
         // clang-format on
-        default: UNEXPECTED("Unknow D3D11 usage"); return USAGE_DEFAULT;
+        default: UNEXPECTED("Unknown D3D11 usage"); return USAGE_DEFAULT;
     }
 }
 

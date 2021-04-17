@@ -210,7 +210,7 @@ bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttri
     {
         CHECK_RESOLVE_TEX_SUBRES_ATTRIBS(SrcTexDesc.Format == DstTexDesc.Format,
                                          "source (", SrcFmtAttribs.Name, ") and destination (", DstFmtAttribs.Name,
-                                         ") texture formats of a resolve operation must match exaclty or be compatible typeless formats.");
+                                         ") texture formats of a resolve operation must match exactly or be compatible typeless formats.");
         CHECK_RESOLVE_TEX_SUBRES_ATTRIBS(ResolveAttribs.Format == TEX_FORMAT_UNKNOWN || SrcTexDesc.Format == ResolveAttribs.Format, "Invalid format of a resolve operation.");
     }
     if (SrcFmtAttribs.IsTypeless && DstFmtAttribs.IsTypeless)
@@ -276,12 +276,12 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
     {
         const auto& TexDesc = pTexture->GetDesc();
 
-        CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(Barrier.NewState, true), "invlaid new state specified for texture '", TexDesc.Name, "'.");
+        CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(Barrier.NewState, true), "invalid new state specified for texture '", TexDesc.Name, "'.");
         OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTexture->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN,
                                     "the state of texture '", TexDesc.Name,
                                     "' is unknown to the engine and is not explicitly specified in the barrier.");
-        CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(OldState, true), "invlaid old state specified for texture '", TexDesc.Name, "'.");
+        CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(OldState, true), "invalid old state specified for texture '", TexDesc.Name, "'.");
 
         CHECK_STATE_TRANSITION_DESC(Barrier.FirstMipLevel < TexDesc.MipLevels, "first mip level (", Barrier.FirstMipLevel,
                                     ") specified by the barrier is out of range. Texture '",
@@ -311,10 +311,10 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
     else if (RefCntAutoPtr<IBuffer> pBuffer{Barrier.pResource, IID_Buffer})
     {
         const auto& BuffDesc = pBuffer->GetDesc();
-        CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(Barrier.NewState, false), "invlaid new state specified for buffer '", BuffDesc.Name, "'.");
+        CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(Barrier.NewState, false), "invalid new state specified for buffer '", BuffDesc.Name, "'.");
         OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBuffer->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
-        CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(OldState, false), "invlaid old state specified for buffer '", BuffDesc.Name, "'.");
+        CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(OldState, false), "invalid old state specified for buffer '", BuffDesc.Name, "'.");
     }
     else if (RefCntAutoPtr<IBottomLevelAS> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
     {
@@ -322,7 +322,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
         OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBottomLevelAS->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of BLAS '", BLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE,
-                                    "invlaid new state specified for BLAS '", BLASDesc.Name, "'.");
+                                    "invalid new state specified for BLAS '", BLASDesc.Name, "'.");
         CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "split barriers are not supported for BLAS.");
     }
     else if (RefCntAutoPtr<ITopLevelAS> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
@@ -331,7 +331,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
         OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTopLevelAS->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of TLAS '", TLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE || Barrier.NewState == RESOURCE_STATE_RAY_TRACING,
-                                    "invlaid new state specified for TLAS '", TLASDesc.Name, "'.");
+                                    "invalid new state specified for TLAS '", TLASDesc.Name, "'.");
         CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "split barriers are not supported for TLAS.");
     }
     else
@@ -469,7 +469,7 @@ bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs)
         const auto& BoxDesc = BLASDesc.pBoxes[GeomIndex];
 
         CHECK_BUILD_BLAS_ATTRIBS(box.BoxCount <= BoxDesc.MaxBoxCount,
-                                 "pBoxData[", i, "].BoxCount (", box.BoxCount, ") must not be greated than MaxBoxCount (", BoxDesc.MaxBoxCount, ").");
+                                 "pBoxData[", i, "].BoxCount (", box.BoxCount, ") must not be greater than MaxBoxCount (", BoxDesc.MaxBoxCount, ").");
 
         CHECK_BUILD_BLAS_ATTRIBS(box.BoxStride >= BoxSize,
                                  "pBoxData[", i, "].BoxStride (", box.BoxStride, ") must be at least ", BoxSize, " bytes.");

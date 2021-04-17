@@ -59,7 +59,7 @@ public:
 
     /// \param [in] pCtx - Context to record begin query command
     ///
-    /// \remarks    There must be exaclty one matching Begin() for every End() call, otherwise
+    /// \remarks    There must be exactly one matching Begin() for every End() call, otherwise
     ///             the behavior is undefined.
     void Begin(IDeviceContext* pCtx);
 
@@ -70,7 +70,7 @@ public:
     /// \param [out] Duration - Variable where duration will be written to.
     /// \return                 true if the data from the oldest query is available, and false otherwise.
     ///
-    /// \remarks    There must be exaclty one matching End() for every Begin() call, otherwise
+    /// \remarks    There must be exactly one matching End() for every Begin() call, otherwise
     ///             the behavior is undefined.
     bool End(IDeviceContext* pCtx, double& Duration);
 

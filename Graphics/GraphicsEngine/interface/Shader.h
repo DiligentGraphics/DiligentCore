@@ -1,27 +1,27 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
- *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
  *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
- *  liable for any damages, including any direct, indirect, special, incidental, 
- *  or consequential damages of any character arising as a result of this License or 
- *  out of the use or inability to use the software (including but not limited to damages 
- *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
- *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
 
@@ -60,7 +60,7 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     /// The source language is GLSL that should be compiled verbatim
 
     /// By default the engine prepends GLSL shader source code with platform-specific
-    /// definitions. For instance it adds appropriate #version directive (e.g. '#version 430 core' or 
+    /// definitions. For instance it adds appropriate #version directive (e.g. '#version 430 core' or
     /// '#version 310 es') so that the same source will work on different versions of desktop OpenGL and OpenGLES.
     /// When SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM is used, the source code will be compiled as is.
     /// Note that shader macros are ignored when compiling GLSL verbatim in OpenGL backend, and an application
@@ -78,7 +78,7 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
     ///     - OpenGL(ES) GLSL: native compiler
     ///     - OpenGL(ES) HLSL: HLSL2GLSL converter and native compiler
     ///     - Vulkan GLSL:     built-in glslang
-    ///     - Vulkan HLSL:     built-in glslang (with limitted support for Shader Model 6.x)
+    ///     - Vulkan HLSL:     built-in glslang (with limited support for Shader Model 6.x)
     SHADER_COMPILER_DEFAULT = 0,
 
     /// Built-in glslang compiler for GLSL and HLSL.
@@ -86,7 +86,7 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
 
     /// Modern HLSL compiler (DXC) for Direct3D12 and Vulkan with Shader Model 6.x support.
     SHADER_COMPILER_DXC,
-        
+
     /// Legacy HLSL compiler (FXC) for Direct3D11 and Direct3D12 supporting shader models up to 5.1.
     SHADER_COMPILER_FXC,
 
@@ -261,7 +261,7 @@ struct ShaderCreateInfo
     /// the converter will write pointer to the conversion stream to *ppConversionStream
     /// the first time and will use it in all subsequent times.
     /// For all subsequent conversions, FilePath member must be the same, or
-    /// new stream will be crated and warning message will be displayed.
+    /// new stream will be created and warning message will be displayed.
     struct IHLSL2GLSLConversionStream** ppConversionStream DEFAULT_INITIALIZER(nullptr);
 
     /// Shader source
@@ -367,7 +367,7 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8)
     /// Shader resource view of a buffer (read-only storage image)
     SHADER_RESOURCE_TYPE_BUFFER_SRV,
 
-    /// Unordered access view of a texture (sotrage image)
+    /// Unordered access view of a texture (storage image)
     SHADER_RESOURCE_TYPE_TEXTURE_UAV,
 
     /// Unordered access view of a buffer (storage buffer)
@@ -381,7 +381,7 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8)
 
     /// Acceleration structure
     SHADER_RESOURCE_TYPE_ACCEL_STRUCT,
-    
+
     SHADER_RESOURCE_TYPE_LAST = SHADER_RESOURCE_TYPE_ACCEL_STRUCT
 };
 // clang-format on

@@ -194,7 +194,7 @@ public:
 
     // All the access functions do not require locking reference counters pointer because if it is valid,
     // the smart pointer holds strong reference to the object and it thus cannot be released by
-    // ohter thread
+    // other thread
     bool     operator!() const noexcept { return m_pObject == nullptr; }
     explicit operator bool() const noexcept { return m_pObject != nullptr; }
     bool     operator==(const RefCntAutoPtr& Ptr) const noexcept { return m_pObject == Ptr.m_pObject; }

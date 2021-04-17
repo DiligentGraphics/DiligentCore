@@ -374,7 +374,7 @@ private:
 
     std::array<Uint32, 3> m_ComputeGroupSize = {};
 
-    // Inidicates if the shader was compiled from HLSL source.
+    // Indicates if the shader was compiled from HLSL source.
     bool m_IsHLSLSource = false;
 };
 

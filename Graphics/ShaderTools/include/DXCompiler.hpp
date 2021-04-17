@@ -100,7 +100,7 @@ public:
     /// \param [out] ppDstByteCode - Memory location where the pointer to the byte code
     ///                              with the remapped bindigs will be written.
     ///
-    /// \return     true if the remapping was successfull, and false otherwise.
+    /// \return     true if the remapping was successful, and false otherwise.
     virtual bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
                                        IDxcBlob*                  pSrcBytecode,
                                        IDxcBlob**                 ppDstByteCode) = 0;

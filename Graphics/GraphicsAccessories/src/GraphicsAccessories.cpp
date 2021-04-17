@@ -543,8 +543,8 @@ const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarTy
         return (bGetFullName ? FullVarTypeNameStrings : ShortVarTypeNameStrings)[VarType];
     else
     {
-        UNEXPECTED("Unknow shader variable type");
-        return "unknow";
+        UNEXPECTED("Unknown shader variable type");
+        return "unknown";
     }
 }
 
@@ -566,7 +566,7 @@ const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_ACCEL_STRUCT"     : "acceleration structure";
         // clang-format on
         default:
-            UNEXPECTED("Unexepcted resource type (", Uint32{ResourceType}, ")");
+            UNEXPECTED("Unexpected resource type (", Uint32{ResourceType}, ")");
             return "UNKNOWN";
     }
 }
@@ -592,7 +592,7 @@ const Char* GetFilterTypeLiteralName(FILTER_TYPE FilterType, bool bGetFullName)
         case FILTER_TYPE_MAXIMUM_ANISOTROPIC:    return bGetFullName ? "FILTER_TYPE_MAXIMUM_ANISOTROPIC"    : "maximum anisotropic";
         // clang-format on
         default:
-            UNEXPECTED("Unexepcted filter type (", Uint32{FilterType}, ")");
+            UNEXPECTED("Unexpected filter type (", Uint32{FilterType}, ")");
             return "UNKNOWN";
     }
 }
@@ -611,7 +611,7 @@ const Char* GetTextureAddressModeLiteralName(TEXTURE_ADDRESS_MODE AddressMode, b
         case TEXTURE_ADDRESS_MIRROR_ONCE: return bGetFullName ? "TEXTURE_ADDRESS_MIRROR_ONCE" : "mirror once";
         // clang-format on
         default:
-            UNEXPECTED("Unexepcted texture address mode (", Uint32{AddressMode}, ")");
+            UNEXPECTED("Unexpected texture address mode (", Uint32{AddressMode}, ")");
             return "UNKNOWN";
     }
 }
@@ -633,7 +633,7 @@ const Char* GetComparisonFunctionLiteralName(COMPARISON_FUNCTION ComparisonFunc,
         case COMPARISON_FUNC_ALWAYS:        return bGetFullName ? "COMPARISON_FUNC_ALWAYS"       : "always";
         // clang-format on
         default:
-            UNEXPECTED("Unexepcted comparison function (", Uint32{ComparisonFunc}, ")");
+            UNEXPECTED("Unexpected comparison function (", Uint32{ComparisonFunc}, ")");
             return "UNKNOWN";
     }
 }
@@ -657,7 +657,7 @@ const Char* GetStencilOpLiteralName(STENCIL_OP StencilOp)
         STENCIL_OP_TO_STR(STENCIL_OP_DECR_WRAP);
 
         default:
-            UNEXPECTED("Unexepcted stencil operation (", static_cast<Uint32>(StencilOp), ")");
+            UNEXPECTED("Unexpected stencil operation (", static_cast<Uint32>(StencilOp), ")");
             return "UNKNOWN";
     }
 #undef STENCIL_OP_TO_STR
@@ -691,7 +691,7 @@ const Char* GetBlendFactorLiteralName(BLEND_FACTOR BlendFactor)
         BLEND_FACTOR_TO_STR(BLEND_FACTOR_INV_SRC1_ALPHA);
 
         default:
-            UNEXPECTED("Unexepcted blend factor (", static_cast<int>(BlendFactor), ")");
+            UNEXPECTED("Unexpected blend factor (", static_cast<int>(BlendFactor), ")");
             return "UNKNOWN";
     }
 #undef BLEND_FACTOR_TO_STR
@@ -713,7 +713,7 @@ const Char* GetBlendOperationLiteralName(BLEND_OPERATION BlendOp)
         BLEND_OP_TO_STR(BLEND_OPERATION_MAX);
 
         default:
-            UNEXPECTED("Unexepcted blend operation (", static_cast<int>(BlendOp), ")");
+            UNEXPECTED("Unexpected blend operation (", static_cast<int>(BlendOp), ")");
             return "UNKNOWN";
     }
 #undef BLEND_OP_TO_STR
@@ -732,7 +732,7 @@ const Char* GetFillModeLiteralName(FILL_MODE FillMode)
         FILL_MODE_TO_STR(FILL_MODE_SOLID);
 
         default:
-            UNEXPECTED("Unexepcted fill mode (", static_cast<int>(FillMode), ")");
+            UNEXPECTED("Unexpected fill mode (", static_cast<int>(FillMode), ")");
             return "UNKNOWN";
     }
 #undef FILL_MODE_TO_STR
@@ -752,7 +752,7 @@ const Char* GetCullModeLiteralName(CULL_MODE CullMode)
         CULL_MODE_TO_STR(CULL_MODE_BACK);
 
         default:
-            UNEXPECTED("Unexepcted cull mode (", static_cast<int>(CullMode), ")");
+            UNEXPECTED("Unexpected cull mode (", static_cast<int>(CullMode), ")");
             return "UNKNOWN";
     }
 #undef CULL_MODE_TO_STR
@@ -796,7 +796,7 @@ const Char* GetUsageString(USAGE Usage)
         return UsageStrings[Usage];
     else
     {
-        UNEXPECTED("Unknow usage");
+        UNEXPECTED("Unknown usage");
         return "Unknown usage";
     }
 }
@@ -824,8 +824,8 @@ const Char* GetResourceDimString(RESOURCE_DIMENSION TexType)
         return TexTypeStrings[TexType];
     else
     {
-        UNEXPECTED("Unknow texture type");
-        return "Unknow texture type";
+        UNEXPECTED("Unknown texture type");
+        return "Unknown texture type";
     }
 }
 

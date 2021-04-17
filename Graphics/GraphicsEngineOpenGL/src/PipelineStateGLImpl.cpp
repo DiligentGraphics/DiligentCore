@@ -384,7 +384,7 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
             return ctx_pipeline.second;
     }
 
-    // Create new progam pipeline
+    // Create new program pipeline
     m_GLProgPipelines.emplace_back(Context, true);
     auto&  ctx_pipeline = m_GLProgPipelines.back();
     GLuint Pipeline     = ctx_pipeline.second;

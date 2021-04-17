@@ -85,7 +85,7 @@ public:
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                 RTVFormats[rt] = _RTVFormats[rt];
         }
-        // Default memeber initialization is intentionally omitted
+        // Default member initialization is intentionally omitted
         Uint8          NumRenderTargets;
         Uint8          SampleCount;
         TEXTURE_FORMAT DSVFormat;

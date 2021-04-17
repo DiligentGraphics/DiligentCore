@@ -39,7 +39,7 @@ StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char Sl
     if (m_pFile == nullptr)
     {
         LOG_ERROR_AND_THROW("Failed to open file ", m_OpenAttribs.strFilePath,
-                            "\nThe following error occured: ", strerror(errno));
+                            "\nThe following error occurred: ", strerror(errno));
     }
 #endif
 }

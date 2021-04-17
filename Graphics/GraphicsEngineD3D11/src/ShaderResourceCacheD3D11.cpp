@@ -63,7 +63,7 @@ size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResource
 void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters& ResCount, IMemoryAllocator& MemAllocator)
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
-    VERIFY(!IsInitialized(), "Resource cache has already been intialized!");
+    VERIFY(!IsInitialized(), "Resource cache has already been initialized!");
 
     size_t MemOffset = 0;
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
@@ -149,7 +149,7 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
 {
     if (IsInitialized())
     {
-        // Explicitly destory all objects
+        // Explicitly destroy all objects
         for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
         {
             const auto CBCount = GetCBCount(ShaderInd);

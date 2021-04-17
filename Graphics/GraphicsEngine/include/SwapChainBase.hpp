@@ -42,7 +42,7 @@ namespace Diligent
 
 /// Base implementation of the swap chain.
 
-/// \tparam BaseInterface - Base interface that this class will inheret
+/// \tparam BaseInterface - Base interface that this class will inherit
 ///                         (Diligent::ISwapChainGL, Diligent::ISwapChainD3D11,
 ///                          Diligent::ISwapChainD3D12 or Diligent::ISwapChainVk).
 /// \remarks Swap chain holds the strong reference to the device and a weak reference to the

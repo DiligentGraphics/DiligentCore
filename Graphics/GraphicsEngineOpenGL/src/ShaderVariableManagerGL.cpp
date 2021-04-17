@@ -184,7 +184,7 @@ void ShaderVariableManagerGL::Destroy(IMemoryAllocator& Allocator)
     if (m_ResourceBuffer == nullptr)
         return;
 
-    VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
+    VERIFY(m_pDbgAllocator == &Allocator, "Inconsistent allocator");
 
     HandleResources(
         [&](UniformBuffBindInfo& ub) {
@@ -515,7 +515,7 @@ public:
             RelativeOffset /= sizeof(ResourceType);
             VERIFY(RelativeOffset >= 0 && RelativeOffset < VarCount,
                    "Relative offset is out of bounds which either means the variable does not belong to this SRB or "
-                   "there is a bug in varaible offsets");
+                   "there is a bug in variable offsets");
             Index += static_cast<Uint32>(RelativeOffset);
             return true;
         }

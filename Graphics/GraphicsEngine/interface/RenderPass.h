@@ -182,7 +182,7 @@ struct AttachmentReference
 typedef struct AttachmentReference AttachmentReference;
 
 
-/// Render pass subpass decription.
+/// Render pass subpass description.
 struct SubpassDesc
 {
     /// The number of input attachments the subpass uses.

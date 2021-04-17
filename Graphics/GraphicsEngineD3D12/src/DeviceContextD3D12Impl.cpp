@@ -188,7 +188,7 @@ DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
 
     for (size_t i = 0; i < _countof(m_DynamicGPUDescriptorAllocator); ++i)
     {
-        // Note: as dynamic decriptor suballocations are returned to the global GPU descriptor heap that
+        // Note: as dynamic descriptor suballocations are returned to the global GPU descriptor heap that
         // is hosted by the render device, the descriptor allocator can be destroyed before all suballocations
         // are actually returned to the global heap.
         DEV_CHECK_ERR(m_DynamicGPUDescriptorAllocator[i].GetSuballocationCount() == 0, "All dynamic suballocations must have been released");
@@ -238,7 +238,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         Uint32 DvpCompatibleSRBCount = 0;
         PrepareCommittedResources(RootInfo, DvpCompatibleSRBCount);
 
-        // When root signature changes, all resoruces must be committed anew
+        // When root signature changes, all resources must be committed anew
         RootInfo.MakeAllStale();
     }
 
@@ -361,7 +361,7 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, b
 
 void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
-    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must mot be null");
+    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must not be null");
     DEV_CHECK_ERR(!m_pActiveRenderPass, "State transitions are not allowed inside a render pass.");
 
     auto& CmdCtx               = GetCmdContext();
@@ -1336,7 +1336,7 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
         const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
         VERIFY_EXPR(Subpass.pDepthStencilAttachment != nullptr && DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED);
         VERIFY(m_pBoundDepthStencil == FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex],
-               "Depth-stencil bufer in the device context is inconsistent with the framebuffer");
+               "Depth-stencil buffer in the device context is inconsistent with the framebuffer");
         const auto  FirstLastUse     = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentRef.AttachmentIndex);
         const auto& DSAttachmentDesc = RPDesc.pAttachments[DSAttachmentRef.AttachmentIndex];
 
@@ -1498,7 +1498,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
     if (MapType == MAP_READ)
     {
         DEV_CHECK_ERR(BuffDesc.Usage == USAGE_STAGING, "Buffer must be created as USAGE_STAGING to be mapped for reading");
-        DEV_CHECK_ERR(pd3d12Resource != nullptr, "USAGE_STAGING buffer must intialize D3D12 resource");
+        DEV_CHECK_ERR(pd3d12Resource != nullptr, "USAGE_STAGING buffer must initialize D3D12 resource");
 
         if ((MapFlags & MAP_FLAG_DO_NOT_WAIT) == 0)
         {
@@ -1516,7 +1516,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
     {
         if (BuffDesc.Usage == USAGE_STAGING)
         {
-            DEV_CHECK_ERR(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must intialize D3D12 resource");
+            DEV_CHECK_ERR(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must initialize D3D12 resource");
             if (MapFlags & MAP_FLAG_DISCARD)
             {
             }
@@ -1581,7 +1581,7 @@ void DeviceContextD3D12Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
     {
         if (BuffDesc.Usage == USAGE_STAGING)
         {
-            VERIFY(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must intialize D3D12 resource");
+            VERIFY(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must initialize D3D12 resource");
             pd3d12Resource->Unmap(0, nullptr);
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
@@ -2576,7 +2576,7 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
     DEV_CHECK_ERR(d3d12BuildASInputs.InstanceDescs % D3D12_RAYTRACING_INSTANCE_DESCS_BYTE_ALIGNMENT == 0,
                   "Instance data address is not properly aligned");
     DEV_CHECK_ERR(d3d12BuildASDesc.ScratchAccelerationStructureData % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0,
-                  "Scratch data address is not properly algined");
+                  "Scratch data address is not properly aligned");
 
     CmdCtx.AsGraphicsContext4().BuildRaytracingAccelerationStructure(d3d12BuildASDesc, 0, nullptr);
     ++m_State.NumCommands;

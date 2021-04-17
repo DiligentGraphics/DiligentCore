@@ -123,7 +123,7 @@ public:
 
         if (MapInfo.m_MappedData == nullptr)
         {
-            // If current offset is zero, we are mapping the buffer for the first time after it has been Reseted. Use MAP_FLAG_DISCARD flag.
+            // If current offset is zero, we are mapping the buffer for the first time after it has been Reset. Use MAP_FLAG_DISCARD flag.
             // Otherwise use MAP_FLAG_NO_OVERWRITE flag.
             MapInfo.m_MappedData.Map(pCtx, m_pBuffer, MAP_WRITE, MapInfo.m_CurrOffset == 0 ? MAP_FLAG_DISCARD : MAP_FLAG_NO_OVERWRITE);
             VERIFY_EXPR(MapInfo.m_MappedData);

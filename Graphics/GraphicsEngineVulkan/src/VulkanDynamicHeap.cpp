@@ -110,7 +110,7 @@ VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Alloc
     CHECK_VK_ERROR_AND_THROW(err, "Failed to map  memory");
 
     err = LogicalDevice.BindBufferMemory(m_VkBuffer, m_BufferMemory, 0 /*offset*/);
-    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind  bufer memory");
+    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
     LOG_INFO_MESSAGE("GPU dynamic heap created. Total buffer size: ", FormatMemorySize(Size, 2));
 }
@@ -182,14 +182,14 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
             Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
             if (!Block.IsValid())
             {
-                LOG_ERROR_MESSAGE("Space in dynamic heap is exausted! After idling for ",
+                LOG_ERROR_MESSAGE("Space in dynamic heap is exhausted! After idling for ",
                                   std::fixed, std::setprecision(1), IdleDuration.count() * 1000.0,
                                   " ms still no space is available. Increase the size of the heap by setting "
                                   "EngineVkCreateInfo::DynamicHeapSize to a greater value or optimize dynamic resource usage");
             }
             else
             {
-                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced idling the GPU. "
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exhausted. Allocation forced idling the GPU. "
                                     "Increase the size of the heap by setting EngineVkCreateInfo::DynamicHeapSize to a "
                                     "greater value or optimize dynamic resource usage");
             }
@@ -198,13 +198,13 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
         {
             if (SleepIterations == 0)
             {
-                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted forcing mid-frame shrinkage. "
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exhausted forcing mid-frame shrinkage. "
                                     "Increase the size of the heap buffer by setting EngineVkCreateInfo::DynamicHeapSize to a "
                                     "greater value or optimize dynamic resource usage");
             }
             else
             {
-                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exausted. Allocation forced wait time of ",
+                LOG_WARNING_MESSAGE("Space in dynamic heap is almost exhausted. Allocation forced wait time of ",
                                     std::fixed, std::setprecision(1), IdleDuration.count() * 1000.0,
                                     " ms. Increase the size of the heap by setting EngineVkCreateInfo::DynamicHeapSize "
                                     "to a greater value or optimize dynamic resource usage");

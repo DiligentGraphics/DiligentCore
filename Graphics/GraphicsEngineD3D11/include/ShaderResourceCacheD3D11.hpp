@@ -108,7 +108,7 @@ public:
     /// Describes a resource associated with a cached SRV or a UAV
     struct CachedResource
     {
-        /// Wee keep strong reference to the view instead of the reference
+        /// We keep strong reference to the view instead of the reference
         /// to the texture or buffer because this is more efficient from
         /// performance point of view: this avoids one pair of
         /// AddStrongRef()/ReleaseStrongRef(). The view holds strong reference

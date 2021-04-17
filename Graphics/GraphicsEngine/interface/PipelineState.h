@@ -550,7 +550,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
     /// \param [in] Flags            - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
     ///
-    /// \remarks    This metod is only allowed for pipelines that use implicit resource signature
+    /// \remarks    This method is only allowed for pipelines that use implicit resource signature
     ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
     ///             For pipelines that use explicit resource signatures, use
     ///             IPipelineResourceSignature::BindStaticResources() method.
@@ -567,7 +567,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \remarks    Only static variables (that can be accessed directly through the PSO) are counted.
     ///             Mutable and dynamic variables are accessed through Shader Resource Binding object.
     ///
-    ///             This metod is only allowed for pipelines that use implicit resource signature
+    ///             This method is only allowed for pipelines that use implicit resource signature
     ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
     ///             For pipelines that use explicit resource signatures, use
     ///             IPipelineResourceSignature::GetStaticVariableCount() method.
@@ -585,7 +585,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \remarks    The method does not increment the reference counter
     ///             of the returned interface.
     ///
-    ///             This metod is only allowed for pipelines that use implicit resource signature
+    ///             This method is only allowed for pipelines that use implicit resource signature
     ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
     ///             For pipelines that use explicit resource signatures, use
     ///             IPipelineResourceSignature::GetStaticVariableByName() method.
@@ -606,7 +606,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///             Mutable and dynamic variables are accessed through Shader Resource 
     ///             Binding object.
     ///
-    ///             This metod is only allowed for pipelines that use implicit resource signature
+    ///             This method is only allowed for pipelines that use implicit resource signature
     ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
     ///             For pipelines that use explicit resource signatures, use
     ///             IPipelineResourceSignature::GetStaticVariableByIndex() method.
@@ -623,7 +623,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///                                        the created object, which has the exact same effect as calling 
     ///                                        IPipelineState::InitializeStaticSRBResources().
     ///
-    /// \remarks    This metod is only allowed for pipelines that use implicit resource signature
+    /// \remarks    This method is only allowed for pipelines that use implicit resource signature
     ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
     ///             For pipelines that use explicit resource signatures, use
     ///             IPipelineResourceSignature::CreateShaderResourceBinding() method.
@@ -645,9 +645,9 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///                                      with the shader resource binding object.
     ///
     /// \note   If static resources have already been initialized in the SRB and the method
-    ///         is called again, it will have no effect and a warning messge will be displayed.
+    ///         is called again, it will have no effect and a warning message will be displayed.
     ///
-    /// \remarks    This metod is only allowed for pipelines that use implicit resource signature
+    /// \remarks    This method is only allowed for pipelines that use implicit resource signature
     ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
     ///             For pipelines that use explicit resource signatures, use
     ///             IPipelineResourceSignature::InitializeStaticSRBResources() method.
@@ -661,7 +661,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// objects interchangebly, i.e. SRBs created by one PSO can be committed
     /// when another PSO is bound.
     /// \param [in] pPSO - Pointer to the pipeline state object to check compatibility with.
-    /// \return     true if this PSO is compatbile with pPSO. false otherwise.
+    /// \return     true if this PSO is compatible with pPSO. false otherwise.
     /// \remarks    The function only checks that shader resource layouts are compatible, but 
     ///             does not check if resource types match. For instance, if a pixel shader in one PSO
     ///             uses a texture at slot 0, and a pixel shader in another PSO uses texture array at slot 0,

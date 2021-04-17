@@ -483,9 +483,9 @@ protected:
 
         CopyDescription(Allocator, Desc);
 
-        // Objects will be contructed by the specific implementation
+        // Objects will be constructed by the specific implementation
         static_assert(std::is_trivially_destructible<PipelineResourceAttribsType>::value,
-                      "PipelineResourceAttribsType objects must be constructed to be properly destructed in case an excpetion is thrown");
+                      "PipelineResourceAttribsType objects must be constructed to be properly destructed in case an exception is thrown");
         m_pResourceAttribs = Allocator.Allocate<PipelineResourceAttribsType>(Desc.NumResources);
 
         if (NumStaticResStages > 0)
