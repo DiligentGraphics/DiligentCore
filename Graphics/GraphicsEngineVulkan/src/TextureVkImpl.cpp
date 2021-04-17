@@ -190,12 +190,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         VkMemoryRequirements MemReqs = LogicalDevice.GetImageMemoryRequirements(m_VulkanImage);
 
-        VkMemoryPropertyFlags ImageMemoryFlags = 0;
-        if (m_Desc.Usage == USAGE_STAGING)
-            ImageMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        else
-            ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
+        constexpr auto ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
         m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, ImageMemoryFlags);
         auto AlignedOffset = AlignUp(m_MemoryAllocation.UnalignedOffset, MemReqs.alignment);

@@ -381,23 +381,23 @@ protected:
         CommittedShaderResources&                                 Resources,
         std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature = nullptr) const;
 #else
-    bool DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {return true;}
-    bool DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs)const {return true;}
-    bool DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs)const {return true;}
-    bool DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer)const {return true;}
-    bool DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer)const {return true;}
-    bool DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer)const {return true;}
-    bool DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const {return true;}
+    void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {}
+    void DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs)const {}
+    void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs)const {}
+    void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs, const IBuffer* pAttribsBuffer)const {}
+    void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs, const IBuffer* pAttribsBuffer)const {}
+    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs, const IBuffer* pAttribsBuffer)const {}
+    void DvpVerifyDrawMeshIndirectCountArguments(const DrawMeshIndirectCountAttribs& Attribs, const IBuffer* pAttribsBuffer, const IBuffer* pCountBuff) const {}
 
-    bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {return true;}
-    bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+    void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {}
+    void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {}
 
-    bool DvpVerifyRenderTargets()const {return true;}
-    bool DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const {return true;}
-    bool DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
-    bool DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
-    bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
-    bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
+    void DvpVerifyRenderTargets()const {}
+    void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const {}
+    void DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName)const {}
+    void DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const {}
+    void DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {}
+    void DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {}
     // clang-format on
 #endif
 

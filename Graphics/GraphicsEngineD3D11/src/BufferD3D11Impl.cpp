@@ -125,6 +125,8 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
     }
 
     SetState(RESOURCE_STATE_UNDEFINED);
+    // The memory is always coherent in Direct3D11
+    m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
 }
 
 static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc BuffDesc)
@@ -212,6 +214,8 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*          pRefCounters,
 {
     m_pd3d11Buffer = pd3d11Buffer;
     SetState(InitialState);
+    // The memory is always coherent in Direct3D11
+    m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
 }
 
 BufferD3D11Impl::~BufferD3D11Impl()

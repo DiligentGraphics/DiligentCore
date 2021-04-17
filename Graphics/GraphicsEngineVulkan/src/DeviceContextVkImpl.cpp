@@ -1681,7 +1681,7 @@ void DeviceContextVkImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
 void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
 {
     TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
-    auto*       pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
+    auto* const pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
     const auto& BuffDesc  = pBufferVk->GetDesc();
 
     if (MapType == MAP_READ)
@@ -1758,18 +1758,27 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
 void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
-    auto*       pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
+    auto* const pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
     const auto& BuffDesc  = pBufferVk->GetDesc();
 
     if (MapType == MAP_READ)
     {
-        // We are currently using host-cached memory, so there is no need to invalidated mapped range
+        if (BuffDesc.Usage == USAGE_STAGING || BuffDesc.Usage == USAGE_UNIFIED)
+        {
+            if ((pBufferVk->GetMemoryProperties() & MEMORY_PROPERTY_HOST_COHERENT) == 0)
+            {
+                pBufferVk->InvalidateMappedRange(0, BuffDesc.uiSizeInBytes);
+            }
+        }
     }
     else if (MapType == MAP_WRITE)
     {
         if (BuffDesc.Usage == USAGE_STAGING || BuffDesc.Usage == USAGE_UNIFIED)
         {
-            // We are currently using host-coherent memory, so there is no need to flush mapped range
+            if ((pBufferVk->GetMemoryProperties() & MEMORY_PROPERTY_HOST_COHERENT) == 0)
+            {
+                pBufferVk->FlushMappedRange(0, BuffDesc.uiSizeInBytes);
+            }
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {

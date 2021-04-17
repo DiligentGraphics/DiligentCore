@@ -197,8 +197,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
                 if ((MemTypeInfo.propertyFlags & UnifiedMemoryFlags) == UnifiedMemoryFlags)
                 {
                     IsUnified = true;
-                    if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-                        AdapterInfo.UnifiedMemoryCPUAccess |= CPU_ACCESS_WRITE;
+                    // Host-visible memory is always writable, even if it is not coherent
+                    AdapterInfo.UnifiedMemoryCPUAccess |= CPU_ACCESS_WRITE;
                     if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
                         AdapterInfo.UnifiedMemoryCPUAccess |= CPU_ACCESS_READ;
                 }

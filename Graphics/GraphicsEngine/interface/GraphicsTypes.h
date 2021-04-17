@@ -1144,6 +1144,23 @@ DILIGENT_TYPED_ENUM(PRIMITIVE_TOPOLOGY, Uint8)
 };
 
 
+/// Memory property flags.
+DILIGENT_TYPED_ENUM(MEMORY_PROPERTIES, Uint32)
+{
+    /// Memory properties are unknown.
+    MEMORY_PROPERTY_UNKNOWN       = 0x00,
+
+    /// The device (GPU) memory is coherent with the host (CPU), meaning
+    /// that CPU writes are automatically available to the GPU and vice versa.
+    /// If memory is not coherent, it must be explicitly flushed after
+    /// being modified by the CPU, or invalidated before being read by the CPU.
+    ///
+    /// \sa IBuffer::GetMemoryProperties().
+    MEMORY_PROPERTY_HOST_COHERENT = 0x01
+};
+DEFINE_FLAG_ENUM_OPERATORS(MEMORY_PROPERTIES)
+
+
 /// Defines optimized depth-stencil clear value.
 struct DepthStencilClearValue
 {

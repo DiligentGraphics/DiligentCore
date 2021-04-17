@@ -105,6 +105,14 @@ public:
     /// Implementation of IBufferVk::GetVkDeviceAddress().
     virtual VkDeviceAddress DILIGENT_CALL_TYPE GetVkDeviceAddress() const override final;
 
+    /// Implementation of IBuffer::FlushMappedRange().
+    virtual void DILIGENT_CALL_TYPE FlushMappedRange(Uint32 StartOffset,
+                                                     Uint32 Size) override final;
+
+    /// Implementation of IBuffer::InvalidateMappedRange().
+    virtual void DILIGENT_CALL_TYPE InvalidateMappedRange(Uint32 StartOffset,
+                                                          Uint32 Size) override final;
+
     bool CheckAccessFlags(VkAccessFlags AccessFlags) const
     {
         return (GetAccessFlags() & AccessFlags) == AccessFlags;

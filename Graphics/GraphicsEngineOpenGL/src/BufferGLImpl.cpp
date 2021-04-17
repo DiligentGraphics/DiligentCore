@@ -156,6 +156,8 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     glBufferData(m_BindTarget, DataSize, pData, m_GLUsageHint);
     CHECK_GL_ERROR_AND_THROW("glBufferData() failed");
     GLState.BindBuffer(m_BindTarget, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+
+    m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
 }
 
 static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc BuffDesc, GLuint BufferHandle)
@@ -209,6 +211,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     m_GLUsageHint {UsageToGLUsage(BuffDesc)}
 // clang-format on
 {
+    m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
 }
 
 BufferGLImpl::~BufferGLImpl()

@@ -238,6 +238,57 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
 
     /// Returns the internal buffer state
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
+
+
+    /// Returns the buffer memory properties, see Diligent::MEMORY_PROPERTIES.
+
+    /// The memory properties are only relevant for persistently mapped buffers.
+    /// In particular, if the memory is not coherent, an application must call
+    /// IBuffer::FlushMappedRange() to make writes by the CPU available to the GPU, and
+    /// call IBuffer::InvalidateMappedRange() to make writes by the GPU visible to the CPU.
+    VIRTUAL MEMORY_PROPERTIES METHOD(GetMemoryProperties)(THIS) CONST PURE;
+
+
+    /// Flushes the specified range of non-coherent memory from the host cache to make
+    /// it available to the GPU.
+
+    /// \param [in] StartOffset - Offset, in bytes, from the beginning of the buffer to
+    ///                           the start of the memory range to flush.
+    /// \param [in] Size        - Size, in bytes, of the memory range to flush.
+    ///
+    /// This method should only be used for persistently-mapped buffers that do not
+    /// report MEMORY_PROPERTY_HOST_COHERENT property. After an application modifies
+    /// a mapped memory range on the CPU, it must flush the range to make it available
+    /// to the GPU.
+    ///
+    /// \note   This method must never be used for USAGE_DYNAMIC buffers.
+    ///
+    ///         When a mapped buffer is unmapped it is automatically flushed by
+    ///         the engine if necessary.
+    VIRTUAL void METHOD(FlushMappedRange)(THIS_
+                                          Uint32 StartOffset,
+                                          Uint32 Size) PURE;
+
+
+    /// Invalidates the specified range of non-coherent memory modified by the GPU to make
+    /// it visible to the CPU.
+
+    /// \param [in] StartOffset - Offset, in bytes, from the beginning of the buffer to
+    ///                           the start of the memory range to invalidate.
+    /// \param [in] Size        - Size, in bytes, of the memory range to invalidate.
+    ///
+    /// This method should only be used for persistently-mapped buffers that do not
+    /// report MEMORY_PROPERTY_HOST_COHERENT property. After an application modifies
+    /// a mapped memory range on the GPU, it must invalidate the range to make it visible
+    /// to the CPU.
+    ///
+    /// \note   This method must never be used for USAGE_DYNAMIC buffers.
+    ///
+    ///         When a mapped buffer is unmapped it is automatically invalidated by
+    ///         the engine if necessary.
+    VIRTUAL void METHOD(InvalidateMappedRange)(THIS_
+                                               Uint32 StartOffset,
+                                               Uint32 Size) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -249,11 +300,14 @@ DILIGENT_END_INTERFACE
 
 #    define IBuffer_GetDesc(This) (const struct BufferDesc*)IDeviceObject_GetDesc(This)
 
-#    define IBuffer_CreateView(This, ...)     CALL_IFACE_METHOD(Buffer, CreateView,      This, __VA_ARGS__)
-#    define IBuffer_GetDefaultView(This, ...) CALL_IFACE_METHOD(Buffer, GetDefaultView,  This, __VA_ARGS__)
-#    define IBuffer_GetNativeHandle(This)     CALL_IFACE_METHOD(Buffer, GetNativeHandle, This)
-#    define IBuffer_SetState(This, ...)       CALL_IFACE_METHOD(Buffer, SetState,        This, __VA_ARGS__)
-#    define IBuffer_GetState(This)            CALL_IFACE_METHOD(Buffer, GetState,        This)
+#    define IBuffer_CreateView(This, ...)            CALL_IFACE_METHOD(Buffer, CreateView,            This, __VA_ARGS__)
+#    define IBuffer_GetDefaultView(This, ...)        CALL_IFACE_METHOD(Buffer, GetDefaultView,        This, __VA_ARGS__)
+#    define IBuffer_GetNativeHandle(This)            CALL_IFACE_METHOD(Buffer, GetNativeHandle,       This)
+#    define IBuffer_SetState(This, ...)              CALL_IFACE_METHOD(Buffer, SetState,              This, __VA_ARGS__)
+#    define IBuffer_GetState(This)                   CALL_IFACE_METHOD(Buffer, GetState,              This)
+#    define IBuffer_GetMemoryProperties(This)        CALL_IFACE_METHOD(Buffer, GetMemoryProperties,   This)
+#    define IBuffer_FlushMappedRange(This, ...)      CALL_IFACE_METHOD(Buffer, FlushMappedRange,      This, __VA_ARGS__)
+#    define IBuffer_InvalidateMappedRange(This, ...) CALL_IFACE_METHOD(Buffer, InvalidateMappedRange, This, __VA_ARGS__)
 
 // clang-format on
 

@@ -230,6 +230,8 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
         }
     }
+
+    m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
 }
 
 static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resource* pd3d12Buffer)
@@ -302,7 +304,10 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         m_CBVDescriptorAllocation = pRenderDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         CreateCBV(m_CBVDescriptorAllocation.GetCpuHandle());
     }
+
+    m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
 }
+
 BufferD3D12Impl::~BufferD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU

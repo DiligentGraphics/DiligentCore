@@ -205,6 +205,8 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             VERIFY_EXPR(ResourceStateFlagsToVkAccessFlags(State) == AccessFlags);
         }
 #endif
+        // Dynamic buffer memory is always host-coherent
+        m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
     }
     else
     {
@@ -217,7 +219,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
         VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
 
-        uint32_t MemoryTypeIndex = VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex;
+        static constexpr auto InvalidMemoryTypeIndex = VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex;
+
+        uint32_t MemoryTypeIndex = InvalidMemoryTypeIndex;
         {
             VkMemoryPropertyFlags vkMemoryFlags = 0;
             switch (m_Desc.Usage)
@@ -228,32 +232,41 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                     vkMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
                     break;
 
-                case USAGE_STAGING:
-                    vkMemoryFlags =
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                        (((m_Desc.CPUAccessFlags & CPU_ACCESS_READ) != 0) ? VK_MEMORY_PROPERTY_HOST_CACHED_BIT : 0) |
-                        (((m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE) != 0) ? VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : 0);
-                    break;
-
                 case USAGE_UNIFIED:
-                    vkMemoryFlags =
-                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                        (((m_Desc.CPUAccessFlags & CPU_ACCESS_READ) != 0) ? VK_MEMORY_PROPERTY_HOST_CACHED_BIT : 0) |
-                        (((m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE) != 0) ? VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : 0);
+                case USAGE_STAGING:
+                    vkMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+                    if (m_Desc.Usage == USAGE_UNIFIED)
+                        vkMemoryFlags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+                    if ((m_Desc.CPUAccessFlags & CPU_ACCESS_READ) != 0)
+                        vkMemoryFlags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+
+                    // Try to find coherent memory first
+                    vkMemoryFlags |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+                    MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, vkMemoryFlags);
+                    if (MemoryTypeIndex == InvalidMemoryTypeIndex)
+                    {
+                        // Use non-coherent memory
+                        vkMemoryFlags &= ~VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+                    }
                     break;
 
                 default:
                     UNEXPECTED("Unexpected usage");
             }
-            MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, vkMemoryFlags);
+            if (MemoryTypeIndex == InvalidMemoryTypeIndex)
+                MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, vkMemoryFlags);
+
+            if (vkMemoryFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+                m_MemoryProperties |= MEMORY_PROPERTY_HOST_COHERENT;
         }
 
         VkMemoryAllocateFlags AllocateFlags = 0;
         if (VkBuffCI.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
             AllocateFlags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 
-        if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
+        if (MemoryTypeIndex == InvalidMemoryTypeIndex)
             LOG_ERROR_AND_THROW("Failed to find suitable memory type for buffer '", m_Desc.Name, '\'');
 
         VkDeviceSize RequiredAlignment = MemReqs.alignment;
@@ -541,6 +554,35 @@ VkDeviceAddress BufferVkImpl::GetVkDeviceAddress() const
         return 0;
     }
 }
+
+void BufferVkImpl::FlushMappedRange(Uint32 StartOffset, Uint32 Size)
+{
+    DvpVerifyFlushMappedRangeArguments(StartOffset, Size);
+
+    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
+    const auto& DeviceLimits  = GetDevice()->GetPhysicalDevice().GetProperties().limits;
+
+    VkMappedMemoryRange MappedRange{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
+    MappedRange.memory = m_MemoryAllocation.Page->GetVkMemory();
+    MappedRange.offset = AlignDown(m_BufferMemoryAlignedOffset + StartOffset, DeviceLimits.nonCoherentAtomSize);
+    MappedRange.size   = AlignUp(m_BufferMemoryAlignedOffset + StartOffset + Size, DeviceLimits.nonCoherentAtomSize) - MappedRange.offset;
+    LogicalDevice.FlushMappedMemoryRanges(1, &MappedRange);
+}
+
+void BufferVkImpl::InvalidateMappedRange(Uint32 StartOffset, Uint32 Size)
+{
+    DvpVerifyInvalidateMappedRangeArguments(StartOffset, Size);
+
+    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
+    const auto& DeviceLimits  = GetDevice()->GetPhysicalDevice().GetProperties().limits;
+
+    VkMappedMemoryRange MappedRange{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
+    MappedRange.memory = m_MemoryAllocation.Page->GetVkMemory();
+    MappedRange.offset = AlignDown(m_BufferMemoryAlignedOffset + StartOffset, DeviceLimits.nonCoherentAtomSize);
+    MappedRange.size   = AlignUp(m_BufferMemoryAlignedOffset + StartOffset + Size, DeviceLimits.nonCoherentAtomSize) - MappedRange.offset;
+    LogicalDevice.InvalidateMappedMemoryRanges(1, &MappedRange);
+}
+
 
 #ifdef DILIGENT_DEVELOPMENT
 void BufferVkImpl::DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx) const

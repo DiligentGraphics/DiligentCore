@@ -1,5 +1,8 @@
 ## Current Progress
 
+* Updated API to allow explicitly flushing/invlidating mapped buffer memory range :
+  added `MEMORY_PROPERTIES` enum, `IBuffer::GetMemoryProperties()`, `IBuffer::FlushMappedRange()`,
+  and `IBuffer::InvalidateMappedRange()` methods (API240092)
 * Added `IDeviceContext::SetUserData()` and `IDeviceContext::GetUserData()` methods (API240091)
 * Added `SHADER_VARIABLE_FLAGS` enum and `SHADER_VARIABLE_FLAGS Flags` member to ShaderResourceVariableDesc struct (API240090)
 * Reworked validation options (API240089)

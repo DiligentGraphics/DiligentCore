@@ -194,6 +194,24 @@ public:
         return this->m_State;
     }
 
+    virtual MEMORY_PROPERTIES DILIGENT_CALL_TYPE GetMemoryProperties() const override final
+    {
+        return this->m_MemoryProperties;
+    }
+
+    virtual void DILIGENT_CALL_TYPE FlushMappedRange(Uint32 StartOffset,
+                                                     Uint32 Size) override
+    {
+        DvpVerifyFlushMappedRangeArguments(StartOffset, Size);
+    }
+
+    virtual void DILIGENT_CALL_TYPE InvalidateMappedRange(Uint32 StartOffset,
+                                                          Uint32 Size) override
+    {
+        DvpVerifyInvalidateMappedRangeArguments(StartOffset, Size);
+    }
+
+
     bool IsInKnownState() const
     {
         return this->m_State != RESOURCE_STATE_UNKNOWN;
@@ -210,11 +228,34 @@ protected:
     /// Pure virtual function that creates buffer view for the specific engine implementation.
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) = 0;
 
+    void DvpVerifyFlushMappedRangeArguments(Uint32 StartOffset,
+                                            Uint32 Size) const
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        DEV_CHECK_ERR((GetMemoryProperties() & MEMORY_PROPERTY_HOST_COHERENT) == 0, "Coherent memory does not need to be flushed.");
+        DEV_CHECK_ERR(this->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffer mapped memory must never be flushed.");
+        DEV_CHECK_ERR(StartOffset + Size <= this->GetDesc().uiSizeInBytes, "Memory range is out of buffer bounds.");
+#endif
+    }
+
+    void DvpVerifyInvalidateMappedRangeArguments(Uint32 StartOffset,
+                                                 Uint32 Size) const
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        DEV_CHECK_ERR((GetMemoryProperties() & MEMORY_PROPERTY_HOST_COHERENT) == 0, "Coherent memory does not need to be invalidated.");
+        DEV_CHECK_ERR(this->GetDesc().Usage != USAGE_DYNAMIC, "Dynamic buffer mapped memory must never be invalidated.");
+        DEV_CHECK_ERR(StartOffset + Size <= this->GetDesc().uiSizeInBytes, "Memory range is out of buffer bounds.");
+#endif
+    }
+
+
 #ifdef DILIGENT_DEBUG
     TBuffViewObjAllocator& m_dbgBuffViewAllocator;
 #endif
 
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
+
+    MEMORY_PROPERTIES m_MemoryProperties = MEMORY_PROPERTY_UNKNOWN;
 
     /// Default UAV addressing the entire buffer
     std::unique_ptr<BufferViewImplType, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>> m_pDefaultUAV;
