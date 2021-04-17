@@ -45,9 +45,9 @@ void ClearRenderTargetReferenceD3D12(ISwapChain* pSwapChain, const float ClearCo
     auto pCmdList = pEnv->CreateGraphicsCommandList();
     pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-    auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
+    auto RTVDescriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
 
-    pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
+    pCmdList->ClearRenderTargetView(RTVDescriptorHandle, ClearColor, 0, nullptr);
 
     pCmdList->Close();
     ID3D12CommandList* pCmdLits[] = {pCmdList};

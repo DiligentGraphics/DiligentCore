@@ -79,7 +79,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     // (the null character is not counted as part of the string length).
     // Not specifying lengths causes shader compilation errors on Android
     std::array<const char*, 1> ShaderStrings = {};
-    std::array<GLint, 1>       Lenghts       = {};
+    std::array<GLint, 1>       Lengths       = {};
 
     std::string              GLSLSourceString;
     RefCntAutoPtr<IDataBlob> pSourceFileData;
@@ -93,7 +93,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         // Read the source file directly and use it as is
         size_t SourceLen = 0;
         ShaderStrings[0] = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceFileData, SourceLen);
-        Lenghts[0]       = static_cast<GLint>(SourceLen);
+        Lengths[0]       = static_cast<GLint>(SourceLen);
     }
     else
     {
@@ -101,12 +101,12 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         // platform definitions, user-provided shader macros, etc.
         GLSLSourceString = BuildGLSLSourceString(ShaderCI, deviceCaps, TargetGLSLCompiler::driver);
         ShaderStrings[0] = GLSLSourceString.c_str();
-        Lenghts[0]       = static_cast<GLint>(GLSLSourceString.length());
+        Lengths[0]       = static_cast<GLint>(GLSLSourceString.length());
     }
 
 
     // Provide source strings (the strings will be saved in internal OpenGL memory)
-    glShaderSource(m_GLShaderObj, static_cast<GLsizei>(ShaderStrings.size()), ShaderStrings.data(), Lenghts.data());
+    glShaderSource(m_GLShaderObj, static_cast<GLsizei>(ShaderStrings.size()), ShaderStrings.data(), Lengths.data());
     // When the shader is compiled, it will be compiled as if all of the given strings were concatenated end-to-end.
     glCompileShader(m_GLShaderObj);
     GLint compiled = GL_FALSE;

@@ -640,7 +640,7 @@ void DeviceContextGLImpl::DvpValidateCommittedShaderResources()
 
 void DeviceContextGLImpl::BindProgramResources()
 {
-    //if (m_CommitedResourcesTentativeBarriers != 0)
+    //if (m_CommittedResourcesTentativeBarriers != 0)
     //    LOG_INFO_MESSAGE("Not all tentative resource barriers have been executed since the last call to CommitShaderResources(). Did you forget to call Draw()/DispatchCompute() ?");
 
     // Only commit those stale SRBs that are used by current PSO
@@ -651,7 +651,7 @@ void DeviceContextGLImpl::BindProgramResources()
     VERIFY_EXPR(m_BoundWritableTextures.empty());
     VERIFY_EXPR(m_BoundWritableBuffers.empty());
 
-    m_CommitedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
+    m_CommittedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
 
     while (StaleSRBs != 0)
     {
@@ -676,7 +676,7 @@ void DeviceContextGLImpl::BindProgramResources()
     {
         constexpr MEMORY_BARRIER TextureMemBarriers = MEMORY_BARRIER_ALL_TEXTURE_BARRIERS;
 
-        m_CommitedResourcesTentativeBarriers |= TextureMemBarriers;
+        m_CommittedResourcesTentativeBarriers |= TextureMemBarriers;
 
         // Set new required barriers for the time when texture is used next time
         pWritableTex->SetPendingMemoryBarriers(TextureMemBarriers);
@@ -687,7 +687,7 @@ void DeviceContextGLImpl::BindProgramResources()
     {
         constexpr MEMORY_BARRIER BufferMemoryBarriers = MEMORY_BARRIER_ALL_BUFFER_BARRIERS;
 
-        m_CommitedResourcesTentativeBarriers |= BufferMemoryBarriers;
+        m_CommittedResourcesTentativeBarriers |= BufferMemoryBarriers;
         // Set new required barriers for the time when buffer is used next time
         pWritableBuff->SetPendingMemoryBarriers(BufferMemoryBarriers);
     }
@@ -769,10 +769,10 @@ void DeviceContextGLImpl::PostDraw()
 {
     // IMPORTANT: new pending memory barriers in the context must be set
     // after all previous barriers have been executed.
-    // m_CommitedResourcesTentativeBarriers contains memory barriers that will be required
+    // m_CommittedResourcesTentativeBarriers contains memory barriers that will be required
     // AFTER the actual draw/dispatch command is executed.
-    m_ContextState.SetPendingMemoryBarriers(m_CommitedResourcesTentativeBarriers);
-    m_CommitedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
+    m_ContextState.SetPendingMemoryBarriers(m_CommittedResourcesTentativeBarriers);
+    m_CommittedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
 }
 
 void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)

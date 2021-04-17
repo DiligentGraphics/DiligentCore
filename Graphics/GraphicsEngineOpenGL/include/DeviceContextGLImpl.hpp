@@ -315,7 +315,7 @@ private:
         }
     } m_BindInfo;
 
-    MEMORY_BARRIER m_CommitedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
+    MEMORY_BARRIER m_CommittedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
 
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;
     std::vector<class BufferGLImpl*>  m_BoundWritableBuffers;

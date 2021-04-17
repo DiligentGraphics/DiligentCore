@@ -88,12 +88,12 @@ struct RTContext
     {
         pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-        auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
+        auto RTVDescriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
 
-        pCmdList->OMSetRenderTargets(1, &RTVDesriptorHandle, FALSE, nullptr);
+        pCmdList->OMSetRenderTargets(1, &RTVDescriptorHandle, FALSE, nullptr);
 
         float ClearColor[] = {0, 0, 0, 0};
-        pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
+        pCmdList->ClearRenderTargetView(RTVDescriptorHandle, ClearColor, 0, nullptr);
 
         pCmdList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
     }

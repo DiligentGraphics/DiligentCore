@@ -265,8 +265,8 @@ NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
 
     static std::array<NativePixelAttribs, TEX_FORMAT_NUM_FORMATS> FmtToGLPixelFmt;
 
-    static bool bAttribsMapIntialized = false;
-    if (!bAttribsMapIntialized)
+    static bool bAttribsMapInitialized = false;
+    if (!bAttribsMapInitialized)
     {
         // clang-format off
         // http://www.opengl.org/wiki/Image_Format
@@ -393,7 +393,7 @@ NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
         FmtToGLPixelFmt[TEX_FORMAT_BC7_UNORM]              = NativePixelAttribs(GL_RGBA, 0,  True);
         FmtToGLPixelFmt[TEX_FORMAT_BC7_UNORM_SRGB]         = NativePixelAttribs(GL_RGBA, 0,  True);
         // clang-format on
-        bAttribsMapIntialized = true;
+        bAttribsMapInitialized = true;
     }
 
     if (TexFormat > TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS)

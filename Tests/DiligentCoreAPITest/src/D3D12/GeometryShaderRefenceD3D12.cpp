@@ -113,12 +113,12 @@ void GeometryShaderReferenceD3D12(ISwapChain* pSwapChain)
     D3D12_RECT Rect = {0, 0, static_cast<LONG>(SCDesc.Width), static_cast<LONG>(SCDesc.Height)};
     pCmdList->RSSetScissorRects(1, &Rect);
 
-    auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
+    auto RTVDescriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
 
-    pCmdList->OMSetRenderTargets(1, &RTVDesriptorHandle, FALSE, nullptr);
+    pCmdList->OMSetRenderTargets(1, &RTVDescriptorHandle, FALSE, nullptr);
 
     float ClearColor[] = {0, 0, 0, 0};
-    pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
+    pCmdList->ClearRenderTargetView(RTVDescriptorHandle, ClearColor, 0, nullptr);
 
     pCmdList->SetPipelineState(pd3d12PSO);
     pCmdList->SetGraphicsRootSignature(pd3d12RootSignature);
