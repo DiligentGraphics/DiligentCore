@@ -422,9 +422,9 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     Shader.setPreamble(Defines.c_str());
 
     const char* ShaderStrings[]       = {SourceCode};
-    const int   ShaderStringLenghts[] = {static_cast<int>(SourceCodeLen)};
+    const int   ShaderStringLengths[] = {static_cast<int>(SourceCodeLen)};
     const char* Names[]               = {ShaderCI.FilePath != nullptr ? ShaderCI.FilePath : ""};
-    Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLenghts, Names, 1);
+    Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLengths, Names, 1);
 
     IncluderImpl Includer{ShaderCI.pShaderSourceStreamFactory};
 
@@ -488,8 +488,8 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
     const char* ShaderStrings[] = {Attribs.ShaderSource};
-    int         Lenghts[]       = {Attribs.SourceCodeLen};
-    Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
+    int         Lengths[]       = {Attribs.SourceCodeLen};
+    Shader.setStringsWithLengths(ShaderStrings, Lengths, 1);
 
     std::string Defines{"#define GLSLANG\n\n"};
     if (Attribs.Macros != nullptr)

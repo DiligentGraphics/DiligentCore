@@ -135,11 +135,11 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClear
     auto pCmdList = pEnv->CreateGraphicsCommandList();
     pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-    auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
-    pCmdList->OMSetRenderTargets(1, &RTVDesriptorHandle, FALSE, nullptr);
+    auto RTVDescriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
+    pCmdList->OMSetRenderTargets(1, &RTVDescriptorHandle, FALSE, nullptr);
 
     float Zero[] = {0, 0, 0, 0};
-    pCmdList->ClearRenderTargetView(RTVDesriptorHandle, pClearColor != nullptr ? pClearColor : Zero, 0, nullptr);
+    pCmdList->ClearRenderTargetView(RTVDescriptorHandle, pClearColor != nullptr ? pClearColor : Zero, 0, nullptr);
 
     TriRenderer.Draw(pCmdList, SCDesc.Width, SCDesc.Height);
 

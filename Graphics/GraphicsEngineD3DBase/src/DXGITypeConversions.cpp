@@ -275,9 +275,9 @@ DXGI_FORMAT CorrectDXGIFormat(DXGI_FORMAT DXGIFormat, Uint32 BindFlags)
 
 DXGI_FORMAT TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
 {
-    static Bool        bFormatMapIntialized                    = false;
+    static Bool        bFormatMapInitialized                   = false;
     static DXGI_FORMAT FmtToDXGIFmtMap[TEX_FORMAT_NUM_FORMATS] = {DXGI_FORMAT_UNKNOWN};
-    if (!bFormatMapIntialized)
+    if (!bFormatMapInitialized)
     {
         // clang-format off
         FmtToDXGIFmtMap[TEX_FORMAT_UNKNOWN]                = DXGI_FORMAT_UNKNOWN;
@@ -402,7 +402,7 @@ DXGI_FORMAT TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
         FmtToDXGIFmtMap[TEX_FORMAT_BC7_UNORM_SRGB]         = DXGI_FORMAT_BC7_UNORM_SRGB;
         // clang-format on
 
-        bFormatMapIntialized = true;
+        bFormatMapInitialized = true;
     }
 
     if (TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS)

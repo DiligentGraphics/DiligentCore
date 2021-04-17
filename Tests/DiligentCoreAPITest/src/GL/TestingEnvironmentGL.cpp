@@ -65,10 +65,10 @@ GLuint TestingEnvironmentGL::CompileGLShader(const std::string& Source, GLenum S
     GLuint glShader = glCreateShader(ShaderType);
 
     const char* ShaderStrings[] = {Source.c_str()};
-    GLint       Lenghts[]       = {static_cast<GLint>(Source.length())};
+    GLint       Lengths[]       = {static_cast<GLint>(Source.length())};
 
     // Provide source strings (the strings will be saved in internal OpenGL memory)
-    glShaderSource(glShader, _countof(ShaderStrings), ShaderStrings, Lenghts);
+    glShaderSource(glShader, _countof(ShaderStrings), ShaderStrings, Lengths);
     // When the shader is compiled, it will be compiled as if all of the given strings were concatenated end-to-end.
     glCompileShader(glShader);
     GLint compiled = GL_FALSE;
