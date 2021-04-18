@@ -1,0 +1,124 @@
+name: Linux
+
+on: [push, pull_request]
+
+jobs:
+  build-gcc-9:
+    strategy:
+      matrix:
+        config: [Debug, Release]
+
+    runs-on: ubuntu-latest
+    name: Linux x64, GCC 9, ${{ matrix.config }}
+
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Format validation
+      shell: bash
+      run: |
+        cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
+        ./validate_format_linux.sh
+
+    - name: Configure dependencies
+      if: success()
+      run: |
+        sudo apt-get install build-essential pkg-config libx11-dev libxcursor-dev \
+          libxinerama-dev libgl1-mesa-dev libglu-dev libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev yasm
+
+    - name: Configure CMake
+      if: success()
+      env:
+        CC: gcc-9
+        CXX: g++-9
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: |
+        mkdir build
+        cd ./build
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install ..
+
+    - name: Build
+      if: success()
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . --config ${{ matrix.config }} --target install
+
+    - name: DiligentCoreTest
+      if: success()
+      shell: bash
+      run: ${{runner.workspace}}/build/Tests/DiligentCoreTest/DiligentCoreTest
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      if: ${{ success() && matrix.config == 'Release' }}
+      with:
+        name: DiligentCore-Linux-x64-GCC9-${{ matrix.config }}
+        path: |
+          ${{runner.workspace}}/build/install/
+          !${{runner.workspace}}/build/install/**/*.a
+        retention-days: 90
+
+
+  build-clang-9:
+    strategy:
+      matrix:
+        config: [Debug, Release]
+
+    runs-on: ubuntu-latest
+    name: Linux x64, Clang 9, ${{ matrix.config }}
+
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Format validation
+      shell: bash
+      run: |
+        cd $GITHUB_WORKSPACE/BuildTools/FormatValidation
+        ./validate_format_linux.sh
+
+    - name: Configure dependencies
+      if: success()
+      run: |
+        sudo apt-get install build-essential pkg-config libx11-dev libxcursor-dev \
+          libxinerama-dev libgl1-mesa-dev libglu-dev libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev yasm
+
+    - name: Configure CMake
+      if: success()
+      env:
+        CC: clang-9
+        CXX: clang++-9
+      shell: bash
+      working-directory: ${{runner.workspace}}
+      run: |
+        mkdir build
+        cd ./build
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install ..
+
+    - name: Build
+      if: success()
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . --config ${{ matrix.config }} --target install
+
+    - name: DiligentCoreTest
+      if: success()
+      shell: bash
+      run: ${{runner.workspace}}/build/Tests/DiligentCoreTest/DiligentCoreTest
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      if: ${{ success() && matrix.config == 'Release' }}
+      with:
+        name: DiligentCore-Linux-x64-Clang9-${{ matrix.config }}
+        path: |
+          ${{runner.workspace}}/build/install/
+          !${{runner.workspace}}/build/install/**/*.a
+        retention-days: 90
+

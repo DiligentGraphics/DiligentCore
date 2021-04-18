@@ -25,18 +25,6 @@ matrix:
     compiler: gcc
     env: 
       - CONFIG=Debug
-  - os: osx
-    osx_image: xcode12.2
-    compiler: clang
-    env: 
-      - CONFIG=Debug
-      - IOS=false
-  - os: osx
-    osx_image: xcode12.2
-    compiler: clang
-    env: 
-      - CONFIG=Debug
-      - IOS=true
   - os: linux
     compiler: gcc
     env:
