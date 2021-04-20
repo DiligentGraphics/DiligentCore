@@ -52,6 +52,7 @@
 #include "PipelineLayoutVk.hpp"
 #include "VulkanUtilities/VulkanCommandBufferPool.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
+#include "VulkanUtilities/VulkanSyncObjectManager.hpp"
 #include "VulkanUploadHeap.hpp"
 #include "VulkanDynamicHeap.hpp"
 #include "ResourceReleaseQueue.hpp"
@@ -73,12 +74,15 @@ public:
                         RenderDeviceVkImpl*                   pDevice,
                         bool                                  bIsDeferred,
                         const EngineVkCreateInfo&             EngineCI,
-                        Uint32                                ContextId,
-                        Uint32                                CommandQueueId,
+                        ContextIndex                          ContextId,
+                        CommandQueueIndex                     CommandQueueId,
                         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper);
     ~DeviceContextVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextVk, TDeviceContextBase)
+
+    /// Implementation of IDeviceContext::Begin() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE Begin(Uint32 CommandQueueId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;
@@ -101,7 +105,7 @@ public:
     virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                      Uint32                         NumBuffersSet,
                                                      IBuffer**                      ppBuffers,
-                                                     Uint32*                        pOffsets,
+                                                     const Uint32*                  pOffsets,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                      SET_VERTEX_BUFFERS_FLAGS       Flags) override final;
 
@@ -233,8 +237,8 @@ public:
     /// Implementation of IDeviceContext::SignalFence() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE SignalFence(IFence* pFence, Uint64 Value) override final;
 
-    /// Implementation of IDeviceContext::WaitForFence() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext) override final;
+    /// Implementation of IDeviceContext::DeviceWaitForFence() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE DeviceWaitForFence(IFence* pFence, Uint64 Value) override final;
 
     /// Implementation of IDeviceContext::WaitForIdle() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE WaitForIdle() override final;
@@ -304,6 +308,8 @@ public:
     /// Implementation of IDeviceContextVk::BufferMemoryBarrier().
     virtual void DILIGENT_CALL_TYPE BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags) override final;
 
+    /// Implementation of IDeviceContextVk::GetVkCommandBuffer().
+    virtual VkCommandBuffer DILIGENT_CALL_TYPE GetVkCommandBuffer() override final;
 
     // Transitions BLAS state from OldState to NewState, and optionally updates internal state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal BLAS state is used as old state.
@@ -322,14 +328,14 @@ public:
     void AddWaitSemaphore(ManagedSemaphore* pWaitSemaphore, VkPipelineStageFlags WaitDstStageMask)
     {
         VERIFY_EXPR(pWaitSemaphore != nullptr);
-        m_WaitSemaphores.emplace_back(pWaitSemaphore);
+        m_WaitManagedSemaphores.emplace_back(pWaitSemaphore);
         m_VkWaitSemaphores.push_back(pWaitSemaphore->Get());
         m_WaitDstStageMasks.push_back(WaitDstStageMask);
     }
     void AddSignalSemaphore(ManagedSemaphore* pSignalSemaphore)
     {
         VERIFY_EXPR(pSignalSemaphore != nullptr);
-        m_SignalSemaphores.emplace_back(pSignalSemaphore);
+        m_SignalManagedSemaphores.emplace_back(pSignalSemaphore);
         m_VkSignalSemaphores.push_back(pSignalSemaphore->Get());
     }
 
@@ -357,8 +363,6 @@ public:
 
     virtual void DILIGENT_CALL_TYPE GenerateMips(ITextureView* pTexView) override final;
 
-    Uint32 GetContextId() const { return m_ContextId; }
-
     size_t GetNumCommandsInCtx() const { return m_State.NumCommands; }
 
     __forceinline VulkanUtilities::VulkanCommandBuffer& GetCommandBuffer()
@@ -370,7 +374,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE FinishFrame() override final;
 
-    virtual void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) override final;
+    virtual void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers) override final;
 
     virtual void DILIGENT_CALL_TYPE ResolveTextureSubresource(ITexture*                               pSrcTexture,
                                                               ITexture*                               pDstTexture,
@@ -424,18 +428,20 @@ private:
 
     __forceinline void EnsureVkCmdBuffer()
     {
+        VERIFY_EXPR(m_CmdPool != nullptr);
+
         // Make sure that the number of commands in the context is at least one,
         // so that the context cannot be disposed by Flush()
         m_State.NumCommands = m_State.NumCommands != 0 ? m_State.NumCommands : 1;
         if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
         {
             auto vkCmdBuff = m_CmdPool->GetCommandBuffer();
-            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff);
+            m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff, m_CmdPool->GetSupportedStagesMask());
         }
     }
 
-    inline void DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
-    inline void DisposeCurrentCmdBuffer(Uint32 CmdQueue, Uint64 FenceValue);
+    inline void DisposeVkCmdBuffer(CommandQueueIndex CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
+    inline void DisposeCurrentCmdBuffer(CommandQueueIndex CmdQueue, Uint64 FenceValue);
 
     void CopyBufferToTexture(VkBuffer                       vkSrcBuffer,
                              Uint32                         SrcBufferOffset,
@@ -464,6 +470,8 @@ private:
     void DvpLogRenderPass_PSOMismatch();
 
     void CreateASCompactedSizeQueryPool();
+
+    void InitializeForQueue(CommandQueueIndex CommandQueueId);
 
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
@@ -537,15 +545,16 @@ private:
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
     // Semaphores are not owned by the command context
-    std::vector<RefCntAutoPtr<ManagedSemaphore>> m_WaitSemaphores;
-    std::vector<VkPipelineStageFlags>            m_WaitDstStageMasks;
-    std::vector<RefCntAutoPtr<ManagedSemaphore>> m_SignalSemaphores;
+    std::vector<RefCntAutoPtr<ManagedSemaphore>>          m_WaitManagedSemaphores;
+    std::vector<RefCntAutoPtr<ManagedSemaphore>>          m_SignalManagedSemaphores;
+    std::vector<VulkanUtilities::VulkanRecycledSemaphore> m_WaitRecycledSemaphores;
 
-    std::vector<VkSemaphore> m_VkWaitSemaphores;
-    std::vector<VkSemaphore> m_VkSignalSemaphores;
+    std::vector<VkSemaphore>          m_VkWaitSemaphores;
+    std::vector<VkSemaphore>          m_VkSignalSemaphores;
+    std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
 
     // List of fences to signal next time the command context is flushed
-    std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>> m_PendingFences;
+    std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>> m_SignalFences;
 
     std::unordered_map<BufferVkImpl*, VulkanUploadAllocation> m_UploadAllocations;
 

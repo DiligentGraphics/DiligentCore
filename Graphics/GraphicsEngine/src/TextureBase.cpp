@@ -148,6 +148,17 @@ void ValidateTextureDesc(const TextureDesc& Desc) noexcept(false)
     {
         LOG_TEXTURE_ERROR_AND_THROW("USAGE_UNIFIED textures are currently not supported.");
     }
+
+    if ((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) != 0)
+    {
+        DEV_CHECK_ERR(PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1,
+                      "RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS specified, but CommandQueueMask contains just 1 queue index");
+    }
+
+    if ((Desc.CommandQueueMask & (Uint64(1) << Desc.InitialCommandQueueId)) == 0)
+    {
+        LOG_TEXTURE_ERROR_AND_THROW("CommandQueueMask (0x", std::hex, Desc.CommandQueueMask, ") must contains bit at index InitialCommandQueueId (", Uint32{Desc.InitialCommandQueueId}, ")");
+    }
 }
 
 

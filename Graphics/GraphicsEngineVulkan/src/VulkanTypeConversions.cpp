@@ -1170,7 +1170,7 @@ VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[])
 }
 
 
-static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE StateFlag, VkPipelineStageFlags ShaderStages)
+static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE StateFlag)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
@@ -1179,13 +1179,13 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
         // clang-format off
         case RESOURCE_STATE_UNDEFINED:         return 0;
         case RESOURCE_STATE_VERTEX_BUFFER:     return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-        case RESOURCE_STATE_CONSTANT_BUFFER:   return ShaderStages;
+        case RESOURCE_STATE_CONSTANT_BUFFER:   return VulkanUtilities::AllShaderStagesVk;
         case RESOURCE_STATE_INDEX_BUFFER:      return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
         case RESOURCE_STATE_RENDER_TARGET:     return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        case RESOURCE_STATE_UNORDERED_ACCESS:  return ShaderStages;
+        case RESOURCE_STATE_UNORDERED_ACCESS:  return VulkanUtilities::AllShaderStagesVk;
         case RESOURCE_STATE_DEPTH_WRITE:       return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         case RESOURCE_STATE_DEPTH_READ:        return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-        case RESOURCE_STATE_SHADER_RESOURCE:   return ShaderStages;
+        case RESOURCE_STATE_SHADER_RESOURCE:   return VulkanUtilities::AllShaderStagesVk;
         case RESOURCE_STATE_STREAM_OUT:        return 0;
         case RESOURCE_STATE_INDIRECT_ARGUMENT: return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
         case RESOURCE_STATE_COPY_DEST:         return VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -1205,7 +1205,7 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
     }
 }
 
-VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, VkPipelineStageFlags vkShaderStages)
+VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags)
 {
     VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
 
@@ -1213,7 +1213,7 @@ VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE Sta
     while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
         auto StateBit = ExtractLSB(StateFlags);
-        vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit, vkShaderStages);
+        vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit);
     }
     return vkPipelineStages;
 }
@@ -1803,6 +1803,58 @@ WAVE_FEATURE VkSubgroupFeatureFlagsToWaveFeatures(VkSubgroupFeatureFlags Feature
         }
     }
     return Result;
+}
+
+ADAPTER_TYPE VkPhysicalDeviceTypeToAdapterType(VkPhysicalDeviceType DeviceType)
+{
+    switch (DeviceType)
+    {
+        // clang-format off
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return ADAPTER_TYPE_INTEGRATED;
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:   return ADAPTER_TYPE_DISCRETE;
+        case VK_PHYSICAL_DEVICE_TYPE_CPU:            return ADAPTER_TYPE_SOFTWARE;
+        case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+        default:                                     return ADAPTER_TYPE_UNKNOWN;
+            // clang-format on
+    }
+}
+
+CONTEXT_TYPE VkQueueFlagsToContextType(VkQueueFlags QueueFlags)
+{
+    static_assert(CONTEXT_TYPE_LAST == 7, "Please update the code below to handle the new context type");
+
+    CONTEXT_TYPE Result = CONTEXT_TYPE_UNKNOWN;
+
+    if (QueueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
+        Result |= CONTEXT_TYPE_SPARSE_BINDING;
+
+    if ((QueueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+        return Result | CONTEXT_TYPE_GRAPHICS;
+
+    if ((QueueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
+        return Result | CONTEXT_TYPE_COMPUTE;
+
+    if ((QueueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
+        return Result | CONTEXT_TYPE_TRANSFER;
+
+    return CONTEXT_TYPE_UNKNOWN;
+}
+
+VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Priority)
+{
+    static_assert(QUEUE_PRIORITY_LAST == 4, "Please update the switch below to handle the new queue priority");
+    switch (Priority)
+    {
+        // clang-format off
+        case QUEUE_PRIORITY_LOW:      return VK_QUEUE_GLOBAL_PRIORITY_LOW_EXT;
+        case QUEUE_PRIORITY_MEDIUM:   return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_EXT;
+        case QUEUE_PRIORITY_HIGH:     return VK_QUEUE_GLOBAL_PRIORITY_HIGH_EXT;
+        case QUEUE_PRIORITY_REALTIME: return VK_QUEUE_GLOBAL_PRIORITY_REALTIME_EXT;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected queue priority");
+            return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_EXT;
+    }
 }
 
 } // namespace Diligent

@@ -38,8 +38,9 @@
 namespace Diligent
 {
 
-QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
-                               const Uint32        QueryHeapSizes[])
+QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*     pRenderDeviceVk,
+                               const Uint32            QueryHeapSizes[],
+                               const CommandQueueIndex CmdQueueInd)
 {
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
@@ -47,16 +48,27 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
     auto timestampPeriod = PhysicalDevice.GetProperties().limits.timestampPeriod;
     m_CounterFrequency   = static_cast<Uint64>(1000000000.0 / timestampPeriod);
 
+    const auto  QueueFamilyIndex = HardwareQueueId{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
+    const auto& EnabledFeatures  = LogicalDevice.GetEnabledFeatures();
+    const auto  StageMask        = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
+    const auto  QueueFlags       = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
+
+    // Queries supported only in graphics or compute queues.
+    if ((QueueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) == 0)
+        return;
+
     VulkanUtilities::CommandPoolWrapper CmdPool;
     VkCommandBuffer                     vkCmdBuff;
-    pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to reset queries before first use");
-
-    const auto& EnabledFeatures = LogicalDevice.GetEnabledFeatures();
+    pRenderDeviceVk->AllocateTransientCmdPool(CmdQueueInd, CmdPool, vkCmdBuff, "Transient command pool to reset queries before first use");
 
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
         if ((QueryType == QUERY_TYPE_OCCLUSION && !EnabledFeatures.occlusionQueryPrecise) ||
             (QueryType == QUERY_TYPE_PIPELINE_STATISTICS && !EnabledFeatures.pipelineStatisticsQuery))
+            continue;
+
+        // Compute queue supports only time queries
+        if ((QueryType != QUERY_TYPE_TIMESTAMP && QueryType != QUERY_TYPE_DURATION) && (QueueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
             continue;
 
         // clang-format off
@@ -100,16 +112,15 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
                     VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT |
                     VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
 
-                const auto EnabledShaderStages = LogicalDevice.GetEnabledShaderStages();
-                if (EnabledShaderStages & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
+                if (StageMask & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
                 {
                     QueryPoolCI.pipelineStatistics |=
                         VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_INVOCATIONS_BIT |
                         VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_PRIMITIVES_BIT;
                 }
-                if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
+                if (StageMask & VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
                     QueryPoolCI.pipelineStatistics |= VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_CONTROL_SHADER_PATCHES_BIT;
-                if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
+                if (StageMask & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
                     QueryPoolCI.pipelineStatistics |= VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT;
             }
             break;
@@ -135,8 +146,7 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
         }
     }
 
-    Uint32 QueueIndex = 0;
-    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
+    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
 }
 
 QueryManagerVk::~QueryManagerVk()
@@ -193,6 +203,7 @@ void QueryManagerVk::DiscardQuery(QUERY_TYPE Type, Uint32 Index)
 
     auto& HeapInfo = m_Heaps[Type];
     VERIFY(Index < HeapInfo.PoolSize, "Query index ", Index, " is out of range");
+    VERIFY(HeapInfo.vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized");
 #ifdef DILIGENT_DEBUG
     for (const auto& ind : HeapInfo.AvailableQueries)
     {
@@ -213,6 +224,8 @@ Uint32 QueryManagerVk::ResetStaleQueries(VulkanUtilities::VulkanCommandBuffer& C
     Uint32 NumQueriesReset = 0;
     for (auto& HeapInfo : m_Heaps)
     {
+        VERIFY(HeapInfo.StaleQueries.empty() || HeapInfo.vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized");
+
         for (auto& StaleQuery : HeapInfo.StaleQueries)
         {
             CmdBuff.ResetQueryPool(HeapInfo.vkQueryPool, StaleQuery, 1);

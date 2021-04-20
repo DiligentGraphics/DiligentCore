@@ -42,6 +42,8 @@ static const INTERFACE_ID IID_Shader =
 
 // clang-format off
 
+typedef struct Version ShaderVersion;
+
 /// Describes the shader source code language
 DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
 {
@@ -172,51 +174,6 @@ struct ShaderMacro
 #endif
 };
 typedef struct ShaderMacro ShaderMacro;
-
-/// Shader version
-struct ShaderVersion
-{
-    /// Major revision
-    Uint8 Major DEFAULT_INITIALIZER(0);
-
-    /// Minor revision
-    Uint8 Minor DEFAULT_INITIALIZER(0);
-
-#if DILIGENT_CPP_INTERFACE
-    ShaderVersion() noexcept
-    {}
-    ShaderVersion(Uint8 _Major, Uint8 _Minor) noexcept :
-        Major{_Major},
-        Minor{_Minor}
-    {}
-
-    bool operator==(const ShaderVersion& rhs) const
-    {
-        return Major == rhs.Major && Minor == rhs.Minor;
-    }
-
-    bool operator>(const ShaderVersion& rhs) const
-    {
-        return Major == rhs.Major ? Minor > rhs.Minor : Major > rhs.Major;
-    }
-
-    bool operator>=(const ShaderVersion& rhs) const
-    {
-        return Major == rhs.Major ? Minor >= rhs.Minor : Major >= rhs.Major;
-    }
-
-    bool operator<(const ShaderVersion& rhs) const
-    {
-        return Major == rhs.Major ? Minor < rhs.Minor : Major < rhs.Major;
-    }
-
-    bool operator<=(const ShaderVersion& rhs) const
-    {
-        return Major == rhs.Major ? Minor <= rhs.Minor : Major <= rhs.Major;
-    }
-#endif
-};
-typedef struct ShaderVersion ShaderVersion;
 
 
 // clang-format off

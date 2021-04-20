@@ -114,7 +114,7 @@ public:
         return shared_from_this();
     }
 
-    VkQueue GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex);
+    VkQueue GetQueue(HardwareQueueId queueFamilyIndex, uint32_t queueIndex);
 
     VkDevice GetVkDevice() const
     {
@@ -221,7 +221,7 @@ public:
 
     VkResult GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const;
 
-    VkPipelineStageFlags GetEnabledShaderStages() const { return m_EnabledShaderStages; }
+    VkPipelineStageFlags GetSupportedStagesMask(HardwareQueueId QueueFamilyIndex) const { return m_SupportedStagesMask[QueueFamilyIndex]; }
 
     const VkPhysicalDeviceFeatures& GetEnabledFeatures() const { return m_EnabledFeatures; }
     const ExtensionFeatures&        GetEnabledExtFeatures() const { return m_EnabledExtFeatures; }
@@ -243,11 +243,9 @@ private:
 
     VkDevice                           m_VkDevice = VK_NULL_HANDLE;
     const VkAllocationCallbacks* const m_VkAllocator;
-    VkPipelineStageFlags               m_EnabledShaderStages = 0;
     const VkPhysicalDeviceFeatures     m_EnabledFeatures;
     ExtensionFeatures                  m_EnabledExtFeatures = {};
+    std::vector<VkPipelineStageFlags>  m_SupportedStagesMask;
 };
-
-void EnableRayTracingKHRviaNV();
 
 } // namespace VulkanUtilities

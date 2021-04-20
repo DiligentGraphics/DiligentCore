@@ -28,13 +28,14 @@
 #include "pch.h"
 #include "CommandPoolManager.hpp"
 #include "RenderDeviceVkImpl.hpp"
+#include "VulkanUtilities/VulkanDebug.hpp"
 
 namespace Diligent
 {
 
 CommandPoolManager::CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
                                        std::string                                 Name,
-                                       uint32_t                                    queueFamilyIndex,
+                                       HardwareQueueId                             queueFamilyIndex,
                                        VkCommandPoolCreateFlags                    flags) noexcept :
     // clang-format off
     m_LogicalDevice   {LogicalDevice    },
@@ -42,6 +43,17 @@ CommandPoolManager::CommandPoolManager(const VulkanUtilities::VulkanLogicalDevic
     m_QueueFamilyIndex{queueFamilyIndex },
     m_CmdPoolFlags    {flags            },
     m_CmdPools        (STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>"))
+// clang-format on
+{
+}
+
+CommandPoolManager::CommandPoolManager(CommandPoolManager&& Other) :
+    // clang-format off
+    m_LogicalDevice   {Other.m_LogicalDevice      },
+    m_Name            {std::move(Other.m_Name)    },
+    m_QueueFamilyIndex{Other.m_QueueFamilyIndex   },
+    m_CmdPoolFlags    {Other.m_CmdPoolFlags       },
+    m_CmdPools        {std::move(Other.m_CmdPools)}
 // clang-format on
 {
 }
@@ -71,6 +83,8 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
         CmdPool = m_LogicalDevice.CreateCommandPool(CmdPoolCI);
         DEV_CHECK_ERR(CmdPool != VK_NULL_HANDLE, "Failed to create Vulkan command pool");
     }
+
+    VulkanUtilities::SetCommandPoolName(m_LogicalDevice.GetVkDevice(), CmdPool, DebugName);
 
 #ifdef DILIGENT_DEVELOPMENT
     ++m_AllocatedPoolCounter;

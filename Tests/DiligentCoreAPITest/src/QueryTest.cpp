@@ -162,11 +162,8 @@ protected:
         pEnv->Reset();
     }
 
-    static void DrawQuad()
+    static void DrawQuad(IDeviceContext* pContext)
     {
-        auto* pEnv     = TestingEnvironment::GetInstance();
-        auto* pContext = pEnv->GetDeviceContext();
-
         ITextureView* pRTVs[] = {sm_pRTV};
         pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -182,11 +179,10 @@ protected:
     static constexpr Uint32 sm_NumTestQueries = 3;
     static constexpr Uint32 sm_NumFrames      = 5;
 
-    void InitTestQueries(std::vector<RefCntAutoPtr<IQuery>>& Queries, const QueryDesc& queryDesc)
+    void InitTestQueries(IDeviceContext* pContext, std::vector<RefCntAutoPtr<IQuery>>& Queries, const QueryDesc& queryDesc)
     {
-        auto* pEnv     = TestingEnvironment::GetInstance();
-        auto* pDevice  = pEnv->GetDevice();
-        auto* pContext = pEnv->GetDeviceContext();
+        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pDevice = pEnv->GetDevice();
 
         if (Queries.empty())
         {
@@ -203,7 +199,7 @@ protected:
         {
             pContext->BeginQuery(Queries[i]);
             for (Uint32 j = 0; j < i + 1; ++j)
-                DrawQuad();
+                DrawQuad(pContext);
             pContext->EndQuery(Queries[i]);
             Queries[i]->GetData(nullptr, 0);
         }
@@ -255,35 +251,44 @@ TEST_F(QueryTest, PipelineStats)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    QueryDesc queryDesc;
-    queryDesc.Name = "Pipeline stats query";
-    queryDesc.Type = QUERY_TYPE_PIPELINE_STATISTICS;
-
-    std::vector<RefCntAutoPtr<IQuery>> Queries;
-    for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
+    auto* pEnv = TestingEnvironment::GetInstance();
+    for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
-        InitTestQueries(Queries, queryDesc);
+        auto* pContext = pEnv->GetDeviceContext(q);
 
-        for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+            continue;
+
+        QueryDesc queryDesc;
+        queryDesc.Name = "Pipeline stats query";
+        queryDesc.Type = QUERY_TYPE_PIPELINE_STATISTICS;
+
+        std::vector<RefCntAutoPtr<IQuery>> Queries;
+        for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
         {
-            Uint32 DrawCounter = 1 + i;
+            InitTestQueries(pContext, Queries, queryDesc);
 
-            QueryDataPipelineStatistics QueryData;
-
-            auto QueryReady = Queries[i]->GetData(nullptr, 0);
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-            QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-            if (!IsGL)
+            for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
             {
-                EXPECT_GE(QueryData.InputVertices, 4 * DrawCounter);
-                EXPECT_GE(QueryData.InputPrimitives, 2 * DrawCounter);
-                EXPECT_GE(QueryData.ClippingPrimitives, 2 * DrawCounter);
-                EXPECT_GE(QueryData.VSInvocations, 4 * DrawCounter);
-                auto NumPixels = sm_TextureSize * sm_TextureSize / 16;
-                EXPECT_GE(QueryData.PSInvocations, NumPixels * DrawCounter);
+                Uint32 DrawCounter = 1 + i;
+
+                QueryDataPipelineStatistics QueryData;
+
+                auto QueryReady = Queries[i]->GetData(nullptr, 0);
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                if (!IsGL)
+                {
+                    EXPECT_GE(QueryData.InputVertices, 4 * DrawCounter);
+                    EXPECT_GE(QueryData.InputPrimitives, 2 * DrawCounter);
+                    EXPECT_GE(QueryData.ClippingPrimitives, 2 * DrawCounter);
+                    EXPECT_GE(QueryData.VSInvocations, 4 * DrawCounter);
+                    auto NumPixels = sm_TextureSize * sm_TextureSize / 16;
+                    EXPECT_GE(QueryData.PSInvocations, NumPixels * DrawCounter);
+                }
+                EXPECT_GE(QueryData.ClippingInvocations, 2 * DrawCounter);
             }
-            EXPECT_GE(QueryData.ClippingInvocations, 2 * DrawCounter);
         }
     }
 }
@@ -298,27 +303,36 @@ TEST_F(QueryTest, Occlusion)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    QueryDesc queryDesc;
-    queryDesc.Name = "Occlusion query";
-    queryDesc.Type = QUERY_TYPE_OCCLUSION;
-
-    std::vector<RefCntAutoPtr<IQuery>> Queries;
-    for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
+    auto* pEnv = TestingEnvironment::GetInstance();
+    for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
-        InitTestQueries(Queries, queryDesc);
+        auto* pContext = pEnv->GetDeviceContext(q);
 
-        for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+            continue;
+
+        QueryDesc queryDesc;
+        queryDesc.Name = "Occlusion query";
+        queryDesc.Type = QUERY_TYPE_OCCLUSION;
+
+        std::vector<RefCntAutoPtr<IQuery>> Queries;
+        for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
         {
-            Uint32 DrawCounter = 1 + i;
+            InitTestQueries(pContext, Queries, queryDesc);
 
-            QueryDataOcclusion QueryData;
+            for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+            {
+                Uint32 DrawCounter = 1 + i;
 
-            auto QueryReady = Queries[i]->GetData(nullptr, 0);
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-            QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-            auto NumPixels = sm_TextureSize * sm_TextureSize / 16;
-            EXPECT_GE(QueryData.NumSamples, NumPixels * DrawCounter);
+                QueryDataOcclusion QueryData;
+
+                auto QueryReady = Queries[i]->GetData(nullptr, 0);
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                auto NumPixels = sm_TextureSize * sm_TextureSize / 16;
+                EXPECT_GE(QueryData.NumSamples, NumPixels * DrawCounter);
+            }
         }
     }
 }
@@ -333,24 +347,33 @@ TEST_F(QueryTest, BinaryOcclusion)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    QueryDesc queryDesc;
-    queryDesc.Name = "Binary occlusion query";
-    queryDesc.Type = QUERY_TYPE_BINARY_OCCLUSION;
-
-    std::vector<RefCntAutoPtr<IQuery>> Queries;
-    for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
+    auto* pEnv = TestingEnvironment::GetInstance();
+    for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
-        InitTestQueries(Queries, queryDesc);
+        auto* pContext = pEnv->GetDeviceContext(q);
 
-        for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+            continue;
+
+        QueryDesc queryDesc;
+        queryDesc.Name = "Binary occlusion query";
+        queryDesc.Type = QUERY_TYPE_BINARY_OCCLUSION;
+
+        std::vector<RefCntAutoPtr<IQuery>> Queries;
+        for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
         {
-            QueryDataBinaryOcclusion QueryData;
+            InitTestQueries(pContext, Queries, queryDesc);
 
-            auto QueryReady = Queries[i]->GetData(nullptr, 0);
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-            Queries[i]->GetData(&QueryData, sizeof(QueryData));
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-            EXPECT_TRUE(QueryData.AnySamplePassed);
+            for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+            {
+                QueryDataBinaryOcclusion QueryData;
+
+                auto QueryReady = Queries[i]->GetData(nullptr, 0);
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                Queries[i]->GetData(&QueryData, sizeof(QueryData));
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                EXPECT_TRUE(QueryData.AnySamplePassed);
+            }
         }
     }
 }
@@ -366,54 +389,60 @@ TEST_F(QueryTest, Timestamp)
         GTEST_SKIP() << "Timestamp queries are not supported by this device";
     }
 
-    auto* pContext = pEnv->GetDeviceContext();
-
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    QueryDesc queryDesc;
-    queryDesc.Name = "Timestamp query";
-    queryDesc.Type = QUERY_TYPE_TIMESTAMP;
-
-    RefCntAutoPtr<IQuery> pQueryStart;
-    pDevice->CreateQuery(queryDesc, &pQueryStart);
-    ASSERT_NE(pQueryStart, nullptr) << "Failed to create timestamp query";
-
-    RefCntAutoPtr<IQuery> pQueryEnd;
-    pDevice->CreateQuery(queryDesc, &pQueryEnd);
-    ASSERT_NE(pQueryEnd, nullptr) << "Failed to create timestamp query";
-
-    for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
+    for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
-        pContext->EndQuery(pQueryStart);
-        pQueryStart->GetData(nullptr, 0);
-        DrawQuad();
-        pContext->EndQuery(pQueryEnd);
-        pQueryEnd->GetData(nullptr, 0);
+        auto* pContext = pEnv->GetDeviceContext(q);
 
-        pContext->Flush();
-        pContext->FinishFrame();
-        pContext->WaitForIdle();
-        if (pDevice->GetDeviceCaps().IsGLDevice())
+        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+            continue;
+
+        QueryDesc queryDesc;
+        queryDesc.Name = "Timestamp query";
+        queryDesc.Type = QUERY_TYPE_TIMESTAMP;
+
+        RefCntAutoPtr<IQuery> pQueryStart;
+        pDevice->CreateQuery(queryDesc, &pQueryStart);
+        ASSERT_NE(pQueryStart, nullptr) << "Failed to create tiemstamp query";
+
+        RefCntAutoPtr<IQuery> pQueryEnd;
+        pDevice->CreateQuery(queryDesc, &pQueryEnd);
+        ASSERT_NE(pQueryEnd, nullptr) << "Failed to create tiemstamp query";
+
+        for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
         {
-            // glFinish() is not a guarantee that queries will become available
-            // Even using glFenceSync + glClientWaitSync does not help.
-            WaitForQuery(pQueryStart);
-            WaitForQuery(pQueryEnd);
+            pContext->EndQuery(pQueryStart);
+            pQueryStart->GetData(nullptr, 0);
+            DrawQuad(pContext);
+            pContext->EndQuery(pQueryEnd);
+            pQueryEnd->GetData(nullptr, 0);
+
+            pContext->Flush();
+            pContext->FinishFrame();
+            pContext->WaitForIdle();
+            if (pDevice->GetDeviceCaps().IsGLDevice())
+            {
+                // glFinish() is not a guarantee that queries will become available
+                // Even using glFenceSync + glClientWaitSync does not help.
+                WaitForQuery(pQueryStart);
+                WaitForQuery(pQueryEnd);
+            }
+
+            QueryDataTimestamp QueryStartData, QueryEndData;
+
+            auto QueryReady = pQueryStart->GetData(nullptr, 0);
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            QueryReady = pQueryStart->GetData(&QueryStartData, sizeof(QueryStartData));
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+
+            QueryReady = pQueryEnd->GetData(nullptr, 0);
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            QueryReady = pQueryEnd->GetData(&QueryEndData, sizeof(QueryEndData), false);
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            EXPECT_EQ(TestQueryCInterface(pQueryEnd.RawPtr()), 0);
+            EXPECT_TRUE(QueryStartData.Frequency == 0 || QueryEndData.Frequency == 0 || QueryEndData.Counter > QueryStartData.Counter);
         }
-
-        QueryDataTimestamp QueryStartData, QueryEndData;
-
-        auto QueryReady = pQueryStart->GetData(nullptr, 0);
-        ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-        QueryReady = pQueryStart->GetData(&QueryStartData, sizeof(QueryStartData));
-        ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-
-        QueryReady = pQueryEnd->GetData(nullptr, 0);
-        ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-        QueryReady = pQueryEnd->GetData(&QueryEndData, sizeof(QueryEndData), false);
-        ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-        EXPECT_EQ(TestQueryCInterface(pQueryEnd.RawPtr()), 0);
-        EXPECT_TRUE(QueryStartData.Frequency == 0 || QueryEndData.Frequency == 0 || QueryEndData.Counter > QueryStartData.Counter);
     }
 }
 
@@ -428,24 +457,33 @@ TEST_F(QueryTest, Duration)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    QueryDesc queryDesc;
-    queryDesc.Name = "Duration query";
-    queryDesc.Type = QUERY_TYPE_DURATION;
-
-    std::vector<RefCntAutoPtr<IQuery>> Queries;
-    for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
+    auto* pEnv = TestingEnvironment::GetInstance();
+    for (Uint32 q = 0; q < pEnv->GetNumImmediateContexts(); ++q)
     {
-        InitTestQueries(Queries, queryDesc);
+        auto* pContext = pEnv->GetDeviceContext(q);
 
-        for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+            continue;
+
+        QueryDesc queryDesc;
+        queryDesc.Name = "Duration query";
+        queryDesc.Type = QUERY_TYPE_DURATION;
+
+        std::vector<RefCntAutoPtr<IQuery>> Queries;
+        for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
         {
-            QueryDataDuration QueryData;
+            InitTestQueries(pContext, Queries, queryDesc);
 
-            auto QueryReady = Queries[i]->GetData(nullptr, 0);
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-            Queries[i]->GetData(&QueryData, sizeof(QueryData));
-            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-            EXPECT_TRUE(QueryData.Frequency == 0 || QueryData.Duration > 0);
+            for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+            {
+                QueryDataDuration QueryData;
+
+                auto QueryReady = Queries[i]->GetData(nullptr, 0);
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                Queries[i]->GetData(&QueryData, sizeof(QueryData));
+                ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+                EXPECT_TRUE(QueryData.Frequency == 0 || QueryData.Duration > 0);
+            }
         }
     }
 }

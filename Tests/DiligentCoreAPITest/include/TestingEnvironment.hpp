@@ -103,9 +103,15 @@ public:
     };
 
     IRenderDevice*  GetDevice() { return m_pDevice; }
-    IDeviceContext* GetDeviceContext(size_t ctx = 0) { return m_pDeviceContexts[ctx]; }
+    IDeviceContext* GetDeviceContext(size_t ctx = 0)
+    {
+        VERIFY_EXPR(ctx < m_NumImmediateContexts);
+        return m_pDeviceContexts[ctx];
+    }
+    IDeviceContext* GetDeferredContext(size_t ctx) { return m_pDeviceContexts[m_NumImmediateContexts + ctx]; }
     ISwapChain*     GetSwapChain() { return m_pSwapChain; }
-    size_t          GetNumDeferredContexts() const { return m_pDeviceContexts.size() - 1; }
+    size_t          GetNumDeferredContexts() const { return m_pDeviceContexts.size() - m_NumImmediateContexts; }
+    size_t          GetNumImmediateContexts() const { return m_NumImmediateContexts; }
 
     static TestingEnvironment* GetInstance() { return m_pTheEnvironment; }
 
@@ -159,6 +165,7 @@ protected:
 
     RefCntAutoPtr<IRenderDevice>               m_pDevice;
     std::vector<RefCntAutoPtr<IDeviceContext>> m_pDeviceContexts;
+    Uint32                                     m_NumImmediateContexts = 1;
     RefCntAutoPtr<ISwapChain>                  m_pSwapChain;
     SHADER_COMPILER                            m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
 

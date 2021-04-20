@@ -67,6 +67,11 @@ Uint64 FenceD3D11Impl::GetCompletedValue()
     return m_LastCompletedFenceValue.load();
 }
 
+void FenceD3D11Impl::Wait(Uint64 Value)
+{
+    return Wait(Value, false);
+}
+
 void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
 {
     while (!m_PendingQueries.empty())

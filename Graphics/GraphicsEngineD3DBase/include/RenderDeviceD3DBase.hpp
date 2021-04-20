@@ -43,11 +43,12 @@ template <typename EngineImplTraits>
 class RenderDeviceD3DBase : public RenderDeviceBase<EngineImplTraits>
 {
 public:
-    RenderDeviceD3DBase(IReferenceCounters*     pRefCounters,
-                        IMemoryAllocator&       RawMemAllocator,
-                        IEngineFactory*         pEngineFactory,
-                        const EngineCreateInfo& EngineCI) :
-        RenderDeviceBase<EngineImplTraits>{pRefCounters, RawMemAllocator, pEngineFactory, EngineCI}
+    RenderDeviceD3DBase(IReferenceCounters*        pRefCounters,
+                        IMemoryAllocator&          RawMemAllocator,
+                        IEngineFactory*            pEngineFactory,
+                        const EngineCreateInfo&    EngineCI,
+                        const GraphicsAdapterInfo& AdapterInfo) :
+        RenderDeviceBase<EngineImplTraits>{pRefCounters, RawMemAllocator, pEngineFactory, EngineCI, AdapterInfo}
     {
         // Flag texture formats always supported in D3D11 and D3D12
 
@@ -155,47 +156,6 @@ public:
         FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             true);
 #undef FLAG_FORMAT
         // clang-format on
-
-        auto& Features = this->m_DeviceCaps.Features;
-
-        Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
-        Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
-        Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
-        Features.WireframeFill                 = DEVICE_FEATURE_STATE_ENABLED;
-        Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
-        Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
-        Features.GeometryShaders               = DEVICE_FEATURE_STATE_ENABLED;
-        Features.Tessellation                  = DEVICE_FEATURE_STATE_ENABLED;
-        Features.OcclusionQueries              = DEVICE_FEATURE_STATE_ENABLED;
-        Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
-        Features.TimestampQueries              = DEVICE_FEATURE_STATE_ENABLED;
-        Features.PipelineStatisticsQueries     = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DepthBiasClamp                = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DepthClamp                    = DEVICE_FEATURE_STATE_ENABLED;
-        Features.IndependentBlend              = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DualSourceBlend               = DEVICE_FEATURE_STATE_ENABLED;
-        Features.MultiViewport                 = DEVICE_FEATURE_STATE_ENABLED;
-        Features.TextureCompressionBC          = DEVICE_FEATURE_STATE_ENABLED;
-        Features.PixelUAVWritesAndAtomics      = DEVICE_FEATURE_STATE_ENABLED;
-        Features.TextureUAVExtendedFormats     = DEVICE_FEATURE_STATE_ENABLED;
-        Features.InstanceDataStepRate          = DEVICE_FEATURE_STATE_ENABLED;
-    }
-
-protected:
-    void ReadAdapterInfo(IDXGIAdapter1* pdxgiAdapter)
-    {
-        DXGI_ADAPTER_DESC1 dxgiAdapterDesc = {};
-
-        auto hr = pdxgiAdapter->GetDesc1(&dxgiAdapterDesc);
-        if (SUCCEEDED(hr))
-        {
-            m_DeviceCaps.AdapterInfo = DXGI_ADAPTER_DESC_To_GraphicsAdapterInfo(dxgiAdapterDesc);
-        }
-        else
-        {
-            LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter properties will be unknown.");
-        }
     }
 };
 

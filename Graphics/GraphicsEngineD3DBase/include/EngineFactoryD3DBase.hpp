@@ -47,11 +47,11 @@ public:
     {}
 
 
-    virtual void DILIGENT_CALL_TYPE EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                                      Uint32&                NumAdapters,
-                                                      GraphicsAdapterInfo*   Adapters) override
+    virtual void DILIGENT_CALL_TYPE EnumerateAdapters(Version              MinVersion,
+                                                      Uint32&              NumAdapters,
+                                                      GraphicsAdapterInfo* Adapters) const override
     {
-        auto DXGIAdapters = FindCompatibleAdapters(MinFeatureLevel);
+        auto DXGIAdapters = FindCompatibleAdapters(MinVersion);
 
         if (Adapters == nullptr)
             NumAdapters = static_cast<Uint32>(DXGIAdapters.size());
@@ -60,13 +60,10 @@ public:
             NumAdapters = std::min(NumAdapters, static_cast<Uint32>(DXGIAdapters.size()));
             for (Uint32 adapter = 0; adapter < NumAdapters; ++adapter)
             {
-                IDXGIAdapter1*     pDXIAdapter = DXGIAdapters[adapter];
-                DXGI_ADAPTER_DESC1 AdapterDesc;
-                pDXIAdapter->GetDesc1(&AdapterDesc);
+                IDXGIAdapter1* pDXIAdapter = DXGIAdapters[adapter];
+                auto&          Attribs     = Adapters[adapter];
 
-                auto& Attribs = Adapters[adapter];
-
-                Attribs = DXGI_ADAPTER_DESC_To_GraphicsAdapterInfo(AdapterDesc);
+                InitializeGraphicsAdapterInfo(nullptr, pDXIAdapter, Attribs);
 
                 Attribs.NumOutputs = 0;
                 CComPtr<IDXGIOutput> pOutput;
@@ -80,14 +77,14 @@ public:
     }
 
 
-    virtual void DILIGENT_CALL_TYPE EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                                          Uint32                 AdapterId,
-                                                          Uint32                 OutputId,
-                                                          TEXTURE_FORMAT         Format,
-                                                          Uint32&                NumDisplayModes,
-                                                          DisplayModeAttribs*    DisplayModes) override
+    virtual void DILIGENT_CALL_TYPE EnumerateDisplayModes(Version             MinVersion,
+                                                          Uint32              AdapterId,
+                                                          Uint32              OutputId,
+                                                          TEXTURE_FORMAT      Format,
+                                                          Uint32&             NumDisplayModes,
+                                                          DisplayModeAttribs* DisplayModes) override
     {
-        auto DXGIAdapters = FindCompatibleAdapters(MinFeatureLevel);
+        auto DXGIAdapters = FindCompatibleAdapters(MinVersion);
         if (AdapterId >= DXGIAdapters.size())
         {
             LOG_ERROR("Incorrect adapter id ", AdapterId);
@@ -137,7 +134,7 @@ public:
     }
 
 
-    std::vector<CComPtr<IDXGIAdapter1>> FindCompatibleAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel)
+    std::vector<CComPtr<IDXGIAdapter1>> FindCompatibleAdapters(Version MinVersion) const
     {
         std::vector<CComPtr<IDXGIAdapter1>> DXGIAdapters;
 
@@ -150,7 +147,7 @@ public:
 
         CComPtr<IDXGIAdapter1> pDXIAdapter;
 
-        auto d3dFeatureLevel = GetD3DFeatureLevel(MinFeatureLevel);
+        auto d3dFeatureLevel = GetD3DFeatureLevel(MinVersion);
         UINT adapter         = 0;
         for (; pFactory->EnumAdapters1(adapter, &pDXIAdapter) != DXGI_ERROR_NOT_FOUND; ++adapter, pDXIAdapter.Release())
         {
@@ -167,34 +164,125 @@ public:
     }
 
 
-protected:
-    static D3D_FEATURE_LEVEL GetD3DFeatureLevel(DIRECT3D_FEATURE_LEVEL FeatureLevel)
+    virtual void InitializeGraphicsAdapterInfo(void*                pd3Device,
+                                               IDXGIAdapter1*       pDXIAdapter,
+                                               GraphicsAdapterInfo& AdapterInfo) const
     {
-        switch (FeatureLevel)
+        DXGI_ADAPTER_DESC1 dxgiAdapterDesc = {};
+        if (pDXIAdapter)
+            pDXIAdapter->GetDesc1(&dxgiAdapterDesc);
+
+        AdapterInfo = {};
+
+        // Set graphics adapter properties
         {
-            case DIRECT3D_FEATURE_LEVEL_10_0: return D3D_FEATURE_LEVEL_10_0;
-            case DIRECT3D_FEATURE_LEVEL_10_1: return D3D_FEATURE_LEVEL_10_1;
-            case DIRECT3D_FEATURE_LEVEL_11_0: return D3D_FEATURE_LEVEL_11_0;
-            case DIRECT3D_FEATURE_LEVEL_11_1: return D3D_FEATURE_LEVEL_11_1;
-#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WIN10)
-            case DIRECT3D_FEATURE_LEVEL_12_0: return D3D_FEATURE_LEVEL_12_0;
-            case DIRECT3D_FEATURE_LEVEL_12_1: return D3D_FEATURE_LEVEL_12_1;
+            WideCharToMultiByte(CP_ACP, 0, dxgiAdapterDesc.Description, -1, AdapterInfo.Description, _countof(AdapterInfo.Description), NULL, FALSE);
+
+            // Can not detect descrete or integrated GPUs, so set descrete.
+            AdapterInfo.Type       = (dxgiAdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_DISCRETE;
+            AdapterInfo.Vendor     = VendorIdToAdapterVendor(dxgiAdapterDesc.VendorId);
+            AdapterInfo.VendorId   = dxgiAdapterDesc.VendorId;
+            AdapterInfo.DeviceId   = dxgiAdapterDesc.DeviceId;
+            AdapterInfo.NumOutputs = 0;
+        }
+
+        // Enable features
+        {
+            auto& Features = AdapterInfo.Capabilities.Features;
+
+            Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+            Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
+            Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
+            Features.WireframeFill                 = DEVICE_FEATURE_STATE_ENABLED;
+            Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
+            Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
+            Features.GeometryShaders               = DEVICE_FEATURE_STATE_ENABLED;
+            Features.Tessellation                  = DEVICE_FEATURE_STATE_ENABLED;
+            Features.OcclusionQueries              = DEVICE_FEATURE_STATE_ENABLED;
+            Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
+            Features.TimestampQueries              = DEVICE_FEATURE_STATE_ENABLED;
+            Features.PipelineStatisticsQueries     = DEVICE_FEATURE_STATE_ENABLED;
+            Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
+            Features.DepthBiasClamp                = DEVICE_FEATURE_STATE_ENABLED;
+            Features.DepthClamp                    = DEVICE_FEATURE_STATE_ENABLED;
+            Features.IndependentBlend              = DEVICE_FEATURE_STATE_ENABLED;
+            Features.DualSourceBlend               = DEVICE_FEATURE_STATE_ENABLED;
+            Features.MultiViewport                 = DEVICE_FEATURE_STATE_ENABLED;
+            Features.TextureCompressionBC          = DEVICE_FEATURE_STATE_ENABLED;
+            Features.PixelUAVWritesAndAtomics      = DEVICE_FEATURE_STATE_ENABLED;
+            Features.TextureUAVExtendedFormats     = DEVICE_FEATURE_STATE_ENABLED;
+            Features.InstanceDataStepRate          = DEVICE_FEATURE_STATE_ENABLED;
+        }
+
+        // Set memory properties
+        {
+            auto& Mem              = AdapterInfo.Memory;
+            Mem.DeviceLocalMemory  = dxgiAdapterDesc.DedicatedVideoMemory;
+            Mem.HostVisibileMemory = dxgiAdapterDesc.SharedSystemMemory;
+            Mem.UnifiedMemory      = 0;
+        }
+
+        // Set queue info
+        {
+            AdapterInfo.NumQueues                           = 1;
+            AdapterInfo.Queues[0].QueueType                 = CONTEXT_TYPE_GRAPHICS;
+            AdapterInfo.Queues[0].MaxDeviceContexts         = 1;
+            AdapterInfo.Queues[0].TextureCopyGranularity[0] = 1;
+            AdapterInfo.Queues[0].TextureCopyGranularity[1] = 1;
+            AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
+        }
+    }
+
+protected:
+    static D3D_FEATURE_LEVEL GetD3DFeatureLevel(Version MinVersion)
+    {
+        const D3D_FEATURE_LEVEL FeatureLevel = static_cast<D3D_FEATURE_LEVEL>((Uint32{MinVersion.Major} << 12) | (Uint32{MinVersion.Minor} << 8));
+
+#ifdef DILIGENT_DEBUG
+        switch (MinVersion.Major)
+        {
+            case 10:
+                switch (MinVersion.Minor)
+                {
+                    case 0: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_10_0); break;
+                    case 1: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_10_1); break;
+                    default: UNEXPECTED("unknown feature level 10.x");
+                }
+                break;
+            case 11:
+                switch (MinVersion.Minor)
+                {
+                    case 0: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_11_0); break;
+                    case 1: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_11_1); break;
+                    default: UNEXPECTED("unknown feature level 11.x");
+                }
+                break;
+#    if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WIN10)
+            case 12:
+                switch (MinVersion.Minor)
+                {
+                    case 0: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_12_0); break;
+                    case 1: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_12_1); break;
+                    default: UNEXPECTED("unknown feature level 12.x");
+                }
+                break;
+#    endif
+            default:
+                UNEXPECTED("Unknown major version of the feature level");
+        }
 #endif
 
-            default:
-                UNEXPECTED("Unknown DIRECT3D_FEATURE_LEVEL ", static_cast<Uint32>(FeatureLevel));
-                return D3D_FEATURE_LEVEL_11_0;
-        }
+        return FeatureLevel;
     }
 
 private:
     template <RENDER_DEVICE_TYPE DevType>
     bool CheckAdapterCompatibility(IDXGIAdapter1*    pDXGIAdapter,
-                                   D3D_FEATURE_LEVEL FeatureLevels);
+                                   D3D_FEATURE_LEVEL FeatureLevels) const;
 
     template <>
     bool CheckAdapterCompatibility<RENDER_DEVICE_TYPE_D3D11>(IDXGIAdapter1*    pDXGIAdapter,
-                                                             D3D_FEATURE_LEVEL FeatureLevel)
+                                                             D3D_FEATURE_LEVEL FeatureLevel) const
     {
         auto hr = D3D11CreateDevice(
             nullptr,
@@ -213,7 +301,7 @@ private:
 
     template <>
     bool CheckAdapterCompatibility<RENDER_DEVICE_TYPE_D3D12>(IDXGIAdapter1*    pDXGIAdapter,
-                                                             D3D_FEATURE_LEVEL FeatureLevel)
+                                                             D3D_FEATURE_LEVEL FeatureLevel) const
     {
         auto hr = D3D12CreateDevice(pDXGIAdapter, FeatureLevel, _uuidof(ID3D12Device), nullptr);
         return SUCCEEDED(hr);

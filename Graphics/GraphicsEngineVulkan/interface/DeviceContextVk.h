@@ -68,6 +68,22 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContextVk, IDeviceContext)
     VIRTUAL void METHOD(BufferMemoryBarrier)(THIS_
                                              IBuffer*      pBuffer,
                                              VkAccessFlags NewAccessFlags) PURE;
+    
+    /// Returns a command buffer handle that is currently being recorded
+
+    /// \return - a handle to the current command buffer
+    ///
+    /// \remarks  Any command on the device context may potentially submit the command buffer for
+    ///           execution into the command queue and make it invalid. An application should
+    ///           never cache the handle and should instead request the command buffer every time it
+    ///           needs it.
+    ///
+    ///           Diligent Engine internally keeps track of all resource state changes (vertex and index
+    ///           buffers, pipeline states, render targets, etc.). If an application changes any of these
+    ///           states in the command buffer, it must invalidate the engine's internal state tracking by
+    ///           calling IDeviceContext::InvalidateState() and then manually restore all required states via
+    ///           appropriate Diligent API calls.
+    VIRTUAL VkCommandBuffer METHOD(GetVkCommandBuffer)(THIS) PURE;
 
     /// Locks the internal mutex and returns a pointer to the command queue that is associated with this device context.
 
@@ -78,7 +94,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContextVk, IDeviceContext)
     ///           The engine locks the internal mutex to prevent simultaneous access to the command queue.
     ///           An application must release the lock by calling IDeviceContextVk::UnlockCommandQueue()
     ///           when it is done working with the queue or the engine will not be able to submit any command
-    ///           list to the queue. Nested calls to LockCommandQueue() are not allowed.
+    ///           buffer to the queue. Nested calls to LockCommandQueue() are not allowed.
     ///           The queue pointer never changes while the context is alive, so an application may cache and
     ///           use the pointer if it does not need to prevent potential simultaneous access to the queue from
     ///           other threads.

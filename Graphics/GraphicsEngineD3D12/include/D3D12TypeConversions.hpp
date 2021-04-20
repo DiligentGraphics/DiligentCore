@@ -42,6 +42,7 @@
 #include "BufferView.h"
 #include "Shader.h"
 #include "DeviceContext.h"
+#include "IndexWrapper.hpp"
 
 namespace Diligent
 {
@@ -103,5 +104,10 @@ D3D12_DESCRIPTOR_RANGE_TYPE ResourceTypeToD3D12DescriptorRangeType(SHADER_RESOUR
 D3D12_DESCRIPTOR_HEAP_TYPE D3D12DescriptorRangeTypeToD3D12HeapType(D3D12_DESCRIPTOR_RANGE_TYPE RangeType);
 
 D3D12_SHADER_VISIBILITY ShaderStagesToD3D12ShaderVisibility(SHADER_TYPE Stages);
+
+HardwareQueueId              D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TYPE Type);
+D3D12_COMMAND_LIST_TYPE      QueueIdToD3D12CommandListType(HardwareQueueId QueueId);
+CONTEXT_TYPE                 D3D12CommandListTypeToContextType(D3D12_COMMAND_LIST_TYPE ListType);
+D3D12_COMMAND_QUEUE_PRIORITY QueuePriorityToD3D12QueuePriority(QUEUE_PRIORITY Priority);
 
 } // namespace Diligent

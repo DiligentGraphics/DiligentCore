@@ -39,6 +39,7 @@
 #include "ShaderBindingTableD3D12Impl.hpp"
 #include "ShaderResourceBindingD3D12Impl.hpp"
 #include "CommandListD3D12Impl.hpp"
+#include "CommandQueueD3D12Impl.hpp"
 
 #include "CommandContext.hpp"
 #include "D3D12TypeConversions.hpp"
@@ -64,8 +65,8 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
                                                RenderDeviceD3D12Impl*       pDeviceD3D12Impl,
                                                bool                         bIsDeferred,
                                                const EngineD3D12CreateInfo& EngineCI,
-                                               Uint32                       ContextId,
-                                               Uint32                       CommandQueueId) :
+                                               ContextIndex                 ContextId,
+                                               CommandQueueIndex            CommandQueueId) :
     // clang-format off
     TDeviceContextBase
     {
@@ -73,6 +74,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         pDeviceD3D12Impl,
         ContextId,
         CommandQueueId,
+        (ContextId < EngineCI.NumContexts ? EngineCI.pContextInfo[ContextId].Name : ""),
         bIsDeferred
     },
     m_DynamicHeap
@@ -99,8 +101,10 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
     m_CmdListAllocator{GetRawAllocator(), sizeof(CommandListD3D12Impl), 64}
 // clang-format on
 {
-    RequestCommandContext(pDeviceD3D12Impl);
-
+    if (!IsDeferred())
+    {
+        InitializeForQueue(CommandQueueIndex{CommandQueueId});
+    }
     auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
     D3D12_COMMAND_SIGNATURE_DESC CmdSignatureDesc = {};
@@ -150,10 +154,9 @@ DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
 {
     if (m_State.NumCommands != 0)
     {
-        if (m_bIsDeferred)
+        if (IsDeferred())
         {
-            LOG_ERROR_MESSAGE("There are outstanding commands in deferred context #",
-                              m_ContextId,
+            LOG_ERROR_MESSAGE("There are outstanding commands in deferred context #", GetContextId(),
                               " being destroyed, which indicates that FinishCommandList() has not been called."
                               " This may cause synchronization issues.");
         }
@@ -165,7 +168,7 @@ DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
         }
     }
 
-    if (m_bIsDeferred)
+    if (IsDeferred())
     {
         if (m_CurrCmdCtx)
         {
@@ -193,6 +196,33 @@ DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
         // are actually returned to the global heap.
         DEV_CHECK_ERR(m_DynamicGPUDescriptorAllocator[i].GetSuballocationCount() == 0, "All dynamic suballocations must have been released");
     }
+}
+
+void DeviceContextD3D12Impl::InitializeForQueue(CommandQueueIndex CommandQueueInd)
+{
+    DEV_CHECK_ERR(CommandQueueInd < m_pDevice->GetCommandQueueCount(), "CommandQueueInd is out of range");
+
+    const auto* CmdQueue    = ValidatedCast<const CommandQueueD3D12Impl>(&m_pDevice->GetCommandQueue(CommandQueueInd));
+    const auto  CmdListType = CmdQueue->GetCommandListType();
+    const auto  QueueId     = D3D12CommandListTypeToQueueId(CmdListType);
+
+    m_Desc.QueueId                   = static_cast<Uint8>(QueueId);
+    m_Desc.CommandQueueId            = static_cast<Uint8>(CommandQueueInd);
+    m_Desc.ContextType               = D3D12CommandListTypeToContextType(CmdListType);
+    m_Desc.TextureCopyGranularity[0] = 1;
+    m_Desc.TextureCopyGranularity[1] = 1;
+    m_Desc.TextureCopyGranularity[2] = 1;
+
+    VERIFY(m_Desc.QueueId == CommandQueueInd, "Not enough bits to store queue index");
+    VERIFY(m_Desc.CommandQueueId == CommandQueueInd, "Not enough bits to store command queue index");
+
+    RequestCommandContext();
+}
+
+void DeviceContextD3D12Impl::Begin(Uint32 CommandQueueId)
+{
+    DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
+    InitializeForQueue(CommandQueueIndex{CommandQueueId});
 }
 
 void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
@@ -440,7 +470,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
     DEV_CHECK_ERR(m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command");
 
     D3D12_INDEX_BUFFER_VIEW IBView;
-    IBView.BufferLocation = m_pIndexBuffer->GetGPUAddress(m_ContextId, this) + m_IndexDataStartOffset;
+    IBView.BufferLocation = m_pIndexBuffer->GetGPUAddress(GetContextId(), this) + m_IndexDataStartOffset;
     if (IndexType == VT_UINT32)
         IBView.Format = DXGI_FORMAT_R32_UINT;
     else
@@ -511,7 +541,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
             // so there is no need to reference the resource here
             //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
-            VBView.BufferLocation = pBufferD3D12->GetGPUAddress(m_ContextId, this) + CurrStream.Offset;
+            VBView.BufferLocation = pBufferD3D12->GetGPUAddress(GetContextId(), this) + CurrStream.Offset;
             VBView.StrideInBytes  = m_pPipelineState->GetBufferStride(Buff);
             // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
             VBView.SizeInBytes = pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset;
@@ -807,9 +837,9 @@ void DeviceContextD3D12Impl::ClearRenderTarget(ITextureView* pView, const float*
     ++m_State.NumCommands;
 }
 
-void DeviceContextD3D12Impl::RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl)
+void DeviceContextD3D12Impl::RequestCommandContext()
 {
-    m_CurrCmdCtx = pDeviceD3D12Impl->AllocateCommandContext();
+    m_CurrCmdCtx = m_pDevice->AllocateCommandContext(GetCommandQueueId());
     m_CurrCmdCtx->SetDynamicGPUDescriptorAllocators(m_DynamicGPUDescriptorAllocator);
 }
 
@@ -817,7 +847,7 @@ void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
                                    Uint32               NumCommandLists,
                                    ICommandList* const* ppCommandLists)
 {
-    VERIFY(!m_bIsDeferred || NumCommandLists == 0 && ppCommandLists == nullptr, "Only immediate context can execute command lists");
+    VERIFY(!IsDeferred() || NumCommandLists == 0 && ppCommandLists == nullptr, "Only immediate context can execute command lists");
 
     DEV_CHECK_ERR(m_ActiveQueriesCounter == 0,
                   "Flushing device context that has ", m_ActiveQueriesCounter,
@@ -830,7 +860,7 @@ void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
     // First, execute current context
     if (m_CurrCmdCtx)
     {
-        VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
+        VERIFY(!IsDeferred(), "Deferred contexts cannot execute command lists directly");
         if (m_State.NumCommands != 0)
             Contexts.emplace_back(std::move(m_CurrCmdCtx));
         else
@@ -844,14 +874,15 @@ void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
 
         RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
         Contexts.emplace_back(pCmdListD3D12->Close(pDeferredCtx));
+        VERIFY(Contexts.back() && pDeferredCtx, "Trying to execute empty command buffer");
         // Set the bit in the deferred context cmd queue mask corresponding to the cmd queue of this context
-        pDeferredCtx->m_SubmittedBuffersCmdQueueMask.fetch_or(Uint64{1} << m_CommandQueueId);
+        pDeferredCtx->UpdateSubmittedBuffersCmdQueueMask(GetCommandQueueId());
     }
 
     if (!Contexts.empty())
     {
-        m_pDevice->CloseAndExecuteCommandContexts(m_CommandQueueId, static_cast<Uint32>(Contexts.size()), Contexts.data(), true, &m_PendingFences);
-        m_PendingFences.clear();
+        m_pDevice->CloseAndExecuteCommandContexts(GetCommandQueueId(), static_cast<Uint32>(Contexts.size()), Contexts.data(), true, &m_SignalFences, &m_WaitFences);
+        m_SignalFences.clear();
 
 #ifdef DILIGENT_DEBUG
         for (Uint32 i = 0; i < NumCommandLists; ++i)
@@ -859,15 +890,17 @@ void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
 #endif
     }
 
+    m_WaitFences.clear();
+
     // If there is no command list to submit, but there are pending fences, we need to signal them now
-    if (!m_PendingFences.empty())
+    if (!m_SignalFences.empty())
     {
-        m_pDevice->SignalFences(m_CommandQueueId, m_PendingFences);
-        m_PendingFences.clear();
+        m_pDevice->SignalFences(GetCommandQueueId(), m_SignalFences);
+        m_SignalFences.clear();
     }
 
     if (RequestNewCmdCtx)
-        RequestCommandContext(m_pDevice);
+        RequestCommandContext();
 
     m_State             = State{};
     m_GraphicsResources = RootTableInfo{};
@@ -880,7 +913,7 @@ void DeviceContextD3D12Impl::Flush(bool                 RequestNewCmdCtx,
 
 void DeviceContextD3D12Impl::Flush()
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Flush() should only be called for immediate contexts");
+    DEV_CHECK_ERR(!IsDeferred(), "Flush() should only be called for immediate contexts");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Flushing device context inside an active render pass.");
 
     Flush(true);
@@ -902,10 +935,9 @@ void DeviceContextD3D12Impl::FinishFrame()
 #endif
     if (GetNumCommandsInCtx() != 0)
     {
-        if (m_bIsDeferred)
+        if (IsDeferred())
         {
-            LOG_ERROR_MESSAGE("There are outstanding commands in deferred device context #",
-                              m_ContextId,
+            LOG_ERROR_MESSAGE("There are outstanding commands in deferred device context #", GetContextId(),
                               " when finishing the frame. This is an error and may cause unpredicted behaviour. "
                               "Close all deferred contexts and execute them before finishing the frame");
         }
@@ -929,15 +961,16 @@ void DeviceContextD3D12Impl::FinishFrame()
         LOG_ERROR_MESSAGE("Finishing frame inside an active render pass.");
     }
 
-    VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1} << m_CommandQueueId));
+    const auto QueueMask = GetSubmittedBuffersCmdQueueMask();
+    VERIFY_EXPR(IsDeferred() || QueueMask == (Uint64{1} << GetCommandQueueId()));
 
     // Released pages are returned to the global dynamic memory manager hosted by render device.
-    m_DynamicHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
+    m_DynamicHeap.ReleaseAllocatedPages(QueueMask);
 
     // Dynamic GPU descriptor allocations are returned to the global GPU descriptor heap
     // hosted by the render device.
     for (size_t i = 0; i < _countof(m_DynamicGPUDescriptorAllocator); ++i)
-        m_DynamicGPUDescriptorAllocator[i].ReleaseAllocations(m_SubmittedBuffersCmdQueueMask);
+        m_DynamicGPUDescriptorAllocator[i].ReleaseAllocations(QueueMask);
 
     EndFrame();
 }
@@ -945,7 +978,7 @@ void DeviceContextD3D12Impl::FinishFrame()
 void DeviceContextD3D12Impl::SetVertexBuffers(Uint32                         StartSlot,
                                               Uint32                         NumBuffersSet,
                                               IBuffer**                      ppBuffers,
-                                              Uint32*                        pOffsets,
+                                              const Uint32*                  pOffsets,
                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                               SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
@@ -1514,7 +1547,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
             DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag");
-            auto& DynamicData = pBufferD3D12->m_DynamicData[m_ContextId];
+            auto& DynamicData = pBufferD3D12->m_DynamicData[GetContextId()];
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynamicData.CPUAddress == nullptr)
             {
                 size_t Alignment = (BuffDesc.BindFlags & BIND_UNIFORM_BUFFER) ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : 16;
@@ -1578,7 +1611,7 @@ void DeviceContextD3D12Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
             // Copy data into the resource
             if (pd3d12Resource)
             {
-                UpdateBufferRegion(pBufferD3D12, pBufferD3D12->m_DynamicData[m_ContextId], 0, BuffDesc.uiSizeInBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                UpdateBufferRegion(pBufferD3D12, pBufferD3D12->m_DynamicData[GetContextId()], 0, BuffDesc.uiSizeInBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             }
         }
     }
@@ -2090,6 +2123,7 @@ void DeviceContextD3D12Impl::GenerateMips(ITextureView* pTexView)
 
 void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
 {
+    DEV_CHECK_ERR(IsDeferred(), "Only deferred context can record command list");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
     CommandListD3D12Impl* pCmdListD3D12(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)(m_pDevice, this, std::move(m_CurrCmdCtx)));
@@ -2102,7 +2136,7 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
 void DeviceContextD3D12Impl::ExecuteCommandLists(Uint32               NumCommandLists,
                                                  ICommandList* const* ppCommandLists)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate context can execute command list");
+    DEV_CHECK_ERR(!IsDeferred(), "Only immediate context can execute command list");
 
     if (NumCommandLists == 0)
         return;
@@ -2115,24 +2149,21 @@ void DeviceContextD3D12Impl::ExecuteCommandLists(Uint32               NumCommand
 
 void DeviceContextD3D12Impl::SignalFence(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be signaled from immediate context");
-    m_PendingFences.emplace_back(Value, pFence);
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
+    m_SignalFences.emplace_back(Value, pFence);
 }
 
-void DeviceContextD3D12Impl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
+void DeviceContextD3D12Impl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be waited from immediate context");
-    if (FlushContext)
-        Flush();
-    auto* pFenceD3D12 = ValidatedCast<FenceD3D12Impl>(pFence);
-    pFenceD3D12->WaitForCompletion(Value);
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be waited from immediate context");
+    m_WaitFences.emplace_back(Value, pFence);
 }
 
 void DeviceContextD3D12Impl::WaitForIdle()
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate contexts can be idled");
+    DEV_CHECK_ERR(!IsDeferred(), "Only immediate contexts can be idled");
     Flush();
-    m_pDevice->IdleCommandQueue(m_CommandQueueId, true);
+    m_pDevice->IdleCommandQueue(GetCommandQueueId(), true);
 }
 
 void DeviceContextD3D12Impl::BeginQuery(IQuery* pQuery)
@@ -2171,7 +2202,7 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
     QueryMgr.EndQuery(Ctx, QueryType, Idx);
 }
 
-void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
+void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
 

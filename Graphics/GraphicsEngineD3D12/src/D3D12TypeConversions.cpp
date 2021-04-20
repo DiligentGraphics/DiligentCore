@@ -31,6 +31,7 @@
 
 #include <array>
 
+#include "PrivateConstants.h"
 #include "DXGITypeConversions.hpp"
 #include "D3D12TypeDefinitions.h"
 #include "D3DTypeConversionImpl.hpp"
@@ -799,6 +800,69 @@ D3D12_SHADER_VISIBILITY ShaderStagesToD3D12ShaderVisibility(SHADER_TYPE Stages)
     return IsPowerOfTwo(Stages) ?
         ShaderTypeToD3D12ShaderVisibility(Stages) :
         D3D12_SHADER_VISIBILITY_ALL;
+}
+
+HardwareQueueId D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TYPE Type)
+{
+    switch (Type)
+    {
+        // clang-format off
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return HardwareQueueId{0};
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return HardwareQueueId{1};
+        case D3D12_COMMAND_LIST_TYPE_COPY:    return HardwareQueueId{2};
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected command list type");
+            return HardwareQueueId{MAX_COMMAND_QUEUES};
+    }
+}
+
+D3D12_COMMAND_LIST_TYPE QueueIdToD3D12CommandListType(HardwareQueueId QueueId)
+{
+    switch (Uint32{QueueId})
+    {
+        // clang-format off
+        case 0: return D3D12_COMMAND_LIST_TYPE_DIRECT;
+        case 1: return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+        case 2: return D3D12_COMMAND_LIST_TYPE_COPY;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected queue id");
+            return D3D12_COMMAND_LIST_TYPE_DIRECT;
+    }
+}
+
+CONTEXT_TYPE D3D12CommandListTypeToContextType(D3D12_COMMAND_LIST_TYPE ListType)
+{
+    static_assert(CONTEXT_TYPE_LAST == 7, "Please update the switch below to handle the new context type");
+    switch (ListType)
+    {
+        // clang-format off
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return CONTEXT_TYPE_GRAPHICS;
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return CONTEXT_TYPE_COMPUTE;
+        case D3D12_COMMAND_LIST_TYPE_COPY:    return CONTEXT_TYPE_TRANSFER;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected command list type");
+            return CONTEXT_TYPE_UNKNOWN;
+    }
+}
+
+D3D12_COMMAND_QUEUE_PRIORITY QueuePriorityToD3D12QueuePriority(QUEUE_PRIORITY Priority)
+{
+    static_assert(QUEUE_PRIORITY_LAST == 4, "Please update the switch below to handle the new queue priority");
+    switch (Priority)
+    {
+        // clang-format off
+        case QUEUE_PRIORITY_LOW:      return D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+        case QUEUE_PRIORITY_MEDIUM:   return D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+        case QUEUE_PRIORITY_HIGH:     return D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
+        case QUEUE_PRIORITY_REALTIME: return D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected queue priority");
+            return D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+    }
 }
 
 } // namespace Diligent

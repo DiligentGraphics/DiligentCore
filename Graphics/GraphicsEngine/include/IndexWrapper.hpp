@@ -27,57 +27,37 @@
 
 #pragma once
 
-#if DILIGENT_USE_VOLK
-#    define VK_NO_PROTOTYPES
-#endif
+#include "BasicTypes.h"
 
-#define VK_ENABLE_BETA_EXTENSIONS
-#include "vulkan/vulkan.h"
-
-#define VK_FORMAT_RANGE_SIZE (VK_FORMAT_ASTC_12x12_SRGB_BLOCK - VK_FORMAT_UNDEFINED + 1)
-
-#if DILIGENT_USE_VOLK
-#    include "volk/volk.h"
-#endif
-
-#ifdef PLATFORM_WIN32
-#    undef CreateSemaphore
-#endif
-
-#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(_X11_XLIB_H_)
-
-// Undef symbols defined by XLib
-#    ifdef Bool
-#        undef Bool
-#    endif
-#    ifdef True
-#        undef True
-#    endif
-#    ifdef False
-#        undef False
-#    endif
-
-#endif
-
-namespace VulkanUtilities
+namespace Diligent
 {
 
-constexpr VkPipelineStageFlags AllShaderStagesVk =
-    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-    VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
-    VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
-    VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
-    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
-    VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR |
-    VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV |
-    VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
+template <typename IndexType>
+struct TIndexWrapper
+{
+public:
+    TIndexWrapper() {}
 
-constexpr VkPipelineStageFlags TransferQueueStagesVk =
-    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT |
-    VK_PIPELINE_STAGE_TRANSFER_BIT |
-    VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT |
-    VK_PIPELINE_STAGE_HOST_BIT |
-    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    explicit TIndexWrapper(Uint32 Value) :
+        m_Value{static_cast<IndexType>(Value)}
+    {
+        VERIFY(m_Value == Value, "Not enought bits to store value");
+    }
 
-} // namespace VulkanUtilities
+    TIndexWrapper(const TIndexWrapper&) = default;
+    TIndexWrapper(TIndexWrapper&&)      = default;
+
+    operator Uint32() const
+    {
+        return m_Value;
+    }
+
+private:
+    IndexType m_Value = 0;
+};
+
+using HardwareQueueId   = TIndexWrapper<Uint8>;
+using CommandQueueIndex = TIndexWrapper<Uint8>;
+using ContextIndex      = TIndexWrapper<Uint8>;
+
+} // namespace Diligent

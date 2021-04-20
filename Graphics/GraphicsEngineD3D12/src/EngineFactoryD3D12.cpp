@@ -41,6 +41,7 @@
 #include "D3D12TypeConversions.hpp"
 #include "EngineFactoryD3DBase.hpp"
 #include "StringTools.hpp"
+#include "EngineFactoryBase.hpp"
 #include "EngineMemory.h"
 #include "CommandQueueD3D12Impl.hpp"
 
@@ -75,8 +76,13 @@ public:
                                                                  IRenderDevice**              ppDevice,
                                                                  IDeviceContext**             ppContexts) override final;
 
+    virtual void DILIGENT_CALL_TYPE CreateCommandQueueD3D12(void*                pd3d12NativeDevice,
+                                                            void*                pd3d12NativeCommandQueue,
+                                                            IMemoryAllocator*    pRawMemAllocator,
+                                                            ICommandQueueD3D12** ppCommandQueue) override final;
+
     virtual void DILIGENT_CALL_TYPE AttachToD3D12Device(void*                        pd3d12NativeDevice,
-                                                        size_t                       CommandQueueCount,
+                                                        Uint32                       CommandQueueCount,
                                                         ICommandQueueD3D12**         ppCommandQueues,
                                                         const EngineD3D12CreateInfo& EngineCI,
                                                         IRenderDevice**              ppDevice,
@@ -89,16 +95,20 @@ public:
                                                          const NativeWindow&       Window,
                                                          ISwapChain**              ppSwapChain) override final;
 
-    virtual void DILIGENT_CALL_TYPE EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                                      Uint32&                NumAdapters,
-                                                      GraphicsAdapterInfo*   Adapters) override final;
+    virtual void DILIGENT_CALL_TYPE EnumerateAdapters(Version              MinFeatureLevel,
+                                                      Uint32&              NumAdapters,
+                                                      GraphicsAdapterInfo* Adapters) const override final;
 
-    virtual void DILIGENT_CALL_TYPE EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                                          Uint32                 AdapterId,
-                                                          Uint32                 OutputId,
-                                                          TEXTURE_FORMAT         Format,
-                                                          Uint32&                NumDisplayModes,
-                                                          DisplayModeAttribs*    DisplayModes) override final;
+    virtual void DILIGENT_CALL_TYPE EnumerateDisplayModes(Version             MinFeatureLevel,
+                                                          Uint32              AdapterId,
+                                                          Uint32              OutputId,
+                                                          TEXTURE_FORMAT      Format,
+                                                          Uint32&             NumDisplayModes,
+                                                          DisplayModeAttribs* DisplayModes) override final;
+
+    virtual void InitializeGraphicsAdapterInfo(void*                pd3Device,
+                                               IDXGIAdapter1*       pDXIAdapter,
+                                               GraphicsAdapterInfo& AdapterInfo) const override final;
 
 
 private:
@@ -163,6 +173,44 @@ static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapte
     *ppAdapter = adapter.Detach();
 }
 
+static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Device)
+{
+    CComPtr<IDXGIFactory4> pDXIFactory;
+
+    HRESULT hr = CreateDXGIFactory1(__uuidof(pDXIFactory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&pDXIFactory)));
+    if (SUCCEEDED(hr))
+    {
+        auto AdapterLUID = pd3d12Device->GetAdapterLuid();
+
+        CComPtr<IDXGIAdapter1> pDXGIAdapter1;
+        pDXIFactory->EnumAdapterByLuid(AdapterLUID, __uuidof(pDXGIAdapter1), reinterpret_cast<void**>(static_cast<IDXGIAdapter1**>(&pDXGIAdapter1)));
+        return pDXGIAdapter1;
+    }
+    else
+    {
+        LOG_ERROR("Unable to create DXIFactory");
+    }
+    return nullptr;
+}
+
+static void ValidateD3D12CreateInfo(const EngineD3D12CreateInfo& EngineCI) noexcept(false)
+{
+    for (Uint32 Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
+    {
+        auto   CPUHeapAllocSize = EngineCI.CPUDescriptorHeapAllocationSize[Type];
+        Uint32 MaxSize          = 1 << 20;
+        if (CPUHeapAllocSize > 1 << 20)
+        {
+            LOG_ERROR_AND_THROW("CPU Heap allocation size is too large (", CPUHeapAllocSize, "). Max allowed size is ", MaxSize);
+        }
+
+        if ((CPUHeapAllocSize % 16) != 0)
+        {
+            LOG_ERROR_AND_THROW("CPU Heap allocation size (", CPUHeapAllocSize, ") is expected to be multiple of 16");
+        }
+    }
+}
+
 void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI,
                                                           IRenderDevice**              ppDevice,
                                                           IDeviceContext**             ppContexts)
@@ -170,9 +218,9 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
-    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+    if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
         return;
     }
 
@@ -183,30 +231,17 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     if (!ppDevice || !ppContexts)
         return;
 
-    for (Uint32 Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
-    {
-        auto   CPUHeapAllocSize = EngineCI.CPUDescriptorHeapAllocationSize[Type];
-        Uint32 MaxSize          = 1 << 20;
-        if (CPUHeapAllocSize > 1 << 20)
-        {
-            LOG_ERROR("CPU Heap allocation size is too large (", CPUHeapAllocSize, "). Max allowed size is ", MaxSize);
-            return;
-        }
-
-        if ((CPUHeapAllocSize % 16) != 0)
-        {
-            LOG_ERROR("CPU Heap allocation size (", CPUHeapAllocSize, ") is expected to be multiple of 16");
-            return;
-        }
-    }
-
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumContexts) + EngineCI.NumDeferredContexts));
 
-    RefCntAutoPtr<CommandQueueD3D12Impl> pCmdQueueD3D12;
-    CComPtr<ID3D12Device>                d3d12Device;
+    std::vector<RefCntAutoPtr<CommandQueueD3D12Impl>> CmdQueueD3D12Refs;
+    CComPtr<ID3D12Device>                             d3d12Device;
+    std::vector<ICommandQueueD3D12*>                  CmdQueues;
     try
     {
+        ValidateD3D12CreateInfo(EngineCI);
+        SetRawAllocator(EngineCI.pRawMemAllocator);
+
         // Enable the D3D12 debug layer.
         if (EngineCI.EnableValidation)
         {
@@ -233,7 +268,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
         // Direct3D12 does not allow feature levels below 11.0 (D3D12CreateDevice fails to create a device).
-        const auto MinimumFeatureLevel = EngineCI.MinimumFeatureLevel >= DIRECT3D_FEATURE_LEVEL_11_0 ? EngineCI.MinimumFeatureLevel : DIRECT3D_FEATURE_LEVEL_11_0;
+        const auto MinimumFeatureLevel = EngineCI.GraphicsAPIVersion >= Version{11, 0} ? EngineCI.GraphicsAPIVersion : Version{11, 0};
 
         CComPtr<IDXGIAdapter1> hardwareAdapter;
         if (EngineCI.AdapterId == DEFAULT_ADAPTER_ID)
@@ -259,8 +294,8 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             LOG_INFO_MESSAGE("D3D12-capabale adapter found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory >> 20, " MB)");
         }
 
-        constexpr auto MaxFeatureLevel = DIRECT3D_FEATURE_LEVEL_12_1;
-        for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel} - 1))
+        const Version FeatureLevelList[] = {{12, 1}, {12, 0}, {11, 1}, {11, 0}};
+        for (auto FeatureLevel : FeatureLevelList)
         {
             auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
 
@@ -279,7 +314,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             hr = factory->EnumWarpAdapter(__uuidof(warpAdapter), reinterpret_cast<void**>(static_cast<IDXGIAdapter**>(&warpAdapter)));
             CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter");
 
-            for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel} - 1))
+            for (auto FeatureLevel : FeatureLevelList)
             {
                 auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
 
@@ -352,25 +387,54 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         //d3d12Device->SetStablePowerState(TRUE);
 #endif
 
+        {
+            auto                pDXGIAdapter1 = DXGIAdapterFromD3D12Device(d3d12Device);
+            GraphicsAdapterInfo AdapterInfo;
+            InitializeGraphicsAdapterInfo(d3d12Device, pDXGIAdapter1, AdapterInfo);
+            VerifyEngineCreateInfo(EngineCI, AdapterInfo);
+        }
+
         // Describe and create the command queue.
-        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+        auto&      RawMemAllocator = GetRawAllocator();
+        const auto CreateQueue     = [&](const ContextCreateInfo& ContextCI) //
+        {
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 
-        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-        queueDesc.Type  = D3D12_COMMAND_LIST_TYPE_DIRECT;
+            queueDesc.Flags    = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.Priority = QueuePriorityToD3D12QueuePriority(ContextCI.Priority);
+            queueDesc.Type     = QueueIdToD3D12CommandListType(HardwareQueueId{ContextCI.QueueId});
 
-        CComPtr<ID3D12CommandQueue> pd3d12CmdQueue;
-        hr = d3d12Device->CreateCommandQueue(&queueDesc, __uuidof(pd3d12CmdQueue), reinterpret_cast<void**>(static_cast<ID3D12CommandQueue**>(&pd3d12CmdQueue)));
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue");
-        hr = pd3d12CmdQueue->SetName(L"Main Command Queue");
-        VERIFY_EXPR(SUCCEEDED(hr));
+            CComPtr<ID3D12CommandQueue> pd3d12CmdQueue;
+            hr = d3d12Device->CreateCommandQueue(&queueDesc, __uuidof(pd3d12CmdQueue), reinterpret_cast<void**>(static_cast<ID3D12CommandQueue**>(&pd3d12CmdQueue)));
+            CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue");
+            hr = pd3d12CmdQueue->SetName(WidenString(ContextCI.Name).c_str());
+            VERIFY_EXPR(SUCCEEDED(hr));
 
-        CComPtr<ID3D12Fence> pd3d12Fence;
-        hr = d3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&pd3d12Fence)));
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create main command queue fence");
-        d3d12Device->SetName(L"Main Command Queue fence");
+            CComPtr<ID3D12Fence> pd3d12Fence;
+            hr = d3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&pd3d12Fence)));
+            CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue fence");
+            hr = pd3d12Fence->SetName((WidenString(ContextCI.Name) + L" Fence").c_str());
+            VERIFY_EXPR(SUCCEEDED(hr));
 
-        auto& RawMemAllocator = GetRawAllocator();
-        pCmdQueueD3D12        = NEW_RC_OBJ(RawMemAllocator, "CommandQueueD3D12 instance", CommandQueueD3D12Impl)(pd3d12CmdQueue, pd3d12Fence);
+            RefCntAutoPtr<CommandQueueD3D12Impl> pCmdQueueD3D12{NEW_RC_OBJ(RawMemAllocator, "CommandQueueD3D12 instance", CommandQueueD3D12Impl)(pd3d12CmdQueue, pd3d12Fence)};
+            CmdQueueD3D12Refs.push_back(pCmdQueueD3D12);
+            CmdQueues.push_back(pCmdQueueD3D12);
+        };
+
+        if (EngineCI.NumContexts > 0)
+        {
+            VERIFY(EngineCI.pContextInfo != nullptr, "Must be verified in VerifyEngineCreateInfo()");
+            for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumContexts; ++CtxInd)
+                CreateQueue(EngineCI.pContextInfo[CtxInd]);
+        }
+        else
+        {
+            ContextCreateInfo DefaultContext;
+            DefaultContext.Name    = "Main Command Queue";
+            DefaultContext.QueueId = 0;
+
+            CreateQueue(DefaultContext);
+        }
     }
     catch (const std::runtime_error&)
     {
@@ -378,14 +442,46 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         return;
     }
 
-    std::array<ICommandQueueD3D12*, 1> CmdQueues = {pCmdQueueD3D12};
-    AttachToD3D12Device(d3d12Device, CmdQueues.size(), CmdQueues.data(), EngineCI, ppDevice, ppContexts);
+    AttachToD3D12Device(d3d12Device, static_cast<Uint32>(CmdQueues.size()), CmdQueues.data(), EngineCI, ppDevice, ppContexts);
 }
 
 
+void EngineFactoryD3D12Impl::CreateCommandQueueD3D12(void*                pd3d12NativeDevice,
+                                                     void*                pd3d12NativeCommandQueue,
+                                                     IMemoryAllocator*    pRawMemAllocator,
+                                                     ICommandQueueD3D12** ppCommandQueue)
+{
+    VERIFY(pd3d12NativeDevice && pd3d12NativeCommandQueue && ppCommandQueue, "Null pointer provided");
+    if (!pd3d12NativeDevice || !pd3d12NativeCommandQueue || !ppCommandQueue)
+        return;
+
+    *ppCommandQueue = nullptr;
+
+    try
+    {
+        SetRawAllocator(pRawMemAllocator);
+        auto& RawMemAllocator = GetRawAllocator();
+        auto  d3d12Device     = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
+        auto  d3d12CmdQueue   = reinterpret_cast<ID3D12CommandQueue*>(pd3d12NativeCommandQueue);
+
+        CComPtr<ID3D12Fence> pd3d12Fence;
+        auto                 hr = d3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&pd3d12Fence)));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue fence");
+        hr = pd3d12Fence->SetName(L"User-defined command queue fence");
+        VERIFY_EXPR(SUCCEEDED(hr));
+
+        RefCntAutoPtr<CommandQueueD3D12Impl> pCmdQueueD3D12{NEW_RC_OBJ(RawMemAllocator, "CommandQueueD3D12 instance", CommandQueueD3D12Impl)(d3d12CmdQueue, pd3d12Fence)};
+        *ppCommandQueue = pCmdQueueD3D12.Detach();
+    }
+    catch (const std::runtime_error&)
+    {
+        LOG_ERROR("Failed to initialize D3D12 resources");
+        return;
+    }
+}
 
 void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd3d12NativeDevice,
-                                                 size_t                       CommandQueueCount,
+                                                 const Uint32                 CommandQueueCount,
                                                  ICommandQueueD3D12**         ppCommandQueues,
                                                  const EngineD3D12CreateInfo& EngineCI,
                                                  IRenderDevice**              ppDevice,
@@ -394,9 +490,9 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
-    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+    if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
         return;
     }
 
@@ -408,29 +504,62 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));
+
+    if (EngineCI.NumContexts > 0)
+    {
+        if (CommandQueueCount != EngineCI.NumContexts)
+        {
+            LOG_ERROR_MESSAGE("EngineCI.NumContexts (", EngineCI.NumContexts, ") must be the same as CommandQueueCount (", CommandQueueCount, ") or zero.");
+            return;
+        }
+        for (Uint32 q = 0; q < CommandQueueCount; ++q)
+        {
+            auto Desc    = ppCommandQueues[q]->GetD3D12CommandQueue()->GetDesc();
+            auto CtxType = QueueIdToD3D12CommandListType(HardwareQueueId{EngineCI.pContextInfo[q].QueueId});
+
+            if (Desc.Type != CtxType)
+            {
+                LOG_ERROR_MESSAGE("ppCommandQueues[", q, "] has type (", GetContextTypeString(D3D12CommandListTypeToContextType(Desc.Type)),
+                                  ") but EngineCI.pContextInfo[", q, "] hast incompatible type (", GetContextTypeString(D3D12CommandListTypeToContextType(CtxType)), ").");
+                return;
+            }
+        }
+    }
 
     try
     {
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto& RawMemAllocator = GetRawAllocator();
         auto  d3d12Device     = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
+        auto  pDXGIAdapter1   = DXGIAdapterFromD3D12Device(d3d12Device);
 
-        RenderDeviceD3D12Impl* pRenderDeviceD3D12(NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, this, EngineCI, d3d12Device, CommandQueueCount, ppCommandQueues));
+        ValidateD3D12CreateInfo(EngineCI);
+
+        GraphicsAdapterInfo AdapterInfo;
+        InitializeGraphicsAdapterInfo(pd3d12NativeDevice, pDXGIAdapter1, AdapterInfo);
+        DeviceFeatures ValidatedFeatures = EngineCI.Features;
+        EnableDeviceFeatures(AdapterInfo.Capabilities.Features, ValidatedFeatures);
+        AdapterInfo.Capabilities.Features = ValidatedFeatures;
+
+        RenderDeviceD3D12Impl* pRenderDeviceD3D12(NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, this, EngineCI, AdapterInfo, d3d12Device, CommandQueueCount, ppCommandQueues));
         pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12(NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, false, EngineCI, 0, 0));
-        // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
-        // keep a weak reference to the context
-        pImmediateCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
-        pRenderDeviceD3D12->SetImmediateContext(pImmediateCtxD3D12);
+        for (Uint32 CtxInd = 0; CtxInd < CommandQueueCount; ++CtxInd)
+        {
+            RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12(NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, false, EngineCI, ContextIndex{CtxInd}, CommandQueueIndex{CtxInd}));
+            // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
+            // keep a weak reference to the context
+            pImmediateCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CtxInd));
+            pRenderDeviceD3D12->SetImmediateContext(CtxInd, pImmediateCtxD3D12);
+        }
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtxD3D12(NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, true, EngineCI, 1 + DeferredCtx, 0));
+            RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtxD3D12(NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, true, EngineCI, ContextIndex{CommandQueueCount + DeferredCtx}, CommandQueueIndex{MAX_COMMAND_QUEUES}));
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
             // keep a weak reference to the context
-            pDeferredCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx));
+            pDeferredCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CommandQueueCount + DeferredCtx));
             pRenderDeviceD3D12->SetDeferredContext(DeferredCtx, pDeferredCtxD3D12);
         }
     }
@@ -441,7 +570,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for (Uint32 ctx = 0; ctx < 1 + EngineCI.NumDeferredContexts; ++ctx)
+        for (Uint32 ctx = 0; ctx < CommandQueueCount + EngineCI.NumDeferredContexts; ++ctx)
         {
             if (ppContexts[ctx] != nullptr)
             {
@@ -489,9 +618,9 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12(IRenderDevice*            pDev
     }
 }
 
-void EngineFactoryD3D12Impl::EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                               Uint32&                NumAdapters,
-                                               GraphicsAdapterInfo*   Adapters)
+void EngineFactoryD3D12Impl::EnumerateAdapters(Version              MinFeatureLevel,
+                                               Uint32&              NumAdapters,
+                                               GraphicsAdapterInfo* Adapters) const
 {
 #if USE_D3D12_LOADER
     if (m_hD3D12Dll == NULL)
@@ -503,12 +632,12 @@ void EngineFactoryD3D12Impl::EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeature
     TBase::EnumerateAdapters(MinFeatureLevel, NumAdapters, Adapters);
 }
 
-void EngineFactoryD3D12Impl::EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                                   Uint32                 AdapterId,
-                                                   Uint32                 OutputId,
-                                                   TEXTURE_FORMAT         Format,
-                                                   Uint32&                NumDisplayModes,
-                                                   DisplayModeAttribs*    DisplayModes)
+void EngineFactoryD3D12Impl::EnumerateDisplayModes(Version             MinFeatureLevel,
+                                                   Uint32              AdapterId,
+                                                   Uint32              OutputId,
+                                                   TEXTURE_FORMAT      Format,
+                                                   Uint32&             NumDisplayModes,
+                                                   DisplayModeAttribs* DisplayModes)
 {
 #if USE_D3D12_LOADER
     if (m_hD3D12Dll == NULL)
@@ -520,6 +649,202 @@ void EngineFactoryD3D12Impl::EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFea
     TBase::EnumerateDisplayModes(MinFeatureLevel, AdapterId, OutputId, Format, NumDisplayModes, DisplayModes);
 }
 
+
+static D3D_FEATURE_LEVEL GetD3DFeatureLevelFromDevice(ID3D12Device* pd3d12Device)
+{
+    D3D_FEATURE_LEVEL FeatureLevels[] =
+        {
+            D3D_FEATURE_LEVEL_12_1,
+            D3D_FEATURE_LEVEL_12_0,
+            D3D_FEATURE_LEVEL_11_1,
+            D3D_FEATURE_LEVEL_11_0,
+            D3D_FEATURE_LEVEL_10_1,
+            D3D_FEATURE_LEVEL_10_0 //
+        };
+    D3D12_FEATURE_DATA_FEATURE_LEVELS FeatureLevelsData = {};
+
+    FeatureLevelsData.pFeatureLevelsRequested = FeatureLevels;
+    FeatureLevelsData.NumFeatureLevels        = _countof(FeatureLevels);
+    pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &FeatureLevelsData, sizeof(FeatureLevelsData));
+    return FeatureLevelsData.MaxSupportedFeatureLevel;
+}
+
+void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                pd3Device,
+                                                           IDXGIAdapter1*       pDXIAdapter,
+                                                           GraphicsAdapterInfo& AdapterInfo) const
+{
+    TBase::InitializeGraphicsAdapterInfo(pd3Device, pDXIAdapter, AdapterInfo);
+
+    AdapterInfo.Capabilities.DevType = RENDER_DEVICE_TYPE_D3D12;
+
+    ID3D12Device* d3d12Device = reinterpret_cast<ID3D12Device*>(pd3Device);
+    if (d3d12Device == nullptr)
+    {
+        const Version FeatureLevelList[] = {{12, 1}, {12, 0}, {11, 1}, {11, 0}};
+        for (auto FeatureLevel : FeatureLevelList)
+        {
+            auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+
+            auto hr = D3D12CreateDevice(pDXIAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)));
+            if (SUCCEEDED(hr))
+            {
+                VERIFY_EXPR(d3d12Device);
+                break;
+            }
+        }
+    }
+
+    auto FeatureLevel = GetD3DFeatureLevelFromDevice(d3d12Device);
+    switch (FeatureLevel)
+    {
+        case D3D_FEATURE_LEVEL_12_1: AdapterInfo.Capabilities.APIVersion = {12, 1}; break;
+        case D3D_FEATURE_LEVEL_12_0: AdapterInfo.Capabilities.APIVersion = {12, 0}; break;
+        case D3D_FEATURE_LEVEL_11_1: AdapterInfo.Capabilities.APIVersion = {11, 1}; break;
+        case D3D_FEATURE_LEVEL_11_0: AdapterInfo.Capabilities.APIVersion = {11, 0}; break;
+        case D3D_FEATURE_LEVEL_10_1: AdapterInfo.Capabilities.APIVersion = {10, 1}; break;
+        case D3D_FEATURE_LEVEL_10_0: AdapterInfo.Capabilities.APIVersion = {10, 0}; break;
+        default: UNEXPECTED("Unexpected D3D feature level");
+    }
+
+    // Enable features and set properties
+    {
+#define ENABLE_FEATURE(FeatureName, Supported) \
+    Features.FeatureName = (Supported) ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+
+        auto& Features   = AdapterInfo.Capabilities.Features;
+        auto& Properties = AdapterInfo.Properties;
+
+        // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
+        // so bindless resources are always available.
+        // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
+        Features.BindlessResources = DEVICE_FEATURE_STATE_ENABLED;
+
+        Features.VertexPipelineUAVWritesAndAtomics = DEVICE_FEATURE_STATE_ENABLED;
+
+        // Check if mesh shader is supported.
+        bool MeshShadersSupported = false;
+#ifdef D3D12_H_HAS_MESH_SHADER
+        {
+            D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {static_cast<D3D_SHADER_MODEL>(0x65)};
+            if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
+            {
+                D3D12_FEATURE_DATA_D3D12_OPTIONS7 FeatureData = {};
+
+                MeshShadersSupported =
+                    SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureData, sizeof(FeatureData))) &&
+                    FeatureData.MeshShaderTier != D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
+            }
+        }
+#endif
+
+        Features.MeshShaders                = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+        Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_ENABLED;
+
+        {
+            D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
+            if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &d3d12Features, sizeof(d3d12Features))))
+            {
+                if (d3d12Features.MinPrecisionSupport & D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT)
+                {
+                    Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
+                }
+            }
+
+            D3D12_FEATURE_DATA_D3D12_OPTIONS1 d3d12Features1 = {};
+            if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &d3d12Features1, sizeof(d3d12Features1))))
+            {
+                if (d3d12Features1.WaveOps != FALSE)
+                {
+                    Features.WaveOp                   = DEVICE_FEATURE_STATE_ENABLED;
+                    Properties.WaveOp.MinSize         = d3d12Features1.WaveLaneCountMin;
+                    Properties.WaveOp.MaxSize         = d3d12Features1.WaveLaneCountMax;
+                    Properties.WaveOp.SupportedStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
+                    Properties.WaveOp.Features        = WAVE_FEATURE_BASIC | WAVE_FEATURE_VOTE | WAVE_FEATURE_ARITHMETIC | WAVE_FEATURE_BALLOUT | WAVE_FEATURE_QUAD;
+                    if (MeshShadersSupported)
+                        Properties.WaveOp.SupportedStages |= SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH;
+                }
+            }
+
+            D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Features4 = {};
+            if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &d3d12Features4, sizeof(d3d12Features4))))
+            {
+                if (d3d12Features4.Native16BitShaderOpsSupported)
+                {
+                    Features.ResourceBuffer16BitAccess = DEVICE_FEATURE_STATE_ENABLED;
+                    Features.UniformBuffer16BitAccess  = DEVICE_FEATURE_STATE_ENABLED;
+                    Features.ShaderInputOutput16       = DEVICE_FEATURE_STATE_ENABLED;
+                }
+            }
+
+            D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features5 = {};
+            if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &d3d12Features5, sizeof(d3d12Features5))))
+            {
+                if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
+                {
+                    Features.RayTracing                    = DEVICE_FEATURE_STATE_ENABLED;
+                    Properties.MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+                }
+                if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
+                {
+                    Features.RayTracing2 = DEVICE_FEATURE_STATE_ENABLED;
+                }
+            }
+        }
+    }
+
+    // Set texture and sampler capabilities
+    {
+        auto& TexCaps = AdapterInfo.Capabilities.TexCaps;
+
+        TexCaps.MaxTexture1DDimension     = D3D12_REQ_TEXTURE1D_U_DIMENSION;
+        TexCaps.MaxTexture1DArraySlices   = D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
+        TexCaps.MaxTexture2DDimension     = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        TexCaps.MaxTexture2DArraySlices   = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        TexCaps.MaxTexture3DDimension     = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        TexCaps.MaxTextureCubeDimension   = D3D12_REQ_TEXTURECUBE_DIMENSION;
+        TexCaps.Texture2DMSSupported      = True;
+        TexCaps.Texture2DMSArraySupported = True;
+        TexCaps.TextureViewSupported      = True;
+        TexCaps.CubemapArraysSupported    = True;
+
+        auto& SamCaps = AdapterInfo.Capabilities.SamCaps;
+
+        SamCaps.BorderSamplingModeSupported   = True;
+        SamCaps.AnisotropicFilteringSupported = True;
+        SamCaps.LODBiasSupported              = True;
+    }
+
+    // Set queue info
+    {
+        AdapterInfo.NumQueues = 3;
+        for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
+        {
+            auto& Queue                     = AdapterInfo.Queues[q];
+            Queue.QueueType                 = D3D12CommandListTypeToContextType(QueueIdToD3D12CommandListType(HardwareQueueId{q}));
+            Queue.MaxDeviceContexts         = 0xFF;
+            Queue.TextureCopyGranularity[0] = 1;
+            Queue.TextureCopyGranularity[1] = 1;
+            Queue.TextureCopyGranularity[2] = 1;
+        }
+    }
+
+    // Set limits
+    {
+        auto& Limits = AdapterInfo.Limits;
+
+        Limits.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+        Limits.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
+    }
+
+    if (pd3Device == nullptr)
+        d3d12Device->Release();
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
+    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+#endif
+}
 
 #ifdef DOXYGEN
 /// Loads Direct3D12-based engine implementation and exports factory functions

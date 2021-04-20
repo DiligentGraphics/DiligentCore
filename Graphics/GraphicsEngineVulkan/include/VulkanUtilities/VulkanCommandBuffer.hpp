@@ -36,8 +36,7 @@ namespace VulkanUtilities
 class VulkanCommandBuffer
 {
 public:
-    VulkanCommandBuffer(VkPipelineStageFlags EnabledShaderStages) noexcept :
-        m_EnabledShaderStages{EnabledShaderStages}
+    VulkanCommandBuffer() noexcept
     {}
 
     // clang-format off
@@ -355,7 +354,7 @@ public:
                                       VkImageLayout                  OldLayout,
                                       VkImageLayout                  NewLayout,
                                       const VkImageSubresourceRange& SubresRange,
-                                      VkPipelineStageFlags           EnabledShaderStages,
+                                      VkPipelineStageFlags           SupportedStagesMask,
                                       VkPipelineStageFlags           SrcStages  = 0,
                                       VkPipelineStageFlags           DestStages = 0);
 
@@ -373,7 +372,7 @@ public:
             // dependencies between attachments
             EndRenderPass();
         }
-        TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, m_EnabledShaderStages, SrcStages, DestStages);
+        TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, m_SupportedStagesMask, SrcStages, DestStages);
     }
 
 
@@ -381,7 +380,7 @@ public:
                                     VkBuffer             Buffer,
                                     VkAccessFlags        srcAccessMask,
                                     VkAccessFlags        dstAccessMask,
-                                    VkPipelineStageFlags EnabledShaderStages,
+                                    VkPipelineStageFlags SupportedStagesMask,
                                     VkPipelineStageFlags SrcStages  = 0,
                                     VkPipelineStageFlags DestStages = 0);
 
@@ -398,7 +397,7 @@ public:
             // dependencies between attachments
             EndRenderPass();
         }
-        BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_EnabledShaderStages, SrcStages, DestStages);
+        BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_SupportedStagesMask, SrcStages, DestStages);
     }
 
 
@@ -406,7 +405,7 @@ public:
     static void ASMemoryBarrier(VkCommandBuffer      CmdBuffer,
                                 VkAccessFlags        srcAccessMask,
                                 VkAccessFlags        dstAccessMask,
-                                VkPipelineStageFlags EnabledShaderStages,
+                                VkPipelineStageFlags SupportedStagesMask,
                                 VkPipelineStageFlags SrcStages  = 0,
                                 VkPipelineStageFlags DestStages = 0);
 
@@ -422,7 +421,7 @@ public:
             // dependencies between attachments
             EndRenderPass();
         }
-        ASMemoryBarrier(m_VkCmdBuffer, srcAccessMask, dstAccessMask, m_EnabledShaderStages, SrcStages, DestStages);
+        ASMemoryBarrier(m_VkCmdBuffer, srcAccessMask, dstAccessMask, m_SupportedStagesMask, SrcStages, DestStages);
     }
 
     __forceinline void BindDescriptorSets(VkPipelineBindPoint    pipelineBindPoint,
@@ -701,13 +700,14 @@ public:
 
     void FlushBarriers();
 
-    __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)
+    __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer, VkPipelineStageFlags StageMask)
     {
-        m_VkCmdBuffer = VkCmdBuffer;
+        m_VkCmdBuffer         = VkCmdBuffer;
+        m_SupportedStagesMask = StageMask;
     }
     VkCommandBuffer GetVkCmdBuffer() const { return m_VkCmdBuffer; }
 
-    VkPipelineStageFlags GetEnabledShaderStages() const { return m_EnabledShaderStages; }
+    VkPipelineStageFlags GetSupportedStagesMask() const { return m_SupportedStagesMask; }
 
     struct StateCache
     {
@@ -728,9 +728,9 @@ public:
     const StateCache& GetState() const { return m_State; }
 
 private:
-    StateCache                 m_State;
-    VkCommandBuffer            m_VkCmdBuffer = VK_NULL_HANDLE;
-    const VkPipelineStageFlags m_EnabledShaderStages;
+    StateCache           m_State;
+    VkCommandBuffer      m_VkCmdBuffer         = VK_NULL_HANDLE;
+    VkPipelineStageFlags m_SupportedStagesMask = ~0u;
 };
 
 } // namespace VulkanUtilities

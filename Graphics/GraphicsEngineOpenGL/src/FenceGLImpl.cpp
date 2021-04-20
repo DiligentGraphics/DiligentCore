@@ -77,7 +77,7 @@ Uint64 FenceGLImpl::GetCompletedValue()
     return m_LastCompletedFenceValue.load();
 }
 
-void FenceGLImpl::Wait(Uint64 Value, bool FlushCommands)
+void FenceGLImpl::HostWait(Uint64 Value, bool FlushCommands)
 {
     while (!m_PendingFences.empty())
     {
@@ -94,10 +94,28 @@ void FenceGLImpl::Wait(Uint64 Value, bool FlushCommands)
     }
 }
 
+void FenceGLImpl::DeviceWait(Uint64 Value)
+{
+    auto Iter = m_PendingFences.begin();
+    for (; Iter != m_PendingFences.end(); ++Iter)
+    {
+        if (Iter->first >= Value)
+        {
+            glWaitSync(Iter->second, 0, GL_TIMEOUT_IGNORED);
+            return;
+        }
+    }
+}
+
 void FenceGLImpl::Reset(Uint64 NewValue)
 {
     DEV_CHECK_ERR(NewValue >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", NewValue, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
     UpdateLastCompletedFenceValue(NewValue);
+}
+
+void FenceGLImpl::Wait(Uint64 Value)
+{
+    return HostWait(Value, false);
 }
 
 } // namespace Diligent

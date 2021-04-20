@@ -85,13 +85,26 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
                                                       const EngineD3D12CreateInfo REF EngineCI,
                                                       IRenderDevice**                 ppDevice,
                                                       IDeviceContext**                ppContexts) PURE;
-
+    
+    /// Creates a command queue from Direct3D12 native command queue.
+    
+    /// \param [in]  pd3d12NativeDevice - Pointer to the native Direct3D12 device.
+    /// \param [in]  pd3d12NativeDevice - Pointer to the native Direct3D12 command queue.
+    /// \param [in]  pRawMemAllocator   - Pointer to the raw memory allocator.
+    ///                                   Must be same as EngineCreateInfo::pRawMemAllocator in the following AttachToD3D12Device() call.
+    /// \param [out] ppCommandQueue     - Address of the memory location where pointer to the command queue will be written.
+    VIRTUAL void METHOD(CreateCommandQueueD3D12)(THIS_
+                                                 void*                       pd3d12NativeDevice,
+                                                 void*                       pd3d12NativeCommandQueue,
+                                                 struct IMemoryAllocator*    pRawMemAllocator,
+                                                 struct ICommandQueueD3D12** ppCommandQueue) PURE;
 
     /// Attaches to existing Direct3D12 device.
 
     /// \param [in] pd3d12NativeDevice - Pointer to the native Direct3D12 device.
     /// \param [in] CommandQueueCount  - Number of command queues.
     /// \param [in] ppCommandQueues    - Pointer to the array of command queues.
+    ///                                  Must be created from existing command queue using CreateCommandQueueD3D12().
     /// \param [in] EngineCI           - Engine creation info.
     /// \param [out] ppDevice          - Address of the memory location where pointer to
     ///                                  the created device will be written
@@ -101,7 +114,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
     ///                           pointers to the deferred contexts are written afterwards.
     VIRTUAL void METHOD(AttachToD3D12Device)(THIS_
                                              void*                           pd3d12NativeDevice,
-                                             size_t                          CommandQueueCount,
+                                             Uint32                          CommandQueueCount,
                                              struct ICommandQueueD3D12**     ppCommandQueues,
                                              const EngineD3D12CreateInfo REF EngineCI,
                                              IRenderDevice**                 ppDevice,
@@ -112,6 +125,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
 
     /// \param [in] pDevice           - Pointer to the render device.
     /// \param [in] pImmediateContext - Pointer to the immediate device context.
+    ///                                 Only graphics contexts are supported.
     /// \param [in] SCDesc            - Swap chain description.
     /// \param [in] FSDesc            - Fullscreen mode description.
     /// \param [in] Window            - Platform-specific native window description that
@@ -131,27 +145,6 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
                                               ISwapChain**                 ppSwapChain) PURE;
 
 
-    /// Enumerates hardware adapters available on this machine.
-
-    /// \param [in]     MinFeatureLevel - Minimum required feature level.
-    /// \param [in,out] NumAdapters - Number of adapters. If Adapters is null, this value
-    ///                               will be overwritten with the number of adapters available
-    ///                               on this system. If Adapters is not null, this value should
-    ///                               contain maximum number of elements reserved in the array
-    ///                               pointed to by Adapters. In the latter case, this value
-    ///                               is overwritten with the actual number of elements written to
-    ///                               Adapters.
-    /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
-    ///                            null is provided, the number of available adapters is written to
-    ///                            NumAdapters
-    ///
-    /// \note           D3D12 must be loaded before this method can be called, see IEngineFactoryD3D12::LoadD3D12.
-    VIRTUAL void METHOD(EnumerateAdapters)(THIS_
-                                           DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                           Uint32 REF             NumAdapters,
-                                           GraphicsAdapterInfo*   Adapters) PURE;
-
-
     /// Enumerates available display modes for the specified output of the specified adapter.
 
     /// \param [in] MinFeatureLevel - Minimum feature level of the adapter that was given to EnumerateAdapters().
@@ -167,7 +160,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
     ///
     /// \note           D3D12 must be loaded before this method can be called, see IEngineFactoryD3D12::LoadD3D12.
     VIRTUAL void METHOD(EnumerateDisplayModes)(THIS_
-                                               DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                               Version                MinFeatureLevel,
                                                Uint32                 AdapterId,
                                                Uint32                 OutputId,
                                                TEXTURE_FORMAT         Format,

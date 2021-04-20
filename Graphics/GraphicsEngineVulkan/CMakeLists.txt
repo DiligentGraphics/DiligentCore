@@ -47,12 +47,12 @@ set(VULKAN_UTILS_INCLUDE
     include/VulkanUtilities/VulkanCommandBuffer.hpp
     include/VulkanUtilities/VulkanCommandBufferPool.hpp
     include/VulkanUtilities/VulkanDebug.hpp
-    include/VulkanUtilities/VulkanFencePool.hpp
     include/VulkanUtilities/VulkanInstance.hpp
     include/VulkanUtilities/VulkanLogicalDevice.hpp
     include/VulkanUtilities/VulkanMemoryManager.hpp
     include/VulkanUtilities/VulkanObjectWrappers.hpp
     include/VulkanUtilities/VulkanPhysicalDevice.hpp
+    include/VulkanUtilities/VulkanSyncObjectManager.hpp
     include/VulkanUtilities/VulkanHeaders.h
 )
 
@@ -121,11 +121,11 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanCommandBuffer.cpp
     src/VulkanUtilities/VulkanCommandBufferPool.cpp
     src/VulkanUtilities/VulkanDebug.cpp
-    src/VulkanUtilities/VulkanFencePool.cpp
     src/VulkanUtilities/VulkanInstance.cpp
     src/VulkanUtilities/VulkanLogicalDevice.cpp
     src/VulkanUtilities/VulkanMemoryManager.cpp
     src/VulkanUtilities/VulkanPhysicalDevice.cpp
+    src/VulkanUtilities/VulkanSyncObjectManager.cpp
 )
 
 set(GENERATE_MIPS_SHADER shaders/GenerateMipsCS.csh)

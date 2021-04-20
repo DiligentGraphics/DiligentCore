@@ -58,12 +58,16 @@
 namespace Diligent
 {
 
-DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters* pRefCounters, class RenderDeviceGLImpl* pDeviceGL, bool bIsDeferred) :
+DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters* pRefCounters,
+                                         RenderDeviceGLImpl* pDeviceGL,
+                                         const char*         ContextName,
+                                         bool                bIsDeferred) :
     // clang-format off
     TDeviceContextBase
     {
         pRefCounters,
         pDeviceGL,
+        ContextName,
         bIsDeferred
     },
     m_ContextState{pDeviceGL},
@@ -76,6 +80,12 @@ DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters* pRefCounters, class
 
 IMPLEMENT_QUERY_INTERFACE(DeviceContextGLImpl, IID_DeviceContextGL, TDeviceContextBase)
 
+
+void DeviceContextGLImpl::Begin(Uint32 CommandQueueId)
+{
+    UNEXPECTED("OpenGL does not support deferred contexts");
+    (void)(CommandQueueId);
+}
 
 void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
@@ -199,7 +209,7 @@ void DeviceContextGLImpl::SetBlendFactors(const float* pBlendFactors)
 void DeviceContextGLImpl::SetVertexBuffers(Uint32                         StartSlot,
                                            Uint32                         NumBuffersSet,
                                            IBuffer**                      ppBuffers,
-                                           Uint32*                        pOffsets,
+                                           const Uint32*                  pOffsets,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                            SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
@@ -1135,7 +1145,7 @@ void DeviceContextGLImpl::ExecuteCommandLists(Uint32               NumCommandLis
 
 void DeviceContextGLImpl::SignalFence(IFence* pFence, Uint64 Value)
 {
-    VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
     GLObjectWrappers::GLSyncObj GLFence{glFenceSync(
         GL_SYNC_GPU_COMMANDS_COMPLETE, // Condition must always be GL_SYNC_GPU_COMMANDS_COMPLETE
         0                              // Flags, must be 0
@@ -1145,16 +1155,16 @@ void DeviceContextGLImpl::SignalFence(IFence* pFence, Uint64 Value)
     pFenceGLImpl->AddPendingFence(std::move(GLFence), Value);
 }
 
-void DeviceContextGLImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
+void DeviceContextGLImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be waited from immediate context");
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be waited from immediate context");
     auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
-    pFenceGLImpl->Wait(Value, FlushContext);
+    pFenceGLImpl->DeviceWait(Value);
 }
 
 void DeviceContextGLImpl::WaitForIdle()
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate contexts can be idled");
+    DEV_CHECK_ERR(!IsDeferred(), "Only immediate contexts can be idled");
     Flush();
     glFinish();
 }
@@ -1484,7 +1494,7 @@ void DeviceContextGLImpl::GenerateMips(ITextureView* pTexView)
     m_ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
+void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers)
 {
     VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
 }

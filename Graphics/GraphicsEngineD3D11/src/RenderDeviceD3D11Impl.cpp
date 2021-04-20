@@ -58,157 +58,24 @@ class TopLevelASD3D11Impl
 class ShaderBindingTableD3D11Impl
 {};
 
-static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D11Device(ID3D11Device* pd3d11Device)
-{
-    CComPtr<IDXGIDevice> pDXGIDevice;
-
-    auto hr = pd3d11Device->QueryInterface(__uuidof(pDXGIDevice), reinterpret_cast<void**>(static_cast<IDXGIDevice**>(&pDXGIDevice)));
-    if (SUCCEEDED(hr))
-    {
-        CComPtr<IDXGIAdapter> pDXGIAdapter;
-        hr = pDXGIDevice->GetAdapter(&pDXGIAdapter);
-        if (SUCCEEDED(hr))
-        {
-            CComPtr<IDXGIAdapter1> pDXGIAdapter1;
-            pDXGIAdapter.QueryInterface(&pDXGIAdapter1);
-            return pDXGIAdapter1;
-        }
-        else
-        {
-            LOG_ERROR("Failed to get DXGI Adapter from DXGI Device.");
-        }
-    }
-    else
-    {
-        LOG_ERROR("Failed to query IDXGIDevice from D3D device.");
-    }
-
-    return nullptr;
-}
-
 RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
                                              IEngineFactory*              pEngineFactory,
                                              const EngineD3D11CreateInfo& EngineCI,
-                                             ID3D11Device*                pd3d11Device,
-                                             Uint32                       NumDeferredContexts) :
+                                             const GraphicsAdapterInfo&   AdapterInfo,
+                                             ID3D11Device*                pd3d11Device) :
     // clang-format off
     TRenderDeviceBase
     {
         pRefCounters,
         RawMemAllocator,
         pEngineFactory,
-        EngineCI
+        EngineCI,
+        AdapterInfo
     },
-    m_pd3d11Device{pd3d11Device }
+    m_pd3d11Device{pd3d11Device}
 // clang-format on
 {
-    m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D11;
-    auto FeatureLevel    = m_pd3d11Device->GetFeatureLevel();
-    switch (FeatureLevel)
-    {
-        case D3D_FEATURE_LEVEL_11_0:
-        case D3D_FEATURE_LEVEL_11_1:
-            m_DeviceCaps.MajorVersion = 11;
-            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_11_1 ? 1 : 0;
-            break;
-
-        case D3D_FEATURE_LEVEL_10_0:
-        case D3D_FEATURE_LEVEL_10_1:
-            m_DeviceCaps.MajorVersion = 10;
-            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_10_1 ? 1 : 0;
-            break;
-
-        default:
-            UNEXPECTED("Unexpected D3D feature level");
-    }
-
-    if (auto pDXGIAdapter1 = DXGIAdapterFromD3D11Device(pd3d11Device))
-    {
-        ReadAdapterInfo(pDXGIAdapter1);
-    }
-
-#define UNSUPPORTED_FEATURE(Feature, Name)                                   \
-    do                                                                       \
-    {                                                                        \
-        if (EngineCI.Features.Feature == DEVICE_FEATURE_STATE_ENABLED)       \
-            LOG_ERROR_AND_THROW(Name " not supported by Direct3D11 device"); \
-        m_DeviceCaps.Features.Feature = DEVICE_FEATURE_STATE_DISABLED;       \
-    } while (false)
-
-    // Direct3D11 only supports shader model 5.0 even if the device feature level is
-    // above 11.0 (for example, 11.1 or 12.0), so bindless resources are never available.
-    // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
-    // clang-format off
-    UNSUPPORTED_FEATURE(BindlessResources,                 "Bindless resources are");
-    UNSUPPORTED_FEATURE(VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
-    UNSUPPORTED_FEATURE(MeshShaders,                       "Mesh shaders are");
-    UNSUPPORTED_FEATURE(RayTracing,                        "Ray tracing is");
-    UNSUPPORTED_FEATURE(RayTracing2,                       "Inline ray tracing is");
-    UNSUPPORTED_FEATURE(ShaderResourceRuntimeArray,        "Runtime-sized array is");
-    UNSUPPORTED_FEATURE(WaveOp,                            "Wave operations are");
-    // clang-format on
-
-    {
-        bool ShaderFloat16Supported = false;
-
-        D3D11_FEATURE_DATA_SHADER_MIN_PRECISION_SUPPORT d3d11MinPrecisionSupport = {};
-        if (SUCCEEDED(m_pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_SHADER_MIN_PRECISION_SUPPORT, &d3d11MinPrecisionSupport, sizeof(d3d11MinPrecisionSupport))))
-        {
-            ShaderFloat16Supported =
-                (d3d11MinPrecisionSupport.PixelShaderMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0 &&
-                (d3d11MinPrecisionSupport.AllOtherShaderStagesMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0;
-        }
-        if (EngineCI.Features.ShaderFloat16 == DEVICE_FEATURE_STATE_ENABLED && !ShaderFloat16Supported)
-            LOG_ERROR_AND_THROW("16-bit float shader operations are");
-        m_DeviceCaps.Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
-    }
-
-    // Explicit fp16 is only supported in DXC through Shader Model 6.2, so there's no support for FXC or D3D11.
-    // clang-format off
-    UNSUPPORTED_FEATURE(ResourceBuffer16BitAccess, "16-bit native access to resource buffers is");
-    UNSUPPORTED_FEATURE(UniformBuffer16BitAccess,  "16-bit native access to uniform buffers is");
-    UNSUPPORTED_FEATURE(ShaderInputOutput16,       "16-bit shader input/output is");
-
-    UNSUPPORTED_FEATURE(ShaderInt8,               "Native 8-bit shader operations are");
-    UNSUPPORTED_FEATURE(ResourceBuffer8BitAccess, "8-bit native access to resource buffers is");
-    UNSUPPORTED_FEATURE(UniformBuffer8BitAccess,  "8-bit native access to uniform buffers is");
-    // clang-format on
-#undef UNSUPPORTED_FEATURE
-
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
-#endif
-
-    auto& TexCaps = m_DeviceCaps.TexCaps;
-
-    TexCaps.MaxTexture1DDimension     = D3D11_REQ_TEXTURE1D_U_DIMENSION;
-    TexCaps.MaxTexture1DArraySlices   = D3D11_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
-    TexCaps.MaxTexture2DDimension     = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-    TexCaps.MaxTexture2DArraySlices   = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
-    TexCaps.MaxTexture3DDimension     = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
-    TexCaps.MaxTextureCubeDimension   = D3D11_REQ_TEXTURECUBE_DIMENSION;
-    TexCaps.Texture2DMSSupported      = True;
-    TexCaps.Texture2DMSArraySupported = True;
-    TexCaps.TextureViewSupported      = True;
-    TexCaps.CubemapArraysSupported    = True;
-
-    auto& SamCaps = m_DeviceCaps.SamCaps;
-
-    SamCaps.BorderSamplingModeSupported   = True;
-    SamCaps.AnisotropicFilteringSupported = True;
-    SamCaps.LODBiasSupported              = True;
-
-    auto& Limits = m_DeviceCaps.Limits;
-    // Offsets passed to *SSetConstantBuffers1 are measured in shader constants, which are
-    // 16 bytes (4*32-bit components). Each offset must be a multiple of 16 constants,
-    // i.e. 256 bytes.
-    Limits.ConstantBufferOffsetAlignment   = 256;
-    Limits.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
-#endif
 }
 
 void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
@@ -433,7 +300,9 @@ void RenderDeviceD3D11Impl::CreatePipelineResourceSignature(const PipelineResour
 
 void RenderDeviceD3D11Impl::IdleGPU()
 {
-    if (auto pImmediateCtx = m_wpImmediateContext.Lock())
+    VERIFY_EXPR(m_wpImmediateContexts.size() == 1);
+
+    if (auto pImmediateCtx = m_wpImmediateContexts[0].Lock())
     {
         pImmediateCtx->WaitForIdle();
     }

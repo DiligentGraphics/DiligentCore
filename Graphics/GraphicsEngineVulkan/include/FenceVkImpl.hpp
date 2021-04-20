@@ -35,10 +35,13 @@
 
 #include "EngineVkImplTraits.hpp"
 #include "FenceBase.hpp"
-#include "VulkanUtilities/VulkanFencePool.hpp"
+#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/VulkanSyncObjectManager.hpp"
 
 namespace Diligent
 {
+using SyncPointVkPtr = std::shared_ptr<class SyncPointVk>;
+
 
 /// Fence implementation in Vulkan backend.
 class FenceVkImpl final : public FenceBase<EngineVkImplTraits>
@@ -65,18 +68,26 @@ public:
     /// Implementation of IFence::Reset() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
-    VulkanUtilities::FenceWrapper GetVkFence() { return m_FencePool.GetFence(); }
+    /// Implementation of IFence::Wait() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
 
-    void AddPendingFence(VulkanUtilities::FenceWrapper&& vkFence, Uint64 FenceValue)
-    {
-        m_PendingFences.emplace_back(FenceValue, std::move(vkFence));
-    }
+    VulkanUtilities::VulkanRecycledSemaphore ExtractSignalSemaphore(CommandQueueIndex CommandQueueId, Uint64 Value);
 
-    void Wait(Uint64 Value);
+    void AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 Value, SyncPointVkPtr SyncPoint);
 
 private:
-    VulkanUtilities::VulkanFencePool                             m_FencePool;
-    std::deque<std::pair<Uint64, VulkanUtilities::FenceWrapper>> m_PendingFences;
+    Uint64 InternalGetCompletedValue();
+
+    static constexpr Uint32 RequiredArraySize = 8;
+
+    struct SyncPointData
+    {
+        Uint64         Value;
+        SyncPointVkPtr SyncPoint;
+    };
+
+    std::mutex                m_Guard;      // Protects access to the m_SyncPoints
+    std::deque<SyncPointData> m_SyncPoints; // TODO: use ring buffer
 };
 
 } // namespace Diligent

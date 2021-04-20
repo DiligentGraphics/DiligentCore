@@ -141,6 +141,11 @@ void TestingSwapChainGL::TakeSnapshot()
     VERIFY(glGetError() == GL_NO_ERROR, "Failed to read pixels from the framebuffer");
 }
 
+void TestingSwapChainGL::TakeSnapshot(ITexture* pBlitFrom)
+{
+    UNEXPECTED("Not implemented");
+}
+
 void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
                               IDeviceContext*      pContext,
                               const SwapChainDesc& SCDesc,

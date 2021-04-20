@@ -37,6 +37,7 @@
 #include "../../../Primitives/interface/FlagEnum.h"
 #include "../../../Platforms/interface/NativeWindow.h"
 #include "APIInfo.h"
+#include "Constants.h"
 
 /// Graphics engine namespace
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -195,6 +196,16 @@ DILIGENT_TYPED_ENUM(CPU_ACCESS_FLAGS, Uint8)
     CPU_ACCESS_WRITE = 0x02  ///< A resource can be mapped for writing
 };
 DEFINE_FLAG_ENUM_OPERATORS(CPU_ACCESS_FLAGS)
+
+/// AZ TODO
+DILIGENT_TYPED_ENUM(RESOURCE_FLAGS, Uint8)
+{
+    RESOURCE_FLAG_UNKNOWN = 0,
+
+    /// Allows a resource to be simultaneously read from multiple contexts.
+    RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS = 0x01,
+};
+DEFINE_FLAG_ENUM_OPERATORS(RESOURCE_FLAGS)
 
 /// Resource mapping type
 
@@ -1237,8 +1248,11 @@ DILIGENT_TYPED_ENUM(ADAPTER_TYPE, Uint8)
     /// Software adapter
     ADAPTER_TYPE_SOFTWARE,
 
-    /// Hardware adapter
-    ADAPTER_TYPE_HARDWARE
+    /// Integrated hardware adapter
+    ADAPTER_TYPE_INTEGRATED,
+        
+    /// Discrete hardware adapter
+    ADAPTER_TYPE_DISCRETE,
 };
 
 
@@ -1489,7 +1503,6 @@ enum QUERY_TYPE
     /// The number of query types in the enum
     QUERY_TYPE_NUM_TYPES
 };
-
 
 
 /// Device type
@@ -1771,23 +1784,6 @@ struct DeviceFeatures
 typedef struct DeviceFeatures DeviceFeatures;
 
 
-/// Describes the device limits
-struct DeviceLimits
-{
-    /// The minimum required alignment, in bytes, for the constant buffer offsets.
-    /// The Offset parameter passed to IShaderResourceVariable::SetBufferRange() or to
-    /// IShaderResourceVariable::SetBufferOffset() method used to set the offset of a
-    /// constant buffer, must be an integer multiple of this limit.
-    Uint32 ConstantBufferOffsetAlignment DEFAULT_INITIALIZER(0);
-
-    /// The minimum required alignment, in bytes, for the structured buffer offsets.
-    /// The ByteOffset member of the BufferViewDesc used to create a structured buffer view or
-    /// the Offset parameter passed to IShaderResourceVariable::SetBufferOffset() method used to
-    /// set the offset of a structured buffer, must be an integer multiple of this limit.
-    Uint32 StructuredBufferOffsetAlignment DEFAULT_INITIALIZER(0);
-};
-typedef struct DeviceLimits DeviceLimits;
-
 /// Graphics adapter vendor
 DILIGENT_TYPED_ENUM(ADAPTER_VENDOR, Uint8)
 {
@@ -1813,58 +1809,60 @@ DILIGENT_TYPED_ENUM(ADAPTER_VENDOR, Uint8)
     ADAPTER_VENDOR_IMGTECH,
 
     /// Adapter vendor is Microsoft (software rasterizer)
-    ADAPTER_VENDOR_MSFT
+    ADAPTER_VENDOR_MSFT,
+
+    /// Adapter vendor is Apple
+    ADAPTER_VENDOR_APPLE,
+
+    /// Adapter vendor is Mesa (software rasterizer)
+    ADAPTER_VENDOR_MESA
 };
 
-/// Graphics adapter properties
-struct GraphicsAdapterInfo
+
+/// Version
+struct Version
 {
-    /// A string that contains the adapter description.
-    char Description[128]   DEFAULT_INITIALIZER({});
+    /// Major revision
+    Uint8 Major DEFAULT_INITIALIZER(0);
 
-    /// Adapter type, see Diligent::ADAPTER_TYPE.
-    ADAPTER_TYPE   Type     DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
+    /// Minor revision
+    Uint8 Minor DEFAULT_INITIALIZER(0);
 
-    /// Adapter vendor, see Diligent::ADAPTER_VENDOR.
-    ADAPTER_VENDOR Vendor   DEFAULT_INITIALIZER(ADAPTER_VENDOR_UNKNOWN);
+#if DILIGENT_CPP_INTERFACE
+    Version() noexcept
+    {}
+    Version(Uint8 _Major, Uint8 _Minor) noexcept :
+        Major{_Major},
+        Minor{_Minor}
+    {}
 
-    /// The PCI ID of the hardware vendor (if available).
-    Uint32 VendorId         DEFAULT_INITIALIZER(0);
+    bool operator==(const Version& rhs) const
+    {
+        return Major == rhs.Major && Minor == rhs.Minor;
+    }
 
-    /// The PCI ID of the hardware device (if available).
-    Uint32 DeviceId         DEFAULT_INITIALIZER(0);
+    bool operator>(const Version& rhs) const
+    {
+        return Major == rhs.Major ? Minor > rhs.Minor : Major > rhs.Major;
+    }
 
-    /// Number of video outputs this adapter has (if available).
-    Uint32 NumOutputs       DEFAULT_INITIALIZER(0);
+    bool operator>=(const Version& rhs) const
+    {
+        return Major == rhs.Major ? Minor >= rhs.Minor : Major >= rhs.Major;
+    }
 
-    /// The amount of local video memory that is inaccessible by CPU, in bytes.
+    bool operator<(const Version& rhs) const
+    {
+        return !(*this >= rhs);
+    }
 
-    /// \note Device-local memory is where USAGE_DEFAULT and USAGE_IMMUTABLE resources
-    ///       are typically allocated.
-    ///
-    ///       On some devices it may not be possible to query the memory size,
-    ///       in which case all memory sizes will be zero.
-    Uint64  DeviceLocalMemory   DEFAULT_INITIALIZER(0);
-
-
-    /// The amount of host-visible memory that can be accessed by CPU and is visible by GPU, in bytes.
-
-    /// \note Host-visible memory is where USAGE_DYNAMIC and USAGE_STAGING resources
-    ///       are typically allocated.
-    Uint64  HostVisibileMemory  DEFAULT_INITIALIZER(0);
-
-
-    /// The amount of unified memory that can be directly accessed by both CPU and GPU, in bytes.
-
-    /// \note Unified memory is where USAGE_UNIFIED resources are typically allocated, but
-    ///       resourecs with other usages may be allocated as well if there is no corresponding
-    ///       memory type.
-    Uint64  UnifiedMemory       DEFAULT_INITIALIZER(0);
-
-    /// Supported access types for the unified memory.
-    CPU_ACCESS_FLAGS UnifiedMemoryCPUAccess DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
+    bool operator<=(const Version& rhs) const
+    {
+        return !(*this > rhs);
+    }
+#endif
 };
-typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;
+typedef struct Version Version;
 
 
 /// Device capabilities
@@ -1877,14 +1875,7 @@ struct DeviceCaps
     /// Note that this value indicates the maximum supported feature level, so,
     /// for example, if the device type is D3D11, this value will be 10 when 
     /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
-    Int32 MajorVersion DEFAULT_INITIALIZER(0);
-
-    /// Minor revision of the graphics API supported by the graphics adapter.
-    /// Similar to MajorVersion, this value indicates the maximum supported feature level.
-    Int32 MinorVersion DEFAULT_INITIALIZER(0);
-
-    /// Adapter info, see Diligent::GraphicsAdapterInfo.
-    GraphicsAdapterInfo AdapterInfo;
+    Version APIVersion DEFAULT_INITIALIZER({});
 
     /// Texture sampling capabilities. See Diligent::SamplerCaps.
     SamplerCaps SamCaps;
@@ -1897,9 +1888,6 @@ struct DeviceCaps
     /// \note For optional features requested during the initialization, the
     ///       struct will indicate the actual feature state (enabled or disabled).
     DeviceFeatures Features;
-
-    /// Device limits. See Diligent::DeviceLimits.
-    DeviceLimits Limits;
 
 #if DILIGENT_CPP_INTERFACE
     bool IsGLDevice()const
@@ -2022,6 +2010,24 @@ struct WaveOpProperties
 typedef struct WaveOpProperties WaveOpProperties;
 
 
+/// Describes the device limits
+struct DeviceLimits
+{
+    /// The minimum required alignment, in bytes, for the constant buffer offsets.
+    /// The Offset parameter passed to IShaderResourceVariable::SetBufferRange() or to
+    /// IShaderResourceVariable::SetBufferOffset() method used to set the offset of a
+    /// constant buffer, must be an integer multiple of this limit.
+    Uint32 ConstantBufferOffsetAlignment DEFAULT_INITIALIZER(0);
+
+    /// The minimum required alignment, in bytes, for the structured buffer offsets.
+    /// The ByteOffset member of the BufferViewDesc used to create a structured buffer view or
+    /// the Offset parameter passed to IShaderResourceVariable::SetBufferOffset() method used to
+    /// set the offset of a structured buffer, must be an integer multiple of this limit.
+    Uint32 StructuredBufferOffsetAlignment DEFAULT_INITIALIZER(0);
+};
+typedef struct DeviceLimits DeviceLimits;
+
+
 /// Device properties
 struct DeviceProperties
 {
@@ -2032,7 +2038,6 @@ struct DeviceProperties
     WaveOpProperties WaveOp  DEFAULT_INITIALIZER({});
 };
 typedef struct DeviceProperties DeviceProperties;
-
 
 
 /// Commomn validation options.
@@ -2052,17 +2057,189 @@ DILIGENT_TYPED_ENUM(VALIDATION_FLAGS, Uint32)
 DEFINE_FLAG_ENUM_OPERATORS(VALIDATION_FLAGS)
 
 
+/// Device context type
+DILIGENT_TYPED_ENUM(CONTEXT_TYPE, Uint8)
+{
+    CONTEXT_TYPE_UNKNOWN        = 0,
+
+    /// Context that supports only memory transfer commands.
+    CONTEXT_TYPE_TRANSFER       = 0x01,
+
+    /// Context that supports compute, ray tracing and transfer commands.
+    CONTEXT_TYPE_COMPUTE        = 0x02 | CONTEXT_TYPE_TRANSFER,
+
+    /// Context that supports graphics, compute, ray tracing and transfer commands.
+    CONTEXT_TYPE_GRAPHICS       = 0x04 | CONTEXT_TYPE_COMPUTE,
+
+    /// Reserved for future use.
+    CONTEXT_TYPE_SPARSE_BINDING = 0x10,
+
+    CONTEXT_TYPE_LAST           = CONTEXT_TYPE_GRAPHICS
+};
+DEFINE_FLAG_ENUM_OPERATORS(CONTEXT_TYPE)
+
+
+/// Queue priority
+DILIGENT_TYPED_ENUM(QUEUE_PRIORITY, Uint8)
+{
+    QUEUE_PRIORITY_UNKNOWN = 0,
+        
+    /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_LOW_EXT
+    /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_NORMAL
+    QUEUE_PRIORITY_LOW,
+        
+    /// Default queue priority.
+    /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_EXT
+    /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_NORMAL
+    QUEUE_PRIORITY_MEDIUM,
+        
+    /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_HIGH_EXT
+    /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_HIGH
+    QUEUE_PRIORITY_HIGH,
+        
+    /// Additional system privileges required to use this priority, read documentation for specific platform.
+    /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_REALTIME_EXT
+    /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME
+    QUEUE_PRIORITY_REALTIME,
+
+    QUEUE_PRIORITY_LAST = QUEUE_PRIORITY_REALTIME
+};
+
+
+/// Device memory properties
+struct DeviceMemoryInfo
+{
+    /// The amount of local video memory that is inaccessible by CPU, in bytes.
+
+    /// \note Device-local memory is where USAGE_DEFAULT and USAGE_IMMUTABLE resources
+    ///       are typically allocated.
+    ///
+    ///       On some devices it may not be possible to query the memory size,
+    ///       in which case all memory sizes will be zero.
+    Uint64  DeviceLocalMemory   DEFAULT_INITIALIZER(0);
+
+
+    /// The amount of host-visible memory that can be accessed by CPU and is visible by GPU, in bytes.
+
+    /// \note Host-visible memory is where USAGE_DYNAMIC and USAGE_STAGING resources
+    ///       are typically allocated.
+    Uint64  HostVisibileMemory  DEFAULT_INITIALIZER(0);
+
+
+    /// The amount of unified memory that can be directly accessed by both CPU and GPU, in bytes.
+
+    /// \note Unified memory is where USAGE_UNIFIED resources are typically allocated, but
+    ///       resourecs with other usages may be allocated as well if there is no corresponding
+    ///       memory type.
+    Uint64  UnifiedMemory       DEFAULT_INITIALIZER(0);
+
+    /// Supported access types for the unified memory.
+    CPU_ACCESS_FLAGS UnifiedMemoryCPUAccess DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
+};
+typedef struct DeviceMemoryInfo DeviceMemoryInfo;
+
+
+/// Device queue properties
+struct DeviceQueueInfo
+{
+    /// Indicates which type of commands supported by the queue.
+    CONTEXT_TYPE QueueType       DEFAULT_INITIALIZER(CONTEXT_TYPE_UNKNOWN);
+
+    /// Number of queues which may be created with combination of QueueType and QueueId.
+    Uint32       MaxDeviceContexts   DEFAULT_INITIALIZER(0);
+    
+    /// In Vulkan backend transfer queue may require to align texture offset and size in copy operations.
+    /// Graphics and compute queues already specify alignment {1,1,1}.
+    Uint32       TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
+};
+typedef struct DeviceQueueInfo DeviceQueueInfo;
+
+
+/// Graphics adapter properties
+struct GraphicsAdapterInfo
+{
+    /// A string that contains the adapter description.
+    char Description[128]   DEFAULT_INITIALIZER({});
+
+    /// Adapter type, see Diligent::ADAPTER_TYPE.
+    ADAPTER_TYPE   Type     DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
+
+    /// Adapter vendor, see Diligent::ADAPTER_VENDOR.
+    ADAPTER_VENDOR Vendor   DEFAULT_INITIALIZER(ADAPTER_VENDOR_UNKNOWN);
+
+    /// The PCI ID of the hardware vendor (if available).
+    Uint32 VendorId         DEFAULT_INITIALIZER(0);
+
+    /// The PCI ID of the hardware device (if available).
+    Uint32 DeviceId         DEFAULT_INITIALIZER(0);
+
+    /// Number of video outputs this adapter has (if available).
+    Uint32 NumOutputs       DEFAULT_INITIALIZER(0);
+
+    /// Hardware features and properties. See Diligent::DeviceMemoryInfo.
+    DeviceMemoryInfo Memory;
+    
+    /// See Diligent::DeviceCaps.
+    DeviceCaps       Capabilities;
+
+    /// See Diligent::DeviceProperties.
+    DeviceProperties Properties;
+    
+    /// Device limits. See Diligent::DeviceLimits.
+    DeviceLimits     Limits;
+    
+    /// Queue types which are supported by this device. See Diligent::DeviceQueueInfo.
+    DeviceQueueInfo  Queues[DILIGENT_MAX_ADAPTER_QUEUES]  DEFAULT_INITIALIZER({});
+
+    ///
+    Uint32     NumQueues DEFAULT_INITIALIZER(0);
+};
+typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;
+
+
+/// Device context create info
+struct ContextCreateInfo
+{
+    /// Context name.
+    const char*    Name         DEFAULT_INITIALIZER(nullptr);
+
+    /// Queue index in GraphicsAdapterInfo::Queues.
+    Uint8          QueueId      DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
+
+    /// Vulkan backend: all contexts with the same QueueId must have same priority.
+    QUEUE_PRIORITY Priority     DEFAULT_INITIALIZER(QUEUE_PRIORITY_MEDIUM);
+};
+typedef struct ContextCreateInfo ContextCreateInfo;
+
+
 /// Engine creation attributes
 struct EngineCreateInfo
 {
-    /// API version number.
-    Int32                    APIVersion             DEFAULT_INITIALIZER(DILIGENT_API_VERSION);
+    /// Engine API version number.
+    Int32                    EngineAPIVersion       DEFAULT_INITIALIZER(DILIGENT_API_VERSION);
+    
+    /// Id of the hardware adapter the engine should be initialized on.
+    /// Call IEngineFactory::EnumerateAdapters() to get all available adapters.
+    Uint32                   AdapterId              DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
+
+    /// Minimum required graphics API version (feature level for Direct3D).
+    Version                  GraphicsAPIVersion     DEFAULT_INITIALIZER({});
+
+    /// Immediate device contexts.
+    /// If not specified then a single graphics context will be created.
+    /// The recomended configuration:
+    ///   Modern discrete GPU:      1 graphics, 1 compute, 1 transfer contexts.
+    ///   Integrated or mobile GPU: 1..2 graphics contexts.
+    const ContextCreateInfo* pContextInfo           DEFAULT_INITIALIZER(nullptr);
+
+    /// Number of immediate contexts.
+    Uint32                   NumContexts            DEFAULT_INITIALIZER(0);
 
     /// Number of deferred contexts to create when initializing the engine. If non-zero number 
     /// is given, pointers to the contexts are written to ppContexts array by the engine factory 
     /// functions (IEngineFactoryD3D11::CreateDeviceAndContextsD3D11,
     /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12, and IEngineFactoryVk::CreateDeviceAndContextsVk)
-    /// starting at position 1.
+    /// starting at position max(1, NumContexts).
     Uint32                   NumDeferredContexts    DEFAULT_INITIALIZER(0);
 
     /// Requested device features.
@@ -2147,38 +2324,8 @@ DILIGENT_TYPED_ENUM(D3D11_VALIDATION_FLAGS, Uint32)
 DEFINE_FLAG_ENUM_OPERATORS(D3D11_VALIDATION_FLAGS)
 
 
-/// Direct3D11/12 feature level
-DILIGENT_TYPED_ENUM(DIRECT3D_FEATURE_LEVEL, Uint8)
-{
-    /// Feature level 10.0
-    DIRECT3D_FEATURE_LEVEL_10_0,
-
-    /// Feature level 10.1
-    DIRECT3D_FEATURE_LEVEL_10_1,
-
-    /// Feature level 11.0
-    DIRECT3D_FEATURE_LEVEL_11_0,
-
-    /// Feature level 11.1
-    DIRECT3D_FEATURE_LEVEL_11_1,
-
-    /// Feature level 12.0
-    DIRECT3D_FEATURE_LEVEL_12_0,
-
-    /// Feature level 12.1
-    DIRECT3D_FEATURE_LEVEL_12_1
-};
-
-static const Uint32 DEFAULT_ADAPTER_ID = 0xFFFFFFFFU;
-
 /// Attributes specific to D3D11 engine
 struct EngineD3D11CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
-
-    /// Id of the hardware adapter the engine should be initialized on.
-    Uint32                 AdapterId           DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
-
-    /// Minimum required Direct3D feature level.
-    DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel DEFAULT_INITIALIZER(DIRECT3D_FEATURE_LEVEL_11_0);
 
     /// Direct3D11-specific validation options, see Diligent::D3D11_VALIDATION_FLAGS.
     D3D11_VALIDATION_FLAGS D3D11ValidationFlags DEFAULT_INITIALIZER(D3D11_VALIDATION_FLAG_NONE);
@@ -2239,13 +2386,6 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Name of the D3D12 DLL to load. Ignored on UWP.
     const char* D3D12DllName       DEFAULT_INITIALIZER("d3d12.dll");
-
-    /// Id of the hardware adapter the engine should be initialized on.
-    Uint32      AdapterId          DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
-
-    /// Minimum required Direct3D feature level.
-    DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel DEFAULT_INITIALIZER(DIRECT3D_FEATURE_LEVEL_11_0);
-
     /// Direct3D12-specific validation options, see Diligent::D3D12_VALIDATION_FLAGS.
     D3D12_VALIDATION_FLAGS D3D12ValidationFlags DEFAULT_INITIALIZER(D3D12_VALIDATION_FLAG_BREAK_ON_CORRUPTION);
 
@@ -2430,18 +2570,25 @@ typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
 
 /// Attributes specific to Vulkan engine
 struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
+        
+    /// Number of Vulkan instance extensions
+    Uint32             InstanceExtensionCount   DEFAULT_INITIALIZER(0);
 
-    /// Id of the hardware adapter the engine should be initialized on.
-    Uint32             AdapterId                DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
+    /// List of Vulkan instance extensions to enable.
+    const char* const* ppInstanceExtensionNames DEFAULT_INITIALIZER(nullptr);
+    
+    /// Number of Vulkan device extensions
+    Uint32             DeviceExtensionCount     DEFAULT_INITIALIZER(0);
 
-    /// Number of global Vulkan extensions
-    Uint32             GlobalExtensionCount     DEFAULT_INITIALIZER(0);
+    /// List of Vulkan device extensions to enable.
+    const char* const* ppDeviceExtensionNames   DEFAULT_INITIALIZER(nullptr);
 
-    /// List of global Vulkan extensions to enable.
-    const char* const* ppGlobalExtensionNames   DEFAULT_INITIALIZER(nullptr);
+    /// Pointer to Vulkan device extension features.
+    /// Will be added to VkDeviceCreateInfo::pNext.
+    void*              pDeviceExtensionFeatures DEFAULT_INITIALIZER(nullptr);
 
     /// Allocator used as pAllocator parameter in callse to Vulkan Create* functions
-    void* pVkAllocator                          DEFAULT_INITIALIZER(nullptr);
+    void*              pVkAllocator             DEFAULT_INITIALIZER(nullptr);
 
     /// Size of the main descriptor pool that is used to allocate descriptor sets
     /// for static and mutable variables. If allocation from the current pool fails,

@@ -31,7 +31,7 @@
 /// Defines Diligent::IEngineFactory interface
 
 #include "../../../Primitives/interface/Object.h"
-#include "APIInfo.h"
+#include "GraphicsTypes.h"
 
 
 #if PLATFORM_ANDROID
@@ -69,6 +69,24 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
                         THIS_
                         const Char*                              SearchDirectories,
                         struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) CONST PURE;
+    
+    /// Enumerates adapters available on this machine.
+
+    /// \param [in]     MinVersion  - Minimum required API version (feature level for Direct3D).
+    /// \param [in,out] NumAdapters - Number of adapters. If Adapters is null, this value
+    ///                               will be overwritten with the number of adapters available
+    ///                               on this system. If Adapters is not null, this value should
+    ///                               contain the maximum number of elements reserved in the array
+    ///                               pointed to by Adapters. In the latter case, this value
+    ///                               is overwritten with the actual number of elements written to
+    ///                               Adapters.
+    /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
+    ///                            null is provided, the number of available adapters is
+    ///                            written to NumAdapters.
+    VIRTUAL void METHOD(EnumerateAdapters)(THIS_
+                                           Version              MinVersion,
+                                           Uint32 REF           NumAdapters,
+                                           GraphicsAdapterInfo* Adapters) CONST PURE;
 
 #if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
@@ -96,6 +114,7 @@ DILIGENT_END_INTERFACE
 
 #    define IEngineFactory_GetAPIInfo(This)                                  CALL_IFACE_METHOD(EngineFactory, GetAPIInfo,                             This)
 #    define IEngineFactory_CreateDefaultShaderSourceStreamFactory(This, ...) CALL_IFACE_METHOD(EngineFactory, CreateDefaultShaderSourceStreamFactory, This, __VA_ARGS__)
+#    define IEngineFactory_EnumerateAdapters(This, ...)                      CALL_IFACE_METHOD(EngineFactory, EnumerateAdapters,                      This, __VA_ARGS__)
 #    define IEngineFactory_InitAndroidFileSystem(This, ...)                  CALL_IFACE_METHOD(EngineFactory, InitAndroidFileSystem,                  This, __VA_ARGS__)
 
 // clang-format on

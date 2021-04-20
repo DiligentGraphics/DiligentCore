@@ -44,9 +44,10 @@ class CommandListD3D11Impl final : public CommandListBase<EngineD3D11ImplTraits>
 public:
     using TCommandListBase = CommandListBase<EngineD3D11ImplTraits>;
 
-    CommandListD3D11Impl(IReferenceCounters*    pRefCounters,
-                         RenderDeviceD3D11Impl* pDevice,
-                         ID3D11CommandList*     pd3d11CommandList);
+    CommandListD3D11Impl(IReferenceCounters*     pRefCounters,
+                         RenderDeviceD3D11Impl*  pDevice,
+                         DeviceContextD3D11Impl* pContext,
+                         ID3D11CommandList*      pd3d11CommandList);
     ~CommandListD3D11Impl();
 
     ID3D11CommandList* GetD3D11CommandList() { return m_pd3d11CommandList; }

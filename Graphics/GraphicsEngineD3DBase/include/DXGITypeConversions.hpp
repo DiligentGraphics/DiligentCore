@@ -39,6 +39,4 @@ DXGI_FORMAT    TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags
 TEXTURE_FORMAT DXGI_FormatToTexFormat(DXGI_FORMAT DXGIFormat);
 DXGI_FORMAT    TypeToDXGI_Format(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
 
-GraphicsAdapterInfo DXGI_ADAPTER_DESC_To_GraphicsAdapterInfo(const DXGI_ADAPTER_DESC1& dxgiAdapterDesc);
-
 } // namespace Diligent

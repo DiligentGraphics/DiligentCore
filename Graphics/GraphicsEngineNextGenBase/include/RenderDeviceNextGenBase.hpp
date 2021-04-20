@@ -39,6 +39,7 @@
 #include "PlatformMisc.hpp"
 #include "ResourceReleaseQueue.hpp"
 #include "EngineMemory.h"
+#include "IndexWrapper.hpp"
 
 namespace Diligent
 {
@@ -51,15 +52,18 @@ template <class TBase, typename CommandQueueType>
 class RenderDeviceNextGenBase : public TBase
 {
 public:
-    RenderDeviceNextGenBase(IReferenceCounters*     pRefCounters,
-                            IMemoryAllocator&       RawMemAllocator,
-                            IEngineFactory*         pEngineFactory,
-                            size_t                  CmdQueueCount,
-                            CommandQueueType**      Queues,
-                            const EngineCreateInfo& EngineCI) :
-        TBase{pRefCounters, RawMemAllocator, pEngineFactory, EngineCI},
+    RenderDeviceNextGenBase(IReferenceCounters*        pRefCounters,
+                            IMemoryAllocator&          RawMemAllocator,
+                            IEngineFactory*            pEngineFactory,
+                            size_t                     CmdQueueCount,
+                            CommandQueueType**         Queues,
+                            const EngineCreateInfo&    EngineCI,
+                            const GraphicsAdapterInfo& AdapterInfo) :
+        TBase{pRefCounters, RawMemAllocator, pEngineFactory, EngineCI, AdapterInfo},
         m_CmdQueueCount{CmdQueueCount}
     {
+        VERIFY(m_CmdQueueCount < MAX_COMMAND_QUEUES, "Number of command queue is greater than maximum allowed value (", MAX_COMMAND_QUEUES, ")");
+
         m_CommandQueues = ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", CommandQueue, m_CmdQueueCount);
         for (size_t q = 0; q < m_CmdQueueCount; ++q)
             new (m_CommandQueues + q) CommandQueue{RefCntAutoPtr<CommandQueueType>(Queues[q]), this->m_RawMemAllocator};
@@ -112,13 +116,13 @@ public:
 
         while (QueueMask != 0)
         {
-            auto QueueIndex = PlatformMisc::GetLSB(QueueMask);
-            VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
+            auto QueueInd = PlatformMisc::GetLSB(QueueMask);
+            VERIFY_EXPR(QueueInd < m_CmdQueueCount);
 
-            auto& Queue = m_CommandQueues[QueueIndex];
+            auto& Queue = m_CommandQueues[QueueInd];
             // Do not use std::move on wrapper!!!
             Queue.ReleaseQueue.SafeReleaseResource(Wrapper, Queue.NextCmdBufferNumber.load());
-            QueueMask &= ~(Uint64{1} << Uint64{QueueIndex});
+            QueueMask &= ~(Uint64{1} << Uint64{QueueInd});
             --NumReferences;
         }
         VERIFY_EXPR(NumReferences == 0);
@@ -139,21 +143,21 @@ public:
     void PurgeReleaseQueues(bool ForceRelease = false)
     {
         for (Uint32 q = 0; q < m_CmdQueueCount; ++q)
-            PurgeReleaseQueue(q, ForceRelease);
+            PurgeReleaseQueue(CommandQueueIndex{q}, ForceRelease);
     }
 
-    void PurgeReleaseQueue(Uint32 QueueIndex, bool ForceRelease = false)
+    void PurgeReleaseQueue(CommandQueueIndex QueueInd, bool ForceRelease = false)
     {
-        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        auto& Queue               = m_CommandQueues[QueueIndex];
+        VERIFY_EXPR(QueueInd < m_CmdQueueCount);
+        auto& Queue               = m_CommandQueues[QueueInd];
         auto  CompletedFenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : Queue.CmdQueue->GetCompletedFenceValue();
         Queue.ReleaseQueue.Purge(CompletedFenceValue);
     }
 
-    void IdleCommandQueue(size_t QueueIdx, bool ReleaseResources)
+    void IdleCommandQueue(CommandQueueIndex QueueInd, bool ReleaseResources)
     {
-        VERIFY_EXPR(QueueIdx < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueIdx];
+        VERIFY_EXPR(QueueInd < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueInd];
 
         Uint64 CmdBufferNumber = 0;
         Uint64 FenceValue      = 0;
@@ -181,8 +185,8 @@ public:
 
     void IdleAllCommandQueues(bool ReleaseResources)
     {
-        for (size_t q = 0; q < m_CmdQueueCount; ++q)
-            IdleCommandQueue(q, ReleaseResources);
+        for (Uint32 q = 0; q < m_CmdQueueCount; ++q)
+            IdleCommandQueue(CommandQueueIndex{q}, ReleaseResources);
     }
 
     struct SubmittedCommandBufferInfo
@@ -191,11 +195,11 @@ public:
         Uint64 FenceValue      = 0;
     };
     template <typename... SubmitDataType>
-    SubmittedCommandBufferInfo SubmitCommandBuffer(Uint32 QueueIndex, bool DiscardStaleResources, const SubmitDataType&... SubmitData)
+    SubmittedCommandBufferInfo SubmitCommandBuffer(CommandQueueIndex QueueInd, bool DiscardStaleResources, const SubmitDataType&... SubmitData)
     {
         SubmittedCommandBufferInfo CmdBuffInfo;
-        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueIndex];
+        VERIFY_EXPR(QueueInd < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueInd];
 
         {
             std::lock_guard<std::mutex> Lock{Queue.Mtx};
@@ -229,55 +233,71 @@ public:
         return CmdBuffInfo;
     }
 
-    ResourceReleaseQueue<DynamicStaleResourceWrapper>& GetReleaseQueue(Uint32 QueueIndex)
+    ResourceReleaseQueue<DynamicStaleResourceWrapper>& GetReleaseQueue(CommandQueueIndex QueueInd)
     {
-        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        return m_CommandQueues[QueueIndex].ReleaseQueue;
+        VERIFY_EXPR(QueueInd < m_CmdQueueCount);
+        return m_CommandQueues[QueueInd].ReleaseQueue;
     }
 
-    const CommandQueueType& DILIGENT_CALL_TYPE GetCommandQueue(Uint32 QueueIndex) const
+    const CommandQueueType& GetCommandQueue(CommandQueueIndex CommandQueueInd) const
     {
-        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        return *m_CommandQueues[QueueIndex].CmdQueue;
+        VERIFY_EXPR(CommandQueueInd < m_CmdQueueCount);
+        return *m_CommandQueues[CommandQueueInd].CmdQueue;
     }
 
-    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue(Uint32 QueueIndex) override final
+    Uint64 GetCompletedFenceValue(CommandQueueIndex CommandQueueInd)
     {
-        return m_CommandQueues[QueueIndex].CmdQueue->GetCompletedFenceValue();
+        return m_CommandQueues[CommandQueueInd].CmdQueue->GetCompletedFenceValue();
     }
 
-    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue(Uint32 QueueIndex) override final
+    Uint64 GetNextFenceValue(CommandQueueIndex CommandQueueInd)
     {
-        return m_CommandQueues[QueueIndex].CmdQueue->GetNextFenceValue();
+        return m_CommandQueues[CommandQueueInd].CmdQueue->GetNextFenceValue();
     }
 
-    virtual Bool DILIGENT_CALL_TYPE IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) override final
+    Bool IsFenceSignaled(CommandQueueIndex CommandQueueInd, Uint64 FenceValue)
     {
-        return FenceValue <= GetCompletedFenceValue(QueueIndex);
+        return FenceValue <= GetCompletedFenceValue(CommandQueueInd);
     }
 
     template <typename TAction>
-    void LockCmdQueueAndRun(Uint32 QueueIndex, TAction Action)
+    void LockCmdQueueAndRun(CommandQueueIndex QueueInd, TAction Action)
     {
-        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        auto&                       Queue = m_CommandQueues[QueueIndex];
+        VERIFY_EXPR(QueueInd < m_CmdQueueCount);
+        auto&                       Queue = m_CommandQueues[QueueInd];
         std::lock_guard<std::mutex> Lock{Queue.Mtx};
         Action(Queue.CmdQueue);
     }
 
-    CommandQueueType* LockCommandQueue(Uint32 QueueIndex)
+    CommandQueueType* LockCommandQueue(CommandQueueIndex QueueInd)
     {
-        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueIndex];
+        VERIFY_EXPR(QueueInd < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueInd];
         Queue.Mtx.lock();
         return Queue.CmdQueue;
     }
 
-    void UnlockCommandQueue(Uint32 QueueIndex)
+    void UnlockCommandQueue(CommandQueueIndex QueueInd)
     {
-        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueIndex];
+        VERIFY_EXPR(QueueInd < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueInd];
         Queue.Mtx.unlock();
+    }
+
+private:
+    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue(Uint32 CommandQueueInd) override final
+    {
+        return GetCompletedFenceValue(CommandQueueIndex{CommandQueueInd});
+    }
+
+    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue(Uint32 CommandQueueInd) override final
+    {
+        return GetNextFenceValue(CommandQueueIndex{CommandQueueInd});
+    }
+
+    virtual Bool DILIGENT_CALL_TYPE IsFenceSignaled(Uint32 CommandQueueInd, Uint64 FenceValue) override final
+    {
+        return IsFenceSignaled(CommandQueueIndex{CommandQueueInd}, FenceValue);
     }
 
 protected:
@@ -313,7 +333,7 @@ protected:
         CommandQueue& operator = (      CommandQueue&&) = delete;
         // clang-format on
 
-        std::mutex                                        Mtx;
+        std::mutex                                        Mtx; // Protects access to the CmdQueue.
         std::atomic_uint64_t                              NextCmdBufferNumber{0};
         RefCntAutoPtr<CommandQueueType>                   CmdQueue;
         ResourceReleaseQueue<DynamicStaleResourceWrapper> ReleaseQueue;

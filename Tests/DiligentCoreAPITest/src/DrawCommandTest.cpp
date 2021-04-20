@@ -1855,8 +1855,9 @@ TEST_F(DrawCommandTest, DeferredContexts)
         WorkerThreads[i] = std::thread(
             [&](Uint32 thread_id) //
             {
-                auto* pCtx = pEnv->GetDeviceContext(thread_id + 1);
+                auto* pCtx = pEnv->GetDeferredContext(thread_id + 1);
 
+                pCtx->Begin(0);
                 pCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 
                 IBuffer* pVBs[]    = {pVB};
@@ -2471,11 +2472,11 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
-    const auto& Limits     = deviceCaps.Limits;
+    const auto& adapterInfo = pDevice->GetAdapterInfo();
+    const auto& Limits      = adapterInfo.Limits;
 
     const auto UseSetOffset = (VarFlags & SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS) == 0 && (CBType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-    if (deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D11 && BuffMode == BUFFER_MODE_STRUCTURED && UseSetOffset)
+    if (adapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_D3D11 && BuffMode == BUFFER_MODE_STRUCTURED && UseSetOffset)
     {
         // Offsets for structured buffers are not supported in D3D11
         return;

@@ -35,7 +35,7 @@ class GLContext
 public:
     using NativeGLContextType = HGLRC;
 
-    GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
+    GLContext(const struct EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& DevType, struct Version& APIVersion, const struct SwapChainDesc* pSCDesc);
     ~GLContext();
     void SwapBuffers(int SwapInterval);
 

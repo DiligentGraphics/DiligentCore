@@ -29,51 +29,79 @@
 
 void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
 {
-    struct IPipelineState*            pPSO                       = NULL;
-    struct DrawAttribs                drawAttribs                = {0};
-    struct DrawIndexedAttribs         drawIndexedAttribs         = {0};
-    struct DrawIndirectAttribs        drawIndirectAttribs        = {0};
-    struct DrawIndexedIndirectAttribs drawIndexedIndirectAttribs = {0};
-    struct IBuffer*                   pIndirectBuffer            = NULL;
+    const struct DeviceContextDesc* pDesc       = NULL;
+    Uint64                          FrameNumber = 0;
 
-    IDeviceContext_SetPipelineState(pCtx, pPSO);
-    IDeviceContext_Draw(pCtx, &drawAttribs);
-    IDeviceContext_DrawIndexed(pCtx, &drawIndexedAttribs);
-    IDeviceContext_DrawIndirect(pCtx, &drawIndirectAttribs, pIndirectBuffer);
-    IDeviceContext_DrawIndexedIndirect(pCtx, &drawIndexedIndirectAttribs, pIndirectBuffer);
+    pDesc = IDeviceContext_GetDesc(pCtx);
+    (void)(pDesc);
 
-    struct DrawMeshAttribs drawMeshAttribs = {0};
-    IDeviceContext_DrawMesh(pCtx, &drawMeshAttribs);
+    IDeviceContext_Begin(pCtx, 0u);
 
-    struct DrawMeshIndirectAttribs drawMeshIndirectAttribs = {0};
-    IDeviceContext_DrawMeshIndirect(pCtx, &drawMeshIndirectAttribs, pIndirectBuffer);
+    IDeviceContext_TransitionShaderResources(pCtx, (struct IPipelineState*)NULL, (struct IShaderResourceBinding*)NULL);
+    IDeviceContext_TransitionResourceStates(pCtx, 1u, (const struct StateTransitionDesc*)NULL);
 
-    struct DrawMeshIndirectCountAttribs drawMeshIndirectCountAttribs = {0};
-    IDeviceContext_DrawMeshIndirectCount(pCtx, &drawMeshIndirectCountAttribs, pIndirectBuffer, pIndirectBuffer);
+    IDeviceContext_SetPipelineState(pCtx, (struct IPipelineState*)NULL);
+    IDeviceContext_CommitShaderResources(pCtx, (struct IShaderResourceBinding*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_SetStencilRef(pCtx, 1u);
+    IDeviceContext_SetBlendFactors(pCtx, (const float*)NULL);
+    IDeviceContext_SetVertexBuffers(pCtx, 0u, 1u, (struct IBuffer**)NULL, (const Uint32*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE, SET_VERTEX_BUFFERS_FLAG_RESET);
+    IDeviceContext_InvalidateState(pCtx);
+    IDeviceContext_SetIndexBuffer(pCtx, (struct IBuffer*)NULL, 0u, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_SetViewports(pCtx, 1u, (const struct Viewport*)NULL, 512u, 512u);
+    IDeviceContext_SetScissorRects(pCtx, 1u, (const struct Rect*)NULL, 512u, 512u);
+    IDeviceContext_SetRenderTargets(pCtx, 1u, (struct ITextureView**)NULL, (struct ITextureView*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_BeginRenderPass(pCtx, (const struct BeginRenderPassAttribs*)NULL);
+    IDeviceContext_NextSubpass(pCtx);
+    IDeviceContext_EndRenderPass(pCtx);
+    IDeviceContext_ClearDepthStencil(pCtx, (struct ITextureView*)NULL, CLEAR_DEPTH_FLAG, 1.0f, (Uint8)0, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_ClearRenderTarget(pCtx, (struct ITextureView*)NULL, (const float*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
 
-    struct BuildBLASAttribs buildBLASAttribs = {0};
-    IDeviceContext_BuildBLAS(pCtx, &buildBLASAttribs);
+    IDeviceContext_Draw(pCtx, (struct DrawAttribs*)NULL);
+    IDeviceContext_DrawIndexed(pCtx, (struct DrawIndexedAttribs*)NULL);
+    IDeviceContext_DrawIndirect(pCtx, (struct DrawIndirectAttribs*)NULL, (struct IBuffer*)NULL);
+    IDeviceContext_DrawIndexedIndirect(pCtx, (struct DrawIndexedIndirectAttribs*)NULL, (struct IBuffer*)NULL);
+    IDeviceContext_DrawMesh(pCtx, (struct DrawMeshAttribs*)NULL);
+    IDeviceContext_DrawMeshIndirect(pCtx, (struct DrawMeshIndirectAttribs*)NULL, (struct IBuffer*)NULL);
+    IDeviceContext_DrawMeshIndirectCount(pCtx, (struct DrawMeshIndirectCountAttribs*)NULL, (struct IBuffer*)NULL, (struct IBuffer*)NULL);
 
-    struct BuildTLASAttribs buildTLASAttribs = {0};
-    IDeviceContext_BuildTLAS(pCtx, &buildTLASAttribs);
+    IDeviceContext_DispatchCompute(pCtx, (const DispatchComputeAttribs*)NULL);
+    IDeviceContext_DispatchComputeIndirect(pCtx, (const DispatchComputeIndirectAttribs*)NULL, (struct IBuffer*)NULL);
 
-    struct CopyBLASAttribs copyBLASAttribs = {0};
-    IDeviceContext_CopyBLAS(pCtx, &copyBLASAttribs);
+    IDeviceContext_FinishCommandList(pCtx, (struct ICommandList**)NULL);
+    IDeviceContext_ExecuteCommandLists(pCtx, 2u, (struct ICommandList* const*)NULL);
 
-    struct CopyTLASAttribs copyTLASAttribs = {0};
-    IDeviceContext_CopyTLAS(pCtx, &copyTLASAttribs);
+    IDeviceContext_SignalFence(pCtx, (struct IFence*)NULL, (Uint64)1);
+    IDeviceContext_DeviceWaitForFence(pCtx, (struct IFence*)NULL, (Uint64)1);
+    IDeviceContext_WaitForIdle(pCtx);
+    IDeviceContext_Flush(pCtx);
+    IDeviceContext_FinishFrame(pCtx);
 
-    struct WriteBLASCompactedSizeAttribs writeBLASCompactedSizeAttribs = {0};
-    IDeviceContext_WriteBLASCompactedSize(pCtx, &writeBLASCompactedSizeAttribs);
+    FrameNumber = IDeviceContext_GetFrameNumber(pCtx);
+    (void)(FrameNumber);
 
-    struct WriteTLASCompactedSizeAttribs writeTLASCompactedSizeAttribs = {0};
-    IDeviceContext_WriteTLASCompactedSize(pCtx, &writeTLASCompactedSizeAttribs);
+    IDeviceContext_BeginQuery(pCtx, (struct IQuery*)NULL);
+    IDeviceContext_EndQuery(pCtx, (struct IQuery*)NULL);
 
-    struct TraceRaysAttribs traceRaysAttribs = {0};
-    IDeviceContext_TraceRays(pCtx, &traceRaysAttribs);
+    IDeviceContext_UpdateBuffer(pCtx, (struct IBuffer*)NULL, 1u, 1u, NULL, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_CopyBuffer(pCtx, (struct IBuffer*)NULL, 0u, RESOURCE_STATE_TRANSITION_MODE_NONE, (struct IBuffer*)NULL, 0u, 128u, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_MapBuffer(pCtx, (struct IBuffer*)NULL, MAP_WRITE, MAP_FLAG_DISCARD, (void**)NULL);
+    IDeviceContext_UnmapBuffer(pCtx, (struct IBuffer*)NULL, MAP_WRITE);
+    IDeviceContext_UpdateTexture(pCtx, (struct ITexture*)NULL, 0u, 0u, (const struct Box*)NULL, (const struct TextureSubResData*)NULL, RESOURCE_STATE_TRANSITION_MODE_NONE, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IDeviceContext_CopyTexture(pCtx, (const struct CopyTextureAttribs*)NULL);
+    IDeviceContext_MapTextureSubresource(pCtx, (struct ITexture*)NULL, 0u, 0u, MAP_WRITE, MAP_FLAG_DISCARD, (const struct Box*)NULL, (struct MappedTextureSubresource*)NULL);
+    IDeviceContext_UnmapTextureSubresource(pCtx, (struct ITexture*)NULL, 0u, 0u);
+    IDeviceContext_GenerateMips(pCtx, (struct ITextureView*)NULL);
+    IDeviceContext_ResolveTextureSubresource(pCtx, (struct ITexture*)NULL, (struct ITexture*)NULL, (const struct ResolveTextureSubresourceAttribs*)NULL);
 
-    struct TraceRaysIndirectAttribs traceRaysIndirectAttribs = {0};
-    IDeviceContext_TraceRaysIndirect(pCtx, &traceRaysIndirectAttribs, pIndirectBuffer);
+    IDeviceContext_BuildBLAS(pCtx, (struct BuildBLASAttribs*)NULL);
+    IDeviceContext_BuildTLAS(pCtx, (struct BuildTLASAttribs*)NULL);
+    IDeviceContext_CopyBLAS(pCtx, (struct CopyBLASAttribs*)NULL);
+    IDeviceContext_CopyTLAS(pCtx, (struct CopyTLASAttribs*)NULL);
+    IDeviceContext_WriteBLASCompactedSize(pCtx, (struct WriteBLASCompactedSizeAttribs*)NULL);
+    IDeviceContext_WriteTLASCompactedSize(pCtx, (struct WriteTLASCompactedSizeAttribs*)NULL);
+    IDeviceContext_TraceRays(pCtx, (struct TraceRaysAttribs*)NULL);
+    IDeviceContext_TraceRaysIndirect(pCtx, (struct TraceRaysIndirectAttribs*)NULL, (struct IBuffer*)NULL);
+    IDeviceContext_UpdateSBT(pCtx, (struct IShaderBindingTable*)NULL, (const struct UpdateIndirectRTBufferAttribs*)NULL);
 
     struct IObject* pUserData = NULL;
     IDeviceContext_SetUserData(pCtx, pUserData);

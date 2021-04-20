@@ -73,9 +73,25 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
     ///          IDeviceContext::SignalFence().
     VIRTUAL Uint64 METHOD(GetCompletedValue)(THIS) PURE;
 
+
     /// Resets the fence to the specified value.
+    
+    /// \param [in] Value - New value to reset the fence to.
+    /// 
+    /// \note  Fence value will be changed immediatlly on the CPU side,
+    ///        use ICommandQueueVk::SignalFence or ICommandQueueD3D12::SignalFence to add signal command
+    ///        to the queue, value will be changed when all previously submitted commands will be completed.
     VIRTUAL void METHOD(Reset)(THIS_
                                Uint64 Value) PURE;
+    
+
+    /// Waits until the specified fence reaches or exceeds the specified value, on the host.
+    
+    /// \param [in] Value - The value that the fence is waiting for to reach.
+    /// 
+    /// \note  The method blocks the execution of the calling thread until the wait is complete.
+    VIRTUAL void METHOD(Wait)(THIS_
+                              Uint64 Value) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -89,6 +105,7 @@ DILIGENT_END_INTERFACE
 
 #    define IFence_GetCompletedValue(This) CALL_IFACE_METHOD(Fence, GetCompletedValue, This)
 #    define IFence_Reset(This, ...)        CALL_IFACE_METHOD(Fence, Reset,             This, __VA_ARGS__)
+#    define IFence_Wait(This, ...)         CALL_IFACE_METHOD(Fence, Wait,              This, __VA_ARGS__)
 
 // clang-format on
 

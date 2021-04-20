@@ -91,7 +91,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     {
         auto& QueryMgr = m_pDevice->GetQueryManager();
 
-        auto GetTimestampFrequency = [this](Uint32 CmdQueueId) //
+        auto GetTimestampFrequency = [this](CommandQueueIndex CmdQueueId) //
         {
             const auto& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
             auto*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();

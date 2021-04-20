@@ -65,18 +65,44 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
     volkLoadDevice(m_VkDevice);
 #endif
 
-    m_EnabledShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    auto GraphicsStages =
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    auto ComputeStages =
+        VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
     if (DeviceCI.pEnabledFeatures->geometryShader)
-        m_EnabledShaderStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+        GraphicsStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
     if (DeviceCI.pEnabledFeatures->tessellationShader)
-        m_EnabledShaderStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+        GraphicsStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
     if (m_EnabledExtFeatures.MeshShader.meshShader != VK_FALSE && m_EnabledExtFeatures.MeshShader.taskShader != VK_FALSE)
-        m_EnabledShaderStages |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV | VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
+        GraphicsStages |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV | VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
     if (m_EnabledExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE)
-        m_EnabledShaderStages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+        ComputeStages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+
+    const auto QueueCount = PhysicalDevice.GetQueueProperties().size();
+    m_SupportedStagesMask.resize(QueueCount, 0);
+    for (size_t q = 0; q < QueueCount; ++q)
+    {
+        const auto& Queue     = PhysicalDevice.GetQueueProperties()[q];
+        auto&       StageMask = m_SupportedStagesMask[q];
+
+        if (Queue.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            StageMask |= GraphicsStages | ComputeStages | TransferQueueStagesVk;
+        if (Queue.queueFlags & VK_QUEUE_COMPUTE_BIT)
+            StageMask |= ComputeStages | TransferQueueStagesVk;
+        if (Queue.queueFlags & VK_QUEUE_TRANSFER_BIT)
+            StageMask |= TransferQueueStagesVk;
+    }
 }
 
-VkQueue VulkanLogicalDevice::GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex)
+VkQueue VulkanLogicalDevice::GetQueue(HardwareQueueId queueFamilyIndex, uint32_t queueIndex)
 {
     VkQueue vkQueue = VK_NULL_HANDLE;
     vkGetDeviceQueue(m_VkDevice,

@@ -55,10 +55,6 @@ DILIGENT_BEGIN_INTERFACE(IFenceD3D12, IFence)
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     VIRTUAL ID3D12Fence* METHOD(GetD3D12Fence)(THIS) PURE;
-
-    /// Waits until the fence reaches the specified value, on the host.
-    VIRTUAL void METHOD(WaitForCompletion)(THIS_
-                                           Uint64 Value) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -69,7 +65,6 @@ DILIGENT_END_INTERFACE
 // clang-format off
 
 #    define IFenceD3D12_GetD3D12Fence(This)          CALL_IFACE_METHOD(FenceD3D12, GetD3D12Fence,     This)
-#    define IFenceD3D12_WaitForCompletion(This, ...) CALL_IFACE_METHOD(FenceD3D12, WaitForCompletion, This, __VA_ARGS__)
 
 // clang-format on
 

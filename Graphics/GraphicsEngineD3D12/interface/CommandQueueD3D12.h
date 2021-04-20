@@ -77,6 +77,11 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, IObject)
     VIRTUAL void METHOD(SignalFence)(THIS_
                                      ID3D12Fence* pFence,
                                      Uint64       Value) PURE;
+    
+    /// GPU waits until fence reaches the specified value
+    VIRTUAL void METHOD(WaitFence)(THIS_
+                                     ID3D12Fence* pFence,
+                                     Uint64       Value) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -92,6 +97,7 @@ DILIGENT_END_INTERFACE
 #    define ICommandQueueD3D12_GetCompletedFenceValue(This) CALL_IFACE_METHOD(CommandQueueD3D12, GetCompletedFenceValue,This)
 #    define ICommandQueueD3D12_WaitForIdle(This)            CALL_IFACE_METHOD(CommandQueueD3D12, WaitForIdle,           This)
 #    define ICommandQueueD3D12_SignalFence(This, ...)       CALL_IFACE_METHOD(CommandQueueD3D12, SignalFence,           This, __VA_ARGS__)
+#    define ICommandQueueD3D12_WaitFence(This, ...)         CALL_IFACE_METHOD(CommandQueueD3D12, WaitFence,             This, __VA_ARGS__)
 
 // clang-format on
 

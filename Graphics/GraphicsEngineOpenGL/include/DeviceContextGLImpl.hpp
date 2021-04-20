@@ -53,10 +53,16 @@ class DeviceContextGLImpl final : public DeviceContextBase<EngineGLImplTraits>
 public:
     using TDeviceContextBase = DeviceContextBase<EngineGLImplTraits>;
 
-    DeviceContextGLImpl(IReferenceCounters* pRefCounters, RenderDeviceGLImpl* pDeviceGL, bool bIsDeferred);
+    DeviceContextGLImpl(IReferenceCounters* pRefCounters,
+                        RenderDeviceGLImpl* pDeviceGL,
+                        const char*         ContextName,
+                        bool                bIsDeferred);
 
     /// Queries the specific interface, see IObject::QueryInterface() for details.
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+
+    /// Implementation of IDeviceContext::Begin() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE Begin(Uint32 CommandQueueId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;
@@ -78,7 +84,7 @@ public:
     virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                      Uint32                         NumBuffersSet,
                                                      IBuffer**                      ppBuffers,
-                                                     Uint32*                        pOffsets,
+                                                     const Uint32*                  pOffsets,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                      SET_VERTEX_BUFFERS_FLAGS       Flags) override final;
 
@@ -206,7 +212,7 @@ public:
     virtual void DILIGENT_CALL_TYPE FinishFrame() override final;
 
     /// Implementation of IDeviceContext::TransitionResourceStates() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) override final;
+    virtual void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers) override final;
 
     /// Implementation of IDeviceContext::ResolveTextureSubresource() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE ResolveTextureSubresource(ITexture*                               pSrcTexture,
@@ -223,8 +229,8 @@ public:
     /// Implementation of IDeviceContext::SignalFence() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE SignalFence(IFence* pFence, Uint64 Value) override final;
 
-    /// Implementation of IDeviceContext::WaitForFence() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext) override final;
+    /// Implementation of IDeviceContext::DeviceWaitForFence() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE DeviceWaitForFence(IFence* pFence, Uint64 Value) override final;
 
     /// Implementation of IDeviceContext::WaitForIdle() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE WaitForIdle() override final;

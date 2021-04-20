@@ -43,7 +43,7 @@ namespace Diligent
 {
 
 /// Validates buffer description and throws an exception in case of an error.
-void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps) noexcept(false);
+void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryInfo) noexcept(false);
 
 /// Validates initial buffer data parameters and throws an exception in case of an error.
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false);
@@ -94,7 +94,7 @@ public:
         m_pDefaultUAV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)},
         m_pDefaultSRV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)}
     {
-        ValidateBufferDesc(this->m_Desc, pDevice->GetDeviceCaps());
+        ValidateBufferDesc(this->m_Desc, pDevice->GetAdapterInfo().Memory);
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0, "No bits in the command queue mask (0x", std::hex, this->m_Desc.CommandQueueMask, ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");

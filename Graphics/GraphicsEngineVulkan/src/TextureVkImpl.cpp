@@ -179,6 +179,21 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         ImageCI.queueFamilyIndexCount = 0;
         ImageCI.pQueueFamilyIndices   = nullptr;
 
+        std::array<uint32_t, MAX_COMMAND_QUEUES> QueueFamilyIndices = {};
+        if (PlatformMisc::CountOneBits(TexDesc.CommandQueueMask) > 1)
+        {
+            uint32_t queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
+            GetDevice()->ConvertCmdQueueIdsToQueueFamilies(TexDesc.CommandQueueMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
+
+            // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
+            if (queueFamilyIndexCount > 1)
+            {
+                ImageCI.sharingMode           = VK_SHARING_MODE_CONCURRENT;
+                ImageCI.pQueueFamilyIndices   = QueueFamilyIndices.data();
+                ImageCI.queueFamilyIndexCount = queueFamilyIndexCount;
+            }
+        }
+
         // initialLayout must be either VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED (11.4)
         // If it is VK_IMAGE_LAYOUT_PREINITIALIZED, then the image data can be preinitialized by the host
         // while using this layout, and the transition away from this layout will preserve that data.
@@ -203,9 +218,10 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         // Vulkan validation layers do not like uninitialized memory, so if no initial data
         // is provided, we will clear the memory
 
+        const auto                          CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
         VulkanUtilities::CommandPoolWrapper CmdPool;
         VkCommandBuffer                     vkCmdBuff;
-        pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
+        pRenderDeviceVk->AllocateTransientCmdPool(CmdQueueInd, CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
 
         VkImageAspectFlags aspectMask = 0;
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -224,13 +240,13 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         // For either clear or copy command, dst layout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
         VkImageSubresourceRange SubresRange;
-        SubresRange.aspectMask     = aspectMask;
-        SubresRange.baseArrayLayer = 0;
-        SubresRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-        SubresRange.baseMipLevel   = 0;
-        SubresRange.levelCount     = VK_REMAINING_MIP_LEVELS;
-        auto EnabledShaderStages   = LogicalDevice.GetEnabledShaderStages();
-        VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, EnabledShaderStages);
+        SubresRange.aspectMask         = aspectMask;
+        SubresRange.baseArrayLayer     = 0;
+        SubresRange.layerCount         = VK_REMAINING_ARRAY_LAYERS;
+        SubresRange.baseMipLevel       = 0;
+        SubresRange.levelCount         = VK_REMAINING_MIP_LEVELS;
+        const auto SupportedStagesMask = ~0u;
+        VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, SupportedStagesMask);
         SetState(RESOURCE_STATE_COPY_DEST);
         const auto CurrentLayout = GetLayout();
         VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -351,7 +367,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
-            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledShaderStages);
+            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, SupportedStagesMask);
 
             // Copy commands MUST be recorded outside of a render pass instance. This is OK here
             // as copy will be the only command in the cmd buffer
@@ -359,14 +375,13 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
                                    CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
                                    static_cast<uint32_t>(Regions.size()), Regions.data());
 
-            Uint32 QueueIndex = 0;
-            pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
+            pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
 
             // After command buffer is submitted, safe-release resources. This strategy
             // is little overconservative as the resources will be released after the first
             // command buffer submitted through the immediate context will be completed
-            pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer), Uint64{1} << Uint64{QueueIndex});
-            pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{QueueIndex});
+            pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer), Uint64{1} << Uint64{CmdQueueInd});
+            pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{CmdQueueInd});
         }
         else
         {
@@ -398,8 +413,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             {
                 UNEXPECTED("Unexpected aspect mask");
             }
-            Uint32 QueueIndex = 0;
-            pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
+            pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
         }
     }
     else if (m_Desc.Usage == USAGE_STAGING)
@@ -574,7 +588,7 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
                 CreateMipLevelView(TEXTURE_VIEW_UNORDERED_ACCESS, MipLevel, &pMipLevelViews[MipLevel * 2 + 1]);
             }
 
-            if (auto pImmediateCtx = m_pDevice->GetImmediateContext())
+            if (auto pImmediateCtx = m_pDevice->GetImmediateContext(0)) // AZ TODO
             {
                 auto& GenerateMipsHelper = pImmediateCtx.RawPtr<DeviceContextVkImpl>()->GetGenerateMipsHelper();
                 GenerateMipsHelper.WarmUpCache(pViewVk->GetDesc().Format);

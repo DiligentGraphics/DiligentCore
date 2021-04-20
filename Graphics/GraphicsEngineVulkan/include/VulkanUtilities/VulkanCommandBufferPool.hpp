@@ -42,7 +42,7 @@ class VulkanCommandBufferPool
 {
 public:
     VulkanCommandBufferPool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice,
-                            uint32_t                                   queueFamilyIndex,
+                            HardwareQueueId                            queueFamilyIndex,
                             VkCommandPoolCreateFlags                   flags);
 
     // clang-format off
@@ -58,12 +58,7 @@ public:
     // The GPU must have finished with the command buffer being returned to the pool
     void RecycleCommandBuffer(VkCommandBuffer&& CmdBuffer);
 
-#ifdef DILIGENT_DEVELOPMENT
-    int32_t DvpGetBufferCounter() const
-    {
-        return m_BuffCounter;
-    }
-#endif
+    VkPipelineStageFlags GetSupportedStagesMask() const { return m_SupportedStagesMask; }
 
 private:
     // Shared point to logical device must be defined before the command pool
@@ -73,6 +68,8 @@ private:
 
     std::mutex                  m_Mutex;
     std::deque<VkCommandBuffer> m_CmdBuffers;
+    const VkPipelineStageFlags  m_SupportedStagesMask;
+
 #ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_BuffCounter{0};
 #endif

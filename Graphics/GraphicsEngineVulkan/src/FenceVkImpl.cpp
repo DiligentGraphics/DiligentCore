@@ -29,6 +29,7 @@
 
 #include "FenceVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
+#include "CommandQueueVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -45,18 +46,17 @@ FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
         pRendeDeviceVkImpl,
         Desc,
         IsDeviceInternal
-    },
-    m_FencePool{pRendeDeviceVkImpl->GetLogicalDevice().GetSharedPtr()}
+    }
 // clang-format on
 {
 }
 
 FenceVkImpl::~FenceVkImpl()
 {
-    if (!m_PendingFences.empty())
+    if (!m_SyncPoints.empty())
     {
-        LOG_INFO_MESSAGE("FenceVkImpl::~FenceVkImpl(): waiting for ", m_PendingFences.size(), " pending Vulkan ",
-                         (m_PendingFences.size() > 1 ? "fences." : "fence."));
+        LOG_INFO_MESSAGE("FenceVkImpl::~FenceVkImpl(): waiting for ", m_SyncPoints.size(), " pending Vulkan ",
+                         (m_SyncPoints.size() > 1 ? "fences." : "fence."));
         // Vulkan spec states that all queue submission commands that refer to
         // a fence must have completed execution before the fence is destroyed.
         // (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyFence-fence-01120)
@@ -66,17 +66,22 @@ FenceVkImpl::~FenceVkImpl()
 
 Uint64 FenceVkImpl::GetCompletedValue()
 {
-    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-    while (!m_PendingFences.empty())
-    {
-        auto& Value_Fence = m_PendingFences.front();
+    std::lock_guard<std::mutex> Lock{m_Guard};
+    return InternalGetCompletedValue();
+}
 
-        auto status = LogicalDevice.GetFenceStatus(Value_Fence.second);
+Uint64 FenceVkImpl::InternalGetCompletedValue()
+{
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+    while (!m_SyncPoints.empty())
+    {
+        auto& Item = m_SyncPoints.front();
+
+        auto status = LogicalDevice.GetFenceStatus(Item.SyncPoint->GetFence());
         if (status == VK_SUCCESS)
         {
-            UpdateLastCompletedFenceValue(Value_Fence.first);
-            m_FencePool.DisposeFence(std::move(Value_Fence.second));
-            m_PendingFences.pop_front();
+            UpdateLastCompletedFenceValue(Item.Value);
+            m_SyncPoints.pop_front();
         }
         else
         {
@@ -96,28 +101,92 @@ void FenceVkImpl::Reset(Uint64 Value)
 
 void FenceVkImpl::Wait(Uint64 Value)
 {
+    std::lock_guard<std::mutex> Lock{m_Guard};
+
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-    while (!m_PendingFences.empty())
+    while (!m_SyncPoints.empty())
     {
-        auto& val_fence = m_PendingFences.front();
-        if (val_fence.first > Value)
+        auto& Item = m_SyncPoints.front();
+        if (Item.Value > Value)
             break;
 
-        auto status = LogicalDevice.GetFenceStatus(val_fence.second);
+        VkFence Fence  = Item.SyncPoint->GetFence();
+        auto    status = LogicalDevice.GetFenceStatus(Fence);
         if (status == VK_NOT_READY)
         {
-            VkFence FenceToWait = val_fence.second;
-
-            status = LogicalDevice.WaitForFences(1, &FenceToWait, VK_TRUE, UINT64_MAX);
+            status = LogicalDevice.WaitForFences(1, &Fence, VK_TRUE, UINT64_MAX);
         }
 
         DEV_CHECK_ERR(status == VK_SUCCESS, "All pending fences must now be complete!");
-        (void)status;
-        UpdateLastCompletedFenceValue(val_fence.first);
-        m_FencePool.DisposeFence(std::move(val_fence.second));
+        UpdateLastCompletedFenceValue(Item.Value);
 
-        m_PendingFences.pop_front();
+        m_SyncPoints.pop_front();
     }
+}
+
+VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(CommandQueueIndex CommandQueueId, Uint64 Value)
+{
+    std::lock_guard<std::mutex> Lock{m_Guard};
+
+    VulkanUtilities::VulkanRecycledSemaphore Result;
+
+    // Find last non-null semaphore
+    for (auto Iter = m_SyncPoints.begin(); Iter != m_SyncPoints.end(); ++Iter)
+    {
+        auto SemaphoreForContext = Iter->SyncPoint->ExtractSemaphore(CommandQueueId);
+        if (SemaphoreForContext)
+            Result = std::move(SemaphoreForContext);
+
+        if (Iter->Value >= Value)
+            break;
+    }
+
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+
+    // If IFence is used only for synchronization between queues it will accumulate much more sync points.
+    // We need to check VkFence and remove already reached sync points.
+    while (!m_SyncPoints.empty())
+    {
+        auto& Item   = m_SyncPoints.front();
+        auto  status = LogicalDevice.GetFenceStatus(Item.SyncPoint->GetFence());
+        if (status == VK_NOT_READY)
+            break;
+
+        DEV_CHECK_ERR(status == VK_SUCCESS, "All pending fences must now be complete!");
+        UpdateLastCompletedFenceValue(Item.Value);
+
+        m_SyncPoints.pop_front();
+    }
+
+    return Result;
+}
+
+void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 Value, SyncPointVkPtr SyncPoint)
+{
+    std::lock_guard<std::mutex> Lock{m_Guard};
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (!m_SyncPoints.empty())
+    {
+        DEV_CHECK_ERR(Value > m_SyncPoints.back().Value,
+                      "New value for fence (", Value, ") must be greater than previous value (", m_SyncPoints.back().Value, ")");
+
+        DEV_CHECK_ERR(m_SyncPoints.back().SyncPoint->GetCommandQueueId() == CommandQueueId,
+                      "Fence enqueued for signal operation in command queue (", CommandQueueId,
+                      ") but previous signal operation was in command queue (", m_SyncPoints.back().SyncPoint->GetCommandQueueId(),
+                      ") this may cause the data race or deadlock. Call Wait() before to unsure that all pending signal operation have been completed.");
+    }
+#endif
+
+    // Remove already completed sync points
+    if (m_SyncPoints.size() > RequiredArraySize)
+    {
+        (void)(InternalGetCompletedValue());
+    }
+
+    VERIFY(m_SyncPoints.size() < RequiredArraySize * 2, "array of sync points is too big, none of the GetCompletedValue(), Wait() or ExtractSignalSemaphore() are used");
+
+    m_SyncPoints.push_back({Value, std::move(SyncPoint)});
 }
 
 } // namespace Diligent

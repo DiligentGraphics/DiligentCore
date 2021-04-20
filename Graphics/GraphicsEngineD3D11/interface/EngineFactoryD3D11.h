@@ -114,25 +114,6 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
                                              IDeviceContext**                ppContexts) PURE;
 
 
-    /// Enumerates adapters available on this machine.
-
-    /// \param [in]     MinFeatureLevel - Minimum required feature level.
-    /// \param [in,out] NumAdapters - Number of adapters. If Adapters is null, this value
-    ///                               will be overwritten with the number of adapters available
-    ///                               on this system. If Adapters is not null, this value should
-    ///                               contain the maximum number of elements reserved in the array
-    ///                               pointed to by Adapters. In the latter case, this value
-    ///                               is overwritten with the actual number of elements written to
-    ///                               Adapters.
-    /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
-    ///                            null is provided, the number of available adapters is
-    ///                            written to NumAdapters.
-    VIRTUAL void METHOD(EnumerateAdapters)(THIS_
-                                           DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                           Uint32 REF             NumAdapters,
-                                           GraphicsAdapterInfo*   Adapters) PURE;
-
-
     /// Enumerates available display modes for the specified output of the specified adapter.
 
     /// \param [in] MinFeatureLevel - Minimum feature level of the adapter that was given to EnumerateAdapters().
@@ -146,7 +127,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
     ///                                    to be written to DisplayModes array. It is overwritten with
     ///                                    the actual number of display modes written.
     VIRTUAL void METHOD(EnumerateDisplayModes)(THIS_
-                                               DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                               Version                MinFeatureLevel,
                                                Uint32                 AdapterId,
                                                Uint32                 OutputId,
                                                TEXTURE_FORMAT         Format,
@@ -164,7 +145,6 @@ DILIGENT_END_INTERFACE
 #    define IEngineFactoryD3D11_CreateDeviceAndContextsD3D11(This, ...) CALL_IFACE_METHOD(EngineFactoryD3D11, CreateDeviceAndContextsD3D11, This, __VA_ARGS__)
 #    define IEngineFactoryD3D11_CreateSwapChainD3D11(This, ...)         CALL_IFACE_METHOD(EngineFactoryD3D11, CreateSwapChainD3D11,         This, __VA_ARGS__)
 #    define IEngineFactoryD3D11_AttachToD3D11Device(This, ...)          CALL_IFACE_METHOD(EngineFactoryD3D11, AttachToD3D11Device,          This, __VA_ARGS__)
-#    define IEngineFactoryD3D11_EnumerateAdapters(This, ...)            CALL_IFACE_METHOD(EngineFactoryD3D11, EnumerateAdapters,            This, __VA_ARGS__)
 #    define IEngineFactoryD3D11_EnumerateDisplayModes(This, ...)        CALL_IFACE_METHOD(EngineFactoryD3D11, EnumerateDisplayModes,        This, __VA_ARGS__)
 
 // clang-format on
