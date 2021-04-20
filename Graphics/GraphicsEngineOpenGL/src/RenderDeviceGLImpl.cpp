@@ -529,6 +529,13 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #endif
         }
     }
+
+    auto& Limits{m_DeviceCaps.Limits};
+    Limits.ConstantBufferOffsetAlignment   = 256;
+    Limits.StructuredBufferOffsetAlignment = 16;
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+#endif
 }
 
 RenderDeviceGLImpl::~RenderDeviceGLImpl()

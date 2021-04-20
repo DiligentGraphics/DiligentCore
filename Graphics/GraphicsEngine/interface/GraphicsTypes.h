@@ -1771,6 +1771,23 @@ struct DeviceFeatures
 typedef struct DeviceFeatures DeviceFeatures;
 
 
+/// Describes the device limits
+struct DeviceLimits
+{
+    /// The minimum required alignment, in bytes, for the constant buffer offsets.
+    /// The Offset parameter passed to IShaderResourceVariable::SetBufferRange() or to
+    /// IShaderResourceVariable::SetBufferOffset() method used to set the offset of a
+    /// constant buffer, must be an integer multiple of this limit.
+    Uint32 ConstantBufferOffsetAlignment DEFAULT_INITIALIZER(0);
+
+    /// The minimum required alignment, in bytes, for the structured buffer offsets.
+    /// The ByteOffset member of the BufferViewDesc used to create a structured buffer view or
+    /// the Offset parameter passed to IShaderResourceVariable::SetBufferOffset() method used to
+    /// set the offset of a structured buffer, must be an integer multiple of this limit.
+    Uint32 StructuredBufferOffsetAlignment DEFAULT_INITIALIZER(0);
+};
+typedef struct DeviceLimits DeviceLimits;
+
 /// Graphics adapter vendor
 DILIGENT_TYPED_ENUM(ADAPTER_VENDOR, Uint8)
 {
@@ -1880,6 +1897,9 @@ struct DeviceCaps
     /// \note For optional features requested during the initialization, the
     ///       struct will indicate the actual feature state (enabled or disabled).
     DeviceFeatures Features;
+
+    /// Device limits. See Diligent::DeviceLimits.
+    DeviceLimits Limits;
 
 #if DILIGENT_CPP_INTERFACE
     bool IsGLDevice()const

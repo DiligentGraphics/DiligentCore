@@ -420,23 +420,6 @@ bool VerifyTLASResourceBinding(const PipelineResourceDesc& ResDesc,
     return VerifyResourceBinding("TLAS", ResDesc, ArrayIndex, pTLAS, pTLASImpl, pCachedAS, SignatureName);
 }
 
-inline void VerifyAndCorrectSetArrayArguments(const char* Name, Uint32 ArraySize, Uint32& FirstElement, Uint32& NumElements)
-{
-    if (FirstElement >= ArraySize)
-    {
-        LOG_ERROR_MESSAGE("SetArray arguments are invalid for '", Name, "' variable: FirstElement (", FirstElement, ") is out of allowed range 0 .. ", ArraySize - 1);
-        FirstElement = ArraySize - 1;
-        NumElements  = 0;
-    }
-
-    if (FirstElement + NumElements > ArraySize)
-    {
-        LOG_ERROR_MESSAGE("SetArray arguments are invalid for '", Name, "' variable: specified element range (", FirstElement, " .. ",
-                          FirstElement + NumElements - 1, ") is out of array bounds 0 .. ", ArraySize - 1);
-        NumElements = ArraySize - FirstElement;
-    }
-}
-
 template <typename ShaderVectorType>
 std::string GetShaderGroupName(const ShaderVectorType& Shaders)
 {
@@ -501,7 +484,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 
     virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
     {
-        static_cast<ThisImplType*>(this)->BindResource(pObject, 0);
+        static_cast<ThisImplType*>(this)->BindResource(0, pObject);
     }
 
     virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
@@ -509,10 +492,40 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
                                              Uint32                NumElements) override final
     {
         const auto& Desc = GetDesc();
-        VerifyAndCorrectSetArrayArguments(Desc.Name, Desc.ArraySize, FirstElement, NumElements);
+
+        DEV_CHECK_ERR(FirstElement + NumElements <= Desc.ArraySize,
+                      "SetArray arguments are invalid for '", Desc.Name, "' variable: specified element range (", FirstElement, " .. ",
+                      FirstElement + NumElements - 1, ") is out of array bounds 0 .. ", Desc.ArraySize - 1);
+
         for (Uint32 elem = 0; elem < NumElements; ++elem)
-            static_cast<ThisImplType*>(this)->BindResource(ppObjects[elem], FirstElement + elem);
+            static_cast<ThisImplType*>(this)->BindResource(FirstElement + elem, ppObjects[elem]);
     }
+
+    virtual void DILIGENT_CALL_TYPE SetBufferRange(IDeviceObject* pObject,
+                                                   Uint32         Offset,
+                                                   Uint32         Size,
+                                                   Uint32         ArrayIndex) override final
+    {
+        DEV_CHECK_ERR(GetDesc().ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "SetBufferRange() is only allowed for constant buffers.");
+        static_cast<ThisImplType*>(this)->BindResource(ArrayIndex, pObject, Offset, Size);
+    }
+
+    virtual void DILIGENT_CALL_TYPE SetBufferOffset(Uint32 Offset,
+                                                    Uint32 ArrayIndex) override final
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        {
+            const auto& Desc = GetDesc();
+            DEV_CHECK_ERR((Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
+                          "SetBufferOffset() is not only allowed for variables created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
+            DEV_CHECK_ERR(Desc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC,
+                          "SetBufferOffset() is not allowed for static variables.");
+        }
+#endif
+
+        static_cast<ThisImplType*>(this)->SetDynamicOffset(ArrayIndex, Offset);
+    }
+
 
     virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
     {
@@ -550,7 +563,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
             pResourceMapping->GetResource(ResDesc.Name, &pObj, ArrInd);
             if (pObj)
             {
-                pThis->BindResource(pObj, ArrInd);
+                pThis->BindResource(ArrInd, pObj);
             }
             else
             {

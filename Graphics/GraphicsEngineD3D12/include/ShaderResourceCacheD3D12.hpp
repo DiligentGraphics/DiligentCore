@@ -109,6 +109,7 @@
 #include "DescriptorHeap.hpp"
 #include "RootParamsManager.hpp"
 #include "ShaderResourceCacheCommon.hpp"
+#include "BufferViewD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -162,10 +163,39 @@ public:
     {
         Resource() noexcept {}
 
+        Resource(SHADER_RESOURCE_TYPE           _Type,
+                 D3D12_CPU_DESCRIPTOR_HANDLE    _CPUDescriptorHandle,
+                 RefCntAutoPtr<IDeviceObject>&& _pObject,
+                 Uint32                         _BufferBaseOffset = 0,
+                 Uint32                         _BufferRangeSize  = 0) :
+            // clang-format off
+            Type{_Type},
+            CPUDescriptorHandle{_CPUDescriptorHandle},
+            pObject            {std::move(_pObject) },
+            BufferBaseOffset   {_BufferBaseOffset   },
+            BufferRangeSize    {_BufferRangeSize    }
+        // clang-format on
+        {
+            VERIFY(Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER || (BufferBaseOffset == 0 && BufferRangeSize == 0),
+                   "Buffer range may only be specified for constant buffers");
+            if (pObject && (Type == SHADER_RESOURCE_TYPE_BUFFER_SRV || Type == SHADER_RESOURCE_TYPE_BUFFER_UAV))
+            {
+                const auto& BuffViewDesc{pObject.RawPtr<const BufferViewD3D12Impl>()->GetDesc()};
+                BufferBaseOffset = BuffViewDesc.ByteOffset;
+                BufferRangeSize  = BuffViewDesc.ByteWidth;
+            }
+        }
+
         SHADER_RESOURCE_TYPE Type = SHADER_RESOURCE_TYPE_UNKNOWN;
+
+        Uint32 BufferDynamicOffset = 0;
+
         // CPU descriptor handle of a cached resource in CPU-only descriptor heap.
         D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {};
         RefCntAutoPtr<IDeviceObject> pObject;
+
+        Uint32 BufferBaseOffset = 0;
+        Uint32 BufferRangeSize  = 0;
 
         bool IsNull() const { return pObject == nullptr; }
 
@@ -229,26 +259,26 @@ public:
     };
 
     // Sets the resource at the given root index and offset from the table start
-    const Resource& SetResource(Uint32                         RootIndex,
-                                Uint32                         OffsetFromTableStart,
-                                SHADER_RESOURCE_TYPE           Type,
-                                D3D12_CPU_DESCRIPTOR_HANDLE    CPUDescriptorHandle,
-                                RefCntAutoPtr<IDeviceObject>&& pObject);
+    const Resource& SetResource(Uint32     RootIndex,
+                                Uint32     OffsetFromTableStart,
+                                Resource&& SrcRes);
 
     // Copies the resource to the given root index and offset from the table start
-    const Resource& CopyResource(Uint32          RootIndex,
+    const Resource& CopyResource(ID3D12Device*   pd3d12Device,
+                                 Uint32          RootIndex,
                                  Uint32          OffsetFromTableStart,
-                                 const Resource& SrcRes)
-    {
-        return SetResource(RootIndex, OffsetFromTableStart, SrcRes.Type, SrcRes.CPUDescriptorHandle, RefCntAutoPtr<IDeviceObject>{SrcRes.pObject});
-    }
+                                 const Resource& SrcRes);
 
     // Resets the resource at the given root index and offset from the table start to default state
     const Resource& ResetResource(Uint32 RootIndex,
                                   Uint32 OffsetFromTableStart)
     {
-        return SetResource(RootIndex, OffsetFromTableStart, SHADER_RESOURCE_TYPE_UNKNOWN, D3D12_CPU_DESCRIPTOR_HANDLE{}, RefCntAutoPtr<IDeviceObject>{});
+        return SetResource(RootIndex, OffsetFromTableStart, {});
     }
+
+    void SetBufferDynamicOffset(Uint32 RootIndex,
+                                Uint32 OffsetFromTableStart,
+                                Uint32 BufferDynamicOffset);
 
     const RootTable& GetRootTable(Uint32 RootIndex) const
     {

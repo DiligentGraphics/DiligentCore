@@ -204,8 +204,10 @@ void ShaderVariableManagerGL::Destroy(IMemoryAllocator& Allocator)
     m_ResourceBuffer = nullptr;
 }
 
-void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(IDeviceObject* pBuffer,
-                                                                Uint32         ArrayIndex)
+void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(Uint32         ArrayIndex,
+                                                                IDeviceObject* pBuffer,
+                                                                Uint32         BufferBaseOffset,
+                                                                Uint32         BufferRange)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
@@ -225,13 +227,28 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(IDeviceObject* p
     }
 #endif
 
-    ResourceCache.SetUniformBuffer(Attr.CacheOffset + ArrayIndex, std::move(pBuffGLImpl));
+    ResourceCache.SetUniformBuffer(Attr.CacheOffset + ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
+                                   std::move(pBuffGLImpl), BufferBaseOffset, BufferRange);
+}
+
+void ShaderVariableManagerGL::UniformBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
+{
+    const auto& Attr = GetAttribs();
+    const auto& Desc = GetDesc();
+    VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+    VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, "Dynamic offsets may not be set for variables created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
+
+    m_ParentManager.m_ResourceCache.SetDynamicUBOffset(Attr.CacheOffset + ArrayIndex, Offset);
 }
 
 
-
-void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
+void ShaderVariableManagerGL::TextureBindInfo::BindResource(Uint32         ArrayIndex,
+                                                            IDeviceObject* pView,
+                                                            Uint32         BufferBaseOffset,
+                                                            Uint32         BufferRange)
 {
+    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
+
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
@@ -295,8 +312,13 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(IDeviceObject* pView
 }
 
 
-void ShaderVariableManagerGL::ImageBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
+void ShaderVariableManagerGL::ImageBindInfo::BindResource(Uint32         ArrayIndex,
+                                                          IDeviceObject* pView,
+                                                          Uint32         BufferBaseOffset,
+                                                          Uint32         BufferRange)
 {
+    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
+
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
@@ -351,8 +373,13 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(IDeviceObject* pView, 
 
 
 
-void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
+void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(Uint32         ArrayIndex,
+                                                                  IDeviceObject* pView,
+                                                                  Uint32         BufferBaseOffset,
+                                                                  Uint32         BufferRange)
 {
+    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers. Create buffer view to specify base buffer range");
+
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
@@ -380,7 +407,18 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(IDeviceObject*
         ValidateBufferMode(Desc, ArrayIndex, pViewGL.RawPtr());
     }
 #endif
-    ResourceCache.SetSSBO(Attr.CacheOffset + ArrayIndex, std::move(pViewGL));
+    ResourceCache.SetSSBO(Attr.CacheOffset + ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, std::move(pViewGL));
+}
+
+void ShaderVariableManagerGL::StorageBufferBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
+{
+    const auto& Attr = GetAttribs();
+    const auto& Desc = GetDesc();
+    VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
+                Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
+    VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, "Dynamic offsets may not be set for variables created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
+
+    m_ParentManager.m_ResourceCache.SetDynamicSSBOOffset(Attr.CacheOffset + ArrayIndex, Offset);
 }
 
 void ShaderVariableManagerGL::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)

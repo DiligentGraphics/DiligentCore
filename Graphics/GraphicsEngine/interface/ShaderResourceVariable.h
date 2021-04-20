@@ -126,9 +126,9 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
 
     /// Binds resource array to the variable
 
-    /// \param [in] ppObjects    - pointer to the array of objects
-    /// \param [in] FirstElement - first array element to set
-    /// \param [in] NumElements  - number of objects in ppObjects array
+    /// \param [in] ppObjects    - pointer to the array of objects.
+    /// \param [in] FirstElement - first array element to set.
+    /// \param [in] NumElements  - number of objects in ppObjects array.
     ///
     /// \remark The method performs run-time correctness checks.
     ///         For instance, shader resource view cannot
@@ -137,6 +137,54 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
                                   IDeviceObject* const* ppObjects,
                                   Uint32                FirstElement,
                                   Uint32                NumElements) PURE;
+
+    /// Binds the specified constant buffer range to the variable
+
+    /// \param [in] pObject    - pointer to the buffer object.
+    /// \param [in] Offset     - offset, in bytes, to the start of the buffer range to bind.
+    /// \param [in] Size       - size, in bytes, of the buffer range to bind.
+    /// \param [in] ArrayIndex - for array variables, index of the array element.
+    ///
+    /// \remarks This method is only allowed for constant buffers. If dynamic offset is further set
+    ///          by SetBufferOffset() method, it is added to the base offset set by this method.
+    ///
+    ///          The method resets dynamic offset previously set for this variable to zero.
+    ///
+    /// \warning The Offset must be an integer multiple of ConstantBufferOffsetAlignment member
+    ///          specified by the device limits (see Diligent::DeviceLimits).
+    VIRTUAL void METHOD(SetBufferRange)(THIS_
+                                        IDeviceObject* pObject,
+                                        Uint32         Offset,
+                                        Uint32         Size,
+                                        Uint32         ArrayIndex DEFAULT_VALUE(0)) PURE;
+
+
+    /// Sets the constant or structured buffer dynamic offset
+
+    /// \param [in] Offset     - additional offset, in bytes, that is added to the base offset (see remarks).
+    /// \param [in] ArrayIndex - for array variables, index of the array element.
+    ///
+    /// \remarks This method is only allowed for constant or structured buffer variables that
+    ///          were not created with SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS or
+    ///          PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flags. The method is also not
+    ///          allowed for static resource variables.
+    ///
+    /// \warning The Offset must be an integer multiple of ConstantBufferOffsetAlignment member
+    ///          when setting the offset for a constant buffer, or StructuredBufferOffsetAlignment when
+    ///          setting the offset for a structured buffer, as specified by device limits
+    ///          (see Diligent::DeviceLimits).
+    ///
+    ///          For constant buffers, the offset is added to the offset that was previously set
+    ///          by SetBufferRange() method (if any). For structured buffers, the offset is added
+    ///          to the base offset specified by the buffer view.
+    ///
+    ///          Changing the buffer offset does not require committing the SRB.
+    ///          From the engine point of view, buffers with dynamic offsets are treated similar to dynamic
+    ///          buffers, and thus affected by DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT flag.
+    VIRTUAL void METHOD(SetBufferOffset)(THIS_
+                                         Uint32 Offset,
+                                         Uint32 ArrayIndex DEFAULT_VALUE(0)) PURE;
+
 
     /// Returns the shader resource variable type
     VIRTUAL SHADER_RESOURCE_VARIABLE_TYPE METHOD(GetType)(THIS) CONST PURE;

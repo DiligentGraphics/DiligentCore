@@ -1,5 +1,7 @@
 ## Current Progress
 
+* Added `IShaderResourceVariable::SetBufferRange` and `IShaderResourceVariable::SetBufferOffset` methods,
+  added `DeviceLimits` struct (API240093)
 * Updated API to allow explicitly flushing/invlidating mapped buffer memory range :
   added `MEMORY_PROPERTIES` enum, `IBuffer::GetMemoryProperties()`, `IBuffer::FlushMappedRange()`,
   and `IBuffer::InvalidateMappedRange()` methods (API240092)

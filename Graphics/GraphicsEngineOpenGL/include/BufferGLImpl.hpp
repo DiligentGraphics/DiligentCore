@@ -72,7 +72,7 @@ public:
 
     __forceinline void BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState);
 
-    const GLObjectWrappers::GLBufferObj& GetGLHandle() { return m_GlBuffer; }
+    const GLObjectWrappers::GLBufferObj& GetGLHandle() const { return m_GlBuffer; }
 
     /// Implementation of IBufferGL::GetGLBufferHandle().
     virtual GLuint DILIGENT_CALL_TYPE GetGLBufferHandle() override final { return GetGLHandle(); }

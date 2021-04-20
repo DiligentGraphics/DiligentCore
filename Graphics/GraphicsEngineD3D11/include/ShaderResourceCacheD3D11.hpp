@@ -44,6 +44,8 @@
 #include "BufferViewD3D11Impl.hpp"
 #include "SamplerD3D11Impl.hpp"
 
+#include "Align.hpp"
+
 namespace Diligent
 {
 
@@ -82,10 +84,20 @@ public:
             return pBuff;
         }
 
-        __forceinline void Set(RefCntAutoPtr<BufferD3D11Impl> _pBuff)
+        __forceinline void Set(RefCntAutoPtr<BufferD3D11Impl> _pBuff, Uint32 _FirstConstant, Uint32 _NumConstants)
         {
             pBuff = std::move(_pBuff);
+
+            FirstConstant = _FirstConstant;
+            NumConstants  = _NumConstants;
+
+            DynamicOffset = 0;
         }
+
+        Uint32 FirstConstant = 0;
+        Uint32 NumConstants  = 0;
+
+        Uint32 DynamicOffset = 0;
     };
 
     /// Describes a resource associated with a cached sampler
@@ -158,11 +170,42 @@ public:
 
     void Initialize(const D3D11ShaderResourceCounters& ResCount, IMemoryAllocator& MemAllocator);
 
-    __forceinline void SetCB(const D3D11ResourceBindPoints& BindPoints, RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl)
+    __forceinline void SetCB(const D3D11ResourceBindPoints& BindPoints,
+                             bool                           AllowDynamic,
+                             RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl,
+                             Uint32                         BufferOffset,
+                             Uint32                         BufferRange)
     {
+        constexpr Uint32 CBOffsetAlignment = 256;
+        DEV_CHECK_ERR(BufferOffset + BufferRange <= (pBuffD3D11Impl ? pBuffD3D11Impl->GetDesc().uiSizeInBytes : 0), "The range is out of buffer bounds");
+        DEV_CHECK_ERR((BufferOffset % CBOffsetAlignment) == 0, "Buffer offset must be a multiple of ", CBOffsetAlignment);
+
+        bool IsDynamicOffset = false;
+        if (pBuffD3D11Impl)
+        {
+            if (BufferRange == 0)
+                BufferRange = pBuffD3D11Impl->GetDesc().uiSizeInBytes - BufferOffset;
+            IsDynamicOffset = AllowDynamic && (BufferRange < pBuffD3D11Impl->GetDesc().uiSizeInBytes);
+        }
+        BufferRange = AlignUp(BufferRange, CBOffsetAlignment);
+
         auto* pd3d11Buff = pBuffD3D11Impl ? pBuffD3D11Impl->BufferD3D11Impl::GetD3D11Buffer() : nullptr;
-        SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_CBV>(BindPoints, std::move(pBuffD3D11Impl), pd3d11Buff);
+        SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_CBV>(BindPoints, std::move(pBuffD3D11Impl), pd3d11Buff, BufferOffset / 16, BufferRange / 16);
+
+        for (auto ActiveStages = BindPoints.GetActiveStages(); ActiveStages != SHADER_TYPE_UNKNOWN;)
+        {
+            const Uint32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
+            const Uint16 BindPoint = BindPoints[ShaderInd];
+            const Uint16 BufferBit = Uint16{1} << BindPoint;
+            if (IsDynamicOffset)
+                m_DynamicCBOffsetsMask[ShaderInd] |= BufferBit;
+            else
+                m_DynamicCBOffsetsMask[ShaderInd] &= ~BufferBit;
+        }
     }
+
+    __forceinline void SetDynamicCBOffset(const D3D11ResourceBindPoints& BindPoints,
+                                          Uint32                         DynamicOffset);
 
     __forceinline void SetTexSRV(const D3D11ResourceBindPoints& BindPoints, RefCntAutoPtr<TextureViewD3D11Impl> pTexView)
     {
@@ -294,6 +337,12 @@ public:
                                         ID3D11Resource*                                          CommittedD3D11Resources[],
                                         const D3D11ShaderResourceCounters&                       BaseBindings) const;
 
+    inline MinMaxSlot BindCBs(Uint32                             ShaderInd,
+                              ID3D11Buffer*                      CommittedD3D11Resources[],
+                              UINT                               FirstConstants[],
+                              UINT                               NumConstants[],
+                              const D3D11ShaderResourceCounters& BaseBindings) const;
+
     enum class StateTransitionMode
     {
         Transition,
@@ -302,6 +351,21 @@ public:
     // Transitions all resources in the cache
     template <StateTransitionMode Mode>
     void TransitionResourceStates(DeviceContextD3D11Impl& Ctx);
+
+    Uint32 GetDynamicCBOffsetsMask(Uint32 ShaderInd) const
+    {
+        return m_DynamicCBOffsetsMask[ShaderInd];
+    }
+
+    bool HasDynamicCBOffsets()
+    {
+        for (auto Mask : m_DynamicCBOffsetsMask)
+        {
+            if (Mask != 0)
+                return true;
+        }
+        return false;
+    }
 
 private:
     template <D3D11_RESOURCE_RANGE>
@@ -332,8 +396,11 @@ private:
         return std::make_pair(ResArrays.first, ResArrays.second);
     }
 
-    template <D3D11_RESOURCE_RANGE ResRange, typename TSrcResourceType, typename TD3D11ResourceType>
-    __forceinline void SetD3D11ResourceInternal(const D3D11ResourceBindPoints& BindPoints, TSrcResourceType pResource, TD3D11ResourceType* pd3d11Resource)
+    template <D3D11_RESOURCE_RANGE ResRange, typename TSrcResourceType, typename TD3D11ResourceType, typename... ExtraArgsType>
+    __forceinline void SetD3D11ResourceInternal(const D3D11ResourceBindPoints& BindPoints,
+                                                TSrcResourceType               pResource,
+                                                TD3D11ResourceType*            pd3d11Resource,
+                                                const ExtraArgsType&... ExtraArgs)
     {
         VERIFY(pResource != nullptr && pd3d11Resource != nullptr || pResource == nullptr && pd3d11Resource == nullptr,
                "Resource and D3D11 resource must be set/unset atomically");
@@ -344,7 +411,7 @@ private:
             VERIFY(CacheOffset < GetResourceCount<ResRange>(ShaderInd), "Cache offset is out of range");
 
             auto ResArrays = GetResourceArrays<ResRange>(ShaderInd);
-            ResArrays.first[CacheOffset].Set(pResource);
+            ResArrays.first[CacheOffset].Set(pResource, ExtraArgs...);
             ResArrays.second[CacheOffset] = pd3d11Resource;
         }
     }
@@ -390,6 +457,9 @@ private:
 
     // Indicates what types of resources are stored in the cache
     const ResourceCacheContentType m_ContentType;
+
+    std::array<Uint16, NumShaderTypes> m_DynamicCBOffsetsMask{};
+    static_assert(sizeof(m_DynamicCBOffsetsMask[0]) * 8 >= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, "Not enough bits for all dynamic buffer slots");
 
     std::unique_ptr<Uint8, STDDeleter<Uint8, IMemoryAllocator>> m_pResourceData;
 };
@@ -528,6 +598,55 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResour
     }
 
     return Slots;
+}
+
+inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
+    Uint32                             ShaderInd,
+    ID3D11Buffer*                      CommittedD3D11Resources[],
+    UINT                               FirstConstants[],
+    UINT                               NumConstants[],
+    const D3D11ShaderResourceCounters& BaseBindings) const
+{
+    constexpr auto Range = D3D11_RESOURCE_RANGE_CBV;
+
+    const auto   ResCount    = GetResourceCount<Range>(ShaderInd);
+    const auto   ResArrays   = GetConstResourceArrays<Range>(ShaderInd);
+    const Uint32 BaseBinding = BaseBindings[Range][ShaderInd];
+
+    MinMaxSlot Slots;
+    for (Uint32 res = 0; res < ResCount; ++res)
+    {
+        const Uint32 Slot            = BaseBinding + res;
+        auto* const  pd3d11CB        = ResArrays.second[res];
+        const auto   FirstCBConstant = ResArrays.first[res].FirstConstant + ResArrays.first[res].DynamicOffset;
+        const auto   NumCBConstants  = ResArrays.first[res].NumConstants;
+        if (CommittedD3D11Resources[Slot] != pd3d11CB ||
+            FirstConstants[Slot] != FirstCBConstant ||
+            NumConstants[Slot] != NumCBConstants)
+            Slots.Add(Slot);
+
+        VERIFY_EXPR(pd3d11CB != nullptr);
+        CommittedD3D11Resources[Slot] = pd3d11CB;
+        FirstConstants[Slot]          = FirstCBConstant;
+        NumConstants[Slot]            = NumCBConstants;
+    }
+
+    return Slots;
+}
+
+__forceinline void ShaderResourceCacheD3D11::SetDynamicCBOffset(const D3D11ResourceBindPoints& BindPoints,
+                                                                Uint32                         DynamicOffset)
+{
+    for (auto ActiveStages = BindPoints.GetActiveStages(); ActiveStages != SHADER_TYPE_UNKNOWN;)
+    {
+        const Uint32 ShaderInd   = ExtractFirstShaderStageIndex(ActiveStages);
+        const Uint32 CacheOffset = BindPoints[ShaderInd];
+        VERIFY(CacheOffset < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd), "Cache offset is out of range");
+
+        const auto ResArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
+
+        ResArrays.first[CacheOffset].DynamicOffset = DynamicOffset / 16;
+    }
 }
 
 } // namespace Diligent

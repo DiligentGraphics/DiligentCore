@@ -310,6 +310,35 @@ void main(in  uint    VertId : SV_VertexID,
 }
 )"
 };
+
+
+const std::string DrawTest_VSUniformBuffers{
+R"(
+
+cbuffer cbPositions
+{
+    float4 Positions[3];
+}
+
+cbuffer cbColors
+{
+    float4 Colors[3];
+}
+
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
+};
+
+void main(in  uint    VertId : SV_VertexID,
+          out PSInput PSIn) 
+{
+    PSIn.Pos   = Positions[VertId];
+    PSIn.Color = Colors[VertId].rgb;
+}
+)"
+};
 // clang-format on
 
 } // namespace HLSL
@@ -628,6 +657,15 @@ protected:
 
     static void TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
                                                  bool        UseArray);
+
+    static void TestUniOrStructBufferOffsets(BUFFER_MODE BuffMode);
+
+    static void DrawWithUniOrStructBufferOffsets(IShader*                      pVS,
+                                                 IShader*                      pPS,
+                                                 BUFFER_MODE                   BuffMode,
+                                                 SHADER_RESOURCE_VARIABLE_TYPE CBType,
+                                                 USAGE                         BufferUsage,
+                                                 SHADER_VARIABLE_FLAGS         VarFlags);
 
     static RefCntAutoPtr<IPipelineState> sm_pDrawProceduralPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
@@ -2419,6 +2457,292 @@ TEST_F(DrawCommandTest, FormattedBuffers)
 TEST_F(DrawCommandTest, FormattedBufferArray)
 {
     TestStructuredOrFormattedBuffers(BUFFER_MODE_FORMATTED, true /*UseArray*/);
+}
+
+void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                      pVS,
+                                                       IShader*                      pPS,
+                                                       BUFFER_MODE                   BuffMode,
+                                                       SHADER_RESOURCE_VARIABLE_TYPE CBType,
+                                                       USAGE                         BufferUsage,
+                                                       SHADER_VARIABLE_FLAGS         VarFlags)
+{
+    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& Limits     = deviceCaps.Limits;
+
+    const auto UseSetOffset = (VarFlags & SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS) == 0 && (CBType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    if (deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D11 && BuffMode == BUFFER_MODE_STRUCTURED && UseSetOffset)
+    {
+        // Offsets for structured buffers are not supported in D3D11
+        return;
+    }
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.Name = "Draw command test - buffer offsets test";
+
+    PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+    GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    const char* PosResourceName = BuffMode == BUFFER_MODE_STRUCTURED ? "g_Positions" : "cbPositions";
+    const char* ColResourceName = BuffMode == BUFFER_MODE_STRUCTURED ? "g_Colors" : "cbColors";
+
+    ShaderResourceVariableDesc Variables[] = //
+        {
+            {SHADER_TYPE_VERTEX, PosResourceName, CBType, VarFlags},
+            {SHADER_TYPE_VERTEX, ColResourceName, CBType, VarFlags} //
+        };
+    PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+    PSODesc.ResourceLayout.Variables    = Variables;
+
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pPS = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO0;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO0);
+    ASSERT_TRUE(pPSO0 != nullptr);
+
+    RefCntAutoPtr<IPipelineState> pPSO1;
+    if (CBType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+    {
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO1);
+        ASSERT_TRUE(pPSO1 != nullptr);
+    }
+    else
+    {
+        pPSO1 = pPSO0;
+    }
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB0;
+    pPSO0->CreateShaderResourceBinding(&pSRB0, false);
+    ASSERT_TRUE(pSRB0 != nullptr);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB1;
+    if (!UseSetOffset)
+    {
+        pPSO1->CreateShaderResourceBinding(&pSRB1, false);
+        ASSERT_TRUE(pSRB1 != nullptr);
+    }
+
+    const auto IsStructured    = BuffMode == BUFFER_MODE_STRUCTURED;
+    const auto OffsetAlignment = IsStructured ? Limits.StructuredBufferOffsetAlignment : Limits.ConstantBufferOffsetAlignment;
+
+    Uint32 BaseOffset = sizeof(float4) * 4;
+    while (BaseOffset < OffsetAlignment)
+        BaseOffset *= 2;
+
+    const Uint32 PosOffsets[] = {BaseOffset * 1, BaseOffset * 3};
+    const Uint32 ColOffsets[] = {BaseOffset * 2, BaseOffset * 4};
+
+    std::vector<float4> PosData(PosOffsets[1] / sizeof(float4) + 3);
+    std::vector<float4> ColData(ColOffsets[1] / sizeof(float4) + 3);
+    for (Uint32 tri = 0; tri < 2; ++tri)
+    {
+        for (Uint32 i = 0; i < 3; ++i)
+        {
+            PosData[PosOffsets[tri] / sizeof(float4) + i] = Pos[tri * 3 + i];
+            ColData[ColOffsets[tri] / sizeof(float4) + i] = Color[i];
+        }
+    }
+
+    BufferDesc PosBuffDesc;
+    PosBuffDesc.Name              = "Buffer offset test pos data";
+    PosBuffDesc.BindFlags         = BuffMode == BUFFER_MODE_STRUCTURED ? BIND_SHADER_RESOURCE : BIND_UNIFORM_BUFFER;
+    PosBuffDesc.Usage             = BufferUsage;
+    PosBuffDesc.Mode              = BuffMode;
+    PosBuffDesc.ElementByteStride = BuffMode == BUFFER_MODE_STRUCTURED ? sizeof(float4) : 0;
+    PosBuffDesc.CPUAccessFlags    = BufferUsage == USAGE_DYNAMIC ? CPU_ACCESS_WRITE : CPU_ACCESS_NONE;
+    PosBuffDesc.uiSizeInBytes     = static_cast<Uint32>(PosData.size() * sizeof(float4));
+
+    RefCntAutoPtr<IBuffer> pPosDataBuffer;
+    pDevice->CreateBuffer(PosBuffDesc, nullptr, &pPosDataBuffer);
+    ASSERT_TRUE(pPosDataBuffer);
+
+    auto ColBuffDesc          = PosBuffDesc;
+    ColBuffDesc.Name          = "Buffer offset test color data";
+    ColBuffDesc.uiSizeInBytes = static_cast<Uint32>(ColData.size() * sizeof(float4));
+    RefCntAutoPtr<IBuffer> pColDataBuffer;
+    pDevice->CreateBuffer(ColBuffDesc, nullptr, &pColDataBuffer);
+    ASSERT_TRUE(pColDataBuffer);
+
+    if (BufferUsage == USAGE_DYNAMIC)
+    {
+        {
+            MapHelper<float4> PosBufferData{pContext, pPosDataBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
+            memcpy(PosBufferData, PosData.data(), PosBuffDesc.uiSizeInBytes);
+        }
+        {
+            MapHelper<float4> ColBufferData{pContext, pColDataBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
+            memcpy(ColBufferData, ColData.data(), ColBuffDesc.uiSizeInBytes);
+        }
+    }
+    else
+    {
+        pContext->UpdateBuffer(pPosDataBuffer, 0, PosBuffDesc.uiSizeInBytes, PosData.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->UpdateBuffer(pColDataBuffer, 0, ColBuffDesc.uiSizeInBytes, ColData.data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+
+    enum BufferType
+    {
+        Pos,
+        Col
+    };
+    auto SetBuffer = [CBType, BuffMode](IPipelineState* pPSO, IShaderResourceBinding* pSRB, const char* Name, IBuffer* pBuffer, Uint32 Offset) //
+    {
+        RefCntAutoPtr<IBufferView> pBuffView;
+        if (BuffMode == BUFFER_MODE_STRUCTURED)
+        {
+            BufferViewDesc ViewDesc;
+            ViewDesc.ViewType   = BUFFER_VIEW_SHADER_RESOURCE;
+            ViewDesc.ByteOffset = Offset;
+            ViewDesc.ByteWidth  = sizeof(float4) * 3;
+            pBuffer->CreateView(ViewDesc, &pBuffView);
+        }
+
+        if (CBType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            if (BuffMode == BUFFER_MODE_STRUCTURED)
+                pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, Name)->Set(pBuffView);
+            else
+                pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, Name)->SetBufferRange(pBuffer, Offset, sizeof(float4) * 3);
+        }
+        else
+        {
+            if (BuffMode == BUFFER_MODE_STRUCTURED)
+                pSRB->GetVariableByName(SHADER_TYPE_VERTEX, Name)->Set(pBuffView);
+            else
+                pSRB->GetVariableByName(SHADER_TYPE_VERTEX, Name)->SetBufferRange(pBuffer, Offset, sizeof(float4) * 3);
+        }
+    };
+
+    if (UseSetOffset)
+    {
+        SetBuffer(pPSO0, pSRB0, PosResourceName, pPosDataBuffer, BaseOffset);
+        SetBuffer(pPSO0, pSRB0, ColResourceName, pColDataBuffer, BaseOffset);
+    }
+    else
+    {
+        SetBuffer(pPSO0, pSRB0, PosResourceName, pPosDataBuffer, PosOffsets[0]);
+        SetBuffer(pPSO1, pSRB1, PosResourceName, pPosDataBuffer, PosOffsets[1]);
+        SetBuffer(pPSO0, pSRB0, ColResourceName, pColDataBuffer, ColOffsets[0]);
+        SetBuffer(pPSO1, pSRB1, ColResourceName, pColDataBuffer, ColOffsets[1]);
+    }
+
+    pPSO0->InitializeStaticSRBResources(pSRB0);
+    if (pSRB1)
+        pPSO1->InitializeStaticSRBResources(pSRB1);
+
+    SetRenderTargets(pPSO0);
+
+    pContext->CommitShaderResources(pSRB0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    if (UseSetOffset)
+    {
+        pSRB0->GetVariableByName(SHADER_TYPE_VERTEX, PosResourceName)->SetBufferOffset(PosOffsets[0] - BaseOffset);
+        pSRB0->GetVariableByName(SHADER_TYPE_VERTEX, ColResourceName)->SetBufferOffset(ColOffsets[0] - BaseOffset);
+    }
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(drawAttrs);
+
+    if (UseSetOffset)
+    {
+        pSRB0->GetVariableByName(SHADER_TYPE_VERTEX, PosResourceName)->SetBufferOffset(PosOffsets[1] - BaseOffset);
+        if (CBType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            SetBuffer(nullptr, pSRB0, ColResourceName, pColDataBuffer, ColOffsets[1]);
+            pContext->CommitShaderResources(pSRB0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        }
+        else
+        {
+            pSRB0->GetVariableByName(SHADER_TYPE_VERTEX, ColResourceName)->SetBufferOffset(ColOffsets[1] - BaseOffset);
+        }
+    }
+    else
+    {
+        pContext->CommitShaderResources(pSRB1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+void DrawCommandTest::TestUniOrStructBufferOffsets(BUFFER_MODE BuffMode)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.UseCombinedTextureSamplers = true;
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Draw command test buffer offsets - VS";
+        ShaderCI.Source          = BuffMode == BUFFER_MODE_STRUCTURED ? HLSL::DrawTest_VSStructuredBuffers.c_str() : HLSL::DrawTest_VSUniformBuffers.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Draw command test buffer offsets - PS";
+        ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    for (Uint32 cb_type = 0; cb_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++cb_type)
+    {
+        const auto CBType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb_type);
+
+        for (Uint32 is_dynamic = 0; is_dynamic < 2; ++is_dynamic)
+        {
+            const auto Usage = is_dynamic != 0 ? USAGE_DYNAMIC : USAGE_DEFAULT;
+            for (Uint32 no_dyn_buffers = 0; no_dyn_buffers < 2; ++no_dyn_buffers)
+            {
+                const auto ShaderVarFlag = no_dyn_buffers != 0 ? SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS : SHADER_VARIABLE_FLAG_NONE;
+                if ((ShaderVarFlag & SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS) && (Usage == USAGE_DYNAMIC))
+                    continue;
+
+                DrawWithUniOrStructBufferOffsets(pVS, pPS, BuffMode, CBType, Usage, ShaderVarFlag);
+                std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                          << GetShaderVariableTypeLiteralName(CBType)
+                          << ", " << GetUsageString(Usage) << " buff"
+                          << (no_dyn_buffers != 0 ? ", NO_DYNAMIC_BUFFERS" : "")
+                          << std::endl;
+            }
+        }
+    }
+}
+
+
+// Test drawing with uniform buffer offsets
+TEST_F(DrawCommandTest, UniformBufferOffsets)
+{
+    TestUniOrStructBufferOffsets(BUFFER_MODE_UNDEFINED);
+}
+
+// Test drawing with structured buffer offsets
+TEST_F(DrawCommandTest, StructBufferOffsets)
+{
+    TestUniOrStructBufferOffsets(BUFFER_MODE_STRUCTURED);
 }
 
 } // namespace

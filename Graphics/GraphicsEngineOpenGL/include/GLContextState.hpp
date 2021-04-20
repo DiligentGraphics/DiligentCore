@@ -49,7 +49,7 @@ public:
     void BindFBO           (const GLObjectWrappers::GLFrameBufferObj& FBO);
     void SetActiveTexture  (Int32 Index);
     void BindTexture       (Int32 Index, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& Tex);
-    void BindUniformBuffer (Int32 Index,       const GLObjectWrappers::GLBufferObj& Buff);
+    void BindUniformBuffer (Int32 Index,       const GLObjectWrappers::GLBufferObj& Buff, GLintptr Offset, GLsizeiptr Size);
     void BindBuffer        (GLenum BindTarget, const GLObjectWrappers::GLBufferObj& Buff, bool ResetVAO);
     void BindSampler       (Uint32 Index,      const GLObjectWrappers::GLSamplerObj& GLSampler);
     void BindImage         (Uint32 Index, class TextureViewGLImpl* pTexView, GLint MipLevel, GLboolean IsLayered, GLint Layer, GLenum Access, GLenum Format);
@@ -123,13 +123,36 @@ private:
     // the system can reuse the same address
     // The safest way is to keep global unique ID for all objects
 
-    UniqueIdentifier              m_GLProgId     = -1;
-    UniqueIdentifier              m_GLPipelineId = -1;
-    UniqueIdentifier              m_VAOId        = -1;
-    UniqueIdentifier              m_FBOId        = -1;
-    std::vector<UniqueIdentifier> m_BoundTextures;
-    std::vector<UniqueIdentifier> m_BoundSamplers;
-    std::vector<UniqueIdentifier> m_BoundUniformBuffers;
+    UniqueIdentifier m_GLProgId     = -1;
+    UniqueIdentifier m_GLPipelineId = -1;
+    UniqueIdentifier m_VAOId        = -1;
+    UniqueIdentifier m_FBOId        = -1;
+
+    struct BoundBufferInfo
+    {
+        BoundBufferInfo() {}
+        BoundBufferInfo(UniqueIdentifier _BufferID,
+                        GLintptr         _Offset,
+                        GLsizeiptr       _Size) :
+            // clang-format off
+            BufferID{_BufferID},
+            Offset  {_Offset},
+            Size    {_Size}
+        // clang-format on
+        {}
+        UniqueIdentifier BufferID = -1;
+        GLintptr         Offset   = 0;
+        GLsizeiptr       Size     = 0;
+
+        bool operator==(const BoundBufferInfo& rhs) const
+        {
+            // clang-format off
+            return BufferID == rhs.BufferID &&
+                   Offset   == rhs.Offset &&
+                   Size     == rhs.Size;
+            // clang-format on
+        }
+    };
 
     struct BoundImageInfo
     {
@@ -174,34 +197,12 @@ private:
             // clang-format on
         }
     };
-    std::vector<BoundImageInfo> m_BoundImages;
 
-    struct BoundSSBOInfo
-    {
-        BoundSSBOInfo() {}
-        BoundSSBOInfo(UniqueIdentifier _BufferID,
-                      GLintptr         _Offset,
-                      GLsizeiptr       _Size) :
-            // clang-format off
-            BufferID{_BufferID},
-            Offset  {_Offset},
-            Size    {_Size}
-        // clang-format on
-        {}
-        UniqueIdentifier BufferID = -1;
-        GLintptr         Offset   = 0;
-        GLsizeiptr       Size     = 0;
-
-        bool operator==(const BoundSSBOInfo& rhs) const
-        {
-            // clang-format off
-            return BufferID == rhs.BufferID &&
-                   Offset   == rhs.Offset &&
-                   Size     == rhs.Size;
-            // clang-format on
-        }
-    };
-    std::vector<BoundSSBOInfo> m_BoundStorageBlocks;
+    std::vector<UniqueIdentifier> m_BoundTextures;
+    std::vector<UniqueIdentifier> m_BoundSamplers;
+    std::vector<BoundBufferInfo>  m_BoundUniformBuffers;
+    std::vector<BoundImageInfo>   m_BoundImages;
+    std::vector<BoundBufferInfo>  m_BoundStorageBlocks;
 
     MEMORY_BARRIER m_PendingMemoryBarriers = MEMORY_BARRIER_NONE;
 

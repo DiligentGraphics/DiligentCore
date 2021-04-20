@@ -291,7 +291,7 @@ private:
     __forceinline void PostDraw();
 
     using TBindings = PipelineResourceSignatureGLImpl::TBindings;
-    void BindProgramResources();
+    void BindProgramResources(bool DynamicOffsetsIntact = false);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();
@@ -306,6 +306,9 @@ private:
         // Binding offsets that were used in the last BindProgramResources() call.
         std::array<TBindings, MAX_RESOURCE_SIGNATURES> BaseBindings = {};
 #endif
+
+        SRBMaskType DynamicSRBMask = 0; // Indicates SRBs that have buffers with dynamic resources
+
         BindInfo()
         {}
 

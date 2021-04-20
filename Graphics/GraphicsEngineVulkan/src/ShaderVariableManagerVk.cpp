@@ -254,10 +254,14 @@ struct BindResourceHelper
                        Uint32                                 ResIndex,
                        Uint32                                 ArrayIndex);
 
-    void operator()(IDeviceObject* pObj) const;
+    void operator()(IDeviceObject* pObj,
+                    Uint32         BufferBaseOffset = 0,
+                    Uint32         BufferRangeSize  = 0) const;
 
 private:
-    void CacheUniformBuffer(IDeviceObject* pBuffer) const;
+    void CacheUniformBuffer(IDeviceObject* pBuffer,
+                            Uint32         BaseOffset,
+                            Uint32         RangeSize) const;
 
     void CacheStorageBuffer(IDeviceObject* pBufferView) const;
 
@@ -272,13 +276,9 @@ private:
     void CacheAccelerationStructure(IDeviceObject* pTLAS) const;
 
     template <typename ObjectType>
-    bool UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject) const;
-
-    // Updates resource descriptor in the descriptor set
-    inline void UpdateDescriptorHandle(const VkDescriptorImageInfo*                        pImageInfo,
-                                       const VkDescriptorBufferInfo*                       pBufferInfo,
-                                       const VkBufferView*                                 pTexelBufferView,
-                                       const VkWriteDescriptorSetAccelerationStructureKHR* pAccelStructInfo = nullptr) const;
+    bool UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject,
+                              Uint32                      BufferBaseOffset = 0,
+                              Uint32                      BufferRangeSize  = 0) const;
 
 private:
     using ResourceAttribs = PipelineResourceSignatureVkImpl::ResourceAttribs;
@@ -341,7 +341,9 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureVkImpl& Si
 #endif
 }
 
-void BindResourceHelper::operator()(IDeviceObject* pObj) const
+void BindResourceHelper::operator()(IDeviceObject* pObj,
+                                    Uint32         BufferBaseOffset,
+                                    Uint32         BufferRangeSize) const
 {
     if (pObj)
     {
@@ -350,7 +352,7 @@ void BindResourceHelper::operator()(IDeviceObject* pObj) const
         {
             case DescriptorType::UniformBuffer:
             case DescriptorType::UniformBufferDynamic:
-                CacheUniformBuffer(pObj);
+                CacheUniformBuffer(pObj, BufferBaseOffset, BufferRangeSize);
                 break;
 
             case DescriptorType::StorageBuffer:
@@ -409,7 +411,9 @@ void BindResourceHelper::operator()(IDeviceObject* pObj) const
 }
 
 template <typename ObjectType>
-bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject) const
+bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObject,
+                                              Uint32                      BufferBaseOffset,
+                                              Uint32                      BufferRangeSize) const
 {
     if (pObject)
     {
@@ -421,9 +425,15 @@ bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObjec
         }
 
         m_ResourceCache.SetResource(&m_Signature.GetDevice()->GetLogicalDevice(),
-                                    m_Attribs.DescrSet, m_DstResCacheOffset,
-                                    m_Attribs.BindingIndex, m_ArrayIndex,
-                                    std::move(pObject));
+                                    m_Attribs.DescrSet,
+                                    m_DstResCacheOffset,
+                                    {
+                                        m_Attribs.BindingIndex,
+                                        m_ArrayIndex,
+                                        std::move(pObject),
+                                        BufferBaseOffset,
+                                        BufferRangeSize //
+                                    });
         return true;
     }
     else
@@ -432,7 +442,9 @@ bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObjec
     }
 }
 
-void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer) const
+void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer,
+                                            Uint32         BaseOffset,
+                                            Uint32         RangeSize) const
 {
     VERIFY(pBuffer != nullptr, "Setting uniform buffer to null is handled by BindResourceHelper::operator()");
     VERIFY((m_DstRes.Type == DescriptorType::UniformBuffer ||
@@ -446,7 +458,7 @@ void BindResourceHelper::CacheUniformBuffer(IDeviceObject* pBuffer) const
                                 m_Signature.GetDesc().Name);
 #endif
 
-    UpdateCachedResource(std::move(pBufferVk));
+    UpdateCachedResource(std::move(pBufferVk), BaseOffset, RangeSize);
 }
 
 void BindResourceHelper::CacheStorageBuffer(IDeviceObject* pBufferView) const
@@ -635,7 +647,11 @@ void BindResourceHelper::CacheAccelerationStructure(IDeviceObject* pTLAS) const
 } // namespace
 
 
-void ShaderVariableManagerVk::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex, Uint32 ResIndex)
+void ShaderVariableManagerVk::BindResource(Uint32         ResIndex,
+                                           Uint32         ArrayIndex,
+                                           IDeviceObject* pObj,
+                                           Uint32         BufferBaseOffset,
+                                           Uint32         BufferRangeSize)
 {
     BindResourceHelper BindHelper{
         *m_pSignature,
@@ -643,7 +659,19 @@ void ShaderVariableManagerVk::BindResource(IDeviceObject* pObj, Uint32 ArrayInde
         ResIndex,
         ArrayIndex};
 
-    BindHelper(pObj);
+    BindHelper(pObj, BufferBaseOffset, BufferRangeSize);
+}
+
+void ShaderVariableManagerVk::SetBufferDynamicOffset(Uint32 ResIndex,
+                                                     Uint32 ArrayIndex,
+                                                     Uint32 BufferBaseOffset)
+{
+    const auto& Attribs = m_pSignature->GetResourceAttribs(ResIndex);
+    const auto& ResDesc = m_pSignature->GetResourceDesc(ResIndex);
+    VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
+           "Dyanmic offsets can't be set for variables created with NO_DYNAMIC_BUFFERS flag");
+
+    m_ResourceCache.SetDynamicBufferOffset(Attribs.DescrSet, Attribs.CacheOffset(m_ResourceCache.GetContentType()) + ArrayIndex, BufferBaseOffset);
 }
 
 bool ShaderVariableManagerVk::IsBound(Uint32 ArrayIndex, Uint32 ResIndex) const

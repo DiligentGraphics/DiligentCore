@@ -91,6 +91,8 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///          series of draw commands that use the same pipeline state and shader resources and
     ///          no dynamic buffers (constant or bound as shader resources) are updated between the
     ///          commands.
+    ///          Any buffer variable not created with SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS or 
+    ///          PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flags is counted as dynamic.
     ///          The flag has no effect on dynamic vertex and index buffers.
     ///
     ///          Details

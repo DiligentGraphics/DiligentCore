@@ -572,8 +572,15 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
             {
                 VERIFY(pCachedResource == nullptr, "Static resource has already been initialized, and the new resource does not match previously assigned resource");
                 DstResourceCache.SetResource(&GetDevice()->GetLogicalDevice(),
-                                             StaticSetIdx, DstCacheOffset, Attr.BindingIndex, ArrInd,
-                                             RefCntAutoPtr<IDeviceObject>{SrcCachedRes.pObject});
+                                             StaticSetIdx,
+                                             DstCacheOffset,
+                                             {
+                                                 Attr.BindingIndex,
+                                                 ArrInd,
+                                                 RefCntAutoPtr<IDeviceObject>{SrcCachedRes.pObject},
+                                                 SrcCachedRes.BufferBaseOffset,
+                                                 SrcCachedRes.BufferRangeSize //
+                                             });
             }
         }
     }

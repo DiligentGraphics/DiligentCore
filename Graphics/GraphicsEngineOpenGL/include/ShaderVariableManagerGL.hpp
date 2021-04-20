@@ -110,6 +110,11 @@ public:
         {}
 
         const ResourceAttribs& GetAttribs() const { return this->m_ParentManager.GetResourceAttribs(this->m_ResIndex); }
+
+        void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
+        {
+            UNSUPPORTED("Dynamic offset may only be set for uniform and storage buffers");
+        }
     };
 
 
@@ -119,13 +124,15 @@ public:
             GLVariableBase<UniformBuffBindInfo>{ParentLayout, ResIndex}
         {}
 
-        void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
+        void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
             return m_ParentManager.m_ResourceCache.IsUBBound(GetAttribs().CacheOffset + ArrayIndex);
         }
+
+        void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset);
     };
 
 
@@ -135,7 +142,7 @@ public:
             GLVariableBase<TextureBindInfo>{ParentLayout, ResIndex}
         {}
 
-        void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
+        void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -153,7 +160,7 @@ public:
             GLVariableBase<ImageBindInfo>{ParentLayout, ResIndex}
         {}
 
-        void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
+        void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -171,13 +178,15 @@ public:
             GLVariableBase<StorageBufferBindInfo>{ParentLayout, ResIndex}
         {}
 
-        void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
+        void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
             return m_ParentManager.m_ResourceCache.IsSSBOBound(GetAttribs().CacheOffset + ArrayIndex);
         }
+
+        void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset);
     };
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);

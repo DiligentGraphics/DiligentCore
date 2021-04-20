@@ -381,7 +381,9 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
                     if (!SrcCachedRes.pBuffer)
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-                    DstResourceCache.SetUniformBuffer(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<BufferGLImpl>{SrcCachedRes.pBuffer});
+                    DstResourceCache.SetUniformBuffer(ResAttr.CacheOffset + ArrInd, (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
+                                                      RefCntAutoPtr<BufferGLImpl>{SrcCachedRes.pBuffer},
+                                                      SrcCachedRes.BaseOffset, SrcCachedRes.RangeSize);
                 }
                 break;
             case BINDING_RANGE_STORAGE_BUFFER:
@@ -391,7 +393,7 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
                     if (!SrcCachedRes.pBufferView)
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-                    DstResourceCache.SetSSBO(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<BufferViewGLImpl>{SrcCachedRes.pBufferView});
+                    DstResourceCache.SetSSBO(ResAttr.CacheOffset + ArrInd, (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, RefCntAutoPtr<BufferViewGLImpl>{SrcCachedRes.pBufferView});
                 }
                 break;
             case BINDING_RANGE_TEXTURE:

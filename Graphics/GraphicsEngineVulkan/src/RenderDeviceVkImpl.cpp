@@ -268,6 +268,14 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         m_DeviceProperties.WaveOp.SupportedStages = VkShaderStageFlagsToShaderTypes(vkWaveProps.supportedStages);
         m_DeviceProperties.WaveOp.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
     }
+
+    auto& Limits = m_DeviceCaps.Limits;
+
+    Limits.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
+    Limits.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+#endif
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()

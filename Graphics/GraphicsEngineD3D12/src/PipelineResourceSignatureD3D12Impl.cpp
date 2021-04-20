@@ -416,7 +416,6 @@ void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCache
             continue;
         }
 
-        const auto  HeapType     = IsSampler ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         const auto  DstRootIndex = Attr.RootIndex(DstCacheType);
         const auto  SrcRootIndex = Attr.RootIndex(SrcCacheType);
         const auto& SrcRootTable = SrcResourceCache.GetRootTable(SrcRootIndex);
@@ -434,16 +433,7 @@ void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCache
             if (DstRes.pObject != SrcRes.pObject)
             {
                 DEV_CHECK_ERR(DstRes.pObject == nullptr, "Static resource has already been initialized, and the new resource does not match previously assigned resource.");
-
-                DstResourceCache.CopyResource(DstRootIndex, DstCacheOffset, SrcRes);
-
-                if (!Attr.IsRootView())
-                {
-                    auto DstDescrHandle = DstResourceCache.GetDescriptorTableHandle<D3D12_CPU_DESCRIPTOR_HANDLE>(
-                        HeapType, ROOT_PARAMETER_GROUP_STATIC_MUTABLE, DstRootIndex, DstCacheOffset);
-                    VERIFY_EXPR(DstDescrHandle.ptr != 0);
-                    d3d12Device->CopyDescriptorsSimple(1, DstDescrHandle, SrcRes.CPUDescriptorHandle, HeapType);
-                }
+                DstResourceCache.CopyResource(d3d12Device, DstRootIndex, DstCacheOffset, SrcRes);
             }
             else
             {
@@ -474,17 +464,17 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const CommitCacheResour
             continue;
         }
 
-        BufferD3D12Impl* pBuffer = nullptr;
+        const BufferD3D12Impl* pBuffer = nullptr;
         if (Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
         {
             // No need to QueryInterface() - the type is verified when a resource is bound
-            pBuffer = Res.pObject.RawPtr<BufferD3D12Impl>();
+            pBuffer = Res.pObject.RawPtr<const BufferD3D12Impl>();
         }
         else if (Res.Type == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                  Res.Type == SHADER_RESOURCE_TYPE_BUFFER_UAV)
         {
-            auto* pBuffView = Res.pObject.RawPtr<BufferViewD3D12Impl>();
-            pBuffer         = pBuffView->GetBuffer<BufferD3D12Impl>();
+            auto* pBuffView = Res.pObject.RawPtr<const BufferViewD3D12Impl>();
+            pBuffer         = pBuffView->GetBuffer<const BufferD3D12Impl>();
         }
         else
         {
@@ -492,8 +482,10 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const CommitCacheResour
         }
         VERIFY_EXPR(pBuffer != nullptr);
 
-        const auto BufferGPUAddress = pBuffer->GetGPUAddress(CommitAttribs.DeviceCtxId, CommitAttribs.pDeviceCtx);
+        auto BufferGPUAddress = pBuffer->GetGPUAddress(CommitAttribs.DeviceCtxId, CommitAttribs.pDeviceCtx);
         VERIFY_EXPR(BufferGPUAddress != 0);
+
+        BufferGPUAddress += UINT64{Res.BufferBaseOffset} + UINT64{Res.BufferDynamicOffset};
 
         auto* const pd3d12CmdList = CommitAttribs.Ctx.GetCommandList();
         static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
@@ -793,7 +785,8 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DS
                 {
                     if (const auto* pBuffD3D12 = CachedRes.pObject.RawPtr<BufferD3D12Impl>())
                     {
-                        if (pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+                        const auto& BuffDesc = pBuffD3D12->GetDesc();
+                        if (BuffDesc.Usage == USAGE_DYNAMIC || CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.uiSizeInBytes)
                             VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
                         else
                             VERIFY_EXPR((ResourceCache.GetNonDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
@@ -813,7 +806,8 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const D3DS
                     {
                         const auto* pBuffD3D12 = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
                         VERIFY_EXPR(pBuffD3D12 != nullptr);
-                        if (pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+                        const auto& BuffDesc = pBuffD3D12->GetDesc();
+                        if (BuffDesc.Usage == USAGE_DYNAMIC || CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.uiSizeInBytes)
                             VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
                         else
                             VERIFY_EXPR((ResourceCache.GetNonDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);

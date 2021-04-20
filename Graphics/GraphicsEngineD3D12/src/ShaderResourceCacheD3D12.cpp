@@ -293,27 +293,25 @@ ShaderResourceCacheD3D12::~ShaderResourceCacheD3D12()
 
 
 
-const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(Uint32                         RootIndex,
-                                                                                Uint32                         OffsetFromTableStart,
-                                                                                SHADER_RESOURCE_TYPE           Type,
-                                                                                D3D12_CPU_DESCRIPTOR_HANDLE    CPUDescriptorHandle,
-                                                                                RefCntAutoPtr<IDeviceObject>&& pObject)
+const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(Uint32     RootIndex,
+                                                                                Uint32     OffsetFromTableStart,
+                                                                                Resource&& SrcRes)
 {
     auto& Tbl = GetRootTable(RootIndex);
     if (Tbl.IsRootView())
     {
         const BufferD3D12Impl* pBuffer = nullptr;
-        if (pObject)
+        if (SrcRes.pObject)
         {
-            switch (Type)
+            switch (SrcRes.Type)
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-                    pBuffer = pObject.RawPtr<const BufferD3D12Impl>();
+                    pBuffer = SrcRes.pObject.RawPtr<const BufferD3D12Impl>();
                     break;
 
                 case SHADER_RESOURCE_TYPE_BUFFER_SRV:
                 case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-                    pBuffer = pObject.RawPtr<BufferViewD3D12Impl>()->GetBuffer<const BufferD3D12Impl>();
+                    pBuffer = SrcRes.pObject.RawPtr<BufferViewD3D12Impl>()->GetBuffer<const BufferD3D12Impl>();
                     break;
 
                 default:
@@ -327,7 +325,12 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
         m_NonDynamicRootBuffersMask &= ~BufferBit;
         if (pBuffer != nullptr)
         {
-            const auto IsDynamic = pBuffer->GetDesc().Usage == USAGE_DYNAMIC;
+            const auto& BuffDesc = pBuffer->GetDesc();
+
+            const auto IsDynamic =
+                (BuffDesc.Usage == USAGE_DYNAMIC) ||
+                (SrcRes.BufferRangeSize != 0 && SrcRes.BufferRangeSize < BuffDesc.uiSizeInBytes);
+
             (IsDynamic ? m_DynamicRootBuffersMask : m_NonDynamicRootBuffersMask) |= BufferBit;
         }
     }
@@ -337,15 +340,15 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
         if (GetContentType() == ResourceCacheContentType::SRB)
         {
             const BufferD3D12Impl* pBuffer = nullptr;
-            switch (Type)
+            switch (SrcRes.Type)
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-                    pBuffer = pObject.RawPtr<const BufferD3D12Impl>();
+                    pBuffer = SrcRes.pObject.RawPtr<const BufferD3D12Impl>();
                     break;
 
                 case SHADER_RESOURCE_TYPE_BUFFER_SRV:
                 case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-                    pBuffer = pObject.RawPtr<BufferViewD3D12Impl>()->GetBuffer<const BufferD3D12Impl>();
+                    pBuffer = SrcRes.pObject.RawPtr<const BufferViewD3D12Impl>()->GetBuffer<const BufferD3D12Impl>();
                     break;
 
                 default:
@@ -360,14 +363,57 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
 #endif
     }
 
-    auto& Res = Tbl.GetResource(OffsetFromTableStart);
+    auto& DstRes = Tbl.GetResource(OffsetFromTableStart);
 
-    Res.Type                = Type;
-    Res.pObject             = std::move(pObject);
-    Res.CPUDescriptorHandle = CPUDescriptorHandle;
+    DstRes = std::move(SrcRes);
+    // Make sure dynamic offset is reset
+    DstRes.BufferDynamicOffset = 0;
 
-    return Res;
+    return DstRes;
 }
+
+void ShaderResourceCacheD3D12::SetBufferDynamicOffset(Uint32 RootIndex,
+                                                      Uint32 OffsetFromTableStart,
+                                                      Uint32 BufferDynamicOffset)
+{
+    auto& Tbl = GetRootTable(RootIndex);
+    VERIFY(Tbl.IsRootView(), "Dynamic offsets may only be set for root views");
+    auto& Res = Tbl.GetResource(OffsetFromTableStart);
+    VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER ||
+                Res.Type == SHADER_RESOURCE_TYPE_BUFFER_SRV);
+    Res.BufferDynamicOffset = BufferDynamicOffset;
+}
+
+const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::CopyResource(ID3D12Device*   pd3d12Device,
+                                                                                 Uint32          RootIndex,
+                                                                                 Uint32          OffsetFromTableStart,
+                                                                                 const Resource& SrcRes)
+{
+    const auto& DstRes = SetResource(RootIndex, OffsetFromTableStart, Resource{SrcRes});
+
+    auto& Tbl = GetRootTable(RootIndex);
+    if (!Tbl.IsRootView())
+    {
+        const auto HeapType = DstRes.Type == SHADER_RESOURCE_TYPE_SAMPLER ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+
+        auto DstDescrHandle = GetDescriptorTableHandle<D3D12_CPU_DESCRIPTOR_HANDLE>(
+            HeapType, ROOT_PARAMETER_GROUP_STATIC_MUTABLE, RootIndex, OffsetFromTableStart);
+        if (DstRes.CPUDescriptorHandle.ptr != 0)
+        {
+            pd3d12Device->CopyDescriptorsSimple(1, DstDescrHandle, SrcRes.CPUDescriptorHandle, HeapType);
+        }
+        else
+        {
+            VERIFY(DstRes.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Null CPU descriptor is only allowed for constant buffers");
+            const auto* pBuffer = DstRes.pObject.RawPtr<const BufferD3D12Impl>();
+            VERIFY(DstRes.BufferRangeSize < pBuffer->GetDesc().uiSizeInBytes, "Null CPU descriptor is only allowed for partial views of constant buffers");
+            pBuffer->CreateCBV(DstDescrHandle, DstRes.BufferBaseOffset, DstRes.BufferRangeSize);
+        }
+    }
+
+    return DstRes;
+}
+
 
 #ifdef DILIGENT_DEBUG
 void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
@@ -404,7 +450,12 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
 
             if (pBuffer != nullptr)
             {
-                const bool IsDynamicBuffer = pBuffer->GetDesc().Usage == USAGE_DYNAMIC;
+                const auto& BuffDesc = pBuffer->GetDesc();
+
+                const auto IsDynamicBuffer =
+                    (BuffDesc.Usage == USAGE_DYNAMIC) ||
+                    (Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.uiSizeInBytes);
+
                 VERIFY(((m_DynamicRootBuffersMask & DynamicBufferBit) != 0) == IsDynamicBuffer,
                        "Incorrect dynamic buffer bit set in the mask");
                 VERIFY(((m_NonDynamicRootBuffersMask & DynamicBufferBit) != 0) == !IsDynamicBuffer,

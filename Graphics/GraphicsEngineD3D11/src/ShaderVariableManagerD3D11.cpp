@@ -280,7 +280,10 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
     // clang-format on
 }
 
-void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* pBuffer, Uint32 ArrayIndex)
+void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(Uint32         ArrayIndex,
+                                                                 IDeviceObject* pBuffer,
+                                                                 Uint32         BufferBaseOffset,
+                                                                 Uint32         BufferRange)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
@@ -298,12 +301,24 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* 
                                     m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetCB(Attr.BindPoints + ArrayIndex, std::move(pBuffD3D11Impl));
+    ResourceCache.SetCB(Attr.BindPoints + ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, std::move(pBuffD3D11Impl), BufferBaseOffset, BufferRange);
 }
 
-
-void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
+void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
 {
+    const auto& Attr = GetAttribs();
+    const auto& Desc = GetDesc();
+    VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+    VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, "Dynamic offsets may not be set for variables created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
+    m_ParentManager.m_ResourceCache.SetDynamicCBOffset(Attr.BindPoints + ArrayIndex, Offset);
+}
+
+void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(Uint32         ArrayIndex,
+                                                              IDeviceObject* pView,
+                                                              Uint32         BufferBaseOffset,
+                                                              Uint32         BufferRange)
+{
+    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
@@ -358,8 +373,12 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVi
     ResourceCache.SetTexSRV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
 }
 
-void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSampler, Uint32 ArrayIndex)
+void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(Uint32         ArrayIndex,
+                                                               IDeviceObject* pSampler,
+                                                               Uint32         BufferBaseOffset,
+                                                               Uint32         BufferRange)
 {
+    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
@@ -380,8 +399,12 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(IDeviceObject* pS
     ResourceCache.SetSampler(Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
 }
 
-void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
+void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(Uint32         ArrayIndex,
+                                                               IDeviceObject* pView,
+                                                               Uint32         BufferBaseOffset,
+                                                               Uint32         BufferRange)
 {
+    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
@@ -405,8 +428,12 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pV
 }
 
 
-void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
+void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(Uint32         ArrayIndex,
+                                                              IDeviceObject* pView,
+                                                              Uint32         BufferBaseOffset,
+                                                              Uint32         BufferRange)
 {
+    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
@@ -429,8 +456,12 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVi
 }
 
 
-void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pView, Uint32 ArrayIndex)
+void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(Uint32         ArrayIndex,
+                                                               IDeviceObject* pView,
+                                                               Uint32         BufferBaseOffset,
+                                                               Uint32         BufferRange)
 {
+    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);

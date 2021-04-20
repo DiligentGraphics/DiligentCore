@@ -48,7 +48,7 @@ namespace Diligent
 DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRefCounters,
                                                IMemoryAllocator&            Allocator,
                                                RenderDeviceD3D11Impl*       pDevice,
-                                               ID3D11DeviceContext*         pd3d11DeviceContext,
+                                               ID3D11DeviceContext1*        pd3d11DeviceContext,
                                                const EngineD3D11CreateInfo& EngineAttribs,
                                                bool                         bIsDeferred) :
     // clang-format off
@@ -166,16 +166,26 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     DEFINE_D3D11CTX_FUNC_POINTERS(SetSRVMethods,     SetShaderResources)
     DEFINE_D3D11CTX_FUNC_POINTERS(SetSamplerMethods, SetSamplers)
 
-    typedef decltype (&ID3D11DeviceContext::CSSetUnorderedAccessViews) TSetUnorderedAccessViewsType;
-    static const TSetUnorderedAccessViewsType SetUAVMethods[] =
-    {
-        nullptr, // VS
-        reinterpret_cast<TSetUnorderedAccessViewsType>(&ID3D11DeviceContext::OMSetRenderTargetsAndUnorderedAccessViews),  // Little hack for PS
-        nullptr, // GS
-        nullptr, // HS
-        nullptr, // DS
-        &ID3D11DeviceContext::CSSetUnorderedAccessViews // CS
-    };
+typedef decltype (&ID3D11DeviceContext::CSSetUnorderedAccessViews) TSetUnorderedAccessViewsType;
+static const TSetUnorderedAccessViewsType SetUAVMethods[] =
+{
+    nullptr, // VS
+    reinterpret_cast<TSetUnorderedAccessViewsType>(&ID3D11DeviceContext::OMSetRenderTargetsAndUnorderedAccessViews),  // Little hack for PS
+    nullptr, // GS
+    nullptr, // HS
+    nullptr, // DS
+    &ID3D11DeviceContext::CSSetUnorderedAccessViews // CS
+};
+
+static const decltype (&ID3D11DeviceContext1::VSSetConstantBuffers1) SetCB1Methods[] =
+{
+    &ID3D11DeviceContext1::VSSetConstantBuffers1,
+    &ID3D11DeviceContext1::PSSetConstantBuffers1,
+    &ID3D11DeviceContext1::GSSetConstantBuffers1,
+    &ID3D11DeviceContext1::HSSetConstantBuffers1,
+    &ID3D11DeviceContext1::DSSetConstantBuffers1,
+    &ID3D11DeviceContext1::CSSetConstantBuffers1
+};
 
 // clang-format on
 
@@ -205,6 +215,12 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
 
     m_BindInfo.Set(SRBIndex, pShaderResBindingD3D11);
 
+    const Uint32 SRBBit = 1u << SRBIndex;
+    if (ResourceCache.HasDynamicCBOffsets())
+        m_BindInfo.DynamicSRBMask |= SRBBit;
+    else
+        m_BindInfo.DynamicSRBMask &= ~SRBBit;
+
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         ResourceCache.TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(*this);
@@ -220,7 +236,8 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
 
 void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
                                                 const D3D11ShaderResourceCounters& BaseBindings,
-                                                PixelShaderUAVBindMode&            PsUavBindMode)
+                                                PixelShaderUAVBindMode&            PsUavBindMode,
+                                                bool                               CBsOnly)
 {
     for (SHADER_TYPE ActiveStages = m_BindInfo.ActiveStages; ActiveStages != SHADER_TYPE_UNKNOWN;)
     {
@@ -229,11 +246,16 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
 
         if (ResourceCache.GetCBCount(ShaderInd) > 0)
         {
-            auto* d3d11CBs = m_CommittedRes.d3d11CBs[ShaderInd];
-            if (auto Slots = ResourceCache.BindResources<D3D11_RESOURCE_RANGE_CBV>(ShaderInd, d3d11CBs, BaseBindings))
+            auto* d3d11CBs       = m_CommittedRes.d3d11CBs[ShaderInd];
+            auto* FirstConstants = m_CommittedRes.CBFirstConstants[ShaderInd];
+            auto* NumConstants   = m_CommittedRes.CBNumConstants[ShaderInd];
+            if (auto Slots = ResourceCache.BindCBs(ShaderInd, d3d11CBs, FirstConstants, NumConstants, BaseBindings))
             {
-                auto SetCBMethod = SetCBMethods[ShaderInd];
-                (m_pd3d11DeviceContext->*SetCBMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11CBs + Slots.MinSlot);
+                auto SetCB1Method = SetCB1Methods[ShaderInd];
+                (m_pd3d11DeviceContext->*SetCB1Method)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1,
+                                                       d3d11CBs + Slots.MinSlot,
+                                                       FirstConstants + Slots.MinSlot,
+                                                       NumConstants + Slots.MinSlot);
                 m_CommittedRes.NumCBs[ShaderInd] = std::max(m_CommittedRes.NumCBs[ShaderInd], static_cast<Uint8>(Slots.MaxSlot + 1));
             }
 #ifdef DILIGENT_DEVELOPMENT
@@ -242,6 +264,13 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                 DvpVerifyCommittedCBs(ShaderType);
             }
 #endif
+        }
+
+        if (CBsOnly)
+        {
+            if (PsUavBindMode != PixelShaderUAVBindMode::Bind)
+                PsUavBindMode = PixelShaderUAVBindMode::Keep;
+            continue;
         }
 
         if (ResourceCache.GetSRVCount(ShaderInd) > 0)
@@ -314,10 +343,15 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
     }
 }
 
-void DeviceContextD3D11Impl::BindShaderResources()
+void DeviceContextD3D11Impl::BindShaderResources(bool DynamicOffsetsIntact)
 {
+    Uint32 StaleSRBs = m_BindInfo.StaleSRBMask;
+    if (!DynamicOffsetsIntact)
+        StaleSRBs |= m_BindInfo.DynamicSRBMask;
+
     // Only commit those stale SRBs that are used by current PSO
-    Uint32 StaleSRBs = m_BindInfo.StaleSRBMask & m_BindInfo.ActiveSRBMask;
+    StaleSRBs &= m_BindInfo.ActiveSRBMask;
+
     if (StaleSRBs == 0)
         return;
 
@@ -337,7 +371,7 @@ void DeviceContextD3D11Impl::BindShaderResources()
 #endif
         auto* pResourceCache = m_BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Shader resource cache at index ", sign, " is null.");
-        BindCacheResources(*pResourceCache, BaseBindings, PsUavBindMode);
+        BindCacheResources(*pResourceCache, BaseBindings, PsUavBindMode, (m_BindInfo.StaleSRBMask & SignBit) == 0);
     }
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 
@@ -515,7 +549,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
         CommitD3D11VertexBuffers(m_pPipelineState);
     }
 
-    BindShaderResources();
+    BindShaderResources(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT);
 
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
@@ -1608,6 +1642,8 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
 
         memset(m_CommittedRes.d3d11SRVResources[ShaderType], 0, sizeof(m_CommittedRes.d3d11SRVResources[ShaderType][0]) * m_CommittedRes.NumSRVs[ShaderType]);
         memset(m_CommittedRes.d3d11UAVResources[ShaderType], 0, sizeof(m_CommittedRes.d3d11UAVResources[ShaderType][0]) * m_CommittedRes.NumUAVs[ShaderType]);
+        memset(m_CommittedRes.CBFirstConstants[ShaderType], 0, sizeof(m_CommittedRes.CBFirstConstants[ShaderType][0]) * m_CommittedRes.NumCBs[ShaderType]);
+        memset(m_CommittedRes.CBNumConstants[ShaderType], 0, sizeof(m_CommittedRes.CBNumConstants[ShaderType][0]) * m_CommittedRes.NumCBs[ShaderType]);
         m_CommittedRes.NumCBs[ShaderType]      = 0;
         m_CommittedRes.NumSRVs[ShaderType]     = 0;
         m_CommittedRes.NumSamplers[ShaderType] = 0;

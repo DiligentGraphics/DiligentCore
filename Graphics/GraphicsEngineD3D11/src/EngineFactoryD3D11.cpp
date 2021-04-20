@@ -232,15 +232,19 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
 
     try
     {
-        ID3D11Device*        pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
-        ID3D11DeviceContext* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
+        auto* pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
+        auto* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto&                  RawAlloctor = GetRawAllocator();
         RenderDeviceD3D11Impl* pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(RawAlloctor, this, EngineCI, pd3d11Device, EngineCI.NumDeferredContexts));
         pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        RefCntAutoPtr<DeviceContextD3D11Impl> pDeviceContextD3D11(NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(RawAlloctor, pRenderDeviceD3D11, pd3d11ImmediateCtx, EngineCI, false));
+        CComQIPtr<ID3D11DeviceContext1> pd3d11ImmediateCtx1{pd3d11ImmediateCtx};
+        if (!pd3d11ImmediateCtx1)
+            LOG_ERROR_AND_THROW("Failed to get ID3D11DeviceContext1 interface from device context");
+
+        RefCntAutoPtr<DeviceContextD3D11Impl> pDeviceContextD3D11(NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(RawAlloctor, pRenderDeviceD3D11, pd3d11ImmediateCtx1, EngineCI, false));
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D11 will
         // keep a weak reference to the context
         pDeviceContextD3D11->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
@@ -253,8 +257,12 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
             HRESULT hr = pd3d11Device->CreateDeferredContext(0, &pd3d11DeferredCtx);
             CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 deferred context");
 
-            RefCntAutoPtr<DeviceContextD3D11Impl> pDeferredCtxD3D11(
-                NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(RawAlloctor, pRenderDeviceD3D11, pd3d11DeferredCtx, EngineCI, true));
+            CComQIPtr<ID3D11DeviceContext1> pd3d11DeferredCtx1{pd3d11DeferredCtx};
+            if (!pd3d11DeferredCtx1)
+                LOG_ERROR_AND_THROW("Failed to get ID3D11DeviceContext1 interface from device context");
+
+            RefCntAutoPtr<DeviceContextD3D11Impl> pDeferredCtxD3D11{
+                NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(RawAlloctor, pRenderDeviceD3D11, pd3d11DeferredCtx1, EngineCI, true)};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
             // keep a weak reference to the context
             pDeferredCtxD3D11->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx));

@@ -199,6 +199,16 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     SamCaps.BorderSamplingModeSupported   = True;
     SamCaps.AnisotropicFilteringSupported = True;
     SamCaps.LODBiasSupported              = True;
+
+    auto& Limits = m_DeviceCaps.Limits;
+    // Offsets passed to *SSetConstantBuffers1 are measured in shader constants, which are
+    // 16 bytes (4*32-bit components). Each offset must be a multiple of 16 constants,
+    // i.e. 256 bytes.
+    Limits.ConstantBufferOffsetAlignment   = 256;
+    Limits.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+#endif
 }
 
 void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)

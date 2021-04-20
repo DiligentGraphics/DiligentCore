@@ -57,7 +57,7 @@ public:
     DeviceContextD3D11Impl(IReferenceCounters*                 pRefCounters,
                            IMemoryAllocator&                   Allocator,
                            RenderDeviceD3D11Impl*              pDevice,
-                           ID3D11DeviceContext*                pd3d11DeviceContext,
+                           ID3D11DeviceContext1*               pd3d11DeviceContext,
                            const struct EngineD3D11CreateInfo& EngineAttribs,
                            bool                                bIsDeferred);
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
@@ -335,7 +335,7 @@ private:
 
     void ClearStateCache();
 
-    void BindShaderResources();
+    void BindShaderResources(bool DynamicOffsetsIntact = false);
 
     static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
     struct TCommittedResources
@@ -372,6 +372,16 @@ private:
         /// not need to keep strong references.
         ID3D11Resource*  d3d11UAVResources      [NumShaderTypes][D3D11_PS_CS_UAV_REGISTER_COUNT] = {};
 
+
+        /// An array of the first D3D11 constant buffer constants committed to D3D11 device context,
+        /// for each shader type.
+        UINT             CBFirstConstants       [NumShaderTypes][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
+
+        /// An array of the number of D3D11 constant buffer constants committed to D3D11 device context,
+        /// for each shader type.
+        UINT             CBNumConstants         [NumShaderTypes][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT] = {};
+
+
         Uint8 NumCBs     [NumShaderTypes] = {};
         Uint8 NumSRVs    [NumShaderTypes] = {};
         Uint8 NumSamplers[NumShaderTypes] = {};
@@ -394,7 +404,8 @@ private:
 
     void BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
                             const D3D11ShaderResourceCounters& BaseBindings,
-                            PixelShaderUAVBindMode&            PsUavBindMode);
+                            PixelShaderUAVBindMode&            PsUavBindMode,
+                            bool                               CBsOnly);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();
@@ -402,12 +413,15 @@ private:
 
     std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> BeginDisjointQuery();
 
-    CComPtr<ID3D11DeviceContext> m_pd3d11DeviceContext; ///< D3D11 device context
+    CComPtr<ID3D11DeviceContext1> m_pd3d11DeviceContext; ///< D3D11 device context
 
     struct BindInfo : CommittedShaderResources
     {
         // Shader stages that are active in current PSO.
         SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
+
+        // Indicates SRBs that have dynamic CB offsets
+        SRBMaskType DynamicSRBMask = 0;
 
 #ifdef DILIGENT_DEVELOPMENT
         // Base bindings that were used in the last BindShaderResources() call.

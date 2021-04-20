@@ -213,10 +213,10 @@ public:
                        Uint32                                    ResIndex,
                        Uint32                                    ArrayIndex);
 
-    void operator()(IDeviceObject* pObj) const;
+    void operator()(IDeviceObject* pObj, Uint32 BufferRangeOffset = 0, Uint32 BufferRangeSize = 0) const;
 
 private:
-    void CacheCB(IDeviceObject* pBuffer) const;
+    void CacheCB(IDeviceObject* pBuffer, Uint32 RangeOffset, Uint32 RangeSize) const;
     void CacheSampler(IDeviceObject* pBuffer) const;
     void CacheAccelStruct(IDeviceObject* pBuffer) const;
     void BindCombinedSampler(TextureViewD3D12Impl* pTexView) const;
@@ -242,7 +242,12 @@ private:
             GetD3D12Device()->CopyDescriptorsSimple(1, m_DstTableCPUDescriptorHandle, CPUDescriptorHandle, d3d12HeapType);
         }
 
-        m_ResourceCache.SetResource(m_RootIndex, m_OffsetFromTableStart, m_ResDesc.ResourceType, CPUDescriptorHandle, std::move(pObject));
+        m_ResourceCache.SetResource(m_RootIndex, m_OffsetFromTableStart,
+                                    {
+                                        m_ResDesc.ResourceType,
+                                        CPUDescriptorHandle,
+                                        std::move(pObject) //
+                                    });
     }
 
 private:
@@ -321,7 +326,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureD3D12Impl&
 #endif
 }
 
-void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
+void BindResourceHelper::CacheCB(IDeviceObject* pBuffer, Uint32 BaseOffset, Uint32 RangeSize) const
 {
     VERIFY(pBuffer != nullptr, "Setting buffer to null is handled by BindResourceHelper::operator()");
 
@@ -345,11 +350,45 @@ void BindResourceHelper::CacheCB(IDeviceObject* pBuffer) const
             return;
         }
 
-        const auto CPUDescriptorHandle = pBuffD3D12->GetCBVHandle();
+        auto CPUDescriptorHandle = pBuffD3D12->GetCBVHandle();
         VERIFY(CPUDescriptorHandle.ptr != 0 || pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC,
                "Only dynamic constant buffers may have null CPU descriptor");
+        if (m_DstTableCPUDescriptorHandle.ptr != 0)
+            VERIFY(CPUDescriptorHandle.ptr != 0, "CPU descriptor handle must not be null for resources allocated in descriptor tables");
 
-        SetResource(CPUDescriptorHandle, std::move(pBuffD3D12));
+        const auto& BuffDesc = pBuffD3D12->GetDesc();
+        if (RangeSize == 0)
+            RangeSize = BuffDesc.uiSizeInBytes - BaseOffset;
+
+        if (RangeSize != BuffDesc.uiSizeInBytes)
+        {
+            // Default descriptor handle addresses the entire buffer, so we can't use it.
+            // We will create a special CBV instead.
+            // Note: special CBV is also created by ShaderResourceCacheD3D12::CopyResource().
+            CPUDescriptorHandle.ptr = 0;
+        }
+
+        if (m_DstTableCPUDescriptorHandle.ptr != 0)
+        {
+            DEV_CHECK_ERR(m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC || m_DstRes.pObject == nullptr, "Static and mutable resource descriptors should only be copied once");
+            if (RangeSize == BuffDesc.uiSizeInBytes)
+            {
+                GetD3D12Device()->CopyDescriptorsSimple(1, m_DstTableCPUDescriptorHandle, CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            }
+            else
+            {
+                pBuffD3D12->CreateCBV(m_DstTableCPUDescriptorHandle, BaseOffset, RangeSize);
+            }
+        }
+
+        m_ResourceCache.SetResource(m_RootIndex, m_OffsetFromTableStart,
+                                    {
+                                        m_ResDesc.ResourceType,
+                                        CPUDescriptorHandle,
+                                        std::move(pBuffD3D12),
+                                        BaseOffset,
+                                        RangeSize //
+                                    });
     }
 }
 
@@ -534,7 +573,7 @@ void BindResourceHelper::BindCombinedSampler(TextureViewD3D12Impl* pTexView) con
     BindSampler(pSampler);
 }
 
-void BindResourceHelper::operator()(IDeviceObject* pObj) const
+void BindResourceHelper::operator()(IDeviceObject* pObj, Uint32 BufferBaseOffset, Uint32 BufferRangeSize) const
 {
     if (pObj)
     {
@@ -542,7 +581,7 @@ void BindResourceHelper::operator()(IDeviceObject* pObj) const
         switch (m_ResDesc.ResourceType)
         {
             case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-                CacheCB(pObj);
+                CacheCB(pObj, BufferBaseOffset, BufferRangeSize);
                 break;
 
             case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
@@ -610,14 +649,35 @@ void BindResourceHelper::operator()(IDeviceObject* pObj) const
 } // namespace
 
 
-void ShaderVariableManagerD3D12::BindResource(IDeviceObject* pObj,
+void ShaderVariableManagerD3D12::BindResource(Uint32         ResIndex,
                                               Uint32         ArrayIndex,
-                                              Uint32         ResIndex)
+                                              IDeviceObject* pObj,
+                                              Uint32         BufferBaseOffset,
+                                              Uint32         BufferRangeSize)
 {
     VERIFY(m_pSignature->IsUsingSeparateSamplers() || GetResourceDesc(ResIndex).ResourceType != SHADER_RESOURCE_TYPE_SAMPLER,
            "Samplers should not be set directly when using combined texture samplers");
     BindResourceHelper BindResHelper{*m_pSignature, m_ResourceCache, ResIndex, ArrayIndex};
-    BindResHelper(pObj);
+    BindResHelper(pObj, BufferBaseOffset, BufferRangeSize);
+}
+
+void ShaderVariableManagerD3D12::SetBufferDynamicOffset(Uint32 ResIndex,
+                                                        Uint32 ArrayIndex,
+                                                        Uint32 BufferRangeOffset)
+{
+    const auto& Attribs              = m_pSignature->GetResourceAttribs(ResIndex);
+    const auto  CacheType            = m_ResourceCache.GetContentType();
+    const auto  RootIndex            = Attribs.RootIndex(CacheType);
+    const auto  OffsetFromTableStart = Attribs.OffsetFromTableStart(CacheType) + ArrayIndex;
+
+    const auto& ResDesc = m_pSignature->GetResourceDesc(ResIndex);
+    VERIFY((ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER ||
+            ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) == 0),
+           "Dynamic offset may only be set for constant and structured buffers");
+    VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
+           "Dyanmic offsets can't be set for variables created with NO_DYNAMIC_BUFFERS flag");
+
+    m_ResourceCache.SetBufferDynamicOffset(RootIndex, OffsetFromTableStart, BufferRangeOffset);
 }
 
 bool ShaderVariableManagerD3D12::IsBound(Uint32 ArrayIndex,

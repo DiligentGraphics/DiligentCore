@@ -75,9 +75,9 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_DYNAMIC)
         VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "Initial data must be null for dynamic buffers");
 
-    Uint32 AlignmentMask = 1;
+    Uint32 BufferAlignment = 1;
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
-        AlignmentMask = 255;
+        BufferAlignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 
     if (m_Desc.Usage == USAGE_STAGING)
     {
@@ -87,13 +87,11 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         if (m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         {
             VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "CPU-writable staging buffers must be updated via map");
-
-            AlignmentMask = D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1;
+            BufferAlignment = std::max(BufferAlignment, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT});
         }
     }
 
-    if (AlignmentMask != 1)
-        m_Desc.uiSizeInBytes = (m_Desc.uiSizeInBytes + AlignmentMask) & (~AlignmentMask);
+    m_Desc.uiSizeInBytes = AlignUp(m_Desc.uiSizeInBytes, BufferAlignment);
 
 
     if ((m_Desc.Usage == USAGE_DYNAMIC) &&
@@ -352,7 +350,7 @@ void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
     }
 }
 
-void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor)
+void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor) const
 {
     ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc);
 
@@ -363,7 +361,7 @@ void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HA
     pDeviceD3D12->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVDescriptor);
 }
 
-void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor)
+void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor) const
 {
     ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc);
 
@@ -374,11 +372,18 @@ void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRI
     pDeviceD3D12->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVDescriptor);
 }
 
-void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor)
+void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor,
+                                Uint32                      Offset,
+                                Uint32                      Size) const
 {
+    VERIFY((Offset % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT) == 0, "Offset (", Offset, ") must be ", D3D12_TEXTURE_DATA_PITCH_ALIGNMENT, "-aligned");
+    VERIFY(Offset + Size <= m_Desc.uiSizeInBytes, "Range is out of bounds");
+    if (Size == 0)
+        Size = m_Desc.uiSizeInBytes - Offset;
+
     D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12_CBVDesc;
-    D3D12_CBVDesc.BufferLocation = m_pd3d12Resource->GetGPUVirtualAddress();
-    D3D12_CBVDesc.SizeInBytes    = m_Desc.uiSizeInBytes;
+    D3D12_CBVDesc.BufferLocation = m_pd3d12Resource->GetGPUVirtualAddress() + Offset;
+    D3D12_CBVDesc.SizeInBytes    = AlignUp(Size, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT});
 
     auto* pDeviceD3D12 = static_cast<RenderDeviceD3D12Impl*>(GetDevice())->GetD3D12Device();
     pDeviceD3D12->CreateConstantBufferView(&D3D12_CBVDesc, CBVDescriptor);

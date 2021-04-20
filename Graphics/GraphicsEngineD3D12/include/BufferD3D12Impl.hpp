@@ -85,7 +85,7 @@ public:
     /// Implementation of IBufferD3D12::GetD3D12ResourceState().
     virtual D3D12_RESOURCE_STATES DILIGENT_CALL_TYPE GetD3D12ResourceState() const override final;
 
-    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId, class DeviceContextD3D12Impl* pCtx)
+    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId, class DeviceContextD3D12Impl* pCtx) const
     {
         if (m_Desc.Usage == USAGE_DYNAMIC)
         {
@@ -108,12 +108,13 @@ public:
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCBVHandle() { return m_CBVDescriptorAllocation.GetCpuHandle(); }
 
+    void CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor, Uint32 Offset = 0, Uint32 Size = 0) const;
+
 private:
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
 
-    void CreateUAV(struct BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor);
-    void CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor);
-    void CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor);
+    void CreateUAV(struct BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor) const;
+    void CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor) const;
 
     DescriptorHeapAllocation m_CBVDescriptorAllocation;
 

@@ -338,6 +338,13 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         SamCaps.LODBiasSupported              = True;
 
 
+        auto& Limits{m_DeviceCaps.Limits};
+        Limits.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+        Limits.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+#endif
+
 #ifdef DILIGENT_DEVELOPMENT
 #    define CHECK_D3D12_DEVICE_VERSION(Version)               \
         if (CComQIPtr<ID3D12Device##Version>{m_pd3d12Device}) \

@@ -177,14 +177,14 @@ public:
 
     void InitTexRegionRender();
 
-    struct DeviceLimits
+    struct GLDeviceLimits
     {
         GLint MaxUniformBlocks;
         GLint MaxTextureUnits;
         GLint MaxStorageBlock;
         GLint MaxImagesUnits;
     };
-    const DeviceLimits& GetDeviceLimits() const { return m_DeviceLimits; }
+    const GLDeviceLimits& GetDeviceLimits() const { return m_DeviceLimits; }
 
 protected:
     friend class DeviceContextGLImpl;
@@ -216,7 +216,7 @@ private:
 
     int m_ShowDebugGLOutput = 1;
 
-    DeviceLimits m_DeviceLimits = {};
+    GLDeviceLimits m_DeviceLimits = {};
 };
 
 } // namespace Diligent

@@ -135,8 +135,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
                                            // will reflect data written by shaders prior to the barrier
             GLState);
 
-        GLState.BindUniformBuffer(binding, pBufferGL->GetGLHandle());
-        //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferGL->m_GlBuffer, 0, pBufferGL->GetDesc().uiSizeInBytes);
+        GLState.BindUniformBuffer(binding, pBufferGL->GetGLHandle(), UB.BaseOffset + UB.DynamicOffset, UB.RangeSize);
     }
 
     for (Uint32 s = 0, binding = BaseBindings[BINDING_RANGE_TEXTURE]; s < GetTextureCount(); ++s, ++binding)
@@ -290,12 +289,45 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
                                            // will reflect writes prior to the barrier
             GLState);
 
-        GLState.BindStorageBlock(binding, pBufferGL->GetGLHandle(), ViewDesc.ByteOffset, ViewDesc.ByteWidth);
+        GLState.BindStorageBlock(binding, pBufferGL->GetGLHandle(), ViewDesc.ByteOffset + SSBO.DynamicOffset, ViewDesc.ByteWidth);
 
         if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
             WritableBuffers.push_back(pBufferGL);
     }
 #endif
+}
+
+void ShaderResourceCacheGL::BindDynamicBuffers(GLContextState&              GLState,
+                                               const std::array<Uint16, 4>& BaseBindings) const
+{
+    // TODO: skip non-dynamic buffers or count dynamic ones.
+    // NB:   some dynamic buffers in the cache may not be counted as such due to NO_DYNAMIC_BUFFERS flag
+    for (Uint32 ub = 0, binding = BaseBindings[BINDING_RANGE_UNIFORM_BUFFER]; ub < GetUBCount(); ++ub, ++binding)
+    {
+        const auto& UB = GetConstUB(ub);
+        if (!UB.pBuffer || UB.pBuffer->GetDesc().uiSizeInBytes == UB.RangeSize)
+            continue;
+        GLState.BindUniformBuffer(binding, UB.pBuffer->GetGLHandle(), UB.BaseOffset + UB.DynamicOffset, UB.RangeSize);
+    }
+
+    // TODO: skip non-dynamic buffers or count dynamic ones.
+    // NB:   some dynamic buffers in the cache may not be counted as such due to NO_DYNAMIC_BUFFERS flag
+    for (Uint32 ssbo = 0, binding = BaseBindings[BINDING_RANGE_STORAGE_BUFFER]; ssbo < GetSSBOCount(); ++ssbo, ++binding)
+    {
+        const auto& SSBO = GetConstSSBO(ssbo);
+        if (!SSBO.pBufferView)
+            return;
+
+        auto* const pBufferViewGL = SSBO.pBufferView.RawPtr<BufferViewGLImpl>();
+        const auto* pBufferGL     = pBufferViewGL->GetBuffer<BufferGLImpl>();
+        const auto& ViewDesc      = pBufferViewGL->GetDesc();
+        VERIFY(ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpected buffer view type");
+
+        if (ViewDesc.ByteWidth == pBufferGL->GetDesc().uiSizeInBytes)
+            continue;
+
+        GLState.BindStorageBlock(binding, pBufferGL->GetGLHandle(), ViewDesc.ByteOffset + SSBO.DynamicOffset, ViewDesc.ByteWidth);
+    }
 }
 
 } // namespace Diligent

@@ -99,9 +99,15 @@ public:
     ShaderVariableD3D12Impl* GetVariable(Uint32 Index) const;
 
     // Binds object pObj to resource with index ResIndex and array index ArrayIndex.
-    void BindResource(IDeviceObject* pObj,
+    void BindResource(Uint32         ResIndex,
                       Uint32         ArrayIndex,
-                      Uint32         ResIndex);
+                      IDeviceObject* pObj,
+                      Uint32         BufferBaseOffset,
+                      Uint32         BufferRangeSize);
+
+    void SetBufferDynamicOffset(Uint32 ResIndex,
+                                Uint32 ArrayIndex,
+                                Uint32 BufferDynamicOffset);
 
     bool IsBound(Uint32 ArrayIndex,
                  Uint32 ResIndex) const;
@@ -193,9 +199,18 @@ public:
         HLSLResDesc.ShaderRegister = GetAttribs().Register;
     }
 
-    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+    void BindResource(Uint32         ArrayIndex,
+                      IDeviceObject* pObj,
+                      Uint32         BufferRangeOffset = 0,
+                      Uint32         BufferRangeSize   = 0) const
     {
-        m_ParentManager.BindResource(pObj, ArrayIndex, m_ResIndex);
+        m_ParentManager.BindResource(m_ResIndex, ArrayIndex, pObj, BufferRangeOffset, BufferRangeSize);
+    }
+
+    void SetDynamicOffset(Uint32 ArrayIndex,
+                          Uint32 BufferRangeOffset)
+    {
+        m_ParentManager.SetBufferDynamicOffset(m_ResIndex, ArrayIndex, BufferRangeOffset);
     }
 
 private:

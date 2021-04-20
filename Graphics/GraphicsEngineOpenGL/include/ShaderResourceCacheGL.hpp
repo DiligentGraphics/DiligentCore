@@ -67,6 +67,15 @@ public:
     {
         /// Strong reference to the buffer
         RefCntAutoPtr<BufferGLImpl> pBuffer;
+
+        Uint32 BaseOffset    = 0;
+        Uint32 RangeSize     = 0;
+        Uint32 DynamicOffset = 0;
+
+        bool IsDynamic() const
+        {
+            return pBuffer && RangeSize < pBuffer->GetDesc().uiSizeInBytes;
+        }
     };
 
     /// Describes a resource bound to a sampler or an image slot
@@ -115,6 +124,19 @@ public:
     {
         /// Strong reference to the buffer
         RefCntAutoPtr<BufferViewGLImpl> pBufferView;
+
+        Uint32 DynamicOffset = 0;
+
+        bool IsDynamic() const
+        {
+            if (pBufferView)
+            {
+                const auto* pBuff = pBufferView->GetBuffer<BufferGLImpl>();
+                return pBufferView->GetDesc().ByteWidth < pBuff->GetDesc().uiSizeInBytes;
+            }
+
+            return false;
+        }
     };
 
     using TResourceCount = std::array<Uint16, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
@@ -122,9 +144,34 @@ public:
 
     void Initialize(const TResourceCount& Count, IMemoryAllocator& MemAllocator);
 
-    void SetUniformBuffer(Uint32 CacheOffset, RefCntAutoPtr<BufferGLImpl>&& pBuff)
+    void SetUniformBuffer(Uint32 CacheOffset, bool AllowDynamic, RefCntAutoPtr<BufferGLImpl>&& pBuff, Uint32 BaseOffset, Uint32 RangeSize)
     {
-        GetUB(CacheOffset).pBuffer = std::move(pBuff);
+        DEV_CHECK_ERR(BaseOffset + RangeSize <= (pBuff ? pBuff->GetDesc().uiSizeInBytes : 0), "The range is out of buffer bounds");
+        if (pBuff)
+        {
+            if (RangeSize == 0)
+                RangeSize = pBuff->GetDesc().uiSizeInBytes - BaseOffset;
+        }
+
+        auto& UB = GetUB(CacheOffset);
+        if (AllowDynamic && UB.IsDynamic())
+        {
+            VERIFY_EXPR(m_DynamicUBCount > 0);
+            --m_DynamicUBCount;
+        }
+
+        UB.pBuffer       = std::move(pBuff);
+        UB.BaseOffset    = BaseOffset;
+        UB.RangeSize     = RangeSize;
+        UB.DynamicOffset = 0;
+
+        if (AllowDynamic && UB.IsDynamic())
+            ++m_DynamicUBCount;
+    }
+
+    void SetDynamicUBOffset(Uint32 CacheOffset, Uint32 DynamicOffset)
+    {
+        GetUB(CacheOffset).DynamicOffset = DynamicOffset;
     }
 
     void SetTexture(Uint32 CacheOffset, RefCntAutoPtr<TextureViewGLImpl>&& pTexView, bool SetSampler)
@@ -152,10 +199,27 @@ public:
         GetImage(CacheOffset).Set(std::move(pBuffView));
     }
 
-    void SetSSBO(Uint32 CacheOffset, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
+    void SetSSBO(Uint32 CacheOffset, bool AllowDynamic, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
     {
-        GetSSBO(CacheOffset).pBufferView = std::move(pBuffView);
+        auto& SSBO = GetSSBO(CacheOffset);
+        if (AllowDynamic && SSBO.IsDynamic())
+        {
+            VERIFY_EXPR(m_DynamicSSBOCount > 0);
+            --m_DynamicSSBOCount;
+        }
+
+        SSBO.pBufferView   = std::move(pBuffView);
+        SSBO.DynamicOffset = 0;
+
+        if (AllowDynamic && SSBO.IsDynamic())
+            ++m_DynamicSSBOCount;
     }
+
+    void SetDynamicSSBOOffset(Uint32 CacheOffset, Uint32 DynamicOffset)
+    {
+        GetSSBO(CacheOffset).DynamicOffset = DynamicOffset;
+    }
+
 
     bool IsUBBound(Uint32 CacheOffset) const
     {
@@ -246,6 +310,14 @@ public:
                        std::vector<TextureBaseGL*>& WritableTextures,
                        std::vector<BufferGLImpl*>&  WritableBuffers) const;
 
+    void BindDynamicBuffers(GLContextState&              GLState,
+                            const std::array<Uint16, 4>& BaseBindings) const;
+
+    Uint32 GetDynamicBufferCounter() const
+    {
+        return Uint32{m_DynamicUBCount} + Uint32{m_DynamicSSBOCount};
+    }
+
 private:
     CachedUB& GetUB(Uint32 CacheOffset)
     {
@@ -278,6 +350,9 @@ private:
 
     Uint8*            m_pResourceData = nullptr;
     IMemoryAllocator* m_pAllocator    = nullptr;
+
+    Uint16 m_DynamicUBCount   = 0;
+    Uint16 m_DynamicSSBOCount = 0;
 
     // Indicates what types of resources are stored in the cache
     const ResourceCacheContentType m_ContentType;

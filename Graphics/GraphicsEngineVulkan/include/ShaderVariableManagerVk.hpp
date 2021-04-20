@@ -94,9 +94,15 @@ public:
     ShaderVariableVkImpl* GetVariable(Uint32 Index) const;
 
     // Binds object pObj to resource with index ResIndex and array index ArrayIndex.
-    void BindResource(IDeviceObject* pObj,
+    void BindResource(Uint32         ResIndex,
                       Uint32         ArrayIndex,
-                      Uint32         ResIndex);
+                      IDeviceObject* pObj,
+                      Uint32         BufferRangeOffset,
+                      Uint32         BufferRangeSize);
+
+    void SetBufferDynamicOffset(Uint32 ResIndex,
+                                Uint32 ArrayIndex,
+                                Uint32 BufferDynamicOffset);
 
     bool IsBound(Uint32 ArrayIndex,
                  Uint32 ResIndex) const;
@@ -170,9 +176,18 @@ public:
         return m_ParentManager.IsBound(ArrayIndex, m_ResIndex);
     }
 
-    void BindResource(IDeviceObject* pObj, Uint32 ArrayIndex) const
+    void BindResource(Uint32         ArrayIndex,
+                      IDeviceObject* pObj,
+                      Uint32         BufferBaseOffset = 0,
+                      Uint32         BufferRangeSize  = 0) const
     {
-        return m_ParentManager.BindResource(pObj, ArrayIndex, m_ResIndex);
+        m_ParentManager.BindResource(m_ResIndex, ArrayIndex, pObj, BufferBaseOffset, BufferRangeSize);
+    }
+
+    void SetDynamicOffset(Uint32 ArrayIndex,
+                          Uint32 BufferDynamicOffset) const
+    {
+        m_ParentManager.SetBufferDynamicOffset(m_ResIndex, ArrayIndex, BufferDynamicOffset);
     }
 };
 

@@ -112,6 +112,58 @@ void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint3
     }
 }
 
+inline bool IsDynamicDescriptorType(DescriptorType DescrType)
+{
+    return (DescrType == DescriptorType::UniformBufferDynamic ||
+            DescrType == DescriptorType::StorageBufferDynamic ||
+            DescrType == DescriptorType::StorageBufferDynamic_ReadOnly);
+}
+
+static bool IsDynamicBuffer(const ShaderResourceCacheVk::Resource& Res)
+{
+    if (!Res.pObject)
+        return false;
+
+    const BufferVkImpl* pBuffer = nullptr;
+    switch (Res.Type)
+    {
+        case DescriptorType::UniformBufferDynamic:
+        case DescriptorType::UniformBuffer:
+            pBuffer = Res.pObject.RawPtr<const BufferVkImpl>();
+            break;
+
+        case DescriptorType::StorageBuffer:
+        case DescriptorType::StorageBuffer_ReadOnly:
+        case DescriptorType::StorageBufferDynamic:
+        case DescriptorType::StorageBufferDynamic_ReadOnly:
+            pBuffer = Res.pObject ? Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>() : nullptr;
+            break;
+
+        default:
+            VERIFY_EXPR(Res.BufferRangeSize == 0);
+            // Do nothing
+            break;
+    }
+
+    if (pBuffer == nullptr)
+        return false;
+
+    const auto& BuffDesc = pBuffer->GetDesc();
+
+    bool IsDynamic = (BuffDesc.Usage == USAGE_DYNAMIC);
+    if (!IsDynamic)
+    {
+        // Buffers that are not bound as a whole to a dynamic descriptor are also counted as dynamic
+        IsDynamic = (IsDynamicDescriptorType(Res.Type) && Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.uiSizeInBytes);
+    }
+
+    DEV_CHECK_ERR(!IsDynamic || IsDynamicDescriptorType(Res.Type),
+                  "Dynamic buffers must only be used with dynamic descriptor type");
+
+    return IsDynamic;
+}
+
+
 #ifdef DILIGENT_DEBUG
 void ShaderResourceCacheVk::DbgVerifyResourceInitialization() const
 {
@@ -128,35 +180,8 @@ void ShaderResourceCacheVk::DbgVerifyDynamicBuffersCounter() const
     Uint32      NumDynamicBuffers = 0;
     for (Uint32 res = 0; res < m_TotalResources; ++res)
     {
-        const auto& Res = pResources[res];
-        switch (Res.Type)
-        {
-            case DescriptorType::UniformBuffer:
-                VERIFY(!Res.pObject || Res.pObject.RawPtr<const BufferVkImpl>()->GetDesc().Usage != USAGE_DYNAMIC,
-                       "Dynamic uniform buffer is bound to a non-dynamic descriptor. The buffer's dynamic offset will not be properly handled.");
-                break;
-
-            case DescriptorType::UniformBufferDynamic:
-                if (Res.pObject && Res.pObject.RawPtr<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
-                    ++NumDynamicBuffers;
-                break;
-
-            case DescriptorType::StorageBuffer:
-            case DescriptorType::StorageBuffer_ReadOnly:
-                VERIFY(!Res.pObject || Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage != USAGE_DYNAMIC,
-                       "Dynamic storage buffer is bound to a non-dynamic descriptor. The buffer's dynamic offset will not be properly handled.");
-                break;
-
-            case DescriptorType::StorageBufferDynamic:
-            case DescriptorType::StorageBufferDynamic_ReadOnly:
-                if (Res.pObject && Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
-                    ++NumDynamicBuffers;
-                break;
-
-            default:
-                // Do nothing
-                break;
-        }
+        if (IsDynamicBuffer(pResources[res]))
+            ++NumDynamicBuffers;
     }
     VERIFY(NumDynamicBuffers == m_NumDynamicBuffers, "The number of dynamic buffers (", m_NumDynamicBuffers, ") does not match the actual number (", NumDynamicBuffers, ")");
 }
@@ -174,61 +199,136 @@ ShaderResourceCacheVk::~ShaderResourceCacheVk()
     }
 }
 
-const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(const VulkanUtilities::VulkanLogicalDevice* pLogicalDevice,
-                                                                          Uint32                                      SetIndex,
-                                                                          Uint32                                      Offset,
-                                                                          Uint32                                      BindingIndex,
-                                                                          Uint32                                      ArrayIndex,
-                                                                          RefCntAutoPtr<IDeviceObject>&&              pObject)
+void ShaderResourceCacheVk::Resource::SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint32 _BaseOffset, Uint32 _RangeSize)
 {
-    auto& DescrSet = GetDescriptorSet(SetIndex);
-    auto& Res      = DescrSet.GetResource(Offset);
+    VERIFY_EXPR(Type == DescriptorType::UniformBuffer ||
+                Type == DescriptorType::UniformBufferDynamic);
 
-    const BufferVkImpl* pOldBuffer = nullptr;
-    const BufferVkImpl* pNewBuffer = nullptr;
-    switch (Res.Type)
+    pObject = std::move(_pBuffer);
+
+    const auto* pBuffVk = pObject.RawPtr<const BufferVkImpl>();
+
+#ifdef DILIGENT_DEBUG
+    if (pBuffVk != nullptr)
     {
-        case DescriptorType::UniformBuffer:
-            VERIFY(!pObject || pObject.RawPtr<const BufferVkImpl>()->GetDesc().Usage != USAGE_DYNAMIC,
-                   "Dynamic uniform buffer is being bound to a non-dynamic descriptor. The buffer's dynamic offset will not be properly handled.");
-            break;
-
-        case DescriptorType::UniformBufferDynamic:
-            pOldBuffer = Res.pObject.RawPtr<const BufferVkImpl>();
-            pNewBuffer = pObject.RawPtr<const BufferVkImpl>();
-            break;
-
-        case DescriptorType::StorageBuffer:
-        case DescriptorType::StorageBuffer_ReadOnly:
-            VERIFY(!pObject || pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage != USAGE_DYNAMIC,
-                   "Dynamic storage buffer is being bound to a non-dynamic descriptor. The buffer's dynamic offset will not be properly handled.");
-            break;
-
-        case DescriptorType::StorageBufferDynamic:
-        case DescriptorType::StorageBufferDynamic_ReadOnly:
-            pOldBuffer = Res.pObject ? Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>() : nullptr;
-            pNewBuffer = pObject ? pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>() : nullptr;
-            break;
-
-        default:
-            // Do nothing
-            break;
+        // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
+        // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+        VERIFY_EXPR((pBuffVk->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) != 0);
+        VERIFY(Type == DescriptorType::UniformBufferDynamic || pBuffVk->GetDesc().Usage != USAGE_DYNAMIC,
+               "Dynamic buffer must be used with UniformBufferDynamic descriptor");
     }
+#endif
 
-    if (pOldBuffer != nullptr && pOldBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+    VERIFY(_BaseOffset + _RangeSize <= (pBuffVk != nullptr ? pBuffVk->GetDesc().uiSizeInBytes : 0), "Specified range is out of buffer bounds");
+    BufferBaseOffset = _BaseOffset;
+    BufferRangeSize  = _RangeSize;
+    if (BufferRangeSize == 0)
+        BufferRangeSize = pBuffVk != nullptr ? (pBuffVk->GetDesc().uiSizeInBytes - BufferBaseOffset) : 0;
+
+    // Reset dynamic offset
+    BufferDynamicOffset = 0;
+}
+
+void ShaderResourceCacheVk::Resource::SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView)
+{
+    VERIFY_EXPR(Type == DescriptorType::StorageBuffer ||
+                Type == DescriptorType::StorageBufferDynamic ||
+                Type == DescriptorType::StorageBuffer_ReadOnly ||
+                Type == DescriptorType::StorageBufferDynamic_ReadOnly);
+
+    pObject = std::move(_pBufferView);
+
+    BufferDynamicOffset = 0; // It is essential to reset dynamic offset
+    BufferBaseOffset    = 0;
+    BufferRangeSize     = 0;
+
+    if (!pObject)
+        return;
+
+    const auto* pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
+    const auto& ViewDesc    = pBuffViewVk->GetDesc();
+
+    BufferBaseOffset = ViewDesc.ByteOffset;
+    BufferRangeSize  = ViewDesc.ByteWidth;
+
+#ifdef DILIGENT_DEBUG
+    {
+        const auto* pBuffVk  = pBuffViewVk->GetBuffer<const BufferVkImpl>();
+        const auto& BuffDesc = pBuffVk->GetDesc();
+        VERIFY(Type == DescriptorType::StorageBufferDynamic || Type == DescriptorType::StorageBufferDynamic_ReadOnly || BuffDesc.Usage != USAGE_DYNAMIC,
+               "Dynamic buffer must be used with StorageBufferDynamic or StorageBufferDynamic_ReadOnly descriptor");
+
+        VERIFY(BufferBaseOffset + BufferRangeSize <= BuffDesc.uiSizeInBytes,
+               "Specified view range is out of buffer bounds");
+
+        // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type
+        // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
+        if (Type == DescriptorType::StorageBuffer_ReadOnly || Type == DescriptorType::StorageBufferDynamic_ReadOnly)
+        {
+            // HLSL buffer SRVs are mapped to read-only storge buffers in SPIR-V
+            VERIFY(ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Attempting to bind buffer view '", ViewDesc.Name,
+                   "' as read-only storage buffer. Expected view type is BUFFER_VIEW_SHADER_RESOURCE. Actual type: ",
+                   GetBufferViewTypeLiteralName(ViewDesc.ViewType));
+            VERIFY((BuffDesc.BindFlags & BIND_SHADER_RESOURCE) != 0,
+                   "Buffer '", BuffDesc.Name, "' being set as read-only storage buffer was not created with BIND_SHADER_RESOURCE flag");
+        }
+        else if (Type == DescriptorType::StorageBuffer || Type == DescriptorType::StorageBufferDynamic)
+        {
+            VERIFY(ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Attempting to bind buffer view '", ViewDesc.Name,
+                   "' as writable storage buffer. Expected view type is BUFFER_VIEW_UNORDERED_ACCESS. Actual type: ",
+                   GetBufferViewTypeLiteralName(ViewDesc.ViewType));
+            VERIFY((BuffDesc.BindFlags & BIND_UNORDERED_ACCESS) != 0,
+                   "Buffer '", BuffDesc.Name, "' being set as writable storage buffer was not created with BIND_UNORDERED_ACCESS flag");
+        }
+        else
+        {
+            UNEXPECTED("Unexpected resource type");
+        }
+    }
+#endif
+}
+
+const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(
+    const VulkanUtilities::VulkanLogicalDevice* pLogicalDevice,
+    Uint32                                      DescrSetIndex,
+    Uint32                                      CacheOffset,
+    SetResourceInfo&&                           SrcRes)
+{
+    auto& DescrSet = GetDescriptorSet(DescrSetIndex);
+    auto& DstRes   = DescrSet.GetResource(CacheOffset);
+
+    if (IsDynamicBuffer(DstRes))
     {
         VERIFY(m_NumDynamicBuffers > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
         --m_NumDynamicBuffers;
     }
-    if (pNewBuffer != nullptr && pNewBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+
+    switch (DstRes.Type)
+    {
+        case DescriptorType::UniformBuffer:
+        case DescriptorType::UniformBufferDynamic:
+            DstRes.SetUniformBuffer(std::move(SrcRes.pObject), SrcRes.BufferBaseOffset, SrcRes.BufferRangeSize);
+            break;
+
+        case DescriptorType::StorageBuffer:
+        case DescriptorType::StorageBuffer_ReadOnly:
+        case DescriptorType::StorageBufferDynamic:
+        case DescriptorType::StorageBufferDynamic_ReadOnly:
+            DstRes.SetStorageBuffer(std::move(SrcRes.pObject));
+            break;
+
+        default:
+            VERIFY(SrcRes.BufferBaseOffset == 0 && SrcRes.BufferRangeSize == 0, "Buffer range can only be specified for uniform buffers");
+            DstRes.pObject = std::move(SrcRes.pObject);
+    }
+
+    if (IsDynamicBuffer(DstRes))
     {
         ++m_NumDynamicBuffers;
     }
 
-    Res.pObject = std::move(pObject);
-
     auto vkSet = DescrSet.GetVkDescriptorSet();
-    if (vkSet != VK_NULL_HANDLE && Res.pObject)
+    if (vkSet != VK_NULL_HANDLE && DstRes.pObject)
     {
         VERIFY(pLogicalDevice != nullptr, "Logical device must not be null to write descriptor to a non-null set");
 
@@ -236,12 +336,12 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(const 
         WriteDescrSet.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         WriteDescrSet.pNext           = nullptr;
         WriteDescrSet.dstSet          = vkSet;
-        WriteDescrSet.dstBinding      = BindingIndex;
-        WriteDescrSet.dstArrayElement = ArrayIndex;
+        WriteDescrSet.dstBinding      = SrcRes.BindingIndex;
+        WriteDescrSet.dstArrayElement = SrcRes.ArrayIndex;
         WriteDescrSet.descriptorCount = 1;
         // descriptorType must be the same type as that specified in VkDescriptorSetLayoutBinding for dstSet at dstBinding.
         // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
-        WriteDescrSet.descriptorType   = DescriptorTypeToVkDescriptorType(Res.Type);
+        WriteDescrSet.descriptorType   = DescriptorTypeToVkDescriptorType(DstRes.Type);
         WriteDescrSet.pImageInfo       = nullptr;
         WriteDescrSet.pBufferInfo      = nullptr;
         WriteDescrSet.pTexelBufferView = nullptr;
@@ -253,30 +353,30 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(const 
         VkWriteDescriptorSetAccelerationStructureKHR vkDescrAccelStructInfo;
 
         static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
-        switch (Res.Type)
+        switch (DstRes.Type)
         {
             case DescriptorType::Sampler:
-                vkDescrImageInfo         = Res.GetSamplerDescriptorWriteInfo();
+                vkDescrImageInfo         = DstRes.GetSamplerDescriptorWriteInfo();
                 WriteDescrSet.pImageInfo = &vkDescrImageInfo;
                 break;
 
             case DescriptorType::CombinedImageSampler:
             case DescriptorType::SeparateImage:
             case DescriptorType::StorageImage:
-                vkDescrImageInfo         = Res.GetImageDescriptorWriteInfo();
+                vkDescrImageInfo         = DstRes.GetImageDescriptorWriteInfo();
                 WriteDescrSet.pImageInfo = &vkDescrImageInfo;
                 break;
 
             case DescriptorType::UniformTexelBuffer:
             case DescriptorType::StorageTexelBuffer:
             case DescriptorType::StorageTexelBuffer_ReadOnly:
-                vkDescrBufferView              = Res.GetBufferViewWriteInfo();
+                vkDescrBufferView              = DstRes.GetBufferViewWriteInfo();
                 WriteDescrSet.pTexelBufferView = &vkDescrBufferView;
                 break;
 
             case DescriptorType::UniformBuffer:
             case DescriptorType::UniformBufferDynamic:
-                vkDescrBufferInfo         = Res.GetUniformBufferDescriptorWriteInfo();
+                vkDescrBufferInfo         = DstRes.GetUniformBufferDescriptorWriteInfo();
                 WriteDescrSet.pBufferInfo = &vkDescrBufferInfo;
                 break;
 
@@ -284,17 +384,17 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(const 
             case DescriptorType::StorageBuffer_ReadOnly:
             case DescriptorType::StorageBufferDynamic:
             case DescriptorType::StorageBufferDynamic_ReadOnly:
-                vkDescrBufferInfo         = Res.GetStorageBufferDescriptorWriteInfo();
+                vkDescrBufferInfo         = DstRes.GetStorageBufferDescriptorWriteInfo();
                 WriteDescrSet.pBufferInfo = &vkDescrBufferInfo;
                 break;
 
             case DescriptorType::InputAttachment:
-                vkDescrImageInfo         = Res.GetInputAttachmentDescriptorWriteInfo();
+                vkDescrImageInfo         = DstRes.GetInputAttachmentDescriptorWriteInfo();
                 WriteDescrSet.pImageInfo = &vkDescrImageInfo;
                 break;
 
             case DescriptorType::AccelerationStructure:
-                vkDescrAccelStructInfo = Res.GetAccelerationStructureWriteInfo();
+                vkDescrAccelStructInfo = DstRes.GetAccelerationStructureWriteInfo();
                 WriteDescrSet.pNext    = &vkDescrAccelStructInfo;
                 break;
 
@@ -305,8 +405,27 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(const 
         pLogicalDevice->UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
     }
 
-    return Res;
+    return DstRes;
 }
+
+void ShaderResourceCacheVk::SetDynamicBufferOffset(Uint32 DescrSetIndex,
+                                                   Uint32 CacheOffset,
+                                                   Uint32 DynamicBufferOffset)
+{
+    auto& DescrSet = GetDescriptorSet(DescrSetIndex);
+    auto& DstRes   = DescrSet.GetResource(CacheOffset);
+    VERIFY(IsDynamicDescriptorType(DstRes.Type), "Dynamic offsets can only be set of dynamic uniform or storage buffers");
+
+    DEV_CHECK_ERR(DstRes.pObject, "Setting dynamic offset when no object is bound");
+    const auto* pBufferVk = DstRes.Type == DescriptorType::UniformBufferDynamic ?
+        DstRes.pObject.RawPtr<const BufferVkImpl>() :
+        DstRes.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>();
+    DEV_CHECK_ERR(DstRes.BufferBaseOffset + DstRes.BufferRangeSize + DynamicBufferOffset <= pBufferVk->GetDesc().uiSizeInBytes,
+                  "Specified offset is out of buffer bounds");
+
+    DstRes.BufferDynamicOffset = DynamicBufferOffset;
+}
+
 
 static RESOURCE_STATE DescriptorTypeToResourceState(DescriptorType Type)
 {
@@ -555,7 +674,6 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescript
     const auto* pBuffVk = pObject.RawPtr<const BufferVkImpl>();
     // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
     // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
-    VERIFY_EXPR((pBuffVk->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) != 0);
     VERIFY(Type == DescriptorType::UniformBufferDynamic || pBuffVk->GetDesc().Usage != USAGE_DYNAMIC,
            "Dynamic buffer must be used with UniformBufferDynamic descriptor");
 
@@ -563,8 +681,9 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetUniformBufferDescript
     DescrBuffInfo.buffer = pBuffVk->GetVkBuffer();
     // If descriptorType is VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, the offset member
     // of each element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minUniformBufferOffsetAlignment (13.2.4)
-    DescrBuffInfo.offset = 0;
-    DescrBuffInfo.range  = pBuffVk->GetDesc().uiSizeInBytes;
+    VERIFY_EXPR(BufferBaseOffset + BufferRangeSize <= pBuffVk->GetDesc().uiSizeInBytes);
+    DescrBuffInfo.offset = BufferBaseOffset;
+    DescrBuffInfo.range  = BufferRangeSize;
     return DescrBuffInfo;
 }
 
@@ -578,41 +697,16 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get storage buffer write info: cached object is null");
 
     const auto* pBuffViewVk = pObject.RawPtr<const BufferViewVkImpl>();
-    const auto& ViewDesc    = pBuffViewVk->GetDesc();
     const auto* pBuffVk     = pBuffViewVk->GetBuffer<const BufferVkImpl>();
     VERIFY(Type == DescriptorType::StorageBufferDynamic || Type == DescriptorType::StorageBufferDynamic_ReadOnly || pBuffVk->GetDesc().Usage != USAGE_DYNAMIC,
            "Dynamic buffer must be used with StorageBufferDynamic or StorageBufferDynamic_ReadOnly descriptor");
-
-    // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type
-    // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
-    if (Type == DescriptorType::StorageBuffer_ReadOnly || Type == DescriptorType::StorageBufferDynamic_ReadOnly)
-    {
-        // HLSL buffer SRVs are mapped to read-only storge buffers in SPIR-V
-        VERIFY(ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Attempting to bind buffer view '", ViewDesc.Name,
-               "' as read-only storage buffer. Expected view type is BUFFER_VIEW_SHADER_RESOURCE. Actual type: ",
-               GetBufferViewTypeLiteralName(ViewDesc.ViewType));
-        VERIFY((pBuffVk->GetDesc().BindFlags & BIND_SHADER_RESOURCE) != 0,
-               "Buffer '", pBuffVk->GetDesc().Name, "' being set as read-only storage buffer was not created with BIND_SHADER_RESOURCE flag");
-    }
-    else if (Type == DescriptorType::StorageBuffer || Type == DescriptorType::StorageBufferDynamic)
-    {
-        VERIFY(ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Attempting to bind buffer view '", ViewDesc.Name,
-               "' as writable storage buffer. Expected view type is BUFFER_VIEW_UNORDERED_ACCESS. Actual type: ",
-               GetBufferViewTypeLiteralName(ViewDesc.ViewType));
-        VERIFY((pBuffVk->GetDesc().BindFlags & BIND_UNORDERED_ACCESS) != 0,
-               "Buffer '", pBuffVk->GetDesc().Name, "' being set as writable storage buffer was not created with BIND_UNORDERED_ACCESS flag");
-    }
-    else
-    {
-        UNEXPECTED("Unexpected resource type");
-    }
 
     VkDescriptorBufferInfo DescrBuffInfo;
     DescrBuffInfo.buffer = pBuffVk->GetVkBuffer();
     // If descriptorType is VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, the offset member
     // of each element of pBufferInfo must be a multiple of VkPhysicalDeviceLimits::minStorageBufferOffsetAlignment (13.2.4)
-    DescrBuffInfo.offset = ViewDesc.ByteOffset;
-    DescrBuffInfo.range  = ViewDesc.ByteWidth;
+    DescrBuffInfo.offset = BufferBaseOffset;
+    DescrBuffInfo.range  = BufferRangeSize;
     return DescrBuffInfo;
 }
 

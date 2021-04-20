@@ -327,16 +327,21 @@ void GLContextState::GetBoundImage(Uint32     Index,
     }
 }
 
-void GLContextState::BindUniformBuffer(Int32 Index, const GLObjectWrappers::GLBufferObj& Buff)
+void GLContextState::BindUniformBuffer(Int32 Index, const GLObjectWrappers::GLBufferObj& Buff, GLintptr Offset, GLsizeiptr Size)
 {
     VERIFY(0 <= Index && Index < m_Caps.m_iMaxUniformBufferBindings, "Uniform buffer index is out of range");
 
-    GLuint GLBufferHandle = Buff;
-    if (UpdateBoundObjectsArr(m_BoundUniformBuffers, Index, Buff, GLBufferHandle))
+    BoundBufferInfo NewUBOInfo{Buff.GetUniqueID(), Offset, Size};
+    if (Index >= static_cast<Int32>(m_BoundUniformBuffers.size()))
+        m_BoundUniformBuffers.resize(Index + 1);
+
+    if (!(m_BoundUniformBuffers[Index] == NewUBOInfo))
     {
+        m_BoundUniformBuffers[Index] = NewUBOInfo;
+        GLuint GLBufferHandle        = Buff;
         // In addition to binding buffer to the indexed buffer binding target, glBindBufferBase also binds
         // buffer to the generic buffer binding point specified by target.
-        glBindBufferBase(GL_UNIFORM_BUFFER, Index, GLBufferHandle);
+        glBindBufferRange(GL_UNIFORM_BUFFER, Index, GLBufferHandle, Offset, Size);
         DEV_CHECK_GL_ERROR("Failed to bind uniform buffer to slot ", Index);
     }
 }
@@ -344,7 +349,7 @@ void GLContextState::BindUniformBuffer(Int32 Index, const GLObjectWrappers::GLBu
 void GLContextState::BindStorageBlock(Int32 Index, const GLObjectWrappers::GLBufferObj& Buff, GLintptr Offset, GLsizeiptr Size)
 {
 #if GL_ARB_shader_storage_buffer_object
-    BoundSSBOInfo NewSSBOInfo{Buff.GetUniqueID(), Offset, Size};
+    BoundBufferInfo NewSSBOInfo{Buff.GetUniqueID(), Offset, Size};
     if (Index >= static_cast<Int32>(m_BoundStorageBlocks.size()))
         m_BoundStorageBlocks.resize(Index + 1);
 

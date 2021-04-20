@@ -93,7 +93,7 @@ public:
     void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler);
 
-    // sizeof(Resource) == 16 (x64, msvc, Release)
+    // sizeof(Resource) == 24 (x64, msvc, Release)
     struct Resource
     {
         explicit Resource(DescriptorType _Type, bool _HasImmutableSampler) noexcept :
@@ -110,10 +110,15 @@ public:
         Resource& operator = (const Resource&) = delete;
         Resource& operator = (Resource&&)      = delete;
 
-/* 0 */ const DescriptorType       Type;
-/* 1 */ const bool                 HasImmutableSampler;
-/*2-7*/ // Unused
+/* 0 */ const DescriptorType         Type;
+/* 1 */ const bool                   HasImmutableSampler;
+/*2-3*/ // Unused
+/* 4 */ Uint32                       BufferDynamicOffset = 0; 
 /* 8 */ RefCntAutoPtr<IDeviceObject> pObject;
+
+        // For uniform and storage buffers only
+/*12 */ Uint32                       BufferBaseOffset = 0; 
+/*16 */ Uint32                       BufferRangeSize  = 0;
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo()                     const;
         VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo()                     const;
@@ -123,6 +128,9 @@ public:
         VkDescriptorImageInfo  GetInputAttachmentDescriptorWriteInfo()                   const;
         VkWriteDescriptorSetAccelerationStructureKHR GetAccelerationStructureWriteInfo() const;
         // clang-format on
+
+        void SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint32 _RangeOffset, Uint32 _RangeSize);
+        void SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView);
 
         bool IsNull() const { return pObject == nullptr; }
     };
@@ -187,19 +195,51 @@ public:
         DescrSet.m_DescriptorSetAllocation = std::move(Allocation);
     }
 
+    struct SetResourceInfo
+    {
+        const Uint32 BindingIndex = 0;
+        const Uint32 ArrayIndex   = 0;
+
+        RefCntAutoPtr<IDeviceObject> pObject;
+
+        const Uint32 BufferBaseOffset = 0;
+        const Uint32 BufferRangeSize  = 0;
+
+        SetResourceInfo() noexcept
+        {
+        }
+
+        SetResourceInfo(Uint32                         _BindingIndex,
+                        Uint32                         _ArrayIndex,
+                        RefCntAutoPtr<IDeviceObject>&& _pObject,
+                        Uint32                         _BufferBaseOffset = 0,
+                        Uint32                         _BufferRangeSize  = 0) noexcept :
+            // clang-format off
+            BindingIndex    {_BindingIndex      },
+            ArrayIndex      {_ArrayIndex        },
+            pObject         {std::move(_pObject)},
+            BufferBaseOffset{_BufferBaseOffset  },
+            BufferRangeSize {_BufferRangeSize   }
+        // clang-format on
+        {
+        }
+    };
     // Sets the resource at the given descriptor set index and offset
     const Resource& SetResource(const VulkanUtilities::VulkanLogicalDevice* pLogicalDevice,
-                                Uint32                                      SetIndex,
-                                Uint32                                      Offset,
-                                Uint32                                      BindingIndex,
-                                Uint32                                      ArrayIndex,
-                                RefCntAutoPtr<IDeviceObject>&&              pObject);
+                                Uint32                                      DescrSetIndex,
+                                Uint32                                      CacheOffset,
+                                SetResourceInfo&&                           SrcRes);
 
     const Resource& ResetResource(Uint32 SetIndex,
                                   Uint32 Offset)
     {
-        return SetResource(nullptr, SetIndex, Offset, ~0u, ~0u, RefCntAutoPtr<IDeviceObject>{});
+        return SetResource(nullptr, SetIndex, Offset, {});
     }
+
+    void SetDynamicBufferOffset(Uint32 DescrSetIndex,
+                                Uint32 CacheOffset,
+                                Uint32 DynamicBufferOffset);
+
 
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     Uint32 GetNumDynamicBuffers() const { return m_NumDynamicBuffers; }
@@ -280,7 +320,10 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
             {
                 const auto* pBufferVk = Res.pObject.RawPtr<const BufferVkImpl>();
                 const auto  Offset    = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
-                Offsets[OffsetInd++]  = Offset;
+                // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
+                // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
+                // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
+                Offsets[OffsetInd++] = Res.BufferDynamicOffset + Offset;
                 ++res;
             }
             else
@@ -296,7 +339,10 @@ __forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(Uint32      
                 const auto* pBufferVkView = Res.pObject.RawPtr<const BufferViewVkImpl>();
                 const auto* pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBuffer<const BufferVkImpl>() : nullptr;
                 const auto  Offset        = pBufferVk != nullptr ? pBufferVk->GetDynamicOffset(CtxId, pCtxVkImpl) : 0;
-                Offsets[OffsetInd++]      = Offset;
+                // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
+                // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
+                // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
+                Offsets[OffsetInd++] = Res.BufferDynamicOffset + Offset;
                 ++res;
             }
             else

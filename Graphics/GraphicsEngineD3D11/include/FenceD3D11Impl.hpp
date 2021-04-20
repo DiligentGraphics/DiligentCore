@@ -58,7 +58,7 @@ public:
     /// Implementation of IFence::Reset() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
-    void AddPendingQuery(CComPtr<ID3D11DeviceContext> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 Value)
+    void AddPendingQuery(CComPtr<ID3D11DeviceContext1> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 Value)
     {
         m_PendingQueries.emplace_back(std::move(pCtx), std::move(pQuery), Value);
     }
@@ -68,11 +68,11 @@ public:
 private:
     struct PendingFenceData
     {
-        CComPtr<ID3D11DeviceContext> pd3d11Ctx;
-        CComPtr<ID3D11Query>         pd3d11Query;
-        const Uint64                 Value;
+        CComPtr<ID3D11DeviceContext1> pd3d11Ctx;
+        CComPtr<ID3D11Query>          pd3d11Query;
+        const Uint64                  Value;
 
-        PendingFenceData(CComPtr<ID3D11DeviceContext> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 _Value) :
+        PendingFenceData(CComPtr<ID3D11DeviceContext1> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 _Value) :
             // clang-format off
             pd3d11Ctx  {std::move(pCtx)},
             pd3d11Query{std::move(pQuery)},
