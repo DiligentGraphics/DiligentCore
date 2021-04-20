@@ -40,10 +40,54 @@
 
 #include "VulkanUtilities/VulkanHeaders.h"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "VulkanUtilities/VulkanSyncObjectManager.hpp"
 
 
 namespace Diligent
 {
+
+class SyncPointVk final : public std::enable_shared_from_this<SyncPointVk>
+{
+private:
+    friend class CommandQueueVkImpl;
+    SyncPointVk(CommandQueueIndex CommandQueueId, Uint32 NumContexts, VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr, VkDevice LogicalDevice, Uint64 dbgValue);
+
+    void GetSemaphores(std::vector<VkSemaphore>& Semaphores);
+
+    static constexpr size_t SizeOf(Uint32 NumContexts)
+    {
+        return sizeof(SyncPointVk) + sizeof(VulkanUtilities::VulkanRecycledSemaphore) * (NumContexts - _countof(SyncPointVk::m_Semaphores));
+    }
+
+public:
+    ~SyncPointVk();
+
+    // Returns semaphore which is in signaled state.
+    // Access to semaphore in CommandQueueId index must be thread safe.
+    VulkanUtilities::VulkanRecycledSemaphore ExtractSemaphore(Uint32 CommandQueueId)
+    {
+        return std::move(m_Semaphores[CommandQueueId]);
+    }
+
+    // vkGetFenceStatus and vkWaitForFences with same fence can be used in multiple threads.
+    // Other functions requires external synchronization.
+    VkFence GetFence() const
+    {
+        return m_Fence;
+    }
+
+    Uint32 GetCommandQueueId() const
+    {
+        return m_CommandQueueId;
+    }
+
+private:
+    const CommandQueueIndex                  m_CommandQueueId;
+    const Uint8                              m_NumSemaphores; // same as NumContexts
+    VulkanUtilities::VulkanRecycledFence     m_Fence;
+    VulkanUtilities::VulkanRecycledSemaphore m_Semaphores[1]; // [m_NumSemaphores]
+};
+
 
 /// Implementation of the Diligent::ICommandQueueVk interface
 class CommandQueueVkImpl final : public ObjectBase<ICommandQueueVk>
@@ -53,7 +97,10 @@ public:
 
     CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters,
                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                       uint32_t                                              QueueFamilyIndex);
+                       CommandQueueIndex                                     CommandQueueId,
+                       Uint32                                                NumCommandQueues,
+                       Uint32                                                vkQueueIndex,
+                       const ContextCreateInfo&                              CreateInfo);
     ~CommandQueueVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueVk, TBase)
@@ -61,7 +108,7 @@ public:
     /// Implementation of ICommandQueueVk::GetNextFenceValue().
     virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue.load(); }
 
-    /// Implementation of ICommandQueueVk::Submit().
+    /// Implementation of ICommandQueueVk::SubmitCmdBuffer().
     virtual Uint64 DILIGENT_CALL_TYPE SubmitCmdBuffer(VkCommandBuffer cmdBuffer) override final;
 
     /// Implementation of ICommandQueueVk::Submit().
@@ -87,11 +134,22 @@ public:
 
     void SetFence(RefCntAutoPtr<FenceVkImpl> pFence) { m_pFence = std::move(pFence); }
 
+    SyncPointVkPtr GetLastSyncPoint()
+    {
+        std::lock_guard<std::mutex> Lock{m_QueueMutex}; // AZ TODO: atomic_shader_ptr may be faster (or spin-lock)
+        return m_LastSyncPoint;
+    }
+
 private:
+    SyncPointVkPtr CreateSyncPoint(Uint64 dbgValue);
+
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
 
-    const VkQueue  m_VkQueue;
-    const uint32_t m_QueueFamilyIndex;
+    const VkQueue           m_VkQueue;
+    const HardwareQueueId   m_QueueFamilyIndex;
+    const CommandQueueIndex m_CommandQueueId;
+    const Uint8             m_NumCommandQueues;
+
     // Fence is signaled right after a command buffer has been
     // submitted to the command queue for execution.
     // All command buffers with fence value less than or equal to the signaled value
@@ -101,7 +159,17 @@ private:
     // A value that will be signaled by the command queue next
     std::atomic_uint64_t m_NextFenceValue{1};
 
+    // Protects access to the m_VkQueue internal data.
     std::mutex m_QueueMutex;
+
+    // Array used to merge semaphores from SubmitInfo and from SyncPointVk
+    std::vector<VkSemaphore> m_TempSignalSemaphores;
+
+    // Fence and semaphores which was signaled when last submitted commands are completed.
+    SyncPointVkPtr m_LastSyncPoint;
+
+    std::shared_ptr<VulkanUtilities::VulkanSyncObjectManager> m_SyncObjectManager;
+    FixedBlockMemoryAllocator                                 m_SyncPointAllocator;
 };
 
 } // namespace Diligent

@@ -31,7 +31,10 @@ void TestEngineFactortCInterface(struct IEngineFactory* pFactory)
 {
     struct APIInfo apiInfo = *IEngineFactory_GetAPIInfo(pFactory);
     (void)apiInfo;
-    struct IShaderSourceInputStreamFactory* pShaderFactory = NULL;
 
+    struct IShaderSourceInputStreamFactory* pShaderFactory = NULL;
     IEngineFactory_CreateDefaultShaderSourceStreamFactory(pFactory, "directories", &pShaderFactory);
+
+    struct Version MinVersion = {0, 0};
+    IEngineFactory_EnumerateAdapters(pFactory, MinVersion, (Uint32*)NULL, (struct GraphicsAdapterInfo*)NULL);
 }

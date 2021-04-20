@@ -36,6 +36,7 @@
 #include "ObjectBase.hpp"
 #include "Errors.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "IndexWrapper.hpp"
 
 namespace Diligent
 {
@@ -69,6 +70,7 @@ public:
         m_DesiredPreTransform{SCDesc.PreTransform}
     // clang-format on
     {
+        VERIFY(!pDeviceContext->GetDesc().IsDeferred, "Deferred context is not supported for swapchain");
     }
 
     // clang-format off
@@ -109,6 +111,13 @@ protected:
         }
 
         return false;
+    }
+
+    CommandQueueIndex GetCommandQueueId()
+    {
+        auto Ctx = m_wpDeviceContext.Lock();
+        VERIFY_EXPR(Ctx);
+        return CommandQueueIndex{Ctx ? Ctx->GetDesc().CommandQueueId : MAX_COMMAND_QUEUES};
     }
 
     /// Strong reference to the render device

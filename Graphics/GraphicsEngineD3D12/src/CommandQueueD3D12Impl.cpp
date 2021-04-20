@@ -51,6 +51,11 @@ CommandQueueD3D12Impl::~CommandQueueD3D12Impl()
     CloseHandle(m_WaitForGPUEventHandle);
 }
 
+D3D12_COMMAND_LIST_TYPE CommandQueueD3D12Impl::GetCommandListType() const
+{
+    return m_pd3d12CmdQueue->GetDesc().Type;
+}
+
 Uint64 CommandQueueD3D12Impl::Submit(Uint32                    NumCommandLists,
                                      ID3D12CommandList* const* ppCommandLists)
 {
@@ -113,6 +118,12 @@ void CommandQueueD3D12Impl::SignalFence(ID3D12Fence* pFence, Uint64 Value)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
     m_pd3d12CmdQueue->Signal(pFence, Value);
+}
+
+void CommandQueueD3D12Impl::WaitFence(ID3D12Fence* pFence, Uint64 Value)
+{
+    std::lock_guard<std::mutex> Lock{m_QueueMtx};
+    m_pd3d12CmdQueue->Wait(pFence, Value);
 }
 
 } // namespace Diligent

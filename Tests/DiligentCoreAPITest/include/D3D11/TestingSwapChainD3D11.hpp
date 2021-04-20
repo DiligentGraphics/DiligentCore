@@ -50,6 +50,7 @@ public:
                           const SwapChainDesc& SCDesc);
 
     virtual void TakeSnapshot() override final;
+    virtual void TakeSnapshot(ITexture* pBlitFrom) override final;
 
     ID3D11Texture2D* GetD3D11RenderTarget()
     {

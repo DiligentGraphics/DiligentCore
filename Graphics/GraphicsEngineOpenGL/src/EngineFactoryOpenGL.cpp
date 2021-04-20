@@ -32,6 +32,7 @@
 #include "EngineFactoryOpenGL.h"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
+#include "EngineFactoryBase.hpp"
 #include "EngineMemory.h"
 
 #if !DILIGENT_NO_HLSL
@@ -95,6 +96,10 @@ public:
                                                             IRenderDevice**           ppDevice,
                                                             IDeviceContext**          ppImmediateContext) override final;
 
+    virtual void DILIGENT_CALL_TYPE EnumerateAdapters(Version              MinVersion,
+                                                      Uint32&              NumAdapters,
+                                                      GraphicsAdapterInfo* Adapters) const override final;
+
 #if PLATFORM_ANDROID
     virtual void InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
                                        const char*             NativeActivityClassName,
@@ -103,29 +108,57 @@ public:
 };
 
 
+void EngineFactoryOpenGLImpl::EnumerateAdapters(Version              MinVersion,
+                                                Uint32&              NumAdapters,
+                                                GraphicsAdapterInfo* Adapters) const
+{
+    if (Adapters == nullptr)
+    {
+        NumAdapters = 1;
+        return;
+    }
+
+    NumAdapters = std::min(1u, NumAdapters);
+    if (NumAdapters > 0)
+    {
+        *Adapters = {};
+
+        Adapters->Capabilities.DevType = std::is_same<TRenderDeviceGLImpl, RenderDeviceGLImpl>::value ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES;
+
+        Adapters->NumQueues = 1;
+
+        Adapters->Queues[0].QueueType                 = CONTEXT_TYPE_GRAPHICS;
+        Adapters->Queues[0].MaxDeviceContexts         = 1;
+        Adapters->Queues[0].TextureCopyGranularity[0] = 1;
+        Adapters->Queues[0].TextureCopyGranularity[1] = 1;
+        Adapters->Queues[0].TextureCopyGranularity[2] = 1;
+    }
+}
 
 /// Creates render device, device context and swap chain for OpenGL/GLES-based engine implementation
 
-/// \param [in] EngineCI - Engine creation attributes.
-/// \param [out] ppDevice - Address of the memory location where pointer to
-///                         the created device will be written.
+/// \param [in]  EngineCI           - Engine creation attributes.
+/// \param [out] ppDevice           - Address of the memory location where pointer to
+///                                   the created device will be written.
 /// \param [out] ppImmediateContext - Address of the memory location where pointers to
 ///                                   the immediate context will be written.
-/// \param [in] SCDesc - Swap chain description.
-/// \param [out] ppSwapChain    - Address of the memory location where pointer to the new
-///                               swap chain will be written.
-void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
+/// \param [in]  SCDesc             - Swap chain description.
+/// \param [out] ppSwapChain        - Address of the memory location where pointer to the new
+///                                   swap chain will be written.
+void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& _EngineCI,
                                                          IRenderDevice**           ppDevice,
                                                          IDeviceContext**          ppImmediateContext,
                                                          const SwapChainDesc&      SCDesc,
                                                          ISwapChain**              ppSwapChain)
 {
+    EngineGLCreateInfo EngineCI = _EngineCI;
+
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
-    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+    if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
         return;
     }
 
@@ -136,6 +169,13 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
     if (EngineCI.NumDeferredContexts > 0)
     {
         LOG_WARNING_MESSAGE("OpenGL back-end does not support deferred contexts");
+        EngineCI.NumDeferredContexts = 0;
+    }
+
+    if (EngineCI.NumContexts > 1)
+    {
+        LOG_ERROR_MESSAGE("OpenGL back-end does not support multiple immediate contexts");
+        return;
     }
 
     *ppDevice           = nullptr;
@@ -144,17 +184,24 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
 
     try
     {
+        GraphicsAdapterInfo AdapterInfo;
+        AdapterInfo.NumQueues                   = 1;
+        AdapterInfo.Queues[0].QueueType         = CONTEXT_TYPE_GRAPHICS;
+        AdapterInfo.Queues[0].MaxDeviceContexts = 1;
+
+        VerifyEngineCreateInfo(EngineCI, AdapterInfo);
+
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto& RawMemAllocator = GetRawAllocator();
 
         RenderDeviceGLImpl* pRenderDeviceOpenGL(NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI, &SCDesc));
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false));
+        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, (EngineCI.pContextInfo ? EngineCI.pContextInfo[0].Name : ""), false));
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
-        pRenderDeviceOpenGL->SetImmediateContext(pDeviceContextOpenGL);
+        pRenderDeviceOpenGL->SetImmediateContext(0, pDeviceContextOpenGL);
 
         // Need to create immediate context first
         pRenderDeviceOpenGL->InitTexRegionRender();
@@ -196,16 +243,18 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
 ///                         the created device will be written.
 /// \param [out] ppImmediateContext - Address of the memory location where pointers to
 ///                                   the immediate context will be written.
-void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
+void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& _EngineCI,
                                                       IRenderDevice**           ppDevice,
                                                       IDeviceContext**          ppImmediateContext)
 {
+    EngineGLCreateInfo EngineCI = _EngineCI;
+
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
-    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+    if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
         return;
     }
 
@@ -216,6 +265,13 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
     if (EngineCI.NumDeferredContexts > 0)
     {
         LOG_WARNING_MESSAGE("OpenGL back-end does not support deferred contexts");
+        EngineCI.NumDeferredContexts = 0;
+    }
+
+    if (EngineCI.NumContexts > 1)
+    {
+        LOG_ERROR_MESSAGE("OpenGL back-end does not support multiple immediate contexts");
+        return;
     }
 
     *ppDevice           = nullptr;
@@ -223,17 +279,24 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
 
     try
     {
+        GraphicsAdapterInfo AdapterInfo;
+        AdapterInfo.NumQueues                   = 1;
+        AdapterInfo.Queues[0].QueueType         = CONTEXT_TYPE_GRAPHICS;
+        AdapterInfo.Queues[0].MaxDeviceContexts = 1;
+
+        VerifyEngineCreateInfo(EngineCI, AdapterInfo);
+
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto& RawMemAllocator = GetRawAllocator();
 
         RenderDeviceGLImpl* pRenderDeviceOpenGL(NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI));
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false));
+        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, (EngineCI.pContextInfo ? EngineCI.pContextInfo[0].Name : ""), false));
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
-        pRenderDeviceOpenGL->SetImmediateContext(pDeviceContextOpenGL);
+        pRenderDeviceOpenGL->SetImmediateContext(0, pDeviceContextOpenGL);
     }
     catch (const std::runtime_error&)
     {

@@ -58,9 +58,12 @@ public:
                            IMemoryAllocator&                   Allocator,
                            RenderDeviceD3D11Impl*              pDevice,
                            ID3D11DeviceContext1*               pd3d11DeviceContext,
-                           const struct EngineD3D11CreateInfo& EngineAttribs,
+                           const struct EngineD3D11CreateInfo& EngineCI,
                            bool                                bIsDeferred);
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+
+    /// Implementation of IDeviceContext::Begin() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE Begin(Uint32 CommandQueueId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;
@@ -83,7 +86,7 @@ public:
     virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                      Uint32                         NumBuffersSet,
                                                      IBuffer**                      ppBuffers,
-                                                     Uint32*                        pOffsets,
+                                                     const Uint32*                  pOffsets,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                      SET_VERTEX_BUFFERS_FLAGS       Flags) override final;
 
@@ -205,7 +208,7 @@ public:
     virtual void DILIGENT_CALL_TYPE FinishFrame() override final;
 
     /// Implementation of IDeviceContext::TransitionResourceStates() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) override final;
+    virtual void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers) override final;
 
     /// Implementation of IDeviceContext::ResolveTextureSubresource() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE ResolveTextureSubresource(ITexture*                               pSrcTexture,
@@ -222,8 +225,8 @@ public:
     /// Implementation of IDeviceContext::SignalFence() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE SignalFence(IFence* pFence, Uint64 Value) override final;
 
-    /// Implementation of IDeviceContext::WaitForFence() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext) override final;
+    /// Implementation of IDeviceContext::DeviceWaitForFence() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE DeviceWaitForFence(IFence* pFence, Uint64 Value) override final;
 
     /// Implementation of IDeviceContext::WaitForIdle() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE WaitForIdle() override final;

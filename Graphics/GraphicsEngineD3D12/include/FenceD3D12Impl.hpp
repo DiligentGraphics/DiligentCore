@@ -55,11 +55,11 @@ public:
     /// Implementation of IFence::GetCompletedValue() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
+    /// Implementation of IFenceD3D12::Wait() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
+
     /// Implementation of IFenceD3D12::GetD3D12Fence().
     virtual ID3D12Fence* DILIGENT_CALL_TYPE GetD3D12Fence() override final { return m_pd3d12Fence; }
-
-    /// Implementation of IFenceD3D12::WaitForCompletion().
-    virtual void DILIGENT_CALL_TYPE WaitForCompletion(Uint64 Value) override final;
 
 private:
     CComPtr<ID3D12Fence> m_pd3d12Fence; ///< D3D12 Fence object

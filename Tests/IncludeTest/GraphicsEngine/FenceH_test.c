@@ -26,3 +26,14 @@
  */
 
 #include "DiligentCore/Graphics/GraphicsEngine/interface/Fence.h"
+
+void TestFenceCInterface(struct IFence* pFence)
+{
+    Uint64 CompletedValue = 0;
+
+    CompletedValue = IFence_GetCompletedValue(pFence);
+    (void)(CompletedValue);
+
+    IFence_Reset(pFence, (Uint64)0);
+    IFence_Wait(pFence, (Uint64)0);
+}

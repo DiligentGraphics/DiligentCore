@@ -44,6 +44,7 @@ public:
     ~TestingSwapChainGL();
 
     virtual void TakeSnapshot() override final;
+    virtual void TakeSnapshot(ITexture* pBlitFrom) override final;
 
     GLuint GetRenderTargetGLHandle()
     {

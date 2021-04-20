@@ -134,14 +134,16 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
-    auto CmdQueueId          = m_pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId();
-    auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
-    bool DataAvailable       = false;
+    auto*      pContextVk          = m_pContext.RawPtr<DeviceContextVkImpl>();
+    const auto CmdQueueId          = pContextVk->GetCommandQueueId();
+    const auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
+    bool       DataAvailable       = false;
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
-        auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+        auto* pQueryMgr = pContextVk->GetQueryManager();
         VERIFY_EXPR(pQueryMgr != nullptr);
         const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const auto  StageMask     = LogicalDevice.GetSupportedStagesMask(pContextVk->GetHardwareQueueId());
         auto        vkQueryPool   = pQueryMgr->GetQueryPool(m_Desc.Type);
 
         switch (m_Desc.Type)
@@ -225,14 +227,12 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 {
                     auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
 
-                    const auto EnabledShaderStages = LogicalDevice.GetEnabledShaderStages();
-
                     auto Idx = 0;
 
                     QueryData.InputVertices   = Results[Idx++]; // INPUT_ASSEMBLY_VERTICES_BIT   = 0x00000001
                     QueryData.InputPrimitives = Results[Idx++]; // INPUT_ASSEMBLY_PRIMITIVES_BIT = 0x00000002
                     QueryData.VSInvocations   = Results[Idx++]; // VERTEX_SHADER_INVOCATIONS_BIT = 0x00000004
-                    if (EnabledShaderStages & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
+                    if (StageMask & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
                     {
                         QueryData.GSInvocations = Results[Idx++]; // GEOMETRY_SHADER_INVOCATIONS_BIT = 0x00000008
                         QueryData.GSPrimitives  = Results[Idx++]; // GEOMETRY_SHADER_PRIMITIVES_BIT  = 0x00000010
@@ -241,10 +241,10 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                     QueryData.ClippingPrimitives  = Results[Idx++]; // CLIPPING_PRIMITIVES_BIT          = 0x00000040
                     QueryData.PSInvocations       = Results[Idx++]; // FRAGMENT_SHADER_INVOCATIONS_BIT  = 0x00000080
 
-                    if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
+                    if (StageMask & VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
                         QueryData.HSInvocations = Results[Idx++]; // TESSELLATION_CONTROL_SHADER_PATCHES_BIT        = 0x00000100
 
-                    if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
+                    if (StageMask & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
                         QueryData.DSInvocations = Results[Idx++]; // TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT = 0x00000200
 
                     QueryData.CSInvocations = Results[Idx++]; // COMPUTE_SHADER_INVOCATIONS_BIT = 0x00000400

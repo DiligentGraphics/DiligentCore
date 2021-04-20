@@ -49,23 +49,35 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
                                                IMemoryAllocator&            Allocator,
                                                RenderDeviceD3D11Impl*       pDevice,
                                                ID3D11DeviceContext1*        pd3d11DeviceContext,
-                                               const EngineD3D11CreateInfo& EngineAttribs,
+                                               const EngineD3D11CreateInfo& EngineCI,
                                                bool                         bIsDeferred) :
     // clang-format off
     TDeviceContextBase
     {
         pRefCounters,
         pDevice,
+        (EngineCI.pContextInfo ? EngineCI.pContextInfo[0].Name : ""),
         bIsDeferred
     },
-    m_pd3d11DeviceContext {pd3d11DeviceContext                },
-    m_D3D11ValidationFlags{EngineAttribs.D3D11ValidationFlags },
+    m_pd3d11DeviceContext {pd3d11DeviceContext           },
+    m_D3D11ValidationFlags{EngineCI.D3D11ValidationFlags },
     m_CmdListAllocator    {GetRawAllocator(), sizeof(CommandListD3D11Impl), 64}
 // clang-format on
 {
 }
 
 IMPLEMENT_QUERY_INTERFACE(DeviceContextD3D11Impl, IID_DeviceContextD3D11, TDeviceContextBase)
+
+
+void DeviceContextD3D11Impl::Begin(Uint32 CommandQueueId)
+{
+    DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
+    DEV_CHECK_ERR(CommandQueueId == 0, "Direct3D11 supports only one command queue");
+
+    m_Desc.CommandQueueId = 0;
+    m_Desc.QueueId        = 0;
+    m_Desc.ContextType    = CONTEXT_TYPE_GRAPHICS;
+}
 
 void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 {
@@ -1020,7 +1032,7 @@ void DeviceContextD3D11Impl::FinishFrame()
 void DeviceContextD3D11Impl::SetVertexBuffers(Uint32                         StartSlot,
                                               Uint32                         NumBuffersSet,
                                               IBuffer**                      ppBuffers,
-                                              Uint32*                        pOffsets,
+                                              const Uint32*                  pOffsets,
                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                               SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
@@ -1707,7 +1719,8 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
 
 void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+    DEV_CHECK_ERR(IsDeferred(), "Only deferred context can record command list");
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
     CComPtr<ID3D11CommandList> pd3d11CmdList;
     m_pd3d11DeviceContext->FinishCommandList(
@@ -1720,7 +1733,7 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
                //   ID3D11DeviceContext::ClearState() was called.
         &pd3d11CmdList);
 
-    CommandListD3D11Impl* pCmdListD3D11(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(m_pDevice, pd3d11CmdList));
+    CommandListD3D11Impl* pCmdListD3D11(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(m_pDevice, this, pd3d11CmdList));
     pCmdListD3D11->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
 
     // Device context is now in default state
@@ -1740,12 +1753,16 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
         DvpVerifyCommittedShaders();
     }
 #endif
+
+    m_Desc.CommandQueueId = MAX_COMMAND_QUEUES;
+    m_Desc.QueueId        = MAX_COMMAND_QUEUES;
+    m_Desc.ContextType    = CONTEXT_TYPE_UNKNOWN;
 }
 
 void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommandLists,
                                                  ICommandList* const* ppCommandLists)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate context can execute command list");
+    DEV_CHECK_ERR(!IsDeferred(), "Only immediate context can execute command list");
 
     if (NumCommandLists == 0)
         return;
@@ -1803,7 +1820,7 @@ static CComPtr<ID3D11Query> CreateD3D11QueryEvent(ID3D11Device* pd3d11Device)
 
 void DeviceContextD3D11Impl::SignalFence(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be signaled from immediate context");
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
     auto*                pd3d11Device = m_pDevice->GetD3D11Device();
     CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
     m_pd3d11DeviceContext->End(pd3d11Query);
@@ -1811,18 +1828,14 @@ void DeviceContextD3D11Impl::SignalFence(IFence* pFence, Uint64 Value)
     pFenceD3D11Impl->AddPendingQuery(m_pd3d11DeviceContext, std::move(pd3d11Query), Value);
 }
 
-void DeviceContextD3D11Impl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
+void DeviceContextD3D11Impl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be waited from immediate context");
-    if (FlushContext)
-        Flush();
-    auto* pFenceD3D11Impl = ValidatedCast<FenceD3D11Impl>(pFence);
-    pFenceD3D11Impl->Wait(Value, FlushContext);
+    UNEXPECTED("DeviceWaitForFence() is not supported in Direct3D11");
 }
 
 void DeviceContextD3D11Impl::WaitForIdle()
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate contexts can be idled");
+    DEV_CHECK_ERR(!IsDeferred(), "Only immediate contexts can be idled");
     Flush();
     auto*                pd3d11Device = m_pDevice->GetD3D11Device();
     CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
@@ -1960,7 +1973,7 @@ void DeviceContextD3D11Impl::InvalidateState()
     m_BindInfo.Invalidate();
 }
 
-void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
+void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
 

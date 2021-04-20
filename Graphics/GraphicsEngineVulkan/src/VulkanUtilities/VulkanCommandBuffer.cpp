@@ -30,9 +30,10 @@
 
 namespace VulkanUtilities
 {
+namespace
+{
 
-static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags              AccessFlags,
-                                                         const VkPipelineStageFlags EnabledShaderStages)
+static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFlags)
 {
     // 6.1.3
     VkPipelineStageFlags Stages = 0;
@@ -65,7 +66,7 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags          
 
             // Read access to a uniform buffer
             case VK_ACCESS_UNIFORM_READ_BIT:
-                Stages |= EnabledShaderStages;
+                Stages |= AllShaderStagesVk;
                 break;
 
             // Read access to an input attachment within a render pass during fragment shading
@@ -75,12 +76,12 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags          
 
             // Read access to a storage buffer, uniform texel buffer, storage texel buffer, sampled image, or storage image
             case VK_ACCESS_SHADER_READ_BIT:
-                Stages |= EnabledShaderStages;
+                Stages |= AllShaderStagesVk;
                 break;
 
             // Write access to a storage buffer, storage texel buffer, or storage image
             case VK_ACCESS_SHADER_WRITE_BIT:
-                Stages |= EnabledShaderStages;
+                Stages |= AllShaderStagesVk;
                 break;
 
             // Read access to a color attachment, such as via blending, logic operations, or via certain subpass load operations
@@ -248,13 +249,15 @@ static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
 
     return AccessMask;
 }
+} // namespace
+
 
 void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                CmdBuffer,
                                                 VkImage                        Image,
                                                 VkImageLayout                  OldLayout,
                                                 VkImageLayout                  NewLayout,
                                                 const VkImageSubresourceRange& SubresRange,
-                                                VkPipelineStageFlags           EnabledShaderStages,
+                                                VkPipelineStageFlags           SupportedStagesMask,
                                                 VkPipelineStageFlags           SrcStages,
                                                 VkPipelineStageFlags           DestStages)
 {
@@ -282,7 +285,7 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                C
         }
         else if (ImgBarrier.srcAccessMask != 0)
         {
-            SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask, EnabledShaderStages);
+            SrcStages = PipelineStageFromAccessFlags(ImgBarrier.srcAccessMask);
         }
         else
         {
@@ -300,7 +303,7 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                C
         }
         else if (ImgBarrier.dstAccessMask != 0)
         {
-            DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask, EnabledShaderStages);
+            DestStages = PipelineStageFromAccessFlags(ImgBarrier.dstAccessMask);
         }
         else
         {
@@ -311,6 +314,10 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                C
             DestStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         }
     }
+
+    SrcStages &= SupportedStagesMask;
+    DestStages &= SupportedStagesMask;
+    VERIFY(SrcStages != 0 && DestStages != 0, "Stage mask must not be 0");
 
     // Including a particular pipeline stage in the first synchronization scope of a command implicitly
     // includes logically earlier pipeline stages in the synchronization scope. Similarly, the second
@@ -341,7 +348,7 @@ void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
                                               VkBuffer             Buffer,
                                               VkAccessFlags        srcAccessMask,
                                               VkAccessFlags        dstAccessMask,
-                                              VkPipelineStageFlags EnabledShaderStages,
+                                              VkPipelineStageFlags SupportedStagesMask,
                                               VkPipelineStageFlags SrcStages,
                                               VkPipelineStageFlags DestStages)
 {
@@ -358,7 +365,7 @@ void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
     if (SrcStages == 0)
     {
         if (BuffBarrier.srcAccessMask != 0)
-            SrcStages = PipelineStageFromAccessFlags(BuffBarrier.srcAccessMask, EnabledShaderStages);
+            SrcStages = PipelineStageFromAccessFlags(BuffBarrier.srcAccessMask);
         else
         {
             // An execution dependency with only VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT in the source stage
@@ -370,8 +377,12 @@ void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
     if (DestStages == 0)
     {
         VERIFY(BuffBarrier.dstAccessMask != 0, "Dst access mask must not be zero");
-        DestStages = PipelineStageFromAccessFlags(BuffBarrier.dstAccessMask, EnabledShaderStages);
+        DestStages = PipelineStageFromAccessFlags(BuffBarrier.dstAccessMask);
     }
+
+    SrcStages &= SupportedStagesMask;
+    DestStages &= SupportedStagesMask;
+    VERIFY(SrcStages != 0 && DestStages != 0, "Stage mask must not be 0");
 
     vkCmdPipelineBarrier(CmdBuffer,
                          SrcStages,    // must not be 0
@@ -388,7 +399,7 @@ void VulkanCommandBuffer::BufferMemoryBarrier(VkCommandBuffer      CmdBuffer,
 void VulkanCommandBuffer::ASMemoryBarrier(VkCommandBuffer      CmdBuffer,
                                           VkAccessFlags        srcAccessMask,
                                           VkAccessFlags        dstAccessMask,
-                                          VkPipelineStageFlags EnabledShaderStages,
+                                          VkPipelineStageFlags SupportedStagesMask,
                                           VkPipelineStageFlags SrcStages,
                                           VkPipelineStageFlags DestStages)
 {
@@ -401,7 +412,7 @@ void VulkanCommandBuffer::ASMemoryBarrier(VkCommandBuffer      CmdBuffer,
     if (SrcStages == 0)
     {
         if (Barrier.srcAccessMask != 0)
-            SrcStages = PipelineStageFromAccessFlags(Barrier.srcAccessMask, EnabledShaderStages);
+            SrcStages = PipelineStageFromAccessFlags(Barrier.srcAccessMask);
         else
         {
             // An execution dependency with only VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT in the source stage
@@ -413,14 +424,15 @@ void VulkanCommandBuffer::ASMemoryBarrier(VkCommandBuffer      CmdBuffer,
     if (DestStages == 0)
     {
         VERIFY(Barrier.dstAccessMask != 0, "Dst access mask must not be zero");
-        DestStages = PipelineStageFromAccessFlags(Barrier.dstAccessMask, EnabledShaderStages);
+        DestStages = PipelineStageFromAccessFlags(Barrier.dstAccessMask);
     }
 
     // Other stages are not valid for acceleration structures
-    constexpr VkPipelineStageFlags StagesMask = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    constexpr VkPipelineStageFlags RayTracingStagesMask = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
-    SrcStages &= StagesMask;
-    DestStages &= StagesMask;
+    SrcStages &= (SupportedStagesMask & RayTracingStagesMask);
+    DestStages &= (SupportedStagesMask & RayTracingStagesMask);
+    VERIFY(SrcStages != 0 && DestStages != 0, "Stage mask must not be 0");
 
     vkCmdPipelineBarrier(CmdBuffer,
                          SrcStages,  // must not be 0

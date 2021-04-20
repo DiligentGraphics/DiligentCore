@@ -30,9 +30,11 @@
 #include <memory>
 #include <vector>
 #include "VulkanInstance.hpp"
+#include "IndexWrapper.hpp"
 
 namespace VulkanUtilities
 {
+using Diligent::HardwareQueueId;
 
 class VulkanPhysicalDevice
 {
@@ -79,28 +81,31 @@ public:
                                                         const VulkanInstance& Instance);
 
     // clang-format off
-    uint32_t         FindQueueFamily     (VkQueueFlags QueueFlags)                           const;
-    VkPhysicalDevice GetVkDeviceHandle   ()                                                  const { return m_VkDevice; }
-    bool             IsExtensionSupported(const char* ExtensionName)                         const;
-    bool             CheckPresentSupport (uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface) const;
+    HardwareQueueId  FindQueueFamily     (VkQueueFlags QueueFlags)                                  const;
+    VkPhysicalDevice GetVkDeviceHandle   ()                                                         const { return m_VkDevice; }
+    bool             IsExtensionSupported(const char* ExtensionName)                                const;
+    bool             CheckPresentSupport (HardwareQueueId queueFamilyIndex, VkSurfaceKHR VkSurface) const;
     // clang-format on
 
     static constexpr uint32_t InvalidMemoryTypeIndex = ~uint32_t{0};
 
     uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
 
-    const VkPhysicalDeviceProperties&       GetProperties() const { return m_Properties; }
-    const VkPhysicalDeviceFeatures&         GetFeatures() const { return m_Features; }
-    const ExtensionFeatures&                GetExtFeatures() const { return m_ExtFeatures; }
-    const ExtensionProperties&              GetExtProperties() const { return m_ExtProperties; }
-    const VkPhysicalDeviceMemoryProperties& GetMemoryProperties() const { return m_MemoryProperties; }
-    VkFormatProperties                      GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const;
+    uint32_t                                    GetVkVersion() const { return m_VkVersion; }
+    const VkPhysicalDeviceProperties&           GetProperties() const { return m_Properties; }
+    const VkPhysicalDeviceFeatures&             GetFeatures() const { return m_Features; }
+    const ExtensionFeatures&                    GetExtFeatures() const { return m_ExtFeatures; }
+    const ExtensionProperties&                  GetExtProperties() const { return m_ExtProperties; }
+    const VkPhysicalDeviceMemoryProperties&     GetMemoryProperties() const { return m_MemoryProperties; }
+    VkFormatProperties                          GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const;
+    const std::vector<VkQueueFamilyProperties>& GetQueueProperties() const { return m_QueueFamilyProperties; }
 
 private:
     VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
                          const VulkanInstance& Instance);
 
     const VkPhysicalDevice               m_VkDevice;
+    uint32_t                             m_VkVersion        = 0;
     VkPhysicalDeviceProperties           m_Properties       = {};
     VkPhysicalDeviceFeatures             m_Features         = {};
     VkPhysicalDeviceMemoryProperties     m_MemoryProperties = {};

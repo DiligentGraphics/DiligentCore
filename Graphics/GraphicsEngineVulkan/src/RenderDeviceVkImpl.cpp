@@ -44,6 +44,7 @@
 #include "TopLevelASVkImpl.hpp"
 #include "ShaderBindingTableVkImpl.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
+#include "CommandQueueVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
@@ -55,6 +56,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
                                        IMemoryAllocator&                                      RawMemAllocator,
                                        IEngineFactory*                                        pEngineFactory,
                                        const EngineVkCreateInfo&                              EngineCI,
+                                       const GraphicsAdapterInfo&                             AdapterInfo,
                                        size_t                                                 CommandQueueCount,
                                        ICommandQueueVk**                                      CmdQueues,
                                        std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
@@ -68,12 +70,12 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         pEngineFactory,
         CommandQueueCount,
         CmdQueues,
-        EngineCI
+        EngineCI,
+        AdapterInfo
     },
     m_VulkanInstance         {Instance                 },
     m_PhysicalDevice         {std::move(PhysicalDevice)},
     m_LogicalVkDevice        {std::move(LogicalDevice) },
-    m_EngineAttribs          {EngineCI                 },
     m_FramebufferCache       {*this                    },
     m_ImplicitRenderPassCache{*this                    },
     m_DescriptorSetAllocator
@@ -120,13 +122,6 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI.DynamicDescriptorPoolSize.MaxDescriptorSets,
         false // Pools can only be reset
     },
-    m_TransientCmdPoolMgr
-    {
-        GetLogicalDevice(),
-        "Transient command buffer pool manager",
-        CmdQueues[0]->GetQueueFamilyIndex(),
-        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT
-    },
     m_MemoryMgr
     {
         "Global resource memory manager",
@@ -145,8 +140,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI.DynamicHeapSize,
         ~Uint64{0}
     },
-    m_VkVersion{std::min(m_VulkanInstance->GetVersion(), m_PhysicalDevice->GetProperties().apiVersion)},
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_VkVersion, EngineCI.pDxCompilerPath)},
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_PhysicalDevice->GetVkVersion(), EngineCI.pDxCompilerPath)},
     m_Properties
     {
         m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupHandleSize,
@@ -160,122 +154,23 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
 
-    m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_VULKAN;
-    m_DeviceCaps.MajorVersion = 1;
-    m_DeviceCaps.MinorVersion = 0;
-
-    auto& AdapterInfo = m_DeviceCaps.AdapterInfo;
-
-    const auto& DeviceProps = m_PhysicalDevice->GetProperties();
-
-    static_assert(_countof(AdapterInfo.Description) <= _countof(DeviceProps.deviceName), "");
-    for (size_t i = 0; i < _countof(AdapterInfo.Description) - 1 && DeviceProps.deviceName[i] != 0; ++i)
-        AdapterInfo.Description[i] = DeviceProps.deviceName[i];
-
-    AdapterInfo.Type               = ADAPTER_TYPE_HARDWARE;
-    AdapterInfo.Vendor             = VendorIdToAdapterVendor(DeviceProps.vendorID);
-    AdapterInfo.VendorId           = DeviceProps.vendorID;
-    AdapterInfo.DeviceId           = DeviceProps.deviceID;
-    AdapterInfo.NumOutputs         = 0;
-    AdapterInfo.DeviceLocalMemory  = 0;
-    AdapterInfo.HostVisibileMemory = 0;
-    AdapterInfo.UnifiedMemory      = 0;
-
-    const auto& MemoryProps = m_PhysicalDevice->GetMemoryProperties();
-    for (uint32_t heap = 0; heap < MemoryProps.memoryHeapCount; ++heap)
+    for (Uint32 q = 0; q < CommandQueueCount; ++q)
     {
-        const auto& HeapInfo = MemoryProps.memoryHeaps[heap];
-        if (HeapInfo.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+        auto QueueFanilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueIndex{q}).GetQueueFamilyIndex()};
+
+        if (m_TransientCmdPoolMgrs.find(QueueFanilyIndex) == m_TransientCmdPoolMgrs.end())
         {
-            bool IsUnified = false;
-            for (uint32_t type = 0; type < MemoryProps.memoryTypeCount; ++type)
-            {
-                const auto& MemTypeInfo = MemoryProps.memoryTypes[type];
-                if (MemTypeInfo.heapIndex != heap)
-                    continue;
-                constexpr auto UnifiedMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-                if ((MemTypeInfo.propertyFlags & UnifiedMemoryFlags) == UnifiedMemoryFlags)
-                {
-                    IsUnified = true;
-                    // Host-visible memory is always writable, even if it is not coherent
-                    AdapterInfo.UnifiedMemoryCPUAccess |= CPU_ACCESS_WRITE;
-                    if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
-                        AdapterInfo.UnifiedMemoryCPUAccess |= CPU_ACCESS_READ;
-                }
-            }
-            (IsUnified ? AdapterInfo.UnifiedMemory : AdapterInfo.DeviceLocalMemory) += static_cast<Uint64>(HeapInfo.size);
-        }
-        else
-        {
-            AdapterInfo.HostVisibileMemory += static_cast<Uint64>(HeapInfo.size);
+            m_TransientCmdPoolMgrs.emplace(
+                QueueFanilyIndex,
+                CommandPoolManager{GetLogicalDevice(),
+                                   "Transient command buffer pool manager",
+                                   QueueFanilyIndex,
+                                   VK_COMMAND_POOL_CREATE_TRANSIENT_BIT});
         }
     }
 
     for (Uint32 fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
         m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
-
-    auto& Features = m_DeviceCaps.Features;
-    Features       = EngineCI.Features;
-
-    // The following features are always enabled
-    Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
-    Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
-    Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
-    Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
-    Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
-    Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
-    Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
-    Features.TimestampQueries              = DEVICE_FEATURE_STATE_ENABLED;
-    Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
-
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
-    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
-#endif
-
-    const auto& vkDeviceLimits    = m_PhysicalDevice->GetProperties().limits;
-    const auto& vkEnabledFeatures = m_LogicalVkDevice->GetEnabledFeatures();
-
-    auto& TexCaps = m_DeviceCaps.TexCaps;
-
-    TexCaps.MaxTexture1DDimension     = vkDeviceLimits.maxImageDimension1D;
-    TexCaps.MaxTexture1DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
-    TexCaps.MaxTexture2DDimension     = vkDeviceLimits.maxImageDimension2D;
-    TexCaps.MaxTexture2DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
-    TexCaps.MaxTexture3DDimension     = vkDeviceLimits.maxImageDimension3D;
-    TexCaps.MaxTextureCubeDimension   = vkDeviceLimits.maxImageDimensionCube;
-    TexCaps.Texture2DMSSupported      = True;
-    TexCaps.Texture2DMSArraySupported = True;
-    TexCaps.TextureViewSupported      = True;
-    TexCaps.CubemapArraysSupported    = vkEnabledFeatures.imageCubeArray;
-
-
-    auto& SamCaps = m_DeviceCaps.SamCaps;
-
-    SamCaps.BorderSamplingModeSupported   = True;
-    SamCaps.AnisotropicFilteringSupported = vkEnabledFeatures.samplerAnisotropy;
-    SamCaps.LODBiasSupported              = True;
-
-    if (Features.RayTracing)
-    {
-        m_DeviceProperties.MaxRayTracingRecursionDepth = m_Properties.MaxRayTracingRecursionDepth;
-    }
-    if (Features.WaveOp)
-    {
-        const auto& vkWaveProps                   = m_PhysicalDevice->GetExtProperties().Subgroup;
-        m_DeviceProperties.WaveOp.MinSize         = vkWaveProps.subgroupSize;
-        m_DeviceProperties.WaveOp.MaxSize         = vkWaveProps.subgroupSize;
-        m_DeviceProperties.WaveOp.SupportedStages = VkShaderStageFlagsToShaderTypes(vkWaveProps.supportedStages);
-        m_DeviceProperties.WaveOp.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
-    }
-
-    auto& Limits = m_DeviceCaps.Limits;
-
-    Limits.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
-    Limits.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
-#if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
-#endif
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()
@@ -293,12 +188,15 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     ReleaseStaleResources(true);
 
     DEV_CHECK_ERR(m_DescriptorSetAllocator.GetAllocatedDescriptorSetCounter() == 0, "All allocated descriptor sets must have been released now.");
-    DEV_CHECK_ERR(m_TransientCmdPoolMgr.GetAllocatedPoolCount() == 0, "All allocated transient command pools must have been released now. If there are outstanding references to the pools in release queues, the app will crash when CommandPoolManager::FreeCommandPool() is called.");
     DEV_CHECK_ERR(m_DynamicDescriptorPool.GetAllocatedPoolCounter() == 0, "All allocated dynamic descriptor pools must have been released now.");
     DEV_CHECK_ERR(m_DynamicMemoryManager.GetMasterBlockCounter() == 0, "All allocated dynamic master blocks must have been returned to the pool.");
 
     // Immediately destroys all command pools
-    m_TransientCmdPoolMgr.DestroyPools();
+    for (auto& CmdPool : m_TransientCmdPoolMgrs)
+    {
+        DEV_CHECK_ERR(CmdPool.second.GetAllocatedPoolCount() == 0, "All allocated transient command pools must have been released now. If there are outstanding references to the pools in release queues, the app will crash when CommandPoolManager::FreeCommandPool() is called.");
+        CmdPool.second.DestroyPools();
+    }
 
     // We must destroy command queues explicitly prior to releasing Vulkan device
     DestroyCommandQueues();
@@ -312,9 +210,17 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
 }
 
 
-void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName)
+void RenderDeviceVkImpl::AllocateTransientCmdPool(CommandQueueIndex                    CommandQueueId,
+                                                  VulkanUtilities::CommandPoolWrapper& CmdPool,
+                                                  VkCommandBuffer&                     vkCmdBuff,
+                                                  const Char*                          DebugPoolName)
 {
-    CmdPool = m_TransientCmdPoolMgr.AllocateCommandPool(DebugPoolName);
+    auto QueueFanilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFanilyIndex);
+    VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
+           "Con not find transiend command pool manager for queue family index (", Uint32{QueueFanilyIndex}, ")");
+
+    CmdPool = CmdPoolMgrIter->second.AllocateCommandPool(DebugPoolName);
 
     // Allocate command buffer from the cmd pool
     VkCommandBufferAllocateInfo BuffAllocInfo{};
@@ -342,7 +248,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
 }
 
 
-void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32                                QueueIndex,
+void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(CommandQueueIndex                     CommandQueueId,
                                                            VkCommandBuffer                       vkCmdBuff,
                                                            VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
@@ -351,11 +257,6 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32               
     auto err = vkEndCommandBuffer(vkCmdBuff);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer");
     (void)err;
-
-    VkSubmitInfo SubmitInfo{};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.commandBufferCount = 1;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuff;
 
     // We MUST NOT discard stale objects when executing transient command buffer,
     // otherwise a resource can be destroyed while still being used by the GPU:
@@ -383,10 +284,10 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32               
     // Since transient command buffers do not count as real command buffers, submit them directly to the queue
     // to avoid interference with the command buffer counter
     Uint64 FenceValue = 0;
-    LockCmdQueueAndRun(QueueIndex,
+    LockCmdQueueAndRun(CommandQueueId,
                        [&](ICommandQueueVk* pCmdQueueVk) //
                        {
-                           FenceValue = pCmdQueueVk->Submit(SubmitInfo);
+                           FenceValue = pCmdQueueVk->SubmitCmdBuffer(vkCmdBuff);
                        } //
     );
 
@@ -441,14 +342,19 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32               
         VkCommandBuffer                     vkCmdBuffer = VK_NULL_HANDLE;
     };
 
+    auto QueueFanilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFanilyIndex);
+    VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
+           "Con not find transiend command pool manager for queue family index (", Uint32{QueueFanilyIndex}, ")");
+
     // Discard command pool directly to the release queue since we know exactly which queue it was submitted to
     // as well as the associated FenceValue
     // clang-format off
-    GetReleaseQueue(QueueIndex).DiscardResource(
+    GetReleaseQueue(CommandQueueId).DiscardResource(
         TransientCmdPoolRecycler
         {
             GetLogicalDevice(),
-            m_TransientCmdPoolMgr,
+            CmdPoolMgrIter->second,
             std::move(CmdPool),
             std::move(vkCmdBuff)
         },
@@ -456,41 +362,39 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32               
     // clang-format on
 }
 
-void RenderDeviceVkImpl::SubmitCommandBuffer(Uint32                                                 QueueIndex,
-                                             const VkSubmitInfo&                                    SubmitInfo,
-                                             Uint64&                                                SubmittedCmdBuffNumber, // Number of the submitted command buffer
-                                             Uint64&                                                SubmittedFenceValue,    // Fence value associated with the submitted command buffer
-                                             std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pFences                 // List of fences to signal
+void RenderDeviceVkImpl::SubmitCommandBuffer(CommandQueueIndex                                           CommandQueueId,
+                                             const VkSubmitInfo&                                         SubmitInfo,
+                                             Uint64&                                                     SubmittedCmdBuffNumber, // Number of the submitted command buffer
+                                             Uint64&                                                     SubmittedFenceValue,    // Fence value associated with the submitted command buffer
+                                             std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pFences                 // List of fences to signal
 )
 {
     // Submit the command list to the queue
-    auto CmbBuffInfo       = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, true, SubmitInfo);
+    auto CmbBuffInfo       = TRenderDeviceBase::SubmitCommandBuffer(CommandQueueId, true, SubmitInfo);
     SubmittedFenceValue    = CmbBuffInfo.FenceValue;
     SubmittedCmdBuffNumber = CmbBuffInfo.CmdBufferNumber;
+
     if (pFences != nullptr)
     {
+        auto* pQueue     = m_CommandQueues[CommandQueueId].CmdQueue.RawPtr<CommandQueueVkImpl>();
+        auto  pSyncPoint = pQueue->GetLastSyncPoint();
+
         for (auto& val_fence : *pFences)
         {
             auto* pFenceVkImpl = val_fence.second.RawPtr<FenceVkImpl>();
-            auto  vkFence      = pFenceVkImpl->GetVkFence();
-            m_CommandQueues[QueueIndex].CmdQueue->SignalFence(vkFence);
-            pFenceVkImpl->AddPendingFence(std::move(vkFence), val_fence.first);
+            pFenceVkImpl->AddPendingSyncPoint(CommandQueueId, val_fence.first, pSyncPoint);
         }
     }
 }
 
-Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(Uint32 QueueIndex, const VkSubmitInfo& SubmitInfo, DeviceContextVkImpl* pImmediateCtx, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences)
+Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(CommandQueueIndex CommandQueueId, const VkSubmitInfo& SubmitInfo, std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences)
 {
-    // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
-    // Stale objects MUST only be discarded when submitting cmd list from the immediate context
-    VERIFY(!pImmediateCtx->IsDeferred(), "Command buffers must be submitted from immediate context only");
-
     Uint64 SubmittedFenceValue    = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
-    SubmitCommandBuffer(QueueIndex, SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, pSignalFences);
+    SubmitCommandBuffer(CommandQueueId, SubmitInfo, SubmittedCmdBuffNumber, SubmittedFenceValue, pSignalFences);
 
     m_MemoryMgr.ShrinkMemory();
-    PurgeReleaseQueue(QueueIndex);
+    PurgeReleaseQueue(CommandQueueId);
 
     return SubmittedFenceValue;
 }
@@ -503,12 +407,12 @@ void RenderDeviceVkImpl::IdleGPU()
     ReleaseStaleResources();
 }
 
-void RenderDeviceVkImpl::FlushStaleResources(Uint32 CmdQueueIndex)
+void RenderDeviceVkImpl::FlushStaleResources(CommandQueueIndex CmdQueueIndex)
 {
     // Submit empty command buffer to the queue. This will effectively signal the fence and
     // discard all resources
-    VkSubmitInfo DummySumbitInfo = {};
-    TRenderDeviceBase::SubmitCommandBuffer(0, true, DummySumbitInfo);
+    VkSubmitInfo DummySumbitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    TRenderDeviceBase::SubmitCommandBuffer(CmdQueueIndex, true, DummySumbitInfo);
 }
 
 void RenderDeviceVkImpl::ReleaseStaleResources(bool ForceRelease)
@@ -763,6 +667,33 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
                                                          bool                                 IsDeviceInternal)
 {
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, IsDeviceInternal);
+}
+
+void RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueueMask,
+                                                           uint32_t  outQueueFamilyIndices[],
+                                                           uint32_t& inoutQueueFamilyIndicesCount) const
+{
+    std::bitset<MAX_COMMAND_QUEUES> QueueFamilyBits;
+
+    const auto MaxCount = inoutQueueFamilyIndicesCount;
+
+    inoutQueueFamilyIndicesCount = 0;
+
+    for (; CommandQueueMask != 0;)
+    {
+        auto CmdQueueInd = PlatformMisc::GetLSB(CommandQueueMask);
+        CommandQueueMask &= ~(Uint64(1) << CmdQueueInd);
+
+        auto* CmdQueue    = ValidatedCast<const CommandQueueVkImpl>(&GetCommandQueue(CommandQueueIndex{CmdQueueInd}));
+        auto  FamilyIndex = CmdQueue->GetQueueFamilyIndex();
+
+        if (!QueueFamilyBits[FamilyIndex])
+        {
+            QueueFamilyBits[FamilyIndex] = true;
+
+            outQueueFamilyIndices[inoutQueueFamilyIndicesCount++] = FamilyIndex;
+        }
+    }
 }
 
 } // namespace Diligent

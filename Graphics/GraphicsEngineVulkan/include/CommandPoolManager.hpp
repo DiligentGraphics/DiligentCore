@@ -42,12 +42,13 @@ class CommandPoolManager
 public:
     CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
                        std::string                                 Name,
-                       uint32_t                                    queueFamilyIndex,
+                       HardwareQueueId                             queueFamilyIndex,
                        VkCommandPoolCreateFlags                    flags) noexcept;
+
+    CommandPoolManager(CommandPoolManager&& Other);
 
     // clang-format off
     CommandPoolManager             (const CommandPoolManager&)  = delete;
-    CommandPoolManager             (      CommandPoolManager&&) = delete;
     CommandPoolManager& operator = (const CommandPoolManager&)  = delete;
     CommandPoolManager& operator = (      CommandPoolManager&&) = delete;
     // clang-format on
@@ -72,8 +73,8 @@ public:
 private:
     const VulkanUtilities::VulkanLogicalDevice& m_LogicalDevice;
 
-    const std::string              m_Name;
-    const uint32_t                 m_QueueFamilyIndex;
+    std::string                    m_Name;
+    const HardwareQueueId          m_QueueFamilyIndex;
     const VkCommandPoolCreateFlags m_CmdPoolFlags;
 
     std::mutex                                                                                               m_Mutex;

@@ -84,7 +84,8 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryVk, IEngineFactory)
     /// Creates a swap chain for Vulkan-based engine implementation
 
     /// \param [in] pDevice           - Pointer to the render device
-    /// \param [in] pImmediateContext - Pointer to the immediate device context
+    /// \param [in] pImmediateContext - Pointer to the immediate device context.
+    ///                                 Swap chain creation will fail if context can not present to window.
     /// \param [in] SCDesc            - Swap chain description
     /// \param [in] Window            - Platform-specific native window description that
     ///                                 the swap chain will be associated with.

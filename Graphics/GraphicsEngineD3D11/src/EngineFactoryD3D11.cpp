@@ -40,6 +40,7 @@
 #include "D3D11TypeConversions.hpp"
 #include "EngineMemory.h"
 #include "EngineFactoryD3DBase.hpp"
+#include "EngineFactoryBase.hpp"
 
 namespace Diligent
 {
@@ -76,6 +77,10 @@ public:
                                                         const EngineD3D11CreateInfo& EngineCI,
                                                         IRenderDevice**              ppDevice,
                                                         IDeviceContext**             ppContexts) override final;
+
+    virtual void InitializeGraphicsAdapterInfo(void*                pd3Device,
+                                               IDXGIAdapter1*       pDXIAdapter,
+                                               GraphicsAdapterInfo& AdapterInfo) const override final;
 };
 
 
@@ -108,9 +113,9 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
-    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+    if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
         return;
     }
 
@@ -118,14 +123,14 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     if (!ppDevice || !ppContexts)
         return;
 
-    if (EngineCI.MinimumFeatureLevel >= DIRECT3D_FEATURE_LEVEL_12_0)
+    if (EngineCI.GraphicsAPIVersion >= Version{12, 0})
     {
         LOG_ERROR_MESSAGE("DIRECT3D_FEATURE_LEVEL_12_0 and above is not supported by Direct3D11 backend");
         return;
     }
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumContexts) + EngineCI.NumDeferredContexts));
 
     // This flag adds support for surfaces with a different color channel ordering
     // than the API default. It is required for compatibility with Direct2D.
@@ -143,7 +148,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     CComPtr<IDXGIAdapter1> SpecificAdapter;
     if (EngineCI.AdapterId != DEFAULT_ADAPTER_ID)
     {
-        auto Adapters = FindCompatibleAdapters(EngineCI.MinimumFeatureLevel);
+        auto Adapters = FindCompatibleAdapters(EngineCI.GraphicsAPIVersion);
         if (EngineCI.AdapterId < Adapters.size())
             SpecificAdapter = Adapters[EngineCI.AdapterId];
         else
@@ -155,6 +160,8 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     // Create the Direct3D 11 API device object and a corresponding context.
     CComPtr<ID3D11Device>        pd3d11Device;
     CComPtr<ID3D11DeviceContext> pd3d11Context;
+
+    const Version FeatureLevelList[] = {{11, 1}, {11, 0}, {10, 1}, {10, 0}};
 
     for (int adapterType = 0; adapterType < 2 && !pd3d11Device; ++adapterType)
     {
@@ -179,8 +186,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
         //     If you provide a D3D_FEATURE_LEVEL array that contains D3D_FEATURE_LEVEL_11_1 on a computer that doesn't have the Direct3D 11.1
         //     runtime installed, this function immediately fails with E_INVALIDARG.
         // To avoid failure in this case we will try one feature level at a time
-        constexpr auto MaxFeatureLevel = DIRECT3D_FEATURE_LEVEL_11_1;
-        for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= EngineCI.MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel} - 1))
+        for (auto FeatureLevel : FeatureLevelList)
         {
             auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
             auto hr              = D3D11CreateDevice(
@@ -211,18 +217,49 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
 }
 
 
+static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D11Device(ID3D11Device* pd3d11Device)
+{
+    CComPtr<IDXGIDevice> pDXGIDevice;
+
+    auto hr = pd3d11Device->QueryInterface(__uuidof(pDXGIDevice), reinterpret_cast<void**>(static_cast<IDXGIDevice**>(&pDXGIDevice)));
+    if (SUCCEEDED(hr))
+    {
+        CComPtr<IDXGIAdapter> pDXGIAdapter;
+        hr = pDXGIDevice->GetAdapter(&pDXGIAdapter);
+        if (SUCCEEDED(hr))
+        {
+            CComPtr<IDXGIAdapter1> pDXGIAdapter1;
+            pDXGIAdapter.QueryInterface(&pDXGIAdapter1);
+            return pDXGIAdapter1;
+        }
+        else
+        {
+            LOG_ERROR("Failed to get DXGI Adapter from DXGI Device.");
+        }
+    }
+    else
+    {
+        LOG_ERROR("Failed to query IDXGIDevice from D3D device.");
+    }
+
+    return nullptr;
+}
+
+
 void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd3d11NativeDevice,
                                                  void*                        pd3d11ImmediateContext,
-                                                 const EngineD3D11CreateInfo& EngineCI,
+                                                 const EngineD3D11CreateInfo& _EngineCI,
                                                  IRenderDevice**              ppDevice,
                                                  IDeviceContext**             ppContexts)
 {
+    EngineD3D11CreateInfo EngineCI = _EngineCI;
+
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
-    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+    if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
         return;
     }
 
@@ -230,14 +267,30 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
     if (!ppDevice || !ppContexts)
         return;
 
+    *ppDevice = nullptr;
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumContexts) + EngineCI.NumDeferredContexts));
+
+    if (EngineCI.NumContexts > 1)
+    {
+        LOG_WARNING_MESSAGE("Direct3D11 back-end does not support multiple immediate contexts");
+        EngineCI.NumContexts = 1;
+    }
+
     try
     {
-        auto* pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
-        auto* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
+        ID3D11Device*        pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
+        ID3D11DeviceContext* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
+        auto                 pDXGIAdapter1      = DXGIAdapterFromD3D11Device(pd3d11Device);
+
+        GraphicsAdapterInfo AdapterInfo;
+        InitializeGraphicsAdapterInfo(pd3d11NativeDevice, pDXGIAdapter1, AdapterInfo);
+        EnableDeviceFeatures(AdapterInfo.Capabilities.Features, EngineCI.Features);
+        AdapterInfo.Capabilities.Features = EngineCI.Features;
+        VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto&                  RawAlloctor = GetRawAllocator();
-        RenderDeviceD3D11Impl* pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(RawAlloctor, this, EngineCI, pd3d11Device, EngineCI.NumDeferredContexts));
+        RenderDeviceD3D11Impl* pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(RawAlloctor, this, EngineCI, AdapterInfo, pd3d11Device));
         pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         CComQIPtr<ID3D11DeviceContext1> pd3d11ImmediateCtx1{pd3d11ImmediateCtx};
@@ -248,7 +301,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D11 will
         // keep a weak reference to the context
         pDeviceContextD3D11->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
-        pRenderDeviceD3D11->SetImmediateContext(pDeviceContextD3D11);
+        pRenderDeviceD3D11->SetImmediateContext(0, pDeviceContextD3D11);
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
@@ -322,6 +375,107 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
 
         LOG_ERROR("Failed to create the swap chain");
     }
+}
+
+
+void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                pd3Device,
+                                                           IDXGIAdapter1*       pDXIAdapter,
+                                                           GraphicsAdapterInfo& AdapterInfo) const
+{
+    TBase::InitializeGraphicsAdapterInfo(pd3Device, pDXIAdapter, AdapterInfo);
+
+    AdapterInfo.Capabilities.DevType = RENDER_DEVICE_TYPE_D3D11;
+
+    ID3D11Device* pd3d11Device = reinterpret_cast<ID3D11Device*>(pd3Device);
+    if (pd3d11Device == nullptr)
+    {
+        const Version FeatureLevelList[] = {{11, 1}, {11, 0}, {10, 1}, {10, 0}};
+        for (auto FeatureLevel : FeatureLevelList)
+        {
+            auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+            auto hr              = D3D11CreateDevice(
+                pDXIAdapter,             // Specify nullptr to use the default adapter.
+                D3D_DRIVER_TYPE_UNKNOWN, // If no adapter specified, request hardware graphics driver.
+                0,                       // Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
+                0,                       // Set debug and Direct2D compatibility flags.
+                &d3dFeatureLevel,        // List of feature levels this app can support.
+                1,                       // Size of the list above.
+                D3D11_SDK_VERSION,       // Always set this to D3D11_SDK_VERSION for Windows Store apps.
+                &pd3d11Device,           // Returns the Direct3D device created.
+                nullptr,                 // Returns feature level of device created.
+                nullptr                  // Returns the device immediate context.
+            );
+            if (SUCCEEDED(hr))
+                break;
+        }
+        if (pd3d11Device == nullptr)
+            return;
+    }
+    VERIFY_EXPR(pd3d11Device != nullptr);
+
+    switch (pd3d11Device->GetFeatureLevel())
+    {
+        case D3D_FEATURE_LEVEL_11_1: AdapterInfo.Capabilities.APIVersion = {11, 1}; break;
+        case D3D_FEATURE_LEVEL_11_0: AdapterInfo.Capabilities.APIVersion = {11, 0}; break;
+        case D3D_FEATURE_LEVEL_10_1: AdapterInfo.Capabilities.APIVersion = {10, 1}; break;
+        case D3D_FEATURE_LEVEL_10_0: AdapterInfo.Capabilities.APIVersion = {10, 0}; break;
+        default: UNEXPECTED("Unexpected D3D feature level");
+    }
+
+    // Set texture and sampler capabilities
+    {
+        auto& Features = AdapterInfo.Capabilities.Features;
+        {
+            bool ShaderFloat16Supported = false;
+
+            D3D11_FEATURE_DATA_SHADER_MIN_PRECISION_SUPPORT d3d11MinPrecisionSupport = {};
+            if (SUCCEEDED(pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_SHADER_MIN_PRECISION_SUPPORT, &d3d11MinPrecisionSupport, sizeof(d3d11MinPrecisionSupport))))
+            {
+                ShaderFloat16Supported =
+                    (d3d11MinPrecisionSupport.PixelShaderMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0 &&
+                    (d3d11MinPrecisionSupport.AllOtherShaderStagesMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0;
+            }
+            Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+        }
+
+        auto& TexCaps = AdapterInfo.Capabilities.TexCaps;
+
+        TexCaps.MaxTexture1DDimension     = D3D11_REQ_TEXTURE1D_U_DIMENSION;
+        TexCaps.MaxTexture1DArraySlices   = D3D11_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
+        TexCaps.MaxTexture2DDimension     = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        TexCaps.MaxTexture2DArraySlices   = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        TexCaps.MaxTexture3DDimension     = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        TexCaps.MaxTextureCubeDimension   = D3D11_REQ_TEXTURECUBE_DIMENSION;
+        TexCaps.Texture2DMSSupported      = True;
+        TexCaps.Texture2DMSArraySupported = True;
+        TexCaps.TextureViewSupported      = True;
+        TexCaps.CubemapArraysSupported    = True;
+
+        auto& SamCaps = AdapterInfo.Capabilities.SamCaps;
+
+        SamCaps.BorderSamplingModeSupported   = True;
+        SamCaps.AnisotropicFilteringSupported = True;
+        SamCaps.LODBiasSupported              = True;
+    }
+
+    // Set limits
+    {
+        auto& Limits = AdapterInfo.Limits;
+        // Offsets passed to *SSetConstantBuffers1 are measured in shader constants, which are
+        // 16 bytes (4*32-bit components). Each offset must be a multiple of 16 constants,
+        // i.e. 256 bytes.
+        Limits.ConstantBufferOffsetAlignment   = 256;
+        Limits.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
+    }
+
+    if (pd3Device == nullptr)
+        pd3d11Device->Release();
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
+    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+#endif
 }
 
 #ifdef DOXYGEN

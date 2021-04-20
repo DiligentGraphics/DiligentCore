@@ -186,6 +186,8 @@ public:
     };
     const GLDeviceLimits& GetDeviceLimits() const { return m_DeviceLimits; }
 
+    RefCntAutoPtr<IDeviceContext> GetImmediateContext() { return TRenderDeviceBase::GetImmediateContext(0); }
+
 protected:
     friend class DeviceContextGLImpl;
     friend class TextureBaseGL;
@@ -211,8 +213,9 @@ protected:
 
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
-    bool         CheckExtension(const Char* ExtensionString);
+    bool         CheckExtension(const Char* ExtensionString) const;
     void         FlagSupportedTexFormats();
+    void         UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo) const;
 
     int m_ShowDebugGLOutput = 1;
 

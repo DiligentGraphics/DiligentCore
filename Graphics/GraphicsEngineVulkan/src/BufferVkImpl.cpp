@@ -172,16 +172,39 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_DYNAMIC)
     {
-        auto CtxCount = 1 + pRenderDeviceVk->GetNumDeferredContexts();
+        auto CtxCount = pRenderDeviceVk->GetNumImmediateContexts() + pRenderDeviceVk->GetNumDeferredContexts();
         m_DynamicData.reserve(CtxCount);
         for (Uint32 ctx = 0; ctx < CtxCount; ++ctx)
             m_DynamicData.emplace_back();
+    }
+
+    VkBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE; // sharing mode of the buffer when it will be accessed by multiple queue families.
+    VkBuffCI.queueFamilyIndexCount = 0;                         // number of entries in the pQueueFamilyIndices array
+    VkBuffCI.pQueueFamilyIndices   = nullptr;                   // list of queue families that will access this buffer
+                                                                // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
+
+    std::array<uint32_t, MAX_COMMAND_QUEUES> QueueFamilyIndices = {};
+    if (PlatformMisc::CountOneBits(BuffDesc.CommandQueueMask) > 1)
+    {
+        uint32_t queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
+        GetDevice()->ConvertCmdQueueIdsToQueueFamilies(BuffDesc.CommandQueueMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
+
+        // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
+        if (queueFamilyIndexCount > 1)
+        {
+            VkBuffCI.sharingMode           = VK_SHARING_MODE_CONCURRENT;
+            VkBuffCI.pQueueFamilyIndices   = QueueFamilyIndices.data();
+            VkBuffCI.queueFamilyIndexCount = queueFamilyIndexCount;
+        }
     }
 
     if (m_Desc.Usage == USAGE_DYNAMIC &&
         (VkBuffCI.usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT)) == 0 &&
         (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) == 0)
     {
+        VERIFY(VkBuffCI.sharingMode == VK_SHARING_MODE_EXCLUSIVE,
+               "Sharing mode is not supported for dynamic buffers, must be handled by ValidateBufferDesc()");
+
         // Dynamic constant/vertex/index/structured buffers are suballocated in the upload heap when Map() is called.
         // Dynamic formatted buffers or writable buffers need to be allocated in GPU-local memory.
         constexpr RESOURCE_STATE State = static_cast<RESOURCE_STATE>(
@@ -210,11 +233,6 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     }
     else
     {
-        VkBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE; // sharing mode of the buffer when it will be accessed by multiple queue families.
-        VkBuffCI.queueFamilyIndexCount = 0;                         // number of entries in the pQueueFamilyIndices array
-        VkBuffCI.pQueueFamilyIndices   = nullptr;                   // list of queue families that will access this buffer
-                                                                    // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
-
         m_VulkanBuffer = LogicalDevice.CreateBuffer(VkBuffCI, m_Desc.Name);
 
         VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
@@ -365,16 +383,17 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
                 CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
+                const auto                          CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
                 VulkanUtilities::CommandPoolWrapper CmdPool;
                 VkCommandBuffer                     vkCmdBuff;
-                pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
+                pRenderDeviceVk->AllocateTransientCmdPool(CmdQueueInd, CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
 
-                auto EnabledShaderStages = LogicalDevice.GetEnabledShaderStages();
-                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledShaderStages);
+                const auto SupportedStagesMask = ~0u;
+                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, SupportedStagesMask);
                 InitialState              = RESOURCE_STATE_COPY_DEST;
                 VkAccessFlags AccessFlags = ResourceStateFlagsToVkAccessFlags(InitialState);
                 VERIFY_EXPR(AccessFlags == VK_ACCESS_TRANSFER_WRITE_BIT);
-                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags, EnabledShaderStages);
+                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags, SupportedStagesMask);
 
                 // Copy commands MUST be recorded outside of a render pass instance. This is OK here
                 // as copy will be the only command in the cmd buffer
@@ -384,8 +403,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 BuffCopy.size      = VkBuffCI.size;
                 vkCmdCopyBuffer(vkCmdBuff, StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
 
-                Uint32 QueueIndex = 0;
-                pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
+                pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
 
 
                 // After command buffer is submitted, safe-release staging resources. This strategy
@@ -412,8 +430,8 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 //              |            |                                                |   - {F+1, StagingBuffer} -> Release Queue
                 //              |            |                                                |
 
-                pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer), Uint64{1} << Uint64{QueueIndex});
-                pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{QueueIndex});
+                pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingBuffer), Uint64{1} << Uint64{CmdQueueInd});
+                pRenderDeviceVk->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{CmdQueueInd});
             }
         }
 
@@ -489,7 +507,7 @@ void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
 VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDesc& ViewDesc)
 {
     VulkanUtilities::BufferViewWrapper BuffView;
-    ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, GetDevice()->GetDeviceCaps().Limits.StructuredBufferOffsetAlignment);
+    ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, GetDevice()->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
     if (m_Desc.Mode == BUFFER_MODE_FORMATTED)
     {
         VkBufferViewCreateInfo ViewCI{};

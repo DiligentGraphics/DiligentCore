@@ -234,7 +234,8 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap");
 
-            auto InitContext = pRenderDeviceD3D12->AllocateCommandContext();
+            const auto CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
+            auto       InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
             // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
             VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
             std::vector<D3D12_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D12_SUBRESOURCE_DATA>> D3D12SubResData(pInitData->NumSubresources, D3D12_SUBRESOURCE_DATA(), STD_ALLOCATOR_RAW_MEM(D3D12_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D12_SUBRESOURCE_DATA>"));
@@ -265,8 +266,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             //                  |     N+1, but resource it references    |                                   |
             //                  |     was added to the delete queue      |                                   |
             //                  |     with value N                       |                                   |
-            Uint32 QueueIndex = 0;
-            pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(QueueIndex, std::move(InitContext));
+            pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(CmdQueueInd, std::move(InitContext));
 
             // We MUST NOT call TransitionResource() from here, because
             // it will call AddRef() and potentially Release(), while
@@ -274,7 +274,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             // Add reference to the object to the release queue to keep it alive
             // until copy operation is complete.  This must be done after
             // submitting command list for execution!
-            pRenderDeviceD3D12->SafeReleaseDeviceObject(std::move(UploadBuffer), Uint64{1} << QueueIndex);
+            pRenderDeviceD3D12->SafeReleaseDeviceObject(std::move(UploadBuffer), Uint64{1} << CmdQueueInd);
         }
     }
     else if (m_Desc.Usage == USAGE_STAGING)

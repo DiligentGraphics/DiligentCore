@@ -68,6 +68,11 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         VERIFY_EXPR(ExtensionCount == m_SupportedExtensions.size());
     }
 
+    m_VkVersion = std::min(Instance.GetVersion(), m_Properties.apiVersion);
+
+    // remove patch version
+    m_VkVersion &= ~VK_MAKE_VERSION(0, 0, VK_VERSION_PATCH(~0u));
+
 #if DILIGENT_USE_VOLK
     if (Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
@@ -78,8 +83,6 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         VkPhysicalDeviceProperties2 Props2{};
         Props2.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
         void** NextProp = &Props2.pNext;
-
-        const auto VkVersion = std::min(Instance.GetVersion(), m_Properties.apiVersion);
 
         if (IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
         {
@@ -188,7 +191,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtFeatures.Spirv14 = true;
 
         // Some features require SPIRV 1.4 or 1.5 which was added to the Vulkan 1.2 core.
-        if (VkVersion >= VK_API_VERSION_1_2)
+        if (m_VkVersion >= VK_API_VERSION_1_2)
         {
             m_ExtFeatures.Spirv14 = true;
             m_ExtFeatures.Spirv15 = true;
@@ -212,7 +215,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 #    endif
 
         // Subgroup feature requires Vulkan 1.1 core.
-        if (VkVersion >= VK_API_VERSION_1_1)
+        if (m_VkVersion >= VK_API_VERSION_1_1)
         {
             *NextProp = &m_ExtProperties.Subgroup;
             NextProp  = &m_ExtProperties.Subgroup.pNext;
@@ -246,7 +249,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 #endif // DILIGENT_USE_VOLK
 }
 
-uint32_t VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const
+HardwareQueueId VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const
 {
     // All commands that are allowed on a queue that supports transfer operations are also allowed on
     // a queue that supports either graphics or compute operations. Thus, if the capabilities of a queue
@@ -311,7 +314,7 @@ uint32_t VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const
         LOG_ERROR_AND_THROW("Failed to find suitable queue family");
     }
 
-    return FamilyInd;
+    return HardwareQueueId{FamilyInd};
 }
 
 bool VulkanPhysicalDevice::IsExtensionSupported(const char* ExtensionName) const
@@ -323,7 +326,7 @@ bool VulkanPhysicalDevice::IsExtensionSupported(const char* ExtensionName) const
     return false;
 }
 
-bool VulkanPhysicalDevice::CheckPresentSupport(uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface) const
+bool VulkanPhysicalDevice::CheckPresentSupport(HardwareQueueId queueFamilyIndex, VkSurfaceKHR VkSurface) const
 {
     VkBool32 PresentSupport = VK_FALSE;
     vkGetPhysicalDeviceSurfaceSupportKHR(m_VkDevice, queueFamilyIndex, VkSurface, &PresentSupport);

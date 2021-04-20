@@ -127,6 +127,11 @@ void TestingSwapChainD3D11::TakeSnapshot()
     m_pd3d11Context->ClearState();
 }
 
+void TestingSwapChainD3D11::TakeSnapshot(ITexture* pBlitFrom)
+{
+    UNEXPECTED("Not implemented");
+}
+
 void CreateTestingSwapChainD3D11(IRenderDevice*       pDevice,
                                  IDeviceContext*      pContext,
                                  const SwapChainDesc& SCDesc,

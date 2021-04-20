@@ -43,6 +43,7 @@
 #include "FixedBlockMemoryAllocator.hpp"
 #include "EngineMemory.h"
 #include "STDAllocator.hpp"
+#include "IndexWrapper.hpp"
 
 namespace std
 {
@@ -206,17 +207,19 @@ public:
     using ShaderBindingTableImplType        = typename EngineImplTraits::ShaderBindingTableImplType;
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
 
-    /// \param pRefCounters        - Reference counters object that controls the lifetime of this render device
-    /// \param RawMemAllocator     - Allocator that will be used to allocate memory for all device objects (including render device itself)
-    /// \param pEngineFactory      - Engine factory that was used to create this device
-    /// \param NumDeferredContexts - The number of deferred device contexts
+    /// \param pRefCounters         - Reference counters object that controls the lifetime of this render device
+    /// \param RawMemAllocator      - Allocator that will be used to allocate memory for all device objects (including render device itself)
+    /// \param pEngineFactory       - Engine factory that was used to create this device
+    /// \param NumImmediateContexts - The number of immediate device contexts
+    /// \param NumDeferredContexts  - The number of deferred device contexts
     ///
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
     ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
-    RenderDeviceBase(IReferenceCounters*     pRefCounters,
-                     IMemoryAllocator&       RawMemAllocator,
-                     IEngineFactory*         pEngineFactory,
-                     const EngineCreateInfo& EngineCI) :
+    RenderDeviceBase(IReferenceCounters*        pRefCounters,
+                     IMemoryAllocator&          RawMemAllocator,
+                     IEngineFactory*            pEngineFactory,
+                     const EngineCreateInfo&    EngineCI,
+                     const GraphicsAdapterInfo& AdapterInfo) :
         // clang-format off
         TObjectBase             {pRefCounters},
         m_pEngineFactory        {pEngineFactory},
@@ -224,6 +227,7 @@ public:
         m_SamplersRegistry      {RawMemAllocator, "sampler"},
         m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
+        m_wpImmediateContexts   (std::max(1u, EngineCI.NumContexts), RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
         m_wpDeferredContexts    (EngineCI.NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
         m_RawMemAllocator       {RawMemAllocator},
         m_TexObjAllocator       {RawMemAllocator, sizeof(TextureImplType),                    64},
@@ -242,7 +246,8 @@ public:
         m_BLASAllocator         {RawMemAllocator, sizeof(BottomLevelASImplType),              16},
         m_TLASAllocator         {RawMemAllocator, sizeof(TopLevelASImplType),                 16},
         m_SBTAllocator          {RawMemAllocator, sizeof(ShaderBindingTableImplType),         16},
-        m_PipeResSignAllocator  {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128}
+        m_PipeResSignAllocator  {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128},
+        m_AdapterInfo           {AdapterInfo}
     // clang-format on
     {
         // Initialize texture format info
@@ -330,13 +335,19 @@ public:
     /// Implementation of IRenderDevice::GetDeviceCaps().
     virtual const DeviceCaps& DILIGENT_CALL_TYPE GetDeviceCaps() const override final
     {
-        return m_DeviceCaps;
+        return GetAdapterInfo().Capabilities;
     }
 
     /// Implementation of IRenderDevice::GetDeviceProperties().
     virtual const DeviceProperties& DILIGENT_CALL_TYPE GetDeviceProperties() const override final
     {
-        return m_DeviceProperties;
+        return GetAdapterInfo().Properties;
+    }
+
+    /// Implementation of IRenderDevice::GetAdapterInfo().
+    virtual const GraphicsAdapterInfo& GetAdapterInfo() const override final
+    {
+        return m_AdapterInfo;
     }
 
     /// Implementation of IRenderDevice::GetTextureFormatInfo().
@@ -371,10 +382,10 @@ public:
     StateObjectsRegistry<SamplerDesc>& GetSamplerRegistry() { return m_SamplersRegistry; }
 
     /// Set weak reference to the immediate context
-    void SetImmediateContext(IDeviceContext* pImmediateContext)
+    void SetImmediateContext(size_t Ctx, IDeviceContext* pImmediateContext)
     {
-        VERIFY(m_wpImmediateContext.Lock() == nullptr, "Immediate context has already been set");
-        m_wpImmediateContext = pImmediateContext;
+        VERIFY(m_wpImmediateContexts[Ctx].Lock() == nullptr, "Immediate context has already been set");
+        m_wpImmediateContexts[Ctx] = pImmediateContext;
     }
 
     /// Set weak reference to the deferred context
@@ -384,13 +395,19 @@ public:
         m_wpDeferredContexts[Ctx] = pDeferredCtx;
     }
 
+    /// Returns number of immediate contexts
+    size_t GetNumImmediateContexts() const
+    {
+        return m_wpImmediateContexts.size();
+    }
+
     /// Returns number of deferred contexts
     size_t GetNumDeferredContexts() const
     {
         return m_wpDeferredContexts.size();
     }
 
-    RefCntAutoPtr<IDeviceContext> GetImmediateContext() { return m_wpImmediateContext.Lock(); }
+    RefCntAutoPtr<IDeviceContext> GetImmediateContext(size_t Ctx) { return m_wpImmediateContexts[Ctx].Lock(); }
     RefCntAutoPtr<IDeviceContext> GetDeferredContext(size_t Ctx) { return m_wpDeferredContexts[Ctx].Lock(); }
 
     FixedBlockMemoryAllocator& GetTexViewObjAllocator() { return m_TexViewObjAllocator; }
@@ -609,9 +626,7 @@ protected:
     RefCntAutoPtr<IEngineFactory> m_pEngineFactory;
 
     const VALIDATION_FLAGS m_ValidationFlags;
-
-    DeviceCaps       m_DeviceCaps;
-    DeviceProperties m_DeviceProperties;
+    GraphicsAdapterInfo    m_AdapterInfo;
 
     // All state object registries hold raw pointers.
     // This is safe because every object unregisters itself
@@ -620,9 +635,9 @@ protected:
     std::vector<TextureFormatInfoExt, STDAllocatorRawMem<TextureFormatInfoExt>> m_TextureFormatsInfo;
     std::vector<bool, STDAllocatorRawMem<bool>>                                 m_TexFmtInfoInitFlags;
 
-    /// Weak reference to the immediate context. Immediate context holds strong reference
+    /// Weak reference to the immediate contexts. Immediate contexts holds strong reference
     /// to the device, so we must use weak reference to avoid circular dependencies.
-    RefCntWeakPtr<IDeviceContext> m_wpImmediateContext;
+    std::vector<RefCntWeakPtr<IDeviceContext>, STDAllocatorRawMem<RefCntWeakPtr<IDeviceContext>>> m_wpImmediateContexts;
 
     /// Weak references to deferred contexts.
     std::vector<RefCntWeakPtr<IDeviceContext>, STDAllocatorRawMem<RefCntWeakPtr<IDeviceContext>>> m_wpDeferredContexts;

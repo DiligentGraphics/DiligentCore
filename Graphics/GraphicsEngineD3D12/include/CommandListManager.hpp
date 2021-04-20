@@ -31,6 +31,7 @@
 #include <mutex>
 #include <atomic>
 #include <stdint.h>
+#include "IndexWrapper.hpp"
 
 namespace Diligent
 {
@@ -40,12 +41,12 @@ class RenderDeviceD3D12Impl;
 class CommandListManager
 {
 public:
-    CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl);
+    CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl, D3D12_COMMAND_LIST_TYPE ListType);
+    CommandListManager(CommandListManager&& Other);
     ~CommandListManager();
 
     // clang-format off
     CommandListManager             (const CommandListManager&)  = delete;
-    CommandListManager             (      CommandListManager&&) = delete;
     CommandListManager& operator = (const CommandListManager&)  = delete;
     CommandListManager& operator = (      CommandListManager&&) = delete;
     // clang-format on
@@ -54,7 +55,7 @@ public:
     void CreateNewCommandList(ID3D12GraphicsCommandList** ppList, ID3D12CommandAllocator** ppAllocator, Uint32& IfaceVersion);
 
     void RequestAllocator(ID3D12CommandAllocator** ppAllocator);
-    void ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, Uint32 CmdQueue, Uint64 FenceValue);
+    void ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, CommandQueueIndex CmdQueue, Uint64 FenceValue);
 
     // Returns allocator to the list of available allocators. The GPU must have finished using the
     // allocator
@@ -67,11 +68,18 @@ public:
     }
 #endif
 
+    D3D12_COMMAND_LIST_TYPE GetCommandListType() const
+    {
+        return m_CmdListType;
+    }
+
 private:
     std::mutex                                                                                        m_AllocatorMutex;
     std::vector<CComPtr<ID3D12CommandAllocator>, STDAllocatorRawMem<CComPtr<ID3D12CommandAllocator>>> m_FreeAllocators;
 
     RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
+
+    const D3D12_COMMAND_LIST_TYPE m_CmdListType;
 
     std::atomic_int32_t m_NumAllocators{0}; // For logging only
 

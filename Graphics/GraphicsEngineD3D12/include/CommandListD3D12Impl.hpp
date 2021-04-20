@@ -50,12 +50,14 @@ public:
         TCommandListBase
         {
             pRefCounters,
-            pDevice
+            pDevice,
+            pDeferredCtx
         },
         m_pDeferredCtx{pDeferredCtx          },
         m_pCmdContext {std::move(pCmdContext)}
     // clang-format on
     {
+        VERIFY_EXPR(m_pCmdContext);
     }
 
     ~CommandListD3D12Impl()

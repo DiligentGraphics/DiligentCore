@@ -57,7 +57,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     },
     m_DynamicData
     (
-        BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
+        BuffDesc.Usage == USAGE_DYNAMIC ? (pRenderDeviceD3D12->GetNumImmediateContexts() + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
         CtxDynamicData{},
         STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
     )
@@ -103,7 +103,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         // Dynamic upload heap buffer is always in D3D12_RESOURCE_STATE_GENERIC_READ state.
 
         SetState(RESOURCE_STATE_GENERIC_READ);
-        VERIFY_EXPR(m_DynamicData.size() == 1 + pRenderDeviceD3D12->GetNumDeferredContexts());
+        VERIFY_EXPR(m_DynamicData.size() == pRenderDeviceD3D12->GetNumImmediateContexts() + pRenderDeviceD3D12->GetNumDeferredContexts());
     }
     else
     {
@@ -187,7 +187,8 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             memcpy(DestAddress, pBuffData->pData, pBuffData->DataSize);
             UploadBuffer->Unmap(0, nullptr);
 
-            auto InitContext = pRenderDeviceD3D12->AllocateCommandContext();
+            const auto CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
+            auto       InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
             // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
             VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
             // We MUST NOT call TransitionResource() from here, because
@@ -213,13 +214,12 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             //                  |     N+1, but resource it references    |                                   |
             //                  |     was added to the delete queue      |                                   |
             //                  |     with value N                       |                                   |
-            Uint32 QueueIndex = 0;
-            pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(QueueIndex, std::move(InitContext));
+            pRenderDeviceD3D12->CloseAndExecuteTransientCommandContext(CmdQueueInd, std::move(InitContext));
 
             // Add reference to the object to the release queue to keep it alive
             // until copy operation is complete. This must be done after
             // submitting command list for execution!
-            pRenderDeviceD3D12->SafeReleaseDeviceObject(std::move(UploadBuffer), Uint64{1} << QueueIndex);
+            pRenderDeviceD3D12->SafeReleaseDeviceObject(std::move(UploadBuffer), Uint64{1} << CmdQueueInd);
         }
 
         if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
@@ -288,7 +288,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     },
     m_DynamicData
     (
-        BuffDesc.Usage == USAGE_DYNAMIC ? (1 + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
+        BuffDesc.Usage == USAGE_DYNAMIC ? (pRenderDeviceD3D12->GetNumImmediateContexts() + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
         CtxDynamicData{},
         STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
     )
@@ -352,7 +352,7 @@ void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
 
 void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor) const
 {
-    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc, GetDevice()->GetDeviceCaps().Limits.StructuredBufferOffsetAlignment);
+    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc, GetDevice()->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
 
     D3D12_UNORDERED_ACCESS_VIEW_DESC D3D12_UAVDesc;
     BufferViewDesc_to_D3D12_UAV_DESC(m_Desc, UAVDesc, D3D12_UAVDesc);
@@ -363,7 +363,7 @@ void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HA
 
 void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor) const
 {
-    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc, GetDevice()->GetDeviceCaps().Limits.StructuredBufferOffsetAlignment);
+    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc, GetDevice()->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
     BufferViewDesc_to_D3D12_SRV_DESC(m_Desc, SRVDesc, D3D12_SRVDesc);

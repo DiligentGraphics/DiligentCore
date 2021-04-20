@@ -94,6 +94,12 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Buffer mode, see Diligent::BUFFER_MODE
     BUFFER_MODE Mode                DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
 
+    /// Buffer creation flags, see Diligent::RESOURCE_FLAGS for details
+    RESOURCE_FLAGS ResourceFlags    DEFAULT_INITIALIZER(RESOURCE_FLAG_UNKNOWN);
+    
+    /// Defines which command queue will own buffer at start
+    Uint8    InitialCommandQueueId  DEFAULT_INITIALIZER(0);
+
     /// Buffer element stride, in bytes.
 
     /// For a structured buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_STRUCTURED) this member 
@@ -118,14 +124,16 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                CPU_ACCESS_FLAGS _CPUAccessFlags    = BufferDesc{}.CPUAccessFlags,
                BUFFER_MODE      _Mode              = BufferDesc{}.Mode,
                Uint32           _ElementByteStride = BufferDesc{}.ElementByteStride,
-               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask) noexcept :
-        uiSizeInBytes       {_uiSizeInBytes    },
-        BindFlags           {_BindFlags        },
-        Usage               {_Usage            },
-        CPUAccessFlags      {_CPUAccessFlags   },
-        Mode                {_Mode             },
-        ElementByteStride   {_ElementByteStride},
-        CommandQueueMask    {_CommandQueueMask }
+               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask,
+               Uint8            _InitialQueueId    = BufferDesc{}.InitialCommandQueueId) noexcept : 
+        uiSizeInBytes        {_uiSizeInBytes    },
+        BindFlags            {_BindFlags        },
+        Usage                {_Usage            },
+        CPUAccessFlags       {_CPUAccessFlags   },
+        Mode                 {_Mode             },
+        ElementByteStride    {_ElementByteStride},
+        CommandQueueMask     {_CommandQueueMask },
+        InitialCommandQueueId{_InitialQueueId   }
     {
     }
 
@@ -139,13 +147,17 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// the buffer description.
     bool operator == (const BufferDesc& RHS)const
     {
-        return uiSizeInBytes     == RHS.uiSizeInBytes     && 
-               BindFlags         == RHS.BindFlags         &&
-               Usage             == RHS.Usage             &&
-               CPUAccessFlags    == RHS.CPUAccessFlags    &&
-               Mode              == RHS.Mode              &&
-               ElementByteStride == RHS.ElementByteStride && 
-               CommandQueueMask  == RHS.CommandQueueMask;
+                // Name is primarily used for debug purposes and does not affect the state.
+                // It is ignored in comparison operation.
+        return  // strcmp(Name, RHS.Name) == 0          &&
+                // InitialCommandQueueId == RHS.InitialCommandQueueId &&
+                uiSizeInBytes     == RHS.uiSizeInBytes     && 
+                BindFlags         == RHS.BindFlags         &&
+                Usage             == RHS.Usage             &&
+                CPUAccessFlags    == RHS.CPUAccessFlags    &&
+                Mode              == RHS.Mode              &&
+                ElementByteStride == RHS.ElementByteStride && 
+                CommandQueueMask  == RHS.CommandQueueMask;
     }
 #endif
 };

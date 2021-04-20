@@ -81,18 +81,18 @@ bool VulkanInstance::IsExtensionEnabled(const char* ExtensionName) const
 
 std::shared_ptr<VulkanInstance> VulkanInstance::Create(uint32_t               ApiVersion,
                                                        bool                   EnableValidation,
-                                                       uint32_t               GlobalExtensionCount,
-                                                       const char* const*     ppGlobalExtensionNames,
+                                                       uint32_t               InstanceExtensionCount,
+                                                       const char* const*     ppInstanceExtensionNames,
                                                        VkAllocationCallbacks* pVkAllocator)
 {
-    auto Instance = new VulkanInstance{ApiVersion, EnableValidation, GlobalExtensionCount, ppGlobalExtensionNames, pVkAllocator};
+    auto Instance = new VulkanInstance{ApiVersion, EnableValidation, InstanceExtensionCount, ppInstanceExtensionNames, pVkAllocator};
     return std::shared_ptr<VulkanInstance>{Instance};
 }
 
 VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
                                bool                   EnableValidation,
-                               uint32_t               GlobalExtensionCount,
-                               const char* const*     ppGlobalExtensionNames,
+                               uint32_t               InstanceExtensionCount,
+                               const char* const*     ppInstanceExtensionNames,
                                VkAllocationCallbacks* pVkAllocator) :
     m_pVkAllocator{pVkAllocator}
 {
@@ -161,16 +161,21 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         GlobalExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     }
 
-    if (ppGlobalExtensionNames != nullptr)
+    if (IsExtensionAvailable(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME))
     {
-        for (uint32_t ext = 0; ext < GlobalExtensionCount; ++ext)
-            GlobalExtensions.push_back(ppGlobalExtensionNames[ext]);
+        GlobalExtensions.push_back(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME);
+    }
+
+    if (ppInstanceExtensionNames != nullptr)
+    {
+        for (uint32_t ext = 0; ext < InstanceExtensionCount; ++ext)
+            GlobalExtensions.push_back(ppInstanceExtensionNames[ext]);
     }
     else
     {
-        if (GlobalExtensionCount != 0)
-            LOG_ERROR_MESSAGE("Global extensions pointer is null while extensions count is ", GlobalExtensionCount,
-                              ". Please initialize 'ppGlobalExtensionNames' member of EngineVkCreateInfo struct.");
+        if (InstanceExtensionCount != 0)
+            LOG_ERROR_MESSAGE("Global extensions pointer is null while extensions count is ", InstanceExtensionCount,
+                              ". Please initialize 'ppInstanceExtensionNames' member of EngineVkCreateInfo struct.");
     }
 
     for (const auto* ExtName : GlobalExtensions)
@@ -198,7 +203,6 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         uint32_t MaxApiVersion = 0;
         vkEnumerateInstanceVersion(&MaxApiVersion);
         ApiVersion = std::min(ApiVersion, MaxApiVersion);
-        LOG_INFO_MESSAGE("Using Vulkan API version ", VK_VERSION_MAJOR(ApiVersion), ".", VK_VERSION_MINOR(ApiVersion));
     }
     else
     {

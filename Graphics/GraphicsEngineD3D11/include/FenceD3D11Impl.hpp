@@ -58,9 +58,13 @@ public:
     /// Implementation of IFence::Reset() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
+    /// Implementation of IFence::Wait() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
+
     void AddPendingQuery(CComPtr<ID3D11DeviceContext1> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 Value)
     {
         m_PendingQueries.emplace_back(std::move(pCtx), std::move(pQuery), Value);
+        VERIFY(m_PendingQueries.size() < 16, "array of queries is too big, none of the GetCompletedValue() or Wait() are used");
     }
 
     void Wait(Uint64 Value, bool FlushCommands);

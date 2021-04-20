@@ -64,6 +64,7 @@ public:
                        IMemoryAllocator&                                      RawMemAllocator,
                        IEngineFactory*                                        pEngineFactory,
                        const EngineVkCreateInfo&                              EngineCI,
+                       const GraphicsAdapterInfo&                             AdapterInfo,
                        size_t                                                 CommandQueueCount,
                        ICommandQueueVk**                                      pCmdQueues,
                        std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
@@ -149,7 +150,7 @@ public:
     virtual VkInstance DILIGENT_CALL_TYPE GetVkInstance() override final { return m_VulkanInstance->GetVkInstance(); }
 
     /// Implementation of IRenderDeviceVk::GetVkVersion().
-    virtual Uint32 DILIGENT_CALL_TYPE GetVkVersion() override final { return m_VkVersion; }
+    virtual Uint32 DILIGENT_CALL_TYPE GetVkVersion() override final { return m_PhysicalDevice->GetVkVersion(); }
 
     /// Implementation of IRenderDeviceVk::CreateTextureFromVulkanImage().
     virtual void DILIGENT_CALL_TYPE CreateTextureFromVulkanImage(VkImage            vkImage,
@@ -180,10 +181,13 @@ public:
 
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // The method returns fence value associated with the submitted command buffer
-    Uint64 ExecuteCommandBuffer(Uint32 QueueIndex, const VkSubmitInfo& SubmitInfo, class DeviceContextVkImpl* pImmediateCtx, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences);
+    Uint64 ExecuteCommandBuffer(CommandQueueIndex CommandQueueId, const VkSubmitInfo& SubmitInfo, std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences);
 
-    void AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName = nullptr);
-    void ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
+    void AllocateTransientCmdPool(CommandQueueIndex                    CommandQueueId,
+                                  VulkanUtilities::CommandPoolWrapper& CmdPool,
+                                  VkCommandBuffer&                     vkCmdBuff,
+                                  const Char*                          DebugPoolName = nullptr);
+    void ExecuteAndDisposeTransientCmdBuff(CommandQueueIndex CommandQueueId, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final;
@@ -217,7 +221,7 @@ public:
 
     VulkanDynamicMemoryManager& GetDynamicMemoryManager() { return m_DynamicMemoryManager; }
 
-    void FlushStaleResources(Uint32 CmdQueueIndex);
+    void FlushStaleResources(CommandQueueIndex CmdQueueIndex);
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
@@ -236,6 +240,10 @@ public:
         return m_Properties;
     }
 
+    void ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueueMask,
+                                           uint32_t  outQueueFamilyIndices[],
+                                           uint32_t& inoutQueueFamilyIndicesCount) const;
+
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
@@ -246,17 +254,15 @@ private:
     // Parameters:
     //      * SubmittedCmdBuffNumber - submitted command buffer number
     //      * SubmittedFenceValue    - fence value associated with the submitted command buffer
-    void SubmitCommandBuffer(Uint32                                                 QueueIndex,
-                             const VkSubmitInfo&                                    SubmitInfo,
-                             Uint64&                                                SubmittedCmdBuffNumber,
-                             Uint64&                                                SubmittedFenceValue,
-                             std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pFences);
+    void SubmitCommandBuffer(CommandQueueIndex                                           CommandQueueId,
+                             const VkSubmitInfo&                                         SubmitInfo,
+                             Uint64&                                                     SubmittedCmdBuffNumber,
+                             Uint64&                                                     SubmittedFenceValue,
+                             std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pFences);
 
     std::shared_ptr<VulkanUtilities::VulkanInstance>       m_VulkanInstance;
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  m_LogicalVkDevice;
-
-    EngineVkCreateInfo m_EngineAttribs;
 
     FramebufferCache       m_FramebufferCache;
     RenderPassCache        m_ImplicitRenderPassCache;
@@ -266,13 +272,12 @@ private:
     // These one-time command pools are used by buffer and texture constructors to
     // issue copy commands. Vulkan requires that every command pool is used by one thread
     // at a time, so every constructor must allocate command buffer from its own pool.
-    CommandPoolManager m_TransientCmdPoolMgr;
+    std::map<HardwareQueueId, CommandPoolManager> m_TransientCmdPoolMgrs;
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
 
     VulkanDynamicMemoryManager m_DynamicMemoryManager;
 
-    const Uint32                 m_VkVersion; // Must be defined before m_pDxCompiler
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
 
     Properties m_Properties;

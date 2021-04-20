@@ -69,6 +69,11 @@ public:
     // Implementation of ICommandQueueD3D12::SignalFence().
     virtual void DILIGENT_CALL_TYPE SignalFence(ID3D12Fence* pFence, Uint64 Value) override final;
 
+    // Implementation of ICommandQueueD3D12::WaitFence().
+    virtual void DILIGENT_CALL_TYPE WaitFence(ID3D12Fence* pFence, Uint64 Value) override final;
+
+    D3D12_COMMAND_LIST_TYPE GetCommandListType() const;
+
 private:
     // A value that will be signaled by the command queue next
     std::atomic_uint64_t m_NextFenceValue{1};

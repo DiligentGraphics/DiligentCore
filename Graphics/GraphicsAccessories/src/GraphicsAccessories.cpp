@@ -1396,7 +1396,8 @@ ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
         case 0x05143: return ADAPTER_VENDOR_QUALCOMM;
         case 0x01010: return ADAPTER_VENDOR_IMGTECH;
         case 0x01414: return ADAPTER_VENDOR_MSFT;
-
+        case 0x0106B: return ADAPTER_VENDOR_APPLE;
+        case 0x10005: return ADAPTER_VENDOR_MESA;
         default:
             return ADAPTER_VENDOR_UNKNOWN;
     }
@@ -1710,6 +1711,25 @@ void CopyTextureSubresource(const TextureSubResData& SrcSubres,
                    RowSize);
         }
     }
+}
+
+String GetContextTypeString(CONTEXT_TYPE Type)
+{
+    static_assert(CONTEXT_TYPE_LAST == 7, "Please update the code below to handle the new context type");
+
+    String Result;
+    if ((Type & CONTEXT_TYPE_SPARSE_BINDING) != 0)
+        Result += " | SPARSE_BINDING";
+
+    if ((Type & CONTEXT_TYPE_GRAPHICS) == CONTEXT_TYPE_GRAPHICS)
+        return "GRAPHICS" + Result;
+    if ((Type & CONTEXT_TYPE_COMPUTE) == CONTEXT_TYPE_COMPUTE)
+        return "COMPUTE" + Result;
+    if ((Type & CONTEXT_TYPE_TRANSFER) == CONTEXT_TYPE_TRANSFER)
+        return "TRANSFER" + Result;
+
+    UNEXPECTED("Unexpected context type");
+    return "Unknown context type";
 }
 
 } // namespace Diligent

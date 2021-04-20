@@ -42,7 +42,7 @@ namespace Diligent
     } while (false)
 
 
-void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps) noexcept(false)
+void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryInfo) noexcept(false)
 {
     static_assert(BIND_FLAGS_LAST == 0x400L, "Please update this function to handle the new bind flags");
 
@@ -80,6 +80,7 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps) no
 
         case USAGE_DYNAMIC:
             VERIFY_BUFFER(Desc.CPUAccessFlags == CPU_ACCESS_WRITE, "dynamic buffers require CPU_ACCESS_WRITE flag.");
+            VERIFY_BUFFER((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) == 0, "dynamic buffers can not be shadred between queues.");
             break;
 
         case USAGE_STAGING:
@@ -90,20 +91,20 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps) no
             break;
 
         case USAGE_UNIFIED:
-            VERIFY_BUFFER(deviceCaps.AdapterInfo.UnifiedMemory != 0,
+            VERIFY_BUFFER(memoryInfo.UnifiedMemory != 0,
                           "Unified memory is not present on this device. Check the amount of available unified memory "
                           "in the device caps before creating unified buffers.");
             VERIFY_BUFFER(Desc.CPUAccessFlags != CPU_ACCESS_NONE,
                           "at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a unified buffer.");
             if (Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
             {
-                VERIFY_BUFFER(deviceCaps.AdapterInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_WRITE,
+                VERIFY_BUFFER(memoryInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_WRITE,
                               "Unified memory on this device does not support write access. Check the available access flags "
                               "in the device caps before creating unified buffers.");
             }
             if (Desc.CPUAccessFlags & CPU_ACCESS_READ)
             {
-                VERIFY_BUFFER(deviceCaps.AdapterInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_READ,
+                VERIFY_BUFFER(memoryInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_READ,
                               "Unified memory on this device does not support read access. Check the available access flags "
                               "in the device caps before creating unified buffers.");
             }
@@ -112,6 +113,15 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps) no
         default:
             UNEXPECTED("Unknown usage");
     }
+
+    if ((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) != 0)
+    {
+        DEV_CHECK_ERR(PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1,
+                      "RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS specified, but CommandQueueMask contains just 1 queue index");
+    }
+
+    VERIFY_BUFFER((Desc.CommandQueueMask & (Uint64(1) << Desc.InitialCommandQueueId)) != 0,
+                  "CommandQueueMask (0x", std::hex, Desc.CommandQueueMask, ") must contains bit at index InitialCommandQueueId (", Uint32{Desc.InitialCommandQueueId}, ")");
 }
 
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false)

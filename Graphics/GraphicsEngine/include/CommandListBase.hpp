@@ -54,21 +54,34 @@ public:
     // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
     using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
 
+    using DeviceContextImplType = typename EngineImplTraits::DeviceContextImplType;
+
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, CommandListDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this command list.
     /// \param pDevice           - Pointer to the device.
     /// \param bIsDeviceInternal - Flag indicating if the CommandList is an internal device object and
     ///							   must not keep a strong reference to the device.
-    CommandListBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, bool bIsDeviceInternal = false) :
-        TDeviceObjectBase{pRefCounters, pDevice, CommandListDesc{}, bIsDeviceInternal}
-    {}
+    CommandListBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, DeviceContextImplType* pDeferredCtx, bool bIsDeviceInternal = false) :
+        TDeviceObjectBase{pRefCounters, pDevice, CommandListDesc{}, bIsDeviceInternal},
+        m_QueueId{pDeferredCtx->GetDesc().QueueId}
+    {
+        VERIFY_EXPR(pDeferredCtx->GetDesc().IsDeferred);
+    }
 
     ~CommandListBase()
     {
     }
 
+    Uint32 GetQueueId() const
+    {
+        return m_QueueId;
+    }
+
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandList, TDeviceObjectBase)
+
+private:
+    const Uint8 m_QueueId;
 };
 
 } // namespace Diligent

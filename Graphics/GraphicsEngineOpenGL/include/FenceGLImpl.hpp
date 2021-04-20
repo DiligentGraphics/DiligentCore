@@ -59,12 +59,17 @@ public:
     /// Implementation of IFence::Reset() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
+    /// Implementation of IFence::Wait() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
+
     void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
     {
         m_PendingFences.emplace_back(Value, std::move(Fence));
+        VERIFY(m_PendingFences.size() < 16, "array of fences is too big, none of the GetCompletedValue(), HostWait() or DeviceWait() are used");
     }
 
-    void Wait(Uint64 Value, bool FlushCommands);
+    void HostWait(Uint64 Value, bool FlushCommands);
+    void DeviceWait(Uint64 Value);
 
 private:
     std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;

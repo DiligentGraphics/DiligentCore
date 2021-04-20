@@ -65,11 +65,14 @@ public:
                            RenderDeviceD3D12Impl*       pDevice,
                            bool                         bIsDeferred,
                            const EngineD3D12CreateInfo& EngineCI,
-                           Uint32                       ContextId,
-                           Uint32                       CommandQueueId);
+                           ContextIndex                 ContextInd,
+                           CommandQueueIndex            QueueInd);
     ~DeviceContextD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextD3D12, TDeviceContextBase)
+
+    /// Implementation of IDeviceContext::Begin() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE Begin(Uint32 CommandQueueId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;
@@ -92,7 +95,7 @@ public:
     virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                      Uint32                         NumBuffersSet,
                                                      IBuffer**                      ppBuffers,
-                                                     Uint32*                        pOffsets,
+                                                     const Uint32*                  pOffsets,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                      SET_VERTEX_BUFFERS_FLAGS       Flags) override final;
 
@@ -219,7 +222,7 @@ public:
     virtual void DILIGENT_CALL_TYPE FinishFrame() override final;
 
     /// Implementation of IDeviceContext::TransitionResourceStates() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) override final;
+    virtual void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers) override final;
 
     /// Implementation of IDeviceContext::ResolveTextureSubresource() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE ResolveTextureSubresource(ITexture*                               pSrcTexture,
@@ -236,8 +239,8 @@ public:
     /// Implementation of IDeviceContext::SignalFence() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE SignalFence(IFence* pFence, Uint64 Value) override final;
 
-    /// Implementation of IDeviceContext::WaitForFence() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext) override final;
+    /// Implementation of IDeviceContext::DeviceWaitForFence() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE DeviceWaitForFence(IFence* pFence, Uint64 Value) override final;
 
     /// Implementation of IDeviceContext::WaitForIdle() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE WaitForIdle() override final;
@@ -335,8 +338,6 @@ public:
 
     D3D12DynamicAllocation AllocateDynamicSpace(size_t NumBytes, size_t Alignment);
 
-    Uint32 GetContextId() const { return m_ContextId; }
-
     size_t GetNumCommandsInCtx() const { return m_State.NumCommands; }
 
 private:
@@ -351,7 +352,7 @@ private:
                Uint32               NumCommandLists = 0,
                ICommandList* const* ppCommandLists  = nullptr);
 
-    __forceinline void RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl);
+    __forceinline void RequestCommandContext();
 
     __forceinline void TransitionOrVerifyBufferState(CommandContext&                CmdCtx,
                                                      BufferD3D12Impl&               Buffer,
@@ -414,6 +415,8 @@ private:
     TextureUploadSpace AllocateTextureUploadSpace(TEXTURE_FORMAT TexFmt,
                                                   const Box&     Region);
 
+    void InitializeForQueue(CommandQueueIndex QueueInd);
+
 
     friend class SwapChainD3D12Impl;
     inline CommandContext& GetCmdContext()
@@ -458,7 +461,8 @@ private:
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
-    std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>> m_PendingFences;
+    std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>> m_SignalFences;
+    std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>> m_WaitFences;
 
     struct MappedTextureKey
     {

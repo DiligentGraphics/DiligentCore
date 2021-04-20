@@ -26,57 +26,148 @@
  */
 
 #include "pch.h"
-
-#include "CommandQueueVkImpl.hpp"
-
 #include <thread>
 
+#include "CommandQueueVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
+#include "VulkanUtilities/VulkanDebug.hpp"
 
 namespace Diligent
 {
 
 CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters,
                                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                       uint32_t                                              QueueFamilyIndex) :
+                                       CommandQueueIndex                                     CommandQueueId,
+                                       Uint32                                                NumCommandQueues,
+                                       Uint32                                                vkQueueIndex,
+                                       const ContextCreateInfo&                              CreateInfo) :
     // clang-format off
     TBase{pRefCounters},
-    m_LogicalDevice    {LogicalDevice},
-    m_VkQueue          {LogicalDevice->GetQueue(QueueFamilyIndex, 0)},
-    m_QueueFamilyIndex {QueueFamilyIndex},
-    m_NextFenceValue   {1}
+    m_LogicalDevice      {LogicalDevice},
+    m_VkQueue            {LogicalDevice->GetQueue(HardwareQueueId{CreateInfo.QueueId}, vkQueueIndex)},
+    m_QueueFamilyIndex   {CreateInfo.QueueId},
+    m_CommandQueueId     {static_cast<Uint8>(CommandQueueId)},
+    m_NumCommandQueues   {static_cast<Uint8>(NumCommandQueues)},
+    m_NextFenceValue     {1},
+    m_SyncObjectManager  {std::make_shared<VulkanUtilities::VulkanSyncObjectManager>(*LogicalDevice)},
+    m_SyncPointAllocator {GetRawAllocator(), SyncPointVk::SizeOf(m_NumCommandQueues), 16}
 // clang-format on
 {
+    VERIFY(m_CommandQueueId == CommandQueueId, "Not enough bits to store command queue index");
+    VERIFY(m_NumCommandQueues == NumCommandQueues, "Not enough bits to store command queue count");
+
+    if (CreateInfo.Name != nullptr)
+        VulkanUtilities::SetQueueName(m_LogicalDevice->GetVkDevice(), m_VkQueue, CreateInfo.Name);
+
+    m_TempSignalSemaphores.reserve(16);
 }
 
 CommandQueueVkImpl::~CommandQueueVkImpl()
 {
+    m_pFence.Release();
+    m_LastSyncPoint.reset();
+
     // Queues are created along with the logical device during vkCreateDevice.
     // All queues associated with the logical device are destroyed when vkDestroyDevice
     // is called on that device.
 }
 
-Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
+SyncPointVk::SyncPointVk(CommandQueueIndex CommandQueueId, Uint32 NumContexts, VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr, VkDevice LogicalDevice, Uint64 dbgValue) :
+    m_CommandQueueId{CommandQueueId},
+    m_NumSemaphores{static_cast<Uint8>(NumContexts)},
+    m_Fence{SyncObjectMngr.CreateFence()}
+{
+    VERIFY(m_CommandQueueId == CommandQueueId, "Not enough bits to store command queue index");
+    VERIFY(m_NumSemaphores == NumContexts, "Not enough bits to store command queue count");
+
+    // Call constructors for semaphores
+    for (Uint32 s = _countof(m_Semaphores); s < NumContexts; ++s)
+        new (&m_Semaphores[s]) VulkanUtilities::VulkanRecycledSemaphore{};
+
+    // Semaphores are used to synchronize between queues, semaphores are not used when created only one queue.
+    if (NumContexts > 1)
+    {
+        SyncObjectMngr.CreateSemaphores(m_Semaphores, NumContexts - 1);
+
+        // Semaphore for current queue is not used.
+        std::swap(m_Semaphores[CommandQueueId], m_Semaphores[NumContexts - 1]);
+    }
+
+#ifdef DILIGENT_DEBUG
+    String Name = String{"Queue("} + std::to_string(CommandQueueId) + ") Value(" + std::to_string(dbgValue) + ")";
+    VulkanUtilities::SetFenceName(LogicalDevice, m_Fence, Name.c_str());
+
+    for (Uint32 s = 0; s < m_NumSemaphores; ++s)
+    {
+        if (m_Semaphores[s])
+        {
+            Name = String{"Queue("} + std::to_string(CommandQueueId) + ") Value(" + std::to_string(dbgValue) + ") Ctx(" + std::to_string(s) + ")";
+            VulkanUtilities::SetSemaphoreName(LogicalDevice, m_Semaphores[s], Name.c_str());
+        }
+    }
+#endif
+}
+
+SyncPointVk::~SyncPointVk()
+{
+    // Call destructors for semaphores
+    for (Uint32 s = _countof(m_Semaphores); s < m_NumSemaphores; ++s)
+        m_Semaphores[s].~RecycledSyncObject();
+}
+
+__forceinline void SyncPointVk::GetSemaphores(std::vector<VkSemaphore>& Semaphores)
+{
+    for (Uint32 s = 0; s < m_NumSemaphores; ++s)
+    {
+        if (m_Semaphores[s])
+            Semaphores.push_back(m_Semaphores[s]);
+    }
+}
+
+__forceinline SyncPointVkPtr CommandQueueVkImpl::CreateSyncPoint(Uint64 dbgValue)
+{
+    auto* pAllocator = &m_SyncPointAllocator;
+    void* ptr        = pAllocator->Allocate(SyncPointVk::SizeOf(m_NumCommandQueues), "SyncPointVk", __FILE__, __LINE__);
+    auto  Deleter    = [pAllocator](SyncPointVk* ptr) //
+    {
+        ptr->~SyncPointVk();
+        pAllocator->Free(ptr);
+    };
+
+    return SyncPointVkPtr{new (ptr) SyncPointVk{m_CommandQueueId, m_NumCommandQueues, *m_SyncObjectManager, m_LogicalDevice->GetVkDevice(), dbgValue}, std::move(Deleter)};
+}
+
+Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMutex};
 
     // Increment the value before submitting the buffer to be overly safe
     auto FenceValue = m_NextFenceValue.fetch_add(1);
 
-    auto vkFence = m_pFence->GetVkFence();
+    m_LastSyncPoint = CreateSyncPoint(FenceValue);
 
-    uint32_t SubmitCount =
+    m_TempSignalSemaphores.clear();
+    m_LastSyncPoint->GetSemaphores(m_TempSignalSemaphores);
+
+    for (uint32_t s = 0; s < InSubmitInfo.signalSemaphoreCount; ++s)
+        m_TempSignalSemaphores.push_back(InSubmitInfo.pSignalSemaphores[s]);
+
+    VkSubmitInfo SubmitInfo         = InSubmitInfo;
+    SubmitInfo.signalSemaphoreCount = static_cast<Uint32>(m_TempSignalSemaphores.size());
+    SubmitInfo.pSignalSemaphores    = m_TempSignalSemaphores.data();
+
+    const uint32_t SubmitCount =
         (SubmitInfo.waitSemaphoreCount != 0 ||
          SubmitInfo.commandBufferCount != 0 ||
          SubmitInfo.signalSemaphoreCount != 0) ?
         1 :
         0;
-    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, vkFence);
+
+    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, m_LastSyncPoint->GetFence());
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
     (void)err;
 
-    // We must atomically place the (value, fence) pair into the deque
-    m_pFence->AddPendingFence(std::move(vkFence), FenceValue);
+    m_pFence->AddPendingSyncPoint(m_CommandQueueId, FenceValue, m_LastSyncPoint);
 
     return FenceValue;
 }

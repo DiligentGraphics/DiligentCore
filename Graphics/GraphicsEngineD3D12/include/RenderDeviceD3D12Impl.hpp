@@ -77,6 +77,7 @@ public:
                           IMemoryAllocator&            RawMemAllocator,
                           IEngineFactory*              pEngineFactory,
                           const EngineD3D12CreateInfo& EngineCI,
+                          const GraphicsAdapterInfo&   AdapterInfo,
                           ID3D12Device*                pD3D12Device,
                           size_t                       CommandQueueCount,
                           ICommandQueueD3D12**         ppCmdQueues) noexcept(false);
@@ -186,22 +187,24 @@ public:
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
     using PooledCommandContext = std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext>>;
-    PooledCommandContext AllocateCommandContext(const Char* ID = "");
+    PooledCommandContext AllocateCommandContext(CommandQueueIndex CommandQueueId, const Char* ID = "");
 
-    void CloseAndExecuteTransientCommandContext(Uint32 CommandQueueIndex, PooledCommandContext&& Ctx);
+    void CloseAndExecuteTransientCommandContext(CommandQueueIndex CommandQueueId, PooledCommandContext&& Ctx);
 
-    Uint64 CloseAndExecuteCommandContexts(Uint32                                                 QueueIndex,
+    Uint64 CloseAndExecuteCommandContexts(CommandQueueIndex                                      CommandQueueId,
                                           Uint32                                                 NumContexts,
                                           PooledCommandContext                                   pContexts[],
                                           bool                                                   DiscardStaleObjects,
-                                          std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences);
+                                          std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences,
+                                          std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pWaitFences);
 
-    void SignalFences(Uint32 QueueIndex, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& SignalFences);
+    void SignalFences(CommandQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& SignalFences);
+    void WaitFences(CommandQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& WaitFences);
 
     // Disposes an unused command context
     void DisposeCommandContext(PooledCommandContext&& Ctx);
 
-    void FlushStaleResources(Uint32 CmdQueueIndex);
+    void FlushStaleResources(CommandQueueIndex CommandQueueId);
 
     /// Implementation of IRenderDevice::() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final;
@@ -258,13 +261,16 @@ private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     void         FreeCommandContext(PooledCommandContext&& Ctx);
 
+    CommandListManager& GetCmdListManager(CommandQueueIndex CommandQueueId);
+    CommandListManager& GetCmdListManager(D3D12_COMMAND_LIST_TYPE CmdListType);
+
     CComPtr<ID3D12Device> m_pd3d12Device;
 
     CPUDescriptorHeap m_CPUDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
     GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0
                                                // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1
 
-    CommandListManager m_CmdListManager;
+    std::array<CommandListManager, 3> m_CmdListManagers;
 
     std::mutex                                                                  m_ContextPoolMutex;
     std::vector<PooledCommandContext, STDAllocatorRawMem<PooledCommandContext>> m_ContextPool;

@@ -39,6 +39,7 @@
 #include "VulkanUtilities/VulkanInstance.hpp"
 #include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 #include "EngineFactoryBase.hpp"
+#include "VulkanTypeConversions.hpp"
 
 #if PLATFORM_ANDROID
 #    include "FileSystem.hpp"
@@ -46,9 +47,11 @@
 
 namespace Diligent
 {
+namespace
+{
 
 /// Engine factory for Vk implementation
-class EngineFactoryVkImpl : public EngineFactoryBase<IEngineFactoryVk>
+class EngineFactoryVkImpl final : public EngineFactoryBase<IEngineFactoryVk>
 {
 public:
     static EngineFactoryVkImpl* GetInstance()
@@ -60,26 +63,32 @@ public:
     using TBase = EngineFactoryBase<IEngineFactoryVk>;
     EngineFactoryVkImpl() :
         TBase{IID_EngineFactoryVk}
-    {}
+    {
+    }
 
     virtual void DILIGENT_CALL_TYPE CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI,
                                                               IRenderDevice**           ppDevice,
                                                               IDeviceContext**          ppContexts) override final;
 
-    virtual void DILIGENT_CALL_TYPE AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
-                                                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                                                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                                                         size_t                                                 CommandQueueCount,
-                                                         ICommandQueueVk**                                      ppCommandQueues,
-                                                         const EngineVkCreateInfo&                              EngineCI,
-                                                         IRenderDevice**                                        ppDevice,
-                                                         IDeviceContext**                                       ppContexts); //override final;
+    void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
+                              std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
+                              std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
+                              size_t                                                 CommandQueueCount,
+                              ICommandQueueVk**                                      ppCommandQueues,
+                              const EngineVkCreateInfo&                              EngineCI,
+                              const GraphicsAdapterInfo&                             AdapterInfo,
+                              IRenderDevice**                                        ppDevice,
+                              IDeviceContext**                                       ppContexts);
 
     virtual void DILIGENT_CALL_TYPE CreateSwapChainVk(IRenderDevice*       pDevice,
                                                       IDeviceContext*      pImmediateContext,
                                                       const SwapChainDesc& SwapChainDesc,
                                                       const NativeWindow&  Window,
                                                       ISwapChain**         ppSwapChain) override final;
+
+    virtual void DILIGENT_CALL_TYPE EnumerateAdapters(Version              MinVersion,
+                                                      Uint32&              NumAdapters,
+                                                      GraphicsAdapterInfo* Adapters) const override final;
 
 #if PLATFORM_ANDROID
     virtual void InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
@@ -89,8 +98,285 @@ public:
 
 private:
     std::function<void(RenderDeviceVkImpl*)> OnRenderDeviceCreated = nullptr;
+
+    bool m_RenderDeviceCreated = false;
 };
 
+
+void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice, GraphicsAdapterInfo& AdapterInfo)
+{
+    AdapterInfo = {};
+
+    const uint32_t VkVersion = PhysicalDevice.GetVkVersion();
+
+    // Set graphics adapter properties
+    {
+        const auto& DeviceProps = PhysicalDevice.GetProperties();
+
+        AdapterInfo.Capabilities.DevType          = RENDER_DEVICE_TYPE_VULKAN;
+        AdapterInfo.Capabilities.APIVersion.Major = static_cast<Uint8>(VK_VERSION_MAJOR(VkVersion));
+        AdapterInfo.Capabilities.APIVersion.Minor = static_cast<Uint8>(VK_VERSION_MINOR(VkVersion));
+
+        static_assert(_countof(AdapterInfo.Description) <= _countof(DeviceProps.deviceName), "");
+        for (size_t i = 0; i < _countof(AdapterInfo.Description) - 1 && DeviceProps.deviceName[i] != 0; ++i)
+            AdapterInfo.Description[i] = DeviceProps.deviceName[i];
+
+        AdapterInfo.Type       = VkPhysicalDeviceTypeToAdapterType(DeviceProps.deviceType);
+        AdapterInfo.Vendor     = VendorIdToAdapterVendor(DeviceProps.vendorID);
+        AdapterInfo.VendorId   = DeviceProps.vendorID;
+        AdapterInfo.DeviceId   = DeviceProps.deviceID;
+        AdapterInfo.NumOutputs = 0;
+    }
+
+    // Enable features
+    {
+#define ENABLE_FEATURE(FeatureName, Supported) \
+    Features.FeatureName = (Supported) ? DEVICE_FEATURE_STATE_OPTIONAL : DEVICE_FEATURE_STATE_DISABLED;
+
+        const auto& DeviceFeatures    = PhysicalDevice.GetFeatures();
+        const auto& DeviceExtFeatures = PhysicalDevice.GetExtFeatures();
+        auto&       Features          = AdapterInfo.Capabilities.Features;
+
+        // The following features are always enabled
+        Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
+        Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
+        Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
+        Features.TimestampQueries              = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
+
+        // clang-format off
+        ENABLE_FEATURE(GeometryShaders,                   DeviceFeatures.geometryShader);
+        ENABLE_FEATURE(Tessellation,                      DeviceFeatures.tessellationShader);
+        ENABLE_FEATURE(PipelineStatisticsQueries,         DeviceFeatures.pipelineStatisticsQuery);
+        ENABLE_FEATURE(OcclusionQueries,                  DeviceFeatures.occlusionQueryPrecise);
+        ENABLE_FEATURE(WireframeFill,                     DeviceFeatures.fillModeNonSolid);
+        ENABLE_FEATURE(DepthBiasClamp,                    DeviceFeatures.depthBiasClamp);
+        ENABLE_FEATURE(DepthClamp,                        DeviceFeatures.depthClamp);
+        ENABLE_FEATURE(IndependentBlend,                  DeviceFeatures.independentBlend);
+        ENABLE_FEATURE(DualSourceBlend,                   DeviceFeatures.dualSrcBlend);
+        ENABLE_FEATURE(MultiViewport,                     DeviceFeatures.multiViewport);
+        ENABLE_FEATURE(TextureCompressionBC,              DeviceFeatures.textureCompressionBC);
+        ENABLE_FEATURE(VertexPipelineUAVWritesAndAtomics, DeviceFeatures.vertexPipelineStoresAndAtomics);
+        ENABLE_FEATURE(PixelUAVWritesAndAtomics,          DeviceFeatures.fragmentStoresAndAtomics);
+        ENABLE_FEATURE(TextureUAVExtendedFormats,         DeviceFeatures.shaderStorageImageExtendedFormats);
+        // clang-format on
+
+        const auto& MeshShaderFeats = DeviceExtFeatures.MeshShader;
+        ENABLE_FEATURE(MeshShaders, MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE);
+
+        const auto& ShaderFloat16Int8Feats = DeviceExtFeatures.ShaderFloat16Int8;
+        // clang-format off
+        ENABLE_FEATURE(ShaderFloat16, ShaderFloat16Int8Feats.shaderFloat16 != VK_FALSE);
+        ENABLE_FEATURE(ShaderInt8,    ShaderFloat16Int8Feats.shaderInt8    != VK_FALSE);
+        // clang-format on
+
+        const auto& Storage16BitFeats = DeviceExtFeatures.Storage16Bit;
+        // clang-format off
+        ENABLE_FEATURE(ResourceBuffer16BitAccess, Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE && DeviceFeatures.shaderInt16 != VK_FALSE);
+        ENABLE_FEATURE(UniformBuffer16BitAccess,  Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE && DeviceFeatures.shaderInt16 != VK_FALSE);
+        ENABLE_FEATURE(ShaderInputOutput16,       Storage16BitFeats.storageInputOutput16               != VK_FALSE && DeviceFeatures.shaderInt16 != VK_FALSE);
+        // clang-format on
+
+        const auto& Storage8BitFeats = DeviceExtFeatures.Storage8Bit;
+        // clang-format off
+        ENABLE_FEATURE(ResourceBuffer8BitAccess, Storage8BitFeats.storageBuffer8BitAccess           != VK_FALSE);
+        ENABLE_FEATURE(UniformBuffer8BitAccess,  Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE);
+        // clang-format on
+
+        const auto& DescrIndexingFeats = DeviceExtFeatures.DescriptorIndexing;
+        ENABLE_FEATURE(ShaderResourceRuntimeArray, DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE);
+        const auto& AccelStructFeats = DeviceExtFeatures.AccelStruct;
+        const auto& RayTracingFeats  = DeviceExtFeatures.RayTracingPipeline;
+        const auto& RayQueryFeats    = DeviceExtFeatures.RayQuery;
+        // clang-format off
+        ENABLE_FEATURE(RayTracing,
+                        VkVersion                              >= VK_API_VERSION_1_1 &&
+                        AccelStructFeats.accelerationStructure != VK_FALSE           &&
+                        RayTracingFeats.rayTracingPipeline     != VK_FALSE);
+        ENABLE_FEATURE(RayTracing2,
+                        VkVersion                                           >= VK_API_VERSION_1_1 &&
+                        AccelStructFeats.accelerationStructure              != VK_FALSE           &&
+                        RayTracingFeats.rayTracingPipeline                  != VK_FALSE           &&
+                        RayTracingFeats.rayTracingPipelineTraceRaysIndirect != VK_FALSE           &&
+                        RayTracingFeats.rayTraversalPrimitiveCulling        != VK_FALSE           &&
+                        RayQueryFeats.rayQuery                              != VK_FALSE);
+        // clang-format on
+
+        const auto& SubgroupProps          = PhysicalDevice.GetExtProperties().Subgroup;
+        const auto  RequiredSubgroupFeats  = VK_SUBGROUP_FEATURE_BASIC_BIT;
+        const auto  RequiredSubgroupStages = VK_SHADER_STAGE_COMPUTE_BIT;
+        ENABLE_FEATURE(WaveOp,
+                       (VkVersion >= VK_API_VERSION_1_1 &&
+                        (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
+                        (SubgroupProps.supportedStages & RequiredSubgroupStages) == RequiredSubgroupStages));
+
+        const auto& VertexAttribDivisorFeats = PhysicalDevice.GetExtFeatures().VertexAttributeDivisor;
+        ENABLE_FEATURE(InstanceDataStepRate,
+                       (VertexAttribDivisorFeats.vertexAttributeInstanceRateDivisor != VK_FALSE &&
+                        VertexAttribDivisorFeats.vertexAttributeInstanceRateZeroDivisor != VK_FALSE));
+#undef ENABLE_FEATURE
+    }
+
+    // Set texture and sampler capabilities
+    {
+        const auto& vkDeviceLimits = PhysicalDevice.GetProperties().limits;
+        const auto& vkFeatures     = PhysicalDevice.GetFeatures();
+
+        auto& TexCaps = AdapterInfo.Capabilities.TexCaps;
+
+        TexCaps.MaxTexture1DDimension     = vkDeviceLimits.maxImageDimension1D;
+        TexCaps.MaxTexture1DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
+        TexCaps.MaxTexture2DDimension     = vkDeviceLimits.maxImageDimension2D;
+        TexCaps.MaxTexture2DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
+        TexCaps.MaxTexture3DDimension     = vkDeviceLimits.maxImageDimension3D;
+        TexCaps.MaxTextureCubeDimension   = vkDeviceLimits.maxImageDimensionCube;
+        TexCaps.Texture2DMSSupported      = True;
+        TexCaps.Texture2DMSArraySupported = True;
+        TexCaps.TextureViewSupported      = True;
+        TexCaps.CubemapArraysSupported    = vkFeatures.imageCubeArray;
+
+        auto& SamCaps = AdapterInfo.Capabilities.SamCaps;
+
+        SamCaps.BorderSamplingModeSupported   = True;
+        SamCaps.AnisotropicFilteringSupported = vkFeatures.samplerAnisotropy;
+        SamCaps.LODBiasSupported              = True;
+    }
+
+    // Set properties
+    {
+        const auto& Features   = AdapterInfo.Capabilities.Features;
+        auto&       Properties = AdapterInfo.Properties;
+
+        if (Features.RayTracing)
+        {
+            Properties.MaxRayTracingRecursionDepth = PhysicalDevice.GetExtProperties().RayTracingPipeline.maxRayRecursionDepth;
+        }
+        if (Features.WaveOp)
+        {
+            const auto& vkWaveProps           = PhysicalDevice.GetExtProperties().Subgroup;
+            Properties.WaveOp.MinSize         = vkWaveProps.subgroupSize;
+            Properties.WaveOp.MaxSize         = vkWaveProps.subgroupSize;
+            Properties.WaveOp.SupportedStages = VkShaderStageFlagsToShaderTypes(vkWaveProps.supportedStages);
+            Properties.WaveOp.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
+        }
+    }
+
+    // Set memory properties
+    {
+        auto& Mem = AdapterInfo.Memory;
+
+        Mem.DeviceLocalMemory  = 0;
+        Mem.HostVisibileMemory = 0;
+        Mem.UnifiedMemory      = 0;
+
+        std::bitset<VK_MAX_MEMORY_HEAPS> DeviceLocalHeap;
+        std::bitset<VK_MAX_MEMORY_HEAPS> HostVisibleHeap;
+        std::bitset<VK_MAX_MEMORY_HEAPS> UnifiedHeap;
+
+        const auto& MemoryProps = PhysicalDevice.GetMemoryProperties();
+        for (uint32_t type = 0; type < MemoryProps.memoryTypeCount; ++type)
+        {
+            const auto&    MemTypeInfo        = MemoryProps.memoryTypes[type];
+            constexpr auto UnifiedMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+            if ((MemTypeInfo.propertyFlags & UnifiedMemoryFlags) == UnifiedMemoryFlags)
+            {
+                UnifiedHeap[MemTypeInfo.heapIndex] = true;
+                if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+                    Mem.UnifiedMemoryCPUAccess |= CPU_ACCESS_WRITE;
+                if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+                    Mem.UnifiedMemoryCPUAccess |= CPU_ACCESS_READ;
+            }
+            else if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+            {
+                DeviceLocalHeap[MemTypeInfo.heapIndex] = true;
+            }
+            else if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+            {
+                HostVisibleHeap[MemTypeInfo.heapIndex] = true;
+            }
+        }
+
+        for (uint32_t heap = 0; heap < MemoryProps.memoryHeapCount; ++heap)
+        {
+            const auto& HeapInfo = MemoryProps.memoryHeaps[heap];
+
+            if (UnifiedHeap[heap])
+                Mem.UnifiedMemory += static_cast<Uint64>(HeapInfo.size);
+            else if (DeviceLocalHeap[heap])
+                Mem.DeviceLocalMemory += static_cast<Uint64>(HeapInfo.size);
+            else if (HostVisibleHeap[heap])
+                Mem.HostVisibileMemory += static_cast<Uint64>(HeapInfo.size);
+        }
+    }
+
+    // Set queue info
+    {
+        const auto& QueueProperties = PhysicalDevice.GetQueueProperties();
+        AdapterInfo.NumQueues       = std::min(MAX_ADAPTER_QUEUES, static_cast<Uint32>(QueueProperties.size()));
+
+        for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
+        {
+            const auto& SrcQueue = QueueProperties[q];
+            auto&       DstQueue = AdapterInfo.Queues[q];
+
+            DstQueue.QueueType                 = VkQueueFlagsToContextType(SrcQueue.queueFlags);
+            DstQueue.MaxDeviceContexts         = SrcQueue.queueCount;
+            DstQueue.TextureCopyGranularity[0] = SrcQueue.minImageTransferGranularity.width;
+            DstQueue.TextureCopyGranularity[1] = SrcQueue.minImageTransferGranularity.height;
+            DstQueue.TextureCopyGranularity[2] = SrcQueue.minImageTransferGranularity.depth;
+        }
+    }
+
+    // Set limits
+    {
+        auto&       Limits         = AdapterInfo.Limits;
+        const auto& vkDeviceLimits = PhysicalDevice.GetProperties().limits;
+
+        Limits.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
+        Limits.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
+    }
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
+    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+#endif
+}
+
+void EngineFactoryVkImpl::EnumerateAdapters(Version              MinVersion,
+                                            Uint32&              NumAdapters,
+                                            GraphicsAdapterInfo* Adapters) const
+{
+    if (m_RenderDeviceCreated)
+    {
+        LOG_ERROR_MESSAGE("We have global pointers to Vulkan functions and can not simultaniously use more than one instance and logical device.");
+        NumAdapters = 0;
+        return;
+    }
+
+    // Create instance with maximum available version.
+    // If Volk is not enabled then version will be 1.0
+    const uint32_t APIVersion = VK_MAKE_VERSION(0xFF, 0xFF, 0);
+    auto           Instance   = VulkanUtilities::VulkanInstance::Create(APIVersion, false, 0, nullptr, nullptr);
+
+    if (Adapters == nullptr)
+    {
+        NumAdapters = static_cast<Uint32>(Instance->GetVkPhysicalDevices().size());
+        return;
+    }
+
+    NumAdapters = std::min(NumAdapters, static_cast<Uint32>(Instance->GetVkPhysicalDevices().size()));
+    for (Uint32 i = 0; i < NumAdapters; ++i)
+    {
+        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(Instance->GetVkPhysicalDevices()[i], *Instance);
+        GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice, Adapters[i]);
+    }
+}
 
 void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _EngineCI,
                                                     IRenderDevice**           ppDevice,
@@ -99,9 +385,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
     if (_EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(_EngineCI.DebugMessageCallback);
 
-    if (_EngineCI.APIVersion != DILIGENT_API_VERSION)
+    if (_EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", _EngineCI.APIVersion, ")");
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", _EngineCI.EngineAPIVersion, ")");
         return;
     }
 
@@ -109,146 +395,170 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
     if (!ppDevice || !ppContexts)
         return;
 
+    if (m_RenderDeviceCreated)
+    {
+        LOG_ERROR_MESSAGE("We have global pointers to Vulkan functions and can not simultaniously use more than one instance and logical device.");
+        return;
+    }
+
     EngineVkCreateInfo EngineCI = _EngineCI;
 
-#if 0
-    for (Uint32 Type = Vk_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < Vk_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
-    {
-        auto CPUHeapAllocSize = EngineCI.CPUDescriptorHeapAllocationSize[Type];
-        Uint32 MaxSize = 1 << 20;
-        if (CPUHeapAllocSize > 1 << 20)
-        {
-            LOG_ERROR("CPU Heap allocation size is too large (", CPUHeapAllocSize, "). Max allowed size is ", MaxSize);
-            return;
-        }
-
-        if ((CPUHeapAllocSize % 16) != 0)
-        {
-            LOG_ERROR("CPU Heap allocation size (", CPUHeapAllocSize, ") is expected to be multiple of 16");
-            return;
-        }
-    }
-#endif
-
     SetRawAllocator(EngineCI.pRawMemAllocator);
-
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumContexts) + EngineCI.NumDeferredContexts));
 
     try
     {
-        Uint32 InstanceVersion = VK_API_VERSION_1_0;
-        if (EngineCI.Features.WaveOp != DEVICE_FEATURE_STATE_DISABLED)
-            InstanceVersion = VK_API_VERSION_1_1; // There is no alternative to subgroup extension in Vulkan 1.1 core
-        if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED || EngineCI.Features.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
-            InstanceVersion = VK_API_VERSION_1_2; // DXC requires Vulkan 1.2
+        if (EngineCI.GraphicsAPIVersion == Version{0, 0})
+        {
+            // Instance will use maximum available version
+            EngineCI.GraphicsAPIVersion = Version{0xFF, 0xFF};
+        }
 
         auto Instance = VulkanUtilities::VulkanInstance::Create(
-            InstanceVersion,
+            VK_MAKE_VERSION(EngineCI.GraphicsAPIVersion.Major, EngineCI.GraphicsAPIVersion.Minor, 0),
             EngineCI.EnableValidation,
-            EngineCI.GlobalExtensionCount,
-            EngineCI.ppGlobalExtensionNames,
+            EngineCI.InstanceExtensionCount,
+            EngineCI.ppInstanceExtensionNames,
             reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator));
-        // Actual instance version may be lower than requested.
-        InstanceVersion = Instance->GetVersion();
 
-        auto        vkDevice               = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
-        auto        PhysicalDevice         = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, *Instance);
-        const auto& PhysicalDeviceFeatures = PhysicalDevice->GetFeatures();
+        auto vkDevice       = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
+        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, *Instance);
 
-        // If an implementation exposes any queue family that supports graphics operations,
-        // at least one queue family of at least one physical device exposed by the implementation
-        // must support both graphics and compute operations.
+        // Enable device feature if they are supported and throw error if not supported but required by user.
+        GraphicsAdapterInfo AdapterInfo;
+        GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice, AdapterInfo);
+        EnableDeviceFeatures(AdapterInfo.Capabilities.Features, EngineCI.Features);
+        AdapterInfo.Capabilities.Features = EngineCI.Features;
 
-        VkDeviceQueueCreateInfo QueueInfo{};
-        QueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        QueueInfo.flags = 0; // reserved for future use
-        // All commands that are allowed on a queue that supports transfer operations are also allowed on a
-        // queue that supports either graphics or compute operations. Thus, if the capabilities of a queue family
-        // include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT, then reporting the VK_QUEUE_TRANSFER_BIT
-        // capability separately for that queue family is optional (4.1).
-        QueueInfo.queueFamilyIndex       = PhysicalDevice->FindQueueFamily(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
-        QueueInfo.queueCount             = 1;
-        const float defaultQueuePriority = 1.0f; // Ask for highest priority for our queue. (range [0,1])
-        QueueInfo.pQueuePriorities       = &defaultQueuePriority;
+        VerifyEngineCreateInfo(EngineCI, AdapterInfo);
+
+        std::vector<VkDeviceQueueGlobalPriorityCreateInfoEXT> QueueGlobalPriority;
+        std::vector<VkDeviceQueueCreateInfo>                  QueueInfos;
+        std::vector<float>                                    QueuePriorities;
+        std::array<Uint8, MAX_ADAPTER_QUEUES>                 QueueIDtoQueueInfo;
+        std::array<QUEUE_PRIORITY, MAX_ADAPTER_QUEUES>        QueueIDtoPriority;
+        QueueIDtoQueueInfo.fill(DEFAULT_QUEUE_ID);
+        QueueIDtoPriority.fill(QUEUE_PRIORITY_UNKNOWN);
+
+        // Setup device queues
+        if (EngineCI.NumContexts > 0)
+        {
+            VERIFY(EngineCI.pContextInfo != nullptr, "Must be verified in VerifyEngineCreateInfo()");
+
+            const auto& QueueProperties = PhysicalDevice->GetQueueProperties();
+            QueuePriorities.resize(EngineCI.NumContexts, 1.0f);
+
+            for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumContexts; ++CtxInd)
+            {
+                const auto& ContextInfo = EngineCI.pContextInfo[CtxInd];
+                VERIFY(ContextInfo.QueueId < QueueProperties.size() && ContextInfo.QueueId < QueueIDtoQueueInfo.size(),
+                       "Must be verified in VerifyEngineCreateInfo()");
+
+                auto& QueueIndex = QueueIDtoQueueInfo[ContextInfo.QueueId];
+                if (QueueIndex == DEFAULT_QUEUE_ID)
+                {
+                    QueueIndex = static_cast<Uint8>(QueueInfos.size());
+
+                    VkDeviceQueueCreateInfo QueueCI = {};
+                    QueueCI.sType                   = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                    QueueCI.pNext                   = nullptr;
+                    QueueCI.flags                   = 0; // reserved for future use
+                    QueueCI.queueFamilyIndex        = ContextInfo.QueueId;
+                    QueueCI.queueCount              = 0;
+                    QueueCI.pQueuePriorities        = QueuePriorities.data();
+                    QueueInfos.push_back(QueueCI);
+                }
+                QueueInfos[QueueIndex].queueCount += 1;
+
+                auto& Priority = QueueIDtoPriority[QueueIndex];
+                if (Priority != QUEUE_PRIORITY_UNKNOWN && Priority != ContextInfo.Priority)
+                    LOG_ERROR_AND_THROW("Context priority for all contexts with QueueId must be the same");
+                Priority = ContextInfo.Priority;
+            }
+
+            if (Instance->IsExtensionEnabled(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME))
+            {
+                QueueGlobalPriority.resize(QueueInfos.size());
+                for (Uint32 QInd = 0; QInd < QueueInfos.size(); ++QInd)
+                {
+                    auto& QPriority          = QueueGlobalPriority[QInd];
+                    QPriority.sType          = VK_STRUCTURE_TYPE_DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_EXT;
+                    QPriority.pNext          = nullptr;
+                    QPriority.globalPriority = QueuePriorityToVkQueueGlobalPriority(QueueIDtoPriority[QInd]);
+                    QueueInfos[QInd].pNext   = &QPriority;
+                }
+            }
+        }
+        else
+        {
+            QueueInfos.resize(1);
+            QueuePriorities.resize(1);
+
+            auto& QueueCI         = QueueInfos[0];
+            QueuePriorities[0]    = 1.0f; // Ask for highest priority for our queue. (range [0,1])
+            QueueIDtoQueueInfo[0] = 0;
+
+            // If an implementation exposes any queue family that supports graphics operations,
+            // at least one queue family of at least one physical device exposed by the implementation
+            // must support both graphics and compute operations.
+
+            QueueCI.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            QueueCI.flags            = 0; // reserved for future use
+            QueueCI.queueFamilyIndex = PhysicalDevice->FindQueueFamily(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+            QueueCI.queueCount       = 1;
+            QueueCI.pQueuePriorities = QueuePriorities.data();
+        }
 
         VkDeviceCreateInfo DeviceCreateInfo = {};
         DeviceCreateInfo.sType              = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         DeviceCreateInfo.flags              = 0; // Reserved for future use
         // https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#extended-functionality-device-layer-deprecation
-        DeviceCreateInfo.enabledLayerCount       = 0;       // Deprecated and ignored.
-        DeviceCreateInfo.ppEnabledLayerNames     = nullptr; // Deprecated and ignored
-        DeviceCreateInfo.queueCreateInfoCount    = 1;
-        DeviceCreateInfo.pQueueCreateInfos       = &QueueInfo;
+        DeviceCreateInfo.enabledLayerCount    = 0;       // Deprecated and ignored.
+        DeviceCreateInfo.ppEnabledLayerNames  = nullptr; // Deprecated and ignored
+        DeviceCreateInfo.queueCreateInfoCount = static_cast<Uint32>(QueueInfos.size());
+        DeviceCreateInfo.pQueueCreateInfos    = QueueInfos.data();
+
+        const auto&              DeviceFeatures  = PhysicalDevice->GetFeatures();
         VkPhysicalDeviceFeatures EnabledFeatures = {};
-        EnabledFeatures.fullDrawIndexUint32      = PhysicalDeviceFeatures.fullDrawIndexUint32;
+        DeviceCreateInfo.pEnabledFeatures        = &EnabledFeatures;
 
-        auto GetFeatureState = [](DEVICE_FEATURE_STATE RequestedState, bool IsFeatureSupported, const char* FeatureName) //
-        {
-            switch (RequestedState)
-            {
-                case DEVICE_FEATURE_STATE_DISABLED:
-                    return DEVICE_FEATURE_STATE_DISABLED;
-
-                case DEVICE_FEATURE_STATE_ENABLED:
-                {
-                    if (IsFeatureSupported)
-                        return DEVICE_FEATURE_STATE_ENABLED;
-                    else
-                        LOG_ERROR_AND_THROW(FeatureName, " not supported by this device");
-                }
-
-                case DEVICE_FEATURE_STATE_OPTIONAL:
-                    return IsFeatureSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
-
-                default:
-                    UNEXPECTED("Unexpected feature state");
-                    return DEVICE_FEATURE_STATE_DISABLED;
-            }
-        };
-
-#define ENABLE_FEATURE(vkFeature, State, FeatureName)                                          \
-    do                                                                                         \
-    {                                                                                          \
-        State =                                                                                \
-            GetFeatureState(State, PhysicalDeviceFeatures.vkFeature != VK_FALSE, FeatureName); \
-        EnabledFeatures.vkFeature =                                                            \
-            State == DEVICE_FEATURE_STATE_ENABLED ? VK_TRUE : VK_FALSE;                        \
-    } while (false)
+#define ENABLE_VKFEATURE(vkFeature, State) \
+    EnabledFeatures.vkFeature = (State == DEVICE_FEATURE_STATE_ENABLED ? VK_TRUE : VK_FALSE);
 
         auto ImageCubeArrayFeature    = DEVICE_FEATURE_STATE_OPTIONAL;
         auto SamplerAnisotropyFeature = DEVICE_FEATURE_STATE_OPTIONAL;
         // clang-format off
-        ENABLE_FEATURE(geometryShader,                    EngineCI.Features.GeometryShaders,                   "Geometry shaders are");
-        ENABLE_FEATURE(tessellationShader,                EngineCI.Features.Tessellation,                      "Tessellation is");
-        ENABLE_FEATURE(pipelineStatisticsQuery,           EngineCI.Features.PipelineStatisticsQueries,         "Pipeline statistics queries are");
-        ENABLE_FEATURE(occlusionQueryPrecise,             EngineCI.Features.OcclusionQueries,                  "Occlusion queries are");
-        ENABLE_FEATURE(imageCubeArray,                    ImageCubeArrayFeature,                               "Image cube arrays are");
-        ENABLE_FEATURE(fillModeNonSolid,                  EngineCI.Features.WireframeFill,                     "Wireframe fill is");
-        ENABLE_FEATURE(samplerAnisotropy,                 SamplerAnisotropyFeature,                            "Anisotropic texture filtering is");
-        ENABLE_FEATURE(depthBiasClamp,                    EngineCI.Features.DepthBiasClamp,                    "Depth bias clamp is");
-        ENABLE_FEATURE(depthClamp,                        EngineCI.Features.DepthClamp,                        "Depth clamp is");
-        ENABLE_FEATURE(independentBlend,                  EngineCI.Features.IndependentBlend,                  "Independent blend is");
-        ENABLE_FEATURE(dualSrcBlend,                      EngineCI.Features.DualSourceBlend,                   "Dual-source blend is");
-        ENABLE_FEATURE(multiViewport,                     EngineCI.Features.MultiViewport,                     "Multiviewport is");
-        ENABLE_FEATURE(textureCompressionBC,              EngineCI.Features.TextureCompressionBC,              "BC texture compression is");
-        ENABLE_FEATURE(vertexPipelineStoresAndAtomics,    EngineCI.Features.VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
-        ENABLE_FEATURE(fragmentStoresAndAtomics,          EngineCI.Features.PixelUAVWritesAndAtomics,          "Pixel UAV writes and atomics are");
-        ENABLE_FEATURE(shaderStorageImageExtendedFormats, EngineCI.Features.TextureUAVExtendedFormats,         "Texture UAV extended formats are");
+        ENABLE_VKFEATURE(geometryShader,                    EngineCI.Features.GeometryShaders);
+        ENABLE_VKFEATURE(tessellationShader,                EngineCI.Features.Tessellation);
+        ENABLE_VKFEATURE(pipelineStatisticsQuery,           EngineCI.Features.PipelineStatisticsQueries);
+        ENABLE_VKFEATURE(occlusionQueryPrecise,             EngineCI.Features.OcclusionQueries);
+        ENABLE_VKFEATURE(imageCubeArray,                    ImageCubeArrayFeature);
+        ENABLE_VKFEATURE(fillModeNonSolid,                  EngineCI.Features.WireframeFill);
+        ENABLE_VKFEATURE(samplerAnisotropy,                 SamplerAnisotropyFeature);
+        ENABLE_VKFEATURE(depthBiasClamp,                    EngineCI.Features.DepthBiasClamp);
+        ENABLE_VKFEATURE(depthClamp,                        EngineCI.Features.DepthClamp);
+        ENABLE_VKFEATURE(independentBlend,                  EngineCI.Features.IndependentBlend);
+        ENABLE_VKFEATURE(dualSrcBlend,                      EngineCI.Features.DualSourceBlend);
+        ENABLE_VKFEATURE(multiViewport,                     EngineCI.Features.MultiViewport);
+        ENABLE_VKFEATURE(textureCompressionBC,              EngineCI.Features.TextureCompressionBC);
+        ENABLE_VKFEATURE(vertexPipelineStoresAndAtomics,    EngineCI.Features.VertexPipelineUAVWritesAndAtomics);
+        ENABLE_VKFEATURE(fragmentStoresAndAtomics,          EngineCI.Features.PixelUAVWritesAndAtomics);
+        ENABLE_VKFEATURE(shaderStorageImageExtendedFormats, EngineCI.Features.TextureUAVExtendedFormats);
         // clang-format on
-#undef ENABLE_FEATURE
+#undef ENABLE_VKFEATURE
 
-        // Enable features that are not covered by DeviceFeatures but required for some operations.
-        EnabledFeatures.multiDrawIndirect                       = PhysicalDeviceFeatures.multiDrawIndirect;
-        EnabledFeatures.drawIndirectFirstInstance               = PhysicalDeviceFeatures.drawIndirectFirstInstance;
-        EnabledFeatures.shaderStorageImageWriteWithoutFormat    = PhysicalDeviceFeatures.shaderStorageImageWriteWithoutFormat;
-        EnabledFeatures.shaderUniformBufferArrayDynamicIndexing = PhysicalDeviceFeatures.shaderUniformBufferArrayDynamicIndexing;
-        EnabledFeatures.shaderSampledImageArrayDynamicIndexing  = PhysicalDeviceFeatures.shaderSampledImageArrayDynamicIndexing;
-        EnabledFeatures.shaderStorageBufferArrayDynamicIndexing = PhysicalDeviceFeatures.shaderStorageBufferArrayDynamicIndexing;
-        EnabledFeatures.shaderStorageImageArrayDynamicIndexing  = PhysicalDeviceFeatures.shaderStorageImageArrayDynamicIndexing;
-
-        DeviceCreateInfo.pEnabledFeatures = &EnabledFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains
-                                                              // boolean indicators of all the features to be enabled.
+        // Enable features (if they are supported) that are not covered by DeviceFeatures but required for some operations.
+        EnabledFeatures.imageCubeArray                          = DeviceFeatures.imageCubeArray;
+        EnabledFeatures.samplerAnisotropy                       = DeviceFeatures.samplerAnisotropy;
+        EnabledFeatures.fullDrawIndexUint32                     = DeviceFeatures.fullDrawIndexUint32;
+        EnabledFeatures.multiDrawIndirect                       = DeviceFeatures.multiDrawIndirect;
+        EnabledFeatures.drawIndirectFirstInstance               = DeviceFeatures.drawIndirectFirstInstance;
+        EnabledFeatures.shaderStorageImageWriteWithoutFormat    = DeviceFeatures.shaderStorageImageWriteWithoutFormat;
+        EnabledFeatures.shaderUniformBufferArrayDynamicIndexing = DeviceFeatures.shaderUniformBufferArrayDynamicIndexing;
+        EnabledFeatures.shaderSampledImageArrayDynamicIndexing  = DeviceFeatures.shaderSampledImageArrayDynamicIndexing;
+        EnabledFeatures.shaderStorageBufferArrayDynamicIndexing = DeviceFeatures.shaderStorageBufferArrayDynamicIndexing;
+        EnabledFeatures.shaderStorageImageArrayDynamicIndexing  = DeviceFeatures.shaderStorageImageArrayDynamicIndexing;
 
         std::vector<const char*> DeviceExtensions =
             {
@@ -256,74 +566,13 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
             };
 
-        const auto& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
-        auto        EnabledExtFeats   = VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures{};
-        const auto  VkApiVersion      = std::min(InstanceVersion, PhysicalDevice->GetProperties().apiVersion);
-
-#define ENABLE_FEATURE(IsFeatureSupported, Feature, FeatureName)                         \
-    do                                                                                   \
-    {                                                                                    \
-        EngineCI.Features.Feature =                                                      \
-            GetFeatureState(EngineCI.Features.Feature, IsFeatureSupported, FeatureName); \
-    } while (false)
-
-        const auto& MeshShaderFeats = DeviceExtFeatures.MeshShader;
-        ENABLE_FEATURE(MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE, MeshShaders, "Mesh shaders are");
-
-        const auto& ShaderFloat16Int8Feats = DeviceExtFeatures.ShaderFloat16Int8;
-        // clang-format off
-        ENABLE_FEATURE(ShaderFloat16Int8Feats.shaderFloat16 != VK_FALSE, ShaderFloat16, "16-bit float shader operations are");
-        ENABLE_FEATURE(ShaderFloat16Int8Feats.shaderInt8    != VK_FALSE, ShaderInt8,    "8-bit int shader operations are");
-        // clang-format on
-
-        const auto& Storage16BitFeats = DeviceExtFeatures.Storage16Bit;
-        // clang-format off
-        ENABLE_FEATURE(Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE, ResourceBuffer16BitAccess, "16-bit resource buffer access is");
-        ENABLE_FEATURE(Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE, UniformBuffer16BitAccess,  "16-bit uniform buffer access is");
-        ENABLE_FEATURE(Storage16BitFeats.storageInputOutput16               != VK_FALSE, ShaderInputOutput16,       "16-bit shader inputs/outputs are");
-        // clang-format on
-
-        const auto& Storage8BitFeats = DeviceExtFeatures.Storage8Bit;
-        // clang-format off
-        ENABLE_FEATURE(Storage8BitFeats.storageBuffer8BitAccess           != VK_FALSE, ResourceBuffer8BitAccess, "8-bit resource buffer access is");
-        ENABLE_FEATURE(Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE, UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
-        // clang-format on
-
-        const auto& DescrIndexingFeats = DeviceExtFeatures.DescriptorIndexing;
-        ENABLE_FEATURE(DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE, ShaderResourceRuntimeArray, "Shader resource runtime array is");
-        const auto& AccelStructFeats = DeviceExtFeatures.AccelStruct;
-        const auto& RayTracingFeats  = DeviceExtFeatures.RayTracingPipeline;
-        const auto& RayQueryFeats    = DeviceExtFeatures.RayQuery;
-        // clang-format off
-        ENABLE_FEATURE(VkApiVersion                           >= VK_API_VERSION_1_1 &&
-                       AccelStructFeats.accelerationStructure != VK_FALSE           &&
-                       RayTracingFeats.rayTracingPipeline     != VK_FALSE, RayTracing, "Ray tracing is");
-        ENABLE_FEATURE(VkApiVersion                                        >= VK_API_VERSION_1_1 &&
-                       AccelStructFeats.accelerationStructure              != VK_FALSE           &&
-                       RayTracingFeats.rayTracingPipeline                  != VK_FALSE           &&
-                       RayTracingFeats.rayTracingPipelineTraceRaysIndirect != VK_FALSE           &&
-                       RayTracingFeats.rayTraversalPrimitiveCulling        != VK_FALSE           &&
-                       RayQueryFeats.rayQuery                              != VK_FALSE, RayTracing2, "Inline ray tracing is");
-        // clang-format on
-
-        const auto& SubgroupProps          = PhysicalDevice->GetExtProperties().Subgroup;
-        const auto  RequiredSubgroupFeats  = VK_SUBGROUP_FEATURE_BASIC_BIT;
-        const auto  RequiredSubgroupStages = VK_SHADER_STAGE_COMPUTE_BIT;
-        ENABLE_FEATURE((VkApiVersion >= VK_API_VERSION_1_1 &&
-                        (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
-                        (SubgroupProps.supportedStages & RequiredSubgroupStages) == RequiredSubgroupStages),
-                       WaveOp, "Wave operations are");
-
-        const auto& VertexAttribDivisorFeats = PhysicalDevice->GetExtFeatures().VertexAttributeDivisor;
-        ENABLE_FEATURE((VertexAttribDivisorFeats.vertexAttributeInstanceRateDivisor != VK_FALSE &&
-                        VertexAttribDivisorFeats.vertexAttributeInstanceRateZeroDivisor != VK_FALSE),
-                       InstanceDataStepRate, "Instance data step rate is");
-#undef ENABLE_FEATURE
-
+        using ExtensionFeatures                    = VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures;
+        const ExtensionFeatures& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
+        ExtensionFeatures        EnabledExtFeats   = {};
 
         // To enable some device extensions you must enable instance extension VK_KHR_get_physical_device_properties2
         // and add feature description to DeviceCreateInfo.pNext.
-        bool SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        const bool SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
         // Enable extensions
         if (SupportsFeatures2)
@@ -333,7 +582,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // Mesh shader
             if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
             {
-                EnabledExtFeats.MeshShader = MeshShaderFeats;
+                EnabledExtFeats.MeshShader = DeviceExtFeatures.MeshShader;
                 VERIFY_EXPR(EnabledExtFeats.MeshShader.taskShader != VK_FALSE && EnabledExtFeats.MeshShader.meshShader != VK_FALSE);
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME),
                        "VK_NV_mesh_shader extension must be supported as it has already been checked by VulkanPhysicalDevice and "
@@ -346,7 +595,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             if (EngineCI.Features.ShaderFloat16 != DEVICE_FEATURE_STATE_DISABLED ||
                 EngineCI.Features.ShaderInt8 != DEVICE_FEATURE_STATE_DISABLED)
             {
-                EnabledExtFeats.ShaderFloat16Int8 = ShaderFloat16Int8Feats;
+                EnabledExtFeats.ShaderFloat16Int8 = DeviceExtFeatures.ShaderFloat16Int8;
                 VERIFY_EXPR(EnabledExtFeats.ShaderFloat16Int8.shaderFloat16 != VK_FALSE || EnabledExtFeats.ShaderFloat16Int8.shaderInt8 != VK_FALSE);
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME),
                        "VK_KHR_shader_float16_int8 extension must be supported as it has already been checked by VulkanPhysicalDevice "
@@ -371,7 +620,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // clang-format on
             {
                 // clang-format off
-                EnabledExtFeats.Storage16Bit = Storage16BitFeats;
+                EnabledExtFeats.Storage16Bit = DeviceExtFeatures.Storage16Bit;
                 VERIFY_EXPR(EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage16Bit.storageBuffer16BitAccess           != VK_FALSE);
                 VERIFY_EXPR(EngineCI.Features.UniformBuffer16BitAccess  == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage16Bit.uniformAndStorageBuffer16BitAccess != VK_FALSE);
                 VERIFY_EXPR(EngineCI.Features.ShaderInputOutput16       == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage16Bit.storageInputOutput16               != VK_FALSE);
@@ -390,6 +639,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                        "storageBuffer16BitAccess, uniformAndStorageBuffer16BitAccess, or storagePushConstant16 features is TRUE");
                 StorageBufferStorageClassExtensionRequired = true;
 
+                EnabledFeatures.shaderInt16 = VK_TRUE;
                 if (EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED)
                     EnabledExtFeats.Storage16Bit.storageBuffer16BitAccess = VK_FALSE;
                 if (EngineCI.Features.UniformBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED)
@@ -407,7 +657,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // clang-format on
             {
                 // clang-format off
-                EnabledExtFeats.Storage8Bit = Storage8BitFeats;
+                EnabledExtFeats.Storage8Bit = DeviceExtFeatures.Storage8Bit;
                 VERIFY_EXPR(EngineCI.Features.ResourceBuffer8BitAccess == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage8Bit.storageBuffer8BitAccess           != VK_FALSE);
                 VERIFY_EXPR(EngineCI.Features.UniformBuffer8BitAccess  == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage8Bit.uniformAndStorageBuffer8BitAccess != VK_FALSE);
                 // clang-format on
@@ -436,17 +686,22 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
             if (StorageBufferStorageClassExtensionRequired)
             {
-                VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME));
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME), "VK_KHR_storage_buffer_storage_class extension must be supported");
                 DeviceExtensions.push_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
             }
 
+            // clang-format off
             if (EngineCI.Features.ShaderResourceRuntimeArray != DEVICE_FEATURE_STATE_DISABLED ||
-                EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
+                EngineCI.Features.RayTracing                 != DEVICE_FEATURE_STATE_DISABLED)
+            // clang-format on
             {
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_MAINTENANCE3_EXTENSION_NAME), "VK_KHR_maintenance3 extension must be supported");
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_MAINTENANCE3_EXTENSION_NAME), "VK_EXT_descriptor_indexing extension must be supported");
                 DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME); // required for VK_EXT_descriptor_indexing
                 DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 
-                EnabledExtFeats.DescriptorIndexing = DescrIndexingFeats;
+                EnabledExtFeats.DescriptorIndexing = DeviceExtFeatures.DescriptorIndexing;
+                VERIFY_EXPR(EnabledExtFeats.DescriptorIndexing.runtimeDescriptorArray != VK_FALSE);
 
                 *NextExt = &EnabledExtFeats.DescriptorIndexing;
                 NextExt  = &EnabledExtFeats.DescriptorIndexing.pNext;
@@ -458,6 +713,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 // this extensions added to Vulkan 1.2 core
                 if (!DeviceExtFeatures.Spirv15)
                 {
+                    VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME), "VK_KHR_shader_float_controls extension must be supported");
+                    VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_SPIRV_1_4_EXTENSION_NAME), "VK_KHR_spirv_1_4 extension must be supported");
                     DeviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME); // required for VK_KHR_spirv_1_4
                     DeviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);             // required for VK_KHR_ray_tracing_pipeline or VK_KHR_ray_query
                     EnabledExtFeats.Spirv14 = DeviceExtFeatures.Spirv14;
@@ -467,6 +724,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 // SPIRV 1.5 is in Vulkan 1.2 core
                 EnabledExtFeats.Spirv15 = DeviceExtFeatures.Spirv15;
 
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME), "VK_KHR_buffer_device_address extension must be supported");
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME), "VK_KHR_deferred_host_operations extension must be supported");
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME), "VK_KHR_acceleration_structure extension must be supported");
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME), "VK_KHR_ray_tracing_pipeline extension must be supported");
                 DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);    // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME); // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);   // required for ray tracing
@@ -494,9 +755,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 // Inline ray tracing from any shader.
                 if (EngineCI.Features.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
                 {
+                    VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_RAY_QUERY_EXTENSION_NAME), "VK_KHR_ray_query extension must be supported");
                     DeviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
 
-                    EnabledExtFeats.RayQuery = RayQueryFeats;
+                    EnabledExtFeats.RayQuery = DeviceExtFeatures.RayQuery;
 
                     *NextExt = &EnabledExtFeats.RayQuery;
                     NextExt  = &EnabledExtFeats.RayQuery.pNext;
@@ -514,6 +776,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             {
                 EnabledExtFeats.HasPortabilitySubset = DeviceExtFeatures.HasPortabilitySubset;
                 EnabledExtFeats.PortabilitySubset    = DeviceExtFeatures.PortabilitySubset;
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME), "VK_KHR_portability_subset extension must be supported");
                 DeviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
 
                 *NextExt = &EnabledExtFeats.PortabilitySubset;
@@ -531,19 +794,47 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME));
                 DeviceExtensions.push_back(VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME);
 
-                EnabledExtFeats.VertexAttributeDivisor = VertexAttribDivisorFeats;
+                EnabledExtFeats.VertexAttributeDivisor = DeviceExtFeatures.VertexAttributeDivisor;
 
                 *NextExt = &EnabledExtFeats.VertexAttributeDivisor;
                 NextExt  = &EnabledExtFeats.VertexAttributeDivisor.pNext;
             }
 
-            // make sure that last pNext is null
-            *NextExt = nullptr;
+            // Append user-defined features
+            *NextExt = EngineCI.pDeviceExtensionFeatures;
+        }
+        else
+        {
+            if (EngineCI.pDeviceExtensionFeatures == nullptr)
+                LOG_ERROR_MESSAGE("Can not enable extended device features when VK_KHR_get_physical_device_properties2 extension is not supported by device");
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
+
+        for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)
+        {
+            if (!PhysicalDevice->IsExtensionSupported(EngineCI.ppDeviceExtensionNames[i]))
+            {
+                LOG_ERROR_MESSAGE("Required device extension '", EngineCI.ppDeviceExtensionNames[i], "' is not supported.");
+                continue;
+            }
+
+            // Remove duplicate extensions
+            bool Exists = false;
+            for (auto* ExtName : DeviceExtensions)
+            {
+                if (std::strcmp(ExtName, EngineCI.ppDeviceExtensionNames[i]) == 0)
+                {
+                    Exists = true;
+                    break;
+                }
+            }
+
+            if (!Exists)
+                DeviceExtensions.push_back(EngineCI.ppDeviceExtensionNames[i]);
+        }
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();
         DeviceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(DeviceExtensions.size());
@@ -553,8 +844,36 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
         auto& RawMemAllocator = GetRawAllocator();
 
-        RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk{
-            NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex)};
+        std::vector<RefCntAutoPtr<CommandQueueVkImpl>> CommandQueuesVk{std::max(1u, EngineCI.NumContexts)};
+        std::vector<ICommandQueueVk*>                  CommandQueues{CommandQueuesVk.size()};
+
+        if (EngineCI.NumContexts > 0)
+        {
+            for (Uint32 QInd = 0; QInd < QueueInfos.size(); ++QInd)
+                QueueInfos[QInd].queueCount = 0;
+
+            for (Uint32 CtxInd = 0; CtxInd < CommandQueuesVk.size(); ++CtxInd)
+            {
+                const auto& ContextInfo = EngineCI.pContextInfo[CtxInd];
+                const auto  QueueIndex  = QueueIDtoQueueInfo[ContextInfo.QueueId];
+                VERIFY_EXPR(QueueIndex != DEFAULT_QUEUE_ID);
+                auto& QueueCI = QueueInfos[QueueIndex];
+
+                CommandQueuesVk[CtxInd] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, CommandQueueIndex{CtxInd}, EngineCI.NumContexts, QueueCI.queueCount, ContextInfo);
+                CommandQueues[CtxInd]   = CommandQueuesVk[CtxInd];
+                QueueCI.queueCount += 1;
+            }
+        }
+        else
+        {
+            VERIFY_EXPR(CommandQueuesVk.size() == 1);
+            ContextCreateInfo DefaultContextInfo{};
+            DefaultContextInfo.Name    = "Graphics context";
+            DefaultContextInfo.QueueId = static_cast<Uint8>(QueueInfos[0].queueFamilyIndex);
+
+            CommandQueuesVk[0] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, CommandQueueIndex{0}, 1, 1, DefaultContextInfo);
+            CommandQueues[0]   = CommandQueuesVk[0];
+        }
 
         OnRenderDeviceCreated = [&](RenderDeviceVkImpl* pRenderDeviceVk) //
         {
@@ -563,13 +882,16 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // Render device owns command queue that in turn owns the fence, so it is an internal device object
             constexpr bool IsDeviceInternal = true;
 
-            RefCntAutoPtr<FenceVkImpl> pFenceVk{
-                NEW_RC_OBJ(RawMemAllocator, "FenceVkImpl instance", FenceVkImpl)(pRenderDeviceVk, Desc, IsDeviceInternal)};
-            pCmdQueueVk->SetFence(std::move(pFenceVk));
+            for (Uint32 CtxInd = 0; CtxInd < CommandQueuesVk.size(); ++CtxInd)
+            {
+                RefCntAutoPtr<FenceVkImpl> pFenceVk{NEW_RC_OBJ(RawMemAllocator, "FenceVkImpl instance", FenceVkImpl)(pRenderDeviceVk, Desc, IsDeviceInternal)};
+                CommandQueuesVk[CtxInd]->SetFence(std::move(pFenceVk));
+            }
         };
 
-        std::array<ICommandQueueVk*, 1> CommandQueues = {{pCmdQueueVk}};
-        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, ppDevice, ppContexts);
+        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, AdapterInfo, ppDevice, ppContexts);
+
+        m_RenderDeviceCreated = true;
     }
     catch (std::runtime_error&)
     {
@@ -579,32 +901,33 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
 /// Attaches to existing Vulkan device
 
-/// \param [in] Instance - shared pointer to a VulkanUtilities::VulkanInstance object
-/// \param [in] PhysicalDevice - pointer to the object representing physical device
-/// \param [in] LogicalDevice - shared pointer to a VulkanUtilities::VulkanLogicalDevice object
-/// \param [in] pCommandQueue - pointer to the implementation of command queue
-/// \param [in] EngineCI - Engine creation attributes.
-/// \param [out] ppDevice - Address of the memory location where pointer to
-///                         the created device will be written
-/// \param [out] ppContexts - Address of the memory location where pointers to
-///                           the contexts will be written. Immediate context goes at
-///                           position 0. If EngineCI.NumDeferredContexts > 0,
-///                           pointers to the deferred contexts are written afterwards.
+/// \param [in]  Instance       - shared pointer to a VulkanUtilities::VulkanInstance object
+/// \param [in]  PhysicalDevice - pointer to the object representing physical device
+/// \param [in]  LogicalDevice  - shared pointer to a VulkanUtilities::VulkanLogicalDevice object
+/// \param [in]  pCommandQueue  - pointer to the implementation of command queue
+/// \param [in]  EngineCI       - Engine creation attributes.
+/// \param [out] ppDevice       - Address of the memory location where pointer to
+///                               the created device will be written
+/// \param [out] ppContexts     - Address of the memory location where pointers to
+///                               the contexts will be written. Immediate context goes at
+///                               position 0. If EngineCI.NumDeferredContexts > 0,
+///                               pointers to the deferred contexts are written afterwards.
 void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                                                std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
                                                std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
                                                size_t                                                 CommandQueueCount,
                                                ICommandQueueVk**                                      ppCommandQueues,
                                                const EngineVkCreateInfo&                              EngineCI,
+                                               const GraphicsAdapterInfo&                             AdapterInfo,
                                                IRenderDevice**                                        ppDevice,
                                                IDeviceContext**                                       ppContexts)
 {
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
-    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+    if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
         return;
     }
 
@@ -612,14 +935,18 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     if (!LogicalDevice || !ppCommandQueues || !ppDevice || !ppContexts)
         return;
 
+    const Uint32 NumImmediateContexts = std::max(1u, EngineCI.NumContexts);
+
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (NumImmediateContexts + EngineCI.NumDeferredContexts));
 
     try
     {
         auto& RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceVkImpl* pRenderDeviceVk(NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, this, EngineCI, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice));
+        VERIFY_EXPR(memcmp(&AdapterInfo.Capabilities.Features, &EngineCI.Features, sizeof(EngineCI.Features)) == 0);
+
+        RenderDeviceVkImpl* pRenderDeviceVk(NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, this, EngineCI, AdapterInfo, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice));
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         if (OnRenderDeviceCreated != nullptr)
@@ -627,18 +954,21 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));
 
-        RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk(NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineCI, 0, 0, GenerateMipsHelper));
-        // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
-        // keep a weak reference to the context
-        pImmediateCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
-        pRenderDeviceVk->SetImmediateContext(pImmediateCtxVk);
+        for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
+        {
+            RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk{NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineCI, ContextIndex{CtxInd}, CommandQueueIndex{CtxInd}, GenerateMipsHelper)};
+            // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
+            // keep a weak reference to the context
+            pImmediateCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CtxInd));
+            pRenderDeviceVk->SetImmediateContext(CtxInd, pImmediateCtxVk);
+        }
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk(NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineCI, 1 + DeferredCtx, 0, GenerateMipsHelper));
+            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk{NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineCI, ContextIndex{NumImmediateContexts + DeferredCtx}, CommandQueueIndex{MAX_COMMAND_QUEUES}, GenerateMipsHelper)};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
-            pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + 1 + DeferredCtx));
+            pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + NumImmediateContexts + DeferredCtx));
             pRenderDeviceVk->SetDeferredContext(DeferredCtx, pDeferredCtxVk);
         }
     }
@@ -649,7 +979,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for (Uint32 ctx = 0; ctx < 1 + EngineCI.NumDeferredContexts; ++ctx)
+        for (Uint32 ctx = 0; ctx < NumImmediateContexts + EngineCI.NumDeferredContexts; ++ctx)
         {
             if (ppContexts[ctx] != nullptr)
             {
@@ -696,6 +1026,7 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
     }
 }
 
+
 #if PLATFORM_ANDROID
 void EngineFactoryVkImpl::InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
                                                 const char*             NativeActivityClassName,
@@ -724,6 +1055,8 @@ GetEngineFactoryVkType LoadGraphicsEngineVk()
 #    error This function must never be compiled;
 }
 #endif
+
+} // namespace
 
 API_QUALIFIER
 IEngineFactoryVk* GetEngineFactoryVk()

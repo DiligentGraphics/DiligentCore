@@ -92,11 +92,17 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
     MISC_TEXTURE_FLAGS MiscFlags        DEFAULT_INITIALIZER(MISC_TEXTURE_FLAG_NONE);
     
+    /// Texture creation flags, see Diligent::RESOURCE_FLAGS for details
+    RESOURCE_FLAGS ResourceFlags        DEFAULT_INITIALIZER(RESOURCE_FLAG_UNKNOWN);
+
+    /// Defines which command queue will own texture at start
+    Uint8        InitialCommandQueueId  DEFAULT_INITIALIZER(0);
+
     /// Optimized clear value
     OptimizedClearValue ClearValue;
 
     /// Defines which command queues this texture can be used with
-    Uint64 CommandQueueMask              DEFAULT_INITIALIZER(1);
+    Uint64 CommandQueueMask             DEFAULT_INITIALIZER(1);
 
 
 #if DILIGENT_CPP_INTERFACE
@@ -114,20 +120,22 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 CPU_ACCESS_FLAGS    _CPUAccessFlags   = TextureDesc{}.CPUAccessFlags,
                 MISC_TEXTURE_FLAGS  _MiscFlags        = TextureDesc{}.MiscFlags,
                 OptimizedClearValue _ClearValue       = TextureDesc{}.ClearValue,
-                Uint64              _CommandQueueMask = TextureDesc{}.CommandQueueMask) : 
-        Type             {_Type            }, 
-        Width            {_Width           },
-        Height           {_Height          },
-        ArraySize        {_ArraySizeOrDepth},
-        Format           {_Format          },
-        MipLevels        {_MipLevels       },
-        SampleCount      {_SampleCount     },
-        Usage            {_Usage           },
-        BindFlags        {_BindFlags       },
-        CPUAccessFlags   {_CPUAccessFlags  },
-        MiscFlags        {_MiscFlags       },
-        ClearValue       {_ClearValue      },
-        CommandQueueMask {_CommandQueueMask}
+                Uint64              _CommandQueueMask = TextureDesc{}.CommandQueueMask,
+                Uint8               _InitialQueueId   = TextureDesc{}.InitialCommandQueueId) noexcept : 
+        Type                 {_Type            }, 
+        Width                {_Width           },
+        Height               {_Height          },
+        ArraySize            {_ArraySizeOrDepth},
+        Format               {_Format          },
+        MipLevels            {_MipLevels       },
+        SampleCount          {_SampleCount     },
+        Usage                {_Usage           },
+        BindFlags            {_BindFlags       },
+        CPUAccessFlags       {_CPUAccessFlags  },
+        MiscFlags            {_MiscFlags       },
+        ClearValue           {_ClearValue      },
+        CommandQueueMask     {_CommandQueueMask},
+        InitialCommandQueueId{_InitialQueueId  }
     {}
 
     /// Tests if two structures are equivalent
@@ -143,6 +151,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
         return  // strcmp(Name, RHS.Name) == 0          &&
+                // InitialCommandQueueId == RHS.InitialCommandQueueId &&
                 Type             == RHS.Type           &&
                 Width            == RHS.Width          &&
                 Height           == RHS.Height         &&

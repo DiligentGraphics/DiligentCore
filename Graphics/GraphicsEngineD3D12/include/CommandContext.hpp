@@ -66,7 +66,7 @@ struct DWParam
 class CommandContext
 {
 public:
-    CommandContext(class CommandListManager& CmdListManager);
+    explicit CommandContext(class CommandListManager& CmdListManager);
 
     // clang-format off
     CommandContext             (const CommandContext&)  = delete;
@@ -182,6 +182,7 @@ public:
 
     void                       SetID(const Char* ID) { m_ID = ID; }
     ID3D12GraphicsCommandList* GetCommandList() { return m_pCommandList; }
+    D3D12_COMMAND_LIST_TYPE    GetCommandListType() const { return m_pCommandList->GetType(); }
 
     DescriptorHeapAllocation AllocateDynamicGPUVisibleDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1)
     {

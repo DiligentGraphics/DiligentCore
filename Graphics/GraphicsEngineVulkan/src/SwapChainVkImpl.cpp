@@ -148,8 +148,8 @@ void SwapChainVkImpl::CreateSurface()
 
     auto*       pRenderDeviceVk  = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     const auto& PhysicalDevice   = pRenderDeviceVk->GetPhysicalDevice();
-    auto&       CmdQueueVK       = pRenderDeviceVk->GetCommandQueue(0);
-    auto        QueueFamilyIndex = CmdQueueVK.GetQueueFamilyIndex();
+    auto&       CmdQueueVK       = pRenderDeviceVk->GetCommandQueue(GetCommandQueueId());
+    auto        QueueFamilyIndex = HardwareQueueId{CmdQueueVK.GetQueueFamilyIndex()};
     if (!PhysicalDevice.CheckPresentSupport(QueueFamilyIndex, m_VkSurface))
     {
         LOG_ERROR_AND_THROW("Selected physical device does not support present capability.\n"
@@ -715,7 +715,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         VkResult Result             = VK_SUCCESS;
         PresentInfo.pResults        = &Result;
         pDeviceVk->LockCmdQueueAndRun(
-            0,
+            GetCommandQueueId(),
             [&PresentInfo](ICommandQueueVk* pCmdQueueVk) //
             {
                 pCmdQueueVk->Present(PresentInfo);

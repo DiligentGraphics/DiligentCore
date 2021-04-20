@@ -286,12 +286,16 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                                          IPipelineResourceSignature**            ppSignature) PURE;
 
 
-    /// Gets the device capabilities, see Diligent::DeviceCaps for details
+    /// Gets the device capabilities, see Diligent::DeviceCaps for details.
+    /// AZ TODO: deprecated, use GetAdapterInfo()
     VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;
     
-    /// Gets the device properties, see Diligent::DeviceProperties for details
+    /// Gets the device properties, see Diligent::DeviceProperties for details.
+    /// AZ TODO: deprecated, use GetAdapterInfo()
     VIRTUAL const DeviceProperties REF METHOD(GetDeviceProperties)(THIS) CONST PURE;
-
+    
+    /// Gets the graphics adapter information, see Diligent::GraphicsAdapterInfo for details.
+    VIRTUAL const GraphicsAdapterInfo REF METHOD(GetAdapterInfo)(THIS) CONST PURE;
 
     /// Returns the basic texture format information.
 

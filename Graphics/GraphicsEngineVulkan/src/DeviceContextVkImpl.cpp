@@ -61,8 +61,8 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
                                          RenderDeviceVkImpl*                   pDeviceVkImpl,
                                          bool                                  bIsDeferred,
                                          const EngineVkCreateInfo&             EngineCI,
-                                         Uint32                                ContextId,
-                                         Uint32                                CommandQueueId,
+                                         ContextIndex                          ContextId,
+                                         CommandQueueIndex                     CommandQueueId,
                                          std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper) :
     // clang-format off
     TDeviceContextBase
@@ -71,21 +71,10 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
         pDeviceVkImpl,
         ContextId,
         CommandQueueId,
+        (ContextId < EngineCI.NumContexts ? EngineCI.pContextInfo[ContextId].Name : ""),
         bIsDeferred
     },
-    m_CommandBuffer { pDeviceVkImpl->GetLogicalDevice().GetEnabledShaderStages() },
     m_CmdListAllocator { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
-    // Command pools must be thread safe because command buffers are returned into pools by release queues
-    // potentially running in another thread
-    m_CmdPool
-    {
-        new VulkanUtilities::VulkanCommandBufferPool
-        {
-            pDeviceVkImpl->GetLogicalDevice().GetSharedPtr(),
-            pDeviceVkImpl->GetCommandQueue(CommandQueueId).GetQueueFamilyIndex(),
-            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
-        }
-    },
     // Upload heap must always be thread-safe as Finish() may be called from another thread
     m_UploadHeap
     {
@@ -107,9 +96,10 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
     m_GenerateMipsHelper{std::move(GenerateMipsHelper)}
 // clang-format on
 {
-    if (!m_bIsDeferred)
+    if (!IsDeferred())
     {
-        m_QueryMgr.reset(new QueryManagerVk{pDeviceVkImpl, EngineCI.QueryPoolSizes});
+        InitializeForQueue(CommandQueueId);
+        m_QueryMgr.reset(new QueryManagerVk{pDeviceVkImpl, EngineCI.QueryPoolSizes, CommandQueueId});
     }
 
     m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
@@ -135,9 +125,9 @@ DeviceContextVkImpl::~DeviceContextVkImpl()
 {
     if (m_State.NumCommands != 0)
     {
-        if (m_bIsDeferred)
+        if (IsDeferred())
         {
-            LOG_ERROR_MESSAGE("There are outstanding commands in deferred context #", m_ContextId,
+            LOG_ERROR_MESSAGE("There are outstanding commands in deferred context #", GetContextId(),
                               " being destroyed, which indicates that FinishCommandList() has not been called."
                               " This may cause synchronization issues.");
         }
@@ -149,7 +139,7 @@ DeviceContextVkImpl::~DeviceContextVkImpl()
         }
     }
 
-    if (!m_bIsDeferred)
+    if (!IsDeferred())
     {
         Flush();
     }
@@ -171,15 +161,57 @@ DeviceContextVkImpl::~DeviceContextVkImpl()
     //     Also note that command buffers are disposed directly into the release queue, but
     //     the command pool goes into the stale objects queue and is moved into the release queue
     //     when the next command buffer is submitted.
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_CmdPool), ~Uint64{0});
+    if (m_CmdPool)
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_CmdPool), ~Uint64{0});
 
     // NB: Upload heap, dynamic heap and dynamic descriptor manager return their resources to
     //     global managers and do not need to wait for GPU to idle.
 }
 
-void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
+void DeviceContextVkImpl::InitializeForQueue(CommandQueueIndex CommandQueueId)
+{
+    DEV_CHECK_ERR(CommandQueueId < m_pDevice->GetCommandQueueCount(), "CommandQueueId is out of range");
+
+    const auto  QueueFamilyIndex = HardwareQueueId{m_pDevice->GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    const auto& PhysicalDevice   = m_pDevice->GetPhysicalDevice();
+    const auto& QueuProps        = PhysicalDevice.GetQueueProperties();
+
+    DEV_CHECK_ERR(QueueFamilyIndex < QueuProps.size(), "QueueFamilyIndex is out of range");
+
+    if (m_CmdPool)
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_CmdPool), ~Uint64{0});
+
+    // Command pools must be thread safe because command buffers are returned into pools by release queues
+    // potentially running in another thread
+    m_CmdPool.reset(new VulkanUtilities::VulkanCommandBufferPool{
+        m_pDevice->GetLogicalDevice().GetSharedPtr(),
+        QueueFamilyIndex,
+        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT});
+
+    // Set queue properties
+    const auto& QueueInfo = QueuProps[QueueFamilyIndex];
+
+    m_Desc.QueueId                   = static_cast<Uint8>(QueueFamilyIndex);
+    m_Desc.CommandQueueId            = static_cast<Uint8>(CommandQueueId);
+    m_Desc.ContextType               = VkQueueFlagsToContextType(QueueInfo.queueFlags);
+    m_Desc.TextureCopyGranularity[0] = QueueInfo.minImageTransferGranularity.width;
+    m_Desc.TextureCopyGranularity[1] = QueueInfo.minImageTransferGranularity.height;
+    m_Desc.TextureCopyGranularity[2] = QueueInfo.minImageTransferGranularity.depth;
+
+    VERIFY(m_Desc.QueueId == QueueFamilyIndex, "Not enough bits to store queue index");
+    VERIFY(m_Desc.CommandQueueId == CommandQueueId, "Not enough bits to store command queue index");
+}
+
+void DeviceContextVkImpl::Begin(Uint32 CommandQueueId)
+{
+    DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
+    InitializeForQueue(CommandQueueIndex{CommandQueueId});
+}
+
+void DeviceContextVkImpl::DisposeVkCmdBuffer(CommandQueueIndex CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
 {
     VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
+    VERIFY_EXPR(m_CmdPool != nullptr);
     class CmdBufferRecycler
     {
     public:
@@ -224,7 +256,7 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vk
     ReleaseQueue.DiscardResource(CmdBufferRecycler{vkCmdBuff, *m_CmdPool}, FenceValue);
 }
 
-inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(Uint32 CmdQueue, Uint64 FenceValue)
+inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(CommandQueueIndex CmdQueue, Uint64 FenceValue)
 {
     VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unifinished render pass");
     auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
@@ -385,7 +417,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
             VERIFY(m_DynamicBufferOffsets.size() >= SetInfo.DynamicOffsetCount,
                    "m_DynamicBufferOffsets must've been resized by CommitShaderResources() to have enough space");
 
-            auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(m_ContextId, this, m_DynamicBufferOffsets);
+            auto NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(GetContextId(), this, m_DynamicBufferOffsets);
             VERIFY_EXPR(NumOffsetsWritten == SetInfo.DynamicOffsetCount);
         }
 
@@ -460,7 +492,7 @@ void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderReso
 
 void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
+    TDeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
 
     auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
     auto& ResourceCache     = pResBindingVkImpl->GetResourceCache();
@@ -581,7 +613,7 @@ void DeviceContextVkImpl::CommitVkVertexBuffers()
             // Device context keeps strong references to all vertex buffers.
 
             vkVertexBuffers[slot] = pBufferVk->GetVkBuffer();
-            Offsets[slot]         = CurrStream.Offset + pBufferVk->GetDynamicOffset(m_ContextId, this);
+            Offsets[slot]         = CurrStream.Offset + pBufferVk->GetDynamicOffset(GetContextId(), this);
         }
         else
         {
@@ -731,7 +763,7 @@ void DeviceContextVkImpl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE Ind
 #endif
     DEV_CHECK_ERR(IndexType == VT_UINT16 || IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
     VkIndexType vkIndexType = TypeToVkIndexType(IndexType);
-    m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(m_ContextId, this), vkIndexType);
+    m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(GetContextId(), this), vkIndexType);
 }
 
 void DeviceContextVkImpl::Draw(const DrawAttribs& Attribs)
@@ -764,7 +796,7 @@ void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuff
 
     PrepareForDraw(Attribs.Flags);
 
-    m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + Attribs.IndirectDrawArgsOffset, 1, 0);
+    m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.IndirectDrawArgsOffset, 1, 0);
     ++m_State.NumCommands;
 }
 
@@ -778,7 +810,7 @@ void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-    m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + Attribs.IndirectDrawArgsOffset, 1, 0);
+    m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.IndirectDrawArgsOffset, 1, 0);
     ++m_State.NumCommands;
 }
 
@@ -802,7 +834,7 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
 
     PrepareForDraw(Attribs.Flags);
 
-    m_CommandBuffer.DrawMeshIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + Attribs.IndirectDrawArgsOffset, 1, 0);
+    m_CommandBuffer.DrawMeshIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.IndirectDrawArgsOffset, 1, 0);
     ++m_State.NumCommands;
 }
 
@@ -818,9 +850,9 @@ void DeviceContextVkImpl::DrawMeshIndirectCount(const DrawMeshIndirectCountAttri
     PrepareForDraw(Attribs.Flags);
 
     m_CommandBuffer.DrawMeshIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                          pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + Attribs.IndirectDrawArgsOffset,
+                                          pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.IndirectDrawArgsOffset,
                                           pCountBufferVk->GetVkBuffer(),
-                                          pCountBufferVk->GetDynamicOffset(m_ContextId, this) + Attribs.CountBufferOffset,
+                                          pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CountBufferOffset,
                                           Attribs.MaxCommandCount,
                                           DrawMeshIndirectCommandStride);
     ++m_State.NumCommands;
@@ -887,7 +919,7 @@ void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
     TransitionOrVerifyBufferState(*pBufferVk, Attribs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
                                   VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
 
-    m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + Attribs.DispatchArgsByteOffset);
+    m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.DispatchArgsByteOffset);
     ++m_State.NumCommands;
 }
 
@@ -1107,9 +1139,9 @@ void DeviceContextVkImpl::FinishFrame()
 
     if (GetNumCommandsInCtx() != 0)
     {
-        if (m_bIsDeferred)
+        if (IsDeferred())
         {
-            LOG_ERROR_MESSAGE("There are outstanding commands in deferred device context #", m_ContextId,
+            LOG_ERROR_MESSAGE("There are outstanding commands in deferred device context #", GetContextId(),
                               " when finishing the frame. This is an error and may cause unpredicted behaviour."
                               " Close all deferred contexts and execute them before finishing the frame.");
         }
@@ -1136,24 +1168,25 @@ void DeviceContextVkImpl::FinishFrame()
     if (!m_MappedTextures.empty())
         LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
 
-    VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1} << m_CommandQueueId));
+    const Uint64 QueueMask = GetSubmittedBuffersCmdQueueMask();
+    VERIFY_EXPR(IsDeferred() || QueueMask == (Uint64{1} << GetCommandQueueId()));
 
     // Release resources used by the context during this frame.
 
     // Upload heap returns all allocated pages to the global memory manager.
     // Note: as global memory manager is hosted by the render device, the upload heap can be destroyed
     // before the pages are actually returned to the manager.
-    m_UploadHeap.ReleaseAllocatedPages(m_SubmittedBuffersCmdQueueMask);
+    m_UploadHeap.ReleaseAllocatedPages(QueueMask);
 
     // Dynamic heap returns all allocated master blocks to the global dynamic memory manager.
     // Note: as global dynamic memory manager is hosted by the render device, the dynamic heap can
     // be destroyed before the blocks are actually returned to the global dynamic memory manager.
-    m_DynamicHeap.ReleaseMasterBlocks(*m_pDevice, m_SubmittedBuffersCmdQueueMask);
+    m_DynamicHeap.ReleaseMasterBlocks(*m_pDevice, QueueMask);
 
     // Dynamic descriptor set allocator returns all allocated pools to the global dynamic descriptor pool manager.
     // Note: as global pool manager is hosted by the render device, the allocator can
     // be destroyed before the pools are actually returned to the global pool manager.
-    m_DynamicDescrSetAllocator.ReleasePools(m_SubmittedBuffersCmdQueueMask);
+    m_DynamicDescrSetAllocator.ReleasePools(QueueMask);
 
     EndFrame();
 }
@@ -1166,7 +1199,7 @@ void DeviceContextVkImpl::Flush()
 void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
                                 ICommandList* const* ppCommandLists)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Flush() should only be called for immediate contexts.");
+    DEV_CHECK_ERR(!IsDeferred(), "Flush() should only be called for immediate contexts.");
 
     DEV_CHECK_ERR(m_ActiveQueriesCounter == 0,
                   "Flushing device context that has ", m_ActiveQueriesCounter,
@@ -1208,46 +1241,58 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     {
         auto* pCmdListVk = ValidatedCast<CommandListVkImpl>(ppCommandLists[i]);
         DEV_CHECK_ERR(pCmdListVk != nullptr, "Command list must not be null");
-        RefCntAutoPtr<IDeviceContext> pDeferredCtx;
-        vkCmdBuffs.emplace_back(pCmdListVk->Close(pDeferredCtx));
+        DEV_CHECK_ERR(pCmdListVk->GetQueueId() == GetDesc().QueueId, "Command list recorded for QueueId(", pCmdListVk->GetQueueId(), "), but executed on QueueId(", GetDesc().QueueId, ")");
+        DeferredCtxs.emplace_back();
+        vkCmdBuffs.emplace_back();
+        pCmdListVk->Close(DeferredCtxs.back(), vkCmdBuffs.back());
         VERIFY(vkCmdBuffs.back() != VK_NULL_HANDLE, "Trying to execute empty command buffer");
-        VERIFY_EXPR(pDeferredCtx);
-        DeferredCtxs.emplace_back(std::move(pDeferredCtx));
+        VERIFY_EXPR(DeferredCtxs.back() != nullptr);
     }
 
-    VERIFY_EXPR(m_VkWaitSemaphores.size() == m_WaitSemaphores.size());
-    VERIFY_EXPR(m_VkSignalSemaphores.size() == m_SignalSemaphores.size());
+    VERIFY_EXPR(m_VkWaitSemaphores.size() == (m_WaitManagedSemaphores.size() + m_WaitRecycledSemaphores.size()));
+    VERIFY_EXPR(m_VkWaitSemaphores.size() == m_WaitDstStageMasks.size());
+    VERIFY_EXPR(m_VkSignalSemaphores.size() == m_SignalManagedSemaphores.size());
 
     VkSubmitInfo SubmitInfo = {};
 
     SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.pNext = nullptr;
 
-    SubmitInfo.commandBufferCount = static_cast<uint32_t>(vkCmdBuffs.size());
-    SubmitInfo.pCommandBuffers    = vkCmdBuffs.data();
-    SubmitInfo.waitSemaphoreCount = static_cast<uint32_t>(m_WaitSemaphores.size());
-    VERIFY_EXPR(m_WaitSemaphores.size() == m_WaitDstStageMasks.size());
+    SubmitInfo.commandBufferCount   = static_cast<uint32_t>(vkCmdBuffs.size());
+    SubmitInfo.pCommandBuffers      = vkCmdBuffs.data();
+    SubmitInfo.waitSemaphoreCount   = static_cast<uint32_t>(m_VkWaitSemaphores.size());
     SubmitInfo.pWaitSemaphores      = SubmitInfo.waitSemaphoreCount != 0 ? m_VkWaitSemaphores.data() : nullptr;
     SubmitInfo.pWaitDstStageMask    = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitDstStageMasks.data() : nullptr;
-    SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_SignalSemaphores.size());
+    SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_VkSignalSemaphores.size());
     SubmitInfo.pSignalSemaphores    = SubmitInfo.signalSemaphoreCount != 0 ? m_VkSignalSemaphores.data() : nullptr;
 
     // Submit command buffer even if there are no commands to release stale resources.
     //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
-    auto SubmittedFenceValue = m_pDevice->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, &m_PendingFences);
+    auto SubmittedFenceValue = m_pDevice->ExecuteCommandBuffer(GetCommandQueueId(), SubmitInfo, &m_SignalFences);
 
-    m_WaitSemaphores.clear();
+    // Recycle semaphores
+    {
+        auto& ReleaseQueue = m_pDevice->GetReleaseQueue(CommandQueueIndex{m_Desc.QueueId});
+        for (auto& Sem : m_WaitRecycledSemaphores)
+        {
+            Sem.SetUnsignaled();
+            ReleaseQueue.DiscardResource(std::move(Sem), SubmittedFenceValue);
+        }
+        m_WaitRecycledSemaphores.clear();
+    }
+
+    m_WaitManagedSemaphores.clear();
     m_WaitDstStageMasks.clear();
-    m_SignalSemaphores.clear();
+    m_SignalManagedSemaphores.clear();
     m_VkWaitSemaphores.clear();
     m_VkSignalSemaphores.clear();
-    m_PendingFences.clear();
+    m_SignalFences.clear();
 
     size_t buff_idx = 0;
     if (vkCmdBuff != VK_NULL_HANDLE)
     {
         VERIFY_EXPR(vkCmdBuffs[buff_idx] == vkCmdBuff);
-        DisposeCurrentCmdBuffer(m_CommandQueueId, SubmittedFenceValue);
+        DisposeCurrentCmdBuffer(GetCommandQueueId(), SubmittedFenceValue);
         ++buff_idx;
     }
 
@@ -1255,10 +1300,10 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     {
         auto pDeferredCtxVkImpl = DeferredCtxs[i].RawPtr<DeviceContextVkImpl>();
         // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
-        pDeferredCtxVkImpl->m_SubmittedBuffersCmdQueueMask.fetch_or(Uint64{1} << m_CommandQueueId);
+        pDeferredCtxVkImpl->UpdateSubmittedBuffersCmdQueueMask(GetCommandQueueId());
         // It is OK to dispose command buffer from another thread. We are not going to
         // record any commands and only need to add the buffer to the queue
-        pDeferredCtxVkImpl->DisposeVkCmdBuffer(m_CommandQueueId, std::move(vkCmdBuffs[buff_idx]), SubmittedFenceValue);
+        pDeferredCtxVkImpl->DisposeVkCmdBuffer(GetCommandQueueId(), std::move(vkCmdBuffs[buff_idx]), SubmittedFenceValue);
     }
     VERIFY_EXPR(buff_idx == vkCmdBuffs.size());
 
@@ -1273,7 +1318,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
 void DeviceContextVkImpl::SetVertexBuffers(Uint32                         StartSlot,
                                            Uint32                         NumBuffersSet,
                                            IBuffer**                      ppBuffers,
-                                           Uint32*                        pOffsets,
+                                           const Uint32*                  pOffsets,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                            SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
@@ -1654,11 +1699,11 @@ void DeviceContextVkImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
     TransitionOrVerifyBufferState(*pDstBuffVk, DstBufferTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, "Using buffer as copy destination (DeviceContextVkImpl::CopyBuffer)");
 
     VkBufferCopy CopyRegion;
-    CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(m_ContextId, this);
+    CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(GetContextId(), this);
     CopyRegion.dstOffset = DstOffset;
     CopyRegion.size      = Size;
     VERIFY(pDstBuffVk->m_VulkanBuffer != VK_NULL_HANDLE, "Copy destination buffer must not be suballocated");
-    VERIFY_EXPR(pDstBuffVk->GetDynamicOffset(m_ContextId, this) == 0);
+    VERIFY_EXPR(pDstBuffVk->GetDynamicOffset(GetContextId(), this) == 0);
     m_CommandBuffer.CopyBuffer(pSrcBuffVk->GetVkBuffer(), pDstBuffVk->GetVkBuffer(), 1, &CopyRegion);
     ++m_State.NumCommands;
 }
@@ -1692,9 +1737,9 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
             DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0, "Failed to map buffer '",
-                          BuffDesc.Name, "': Vulkan buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag. Context Id: ", m_ContextId);
+                          BuffDesc.Name, "': Vulkan buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag. Context Id: ", GetContextId());
 
-            auto& DynAllocation = pBufferVk->m_DynamicData[m_ContextId];
+            auto& DynAllocation = pBufferVk->m_DynamicData[GetContextId()];
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pDynamicMemMgr == nullptr)
             {
                 DynAllocation = AllocateDynamicSpace(BuffDesc.uiSizeInBytes, pBufferVk->m_DynamicOffsetAlignment);
@@ -1769,7 +1814,7 @@ void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
         {
             if (pBufferVk->m_VulkanBuffer != VK_NULL_HANDLE)
             {
-                auto& DynAlloc  = pBufferVk->m_DynamicData[m_ContextId];
+                auto& DynAlloc  = pBufferVk->m_DynamicData[GetContextId()];
                 auto  vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
                 UpdateBufferRegion(pBufferVk, 0, BuffDesc.uiSizeInBytes, vkSrcBuff, DynAlloc.AlignedOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             }
@@ -2287,6 +2332,7 @@ void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
 
 void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
 {
+    DEV_CHECK_ERR(IsDeferred(), "Only deferred context can record command list");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
     if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
@@ -2306,13 +2352,16 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     m_State          = ContextState{};
     m_pPipelineState = nullptr;
 
+    m_Desc.QueueId     = DEFAULT_QUEUE_ID;
+    m_Desc.ContextType = CONTEXT_TYPE_UNKNOWN;
+
     InvalidateState();
 }
 
 void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLists,
                                               ICommandList* const* ppCommandLists)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate context can execute command list");
+    DEV_CHECK_ERR(!IsDeferred(), "Only immediate context can execute command list");
 
     if (NumCommandLists == 0)
         return;
@@ -2325,24 +2374,31 @@ void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLis
 
 void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be signaled from immediate context");
-    m_PendingFences.emplace_back(std::make_pair(Value, pFence));
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
+    m_SignalFences.emplace_back(std::make_pair(Value, ValidatedCast<FenceVkImpl>(pFence)));
 }
 
-void DeviceContextVkImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
+void DeviceContextVkImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Fence can only be waited from immediate context");
-    if (FlushContext)
-        Flush();
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be waited from immediate context");
+    DEV_CHECK_ERR(pFence, "Fence must not be null");
+
     auto* pFenceVk = ValidatedCast<FenceVkImpl>(pFence);
-    pFenceVk->Wait(Value);
+    auto  WaitSem  = pFenceVk->ExtractSignalSemaphore(GetCommandQueueId(), Value);
+
+    if (WaitSem)
+    {
+        m_VkWaitSemaphores.push_back(WaitSem);
+        m_WaitDstStageMasks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        m_WaitRecycledSemaphores.push_back(std::move(WaitSem));
+    }
 }
 
 void DeviceContextVkImpl::WaitForIdle()
 {
-    DEV_CHECK_ERR(!m_bIsDeferred, "Only immediate contexts can be idled");
+    DEV_CHECK_ERR(!IsDeferred(), "Only immediate contexts can be idled");
     Flush();
-    m_pDevice->IdleCommandQueue(m_CommandQueueId, true);
+    m_pDevice->IdleCommandQueue(GetCommandQueueId(), true);
 }
 
 void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
@@ -2353,6 +2409,8 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
     auto       vkQueryPool  = m_QueryMgr->GetQueryPool(QueryType);
     auto       Idx          = pQueryVkImpl->GetQueryPoolIndex(0);
+
+    VERIFY(vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized for query type");
 
     EnsureVkCmdBuffer();
     if (QueryType == QUERY_TYPE_TIMESTAMP)
@@ -2396,6 +2454,8 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
     auto       vkQueryPool  = m_QueryMgr->GetQueryPool(QueryType);
     auto       Idx          = pQueryVkImpl->GetQueryPoolIndex(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
+
+    VERIFY(vkQueryPool != VK_NULL_HANDLE, "Query pool is not initialized for query type");
 
     EnsureVkCmdBuffer();
     if (QueryType == QUERY_TYPE_TIMESTAMP || QueryType == QUERY_TYPE_DURATION)
@@ -2531,8 +2591,8 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
 
     auto OldLayout = ResourceStateToVkImageLayout(OldState);
     auto NewLayout = ResourceStateToVkImageLayout(NewState);
-    auto OldStages = ResourceStateFlagsToVkPipelineStageFlags(OldState, m_CommandBuffer.GetEnabledShaderStages());
-    auto NewStages = ResourceStateFlagsToVkPipelineStageFlags(NewState, m_CommandBuffer.GetEnabledShaderStages());
+    auto OldStages = ResourceStateFlagsToVkPipelineStageFlags(OldState);
+    auto NewStages = ResourceStateFlagsToVkPipelineStageFlags(NewState);
 
     if (((OldState & NewState) != NewState) || OldLayout != NewLayout || AfterWrite)
     {
@@ -2596,6 +2656,13 @@ void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags Ne
     }
 }
 
+VkCommandBuffer DeviceContextVkImpl::GetVkCommandBuffer()
+{
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.FlushBarriers();
+    return m_CommandBuffer.GetVkCmdBuffer();
+}
+
 void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE_STATE OldState, RESOURCE_STATE NewState, bool UpdateBufferState)
 {
     VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
@@ -2627,14 +2694,14 @@ void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE
     if (((OldState & NewState) != NewState) || AfterWrite)
     {
         DEV_CHECK_ERR(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
-        VERIFY_EXPR(BufferVk.GetDynamicOffset(m_ContextId, this) == 0);
+        VERIFY_EXPR(BufferVk.GetDynamicOffset(GetContextId(), this) == 0);
 
         EnsureVkCmdBuffer();
         auto vkBuff         = BufferVk.GetVkBuffer();
         auto OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);
         auto NewAccessFlags = ResourceStateFlagsToVkAccessFlags(NewState);
-        auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, m_CommandBuffer.GetEnabledShaderStages());
-        auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, m_CommandBuffer.GetEnabledShaderStages());
+        auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState);
+        auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState);
         m_CommandBuffer.BufferMemoryBarrier(vkBuff, OldAccessFlags, NewAccessFlags, OldStages, NewStages);
         if (UpdateBufferState)
         {
@@ -2702,8 +2769,8 @@ void DeviceContextVkImpl::TransitionBLASState(BottomLevelASVkImpl& BLAS,
         EnsureVkCmdBuffer();
         auto OldAccessFlags = AccelStructStateFlagsToVkAccessFlags(OldState);
         auto NewAccessFlags = AccelStructStateFlagsToVkAccessFlags(NewState);
-        auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, m_CommandBuffer.GetEnabledShaderStages());
-        auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, m_CommandBuffer.GetEnabledShaderStages());
+        auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState);
+        auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState);
         m_CommandBuffer.ASMemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
         if (UpdateInternalState)
         {
@@ -2748,8 +2815,8 @@ void DeviceContextVkImpl::TransitionTLASState(TopLevelASVkImpl& TLAS,
         EnsureVkCmdBuffer();
         auto OldAccessFlags = AccelStructStateFlagsToVkAccessFlags(OldState);
         auto NewAccessFlags = AccelStructStateFlagsToVkAccessFlags(NewState);
-        auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState, m_CommandBuffer.GetEnabledShaderStages());
-        auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState, m_CommandBuffer.GetEnabledShaderStages());
+        auto OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OldState);
+        auto NewStages      = ResourceStateFlagsToVkPipelineStageFlags(NewState);
         m_CommandBuffer.ASMemoryBarrier(OldAccessFlags, NewAccessFlags, OldStages, NewStages);
         if (UpdateInternalState)
         {
@@ -2814,7 +2881,7 @@ VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInB
     return DynAlloc;
 }
 
-void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
+void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers)
 {
     VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
 

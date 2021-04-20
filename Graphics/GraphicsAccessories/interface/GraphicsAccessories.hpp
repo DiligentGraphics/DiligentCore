@@ -350,6 +350,9 @@ String GetBufferDescString(const BufferDesc& Desc);
 const Char* GetResourceStateFlagString(RESOURCE_STATE State);
 String      GetResourceStateString(RESOURCE_STATE State);
 
+/// Returns the string containing the context type
+String GetContextTypeString(CONTEXT_TYPE Type);
+
 /// Helper template function that converts object description into a string
 template <typename TObjectDescType>
 String GetObjectDescString(const TObjectDescType&)

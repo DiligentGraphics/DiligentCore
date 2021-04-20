@@ -46,8 +46,8 @@ public:
 
     static std::shared_ptr<VulkanInstance> Create(uint32_t               ApiVersion,
                                                   bool                   EnableValidation,
-                                                  uint32_t               GlobalExtensionCount,
-                                                  const char* const*     ppGlobalExtensionNames,
+                                                  uint32_t               InstanceExtensionCount,
+                                                  const char* const*     ppInstanceExtensionNames,
                                                   VkAllocationCallbacks* pVkAllocator);
     ~VulkanInstance();
 
@@ -73,11 +73,13 @@ public:
     uint32_t               GetVersion()     const {return m_VkVersion;   } // Warning: instance version may be greater than physical device version
     // clang-format on
 
+    const std::vector<VkPhysicalDevice>& GetVkPhysicalDevices() const { return m_PhysicalDevices; }
+
 private:
     VulkanInstance(uint32_t               ApiVersion,
                    bool                   EnableValidation,
-                   uint32_t               GlobalExtensionCount,
-                   const char* const*     ppGlobalExtensionNames,
+                   uint32_t               InstanceExtensionCount,
+                   const char* const*     ppInstanceExtensionNames,
                    VkAllocationCallbacks* pVkAllocator);
 
     bool                         m_DebugUtilsEnabled = false;

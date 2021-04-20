@@ -363,7 +363,7 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
         auto* const pDeviceGLImpl = GetDevice();
 
         auto ViewDesc = OrigViewDesc;
-        ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, pDeviceGLImpl->GetDeviceCaps().Limits.StructuredBufferOffsetAlignment);
+        ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, pDeviceGLImpl->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
 
         auto& BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");

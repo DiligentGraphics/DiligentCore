@@ -32,15 +32,17 @@
 #include <atlbase.h>
 
 #include "RenderDeviceD3D11Impl.hpp"
+#include "DeviceContextD3D11Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
 {
 
-CommandListD3D11Impl::CommandListD3D11Impl(IReferenceCounters*    pRefCounters,
-                                           RenderDeviceD3D11Impl* pDevice,
-                                           ID3D11CommandList*     pd3d11CommandList) :
-    TCommandListBase{pRefCounters, pDevice},
+CommandListD3D11Impl::CommandListD3D11Impl(IReferenceCounters*     pRefCounters,
+                                           RenderDeviceD3D11Impl*  pDevice,
+                                           DeviceContextD3D11Impl* pContext,
+                                           ID3D11CommandList*      pd3d11CommandList) :
+    TCommandListBase{pRefCounters, pDevice, pContext},
     m_pd3d11CommandList{pd3d11CommandList}
 {
 }

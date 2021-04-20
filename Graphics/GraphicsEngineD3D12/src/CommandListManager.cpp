@@ -32,10 +32,20 @@
 namespace Diligent
 {
 
-CommandListManager::CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl) :
+CommandListManager::CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl, D3D12_COMMAND_LIST_TYPE ListType) :
     // clang-format off
     m_DeviceD3D12Impl{DeviceD3D12Impl},
-    m_FreeAllocators (STD_ALLOCATOR_RAW_MEM(CComPtr<ID3D12CommandAllocator>, GetRawAllocator(), "Allocator for vector<CComPtr<ID3D12CommandAllocator>>"))
+    m_FreeAllocators (STD_ALLOCATOR_RAW_MEM(CComPtr<ID3D12CommandAllocator>, GetRawAllocator(), "Allocator for vector<CComPtr<ID3D12CommandAllocator>>")),
+    m_CmdListType    {ListType}
+// clang-format on
+{
+}
+
+CommandListManager::CommandListManager(CommandListManager&& Other) :
+    // clang-format off
+    m_DeviceD3D12Impl{Other.m_DeviceD3D12Impl},
+    m_FreeAllocators {std::move(Other.m_FreeAllocators)},
+    m_CmdListType    {Other.m_CmdListType}
 // clang-format on
 {
 }
@@ -67,7 +77,7 @@ void CommandListManager::CreateNewCommandList(ID3D12GraphicsCommandList** List, 
     HRESULT hr = E_FAIL;
     for (Uint32 i = 0; i < _countof(CmdListIIDs); ++i)
     {
-        hr = pd3d12Device->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, *Allocator, nullptr, CmdListIIDs[i], reinterpret_cast<void**>(List));
+        hr = pd3d12Device->CreateCommandList(1, m_CmdListType, *Allocator, nullptr, CmdListIIDs[i], reinterpret_cast<void**>(List));
         if (SUCCEEDED(hr))
         {
             IfaceVersion = _countof(CmdListIIDs) - 1 - i;
@@ -99,7 +109,7 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
     if ((*ppAllocator) == nullptr)
     {
         auto* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
-        auto  hr           = pd3d12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
+        auto  hr           = pd3d12Device->CreateCommandAllocator(m_CmdListType, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
         VERIFY(SUCCEEDED(hr), "Failed to create command allocator");
         wchar_t AllocatorName[32];
         swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", m_NumAllocators.fetch_add(1));
@@ -110,7 +120,7 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
 #endif
 }
 
-void CommandListManager::ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, Uint32 CmdQueue, Uint64 FenceValue)
+void CommandListManager::ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, CommandQueueIndex CmdQueue, Uint64 FenceValue)
 {
     struct StaleAllocator
     {

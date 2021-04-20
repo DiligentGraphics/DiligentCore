@@ -50,6 +50,7 @@ public:
                           const SwapChainDesc& SCDesc);
 
     virtual void TakeSnapshot() override final;
+    virtual void TakeSnapshot(ITexture* pBlitFrom) override final;
 
     void TransitionRenderTarget(ID3D12GraphicsCommandList* pCmdList,
                                 D3D12_RESOURCE_STATES      RTVState);

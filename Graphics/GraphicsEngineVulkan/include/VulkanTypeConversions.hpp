@@ -67,7 +67,7 @@ VkSamplerMipmapMode  FilterTypeToVkMipmapMode(FILTER_TYPE FilterType);
 VkSamplerAddressMode AddressModeToVkAddressMode(TEXTURE_ADDRESS_MODE AddressMode);
 VkBorderColor        BorderColorToVkBorderColor(const Float32 BorderColor[]);
 
-VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, VkPipelineStageFlags ShaderStages);
+VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags);
 VkAccessFlags        ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
 VkAccessFlags        AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
 VkImageLayout        ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsideRenderPass = false);
@@ -98,5 +98,9 @@ VkGeometryInstanceFlagsKHR           InstanceFlagsToVkGeometryInstanceFlags(RAYT
 VkCopyAccelerationStructureModeKHR   CopyASModeToVkCopyAccelerationStructureMode(COPY_AS_MODE Mode);
 
 WAVE_FEATURE VkSubgroupFeatureFlagsToWaveFeatures(VkSubgroupFeatureFlags FeatureFlags);
+ADAPTER_TYPE VkPhysicalDeviceTypeToAdapterType(VkPhysicalDeviceType DeviceType);
+
+CONTEXT_TYPE             VkQueueFlagsToContextType(VkQueueFlags QueueFlags);
+VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Priority);
 
 } // namespace Diligent

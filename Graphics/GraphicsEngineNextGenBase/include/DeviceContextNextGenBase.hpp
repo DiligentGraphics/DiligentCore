@@ -34,6 +34,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "DeviceContextBase.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "IndexWrapper.hpp"
 
 namespace Diligent
 {
@@ -50,16 +51,19 @@ public:
 
     DeviceContextNextGenBase(IReferenceCounters* pRefCounters,
                              DeviceImplType*     pRenderDevice,
-                             Uint32              ContextId,
-                             Uint32              CommandQueueId,
+                             ContextIndex        ContextId,
+                             CommandQueueIndex   CommandQueueId,
+                             const char*         Name,
                              bool                bIsDeferred) :
         // clang-format off
-        TBase{pRefCounters, pRenderDevice, bIsDeferred},
+        TBase{pRefCounters, pRenderDevice, Name, bIsDeferred},
         m_ContextId                   {ContextId         },
-        m_CommandQueueId              {CommandQueueId    },
         m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId}}
     // clang-format on
     {
+        this->m_Desc.CommandQueueId = static_cast<Uint8>(CommandQueueId);
+        VERIFY(bIsDeferred || ContextId == CommandQueueId,
+               "For immediate contexts ContextId must be same as CommandQueueId");
     }
 
     ~DeviceContextNextGenBase()
@@ -68,50 +72,66 @@ public:
 
     virtual ICommandQueueType* DILIGENT_CALL_TYPE LockCommandQueue() override final
     {
-        if (this->m_bIsDeferred)
+        if (this->IsDeferred())
         {
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return nullptr;
         }
-        return this->m_pDevice->LockCommandQueue(m_CommandQueueId);
+        return this->m_pDevice->LockCommandQueue(GetCommandQueueId());
     }
 
     virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final
     {
-        if (this->m_bIsDeferred)
+        if (this->IsDeferred())
         {
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return;
         }
-        this->m_pDevice->UnlockCommandQueue(m_CommandQueueId);
+        this->m_pDevice->UnlockCommandQueue(GetCommandQueueId());
     }
 
-    Uint32 GetCommandQueueId() const
+    ContextIndex GetContextId() const { return ContextIndex{m_ContextId}; }
+
+    HardwareQueueId GetHardwareQueueId() const { return HardwareQueueId{this->m_Desc.QueueId}; }
+
+    CommandQueueIndex GetCommandQueueId() const
     {
-        return m_CommandQueueId;
+        VERIFY_EXPR(this->m_Desc.CommandQueueId < MAX_COMMAND_QUEUES);
+        return CommandQueueIndex{this->m_Desc.CommandQueueId};
     }
+
+    Uint64 GetSubmittedBuffersCmdQueueMask() const { return m_SubmittedBuffersCmdQueueMask.load(); }
 
 protected:
     // Should be called at the end of FinishFrame()
     void EndFrame()
     {
-        if (this->m_bIsDeferred)
+        if (this->IsDeferred())
         {
             // For deferred context, reset submitted cmd queue mask
             m_SubmittedBuffersCmdQueueMask.store(0);
+
+            m_Desc.QueueId        = MAX_COMMAND_QUEUES;
+            m_Desc.CommandQueueId = MAX_COMMAND_QUEUES;
+            m_Desc.ContextType    = CONTEXT_TYPE_UNKNOWN;
         }
         else
         {
-            this->m_pDevice->FlushStaleResources(m_CommandQueueId);
+            this->m_pDevice->FlushStaleResources(GetCommandQueueId());
         }
         TBase::EndFrame();
     }
 
+    void UpdateSubmittedBuffersCmdQueueMask(Uint32 QueueId)
+    {
+        m_SubmittedBuffersCmdQueueMask.fetch_or(Uint64{1} << QueueId);
+    }
+
+private:
     const Uint32 m_ContextId;
-    const Uint32 m_CommandQueueId;
 
     // This mask indicates which command queues command buffers from this context were submitted to.
-    // For immediate context, this will always be 1 << m_CommandQueueId.
+    // For immediate context, this will always be 1 << GetCommandQueueId().
     // For deferred contexts, this will accumulate bits of the queues to which command buffers
     // were submitted to before FinishFrame() was called. This mask is used to release resources
     // allocated by the context during the frame when FinishFrame() is called.
