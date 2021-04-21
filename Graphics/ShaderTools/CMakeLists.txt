@@ -104,6 +104,11 @@ PRIVATE
 
 if (DXC_SUPPORTED)
     target_include_directories(Diligent-ShaderTools PUBLIC ../../ThirdParty/DirectXShaderCompiler)
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(Diligent-ShaderTools PRIVATE -fms-extensions)
+        target_link_libraries(Diligent-ShaderTools PRIVATE dl)
+    endif()
 endif()
 
 target_link_libraries(Diligent-ShaderTools 
