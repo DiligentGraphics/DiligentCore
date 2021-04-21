@@ -260,7 +260,7 @@ void GLContextState::BindImage(Uint32             Index,
         };
     if (Index >= m_BoundImages.size())
         m_BoundImages.resize(Index + 1);
-    if (!(m_BoundImages[Index] == NewImageInfo))
+    if (m_BoundImages[Index] != NewImageInfo)
     {
         m_BoundImages[Index] = NewImageInfo;
         glBindImageTexture(Index, NewImageInfo.GLHandle, MipLevel, IsLayered, Layer, Access, Format);
@@ -286,7 +286,7 @@ void GLContextState::BindImage(Uint32 Index, BufferViewGLImpl* pBuffView, GLenum
         };
     if (Index >= m_BoundImages.size())
         m_BoundImages.resize(Index + 1);
-    if (!(m_BoundImages[Index] == NewImageInfo))
+    if (m_BoundImages[Index] != NewImageInfo)
     {
         m_BoundImages[Index] = NewImageInfo;
         glBindImageTexture(Index, NewImageInfo.GLHandle, 0, GL_FALSE, 0, Access, Format);
@@ -335,7 +335,7 @@ void GLContextState::BindUniformBuffer(Int32 Index, const GLObjectWrappers::GLBu
     if (Index >= static_cast<Int32>(m_BoundUniformBuffers.size()))
         m_BoundUniformBuffers.resize(Index + 1);
 
-    if (!(m_BoundUniformBuffers[Index] == NewUBOInfo))
+    if (m_BoundUniformBuffers[Index] != NewUBOInfo)
     {
         m_BoundUniformBuffers[Index] = NewUBOInfo;
         GLuint GLBufferHandle        = Buff;
@@ -353,7 +353,7 @@ void GLContextState::BindStorageBlock(Int32 Index, const GLObjectWrappers::GLBuf
     if (Index >= static_cast<Int32>(m_BoundStorageBlocks.size()))
         m_BoundStorageBlocks.resize(Index + 1);
 
-    if (!(m_BoundStorageBlocks[Index] == NewSSBOInfo))
+    if (m_BoundStorageBlocks[Index] != NewSSBOInfo)
     {
         m_BoundStorageBlocks[Index] = NewSSBOInfo;
         GLuint GLBufferHandle       = Buff;

@@ -97,7 +97,7 @@ public:
     void BindResource(Uint32         ResIndex,
                       Uint32         ArrayIndex,
                       IDeviceObject* pObj,
-                      Uint32         BufferRangeOffset,
+                      Uint32         BufferBaseOffset,
                       Uint32         BufferRangeSize);
 
     void SetBufferDynamicOffset(Uint32 ResIndex,

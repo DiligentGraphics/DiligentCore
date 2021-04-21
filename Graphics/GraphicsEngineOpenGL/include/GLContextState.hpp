@@ -144,12 +144,12 @@ private:
         GLintptr         Offset   = 0;
         GLsizeiptr       Size     = 0;
 
-        bool operator==(const BoundBufferInfo& rhs) const
+        bool operator!=(const BoundBufferInfo& rhs) const
         {
             // clang-format off
-            return BufferID == rhs.BufferID &&
-                   Offset   == rhs.Offset &&
-                   Size     == rhs.Size;
+            return BufferID != rhs.BufferID ||
+                   Offset   != rhs.Offset   ||
+                   Size     != rhs.Size;
             // clang-format on
         }
     };
@@ -184,16 +184,16 @@ private:
         // clang-format on
         {}
 
-        bool operator==(const BoundImageInfo& rhs) const
+        bool operator!=(const BoundImageInfo& rhs) const
         {
             // clang-format off
-            return InterfaceID == rhs.InterfaceID &&
-                   GLHandle    == rhs.GLHandle &&
-                   MipLevel    == rhs.MipLevel &&
-                   IsLayered   == rhs.IsLayered &&
-                   Layer       == rhs.Layer &&
-                   Access      == rhs.Access &&
-                   Format      == rhs.Format;
+            return InterfaceID != rhs.InterfaceID ||
+                   GLHandle    != rhs.GLHandle    ||
+                   MipLevel    != rhs.MipLevel    ||
+                   IsLayered   != rhs.IsLayered   ||
+                   Layer       != rhs.Layer       ||
+                   Access      != rhs.Access      ||
+                   Format      != rhs.Format;
             // clang-format on
         }
     };
