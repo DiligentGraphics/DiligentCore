@@ -289,8 +289,16 @@ protected:
         using SRBMaskType = Uint8;
         static_assert(sizeof(SRBMaskType) * 8 >= MAX_RESOURCE_SIGNATURES, "Not enough space to store MAX_RESOURCE_SIGNATURES bits");
 
-        SRBMaskType ActiveSRBMask = 0; // Indicates which SRBs are active in current PSO
-        SRBMaskType StaleSRBMask  = 0; // Indicates stale SRBs that have not been committed yet
+        // Indicates which SRBs are active in current PSO
+        SRBMaskType ActiveSRBMask = 0;
+
+        // Indicates stale SRBs that have not been committed yet
+        SRBMaskType StaleSRBMask = 0;
+
+        // Indicates which SRBs have dynamic resources that need to be
+        // processed every frame (e.g. USAGE_DYNAMIC buffers in Direct3D12 and Vulkan,
+        // buffers with dynamic offsets in all backends).
+        SRBMaskType DynamicSRBMask = 0;
 
         void Set(Uint32 Index, ShaderResourceBindingImplType* pSRB)
         {
@@ -303,6 +311,11 @@ protected:
             else
                 StaleSRBMask &= ~SRBBit;
 
+            if (ResourceCaches[Index] != nullptr && ResourceCaches[Index]->HasDynamicResources())
+                DynamicSRBMask |= SRBBit;
+            else
+                DynamicSRBMask &= ~SRBBit;
+
 #ifdef DILIGENT_DEVELOPMENT
             SRBs[Index] = pSRB;
             if (pSRB != nullptr)
@@ -313,6 +326,20 @@ protected:
         void MakeAllStale()
         {
             StaleSRBMask = 0xFFu;
+        }
+
+        // Returns the mask of SRBs whose resources need to be committed
+        SRBMaskType GetCommitMask(bool DynamicResourcesIntact = false) const
+        {
+            // Stale SRBs always have to be committed
+            auto CommitMask = StaleSRBMask;
+            // If dynamic resources are not intact, SRBs with dynamic resources
+            // have to be handled
+            if (!DynamicResourcesIntact)
+                CommitMask |= DynamicSRBMask;
+            // Only process SRBs that are used by current PSO
+            CommitMask &= ActiveSRBMask;
+            return CommitMask;
         }
     };
 

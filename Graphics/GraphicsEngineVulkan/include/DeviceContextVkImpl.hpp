@@ -506,26 +506,16 @@ private:
         };
         std::array<DescriptorSetInfo, MAX_RESOURCE_SIGNATURES> SetInfo;
 
-        SRBMaskType DynamicBuffersMask = 0; // Indicates which SRBs have dynamic buffers
-
         // Pipeline layout of the currently bound pipeline
         VkPipelineLayout vkPipelineLayout = VK_NULL_HANDLE;
 
         ResourceBindInfo()
         {}
-
-        __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
-        {
-            return (StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
-        }
-
-        void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<SRBMaskType>(1u << Index); }
-        void ClearDynamicBufferBit(Uint32 Index) { DynamicBuffersMask &= static_cast<SRBMaskType>(~(1u << Index)); }
     };
 
     __forceinline ResourceBindInfo& GetBindInfo(PIPELINE_TYPE Type);
 
-    __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo, bool DynamicBuffersIntact = false);
+    __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask);
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources(ResourceBindInfo& BindInfo);
 #endif

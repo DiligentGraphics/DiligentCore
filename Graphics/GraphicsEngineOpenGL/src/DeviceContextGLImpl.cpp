@@ -173,11 +173,6 @@ void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     const auto  SRBIndex            = pShaderResBindingGL->GetBindingIndex();
 
     m_BindInfo.Set(SRBIndex, pShaderResBindingGL);
-
-    if (pShaderResBindingGL->GetResourceCache().GetDynamicBufferCounter() > 0)
-        m_BindInfo.DynamicSRBMask |= (Uint32{1} << SRBIndex);
-    else
-        m_BindInfo.DynamicSRBMask &= ~(Uint32{1} << SRBIndex);
 }
 
 void DeviceContextGLImpl::SetStencilRef(Uint32 StencilRef)
@@ -643,28 +638,20 @@ void DeviceContextGLImpl::DvpValidateCommittedShaderResources()
 }
 #endif
 
-void DeviceContextGLImpl::BindProgramResources(bool DynamicOffsetsIntact)
+void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask)
 {
+    VERIFY_EXPR(BindSRBMask != 0);
     //if (m_CommittedResourcesTentativeBarriers != 0)
     //    LOG_INFO_MESSAGE("Not all tentative resource barriers have been executed since the last call to CommitShaderResources(). Did you forget to call Draw()/DispatchCompute() ?");
-
-    // Only commit those stale SRBs that are used by current PSO
-    Uint32 StaleSRBs = m_BindInfo.StaleSRBMask;
-    if (!DynamicOffsetsIntact)
-        StaleSRBs |= m_BindInfo.DynamicSRBMask;
-
-    StaleSRBs &= m_BindInfo.ActiveSRBMask;
-    if (StaleSRBs == 0)
-        return;
 
     VERIFY_EXPR(m_BoundWritableTextures.empty());
     VERIFY_EXPR(m_BoundWritableBuffers.empty());
 
     m_CommittedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
 
-    while (StaleSRBs != 0)
+    while (BindSRBMask != 0)
     {
-        auto SignBit = ExtractLSB(StaleSRBs);
+        auto SignBit = ExtractLSB(BindSRBMask);
         auto sign    = PlatformMisc::GetLSB(SignBit);
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
         const auto& BaseBindings = m_pPipelineState->GetBaseBindings(sign);
@@ -717,7 +704,10 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     // The program might have changed since the last SetPipelineState call if a shader was
     // created after the call (ShaderResourcesGL needs to bind a program to load uniforms).
     m_pPipelineState->CommitProgram(m_ContextState);
-    BindProgramResources(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT);
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    {
+        BindProgramResources(BindSRBMask);
+    }
 
     const auto  CurrNativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
     const auto& PipelineDesc        = m_pPipelineState->GetGraphicsPipelineDesc();
@@ -965,7 +955,10 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
     // The program might have changed since the last SetPipelineState call if a shader was
     // created after the call (ShaderResourcesGL needs to bind a program to load uniforms).
     m_pPipelineState->CommitProgram(m_ContextState);
-    BindProgramResources();
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask())
+    {
+        BindProgramResources(BindSRBMask);
+    }
     glDispatchCompute(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
     DEV_CHECK_GL_ERROR("glDispatchCompute() failed");
 
@@ -987,7 +980,10 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
     // The program might have changed since the last SetPipelineState call if a shader was
     // created after the call (ShaderResourcesGL needs to bind a program to load uniforms).
     m_pPipelineState->CommitProgram(m_ContextState);
-    BindProgramResources();
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask())
+    {
+        BindProgramResources(BindSRBMask);
+    }
 
     auto* pBufferGL = ValidatedCast<BufferGLImpl>(pAttribsBuffer);
     pBufferGL->BufferMemoryBarrier(

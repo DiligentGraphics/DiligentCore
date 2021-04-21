@@ -390,22 +390,12 @@ private:
 
     struct RootTableInfo : CommittedShaderResources
     {
-        SRBMaskType DynamicBuffersMask = 0; // Indicates which SRBs have dynamic root buffers.
-
         ID3D12RootSignature* pd3d12RootSig = nullptr;
-
-        __forceinline bool RequireUpdate(bool DynamicBuffersIntact = false) const
-        {
-            return (StaleSRBMask & ActiveSRBMask) != 0 || ((DynamicBuffersMask & ActiveSRBMask) != 0 && !DynamicBuffersIntact);
-        }
-
-        void SetDynamicBufferBit(Uint32 Index) { DynamicBuffersMask |= static_cast<SRBMaskType>(1u << Index); }
-        void ClearDynamicBufferBit(Uint32 Index) { DynamicBuffersMask &= static_cast<SRBMaskType>(~(1u << Index)); }
     };
     __forceinline RootTableInfo& GetRootTableInfo(PIPELINE_TYPE PipelineType);
 
     template <bool IsCompute>
-    __forceinline void CommitRootTablesAndViews(RootTableInfo& RootInfo, bool RootViewsIntact = false);
+    __forceinline void CommitRootTablesAndViews(RootTableInfo& RootInfo, Uint32 CommitSRBMask);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources(RootTableInfo& RootInfo);

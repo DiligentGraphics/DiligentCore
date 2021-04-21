@@ -320,7 +320,6 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     {
         // Do not clear DescriptorSetBaseInd and DynamicOffsetCount!
         BindInfo.SetInfo[sign].vkSets.fill(VK_NULL_HANDLE);
-        BindInfo.ClearDynamicBufferBit(sign);
     }
 #endif
 
@@ -362,23 +361,14 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
     return m_BindInfo[Indices[Uint32{Type}]];
 }
 
-void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, bool DynamicBuffersIntact)
+void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask)
 {
-    // Process all stale descriptor sets
-    auto StaleSRBFlags = Uint32{BindInfo.StaleSRBMask};
-    if (!DynamicBuffersIntact)
+    VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
+    while (CommitSRBMask != 0)
     {
-        // If dynamic buffers are not intact, also process all SRBs with dynamic sets
-        StaleSRBFlags |= Uint32{BindInfo.DynamicBuffersMask};
-    }
-    StaleSRBFlags &= Uint32{BindInfo.ActiveSRBMask};
-    VERIFY(StaleSRBFlags != 0, "This method should not be called when there is nothing to commit");
-
-    while (StaleSRBFlags != 0)
-    {
-        Uint32 sign = PlatformMisc::GetLSB(StaleSRBFlags);
+        Uint32 sign = PlatformMisc::GetLSB(CommitSRBMask);
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
-        StaleSRBFlags &= ~(Uint32{1} << sign);
+        CommitSRBMask &= ~(Uint32{1} << sign);
 
         auto* pResourceCache = BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", sign, " is null");
@@ -415,7 +405,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, bool 
 #endif
     }
 
-    VERIFY_EXPR((StaleSRBFlags & BindInfo.ActiveSRBMask) == 0);
+    VERIFY_EXPR((CommitSRBMask & BindInfo.ActiveSRBMask) == 0);
     BindInfo.StaleSRBMask &= ~BindInfo.ActiveSRBMask;
 }
 
@@ -504,11 +494,6 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     // We must not clear entire ResInfo as DescriptorSetBaseInd and DynamicOffsetCount
     // are set by SetPipelineState().
     SetInfo.vkSets = {};
-
-    if (ResourceCache.GetNumDynamicBuffers() > 0)
-        BindInfo.SetDynamicBufferBit(SRBIndex);
-    else
-        BindInfo.ClearDynamicBufferBit(SRBIndex);
 
     Uint32 DSIndex = 0;
     if (pSignature->HasDescriptorSet(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE))
@@ -692,9 +677,9 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // cals we do not need to bind the sets again.
-    if (BindInfo.RequireUpdate(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    if (Uint32 CommitMask = BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
     {
-        CommitDescriptorSets(BindInfo, Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT);
+        CommitDescriptorSets(BindInfo, CommitMask);
     }
 
     if (m_pPipelineState->GetGraphicsPipelineDesc().pRenderPass == nullptr)
@@ -851,9 +836,9 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
         m_CommandBuffer.EndRenderPass();
 
     auto& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
-    if (BindInfo.RequireUpdate())
+    if (Uint32 CommitMask = BindInfo.GetCommitMask())
     {
-        CommitDescriptorSets(BindInfo);
+        CommitDescriptorSets(BindInfo, CommitMask);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -866,9 +851,9 @@ void DeviceContextVkImpl::PrepareForRayTracing()
     EnsureVkCmdBuffer();
 
     auto& BindInfo = GetBindInfo(PIPELINE_TYPE_RAY_TRACING);
-    if (BindInfo.RequireUpdate())
+    if (Uint32 CommitMask = BindInfo.GetCommitMask())
     {
-        CommitDescriptorSets(BindInfo);
+        CommitDescriptorSets(BindInfo, CommitMask);
     }
 
 #ifdef DILIGENT_DEVELOPMENT

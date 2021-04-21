@@ -335,7 +335,7 @@ private:
 
     void ClearStateCache();
 
-    void BindShaderResources(bool DynamicOffsetsIntact = false);
+    void BindShaderResources(Uint32 BindSRBMask);
 
     static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
     struct TCommittedResources
@@ -419,9 +419,6 @@ private:
     {
         // Shader stages that are active in current PSO.
         SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
-
-        // Indicates SRBs that have dynamic CB offsets
-        SRBMaskType DynamicSRBMask = 0;
 
 #ifdef DILIGENT_DEVELOPMENT
         // Base bindings that were used in the last BindShaderResources() call.

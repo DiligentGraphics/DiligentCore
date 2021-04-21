@@ -313,9 +313,9 @@ public:
     void BindDynamicBuffers(GLContextState&              GLState,
                             const std::array<Uint16, 4>& BaseBindings) const;
 
-    Uint32 GetDynamicBufferCounter() const
+    bool HasDynamicResources() const
     {
-        return Uint32{m_DynamicUBCount} + Uint32{m_DynamicSSBOCount};
+        return (Uint32{m_DynamicUBCount} + Uint32{m_DynamicSSBOCount}) > 0;
     }
 
 private:

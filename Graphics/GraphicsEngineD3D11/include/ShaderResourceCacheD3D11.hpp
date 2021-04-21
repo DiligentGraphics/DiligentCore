@@ -357,7 +357,7 @@ public:
         return m_DynamicCBOffsetsMask[ShaderInd];
     }
 
-    bool HasDynamicCBOffsets()
+    bool HasDynamicResources() const
     {
         for (auto Mask : m_DynamicCBOffsetsMask)
         {

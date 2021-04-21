@@ -215,12 +215,6 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
 
     m_BindInfo.Set(SRBIndex, pShaderResBindingD3D11);
 
-    const Uint32 SRBBit = 1u << SRBIndex;
-    if (ResourceCache.HasDynamicCBOffsets())
-        m_BindInfo.DynamicSRBMask |= SRBBit;
-    else
-        m_BindInfo.DynamicSRBMask &= ~SRBBit;
-
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         ResourceCache.TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(*this);
@@ -343,25 +337,17 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
     }
 }
 
-void DeviceContextD3D11Impl::BindShaderResources(bool DynamicOffsetsIntact)
+void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
 {
-    Uint32 StaleSRBs = m_BindInfo.StaleSRBMask;
-    if (!DynamicOffsetsIntact)
-        StaleSRBs |= m_BindInfo.DynamicSRBMask;
-
-    // Only commit those stale SRBs that are used by current PSO
-    StaleSRBs &= m_BindInfo.ActiveSRBMask;
-
-    if (StaleSRBs == 0)
-        return;
+    VERIFY_EXPR(BindSRBMask != 0);
 
     PixelShaderUAVBindMode PsUavBindMode = m_CommittedRes.NumUAVs[PSInd] > 0 ?
         PixelShaderUAVBindMode::Clear :
         PixelShaderUAVBindMode::Keep;
 
-    while (StaleSRBs != 0)
+    while (BindSRBMask != 0)
     {
-        auto SignBit = ExtractLSB(StaleSRBs);
+        auto SignBit = ExtractLSB(BindSRBMask);
         auto sign    = PlatformMisc::GetLSB(SignBit);
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
         const auto& BaseBindings = m_pPipelineState->GetBaseBindings(sign);
@@ -549,7 +535,10 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
         CommitD3D11VertexBuffers(m_pPipelineState);
     }
 
-    BindShaderResources(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT);
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    {
+        BindShaderResources(BindSRBMask);
+    }
 
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
@@ -677,7 +666,10 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
 {
     DvpVerifyDispatchArguments(Attribs);
 
-    BindShaderResources();
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask())
+    {
+        BindShaderResources(BindSRBMask);
+    }
 
 #ifdef DILIGENT_DEVELOPMENT
     if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
@@ -702,7 +694,10 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
 {
     DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
 
-    BindShaderResources();
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask())
+    {
+        BindShaderResources(BindSRBMask);
+    }
 
 #ifdef DILIGENT_DEVELOPMENT
     if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)

@@ -242,7 +242,7 @@ public:
 
 
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
-    Uint32 GetNumDynamicBuffers() const { return m_NumDynamicBuffers; }
+    bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
