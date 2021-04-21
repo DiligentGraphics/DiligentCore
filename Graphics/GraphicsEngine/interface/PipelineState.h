@@ -132,6 +132,17 @@ struct PipelineResourceLayoutDesc
     /// or if Variables == nullptr
     SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType  DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
+    /// By default, all variables not found in the Variables array define separate resources.
+    /// For example, if there is resource "g_Texture" in the vertex and pixel shader stages, there
+    /// will be two separate resources in both stages. This member defines shader stages
+    /// in which default variables will be combined.
+    /// For example, if DefaultVariableMergeStages == SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL,
+    /// then both resources in the example above will be combined into a single one.
+    /// If there is another "g_Texture" in geometry shader, it will be separate from combined
+    /// vertex-pixel "g_Texture".
+    /// This memeber has no effect on variables defined in Variables array.
+    SHADER_TYPE                         DefaultVariableMergeStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+
     /// Number of elements in Variables array            
     Uint32                              NumVariables         DEFAULT_INITIALIZER(0);
 

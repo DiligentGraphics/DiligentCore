@@ -670,6 +670,8 @@ ShaderResourceVariableDesc FindPipelineResourceLayoutVariable(
     }
 
     // Use default properties
+    if (ShaderStage & LayoutDesc.DefaultVariableMergeStages)
+        ShaderStage = LayoutDesc.DefaultVariableMergeStages;
     return {ShaderStage, Name, LayoutDesc.DefaultVariableType};
 }
 
