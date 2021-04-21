@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Added `DefaultVariableMergeStages` member to `PipelineResourceLayoutDesc` struct (API240094)
 * Added `IShaderResourceVariable::SetBufferRange` and `IShaderResourceVariable::SetBufferOffset` methods,
   added `DeviceLimits` struct (API240093)
 * Updated API to allow explicitly flushing/invlidating mapped buffer memory range :
