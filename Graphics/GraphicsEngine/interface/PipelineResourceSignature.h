@@ -151,9 +151,9 @@ struct PipelineResourceDesc
                          SHADER_RESOURCE_VARIABLE_TYPE _VarType,
                          PIPELINE_RESOURCE_FLAGS       _Flags = PIPELINE_RESOURCE_FLAG_NONE)noexcept : 
         Name        {_Name        },
+        ShaderStages{_ShaderStages},
         ArraySize   {_ArraySize   },
         ResourceType{_ResourceType},
-        ShaderStages{_ShaderStages},
         VarType     {_VarType     },
         Flags       {_Flags       }
     {}
