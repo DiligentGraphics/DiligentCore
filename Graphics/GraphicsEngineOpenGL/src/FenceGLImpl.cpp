@@ -107,10 +107,9 @@ void FenceGLImpl::DeviceWait(Uint64 Value)
     }
 }
 
-void FenceGLImpl::Reset(Uint64 NewValue)
+void FenceGLImpl::Signal(Uint64 NewValue)
 {
-    DEV_CHECK_ERR(NewValue >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", NewValue, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
-    UpdateLastCompletedFenceValue(NewValue);
+    UNEXPECTED("Signal() is not supported in OpenGL backend");
 }
 
 void FenceGLImpl::Wait(Uint64 Value)

@@ -73,7 +73,7 @@ protected:
     void UpdateLastCompletedFenceValue(uint64_t NewValue)
     {
         auto LastCompletedValue = m_LastCompletedFenceValue.load();
-        while (!m_LastCompletedFenceValue.compare_exchange_strong(LastCompletedValue, std::max(LastCompletedValue, NewValue)))
+        while (!m_LastCompletedFenceValue.compare_exchange_weak(LastCompletedValue, std::max(LastCompletedValue, NewValue)))
         {
             // If exchange fails, LastCompletedValue will hold the actual value of m_LastCompletedFenceValue.
         }

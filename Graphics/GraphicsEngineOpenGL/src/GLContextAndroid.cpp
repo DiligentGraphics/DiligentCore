@@ -258,7 +258,10 @@ bool GLContext::Init(ANativeWindow* window)
     return true;
 }
 
-GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCaps, const struct SwapChainDesc* /*pSCDesc*/) :
+GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
+                     RENDER_DEVICE_TYPE&       DevType,
+                     struct Version&           APIVersion,
+                     const struct SwapChainDesc* /*pSCDesc*/) :
     display_(EGL_NO_DISPLAY),
     surface_(EGL_NO_SURFACE),
     context_(EGL_NO_CONTEXT),
@@ -271,7 +274,9 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     auto* NativeWindow = reinterpret_cast<ANativeWindow*>(InitAttribs.Window.pAWindow);
     Init(NativeWindow);
 
-    FillDeviceCaps(deviceCaps);
+    DevType          = RENDER_DEVICE_TYPE_GLES;
+    APIVersion.Major = static_cast<Uint8>(major_version_);
+    APIVersion.Minor = static_cast<Uint8>(minor_version_);
 }
 
 GLContext::~GLContext()
@@ -417,13 +422,6 @@ bool GLContext::Invalidate()
 
     egl_context_initialized_ = false;
     return true;
-}
-
-void GLContext::FillDeviceCaps(DeviceCaps& deviceCaps)
-{
-    deviceCaps.DevType      = RENDER_DEVICE_TYPE_GLES;
-    deviceCaps.MajorVersion = major_version_;
-    deviceCaps.MinorVersion = minor_version_;
 }
 
 } // namespace Diligent

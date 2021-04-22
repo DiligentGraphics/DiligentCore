@@ -51,7 +51,7 @@ static void  glDrawElementsInstancedBaseVertexBaseInstance_stub(GLenum mode, GLs
 
 namespace Diligent
 {
-    GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& DeviceCaps, const struct SwapChainDesc* /*pSCDesc*/)
+    GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& DevType, struct Version& APIVersion, const struct SwapChainDesc* /*pSCDesc*/)
     {
         if (GetCurrentNativeGLContext() == nullptr)
         {
@@ -97,9 +97,9 @@ namespace Diligent
         if( glGetError() != GL_NO_ERROR )
             LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-        DeviceCaps.DevType = RENDER_DEVICE_TYPE_GL;
-        DeviceCaps.MajorVersion = MajorVersion;
-        DeviceCaps.MinorVersion = MinorVersion;
+        DevType          = RENDER_DEVICE_TYPE_GL;
+        APIVersion.Major = static_cast<Uint8>(MajorVersion);
+        APIVersion.Minor = static_cast<Uint8>(MinorVersion);
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

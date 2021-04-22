@@ -92,11 +92,11 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
     }
     else if (deviceCaps.DevType == RENDER_DEVICE_TYPE_GLES)
     {
-        IsES30        = deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion == 0;
-        IsES31OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 1);
-        IsES32OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 2);
+        IsES30        = deviceCaps.APIVersion == Version{3, 0};
+        IsES31OrAbove = deviceCaps.APIVersion >= Version{3, 1};
+        IsES32OrAbove = deviceCaps.APIVersion >= Version{3, 2};
         std::stringstream versionss;
-        versionss << "#version " << deviceCaps.MajorVersion << deviceCaps.MinorVersion << "0 es\n";
+        versionss << "#version " << deviceCaps.APIVersion.Major << deviceCaps.APIVersion.Minor << "0 es\n";
         GLSLSource.append(versionss.str());
     }
     else

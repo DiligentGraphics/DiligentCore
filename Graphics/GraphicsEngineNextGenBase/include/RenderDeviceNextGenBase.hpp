@@ -31,6 +31,7 @@
 #include <mutex>
 #include <atomic>
 
+#include "PrivateConstants.h"
 #include "EngineFactory.h"
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"

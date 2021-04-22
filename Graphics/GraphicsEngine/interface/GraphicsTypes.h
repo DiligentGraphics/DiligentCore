@@ -1734,6 +1734,11 @@ struct DeviceFeatures
     /// Indicates if device supports instance data step rates other than 1.
     DEVICE_FEATURE_STATE InstanceDataStepRate             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device natively supports fence with Uint64 counter.
+    /// Native fence can wait on GPU for a signal from CPU, can be enqueued for wait operation for any value.
+    /// If not natively supported by the device, the fence is emulated where possible.
+    DEVICE_FEATURE_STATE NativeFence                      DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     DeviceFeatures() noexcept {}
 
@@ -1773,10 +1778,11 @@ struct DeviceFeatures
         UniformBuffer8BitAccess           {State},
         ShaderResourceRuntimeArray        {State},
         WaveOp                            {State},
-        InstanceDataStepRate              {State}
+        InstanceDataStepRate              {State},
+        NativeFence                       {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 36, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 37, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif

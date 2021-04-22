@@ -122,8 +122,8 @@ protected:
         auto* pDevice    = pEnv->GetDevice();
         auto* pSwapChain = pEnv->GetSwapChain();
 
-        if (pEnv->GetNumImmediateContexts() == 1)
-            GTEST_SKIP() << "Multiple contexts are not supported by this device";
+        if (pEnv->GetNumImmediateContexts() <= 1)
+            return;
 
         TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -285,23 +285,26 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     const auto&     SCDesc       = pSwapChain->GetDesc();
     IDeviceContext* pGraphicsCtx = nullptr;
     IDeviceContext* pComputeCtx  = nullptr;
+    const auto      CtxTypeMask  = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE;
 
     for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
     {
         auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
         const auto& Desc = Ctx->GetDesc();
 
-        if (!pGraphicsCtx && (Desc.ContextType & CONTEXT_TYPE_GRAPHICS) == CONTEXT_TYPE_GRAPHICS)
+        if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
             pGraphicsCtx = Ctx;
 
-        if (!pComputeCtx && ((Desc.ContextType & CONTEXT_TYPE_COMPUTE) == CONTEXT_TYPE_COMPUTE || ((Desc.ContextType & CONTEXT_TYPE_GRAPHICS) == CONTEXT_TYPE_GRAPHICS && Ctx != pGraphicsCtx)))
+        if (!pComputeCtx && ((Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_COMPUTE || ((Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS && Ctx != pGraphicsCtx)))
             pComputeCtx = Ctx;
     }
 
-    if (!pGraphicsCtx || !pComputeCtx)
+    if (pEnv->GetNumImmediateContexts() <= 1 || !pGraphicsCtx || !pComputeCtx)
     {
         GTEST_SKIP() << "Compute queue is not supported by this device";
     }
+
+    ASSERT_NE(pGraphicsCtx, pComputeCtx);
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -396,7 +399,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         };
         pGraphicsCtx->TransitionResourceStates(_countof(Barriers2), Barriers2);
 
-        pGraphicsCtx->SignalFence(pGraphicsFence, GraphicsFenceValue);
+        pGraphicsCtx->EnqueueSignal(pGraphicsFence, GraphicsFenceValue);
         pGraphicsCtx->Flush();
     }
 
@@ -416,7 +419,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         pComputeCtx->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_NONE);
         pComputeCtx->DispatchCompute(DispatchComputeAttribs{SCDesc.Width, SCDesc.Height, 1});
 
-        pComputeCtx->SignalFence(pComputeFence, ComputeFenceValue);
+        pComputeCtx->EnqueueSignal(pComputeFence, ComputeFenceValue);
         pComputeCtx->Flush();
     }
 

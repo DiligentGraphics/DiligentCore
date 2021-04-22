@@ -36,6 +36,20 @@
 namespace VulkanUtilities
 {
 
+// In 32-bit version, all vulkan handles are same type
+struct VkSemaphoreType
+{
+    using Type = VkSemaphore;
+    Type Value = VK_NULL_HANDLE;
+};
+
+struct VkFenceType
+{
+    using Type    = VkFence;
+    VkFence Value = VK_NULL_HANDLE;
+};
+
+
 class VulkanSyncObjectManager : public std::enable_shared_from_this<VulkanSyncObjectManager>
 {
 public:
@@ -46,12 +60,12 @@ public:
     explicit VulkanSyncObjectManager(VulkanLogicalDevice& LogicalDevice);
     ~VulkanSyncObjectManager();
 
-    void CreateSemaphores(RecycledSyncObject<VkSemaphore>* pSemaphores, uint32_t Count);
+    void CreateSemaphores(RecycledSyncObject<VkSemaphoreType>* pSemaphores, uint32_t Count);
 
-    RecycledSyncObject<VkFence> CreateFence();
+    RecycledSyncObject<VkFenceType> CreateFence();
 
-    void Recycle(VkSemaphore Semaphore, bool IsUnsignaled);
-    void Recycle(VkFence Fence, bool IsUnsignaled);
+    void Recycle(VkSemaphoreType Semaphore, bool IsUnsignaled);
+    void Recycle(VkFenceType Fence, bool IsUnsignaled);
 
 private:
     VulkanLogicalDevice& m_LogicalDevice;
@@ -63,18 +77,20 @@ private:
     std::vector<VkFence> m_FencePool;
 };
 
-using VulkanRecycledSemaphore = VulkanSyncObjectManager::RecycledSyncObject<VkSemaphore>;
-using VulkanRecycledFence     = VulkanSyncObjectManager::RecycledSyncObject<VkFence>;
+using VulkanRecycledSemaphore = VulkanSyncObjectManager::RecycledSyncObject<VkSemaphoreType>;
+using VulkanRecycledFence     = VulkanSyncObjectManager::RecycledSyncObject<VkFenceType>;
 
 
 template <typename VkSyncObjType>
 class VulkanSyncObjectManager::RecycledSyncObject
 {
 public:
+    using NativeType = typename VkSyncObjType::Type;
+
     RecycledSyncObject()
     {}
 
-    RecycledSyncObject(std::shared_ptr<VulkanSyncObjectManager> pManager, VkSyncObjType SyncObj) :
+    RecycledSyncObject(std::shared_ptr<VulkanSyncObjectManager> pManager, NativeType SyncObj) :
         m_pManager{pManager},
         m_VkSyncObject{SyncObj}
     {}
@@ -105,7 +121,7 @@ public:
         return m_VkSyncObject != VK_NULL_HANDLE;
     }
 
-    operator VkSyncObjType() const
+    operator NativeType() const
     {
         return m_VkSyncObject;
     }
@@ -114,7 +130,7 @@ public:
     {
         if (m_pManager && m_VkSyncObject != VK_NULL_HANDLE)
         {
-            m_pManager->Recycle(m_VkSyncObject, m_IsUnsignaled);
+            m_pManager->Recycle(VkSyncObjType{m_VkSyncObject}, m_IsUnsignaled);
             m_VkSyncObject = VK_NULL_HANDLE;
             m_pManager.reset();
         }
@@ -134,7 +150,7 @@ public:
 
 private:
     std::shared_ptr<VulkanSyncObjectManager> m_pManager;
-    VkSyncObjType                            m_VkSyncObject = VK_NULL_HANDLE;
+    NativeType                               m_VkSyncObject = VK_NULL_HANDLE;
     bool                                     m_IsUnsignaled = false;
 };
 

@@ -56,8 +56,8 @@ public:
     /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
-    /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
+    /// Implementation of IFence::Signal() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE Signal(Uint64 Value) override final;
 
     /// Implementation of IFence::Wait() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;

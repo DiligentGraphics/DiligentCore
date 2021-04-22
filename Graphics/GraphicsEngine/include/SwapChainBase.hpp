@@ -30,6 +30,7 @@
 /// \file
 /// Implementation of the Diligent::SwapChainBase template class
 
+#include "PrivateConstants.h"
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "SwapChain.h"

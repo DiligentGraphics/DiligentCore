@@ -2390,7 +2390,7 @@ void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLis
     InvalidateState();
 }
 
-void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)
+void DeviceContextVkImpl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
     auto* pFenceVk = ValidatedCast<FenceVkImpl>(pFence);

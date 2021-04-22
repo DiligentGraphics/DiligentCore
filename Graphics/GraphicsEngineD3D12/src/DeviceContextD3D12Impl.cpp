@@ -2147,7 +2147,7 @@ void DeviceContextD3D12Impl::ExecuteCommandLists(Uint32               NumCommand
     InvalidateState();
 }
 
-void DeviceContextD3D12Impl::SignalFence(IFence* pFence, Uint64 Value)
+void DeviceContextD3D12Impl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
     m_SignalFences.emplace_back(Value, pFence);

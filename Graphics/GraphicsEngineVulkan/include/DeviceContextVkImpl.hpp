@@ -234,8 +234,8 @@ public:
     virtual void DILIGENT_CALL_TYPE ExecuteCommandLists(Uint32               NumCommandLists,
                                                         ICommandList* const* ppCommandLists) override final;
 
-    /// Implementation of IDeviceContext::SignalFence() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE SignalFence(IFence* pFence, Uint64 Value) override final;
+    /// Implementation of IDeviceContext::EnqueueSignal() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE EnqueueSignal(IFence* pFence, Uint64 Value) override final;
 
     /// Implementation of IDeviceContext::DeviceWaitForFence() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE DeviceWaitForFence(IFence* pFence, Uint64 Value) override final;

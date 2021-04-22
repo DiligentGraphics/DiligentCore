@@ -38,7 +38,10 @@ class GLContext
 public:
     using NativeGLContextType = EGLContext;
 
-    GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
+    GLContext(const struct EngineGLCreateInfo& InitAttribs,
+              RENDER_DEVICE_TYPE&              DevType,
+              struct Version&                  APIVersion,
+              const struct SwapChainDesc*      pSCDesc);
     ~GLContext();
 
     bool Init(ANativeWindow* window);
@@ -89,7 +92,6 @@ private:
     bool InitEGLSurface();
     bool InitEGLContext();
     void AttachToCurrentEGLContext();
-    void FillDeviceCaps(DeviceCaps& DeviceCaps);
 };
 
 } // namespace Diligent

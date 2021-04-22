@@ -1818,7 +1818,7 @@ static CComPtr<ID3D11Query> CreateD3D11QueryEvent(ID3D11Device* pd3d11Device)
     return pd3d11Query;
 }
 
-void DeviceContextD3D11Impl::SignalFence(IFence* pFence, Uint64 Value)
+void DeviceContextD3D11Impl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
     auto*                pd3d11Device = m_pDevice->GetD3D11Device();

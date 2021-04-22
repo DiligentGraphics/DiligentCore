@@ -42,5 +42,5 @@ void TestCommandQueueD3D12CInterface(ICommandQueueD3D12* pQueue)
 
     ICommandQueueD3D12_WaitForIdle(pQueue);
 
-    ICommandQueueD3D12_SignalFence(pQueue, (ID3D12Fence*)NULL, (Uint64)0);
+    ICommandQueueD3D12_EnqueueSignal(pQueue, (ID3D12Fence*)NULL, (Uint64)0);
 }

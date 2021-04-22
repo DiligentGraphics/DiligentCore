@@ -120,7 +120,7 @@ Uint64 FenceVkImpl::InternalGetCompletedValue()
     return m_LastCompletedFenceValue.load();
 }
 
-void FenceVkImpl::Reset(Uint64 Value)
+void FenceVkImpl::Signal(Uint64 Value)
 {
     if (IsTimelineSemaphore())
     {
@@ -134,6 +134,18 @@ void FenceVkImpl::Reset(Uint64 Value)
 
         auto err = LogicalDevice.SignalSemaphore(SignalInfo);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to signal timeline semaphore");
+    }
+    else
+    {
+        UNEXPECTED("Signal() is supported only with timeline semaphore, enable NativeFence feature to use it");
+    }
+}
+
+void FenceVkImpl::Reset(Uint64 Value)
+{
+    if (IsTimelineSemaphore())
+    {
+        UNEXPECTED("Reset() is not supported for timeline semaphore");
     }
     else
     {

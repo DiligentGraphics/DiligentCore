@@ -34,7 +34,10 @@
 namespace Diligent
 {
 
-GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCaps, const struct SwapChainDesc* /*pSCDesc*/) :
+GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
+                     RENDER_DEVICE_TYPE&       DevType,
+                     struct Version&           APIVersion,
+                     const struct SwapChainDesc* /*pSCDesc*/) :
     m_Context(0),
     m_WindowId(InitAttribs.Window.WindowId),
     m_pDisplay(InitAttribs.Window.pDisplay)
@@ -77,9 +80,9 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     if (glGetError() != GL_NO_ERROR)
         LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-    deviceCaps.DevType      = RENDER_DEVICE_TYPE_GL;
-    deviceCaps.MajorVersion = MajorVersion;
-    deviceCaps.MinorVersion = MinorVersion;
+    DevType          = RENDER_DEVICE_TYPE_GL;
+    APIVersion.Major = static_cast<Uint8>(MajorVersion);
+    APIVersion.Minor = static_cast<Uint8>(MinorVersion);
 }
 
 GLContext::~GLContext()
