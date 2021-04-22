@@ -224,8 +224,8 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(const BindResour
     }
 #endif
 
-    ResourceCache.SetUniformBuffer(Attr.CacheOffset + BindInfo.ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
-                                   std::move(pBuffGLImpl), BindInfo.BufferBaseOffset, BindInfo.BufferRangeSize);
+    ResourceCache.SetUniformBuffer(Attr.CacheOffset + BindInfo.ArrayIndex, std::move(pBuffGLImpl),
+                                   BindInfo.BufferBaseOffset, BindInfo.BufferRangeSize);
 }
 
 void ShaderVariableManagerGL::UniformBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
@@ -389,7 +389,7 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(const BindReso
         ValidateBufferMode(Desc, BindInfo.ArrayIndex, pViewGL.RawPtr());
     }
 #endif
-    ResourceCache.SetSSBO(Attr.CacheOffset + BindInfo.ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, std::move(pViewGL));
+    ResourceCache.SetSSBO(Attr.CacheOffset + BindInfo.ArrayIndex, std::move(pViewGL));
 }
 
 void ShaderVariableManagerGL::StorageBufferBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)

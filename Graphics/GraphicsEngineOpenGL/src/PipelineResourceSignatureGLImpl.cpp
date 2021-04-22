@@ -180,6 +180,20 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
                     SamplerIdx,
                     ImtblSamplerIdx != InvalidImmutableSamplerIndex // _ImtblSamplerAssigned
                 };
+
+            if (Range == BINDING_RANGE_UNIFORM_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
+            {
+                DEV_CHECK_ERR(size_t{CacheOffset} + ResDesc.ArraySize < sizeof(m_DynamicUBOMask) * 8, "Dynamic UBO index exceeds maximum representable bit position in the mask");
+                for (Uint32 elem = 0; elem < ResDesc.ArraySize; ++elem)
+                    m_DynamicUBOMask |= Uint64{1} << Uint64{CacheOffset + elem};
+            }
+            else if (Range == BINDING_RANGE_STORAGE_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
+            {
+                DEV_CHECK_ERR(size_t{CacheOffset} + ResDesc.ArraySize < sizeof(m_DynamicSSBOMask) * 8, "Dynamic SSBO index exceeds maximum representable bit position in the mask");
+                for (Uint32 elem = 0; elem < ResDesc.ArraySize; ++elem)
+                    m_DynamicSSBOMask |= Uint64{1} << Uint64{CacheOffset + elem};
+            }
+
             VERIFY(CacheOffset + ResDesc.ArraySize <= std::numeric_limits<TBindings::value_type>::max(), "Cache offset exceeds representable range");
             CacheOffset += static_cast<TBindings::value_type>(ResDesc.ArraySize);
 
@@ -194,7 +208,7 @@ void PipelineResourceSignatureGLImpl::CreateLayout()
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator());
+        m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator(), 0x0, 0x0);
     }
 }
 
@@ -381,7 +395,7 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
                     if (!SrcCachedRes.pBuffer)
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-                    DstResourceCache.SetUniformBuffer(ResAttr.CacheOffset + ArrInd, (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
+                    DstResourceCache.SetUniformBuffer(ResAttr.CacheOffset + ArrInd,
                                                       RefCntAutoPtr<BufferGLImpl>{SrcCachedRes.pBuffer},
                                                       SrcCachedRes.BaseOffset, SrcCachedRes.RangeSize);
                 }
@@ -393,7 +407,7 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
                     if (!SrcCachedRes.pBufferView)
                         LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
 
-                    DstResourceCache.SetSSBO(ResAttr.CacheOffset + ArrInd, (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, RefCntAutoPtr<BufferViewGLImpl>{SrcCachedRes.pBufferView});
+                    DstResourceCache.SetSSBO(ResAttr.CacheOffset + ArrInd, RefCntAutoPtr<BufferViewGLImpl>{SrcCachedRes.pBufferView});
                 }
                 break;
             case BINDING_RANGE_TEXTURE:
@@ -458,11 +472,14 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
 #ifdef DILIGENT_DEVELOPMENT
     DstResourceCache.SetStaticResourcesInitialized();
 #endif
+#ifdef DILIGENT_DEBUG
+    DstResourceCache.DbgVerifyDynamicBufferMasks();
+#endif
 }
 
 void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache)
 {
-    ResourceCache.Initialize(m_BindingCount, m_SRBMemAllocator.GetResourceCacheDataAllocator(0));
+    ResourceCache.Initialize(m_BindingCount, m_SRBMemAllocator.GetResourceCacheDataAllocator(0), m_DynamicUBOMask, m_DynamicSSBOMask);
 
     // Initialize immutable samplers
     for (Uint32 r = 0; r < m_Desc.NumResources; ++r)

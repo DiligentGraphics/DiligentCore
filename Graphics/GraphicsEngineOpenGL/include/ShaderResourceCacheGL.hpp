@@ -131,7 +131,7 @@ public:
         {
             if (pBufferView)
             {
-                const auto* pBuff = pBufferView->GetBuffer<BufferGLImpl>();
+                const auto* pBuff = pBufferView->GetBuffer<const BufferGLImpl>();
                 return pBufferView->GetDesc().ByteWidth < pBuff->GetDesc().uiSizeInBytes;
             }
 
@@ -142,9 +142,9 @@ public:
     using TResourceCount = std::array<Uint16, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
     static size_t GetRequiredMemorySize(const TResourceCount& ResCount);
 
-    void Initialize(const TResourceCount& Count, IMemoryAllocator& MemAllocator);
+    void Initialize(const TResourceCount& Count, IMemoryAllocator& MemAllocator, Uint64 DynamicUBOSlotMask, Uint64 DynamicSSBOSlotMask);
 
-    void SetUniformBuffer(Uint32 CacheOffset, bool AllowDynamic, RefCntAutoPtr<BufferGLImpl>&& pBuff, Uint32 BaseOffset, Uint32 RangeSize)
+    void SetUniformBuffer(Uint32 CacheOffset, RefCntAutoPtr<BufferGLImpl>&& pBuff, Uint32 BaseOffset, Uint32 RangeSize)
     {
         DEV_CHECK_ERR(BaseOffset + RangeSize <= (pBuff ? pBuff->GetDesc().uiSizeInBytes : 0), "The range is out of buffer bounds");
         if (pBuff)
@@ -154,23 +154,29 @@ public:
         }
 
         auto& UB = GetUB(CacheOffset);
-        if (AllowDynamic && UB.IsDynamic())
-        {
-            VERIFY_EXPR(m_DynamicUBCount > 0);
-            --m_DynamicUBCount;
-        }
 
         UB.pBuffer       = std::move(pBuff);
         UB.BaseOffset    = BaseOffset;
         UB.RangeSize     = RangeSize;
         UB.DynamicOffset = 0;
 
-        if (AllowDynamic && UB.IsDynamic())
-            ++m_DynamicUBCount;
+        Uint64 UBBit = Uint64{1} << Uint64{CacheOffset};
+        if (m_DynamicUBOSlotMask & UBBit)
+        {
+            if (UB.IsDynamic())
+                m_DynamicUBOMask |= UBBit;
+            else
+                m_DynamicUBOMask &= ~UBBit;
+        }
+        else
+        {
+            VERIFY((m_DynamicUBOMask & UBBit) == 0, "Dynamic UBO bit should never be set when corresponding bit in m_DynamicUBOSlotMask is not set");
+        }
     }
 
     void SetDynamicUBOffset(Uint32 CacheOffset, Uint32 DynamicOffset)
     {
+        DEV_CHECK_ERR((m_DynamicUBOSlotMask & (Uint64{1} << Uint64{CacheOffset})) != 0, "Attempting to set dynamic offset for a non-dynamic UBO slot");
         GetUB(CacheOffset).DynamicOffset = DynamicOffset;
     }
 
@@ -199,24 +205,30 @@ public:
         GetImage(CacheOffset).Set(std::move(pBuffView));
     }
 
-    void SetSSBO(Uint32 CacheOffset, bool AllowDynamic, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
+    void SetSSBO(Uint32 CacheOffset, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
     {
         auto& SSBO = GetSSBO(CacheOffset);
-        if (AllowDynamic && SSBO.IsDynamic())
-        {
-            VERIFY_EXPR(m_DynamicSSBOCount > 0);
-            --m_DynamicSSBOCount;
-        }
 
         SSBO.pBufferView   = std::move(pBuffView);
         SSBO.DynamicOffset = 0;
 
-        if (AllowDynamic && SSBO.IsDynamic())
-            ++m_DynamicSSBOCount;
+        Uint64 SSBOBit = Uint64{1} << Uint64{CacheOffset};
+        if (m_DynamicSSBOSlotMask & SSBOBit)
+        {
+            if (SSBO.IsDynamic())
+                m_DynamicSSBOMask |= SSBOBit;
+            else
+                m_DynamicSSBOMask &= ~SSBOBit;
+        }
+        else
+        {
+            VERIFY((m_DynamicSSBOMask & SSBOBit) == 0, "Dynamic SSBO bit should never be set when corresponding bit in m_DynamicSSBOSlotMask is not set");
+        }
     }
 
     void SetDynamicSSBOOffset(Uint32 CacheOffset, Uint32 DynamicOffset)
     {
+        DEV_CHECK_ERR((m_DynamicSSBOSlotMask & (Uint64{1} << Uint64{CacheOffset})) != 0, "Attempting to set dynamic offset for a non-dynamic SSBO slot");
         GetSSBO(CacheOffset).DynamicOffset = DynamicOffset;
     }
 
@@ -315,8 +327,12 @@ public:
 
     bool HasDynamicResources() const
     {
-        return (Uint32{m_DynamicUBCount} + Uint32{m_DynamicSSBOCount}) > 0;
+        return m_DynamicUBOMask != 0 || m_DynamicSSBOMask != 0;
     }
+
+#ifdef DILIGENT_DEBUG
+    void DbgVerifyDynamicBufferMasks() const;
+#endif
 
 private:
     CachedUB& GetUB(Uint32 CacheOffset)
@@ -351,8 +367,13 @@ private:
     Uint8*            m_pResourceData = nullptr;
     IMemoryAllocator* m_pAllocator    = nullptr;
 
-    Uint16 m_DynamicUBCount   = 0;
-    Uint16 m_DynamicSSBOCount = 0;
+    // Indicates at which positions dynamic UBOs or SSBOs may be bound
+    Uint64 m_DynamicUBOSlotMask  = 0;
+    Uint64 m_DynamicSSBOSlotMask = 0;
+
+    // Indicates slot at which dynamic buffers are actually bound
+    Uint64 m_DynamicUBOMask  = 0;
+    Uint64 m_DynamicSSBOMask = 0;
 
     // Indicates what types of resources are stored in the cache
     const ResourceCacheContentType m_ContentType;

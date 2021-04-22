@@ -130,6 +130,9 @@ private:
 private:
     TBindings m_BindingCount = {};
 
+    Uint64 m_DynamicUBOMask  = 0;
+    Uint64 m_DynamicSSBOMask = 0;
+
     using SamplerPtr                = RefCntAutoPtr<ISampler>;
     SamplerPtr* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 };

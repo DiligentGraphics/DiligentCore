@@ -173,6 +173,10 @@ void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     const auto  SRBIndex            = pShaderResBindingGL->GetBindingIndex();
 
     m_BindInfo.Set(SRBIndex, pShaderResBindingGL);
+
+#ifdef DILIGENT_DEBUG
+    pShaderResBindingGL->GetResourceCache().DbgVerifyDynamicBufferMasks();
+#endif
 }
 
 void DeviceContextGLImpl::SetStencilRef(Uint32 StencilRef)
@@ -664,7 +668,10 @@ void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask)
         if (m_BindInfo.StaleSRBMask & SignBit)
             pResourceCache->BindResources(GetContextState(), BaseBindings, m_BoundWritableTextures, m_BoundWritableBuffers);
         else
+        {
+            VERIFY_EXPR((m_BindInfo.DynamicSRBMask & SignBit) != 0);
             pResourceCache->BindDynamicBuffers(GetContextState(), BaseBindings);
+        }
     }
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 

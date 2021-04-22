@@ -30,6 +30,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "PipelineResourceSignatureGLImpl.hpp"
 #include "GLTypeConversions.hpp"
+#include "PlatformMisc.hpp"
 
 namespace Diligent
 {
@@ -49,8 +50,11 @@ size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCou
     return MemSize;
 }
 
-void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAllocator& MemAllocator)
+void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAllocator& MemAllocator, Uint64 DynamicUBOSlotMask, Uint64 DynamicSSBOSlotMask)
 {
+    m_DynamicUBOSlotMask  = DynamicUBOSlotMask;
+    m_DynamicSSBOSlotMask = DynamicSSBOSlotMask;
+
     VERIFY(m_pAllocator == nullptr && m_pResourceData == nullptr, "Cache already initialized");
     m_pAllocator = &MemAllocator;
 
@@ -300,34 +304,50 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
 void ShaderResourceCacheGL::BindDynamicBuffers(GLContextState&              GLState,
                                                const std::array<Uint16, 4>& BaseBindings) const
 {
-    // TODO: skip non-dynamic buffers or count dynamic ones.
-    // NB:   some dynamic buffers in the cache may not be counted as such due to NO_DYNAMIC_BUFFERS flag
-    for (Uint32 ub = 0, binding = BaseBindings[BINDING_RANGE_UNIFORM_BUFFER]; ub < GetUBCount(); ++ub, ++binding)
+    const auto BaseUBOBinding = BaseBindings[BINDING_RANGE_UNIFORM_BUFFER];
+    for (Uint64 DynamicUBOMask = m_DynamicUBOMask; DynamicUBOMask != 0;)
     {
-        const auto& UB = GetConstUB(ub);
-        if (!UB.pBuffer || UB.pBuffer->GetDesc().uiSizeInBytes == UB.RangeSize)
-            continue;
-        GLState.BindUniformBuffer(binding, UB.pBuffer->GetGLHandle(), UB.BaseOffset + UB.DynamicOffset, UB.RangeSize);
+        const auto  UBOBit = ExtractLSB(DynamicUBOMask);
+        const auto  UBOIdx = PlatformMisc::GetLSB(UBOBit);
+        const auto& UB     = GetConstUB(UBOIdx);
+        VERIFY_EXPR(UB.IsDynamic());
+        GLState.BindUniformBuffer(BaseUBOBinding + UBOIdx, UB.pBuffer->GetGLHandle(), UB.BaseOffset + UB.DynamicOffset, UB.RangeSize);
     }
 
-    // TODO: skip non-dynamic buffers or count dynamic ones.
-    // NB:   some dynamic buffers in the cache may not be counted as such due to NO_DYNAMIC_BUFFERS flag
-    for (Uint32 ssbo = 0, binding = BaseBindings[BINDING_RANGE_STORAGE_BUFFER]; ssbo < GetSSBOCount(); ++ssbo, ++binding)
+
+    const auto BaseSSBOBinding = BaseBindings[BINDING_RANGE_STORAGE_BUFFER];
+    for (Uint64 DynamicSSBOMask = m_DynamicSSBOMask; DynamicSSBOMask != 0;)
     {
-        const auto& SSBO = GetConstSSBO(ssbo);
-        if (!SSBO.pBufferView)
-            return;
+        const auto  SSBOBit = ExtractLSB(DynamicSSBOMask);
+        const auto  SSBOIdx = PlatformMisc::GetLSB(SSBOBit);
+        const auto& SSBO    = GetConstSSBO(SSBOIdx);
+        VERIFY_EXPR(SSBO.IsDynamic());
 
-        auto* const pBufferViewGL = SSBO.pBufferView.RawPtr<BufferViewGLImpl>();
-        const auto* pBufferGL     = pBufferViewGL->GetBuffer<BufferGLImpl>();
+        auto* const pBufferViewGL = SSBO.pBufferView.RawPtr<const BufferViewGLImpl>();
+        const auto* pBufferGL     = pBufferViewGL->GetBuffer<const BufferGLImpl>();
         const auto& ViewDesc      = pBufferViewGL->GetDesc();
-        VERIFY(ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpected buffer view type");
 
-        if (ViewDesc.ByteWidth == pBufferGL->GetDesc().uiSizeInBytes)
-            continue;
-
-        GLState.BindStorageBlock(binding, pBufferGL->GetGLHandle(), ViewDesc.ByteOffset + SSBO.DynamicOffset, ViewDesc.ByteWidth);
+        GLState.BindStorageBlock(BaseSSBOBinding + SSBOIdx, pBufferGL->GetGLHandle(), ViewDesc.ByteOffset + SSBO.DynamicOffset, ViewDesc.ByteWidth);
     }
 }
+
+#ifdef DILIGENT_DEBUG
+void ShaderResourceCacheGL::DbgVerifyDynamicBufferMasks() const
+{
+    for (Uint32 ub = 0; ub < GetUBCount(); ++ub)
+    {
+        const auto& UB    = GetConstUB(ub);
+        const auto  UBBit = Uint64{1} << Uint64{ub};
+        VERIFY(((m_DynamicUBOMask & UBBit) != 0) == (UB.IsDynamic() && (m_DynamicUBOSlotMask & UBBit) != 0), "Bit ", ub, " in m_DynamicUBOMask is invalid");
+    }
+
+    for (Uint32 ssbo = 0; ssbo < GetSSBOCount(); ++ssbo)
+    {
+        const auto& SSBO    = GetConstSSBO(ssbo);
+        const auto  SSBOBit = Uint64{1} << Uint64{ssbo};
+        VERIFY(((m_DynamicSSBOMask & SSBOBit) != 0) == (SSBO.IsDynamic() && (m_DynamicSSBOSlotMask & SSBOBit) != 0), "Bit ", ssbo, " in m_DynamicSSBOMask is invalid");
+    }
+}
+#endif
 
 } // namespace Diligent
