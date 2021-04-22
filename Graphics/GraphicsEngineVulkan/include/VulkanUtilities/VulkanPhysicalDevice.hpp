@@ -48,14 +48,15 @@ public:
         VkPhysicalDeviceAccelerationStructureFeaturesKHR  AccelStruct            = {};
         VkPhysicalDeviceRayTracingPipelineFeaturesKHR     RayTracingPipeline     = {};
         VkPhysicalDeviceRayQueryFeaturesKHR               RayQuery               = {};
-        bool                                              Spirv14                = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
-        bool                                              Spirv15                = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
-        bool                                              SubgroupOps            = false; // Requires Vulkan 1.1
-        bool                                              HasPortabilitySubset   = false;
         VkPhysicalDeviceBufferDeviceAddressFeaturesKHR    BufferDeviceAddress    = {};
         VkPhysicalDeviceDescriptorIndexingFeaturesEXT     DescriptorIndexing     = {};
         VkPhysicalDevicePortabilitySubsetFeaturesKHR      PortabilitySubset      = {};
         VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT VertexAttributeDivisor = {};
+        VkPhysicalDeviceTimelineSemaphoreFeaturesKHR      TimelineSemaphore      = {};
+        bool                                              Spirv14                = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
+        bool                                              Spirv15                = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
+        bool                                              SubgroupOps            = false; // Requires Vulkan 1.1
+        bool                                              HasPortabilitySubset   = false;
     };
 
     struct ExtensionProperties
@@ -67,6 +68,7 @@ public:
         VkPhysicalDevicePortabilitySubsetPropertiesKHR      PortabilitySubset      = {};
         VkPhysicalDeviceSubgroupProperties                  Subgroup               = {};
         VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT VertexAttributeDivisor = {};
+        VkPhysicalDeviceTimelineSemaphorePropertiesKHR      TimelineSemaphore      = {};
     };
 
 public:

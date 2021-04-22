@@ -42,21 +42,18 @@ static const INTERFACE_ID IID_FenceVk =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define IFenceVkInclusiveMethods \
-    IFenceInclusiveMethods
-//IFenceVkMethods FenceVk
+    IFenceInclusiveMethods;      \
+    IFenceVkMethods FenceVk
 
 // clang-format off
-
-#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Vulkan-specific functionality of a fence object.
 DILIGENT_BEGIN_INTERFACE(IFenceVk, IFence)
 {
+    /// If timeline semaphore is supported returns semaphore object, otherwise returns VK_NULL_HANDLE.
     VIRTUAL VkSemaphore METHOD(GetVkSemaphore)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
-
-#endif
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -64,15 +61,9 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-typedef struct IFenceVkVtbl
-{
-    IFenceVkInclusiveMethods;
-} IFenceVkVtbl;
+#    define IFenceVk_GetVkSemaphore(This)    CALL_IFACE_METHOD(FenceVk, GetVkSemaphore, This)
 
-typedef struct IFenceVk
-{
-    struct IFenceVkVtbl* pVtbl;
-} IFenceVk;
+// clang-format on
 
 #endif
 

@@ -197,7 +197,6 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtFeatures.Spirv15 = true;
         }
 
-#    ifdef PLATFORM_MACOS
         // Extension required for MoltenVk
         if (IsExtensionSupported(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
         {
@@ -212,7 +211,6 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 
             m_ExtProperties.PortabilitySubset.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_PROPERTIES_KHR;
         }
-#    endif
 
         // Subgroup feature requires Vulkan 1.1 core.
         if (m_VkVersion >= VK_API_VERSION_1_1)
@@ -235,6 +233,19 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             NextProp  = &m_ExtProperties.VertexAttributeDivisor.pNext;
 
             m_ExtProperties.VertexAttributeDivisor.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_PROPERTIES_EXT;
+        }
+
+        if (IsExtensionSupported(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.TimelineSemaphore;
+            NextFeat  = &m_ExtFeatures.TimelineSemaphore.pNext;
+
+            m_ExtFeatures.TimelineSemaphore.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+
+            *NextProp = &m_ExtProperties.TimelineSemaphore;
+            NextProp  = &m_ExtProperties.TimelineSemaphore.pNext;
+
+            m_ExtProperties.TimelineSemaphore.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_PROPERTIES;
         }
 
         // make sure that last pNext is null

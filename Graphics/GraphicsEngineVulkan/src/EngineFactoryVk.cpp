@@ -771,7 +771,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 }
             }
 
-#ifdef PLATFORM_MACOS
             if (DeviceExtFeatures.HasPortabilitySubset)
             {
                 EnabledExtFeats.HasPortabilitySubset = DeviceExtFeatures.HasPortabilitySubset;
@@ -782,7 +781,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 *NextExt = &EnabledExtFeats.PortabilitySubset;
                 NextExt  = &EnabledExtFeats.PortabilitySubset.pNext;
             }
-#endif
 
             if (EngineCI.Features.WaveOp != DEVICE_FEATURE_STATE_DISABLED)
             {
@@ -798,6 +796,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
                 *NextExt = &EnabledExtFeats.VertexAttributeDivisor;
                 NextExt  = &EnabledExtFeats.VertexAttributeDivisor.pNext;
+            }
+
+            if (DeviceExtFeatures.TimelineSemaphore.timelineSemaphore == VK_TRUE)
+            {
+                VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME));
+                DeviceExtensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
+
+                EnabledExtFeats.TimelineSemaphore = DeviceExtFeatures.TimelineSemaphore;
+
+                *NextExt = &EnabledExtFeats.TimelineSemaphore;
+                NextExt  = &EnabledExtFeats.TimelineSemaphore.pNext;
             }
 
             // Append user-defined features
