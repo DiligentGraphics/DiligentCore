@@ -449,7 +449,8 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             break;
     }
 
-    m_NumImmediateContexts = std::max(1u, static_cast<Uint32>(ContextCI.size()));
+    constexpr Uint8 InvalidQueueId = 64;
+    m_NumImmediateContexts         = std::max(1u, static_cast<Uint32>(ContextCI.size()));
     m_pDeviceContexts.resize(ppContexts.size());
     for (size_t i = 0; i < ppContexts.size(); ++i)
     {
@@ -459,13 +460,14 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
         const auto CtxDesc = ppContexts[i]->GetDesc();
         if (i < m_NumImmediateContexts)
         {
-            if (CtxDesc.IsDeferred)
-                LOG_ERROR_MESSAGE("Immediate context expected");
+            VERIFY(!CtxDesc.IsDeferred, "Immediate context expected");
+            VERIFY(CtxDesc.CommandQueueId == static_cast<Uint8>(i), "Invalid command queue index");
         }
         else
         {
-            if (!CtxDesc.IsDeferred)
-                LOG_ERROR_MESSAGE("Deferred context expected");
+            VERIFY(CtxDesc.IsDeferred, "Deferred context expected");
+            VERIFY(CtxDesc.CommandQueueId >= InvalidQueueId, "Command queue index must be invalid");
+            VERIFY(CtxDesc.QueueId >= InvalidQueueId, "Hardware queue id must be invalid");
         }
         m_pDeviceContexts[i].Attach(ppContexts[i]);
     }

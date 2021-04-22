@@ -70,7 +70,7 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     IDeviceContext_FinishCommandList(pCtx, (struct ICommandList**)NULL);
     IDeviceContext_ExecuteCommandLists(pCtx, 2u, (struct ICommandList* const*)NULL);
 
-    IDeviceContext_SignalFence(pCtx, (struct IFence*)NULL, (Uint64)1);
+    IDeviceContext_EnqueueSignal(pCtx, (struct IFence*)NULL, (Uint64)1);
     IDeviceContext_DeviceWaitForFence(pCtx, (struct IFence*)NULL, (Uint64)1);
     IDeviceContext_WaitForIdle(pCtx);
     IDeviceContext_Flush(pCtx);

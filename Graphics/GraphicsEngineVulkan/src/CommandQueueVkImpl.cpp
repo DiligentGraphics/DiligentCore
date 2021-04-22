@@ -271,7 +271,7 @@ Uint64 CommandQueueVkImpl::GetCompletedFenceValue()
     return m_pFence->GetCompletedValue();
 }
 
-void CommandQueueVkImpl::SignalFence(VkFence vkFence)
+void CommandQueueVkImpl::EnqueueSignalFence(VkFence vkFence)
 {
     DEV_CHECK_ERR(vkFence != VK_NULL_HANDLE, "vkFence must not be null");
 
@@ -284,7 +284,7 @@ void CommandQueueVkImpl::SignalFence(VkFence vkFence)
     (void)err;
 }
 
-void CommandQueueVkImpl::SignalSemaphore(VkSemaphore vkTimelineSemaphore, Uint64 Value)
+void CommandQueueVkImpl::EnqueueSignal(VkSemaphore vkTimelineSemaphore, Uint64 Value)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMutex};
     InternalSignalSemaphore(vkTimelineSemaphore, Value);

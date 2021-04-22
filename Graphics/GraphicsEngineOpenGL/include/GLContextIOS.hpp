@@ -35,7 +35,10 @@ class GLContext
 public:
     using NativeGLContextType = void*; // EAGLContext*
 
-    GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
+    GLContext(const struct EngineGLCreateInfo& InitAttribs,
+              RENDER_DEVICE_TYPE&              DevType,
+              struct Version&                  APIVersion,
+              const struct SwapChainDesc*      pSCDesc);
 
     NativeGLContextType GetCurrentNativeGLContext();
 };

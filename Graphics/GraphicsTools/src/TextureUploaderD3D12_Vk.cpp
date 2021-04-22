@@ -212,7 +212,7 @@ struct TextureUploaderD3D12_Vk::InternalData
         // Fences can't be accessed from multiple threads simultaneously even
         // when protected by mutex
         auto FenceValue = m_NextFenceValue++;
-        pContext->SignalFence(m_pFence, FenceValue);
+        pContext->EnqueueSignal(m_pFence, FenceValue);
         return FenceValue;
     }
 

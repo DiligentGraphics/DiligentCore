@@ -106,7 +106,7 @@ Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
     VERIFY(CompletedFenceValue != UINT64_MAX, "If the device has been removed, the return value will be UINT64_MAX");
 
     auto CurrValue = m_LastCompletedFenceValue.load();
-    while (!m_LastCompletedFenceValue.compare_exchange_strong(CurrValue, std::max(CurrValue, CompletedFenceValue)))
+    while (!m_LastCompletedFenceValue.compare_exchange_weak(CurrValue, std::max(CurrValue, CompletedFenceValue)))
     {
         // If exchange fails, CurrValue will hold the actual value of m_LastCompletedFenceValue
     }
@@ -114,7 +114,7 @@ Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
     return m_LastCompletedFenceValue.load();
 }
 
-void CommandQueueD3D12Impl::SignalFence(ID3D12Fence* pFence, Uint64 Value)
+void CommandQueueD3D12Impl::EnqueueSignal(ID3D12Fence* pFence, Uint64 Value)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
     m_pd3d12CmdQueue->Signal(pFence, Value);

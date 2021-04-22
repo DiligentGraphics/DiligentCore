@@ -90,10 +90,9 @@ void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
     }
 }
 
-void FenceD3D11Impl::Reset(Uint64 Value)
+void FenceD3D11Impl::Signal(Uint64 Value)
 {
-    DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
-    UpdateLastCompletedFenceValue(Value);
+    UNEXPECTED("Signal() is not supported in Direct3D11 backend");
 }
 
 } // namespace Diligent

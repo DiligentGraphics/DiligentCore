@@ -708,9 +708,6 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
 
     // Enable features and set properties
     {
-#define ENABLE_FEATURE(FeatureName, Supported) \
-    Features.FeatureName = (Supported) ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
-
         auto& Features   = AdapterInfo.Capabilities.Features;
         auto& Properties = AdapterInfo.Properties;
 
@@ -720,6 +717,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
         Features.BindlessResources = DEVICE_FEATURE_STATE_ENABLED;
 
         Features.VertexPipelineUAVWritesAndAtomics = DEVICE_FEATURE_STATE_ENABLED;
+        Features.NativeFence                       = DEVICE_FEATURE_STATE_ENABLED;
 
         // Check if mesh shader is supported.
         bool MeshShadersSupported = false;
@@ -840,7 +838,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
         d3d12Device->Release();
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
     static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
     static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
 #endif

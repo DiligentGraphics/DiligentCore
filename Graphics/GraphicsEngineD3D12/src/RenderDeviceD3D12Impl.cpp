@@ -312,7 +312,7 @@ void RenderDeviceD3D12Impl::SignalFences(CommandQueueIndex CommandQueueId, std::
     {
         auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
         auto* pd3d12Fence     = pFenceD3D12Impl->GetD3D12Fence();
-        CmdQueue->SignalFence(pd3d12Fence, val_fence.first);
+        CmdQueue->EnqueueSignal(pd3d12Fence, val_fence.first);
     }
 }
 

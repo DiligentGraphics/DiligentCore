@@ -60,8 +60,8 @@ public:
     /// Implementation of IFence::GetCompletedValue() in Vulkan backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
-    /// Implementation of IFence::Reset() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
+    /// Implementation of IFence::Signal() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE Signal(Uint64 Value) override final;
 
     /// Implementation of IFence::Wait() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
@@ -70,6 +70,8 @@ public:
     virtual VkSemaphore DILIGENT_CALL_TYPE GetVkSemaphore() override final { return m_TimelineSemaphore; }
 
     VulkanUtilities::VulkanRecycledSemaphore ExtractSignalSemaphore(CommandQueueIndex CommandQueueId, Uint64 Value);
+
+    void Reset(Uint64 Value);
 
     void AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 Value, SyncPointVkPtr SyncPoint);
 

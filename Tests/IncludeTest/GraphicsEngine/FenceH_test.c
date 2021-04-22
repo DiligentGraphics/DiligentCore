@@ -34,6 +34,6 @@ void TestFenceCInterface(struct IFence* pFence)
     CompletedValue = IFence_GetCompletedValue(pFence);
     (void)(CompletedValue);
 
-    IFence_Reset(pFence, (Uint64)0);
+    IFence_Signal(pFence, (Uint64)0);
     IFence_Wait(pFence, (Uint64)0);
 }

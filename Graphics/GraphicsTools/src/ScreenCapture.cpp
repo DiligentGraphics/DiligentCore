@@ -77,7 +77,7 @@ void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Ui
 
     CopyTextureAttribs CopyAttribs(pCurrentBackBuffer, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, pStagingTexture, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->CopyTexture(CopyAttribs);
-    pContext->SignalFence(m_pFence, m_CurrentFenceValue);
+    pContext->EnqueueSignal(m_pFence, m_CurrentFenceValue);
 
     {
         std::lock_guard<std::mutex> Lock{m_PendingTexturesMtx};

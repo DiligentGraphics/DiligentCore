@@ -144,8 +144,8 @@ public:
         m_Desc.Name           = m_Name.c_str();
         m_Desc.ContextType    = bIsDeferred ? CONTEXT_TYPE_UNKNOWN : CONTEXT_TYPE_GRAPHICS;
         m_Desc.IsDeferred     = bIsDeferred;
-        m_Desc.QueueId        = MAX_COMMAND_QUEUES;
-        m_Desc.CommandQueueId = MAX_COMMAND_QUEUES;
+        m_Desc.QueueId        = bIsDeferred ? MAX_COMMAND_QUEUES : 0;
+        m_Desc.CommandQueueId = bIsDeferred ? MAX_COMMAND_QUEUES : 0;
 
         m_Desc.TextureCopyGranularity[0] = 1;
         m_Desc.TextureCopyGranularity[1] = 1;

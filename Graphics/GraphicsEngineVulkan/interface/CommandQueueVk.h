@@ -88,13 +88,15 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, IObject)
     VIRTUAL Uint64 METHOD(WaitForIdle)(THIS) PURE;
 
     /// Signals the given fence
-    VIRTUAL void METHOD(SignalFence)(THIS_
-                                     VkFence vkFence) PURE;
+    VIRTUAL void METHOD(EnqueueSignalFence)(THIS_
+                                            VkFence vkFence) PURE;
 
-    /// Signals the given timeline semaphore
-    VIRTUAL void METHOD(SignalSemaphore)(THIS_
-                                         VkSemaphore vkTimelineSemaphore,
-                                         Uint64      Value) PURE;
+    /// Signals the given timeline semaphore.
+    ///
+    /// \note  Requires NativeFence feature, see Diligent::DeviceFeatures.
+    VIRTUAL void METHOD(EnqueueSignal)(THIS_
+                                       VkSemaphore vkTimelineSemaphore,
+                                       Uint64      Value) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -104,16 +106,16 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define ICommandQueueVk_GetNextFenceValue(This)      CALL_IFACE_METHOD(CommandQueueVk, GetNextFenceValue,      This)
-#    define ICommandQueueVk_SubmitCmdBuffer(This, ...)   CALL_IFACE_METHOD(CommandQueueVk, SubmitCmdBuffer,        This, __VA_ARGS__)
-#    define ICommandQueueVk_Submit(This, ...)            CALL_IFACE_METHOD(CommandQueueVk, Submit,                 This, __VA_ARGS__)
-#    define ICommandQueueVk_Present(This, ...)           CALL_IFACE_METHOD(CommandQueueVk, Present,                This, __VA_ARGS__)
-#    define ICommandQueueVk_GetVkQueue(This)             CALL_IFACE_METHOD(CommandQueueVk, GetVkQueue,             This)
-#    define ICommandQueueVk_GetQueueFamilyIndex(This)    CALL_IFACE_METHOD(CommandQueueVk, GetQueueFamilyIndex,    This)
-#    define ICommandQueueVk_GetCompletedFenceValue(This) CALL_IFACE_METHOD(CommandQueueVk, GetCompletedFenceValue, This)
-#    define ICommandQueueVk_WaitForIdle(This)            CALL_IFACE_METHOD(CommandQueueVk, WaitForIdle,            This)
-#    define ICommandQueueVk_SignalFence(This, ...)       CALL_IFACE_METHOD(CommandQueueVk, SignalFence,            This, __VA_ARGS__)
-#    define ICommandQueueVk_SignalSemaphore(This, ...)   CALL_IFACE_METHOD(CommandQueueVk, SignalSemaphore,        This, __VA_ARGS__)
+#    define ICommandQueueVk_GetNextFenceValue(This)           CALL_IFACE_METHOD(CommandQueueVk, GetNextFenceValue,      This)
+#    define ICommandQueueVk_SubmitCmdBuffer(This, ...)        CALL_IFACE_METHOD(CommandQueueVk, SubmitCmdBuffer,        This, __VA_ARGS__)
+#    define ICommandQueueVk_Submit(This, ...)                 CALL_IFACE_METHOD(CommandQueueVk, Submit,                 This, __VA_ARGS__)
+#    define ICommandQueueVk_Present(This, ...)                CALL_IFACE_METHOD(CommandQueueVk, Present,                This, __VA_ARGS__)
+#    define ICommandQueueVk_GetVkQueue(This)                  CALL_IFACE_METHOD(CommandQueueVk, GetVkQueue,             This)
+#    define ICommandQueueVk_GetQueueFamilyIndex(This)         CALL_IFACE_METHOD(CommandQueueVk, GetQueueFamilyIndex,    This)
+#    define ICommandQueueVk_GetCompletedFenceValue(This)      CALL_IFACE_METHOD(CommandQueueVk, GetCompletedFenceValue, This)
+#    define ICommandQueueVk_WaitForIdle(This)                 CALL_IFACE_METHOD(CommandQueueVk, WaitForIdle,            This)
+#    define ICommandQueueVk_EnqueueSignalFence(This, ...)     CALL_IFACE_METHOD(CommandQueueVk, EnqueueSignalFence,     This, __VA_ARGS__)
+#    define ICommandQueueVk_EnqueueSignal(This, ...)          CALL_IFACE_METHOD(CommandQueueVk, EnqueueSignal,          This, __VA_ARGS__)
 
 // clang-format on
 

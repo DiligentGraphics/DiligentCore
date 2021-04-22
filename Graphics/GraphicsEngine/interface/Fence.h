@@ -74,19 +74,19 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
     VIRTUAL Uint64 METHOD(GetCompletedValue)(THIS) PURE;
 
 
-    /// Resets the fence to the specified value.
+    /// Sets the fence to the specified value.
 
-    /// \param [in] Value - New value to reset the fence to.
+    /// \param [in] Value - New value to set the fence to.
+    ///                     The value must be greater than the current value of the fence.
     /// 
     /// \note  Fence value will be changed immediatlly on the CPU side.
     ///        Use ICommandQueueVk::SignalFence or ICommandQueueD3D12::SignalFence to add signal command
     ///        to the queue, which will change the value when all previously submitted commands are complete.
     /// 
-    /// \warning  Only Direct3D12 and Vulkan backends can wait on the GPU-side for a signal from the CPU.
-    ///           Vulkan backend additionally requires timeline semaphore extension.
-    VIRTUAL void METHOD(Reset)(THIS_
-                               Uint64 Value) PURE;
-
+    /// \note  Requires NativeFence feature, see Diligent::DeviceFeatures.
+    VIRTUAL void METHOD(Signal)(THIS_
+                                Uint64 Value) PURE;
+    
 
     /// Waits until the specified fence reaches or exceeds the specified value, on the host.
 
@@ -107,7 +107,7 @@ DILIGENT_END_INTERFACE
 #    define IFence_GetDesc(This) (const struct FenceDesc*)IDeviceObject_GetDesc(This)
 
 #    define IFence_GetCompletedValue(This) CALL_IFACE_METHOD(Fence, GetCompletedValue, This)
-#    define IFence_Reset(This, ...)        CALL_IFACE_METHOD(Fence, Reset,             This, __VA_ARGS__)
+#    define IFence_Signal(This, ...)       CALL_IFACE_METHOD(Fence, Signal,            This, __VA_ARGS__)
 #    define IFence_Wait(This, ...)         CALL_IFACE_METHOD(Fence, Wait,              This, __VA_ARGS__)
 
 // clang-format on

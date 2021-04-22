@@ -59,7 +59,7 @@ Uint64 FenceD3D12Impl::GetCompletedValue()
     return Result;
 }
 
-void FenceD3D12Impl::Reset(Uint64 Value)
+void FenceD3D12Impl::Signal(Uint64 Value)
 {
     m_pd3d12Fence->Signal(Value);
 }

@@ -52,8 +52,8 @@ public:
     /// Implementation of IFence::GetCompletedValue() in Direct3D12 backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
-    /// Implementation of IFence::GetCompletedValue() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
+    /// Implementation of IFence::Signal() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE Signal(Uint64 Value) override final;
 
     /// Implementation of IFenceD3D12::Wait() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;

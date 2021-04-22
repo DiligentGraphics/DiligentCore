@@ -1143,7 +1143,7 @@ void DeviceContextGLImpl::ExecuteCommandLists(Uint32               NumCommandLis
     LOG_ERROR("Deferred contexts are not supported in OpenGL mode");
 }
 
-void DeviceContextGLImpl::SignalFence(IFence* pFence, Uint64 Value)
+void DeviceContextGLImpl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
     GLObjectWrappers::GLSyncObj GLFence{glFenceSync(

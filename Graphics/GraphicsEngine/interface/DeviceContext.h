@@ -2113,17 +2113,25 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] pFence - The fence to signal
     /// \param [in] Value  - The value to set the fence to. This value must be greater than the
     ///                      previously signaled value on the same fence.
-    VIRTUAL void METHOD(SignalFence)(THIS_
-                                     IFence*    pFence,
-                                     Uint64     Value) PURE;
-    
+    VIRTUAL void METHOD(EnqueueSignal)(THIS_
+                                       IFence*    pFence,
+                                       Uint64     Value) PURE;
+
 
     /// Waits until the specified fence reaches or exceeds the specified value, on the device.
     
     /// \param [in] pFence - The fence to wait.
     /// \param [in] Value  - The value that the context is waiting for the fence to reach.
     /// 
-    /// \remarks    Wait is only allowed for immediate contexts.
+    /// \note  If NativeFence feature is not enabled (see Diligent::DeviceFeatures) then
+    ///        Value must be less than or equal to the last signaled or pending value.
+    ///        Value becomes pending when the context is flushed.
+    ///        Waiting for a value that is greater than any pending value will cause a deadlock.
+    /// 
+    /// \note  If NativeFence feature is enabled then waiting for a value that is greater than
+    ///        any pending value will cause a GPU stall.
+    ///
+    /// \remarks  Wait is only allowed for immediate contexts.
     VIRTUAL void METHOD(DeviceWaitForFence)(THIS_
                                             IFence*  pFence,
                                             Uint64   Value) PURE;
@@ -2597,12 +2605,12 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_ClearRenderTarget(This, ...)         CALL_IFACE_METHOD(DeviceContext, ClearRenderTarget,         This, __VA_ARGS__)
 #    define IDeviceContext_FinishCommandList(This, ...)         CALL_IFACE_METHOD(DeviceContext, FinishCommandList,         This, __VA_ARGS__)
 #    define IDeviceContext_ExecuteCommandLists(This, ...)       CALL_IFACE_METHOD(DeviceContext, ExecuteCommandLists,       This, __VA_ARGS__)
-#    define IDeviceContext_SignalFence(This, ...)               CALL_IFACE_METHOD(DeviceContext, SignalFence,               This, __VA_ARGS__)
+#    define IDeviceContext_EnqueueSignal(This, ...)             CALL_IFACE_METHOD(DeviceContext, EnqueueSignal,             This, __VA_ARGS__)
 #    define IDeviceContext_DeviceWaitForFence(This, ...)        CALL_IFACE_METHOD(DeviceContext, DeviceWaitForFence,        This, __VA_ARGS__)
-#    define IDeviceContext_WaitForIdle(This, ...)               CALL_IFACE_METHOD(DeviceContext, WaitForIdle,               This, __VA_ARGS__)
+#    define IDeviceContext_WaitForIdle(This)                    CALL_IFACE_METHOD(DeviceContext, WaitForIdle,               This)
 #    define IDeviceContext_BeginQuery(This, ...)                CALL_IFACE_METHOD(DeviceContext, BeginQuery,                This, __VA_ARGS__)
 #    define IDeviceContext_EndQuery(This, ...)                  CALL_IFACE_METHOD(DeviceContext, EndQuery,                  This, __VA_ARGS__)
-#    define IDeviceContext_Flush(This, ...)                     CALL_IFACE_METHOD(DeviceContext, Flush,                     This, __VA_ARGS__)
+#    define IDeviceContext_Flush(This)                          CALL_IFACE_METHOD(DeviceContext, Flush,                     This)
 #    define IDeviceContext_UpdateBuffer(This, ...)              CALL_IFACE_METHOD(DeviceContext, UpdateBuffer,              This, __VA_ARGS__)
 #    define IDeviceContext_CopyBuffer(This, ...)                CALL_IFACE_METHOD(DeviceContext, CopyBuffer,                This, __VA_ARGS__)
 #    define IDeviceContext_MapBuffer(This, ...)                 CALL_IFACE_METHOD(DeviceContext, MapBuffer,                 This, __VA_ARGS__)

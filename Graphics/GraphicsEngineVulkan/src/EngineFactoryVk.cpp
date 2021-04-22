@@ -218,6 +218,10 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
         ENABLE_FEATURE(InstanceDataStepRate,
                        (VertexAttribDivisorFeats.vertexAttributeInstanceRateDivisor != VK_FALSE &&
                         VertexAttribDivisorFeats.vertexAttributeInstanceRateZeroDivisor != VK_FALSE));
+
+        const auto& TimelineSemaphoreFeats = PhysicalDevice.GetExtFeatures().TimelineSemaphore;
+        ENABLE_FEATURE(NativeFence,
+                       TimelineSemaphoreFeats.timelineSemaphore != VK_FALSE);
 #undef ENABLE_FEATURE
     }
 
@@ -342,7 +346,7 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
     static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
     static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
 #endif
@@ -798,7 +802,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 NextExt  = &EnabledExtFeats.VertexAttributeDivisor.pNext;
             }
 
-            if (DeviceExtFeatures.TimelineSemaphore.timelineSemaphore == VK_TRUE)
+            if (EngineCI.Features.NativeFence != DEVICE_FEATURE_STATE_DISABLED)
             {
                 VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME));
                 DeviceExtensions.push_back(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
@@ -819,7 +823,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Diligent::DeviceFeatures) == 36, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)

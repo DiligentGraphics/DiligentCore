@@ -66,8 +66,8 @@ public:
     // Implementation of ICommandQueueD3D12::GetCompletedFenceValue().
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue() override final;
 
-    // Implementation of ICommandQueueD3D12::SignalFence().
-    virtual void DILIGENT_CALL_TYPE SignalFence(ID3D12Fence* pFence, Uint64 Value) override final;
+    // Implementation of ICommandQueueD3D12::EnqueueSignal().
+    virtual void DILIGENT_CALL_TYPE EnqueueSignal(ID3D12Fence* pFence, Uint64 Value) override final;
 
     // Implementation of ICommandQueueD3D12::WaitFence().
     virtual void DILIGENT_CALL_TYPE WaitFence(ID3D12Fence* pFence, Uint64 Value) override final;

@@ -129,11 +129,11 @@ public:
     /// Implementation of ICommandQueueVk::GetCompletedFenceValue().
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue() override final;
 
-    /// Implementation of ICommandQueueVk::SignalFence().
-    virtual void DILIGENT_CALL_TYPE SignalFence(VkFence vkFence) override final;
+    /// Implementation of ICommandQueueVk::EnqueueSignalFence().
+    virtual void DILIGENT_CALL_TYPE EnqueueSignalFence(VkFence vkFence) override final;
 
-    /// Implementation of ICommandQueueVk::SignalSemaphore().
-    virtual void DILIGENT_CALL_TYPE SignalSemaphore(VkSemaphore vkTimelineSemaphore, Uint64 Value) override final;
+    /// Implementation of ICommandQueueVk::EnqueueSignal().
+    virtual void DILIGENT_CALL_TYPE EnqueueSignal(VkSemaphore vkTimelineSemaphore, Uint64 Value) override final;
 
     void SetFence(RefCntAutoPtr<FenceVkImpl> pFence)
     {
