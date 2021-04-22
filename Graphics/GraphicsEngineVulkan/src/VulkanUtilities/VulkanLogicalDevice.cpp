@@ -314,6 +314,19 @@ SemaphoreWrapper VulkanLogicalDevice::CreateSemaphore(const VkSemaphoreCreateInf
     return CreateVulkanObject<VkSemaphore, VulkanHandleTypeId::Semaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "semaphore");
 }
 
+SemaphoreWrapper VulkanLogicalDevice::CreateTimelineSemaphore(uint64_t InitialValue, const char* DebugName) const
+{
+    VERIFY_EXPR(m_EnabledExtFeatures.TimelineSemaphore.timelineSemaphore == VK_TRUE);
+
+    VkSemaphoreTypeCreateInfo TimelineCI  = {VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO};
+    VkSemaphoreCreateInfo     SemaphoreCI = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &TimelineCI};
+
+    TimelineCI.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    TimelineCI.initialValue  = InitialValue;
+
+    return CreateVulkanObject<VkSemaphore, VulkanHandleTypeId::Semaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "timeline semaphore");
+}
+
 QueryPoolWrapper VulkanLogicalDevice::CreateQueryPool(const VkQueryPoolCreateInfo& QueryPoolCI, const char* DebugName) const
 {
     VERIFY_EXPR(QueryPoolCI.sType == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
@@ -569,16 +582,6 @@ VkResult VulkanLogicalDevice::GetFenceStatus(VkFence fence) const
     return vkGetFenceStatus(m_VkDevice, fence);
 }
 
-VkResult VulkanLogicalDevice::GetSemaphoreCounter(VkSemaphore semaphore, uint64_t* semaphoreValue) const
-{
-    return vkGetSemaphoreCounterValue(m_VkDevice, semaphore, semaphoreValue);
-}
-
-VkResult VulkanLogicalDevice::SignalSemaphore(VkSemaphore semaphore, const VkSemaphoreSignalInfo& SignalInfo) const
-{
-    return vkSignalSemaphore(m_VkDevice, &SignalInfo);
-}
-
 VkResult VulkanLogicalDevice::ResetFence(VkFence fence) const
 {
     auto err = vkResetFences(m_VkDevice, 1, &fence);
@@ -594,9 +597,36 @@ VkResult VulkanLogicalDevice::WaitForFences(uint32_t       fenceCount,
     return vkWaitForFences(m_VkDevice, fenceCount, pFences, waitAll, timeout);
 }
 
-VkResult VulkanLogicalDevice::WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo, uint64_t timeout) const
+VkResult VulkanLogicalDevice::GetSemaphoreCounter(VkSemaphore TimelineSemaphore, uint64_t* pSemaphoreValue) const
 {
-    return vkWaitSemaphores(m_VkDevice, &WaitInfo, timeout);
+#if DILIGENT_USE_VOLK
+    return vkGetSemaphoreCounterValueKHR(m_VkDevice, TimelineSemaphore, pSemaphoreValue);
+#else
+    UNSUPPORTED("vkGetSemaphoreCounterValueKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
+}
+
+VkResult VulkanLogicalDevice::SignalSemaphore(const VkSemaphoreSignalInfo& SignalInfo) const
+{
+#if DILIGENT_USE_VOLK
+    VERIFY_EXPR(SignalInfo.sType == VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO);
+    return vkSignalSemaphoreKHR(m_VkDevice, &SignalInfo);
+#else
+    UNSUPPORTED("vkSignalSemaphoreKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
+}
+
+VkResult VulkanLogicalDevice::WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo, uint64_t Timeout) const
+{
+#if DILIGENT_USE_VOLK
+    VERIFY_EXPR(WaitInfo.sType == VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO);
+    return vkWaitSemaphoresKHR(m_VkDevice, &WaitInfo, Timeout);
+#else
+    UNSUPPORTED("vkWaitSemaphoresKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
 }
 
 void VulkanLogicalDevice::UpdateDescriptorSets(uint32_t                    descriptorWriteCount,

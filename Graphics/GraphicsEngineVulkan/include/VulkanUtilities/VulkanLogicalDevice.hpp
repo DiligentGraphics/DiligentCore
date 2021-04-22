@@ -145,6 +145,7 @@ public:
     DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo& LayoutCI,       const char* DebugName = "") const;
 
     SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo& SemaphoreCI, const char* DebugName = "") const;
+    SemaphoreWrapper    CreateTimelineSemaphore(uint64_t InitialValue, const char* DebugName = "") const;
     QueryPoolWrapper    CreateQueryPool(const VkQueryPoolCreateInfo& QueryPoolCI, const char* DebugName = "") const;
     AccelStructWrapper  CreateAccelStruct(const VkAccelerationStructureCreateInfoKHR& CI, const char* DebugName = "") const;
 
@@ -188,14 +189,15 @@ public:
     VkResult FlushMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) const;
 
     VkResult GetFenceStatus(VkFence fence) const;
-    VkResult GetSemaphoreCounter(VkSemaphore semaphore, uint64_t* pSemaphoreValue) const;
-    VkResult SignalSemaphore(VkSemaphore semaphore, const VkSemaphoreSignalInfo& SignalInfo) const;
     VkResult ResetFence(VkFence fence) const;
     VkResult WaitForFences(uint32_t       fenceCount,
                            const VkFence* pFences,
                            VkBool32       waitAll,
                            uint64_t       timeout) const;
-    VkResult WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo, uint64_t timeout) const;
+
+    VkResult GetSemaphoreCounter(VkSemaphore TimelineSemaphore, uint64_t* pSemaphoreValue) const;
+    VkResult SignalSemaphore(const VkSemaphoreSignalInfo& SignalInfo) const;
+    VkResult WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo, uint64_t Timeout) const;
 
     void UpdateDescriptorSets(uint32_t                    descriptorWriteCount,
                               const VkWriteDescriptorSet* pDescriptorWrites,

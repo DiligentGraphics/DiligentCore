@@ -58,11 +58,6 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceVk, TFenceBase)
 
     /// Implementation of IFence::GetCompletedValue() in Vulkan backend.
-    /// Note that this method is not thread-safe. The reason is that VulkanFencePool is not thread
-    /// safe, and DeviceContextVkImpl::SignalFence() adds the fence to the pending fences list that
-    /// are signaled later by the command context when it submits the command list. So there is no
-    /// guarantee that the fence pool is not accessed simultaneously by multiple threads even if the
-    /// fence object itself is protected by mutex.
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
     /// Implementation of IFence::Reset() in Vulkan backend.
@@ -71,19 +66,19 @@ public:
     /// Implementation of IFence::Wait() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
 
-    /// Implementation of IFence::GetVkSemaphore().
-    virtual VkSemaphore DILIGENT_CALL_TYPE GetVkSemaphore() override final;
+    /// Implementation of IFenceVk::GetVkSemaphore().
+    virtual VkSemaphore DILIGENT_CALL_TYPE GetVkSemaphore() override final { return m_TimelineSemaphore; }
 
     VulkanUtilities::VulkanRecycledSemaphore ExtractSignalSemaphore(CommandQueueIndex CommandQueueId, Uint64 Value);
 
     void AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 Value, SyncPointVkPtr SyncPoint);
 
+    bool IsTimelineSemaphore() const { return m_TimelineSemaphore; }
+
 private:
     Uint64 InternalGetCompletedValue();
 
-    VulkanUtilities::SemaphoreWrapper m_Semaphore;
-
-    static constexpr Uint32 RequiredArraySize = 8;
+    VulkanUtilities::SemaphoreWrapper m_TimelineSemaphore;
 
     struct SyncPointData
     {
@@ -91,8 +86,13 @@ private:
         SyncPointVkPtr SyncPoint;
     };
 
-    std::mutex                m_Guard;      // Protects access to the m_SyncPoints
-    std::deque<SyncPointData> m_SyncPoints; // TODO: use ring buffer
+    static constexpr Uint32   RequiredArraySize = 8;
+    std::mutex                m_SyncPointsGuard; // Protects access to the m_SyncPoints
+    std::deque<SyncPointData> m_SyncPoints;      // TODO: use ring buffer
+
+#ifdef DILIGENT_DEVELOPMENT
+    bool m_dvpUsedForGPUSync = false;
+#endif
 };
 
 } // namespace Diligent

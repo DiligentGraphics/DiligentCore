@@ -76,7 +76,7 @@ public:
         return m_Fence;
     }
 
-    Uint32 GetCommandQueueId() const
+    CommandQueueIndex GetCommandQueueId() const
     {
         return m_CommandQueueId;
     }
@@ -133,18 +133,26 @@ public:
     virtual void DILIGENT_CALL_TYPE SignalFence(VkFence vkFence) override final;
 
     /// Implementation of ICommandQueueVk::SignalSemaphore().
-    virtual void DILIGENT_CALL_TYPE SignalSemaphore(VkSemaphore vkSemaphore, uint64_t value) override final;
+    virtual void DILIGENT_CALL_TYPE SignalSemaphore(VkSemaphore vkTimelineSemaphore, Uint64 Value) override final;
 
-    void SetFence(RefCntAutoPtr<FenceVkImpl> pFence) { m_pFence = std::move(pFence); }
+    void SetFence(RefCntAutoPtr<FenceVkImpl> pFence)
+    {
+        VERIFY_EXPR(pFence->IsTimelineSemaphore() == m_UseTimelineSemaphore);
+        m_pFence = std::move(pFence);
+    }
 
     SyncPointVkPtr GetLastSyncPoint()
     {
-        std::lock_guard<std::mutex> Lock{m_QueueMutex}; // AZ TODO: atomic_shader_ptr may be faster (or spin-lock)
+        VERIFY(!m_UseTimelineSemaphore, "Sync point is always null when timeline semaphores are used");
+
+        ThreadingTools::LockHelper Lock(m_LastSyncPointGuard);
         return m_LastSyncPoint;
     }
 
 private:
     SyncPointVkPtr CreateSyncPoint(Uint64 dbgValue);
+
+    void InternalSignalSemaphore(VkSemaphore vkTimelineSemaphore, Uint64 Value);
 
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
 
@@ -152,6 +160,7 @@ private:
     const HardwareQueueId   m_QueueFamilyIndex;
     const CommandQueueIndex m_CommandQueueId;
     const Uint8             m_NumCommandQueues;
+    const bool              m_UseTimelineSemaphore;
 
     // Fence is signaled right after a command buffer has been
     // submitted to the command queue for execution.
@@ -167,6 +176,9 @@ private:
 
     // Array used to merge semaphores from SubmitInfo and from SyncPointVk
     std::vector<VkSemaphore> m_TempSignalSemaphores;
+
+    // Protects access to the m_LastSyncPoint
+    ThreadingTools::LockFlag m_LastSyncPointGuard;
 
     // Fence and semaphores which were signaled when the last submitted commands have been completed.
     SyncPointVkPtr m_LastSyncPoint;

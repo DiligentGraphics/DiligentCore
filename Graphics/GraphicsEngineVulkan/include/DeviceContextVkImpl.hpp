@@ -331,12 +331,15 @@ public:
         m_WaitManagedSemaphores.emplace_back(pWaitSemaphore);
         m_VkWaitSemaphores.push_back(pWaitSemaphore->Get());
         m_WaitDstStageMasks.push_back(WaitDstStageMask);
+        m_WaitSemaphoreValues.push_back(0); // Ignored for binary semaphore
     }
+
     void AddSignalSemaphore(ManagedSemaphore* pSignalSemaphore)
     {
         VERIFY_EXPR(pSignalSemaphore != nullptr);
         m_SignalManagedSemaphores.emplace_back(pSignalSemaphore);
         m_VkSignalSemaphores.push_back(pSignalSemaphore->Get());
+        m_SignalSemaphoreValues.push_back(0); // Ignored for binary semaphore
     }
 
     void UpdateBufferRegion(BufferVkImpl*                  pBuffVk,
@@ -552,6 +555,12 @@ private:
     std::vector<VkSemaphore>          m_VkWaitSemaphores;
     std::vector<VkSemaphore>          m_VkSignalSemaphores;
     std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
+
+    // Can be used only if timeline semaphore extension is enabled
+    std::vector<uint64_t> m_WaitSemaphoreValues;
+    std::vector<uint64_t> m_SignalSemaphoreValues;
+    Uint32                m_NumSignalTimelineSemaphores = 0;
+    Uint32                m_NumWaitTimelineSemaphores   = 0;
 
     // List of fences to signal next time the command context is flushed
     std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>> m_SignalFences;

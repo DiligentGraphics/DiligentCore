@@ -562,12 +562,12 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags          
 }
 
 
-static VkPipelineStageFlags AccessMaskFromImageLayout(VkImageLayout Layout,
-                                                      bool          IsDstMask // false - source mask
-                                                                              // true  - destination mask
+static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
+                                               bool          IsDstMask // false - source mask
+                                                                       // true  - destination mask
 )
 {
-    VkPipelineStageFlags AccessMask = 0;
+    VkAccessFlags AccessMask = 0;
     switch (Layout)
     {
         // does not support device access. This layout must only be used as the initialLayout member

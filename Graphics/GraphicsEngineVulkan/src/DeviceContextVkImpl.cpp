@@ -1249,15 +1249,15 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
         VERIFY_EXPR(DeferredCtxs.back() != nullptr);
     }
 
-    VERIFY_EXPR(m_VkWaitSemaphores.size() == (m_WaitManagedSemaphores.size() + m_WaitRecycledSemaphores.size()));
+    VERIFY_EXPR(m_VkWaitSemaphores.size() == (m_WaitManagedSemaphores.size() + m_WaitRecycledSemaphores.size() + m_NumWaitTimelineSemaphores));
     VERIFY_EXPR(m_VkWaitSemaphores.size() == m_WaitDstStageMasks.size());
-    VERIFY_EXPR(m_VkSignalSemaphores.size() == m_SignalManagedSemaphores.size());
+    VERIFY_EXPR(m_VkSignalSemaphores.size() == (m_SignalManagedSemaphores.size() + m_NumSignalTimelineSemaphores));
+    VERIFY_EXPR(m_VkWaitSemaphores.size() == m_WaitSemaphoreValues.size());
+    VERIFY_EXPR(m_VkSignalSemaphores.size() == m_SignalSemaphoreValues.size());
 
-    VkSubmitInfo SubmitInfo = {};
-
-    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pNext = nullptr;
-
+    VkSubmitInfo SubmitInfo{};
+    SubmitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.pNext                = nullptr;
     SubmitInfo.commandBufferCount   = static_cast<uint32_t>(vkCmdBuffs.size());
     SubmitInfo.pCommandBuffers      = vkCmdBuffs.data();
     SubmitInfo.waitSemaphoreCount   = static_cast<uint32_t>(m_VkWaitSemaphores.size());
@@ -1266,8 +1266,22 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_VkSignalSemaphores.size());
     SubmitInfo.pSignalSemaphores    = SubmitInfo.signalSemaphoreCount != 0 ? m_VkSignalSemaphores.data() : nullptr;
 
+    VkTimelineSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo = {};
+    if (m_NumWaitTimelineSemaphores > 0 || m_NumSignalTimelineSemaphores > 0)
+    {
+        VERIFY(m_SignalFences.empty(), "Fences are used to emulate timeline semaphore and must be empty when native timeline semaphore is used");
+
+        SubmitInfo.pNext = &TimelineSemaphoreSubmitInfo;
+
+        TimelineSemaphoreSubmitInfo.sType                     = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+        TimelineSemaphoreSubmitInfo.pNext                     = nullptr;
+        TimelineSemaphoreSubmitInfo.waitSemaphoreValueCount   = SubmitInfo.waitSemaphoreCount;
+        TimelineSemaphoreSubmitInfo.pWaitSemaphoreValues      = TimelineSemaphoreSubmitInfo.waitSemaphoreValueCount ? m_WaitSemaphoreValues.data() : nullptr;
+        TimelineSemaphoreSubmitInfo.signalSemaphoreValueCount = SubmitInfo.signalSemaphoreCount;
+        TimelineSemaphoreSubmitInfo.pSignalSemaphoreValues    = TimelineSemaphoreSubmitInfo.signalSemaphoreValueCount ? m_SignalSemaphoreValues.data() : nullptr;
+    }
+
     // Submit command buffer even if there are no commands to release stale resources.
-    //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
     auto SubmittedFenceValue = m_pDevice->ExecuteCommandBuffer(GetCommandQueueId(), SubmitInfo, &m_SignalFences);
 
     // Recycle semaphores
@@ -1287,6 +1301,10 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     m_VkWaitSemaphores.clear();
     m_VkSignalSemaphores.clear();
     m_SignalFences.clear();
+    m_WaitSemaphoreValues.clear();
+    m_SignalSemaphoreValues.clear();
+    m_NumSignalTimelineSemaphores = 0;
+    m_NumWaitTimelineSemaphores   = 0;
 
     size_t buff_idx = 0;
     if (vkCmdBuff != VK_NULL_HANDLE)
@@ -2375,7 +2393,17 @@ void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLis
 void DeviceContextVkImpl::SignalFence(IFence* pFence, Uint64 Value)
 {
     DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
-    m_SignalFences.emplace_back(std::make_pair(Value, ValidatedCast<FenceVkImpl>(pFence)));
+    auto* pFenceVk = ValidatedCast<FenceVkImpl>(pFence);
+    if (pFenceVk->IsTimelineSemaphore())
+    {
+        m_VkSignalSemaphores.push_back(pFenceVk->GetVkSemaphore()); // AZ TODO: hold strong reference on pFence ?
+        m_SignalSemaphoreValues.push_back(Value);
+        ++m_NumSignalTimelineSemaphores;
+    }
+    else
+    {
+        m_SignalFences.emplace_back(std::make_pair(Value, ValidatedCast<FenceVkImpl>(pFence)));
+    }
 }
 
 void DeviceContextVkImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
@@ -2384,13 +2412,24 @@ void DeviceContextVkImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
     DEV_CHECK_ERR(pFence, "Fence must not be null");
 
     auto* pFenceVk = ValidatedCast<FenceVkImpl>(pFence);
-    auto  WaitSem  = pFenceVk->ExtractSignalSemaphore(GetCommandQueueId(), Value);
-
-    if (WaitSem)
+    if (pFenceVk->IsTimelineSemaphore())
     {
-        m_VkWaitSemaphores.push_back(WaitSem);
+        m_VkWaitSemaphores.push_back(pFenceVk->GetVkSemaphore()); // AZ TODO: hold strong reference on pFence ?
         m_WaitDstStageMasks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-        m_WaitRecycledSemaphores.push_back(std::move(WaitSem));
+        m_WaitSemaphoreValues.push_back(Value);
+        ++m_NumWaitTimelineSemaphores;
+    }
+    else
+    {
+        auto WaitSem = pFenceVk->ExtractSignalSemaphore(GetCommandQueueId(), Value);
+        if (WaitSem)
+        {
+            // Here we have unique binary semaphore that must be released/recycled using release queue
+            m_VkWaitSemaphores.push_back(WaitSem);
+            m_WaitDstStageMasks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+            m_WaitRecycledSemaphores.push_back(std::move(WaitSem));
+            m_WaitSemaphoreValues.push_back(0); // Ignored for binary semaphore
+        }
     }
 }
 

@@ -377,7 +377,7 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(CommandQueueIndex                  
     SubmittedFenceValue    = CmbBuffInfo.FenceValue;
     SubmittedCmdBuffNumber = CmbBuffInfo.CmdBufferNumber;
 
-    if (pFences != nullptr)
+    if (pFences != nullptr && !pFences->empty())
     {
         auto* pQueue     = m_CommandQueues[CommandQueueId].CmdQueue.RawPtr<CommandQueueVkImpl>();
         auto  pSyncPoint = pQueue->GetLastSyncPoint();
