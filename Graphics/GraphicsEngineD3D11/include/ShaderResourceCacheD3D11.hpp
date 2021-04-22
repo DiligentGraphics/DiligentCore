@@ -84,18 +84,18 @@ public:
             return pBuff;
         }
 
-        __forceinline void Set(RefCntAutoPtr<BufferD3D11Impl> _pBuff, Uint32 _FirstConstant, Uint32 _NumConstants)
+        __forceinline void Set(RefCntAutoPtr<BufferD3D11Impl> _pBuff, Uint32 _BaseOffset, Uint32 _RangeSize)
         {
             pBuff = std::move(_pBuff);
 
-            FirstConstant = _FirstConstant;
-            NumConstants  = _NumConstants;
+            BaseOffset = _BaseOffset;
+            RangeSize  = _RangeSize;
 
             DynamicOffset = 0;
         }
 
-        Uint32 FirstConstant = 0;
-        Uint32 NumConstants  = 0;
+        Uint32 BaseOffset = 0;
+        Uint32 RangeSize  = 0;
 
         Uint32 DynamicOffset = 0;
     };
@@ -187,10 +187,9 @@ public:
                 BufferRange = pBuffD3D11Impl->GetDesc().uiSizeInBytes - BufferOffset;
             IsDynamicOffset = AllowDynamic && (BufferRange < pBuffD3D11Impl->GetDesc().uiSizeInBytes);
         }
-        BufferRange = AlignUp(BufferRange, CBOffsetAlignment);
 
         auto* pd3d11Buff = pBuffD3D11Impl ? pBuffD3D11Impl->BufferD3D11Impl::GetD3D11Buffer() : nullptr;
-        SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_CBV>(BindPoints, std::move(pBuffD3D11Impl), pd3d11Buff, BufferOffset / 16, BufferRange / 16);
+        SetD3D11ResourceInternal<D3D11_RESOURCE_RANGE_CBV>(BindPoints, std::move(pBuffD3D11Impl), pd3d11Buff, BufferOffset, BufferRange);
 
         for (auto ActiveStages = BindPoints.GetActiveStages(); ActiveStages != SHADER_TYPE_UNKNOWN;)
         {
@@ -618,8 +617,9 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
     {
         const Uint32 Slot            = BaseBinding + res;
         auto* const  pd3d11CB        = ResArrays.second[res];
-        const auto   FirstCBConstant = ResArrays.first[res].FirstConstant + ResArrays.first[res].DynamicOffset;
-        const auto   NumCBConstants  = ResArrays.first[res].NumConstants;
+        const auto   FirstCBConstant = (ResArrays.first[res].BaseOffset + ResArrays.first[res].DynamicOffset) / 16u;
+        // Number of constants must be a multiple of 16 constants
+        const auto NumCBConstants = AlignUp(ResArrays.first[res].RangeSize / 16u, 16u);
         if (CommittedD3D11Resources[Slot] != pd3d11CB ||
             FirstConstants[Slot] != FirstCBConstant ||
             NumConstants[Slot] != NumCBConstants)
@@ -645,7 +645,7 @@ __forceinline void ShaderResourceCacheD3D11::SetDynamicCBOffset(const D3D11Resou
 
         const auto ResArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
 
-        ResArrays.first[CacheOffset].DynamicOffset = DynamicOffset / 16;
+        ResArrays.first[CacheOffset].DynamicOffset = DynamicOffset;
     }
 }
 

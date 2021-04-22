@@ -134,7 +134,7 @@ public:
             ShaderVariableD3D11Base<ConstBuffBindInfo, D3D11_RESOURCE_RANGE_CBV>{ParentLayout, ResIndex}
         {}
 
-        __forceinline void BindResource(Uint32 ArrayIndex, IDeviceObject* pObj, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        __forceinline void BindResource(const BindResourceInfo& BindInfo);
 
         void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset);
     };
@@ -145,7 +145,7 @@ public:
             ShaderVariableD3D11Base<TexSRVBindInfo, D3D11_RESOURCE_RANGE_SRV>{ParentLayout, ResIndex}
         {}
 
-        __forceinline void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        __forceinline void BindResource(const BindResourceInfo& BindInfo);
     };
 
     struct TexUAVBindInfo final : ShaderVariableD3D11Base<TexUAVBindInfo, D3D11_RESOURCE_RANGE_UAV>
@@ -154,7 +154,7 @@ public:
             ShaderVariableD3D11Base<TexUAVBindInfo, D3D11_RESOURCE_RANGE_UAV>{ParentLayout, ResIndex}
         {}
 
-        __forceinline void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        __forceinline void BindResource(const BindResourceInfo& BindInfo);
     };
 
     struct BuffUAVBindInfo final : ShaderVariableD3D11Base<BuffUAVBindInfo, D3D11_RESOURCE_RANGE_UAV>
@@ -163,7 +163,7 @@ public:
             ShaderVariableD3D11Base<BuffUAVBindInfo, D3D11_RESOURCE_RANGE_UAV>{ParentLayout, ResIndex}
         {}
 
-        __forceinline void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        __forceinline void BindResource(const BindResourceInfo& BindInfo);
     };
 
     struct BuffSRVBindInfo final : ShaderVariableD3D11Base<BuffSRVBindInfo, D3D11_RESOURCE_RANGE_SRV>
@@ -172,7 +172,7 @@ public:
             ShaderVariableD3D11Base<BuffSRVBindInfo, D3D11_RESOURCE_RANGE_SRV>{ParentLayout, ResIndex}
         {}
 
-        __forceinline void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        __forceinline void BindResource(const BindResourceInfo& BindInfo);
     };
 
     struct SamplerBindInfo final : ShaderVariableD3D11Base<SamplerBindInfo, D3D11_RESOURCE_RANGE_SAMPLER>
@@ -181,7 +181,7 @@ public:
             ShaderVariableD3D11Base<SamplerBindInfo, D3D11_RESOURCE_RANGE_SAMPLER>{ParentLayout, ResIndex}
         {}
 
-        __forceinline void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        __forceinline void BindResource(const BindResourceInfo& BindInfo);
     };
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);

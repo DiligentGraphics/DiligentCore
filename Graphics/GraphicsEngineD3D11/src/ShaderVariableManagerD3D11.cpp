@@ -280,28 +280,26 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
     // clang-format on
 }
 
-void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(Uint32         ArrayIndex,
-                                                                 IDeviceObject* pBuffer,
-                                                                 Uint32         BufferBaseOffset,
-                                                                 Uint32         BufferRange)
+void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{pBuffer, IID_BufferD3D11};
+    RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{BindInfo.pObject, IID_BufferD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedCB = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + ArrayIndex);
-        VerifyConstantBufferBinding(Desc, ArrayIndex, pBuffer, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr(),
+        const auto& CachedCB = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        VerifyConstantBufferBinding(Desc, BindInfo, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr(),
+                                    CachedCB.BaseOffset, CachedCB.RangeSize,
                                     m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetCB(Attr.BindPoints + ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, std::move(pBuffD3D11Impl), BufferBaseOffset, BufferRange);
+    ResourceCache.SetCB(Attr.BindPoints + BindInfo.ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, std::move(pBuffD3D11Impl), BindInfo.BufferBaseOffset, BindInfo.BufferRangeSize);
 }
 
 void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
@@ -309,31 +307,31 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 Arra
     const auto& Attr = GetAttribs();
     const auto& Desc = GetDesc();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-    VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, "Dynamic offsets may not be set for variables created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        const auto& CachedCB = m_ParentManager.m_ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + ArrayIndex);
+        VerifyDynamicBufferOffset<BufferD3D11Impl, BufferViewD3D11Impl>(Desc, CachedCB.pBuff, CachedCB.BaseOffset, CachedCB.RangeSize, Offset);
+    }
+#endif
     m_ParentManager.m_ResourceCache.SetDynamicCBOffset(Attr.BindPoints + ArrayIndex, Offset);
 }
 
-void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(Uint32         ArrayIndex,
-                                                              IDeviceObject* pView,
-                                                              Uint32         BufferBaseOffset,
-                                                              Uint32         BufferRange)
+void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
-    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
+    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + ArrayIndex);
-        VerifyResourceViewBinding(Desc, ArrayIndex,
-                                  pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
+        auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        VerifyResourceViewBinding(Desc, BindInfo, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_UNDEFINED, false, CachedSRV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
     }
@@ -349,7 +347,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(Uint32         Arr
                "PipelineResourceSignatureD3D11Impl::CreateLayout(). This mismatch is a bug.");
         VERIFY_EXPR((Desc.ShaderStages & SampDesc.ShaderStages) == Desc.ShaderStages);
         VERIFY_EXPR(SampDesc.ArraySize == Desc.ArraySize || SampDesc.ArraySize == 1);
-        const auto SampArrayIndex = (SampDesc.ArraySize != 1 ? ArrayIndex : 0);
+        const auto SampArrayIndex = (SampDesc.ArraySize != 1 ? BindInfo.ArrayIndex : 0);
 
         if (pViewD3D11)
         {
@@ -359,129 +357,115 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(Uint32         Arr
 #ifdef DILIGENT_DEVELOPMENT
                 {
                     const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex);
-                    VerifySamplerBinding(SampDesc, SampArrayIndex, pSamplerD3D11Impl, pSamplerD3D11Impl, CachedSampler.pSampler, nullptr);
+                    VerifySamplerBinding(SampDesc, BindInfo, pSamplerD3D11Impl, CachedSampler.pSampler, nullptr);
                 }
 #endif
                 ResourceCache.SetSampler(SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
             }
             else
             {
-                LOG_ERROR_MESSAGE("Failed to bind sampler to variable '", GetShaderResourcePrintName(SampDesc, ArrayIndex), "'. Sampler is not set in the texture view '", pViewD3D11->GetDesc().Name, "'");
+                LOG_ERROR_MESSAGE("Failed to bind sampler to variable '", GetShaderResourcePrintName(SampDesc, BindInfo.ArrayIndex),
+                                  "'. Sampler is not set in the texture view '", pViewD3D11->GetDesc().Name, "'");
             }
         }
     }
-    ResourceCache.SetTexSRV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetTexSRV(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
-void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(Uint32         ArrayIndex,
-                                                               IDeviceObject* pSampler,
-                                                               Uint32         BufferBaseOffset,
-                                                               Uint32         BufferRange)
+void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
     VERIFY(!Attr.IsImmutableSamplerAssigned(), "Sampler must not be assigned to an immutable sampler.");
-    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
+           ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{pSampler, IID_SamplerD3D11};
+    RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{BindInfo.pObject, IID_SamplerD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + ArrayIndex);
-        VerifySamplerBinding(Desc, ArrayIndex, pSampler, pSamplerD3D11.RawPtr(), CachedSampler.pSampler, m_ParentManager.m_pSignature->GetDesc().Name);
+        const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + BindInfo.ArrayIndex);
+        VerifySamplerBinding(Desc, BindInfo, pSamplerD3D11.RawPtr(), CachedSampler.pSampler, m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
 
-    ResourceCache.SetSampler(Attr.BindPoints + ArrayIndex, std::move(pSamplerD3D11));
+    ResourceCache.SetSampler(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pSamplerD3D11));
 }
 
-void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(Uint32         ArrayIndex,
-                                                               IDeviceObject* pView,
-                                                               Uint32         BufferBaseOffset,
-                                                               Uint32         BufferRange)
+void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
-    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
+           ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
+    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + ArrayIndex);
-        VerifyResourceViewBinding(Desc, ArrayIndex,
-                                  pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
+        const auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        VerifyResourceViewBinding(Desc, BindInfo, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_BUFFER, false, CachedSRV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
-        ValidateBufferMode(Desc, ArrayIndex, pViewD3D11.RawPtr());
+        ValidateBufferMode(Desc, BindInfo.ArrayIndex, pViewD3D11.RawPtr());
     }
 #endif
-    ResourceCache.SetBufSRV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetBufSRV(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
 
-void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(Uint32         ArrayIndex,
-                                                              IDeviceObject* pView,
-                                                              Uint32         BufferBaseOffset,
-                                                              Uint32         BufferRange)
+void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
+           ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
+    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + ArrayIndex);
-        VerifyResourceViewBinding(Desc, ArrayIndex,
-                                  pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
+        const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        VerifyResourceViewBinding(Desc, BindInfo, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetTexUAV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetTexUAV(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
 
-void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(Uint32         ArrayIndex,
-                                                               IDeviceObject* pView,
-                                                               Uint32         BufferBaseOffset,
-                                                               Uint32         BufferRange)
+void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
-    VERIFY(ArrayIndex < Desc.ArraySize, "Array index (", ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
+           ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
+    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + ArrayIndex);
-        VerifyResourceViewBinding(Desc, ArrayIndex,
-                                  pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
+        const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        VerifyResourceViewBinding(Desc, BindInfo, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_BUFFER, false, CachedUAV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
-        ValidateBufferMode(Desc, ArrayIndex, pViewD3D11.RawPtr());
+        ValidateBufferMode(Desc, BindInfo.ArrayIndex, pViewD3D11.RawPtr());
     }
 #endif
-    ResourceCache.SetBufUAV(Attr.BindPoints + ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetBufUAV(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
 void ShaderVariableManagerD3D11::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)

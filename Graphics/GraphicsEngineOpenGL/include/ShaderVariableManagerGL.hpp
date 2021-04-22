@@ -124,7 +124,7 @@ public:
             GLVariableBase<UniformBuffBindInfo>{ParentLayout, ResIndex}
         {}
 
-        void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        void BindResource(const BindResourceInfo& BindInfo);
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -142,7 +142,7 @@ public:
             GLVariableBase<TextureBindInfo>{ParentLayout, ResIndex}
         {}
 
-        void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        void BindResource(const BindResourceInfo& BindInfo);
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -160,7 +160,7 @@ public:
             GLVariableBase<ImageBindInfo>{ParentLayout, ResIndex}
         {}
 
-        void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        void BindResource(const BindResourceInfo& BindInfo);
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
@@ -178,7 +178,7 @@ public:
             GLVariableBase<StorageBufferBindInfo>{ParentLayout, ResIndex}
         {}
 
-        void BindResource(Uint32 ArrayIndex, IDeviceObject* pObject, Uint32 BufferBaseOffset = 0, Uint32 BufferRange = 0);
+        void BindResource(const BindResourceInfo& BindInfo);
 
         virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {

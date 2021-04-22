@@ -204,31 +204,28 @@ void ShaderVariableManagerGL::Destroy(IMemoryAllocator& Allocator)
     m_ResourceBuffer = nullptr;
 }
 
-void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(Uint32         ArrayIndex,
-                                                                IDeviceObject* pBuffer,
-                                                                Uint32         BufferBaseOffset,
-                                                                Uint32         BufferRange)
+void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
-    VERIFY(ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferGLImpl> pBuffGLImpl{pBuffer, IID_BufferGL};
+    RefCntAutoPtr<BufferGLImpl> pBuffGLImpl{BindInfo.pObject, IID_BufferGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedUB = ResourceCache.GetConstUB(Attr.CacheOffset + ArrayIndex);
-        VerifyConstantBufferBinding(Desc, ArrayIndex, pBuffer, pBuffGLImpl.RawPtr(), CachedUB.pBuffer.RawPtr(),
-                                    m_ParentManager.m_pSignature->GetDesc().Name);
+        const auto& CachedUB = ResourceCache.GetConstUB(Attr.CacheOffset + BindInfo.ArrayIndex);
+        VerifyConstantBufferBinding(Desc, BindInfo, pBuffGLImpl.RawPtr(), CachedUB.pBuffer.RawPtr(),
+                                    CachedUB.BaseOffset, CachedUB.RangeSize, m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
 
-    ResourceCache.SetUniformBuffer(Attr.CacheOffset + ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
-                                   std::move(pBuffGLImpl), BufferBaseOffset, BufferRange);
+    ResourceCache.SetUniformBuffer(Attr.CacheOffset + BindInfo.ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
+                                   std::move(pBuffGLImpl), BindInfo.BufferBaseOffset, BindInfo.BufferRangeSize);
 }
 
 void ShaderVariableManagerGL::UniformBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
@@ -236,36 +233,35 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::SetDynamicOffset(Uint32 Array
     const auto& Attr = GetAttribs();
     const auto& Desc = GetDesc();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-    VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, "Dynamic offsets may not be set for variables created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
-
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        const auto& CachedUB = m_ParentManager.m_ResourceCache.GetConstUB(Attr.CacheOffset + ArrayIndex);
+        VerifyDynamicBufferOffset<BufferGLImpl, BufferViewGLImpl>(Desc, CachedUB.pBuffer, CachedUB.BaseOffset, CachedUB.RangeSize, Offset);
+    }
+#endif
     m_ParentManager.m_ResourceCache.SetDynamicUBOffset(Attr.CacheOffset + ArrayIndex, Offset);
 }
 
 
-void ShaderVariableManagerGL::TextureBindInfo::BindResource(Uint32         ArrayIndex,
-                                                            IDeviceObject* pView,
-                                                            Uint32         BufferBaseOffset,
-                                                            Uint32         BufferRange)
+void ShaderVariableManagerGL::TextureBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
-
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
-    VERIFY(ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     if (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
         Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
     {
         // We cannot use ValidatedCast<> here as the resource can be of wrong type
-        RefCntAutoPtr<TextureViewGLImpl> pViewGL{pView, IID_TextureViewGL};
+        RefCntAutoPtr<TextureViewGLImpl> pViewGL{BindInfo.pObject, IID_TextureViewGL};
 
         const auto ImmutableSamplerAssigned = (m_ParentManager.m_pSignature->GetImmutableSamplerIdx(Attr) != InvalidImmutableSamplerIndex);
 #ifdef DILIGENT_DEVELOPMENT
         {
-            const auto& CachedTexSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
-            VerifyResourceViewBinding(Desc, ArrayIndex, pView, pViewGL.RawPtr(),
+            const auto& CachedTexSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + BindInfo.ArrayIndex);
+            VerifyResourceViewBinding(Desc, BindInfo, pViewGL.RawPtr(),
                                       {TEXTURE_VIEW_SHADER_RESOURCE}, // Expected view type
                                       RESOURCE_DIM_UNDEFINED,         // Expected resource dimension - unknown at this point
                                       false,                          // IsMultisample (ignored when resource dim is undefined)
@@ -281,17 +277,16 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(Uint32         Array
             }
         }
 #endif
-        ResourceCache.SetTexture(Attr.CacheOffset + ArrayIndex, std::move(pViewGL), !ImmutableSamplerAssigned);
+        ResourceCache.SetTexture(Attr.CacheOffset + BindInfo.ArrayIndex, std::move(pViewGL), !ImmutableSamplerAssigned);
     }
     else if (Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
     {
         // We cannot use ValidatedCast<> here as the resource can be of wrong type
-        RefCntAutoPtr<BufferViewGLImpl> pViewGL{pView, IID_BufferViewGL};
+        RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
-            const auto& CachedBuffSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + ArrayIndex);
-            VerifyResourceViewBinding(Desc, ArrayIndex,
-                                      pView, pViewGL.RawPtr(),
+            const auto& CachedBuffSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + BindInfo.ArrayIndex);
+            VerifyResourceViewBinding(Desc, BindInfo, pViewGL.RawPtr(),
                                       {BUFFER_VIEW_SHADER_RESOURCE}, // Expected view type
                                       RESOURCE_DIM_BUFFER,           // Expected resource dimension
                                       false,                         // IsMultisample (ignored when resource dim is buffer)
@@ -300,10 +295,10 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(Uint32         Array
 
             VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0,
                    "FORMATTED_BUFFER resource flag is not set for a texel buffer - this should've not happened.");
-            ValidateBufferMode(Desc, ArrayIndex, pViewGL.RawPtr());
+            ValidateBufferMode(Desc, BindInfo.ArrayIndex, pViewGL.RawPtr());
         }
 #endif
-        ResourceCache.SetTexelBuffer(Attr.CacheOffset + ArrayIndex, std::move(pViewGL));
+        ResourceCache.SetTexelBuffer(Attr.CacheOffset + BindInfo.ArrayIndex, std::move(pViewGL));
     }
     else
     {
@@ -312,28 +307,22 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(Uint32         Array
 }
 
 
-void ShaderVariableManagerGL::ImageBindInfo::BindResource(Uint32         ArrayIndex,
-                                                          IDeviceObject* pView,
-                                                          Uint32         BufferBaseOffset,
-                                                          Uint32         BufferRange)
+void ShaderVariableManagerGL::ImageBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers");
-
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
-    VERIFY(ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     if (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV)
     {
         // We cannot use ValidatedCast<> here as the resource can be of wrong type
-        RefCntAutoPtr<TextureViewGLImpl> pViewGL{pView, IID_TextureViewGL};
+        RefCntAutoPtr<TextureViewGLImpl> pViewGL{BindInfo.pObject, IID_TextureViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
-            const auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + ArrayIndex);
-            VerifyResourceViewBinding(Desc, ArrayIndex,
-                                      pView, pViewGL.RawPtr(),
+            const auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + BindInfo.ArrayIndex);
+            VerifyResourceViewBinding(Desc, BindInfo, pViewGL.RawPtr(),
                                       {TEXTURE_VIEW_UNORDERED_ACCESS}, // Expected view type
                                       RESOURCE_DIM_UNDEFINED,          // Expected resource dimension - unknown at this point
                                       false,                           // IsMultisample (ignored when resource dim is unknown)
@@ -341,17 +330,16 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(Uint32         ArrayIn
                                       m_ParentManager.m_pSignature->GetDesc().Name);
         }
 #endif
-        ResourceCache.SetTexImage(Attr.CacheOffset + ArrayIndex, std::move(pViewGL));
+        ResourceCache.SetTexImage(Attr.CacheOffset + BindInfo.ArrayIndex, std::move(pViewGL));
     }
     else if (Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV)
     {
         // We cannot use ValidatedCast<> here as the resource can be of wrong type
-        RefCntAutoPtr<BufferViewGLImpl> pViewGL{pView, IID_BufferViewGL};
+        RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
-            const auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + ArrayIndex);
-            VerifyResourceViewBinding(Desc, ArrayIndex,
-                                      pView, pViewGL.RawPtr(),
+            const auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + BindInfo.ArrayIndex);
+            VerifyResourceViewBinding(Desc, BindInfo, pViewGL.RawPtr(),
                                       {BUFFER_VIEW_UNORDERED_ACCESS}, // Expected view type
                                       RESOURCE_DIM_BUFFER,            // Expected resource dimension
                                       false,                          // IsMultisample (ignored when resource dim is buffer)
@@ -360,10 +348,10 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(Uint32         ArrayIn
 
             VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0,
                    "FORMATTED_BUFFER resource flag is not set for an image buffer - this should've not happened.");
-            ValidateBufferMode(Desc, ArrayIndex, pViewGL.RawPtr());
+            ValidateBufferMode(Desc, BindInfo.ArrayIndex, pViewGL.RawPtr());
         }
 #endif
-        ResourceCache.SetBufImage(Attr.CacheOffset + ArrayIndex, std::move(pViewGL));
+        ResourceCache.SetBufImage(Attr.CacheOffset + BindInfo.ArrayIndex, std::move(pViewGL));
     }
     else
     {
@@ -373,29 +361,23 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(Uint32         ArrayIn
 
 
 
-void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(Uint32         ArrayIndex,
-                                                                  IDeviceObject* pView,
-                                                                  Uint32         BufferBaseOffset,
-                                                                  Uint32         BufferRange)
+void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    DEV_CHECK_ERR(BufferBaseOffset == 0 && BufferRange == 0, "Buffer range may only be set for constant buffers. Create buffer view to specify base buffer range");
-
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
-    VERIFY(ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
 
     // We cannot use ValidatedCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferViewGLImpl> pViewGL{pView, IID_BufferViewGL};
+    RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedSSBO = ResourceCache.GetConstSSBO(Attr.CacheOffset + ArrayIndex);
+        auto& CachedSSBO = ResourceCache.GetConstSSBO(Attr.CacheOffset + BindInfo.ArrayIndex);
         // HLSL structured buffers are mapped to SSBOs in GLSL
-        VerifyResourceViewBinding(Desc, ArrayIndex,
-                                  pView, pViewGL.RawPtr(),
+        VerifyResourceViewBinding(Desc, BindInfo, pViewGL.RawPtr(),
                                   {BUFFER_VIEW_SHADER_RESOURCE, BUFFER_VIEW_UNORDERED_ACCESS}, // Expected view types
                                   RESOURCE_DIM_BUFFER,                                         // Expected resource dimension
                                   false,                                                       // IsMultisample (ignored when resource dim is buffer)
@@ -404,10 +386,10 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(Uint32        
 
         VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) == 0,
                "FORMATTED_BUFFER resource flag is set for a storage buffer - this should've not happened.");
-        ValidateBufferMode(Desc, ArrayIndex, pViewGL.RawPtr());
+        ValidateBufferMode(Desc, BindInfo.ArrayIndex, pViewGL.RawPtr());
     }
 #endif
-    ResourceCache.SetSSBO(Attr.CacheOffset + ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, std::move(pViewGL));
+    ResourceCache.SetSSBO(Attr.CacheOffset + BindInfo.ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, std::move(pViewGL));
 }
 
 void ShaderVariableManagerGL::StorageBufferBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
@@ -416,7 +398,12 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::SetDynamicOffset(Uint32 Arr
     const auto& Desc = GetDesc();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
-    VERIFY((Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, "Dynamic offsets may not be set for variables created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        const auto& CachedSSBO = m_ParentManager.m_ResourceCache.GetConstSSBO(Attr.CacheOffset + ArrayIndex);
+        VerifyDynamicBufferOffset<BufferGLImpl, BufferViewGLImpl>(Desc, CachedSSBO.pBufferView, 0, 0, Offset);
+    }
+#endif
 
     m_ParentManager.m_ResourceCache.SetDynamicSSBOOffset(Attr.CacheOffset + ArrayIndex, Offset);
 }
