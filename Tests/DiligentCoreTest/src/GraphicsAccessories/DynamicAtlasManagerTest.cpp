@@ -68,11 +68,11 @@ TEST(GraphicsAccessories_DynamicAtlasManager, Region_Ctor)
 
 TEST(GraphicsAccessories_DynamicAtlasManager, Region_OpEqual)
 {
-    EXPECT_TRUE(Region(1, 2, 3, 4) == Region(1, 2, 3, 4));
-    EXPECT_FALSE(Region(0, 2, 3, 4) == Region(1, 2, 3, 4));
-    EXPECT_FALSE(Region(1, 0, 3, 4) == Region(1, 2, 3, 4));
-    EXPECT_FALSE(Region(1, 2, 0, 4) == Region(1, 2, 3, 4));
-    EXPECT_FALSE(Region(1, 2, 3, 0) == Region(1, 2, 3, 4));
+    EXPECT_EQ(Region(1, 2, 3, 4), Region(1, 2, 3, 4));
+    EXPECT_NE(Region(0, 2, 3, 4), Region(1, 2, 3, 4));
+    EXPECT_NE(Region(1, 0, 3, 4), Region(1, 2, 3, 4));
+    EXPECT_NE(Region(1, 2, 0, 4), Region(1, 2, 3, 4));
+    EXPECT_NE(Region(1, 2, 3, 0), Region(1, 2, 3, 4));
 }
 
 TEST(GraphicsAccessories_DynamicAtlasManager, Region_WidthFirstCompare)

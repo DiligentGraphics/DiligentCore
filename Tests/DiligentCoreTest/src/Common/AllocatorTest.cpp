@@ -42,7 +42,7 @@ namespace
 TEST(Common_FixedBlockMemoryAllocator, AllocDealloc)
 {
     constexpr Uint32 AllocSize             = 32;
-    constexpr Uint32 NumAllocationsPerPage = 16;
+    constexpr int    NumAllocationsPerPage = 16;
 
     FixedBlockMemoryAllocator TestAllocator(DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage);
 
