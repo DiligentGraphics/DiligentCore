@@ -200,23 +200,28 @@ else()
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # WARNING: set_source_files_properties() does not append
+    #          properties, but overwrites them!
     # Disable warings like this one:
     #   comparison of function 'glPolygonMode' not equal to a null pointer is always true [-Wtautological-pointer-compare]
-    set_source_files_properties(src/RenderDeviceGLImpl.cpp src/GLContextState.cpp
-    PROPERTIES
-        COMPILE_FLAGS -Wno-tautological-pointer-compare
+    set_property(SOURCE
+        src/RenderDeviceGLImpl.cpp
+        src/GLContextState.cpp
+        src/DeviceContextGLImpl.cpp
+    APPEND_STRING PROPERTY
+        COMPILE_FLAGS " -Wno-tautological-pointer-compare"
     )
 
     if (PLATFORM_IOS)
         # Disable warings like this one:
         #   unused variable 'BottomLeftY' [-Wunused-variable]
-        set_source_files_properties(
+        set_property(SOURCE
             src/DeviceContextGLImpl.cpp
             src/GLContextState.cpp
             src/RenderDeviceGLImpl.cpp
             src/Texture1D_GL.cpp
-        PROPERTIES
-            COMPILE_FLAGS -Wno-unused-variable
+        APPEND_STRING PROPERTY
+            COMPILE_FLAGS " -Wno-unused-variable"
         )
     endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -256,6 +261,9 @@ target_compile_definitions(Diligent-GraphicsEngineOpenGL-shared PUBLIC ENGINE_DL
 if(PLATFORM_MACOS)
     # Silence OpenGL deprecation warnings
     target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PUBLIC GL_SILENCE_DEPRECATION)
+elseif(PLATFORM_IOS)
+    # Silence GLES deprecation warnings
+    target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PUBLIC GLES_SILENCE_DEPRECATION)
 endif()
 
 if(PLATFORM_WIN32)
