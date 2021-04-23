@@ -669,7 +669,7 @@ void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask)
             pResourceCache->BindResources(GetContextState(), BaseBindings, m_BoundWritableTextures, m_BoundWritableBuffers);
         else
         {
-            VERIFY_EXPR((m_BindInfo.DynamicSRBMask & SignBit) != 0);
+            VERIFY_EXPR((m_BindInfo.DynamicSRBMask & SignBit) != 0 && pResourceCache->HasDynamicResources());
             pResourceCache->BindDynamicBuffers(GetContextState(), BaseBindings);
         }
     }

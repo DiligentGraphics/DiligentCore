@@ -225,13 +225,16 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
         ResourceCache.TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Verify>(*this);
     }
 #endif
+
+#ifdef DILIGENT_DEBUG
+    ResourceCache.DbgVerifyDynamicBufferMasks();
+#endif
 }
 
 
 void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
                                                 const D3D11ShaderResourceCounters& BaseBindings,
-                                                PixelShaderUAVBindMode&            PsUavBindMode,
-                                                bool                               CBsOnly)
+                                                PixelShaderUAVBindMode&            PsUavBindMode)
 {
     for (SHADER_TYPE ActiveStages = m_BindInfo.ActiveStages; ActiveStages != SHADER_TYPE_UNKNOWN;)
     {
@@ -258,13 +261,6 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                 DvpVerifyCommittedCBs(ShaderType);
             }
 #endif
-        }
-
-        if (CBsOnly)
-        {
-            if (PsUavBindMode != PixelShaderUAVBindMode::Bind)
-                PsUavBindMode = PixelShaderUAVBindMode::Keep;
-            continue;
         }
 
         if (ResourceCache.GetSRVCount(ShaderInd) > 0)
@@ -337,6 +333,37 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
     }
 }
 
+void DeviceContextD3D11Impl::BindDynamicCBs(const ShaderResourceCacheD3D11&    ResourceCache,
+                                            const D3D11ShaderResourceCounters& BaseBindings)
+{
+    for (SHADER_TYPE ActiveStages = m_BindInfo.ActiveStages; ActiveStages != SHADER_TYPE_UNKNOWN;)
+    {
+        const auto ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
+        if (ResourceCache.GetDynamicCBOffsetsMask(ShaderInd) == 0)
+            continue;
+
+        auto* d3d11CBs       = m_CommittedRes.d3d11CBs[ShaderInd];
+        auto* FirstConstants = m_CommittedRes.CBFirstConstants[ShaderInd];
+        auto* NumConstants   = m_CommittedRes.CBNumConstants[ShaderInd];
+        auto  SetCB1Method   = SetCB1Methods[ShaderInd];
+
+        ResourceCache.BindDynamicCBs(ShaderInd, d3d11CBs, FirstConstants, NumConstants, BaseBindings,
+                                     [&](Uint32 Slot) //
+                                     {
+                                         (m_pd3d11DeviceContext->*SetCB1Method)(Slot, 1, d3d11CBs + Slot, FirstConstants + Slot, NumConstants + Slot);
+                                     });
+
+#ifdef DILIGENT_DEVELOPMENT
+        if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
+        {
+            const auto ShaderType = GetShaderTypeFromIndex(ShaderInd);
+            DvpVerifyCommittedCBs(ShaderType);
+        }
+#endif
+    }
+}
+
+
 void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
 {
     VERIFY_EXPR(BindSRBMask != 0);
@@ -357,7 +384,18 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
 #endif
         auto* pResourceCache = m_BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Shader resource cache at index ", sign, " is null.");
-        BindCacheResources(*pResourceCache, BaseBindings, PsUavBindMode, (m_BindInfo.StaleSRBMask & SignBit) == 0);
+        if (m_BindInfo.StaleSRBMask & SignBit)
+            BindCacheResources(*pResourceCache, BaseBindings, PsUavBindMode);
+        else
+        {
+            VERIFY_EXPR((m_BindInfo.DynamicSRBMask & SignBit) != 0 && pResourceCache->HasDynamicResources());
+            if (pResourceCache->GetUAVCount(PSInd) > 0)
+            {
+                if (PsUavBindMode != PixelShaderUAVBindMode::Bind)
+                    PsUavBindMode = PixelShaderUAVBindMode::Keep;
+            }
+            BindDynamicCBs(*pResourceCache, BaseBindings);
+        }
     }
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 

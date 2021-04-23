@@ -404,8 +404,10 @@ private:
 
     void BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
                             const D3D11ShaderResourceCounters& BaseBindings,
-                            PixelShaderUAVBindMode&            PsUavBindMode,
-                            bool                               CBsOnly);
+                            PixelShaderUAVBindMode&            PsUavBindMode);
+
+    void BindDynamicCBs(const ShaderResourceCacheD3D11&    ResourceCache,
+                        const D3D11ShaderResourceCounters& BaseBindings);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();

@@ -299,7 +299,7 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(const BindResou
                                     m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetCB(Attr.BindPoints + BindInfo.ArrayIndex, (Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0, std::move(pBuffD3D11Impl), BindInfo.BufferBaseOffset, BindInfo.BufferRangeSize);
+    ResourceCache.SetCB(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pBuffD3D11Impl), BindInfo.BufferBaseOffset, BindInfo.BufferRangeSize);
 }
 
 void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)

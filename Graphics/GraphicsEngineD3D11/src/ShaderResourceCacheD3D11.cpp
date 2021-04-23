@@ -60,10 +60,15 @@ size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResource
     return MemSize;
 }
 
-void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters& ResCount, IMemoryAllocator& MemAllocator)
+void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&        ResCount,
+                                          IMemoryAllocator&                         MemAllocator,
+                                          const std::array<Uint16, NumShaderTypes>* pDynamicCBSlotsMask)
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache/
     VERIFY(!IsInitialized(), "Resource cache has already been initialized!");
+
+    if (pDynamicCBSlotsMask != nullptr)
+        m_DynamicCBSlotsMask = *pDynamicCBSlotsMask;
 
     size_t MemOffset = 0;
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
@@ -336,5 +341,28 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
         }
     }
 }
+
+#ifdef DILIGENT_DEBUG
+void ShaderResourceCacheD3D11::DbgVerifyDynamicBufferMasks() const
+{
+    for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
+    {
+        const auto CBCount = GetCBCount(ShaderInd);
+        if (CBCount == 0)
+            continue;
+
+        auto CBArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
+        for (Uint32 i = 0; i < CBCount; ++i)
+        {
+            const auto  BuffBit = 1u << i;
+            const auto& CB      = CBArrays.first[i];
+
+            const auto IsDynamicOffset = CB.AllowsDynamicOffset() && (m_DynamicCBSlotsMask[ShaderInd] & BuffBit) != 0;
+            VERIFY(IsDynamicOffset == ((m_DynamicCBOffsetsMask[ShaderInd] & BuffBit) != 0), "Bit ", i, " in m_DynamicCBOffsetsMask is not valid");
+        }
+    }
+}
+#endif
+
 
 } // namespace Diligent

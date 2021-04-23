@@ -244,6 +244,20 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
                     DstRangeCounters[ShaderInd] = std::max(Uint8{DstRangeCounters[ShaderInd]}, SrcRangeCounters[ShaderInd]);
                 }
             }
+
+            if (Range == D3D11_RESOURCE_RANGE_CBV && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
+            {
+                for (auto ShaderStages = ResDesc.ShaderStages; ShaderStages != SHADER_TYPE_UNKNOWN;)
+                {
+                    const auto ShaderInd = ExtractFirstShaderStageIndex(ShaderStages);
+                    const auto BindPoint = Uint16{pAttrib->BindPoints[ShaderInd]};
+                    for (Uint32 elem = 0; elem < ResDesc.ArraySize; ++elem)
+                    {
+                        VERIFY_EXPR(BindPoint + elem < sizeof(m_DynamicCBSlotsMask[0]) * 8);
+                        m_DynamicCBSlotsMask[ShaderInd] |= 1u << (BindPoint + elem);
+                    }
+                }
+            }
         }
         else
         {
@@ -256,7 +270,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Initialize(StaticResCounters, GetRawAllocator());
+        m_pStaticResCache->Initialize(StaticResCounters, GetRawAllocator(), nullptr);
         VERIFY_EXPR(m_pStaticResCache->IsInitialized());
     }
 }
@@ -345,11 +359,15 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
                 UNEXPECTED("Unsupported descriptor range type.");
         }
     }
+
+#ifdef DILIGENT_DEBUG
+    DstResourceCache.DbgVerifyDynamicBufferMasks();
+#endif
 }
 
 void PipelineResourceSignatureD3D11Impl::InitSRBResourceCache(ShaderResourceCacheD3D11& ResourceCache)
 {
-    ResourceCache.Initialize(m_ResourceCounters, m_SRBMemAllocator.GetResourceCacheDataAllocator(0));
+    ResourceCache.Initialize(m_ResourceCounters, m_SRBMemAllocator.GetResourceCacheDataAllocator(0), &m_DynamicCBSlotsMask);
     VERIFY_EXPR(ResourceCache.IsInitialized());
 
     // Copy immutable samplers.

@@ -110,8 +110,15 @@ private:
     void Destruct();
 
 private:
-    D3D11ShaderResourceCounters m_ResourceCounters  = {};
-    ImmutableSamplerAttribs*    m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
+    D3D11ShaderResourceCounters m_ResourceCounters = {};
+
+    static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
+
+    // Indicates which constant buffer slots may contain buffers with dynamic offsets.
+    std::array<Uint16, NumShaderTypes> m_DynamicCBSlotsMask{};
+    static_assert(sizeof(m_DynamicCBSlotsMask[0]) * 8 >= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, "Not enough bits for all dynamic buffer slots");
+
+    ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 };
 
 } // namespace Diligent
