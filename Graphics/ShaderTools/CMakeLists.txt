@@ -115,7 +115,7 @@ PUBLIC
     Diligent-GraphicsEngineInterface
 )
 
-if (VULKAN_SUPPORTED OR GL_SUPPORTED OR GLES_SUPPORTED)
+if (VULKAN_SUPPORTED OR GL_SUPPORTED OR GLES_SUPPORTED OR METAL_SUPPORTED)
     target_compile_definitions(Diligent-ShaderTools PRIVATE DILIGENT_NO_HLSL=$<BOOL:${DILIGENT_NO_HLSL}>)
     if (NOT ${DILIGENT_NO_HLSL})
         target_include_directories(Diligent-ShaderTools PRIVATE ../HLSL2GLSLConverterLib/include)

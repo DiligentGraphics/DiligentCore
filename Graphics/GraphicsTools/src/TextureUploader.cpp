@@ -25,6 +25,9 @@
  *  of the possibility of such damages.
  */
 
+#include "TextureUploader.hpp"
+#include "DebugUtilities.hpp"
+
 #if D3D11_SUPPORTED
 #    include "TextureUploaderD3D11.hpp"
 #endif
