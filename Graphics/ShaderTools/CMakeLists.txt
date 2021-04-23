@@ -115,12 +115,16 @@ PUBLIC
     Diligent-GraphicsEngineInterface
 )
 
-if (VULKAN_SUPPORTED OR GL_SUPPORTED OR GLES_SUPPORTED OR METAL_SUPPORTED)
-    target_compile_definitions(Diligent-ShaderTools PRIVATE DILIGENT_NO_HLSL=$<BOOL:${DILIGENT_NO_HLSL}>)
+if (TARGET Diligent-HLSL2GLSLConverterLib)
     if (NOT ${DILIGENT_NO_HLSL})
         target_include_directories(Diligent-ShaderTools PRIVATE ../HLSL2GLSLConverterLib/include)
         target_link_libraries(Diligent-ShaderTools PRIVATE Diligent-HLSL2GLSLConverterLib)
     endif()
+else()
+    set(DILIGENT_NO_HLSL TRUE)
+endif()
+if(DILIGENT_NO_HLSL)
+    target_compile_definitions(Diligent-ShaderTools PRIVATE DILIGENT_NO_HLSL=1)
 endif()
 
 if(ENABLE_SPIRV)
