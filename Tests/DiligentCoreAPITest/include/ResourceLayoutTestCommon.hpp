@@ -52,11 +52,11 @@ public:
                      BUFFER_VIEW_TYPE ViewType   = BUFFER_VIEW_UNDEFINED,
                      BUFFER_MODE      BufferMode = BUFFER_MODE_UNDEFINED) :
         Buffers(NumBuffers),
-        Values(NumBuffers),
-        UsedValues(NumBuffers),
-        ppBuffObjects(NumBuffers),
         Views(NumBuffers),
-        ppViewObjects(NumBuffers)
+        ppBuffObjects(NumBuffers),
+        ppViewObjects(NumBuffers),
+        UsedValues(NumBuffers),
+        Values(NumBuffers)
     {
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();

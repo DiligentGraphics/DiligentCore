@@ -45,17 +45,15 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
 
     if (AccelStructSize == 0)
     {
-        VkAccelerationStructureBuildGeometryInfoKHR      vkBuildInfo       = {};
-        VkAccelerationStructureBuildSizesInfoKHR         vkSizeInfo        = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        VkAccelerationStructureGeometryKHR               vkGeometry        = {};
-        VkAccelerationStructureGeometryInstancesDataKHR& vkInstances       = vkGeometry.geometry.instances;
-        const uint32_t                                   MaxPrimitiveCount = m_Desc.MaxInstanceCount;
+        VkAccelerationStructureGeometryKHR vkGeometry{};
+        vkGeometry.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        vkGeometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
 
-        vkGeometry.sType            = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-        vkGeometry.geometryType     = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+        VkAccelerationStructureGeometryInstancesDataKHR& vkInstances{vkGeometry.geometry.instances};
         vkInstances.sType           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
         vkInstances.arrayOfPointers = VK_FALSE;
 
+        VkAccelerationStructureBuildGeometryInfoKHR vkBuildInfo{};
         vkBuildInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         vkBuildInfo.flags         = BuildASFlagsToVkBuildAccelerationStructureFlags(m_Desc.Flags);
         vkBuildInfo.type          = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
@@ -65,6 +63,10 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
         DEV_CHECK_ERR(m_Desc.MaxInstanceCount <= Limits.maxInstanceCount,
                       "Max instance count (", m_Desc.MaxInstanceCount, ") exceeds device limit (", Limits.maxInstanceCount, ").");
 
+        VkAccelerationStructureBuildSizesInfoKHR vkSizeInfo{};
+        vkSizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+        const uint32_t MaxPrimitiveCount = m_Desc.MaxInstanceCount;
         LogicalDevice.GetAccelerationStructureBuildSizes(vkBuildInfo, &MaxPrimitiveCount, vkSizeInfo);
 
         AccelStructSize      = static_cast<Uint32>(vkSizeInfo.accelerationStructureSize);

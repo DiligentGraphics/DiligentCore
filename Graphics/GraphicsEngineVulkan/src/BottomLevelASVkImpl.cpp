@@ -45,10 +45,11 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
 
     if (AccelStructSize == 0)
     {
-        VkAccelerationStructureBuildGeometryInfoKHR     vkBuildInfo = {};
+        VkAccelerationStructureBuildGeometryInfoKHR     vkBuildInfo{};
         std::vector<VkAccelerationStructureGeometryKHR> vkGeometries;
         std::vector<uint32_t>                           MaxPrimitiveCounts;
-        VkAccelerationStructureBuildSizesInfoKHR        vkSizeInfo = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
+        VkAccelerationStructureBuildSizesInfoKHR        vkSizeInfo{};
+        vkSizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
         vkGeometries.resize(Desc.TriangleCount + Desc.BoxCount);
         MaxPrimitiveCounts.resize(vkGeometries.size());
@@ -78,7 +79,8 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                 MaxPrimitiveCount += src.MaxPrimitiveCount;
 
 #ifdef DILIGENT_DEVELOPMENT
-                VkFormatProperties2 vkProps = {VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
+                VkFormatProperties2 vkProps{};
+                vkProps.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2;
                 vkGetPhysicalDeviceFormatProperties2KHR(PhysicalDevice.GetVkDeviceHandle(), tri.vertexFormat, &vkProps);
 
                 DEV_CHECK_ERR((vkProps.formatProperties.bufferFeatures & VK_FORMAT_FEATURE_ACCELERATION_STRUCTURE_VERTEX_BUFFER_BIT_KHR) != 0,

@@ -75,7 +75,7 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
 #ifdef DILIGENT_DEVELOPMENT
     ++m_AllocatedPoolCounter;
 #endif
-    return std::move(CmdPool);
+    return CmdPool;
 }
 
 void CommandPoolManager::RecycleCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool)

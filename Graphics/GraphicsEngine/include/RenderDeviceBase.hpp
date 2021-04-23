@@ -242,8 +242,7 @@ public:
         m_BLASAllocator         {RawMemAllocator, sizeof(BottomLevelASImplType),              16},
         m_TLASAllocator         {RawMemAllocator, sizeof(TopLevelASImplType),                 16},
         m_SBTAllocator          {RawMemAllocator, sizeof(ShaderBindingTableImplType),         16},
-        m_PipeResSignAllocator  {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128},
-        m_DeviceProperties      {}
+        m_PipeResSignAllocator  {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128}
     // clang-format on
     {
         // Initialize texture format info

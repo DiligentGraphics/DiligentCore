@@ -320,7 +320,7 @@ inline GLenum StencilOp2GlStencilOp(STENCIL_OP StencilOp)
     };
     // clang-format on
 
-    VERIFY_EXPR(StencilOp < _countof(StencilOp2GlStencilOpMap));
+    VERIFY_EXPR(StencilOp < int{_countof(StencilOp2GlStencilOpMap)});
     return StencilOp2GlStencilOpMap[StencilOp];
 }
 
@@ -350,7 +350,7 @@ inline GLenum BlendFactor2GLBlend(BLEND_FACTOR bf)
     };
     // clang-format on
 
-    VERIFY_EXPR(bf < _countof(BlendFactor2GLBlendMap));
+    VERIFY_EXPR(bf < int{_countof(BlendFactor2GLBlendMap)});
     return BlendFactor2GLBlendMap[bf];
 }
 
@@ -368,7 +368,7 @@ inline GLenum BlendOperation2GLBlendOp(BLEND_OPERATION BlendOp)
     };
     // clang-format on
 
-    VERIFY_EXPR(BlendOp < _countof(BlendOperation2GLBlendOpMap));
+    VERIFY_EXPR(BlendOp < int{_countof(BlendOperation2GLBlendOpMap)});
     return BlendOperation2GLBlendOpMap[BlendOp];
 }
 

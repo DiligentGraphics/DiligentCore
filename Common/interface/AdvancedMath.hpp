@@ -1,13 +1,13 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -462,7 +462,7 @@ inline bool operator==(const ViewFrustumExt& f1, const ViewFrustumExt& f2)
     if (!(static_cast<const ViewFrustum&>(f1) == static_cast<const ViewFrustum&>(f2)))
         return false;
 
-    for (int c = 0; c < _countof(f1.FrustumCorners); ++c)
+    for (size_t c = 0; c < _countof(f1.FrustumCorners); ++c)
         if (f1.FrustumCorners[c] != f2.FrustumCorners[c])
             return false;
 
@@ -1003,7 +1003,7 @@ struct hash<Diligent::ViewFrustumExt>
     size_t operator()(const Diligent::ViewFrustumExt& Frustum) const
     {
         auto Seed = Diligent::ComputeHash(static_cast<const Diligent::ViewFrustum&>(Frustum));
-        for (int Corner = 0; Corner < _countof(Frustum.FrustumCorners); ++Corner)
+        for (size_t Corner = 0; Corner < _countof(Frustum.FrustumCorners); ++Corner)
             Diligent::HashCombine(Seed, Frustum.FrustumCorners[Corner]);
         return Seed;
     }

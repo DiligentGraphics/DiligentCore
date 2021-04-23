@@ -79,7 +79,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
             SamplerDesc.AddressV,
             SamplerDesc.AddressW //
         };
-    for (int i = 0; i < _countof(AddressModes); ++i)
+    for (size_t i = 0; i < _countof(AddressModes); ++i)
     {
         auto& WrapMode = WrapModes[i];
         WrapMode       = TexAddressModeToGLAddressMode(AddressModes[i]);

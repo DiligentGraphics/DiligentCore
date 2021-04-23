@@ -38,7 +38,7 @@ int TestQueryCInterface(struct IQuery* pQuery)
     DeviceObjectAttribs Desc;
     Int32               UniqueId = 0;
 
-    QueryDataTimestamp queryData      = {QUERY_TYPE_TIMESTAMP};
+    QueryDataTimestamp queryData      = {QUERY_TYPE_TIMESTAMP, 0, 0};
     bool               QueryDataReady = false;
 
     QueryDesc QueryDesc;

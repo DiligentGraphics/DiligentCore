@@ -569,7 +569,8 @@ void BufferVkImpl::FlushMappedRange(Uint32 StartOffset, Uint32 Size)
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
     const auto& DeviceLimits  = GetDevice()->GetPhysicalDevice().GetProperties().limits;
 
-    VkMappedMemoryRange MappedRange{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
+    VkMappedMemoryRange MappedRange{};
+    MappedRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     MappedRange.memory = m_MemoryAllocation.Page->GetVkMemory();
     MappedRange.offset = AlignDown(m_BufferMemoryAlignedOffset + StartOffset, DeviceLimits.nonCoherentAtomSize);
     MappedRange.size   = AlignUp(m_BufferMemoryAlignedOffset + StartOffset + Size, DeviceLimits.nonCoherentAtomSize) - MappedRange.offset;
@@ -583,7 +584,8 @@ void BufferVkImpl::InvalidateMappedRange(Uint32 StartOffset, Uint32 Size)
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
     const auto& DeviceLimits  = GetDevice()->GetPhysicalDevice().GetProperties().limits;
 
-    VkMappedMemoryRange MappedRange{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE};
+    VkMappedMemoryRange MappedRange{};
+    MappedRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     MappedRange.memory = m_MemoryAllocation.Page->GetVkMemory();
     MappedRange.offset = AlignDown(m_BufferMemoryAlignedOffset + StartOffset, DeviceLimits.nonCoherentAtomSize);
     MappedRange.size   = AlignUp(m_BufferMemoryAlignedOffset + StartOffset + Size, DeviceLimits.nonCoherentAtomSize) - MappedRange.offset;

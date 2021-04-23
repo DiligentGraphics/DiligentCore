@@ -76,7 +76,7 @@ static std::vector<VkDescriptorPoolSize> PrunePoolSizes(RenderDeviceVkImpl& Devi
                 ++iter;
         }
     }
-    return PoolSizes;
+    return std::move(PoolSizes);
 }
 
 DescriptorPoolManager::DescriptorPoolManager(RenderDeviceVkImpl&               DeviceVkImpl,

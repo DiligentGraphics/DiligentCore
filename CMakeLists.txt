@@ -291,16 +291,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Werror=instantiation-after-specialization -Werror=method-signatures -Werror=self-assign -Werror=self-move -Werror=infinite-recursion
         -Werror=pessimizing-move -Werror=dangling-else
         # warnings
-        -Wchar-subscripts -Wformat -Wmissing-braces -Wmissing-include-dirs -Wuninitialized
-        -Wconditional-uninitialized -Wstrict-aliasing -Wstrict-overflow -Wendif-labels
-        -Wpointer-arith -Wwrite-strings -Wconversion-null
-        -Wsizeof-pointer-memaccess -Wlogical-op-parentheses -Wloop-analysis -Wincrement-bool
-        # very noisy warnings
-        #-Wcast-qual -Wcast-align -Wmissing-field-initializers -Wenum-compare -Wsign-compare -Wmain -Wlarge-by-value-copy
+        -Wall -Wextra -Wuninitialized -Wconditional-uninitialized -Wextra-tokens -Wpointer-arith -Wloop-analysis
         # disable warnings
-        -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unknown-pragmas -Wno-zero-as-null-pointer-constant
+        -Wno-overloaded-virtual -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unknown-pragmas
+        -Wno-zero-as-null-pointer-constant -Wno-unused-parameter
     )
-    target_compile_options(Diligent-BuildSettings INTERFACE $<$<CONFIG:Debug>: -Wunused >)
+    target_compile_options(Diligent-BuildSettings INTERFACE $<$<CONFIG:Debug>:-Wunused>)
 endif()
 
 if(PLATFORM_MACOS)

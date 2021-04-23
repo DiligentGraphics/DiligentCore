@@ -71,10 +71,14 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 #if DILIGENT_USE_VOLK
     if (Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
-        auto       Feats2    = VkPhysicalDeviceFeatures2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-        auto       Props2    = VkPhysicalDeviceProperties2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-        void**     NextFeat  = &Feats2.pNext;
-        void**     NextProp  = &Props2.pNext;
+        VkPhysicalDeviceFeatures2 Feats2{};
+        Feats2.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        void** NextFeat = &Feats2.pNext;
+
+        VkPhysicalDeviceProperties2 Props2{};
+        Props2.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        void** NextProp = &Props2.pNext;
+
         const auto VkVersion = std::min(Instance.GetVersion(), m_Properties.apiVersion);
 
         if (IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))

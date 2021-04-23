@@ -200,12 +200,6 @@ else()
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # Disable the following clang warning
-    #    '<function name>' hides overloaded virtual function
-    # as hiding is intended
-    target_compile_options(Diligent-GraphicsEngineOpenGL-static PRIVATE -Wno-overloaded-virtual)
-    target_compile_options(Diligent-GraphicsEngineOpenGL-shared PRIVATE -Wno-overloaded-virtual)
-
     # Disable warings like this one:
     #   comparison of function 'glPolygonMode' not equal to a null pointer is always true [-Wtautological-pointer-compare]
     set_source_files_properties(src/RenderDeviceGLImpl.cpp src/GLContextState.cpp

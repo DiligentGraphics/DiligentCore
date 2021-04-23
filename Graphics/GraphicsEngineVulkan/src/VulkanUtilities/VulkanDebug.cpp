@@ -677,7 +677,7 @@ std::string VkAccessFlagsToString(VkAccessFlags Flags)
         FlagsString += VkAccessFlagBitToString(static_cast<VkAccessFlagBits>(Bit));
         Flags = Flags & (Flags - 1);
     }
-    return std::move(FlagsString);
+    return FlagsString;
 }
 
 const char* VkObjectTypeToString(VkObjectType ObjectType)

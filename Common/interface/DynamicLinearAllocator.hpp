@@ -53,8 +53,8 @@ public:
     // clang-format on
 
     explicit DynamicLinearAllocator(IMemoryAllocator& Allocator, Uint32 BlockSize = 4 << 10) :
-        m_pAllocator{&Allocator},
-        m_BlockSize{BlockSize}
+        m_BlockSize{BlockSize},
+        m_pAllocator{&Allocator}
     {
         VERIFY(IsPowerOfTwo(BlockSize), "Block size (", BlockSize, ") is not power of two");
     }

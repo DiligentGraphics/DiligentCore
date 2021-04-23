@@ -97,8 +97,10 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
         // Get extension features and properties.
         if (HasPhysicalDeviceProps2)
         {
-            VkPhysicalDeviceFeatures2 Feats2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-            void**                    NextFeat = &Feats2.pNext;
+            VkPhysicalDeviceFeatures2 Feats2{};
+            Feats2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+
+            void** NextFeat = &Feats2.pNext;
 
             if (HasDescriptorIndexing)
             {

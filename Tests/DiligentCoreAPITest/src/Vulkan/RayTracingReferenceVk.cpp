@@ -233,11 +233,12 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
     Ctx.vkRenderTarget     = pTestingSwapChainVk->GetVkRenderTargetImage();
     Ctx.vkRenderTargetView = pTestingSwapChainVk->GetVkRenderTargetImageView();
 
-    VkPhysicalDeviceProperties2 Props2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-    Props2.pNext                       = &Ctx.RayTracingProps;
-    Ctx.RayTracingProps.sType          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
-    Ctx.RayTracingProps.pNext          = &Ctx.AccelStructProps;
-    Ctx.AccelStructProps.sType         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+    VkPhysicalDeviceProperties2 Props2{};
+    Props2.sType               = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    Props2.pNext               = &Ctx.RayTracingProps;
+    Ctx.RayTracingProps.sType  = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+    Ctx.RayTracingProps.pNext  = &Ctx.AccelStructProps;
+    Ctx.AccelStructProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
     vkGetPhysicalDeviceProperties2KHR(pEnv->GetVkPhysicalDevice(), &Props2);
     Ctx.DeviceLimits = Props2.properties.limits;
 
@@ -366,11 +367,11 @@ void CreateBLAS(const RTContext&                                Ctx,
     VkDeviceSize AccelStructSize = 0;
 
     {
-        VkAccelerationStructureBuildGeometryInfoKHR vkBuildInfo = {};
-        VkAccelerationStructureBuildSizesInfoKHR    vkSizeInfo  = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
-        std::vector<uint32_t>                       MaxPrimitives;
-        MaxPrimitives.resize(GeometryCount);
+        VkAccelerationStructureBuildGeometryInfoKHR vkBuildInfo{};
+        VkAccelerationStructureBuildSizesInfoKHR    vkSizeInfo{};
+        vkSizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
+        std::vector<uint32_t> MaxPrimitives(GeometryCount);
         for (Uint32 i = 0; i < GeometryCount; ++i)
         {
             MaxPrimitives[i] = pRanges[i].primitiveCount;
@@ -446,7 +447,8 @@ void CreateTLAS(const RTContext& Ctx, Uint32 InstanceCount, RTContext::AccelStru
         VkAccelerationStructureBuildGeometryInfoKHR      vkBuildInfo = {};
         VkAccelerationStructureGeometryKHR               vkGeometry  = {};
         VkAccelerationStructureGeometryInstancesDataKHR& vkInstances = vkGeometry.geometry.instances;
-        VkAccelerationStructureBuildSizesInfoKHR         vkSizeInfo  = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
+        VkAccelerationStructureBuildSizesInfoKHR         vkSizeInfo{};
+        vkSizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
         vkGeometry.sType            = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
         vkGeometry.geometryType     = VK_GEOMETRY_TYPE_INSTANCES_KHR;
