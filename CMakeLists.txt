@@ -298,6 +298,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(Diligent-BuildSettings INTERFACE $<$<NOT:$<CONFIG:Debug>>:${CLANG_RELEASE_OPTIONS}>)
 endif()
 
+if(DILIGENT_DEVELOPMENT)
+    foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
+		target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:DILIGENT_DEVELOPMENT>")
+    endforeach()
+endif()
+
 if(PLATFORM_MACOS)
     find_library(APP_KIT AppKit)
     if (NOT APP_KIT)
