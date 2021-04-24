@@ -730,7 +730,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 #ifdef DILIGENT_DEBUG
         DxilArgs.push_back(L"-Zi"); // Debug info
         DxilArgs.push_back(L"-Od"); // Disable optimization
-        if (m_MajorVer > 1 || m_MajorVer == 1 && m_MinorVer >= 5)
+        if (m_MajorVer > 1 || (m_MajorVer == 1 && m_MinorVer >= 5))
         {
             // Silence the following warning:
             // no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
