@@ -44,7 +44,7 @@ struct ResourceBinding
         Uint32 Space     = ~0u;
         Uint32 ArraySize = 0;
 
-#ifdef DILIGENT_DEBUG
+#ifdef DILIGENT_DEVELOPMENT
         SHADER_RESOURCE_TYPE ResType = SHADER_RESOURCE_TYPE_UNKNOWN;
 #endif
 
@@ -56,7 +56,7 @@ struct ResourceBinding
             BindPoint{_BindPoint},
             Space    {_Space    },
             ArraySize{_ArraySize}
-#ifdef DILIGENT_DEBUG
+#ifdef DILIGENT_DEVELOPMENT
             , ResType{_ResType  }
 #endif
         // clang-format on
