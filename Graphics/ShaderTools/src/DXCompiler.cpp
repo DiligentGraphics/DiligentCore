@@ -737,7 +737,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             DxilArgs.push_back(L"-Qembed_debug");
         }
 #else
-        if (m_MajorVer > 1 || m_MajorVer == 1 && m_MinorVer >= 5)
+        if (m_MajorVer > 1 || (m_MajorVer == 1 && m_MinorVer >= 5))
             DxilArgs.push_back(L"-O3"); // Optimization level 3
         else
             DxilArgs.push_back(L"-Od"); // TODO: something goes wrong if optimization is enabled
