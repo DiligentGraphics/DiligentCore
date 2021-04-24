@@ -117,6 +117,8 @@ public:
         return static_cast<Uint32>(m_FreeRegionsByWidth.size());
     }
 
+    Uint32 GetWidth() const { return m_Width; }
+    Uint32 GetHeight() const { return m_Height; }
 
 #define CMP(Member)                 \
     if (R0.Member < R1.Member)      \

@@ -205,7 +205,8 @@ void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, 
 namespace
 {
 
-inline BUFFER_VIEW_TYPE DescriptorTypeToBufferView(DescriptorType Type)
+#ifdef DILIGENT_DEVELOPMENT
+inline BUFFER_VIEW_TYPE DvpDescriptorTypeToBufferView(DescriptorType Type)
 {
     static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
     switch (Type)
@@ -227,7 +228,7 @@ inline BUFFER_VIEW_TYPE DescriptorTypeToBufferView(DescriptorType Type)
     }
 }
 
-inline TEXTURE_VIEW_TYPE DescriptorTypeToTextureView(DescriptorType Type)
+inline TEXTURE_VIEW_TYPE DvpDescriptorTypeToTextureView(DescriptorType Type)
 {
     static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
     switch (Type)
@@ -245,7 +246,7 @@ inline TEXTURE_VIEW_TYPE DescriptorTypeToTextureView(DescriptorType Type)
             return TEXTURE_VIEW_UNDEFINED;
     }
 }
-
+#endif
 
 struct BindResourceHelper
 {
@@ -465,7 +466,7 @@ void BindResourceHelper::CacheStorageBuffer(const BindResourceInfo& BindInfo) co
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
-        const auto RequiredViewType = DescriptorTypeToBufferView(m_DstRes.Type);
+        const auto RequiredViewType = DvpDescriptorTypeToBufferView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, BindInfo, pBufferViewVk.RawPtr(),
                                   {RequiredViewType},
                                   RESOURCE_DIM_BUFFER, // Expected resource dim
@@ -494,7 +495,7 @@ void BindResourceHelper::CacheTexelBuffer(const BindResourceInfo& BindInfo) cons
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
-        const auto RequiredViewType = DescriptorTypeToBufferView(m_DstRes.Type);
+        const auto RequiredViewType = DvpDescriptorTypeToBufferView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, BindInfo, pBufferViewVk.RawPtr(),
                                   {RequiredViewType},
                                   RESOURCE_DIM_BUFFER, // Expected resource dim
@@ -523,7 +524,7 @@ void BindResourceHelper::CacheImage(const BindResourceInfo& BindInfo) const
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
-        auto RequiredViewType = DescriptorTypeToTextureView(m_DstRes.Type);
+        auto RequiredViewType = DvpDescriptorTypeToTextureView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, BindInfo, pTexViewVk0.RawPtr(),
                                   {RequiredViewType},
                                   RESOURCE_DIM_UNDEFINED, // Required resource dimension is not known
