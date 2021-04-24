@@ -120,15 +120,10 @@ PUBLIC
     Diligent-GraphicsEngineInterface
 )
 
-if (TARGET Diligent-HLSL2GLSLConverterLib)
-    if (NOT ${DILIGENT_NO_HLSL})
-        target_include_directories(Diligent-ShaderTools PRIVATE ../HLSL2GLSLConverterLib/include)
-        target_link_libraries(Diligent-ShaderTools PRIVATE Diligent-HLSL2GLSLConverterLib)
-    endif()
+if (TARGET Diligent-HLSL2GLSLConverterLib AND NOT ${DILIGENT_NO_HLSL})
+    target_include_directories(Diligent-ShaderTools PRIVATE ../HLSL2GLSLConverterLib/include)
+    target_link_libraries(Diligent-ShaderTools PRIVATE Diligent-HLSL2GLSLConverterLib)
 else()
-    set(DILIGENT_NO_HLSL TRUE)
-endif()
-if(DILIGENT_NO_HLSL)
     target_compile_definitions(Diligent-ShaderTools PRIVATE DILIGENT_NO_HLSL=1)
 endif()
 

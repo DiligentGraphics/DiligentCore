@@ -173,11 +173,12 @@ set(PRIVATE_DEPENDENCIES
     Diligent-ShaderTools
 )
 
-if(${DILIGENT_NO_HLSL})
-    message("HLSL support is disabled. OpenGL backend will not be able to consume HLSL source.")
-else()
+if(TARGET Diligent-HLSL2GLSLConverterLib AND NOT ${DILIGENT_NO_HLSL})
     target_include_directories(Diligent-GraphicsEngineOpenGL-static PRIVATE ../HLSL2GLSLConverterLib/include)
     set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} Diligent-HLSL2GLSLConverterLib)
+else()
+    message("HLSL support is disabled. OpenGL backend will not be able to consume HLSL source.")
+    target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PRIVATE DILIGENT_NO_HLSL=1)
 endif()
 
 set(PUBLIC_DEPENDENCIES 
@@ -256,7 +257,6 @@ PUBLIC
     ${PUBLIC_DEPENDENCIES}
 )
 
-target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PRIVATE DILIGENT_NO_HLSL=$<BOOL:${DILIGENT_NO_HLSL}>)
 target_compile_definitions(Diligent-GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
 if(PLATFORM_MACOS)
     # Silence OpenGL deprecation warnings

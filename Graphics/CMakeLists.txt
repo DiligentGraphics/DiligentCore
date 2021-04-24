@@ -15,6 +15,11 @@ INTERFACE
 
 add_subdirectory(GraphicsAccessories)
 add_subdirectory(GraphicsEngine)
+
+if(GL_SUPPORTED OR GLES_SUPPORTED OR VULKAN_SUPPORTED)
+    add_subdirectory(HLSL2GLSLConverterLib)
+endif()
+
 add_subdirectory(ShaderTools)
 
 if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
@@ -35,10 +40,6 @@ endif()
 
 if(VULKAN_SUPPORTED)
     add_subdirectory(GraphicsEngineVulkan)
-endif()
-
-if(GL_SUPPORTED OR GLES_SUPPORTED OR VULKAN_SUPPORTED)
-    add_subdirectory(HLSL2GLSLConverterLib)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
