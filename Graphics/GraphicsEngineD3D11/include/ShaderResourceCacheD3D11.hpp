@@ -57,7 +57,7 @@ namespace Diligent
 //   |  0 | 1 | ... | CBCount-1 | 0 | 1 | ...| CBCount-1 || 0 | 1 | ... | SRVCount-1 | 0 | 1 |  ... | SRVCount-1 || 0 | 1 | ... | SamplerCount-1 | 0 | 1 | ...| SamplerCount-1 ||0 | 1 | ... | UAVCount-1 | 0 | 1 | ...  | UAVCount-1 ||
 //    --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //
-class ShaderResourceCacheD3D11
+class ShaderResourceCacheD3D11 : public ShaderResourceCacheBase
 {
 public:
     explicit ShaderResourceCacheD3D11(ResourceCacheContentType ContentType) noexcept :
@@ -744,6 +744,9 @@ bool ShaderResourceCacheD3D11::CopyResource(const ShaderResourceCacheD3D11& SrcC
 
         UpdateDynamicCBOffsetFlag<ResRange>(DstResArrays.first[Binding], ShaderInd, Binding);
     }
+
+    this->UpdateRevision();
+
     VERIFY_EXPR(IsBound == IsResourceBound<ResRange>(BindPoints));
     return IsBound;
 }
@@ -807,6 +810,8 @@ inline void ShaderResourceCacheD3D11::SetResource(
 
         UpdateDynamicCBOffsetFlag<ResRange>(ResArrays.first[Binding], ShaderInd, Binding);
     }
+
+    this->UpdateRevision();
 }
 
 } // namespace Diligent

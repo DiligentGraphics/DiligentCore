@@ -30,6 +30,8 @@
 /// \file
 /// Definition of the common share resource cache constants
 
+#include <atomic>
+
 #include "BasicTypes.h"
 
 namespace Diligent
@@ -43,6 +45,29 @@ enum class ResourceCacheContentType : Uint8
 
     /// Resources of a shader resource binding.
     SRB
+};
+
+class ShaderResourceCacheBase
+{
+public:
+#ifdef DILIGENT_DEVELOPMENT
+    uint32_t DvpGetRevision() const
+    {
+        return m_DvpRevision.load();
+    }
+#endif
+
+protected:
+    void UpdateRevision()
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        m_DvpRevision.fetch_add(1);
+#endif
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    std::atomic_uint32_t m_DvpRevision{0};
+#endif
 };
 
 } // namespace Diligent

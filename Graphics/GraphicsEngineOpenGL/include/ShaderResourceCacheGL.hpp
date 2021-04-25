@@ -46,7 +46,7 @@ namespace Diligent
 //   |  0 | 1 | ... | UBCount-1 | 0 | 1 | ...| SmpCount-1 | 0 | 1 | ... | ImgCount-1 | 0 | 1 |  ... | SBOCount-1 |
 //    -----------------------------------------------------------------------------------------------------------
 //
-class ShaderResourceCacheGL
+class ShaderResourceCacheGL : public ShaderResourceCacheBase
 {
 public:
     explicit ShaderResourceCacheGL(ResourceCacheContentType ContentType) noexcept :
@@ -172,6 +172,7 @@ public:
         {
             VERIFY((m_DynamicUBOMask & UBBit) == 0, "Dynamic UBO bit should never be set when corresponding bit in m_DynamicUBOSlotMask is not set");
         }
+        UpdateRevision();
     }
 
     void SetDynamicUBOffset(Uint32 CacheOffset, Uint32 DynamicOffset)
@@ -183,26 +184,31 @@ public:
     void SetTexture(Uint32 CacheOffset, RefCntAutoPtr<TextureViewGLImpl>&& pTexView, bool SetSampler)
     {
         GetTexture(CacheOffset).Set(std::move(pTexView), SetSampler);
+        UpdateRevision();
     }
 
     void SetSampler(Uint32 CacheOffset, ISampler* pSampler)
     {
         GetTexture(CacheOffset).pSampler = ValidatedCast<SamplerGLImpl>(pSampler);
+        UpdateRevision();
     }
 
     void SetTexelBuffer(Uint32 CacheOffset, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
     {
         GetTexture(CacheOffset).Set(std::move(pBuffView));
+        UpdateRevision();
     }
 
     void SetTexImage(Uint32 CacheOffset, RefCntAutoPtr<TextureViewGLImpl>&& pTexView)
     {
         GetImage(CacheOffset).Set(std::move(pTexView), false);
+        UpdateRevision();
     }
 
     void SetBufImage(Uint32 CacheOffset, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
     {
         GetImage(CacheOffset).Set(std::move(pBuffView));
+        UpdateRevision();
     }
 
     void SetSSBO(Uint32 CacheOffset, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
@@ -224,6 +230,7 @@ public:
         {
             VERIFY((m_DynamicSSBOMask & SSBOBit) == 0, "Dynamic SSBO bit should never be set when corresponding bit in m_DynamicSSBOSlotMask is not set");
         }
+        UpdateRevision();
     }
 
     void SetDynamicSSBOOffset(Uint32 CacheOffset, Uint32 DynamicOffset)

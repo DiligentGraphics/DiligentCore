@@ -405,6 +405,8 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(
         pLogicalDevice->UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
     }
 
+    UpdateRevision();
+
     return DstRes;
 }
 
