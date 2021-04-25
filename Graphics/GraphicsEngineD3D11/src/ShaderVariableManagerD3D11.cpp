@@ -206,7 +206,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
 
     if (m_MemorySize > 0)
     {
-        m_ResourceBuffer = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader resource layout resources", m_MemorySize);
+        m_ResourceBuffer = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variable manager resources", m_MemorySize);
     }
 
     // clang-format off
@@ -285,7 +285,7 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(const BindResou
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex, ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
@@ -299,7 +299,7 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(const BindResou
                                     m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetCB(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pBuffD3D11Impl), BindInfo.BufferBaseOffset, BindInfo.BufferRangeSize);
+    ResourceCache.SetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pBuffD3D11Impl), BindInfo.BufferBaseOffset, BindInfo.BufferRangeSize);
 }
 
 void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
@@ -322,7 +322,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResource
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
-    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex, ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex, ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
@@ -351,16 +351,17 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResource
 
         if (pViewD3D11)
         {
-            auto* const pSamplerD3D11Impl = ValidatedCast<SamplerD3D11Impl>(pViewD3D11->GetSampler());
+            auto* const pSamplerD3D11Impl = pViewD3D11->GetSampler<SamplerD3D11Impl>();
             if (pSamplerD3D11Impl != nullptr)
             {
 #ifdef DILIGENT_DEVELOPMENT
                 {
                     const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex);
-                    VerifySamplerBinding(SampDesc, BindInfo, pSamplerD3D11Impl, CachedSampler.pSampler, nullptr);
+                    VerifySamplerBinding(SampDesc, BindResourceInfo{SampArrayIndex, pSamplerD3D11Impl}, pSamplerD3D11Impl, CachedSampler.pSampler,
+                                         m_ParentManager.m_pSignature->GetDesc().Name);
                 }
 #endif
-                ResourceCache.SetSampler(SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
+                ResourceCache.SetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex, pSamplerD3D11Impl);
             }
             else
             {
@@ -369,7 +370,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResource
             }
         }
     }
-    ResourceCache.SetTexSRV(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
 void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(const BindResourceInfo& BindInfo)
@@ -379,7 +380,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(const BindResourc
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
     VERIFY(!Attr.IsImmutableSamplerAssigned(), "Sampler must not be assigned to an immutable sampler.");
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
-           ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+           ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
@@ -392,7 +393,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(const BindResourc
     }
 #endif
 
-    ResourceCache.SetSampler(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pSamplerD3D11));
+    ResourceCache.SetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pSamplerD3D11));
 }
 
 void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(const BindResourceInfo& BindInfo)
@@ -401,7 +402,7 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(const BindResourc
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
-           ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+           ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
@@ -416,7 +417,7 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(const BindResourc
         ValidateBufferMode(Desc, BindInfo.ArrayIndex, pViewD3D11.RawPtr());
     }
 #endif
-    ResourceCache.SetBufSRV(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
 
@@ -426,7 +427,7 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(const BindResource
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
-           ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+           ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
@@ -440,7 +441,7 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(const BindResource
                                   m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
-    ResourceCache.SetTexUAV(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
 
@@ -450,7 +451,7 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(const BindResourc
     const auto& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
-           ") is out of range. This error should've been caught by VerifyAndCorrectSetArrayArguments()");
+           ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
@@ -465,7 +466,7 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(const BindResourc
         ValidateBufferMode(Desc, BindInfo.ArrayIndex, pViewD3D11.RawPtr());
     }
 #endif
-    ResourceCache.SetBufUAV(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
+    ResourceCache.SetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex, std::move(pViewD3D11));
 }
 
 void ShaderVariableManagerD3D11::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
@@ -533,7 +534,7 @@ IShaderResourceVariable* ShaderVariableManagerD3D11::GetVariable(const Char* Nam
 
     if (!m_pSignature->IsUsingCombinedSamplers())
     {
-        // Immutable samplers are never created in the resource layout
+        // Immutable samplers are never initialized as variables
         if (auto* pSampler = GetResourceByName<SamplerBindInfo>(Name))
             return pSampler;
     }
@@ -590,8 +591,8 @@ Uint32 ShaderVariableManagerD3D11::GetVariableIndex(const IShaderResourceVariabl
 {
     if (m_ResourceBuffer == nullptr)
     {
-        LOG_ERROR("This shader resource layout does not have resources");
-        return static_cast<Uint32>(-1);
+        LOG_ERROR("This shader variable manager does not have any resources");
+        return ~0u;
     }
 
     ShaderVariableIndexLocator IdxLocator(*this, Variable);
@@ -616,7 +617,7 @@ Uint32 ShaderVariableManagerD3D11::GetVariableIndex(const IShaderResourceVariabl
             return IdxLocator.GetIndex();
     }
 
-    LOG_ERROR("Failed to get variable index. The variable ", &Variable, " does not belong to this shader resource layout");
+    LOG_ERROR("Failed to get variable index. The variable ", &Variable, " does not belong to this shader variable manager");
     return ~0U;
 }
 

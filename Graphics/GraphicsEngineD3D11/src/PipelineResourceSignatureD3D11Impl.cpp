@@ -223,7 +223,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
         auto* const pAttrib = new (m_pResourceAttribs + i) ResourceAttribs //
             {
                 AssignedSamplerInd,
-                SrcImmutableSamplerInd != InvalidImmutableSamplerIndex //
+                SrcImmutableSamplerInd != InvalidImmutableSamplerIndex // For samplers or Tex SRVs combined with samplers
             };
 
         // Do not allocate resource slot for immutable samplers that are also defined as resource
@@ -247,6 +247,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout()
 
             if (Range == D3D11_RESOURCE_RANGE_CBV && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
             {
+                // Set corresponding bits in m_DynamicCBSlotsMask
                 for (auto ShaderStages = ResDesc.ShaderStages; ShaderStages != SHADER_TYPE_UNKNOWN;)
                 {
                     const auto ShaderInd = ExtractFirstShaderStageIndex(ShaderStages);
@@ -380,7 +381,7 @@ void PipelineResourceSignatureD3D11Impl::InitSRBResourceCache(ShaderResourceCach
 
         SamplerD3D11Impl* pSampler = ImtblSampAttr.pSampler.RawPtr<SamplerD3D11Impl>();
         for (Uint32 ArrInd = 0; ArrInd < ImtblSampAttr.ArraySize; ++ArrInd)
-            ResourceCache.SetSampler(ImtblSampAttr.BindPoints + ArrInd, pSampler);
+            ResourceCache.SetResource<D3D11_RESOURCE_RANGE_SAMPLER>(ImtblSampAttr.BindPoints + ArrInd, pSampler);
     }
 }
 

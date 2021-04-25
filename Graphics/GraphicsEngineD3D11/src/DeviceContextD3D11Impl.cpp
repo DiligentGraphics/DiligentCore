@@ -141,7 +141,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     if (m_BindInfo.ActiveStages != ActiveStages)
     {
         m_BindInfo.ActiveStages = ActiveStages;
-        // Reset all SRBs if the new pipeline have different shader stages.
+        // Reset all SRBs if the new pipeline has different shader stages.
         m_BindInfo.MakeAllStale();
     }
 }
@@ -340,7 +340,10 @@ void DeviceContextD3D11Impl::BindDynamicCBs(const ShaderResourceCacheD3D11&    R
     {
         const auto ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
         if (ResourceCache.GetDynamicCBOffsetsMask(ShaderInd) == 0)
+        {
+            // Skip stages that don't have any constant buffers with dynamic offsets
             continue;
+        }
 
         auto* d3d11CBs       = m_CommittedRes.d3d11CBs[ShaderInd];
         auto* FirstConstants = m_CommittedRes.CBFirstConstants[ShaderInd];
@@ -385,10 +388,18 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
         auto* pResourceCache = m_BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Shader resource cache at index ", sign, " is null.");
         if (m_BindInfo.StaleSRBMask & SignBit)
+        {
+            // Bind all cache resources
             BindCacheResources(*pResourceCache, BaseBindings, PsUavBindMode);
+        }
         else
         {
-            VERIFY_EXPR((m_BindInfo.DynamicSRBMask & SignBit) != 0 && pResourceCache->HasDynamicResources());
+            // Bind constant buffers with dynamic offsets. In Direct3D11 only these buffers are counted as dynamic.
+            VERIFY((m_BindInfo.DynamicSRBMask & SignBit) != 0,
+                   "When bit in StaleSRBMask is not set, the same bit in DynamicSRBMask must be set. Check GetCommitMask().");
+            DEV_CHECK_ERR(pResourceCache->HasDynamicResources(),
+                          "Bit in DynamicSRBMask is set, but the cache does not contain dynamic resources. This may indicate that resources "
+                          "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
             if (pResourceCache->GetUAVCount(PSInd) > 0)
             {
                 if (PsUavBindMode != PixelShaderUAVBindMode::Bind)
@@ -799,11 +810,7 @@ void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const float*
 
 void DeviceContextD3D11Impl::Flush()
 {
-    if (m_pActiveRenderPass != nullptr)
-    {
-        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
-    }
-
+    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Flushing device context inside an active render pass.");
     m_pd3d11DeviceContext->Flush();
 }
 

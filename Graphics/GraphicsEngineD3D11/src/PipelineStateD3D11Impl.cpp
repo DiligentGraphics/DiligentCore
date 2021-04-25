@@ -48,8 +48,6 @@ __forceinline SHADER_TYPE GetShaderStageType(const ShaderD3D11Impl* pShader)
 
 RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::CreateDefaultResourceSignature(const std::vector<ShaderD3D11Impl*>& Shaders)
 {
-    const auto& LayoutDesc = m_Desc.ResourceLayout;
-
     std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
     std::vector<PipelineResourceDesc> Resources;
@@ -69,7 +67,7 @@ RefCntAutoPtr<PipelineResourceSignatureD3D11Impl> PipelineStateD3D11Impl::Create
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
 
-                const auto VarDesc = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, ShaderType, SamplerSuffix);
+                const auto VarDesc = FindPipelineResourceLayoutVariable(m_Desc.ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
                 // Note that Attribs.Name != VarDesc.Name for combined samplers
                 const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
                 if (it_assigned.second)
@@ -418,7 +416,7 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(const ShaderResourceCacheArra
             continue; // Skip null and empty signatures
 
         DEV_CHECK_ERR(GetBaseBindings(sign) == BaseBindings[sign],
-                      "Bound resources has incorrect base binding indices, this may indicate a bug in resource signature compatibility comparison.");
+                      "Bound resources use incorrect base binding indices. This may indicate a bug in resource signature compatibility comparison.");
     }
 
     auto attrib_it = m_ResourceAttibutions.begin();

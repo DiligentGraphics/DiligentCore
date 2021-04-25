@@ -489,11 +489,10 @@ void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
 VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDesc& ViewDesc)
 {
     VulkanUtilities::BufferViewWrapper BuffView;
-    ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc);
+    ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, GetDevice()->GetDeviceCaps().Limits.StructuredBufferOffsetAlignment);
     if (m_Desc.Mode == BUFFER_MODE_FORMATTED)
     {
-        VkBufferViewCreateInfo ViewCI = {};
-
+        VkBufferViewCreateInfo ViewCI{};
         ViewCI.sType  = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
         ViewCI.pNext  = nullptr;
         ViewCI.flags  = 0; // reserved for future use
@@ -503,7 +502,7 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
         ViewCI.offset = ViewDesc.ByteOffset; // offset in bytes from the base address of the buffer
         ViewCI.range  = ViewDesc.ByteWidth;  // size in bytes of the buffer view
 
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
         BuffView                  = LogicalDevice.CreateBufferView(ViewCI, ViewDesc.Name);
     }
     else if (m_Desc.Mode == BUFFER_MODE_STRUCTURED ||

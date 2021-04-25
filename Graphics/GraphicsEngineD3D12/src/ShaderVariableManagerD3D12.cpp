@@ -288,7 +288,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureD3D12Impl&
     m_DstRes        {const_cast<const ShaderResourceCacheD3D12&>(ResourceCache).GetRootTable(m_RootIndex).GetResource(m_OffsetFromTableStart)}
 // clang-format on
 {
-    VERIFY(ArrayIndex < m_ResDesc.ArraySize, "Array index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(ArrayIndex < m_ResDesc.ArraySize, "Array index is out of range, but it should've been corrected by ShaderVariableBase::SetArray()");
 
     if (m_CacheType != ResourceCacheContentType::Signature && !m_Attribs.IsRootView())
     {

@@ -352,24 +352,24 @@ void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
 
 void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor) const
 {
-    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc);
+    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc, GetDevice()->GetDeviceCaps().Limits.StructuredBufferOffsetAlignment);
 
     D3D12_UNORDERED_ACCESS_VIEW_DESC D3D12_UAVDesc;
     BufferViewDesc_to_D3D12_UAV_DESC(m_Desc, UAVDesc, D3D12_UAVDesc);
 
-    auto* pDeviceD3D12 = static_cast<RenderDeviceD3D12Impl*>(GetDevice())->GetD3D12Device();
-    pDeviceD3D12->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVDescriptor);
+    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    pd3d12Device->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVDescriptor);
 }
 
 void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor) const
 {
-    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc);
+    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc, GetDevice()->GetDeviceCaps().Limits.StructuredBufferOffsetAlignment);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
     BufferViewDesc_to_D3D12_SRV_DESC(m_Desc, SRVDesc, D3D12_SRVDesc);
 
-    auto* pDeviceD3D12 = static_cast<RenderDeviceD3D12Impl*>(GetDevice())->GetD3D12Device();
-    pDeviceD3D12->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVDescriptor);
+    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    pd3d12Device->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVDescriptor);
 }
 
 void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor,

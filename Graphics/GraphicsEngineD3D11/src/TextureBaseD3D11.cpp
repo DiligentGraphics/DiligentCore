@@ -114,7 +114,7 @@ void TextureBaseD3D11::CreateViewInternal(const struct TextureViewDesc& ViewDesc
             default: UNEXPECTED("Unknown view type"); break;
         }
 
-        auto* pDeviceD3D11Impl = ValidatedCast<RenderDeviceD3D11Impl>(GetDevice());
+        auto* pDeviceD3D11Impl = GetDevice();
         auto& TexViewAllocator = pDeviceD3D11Impl->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 

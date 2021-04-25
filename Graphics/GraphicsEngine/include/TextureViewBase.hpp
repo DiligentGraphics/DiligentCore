@@ -110,15 +110,15 @@ public:
     }
 
     template <typename TextureType>
-    TextureType* GetTexture()
+    TextureType* GetTexture() const
     {
         return ValidatedCast<TextureType>(m_pTexture);
     }
 
-    template <typename TextureType>
-    TextureType* GetTexture() const
+    template <typename SamplerType>
+    SamplerType* GetSampler() const
     {
-        return ValidatedCast<TextureType>(m_pTexture);
+        return m_pSampler.RawPtr<SamplerType>();
     }
 
 protected:

@@ -669,7 +669,11 @@ void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask)
             pResourceCache->BindResources(GetContextState(), BaseBindings, m_BoundWritableTextures, m_BoundWritableBuffers);
         else
         {
-            VERIFY_EXPR((m_BindInfo.DynamicSRBMask & SignBit) != 0 && pResourceCache->HasDynamicResources());
+            VERIFY((m_BindInfo.DynamicSRBMask & SignBit) != 0,
+                   "When bit in StaleSRBMask is not set, the same bit in DynamicSRBMask must be set. Check GetCommitMask().");
+            DEV_CHECK_ERR(pResourceCache->HasDynamicResources(),
+                          "Bit in DynamicSRBMask is set, but the cache does not contain dynamic resources. This may indicate that resources "
+                          "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
             pResourceCache->BindDynamicBuffers(GetContextState(), BaseBindings);
         }
     }

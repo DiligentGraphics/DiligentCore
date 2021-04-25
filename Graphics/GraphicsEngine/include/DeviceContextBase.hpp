@@ -303,15 +303,16 @@ protected:
         void Set(Uint32 Index, ShaderResourceBindingImplType* pSRB)
         {
             VERIFY_EXPR(Index < MAX_RESOURCE_SIGNATURES);
-            ResourceCaches[Index] = pSRB != nullptr ? &pSRB->GetResourceCache() : nullptr;
+            auto* pResourceCache  = pSRB != nullptr ? &pSRB->GetResourceCache() : nullptr;
+            ResourceCaches[Index] = pResourceCache;
 
             const auto SRBBit = static_cast<SRBMaskType>(1u << Index);
-            if (ResourceCaches[Index] != nullptr)
+            if (pResourceCache != nullptr)
                 StaleSRBMask |= SRBBit;
             else
                 StaleSRBMask &= ~SRBBit;
 
-            if (ResourceCaches[Index] != nullptr && ResourceCaches[Index]->HasDynamicResources())
+            if (pResourceCache != nullptr && pResourceCache->HasDynamicResources())
                 DynamicSRBMask |= SRBBit;
             else
                 DynamicSRBMask &= ~SRBBit;

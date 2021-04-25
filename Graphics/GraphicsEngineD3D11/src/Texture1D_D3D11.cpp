@@ -49,12 +49,11 @@ Texture1D_D3D11::Texture1D_D3D11(IReferenceCounters*        pRefCounters,
     }
 // clang-format on
 {
-    auto  D3D11TexFormat      = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
-    auto  D3D11BindFlags      = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
-    auto  D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
-    auto  D3D11Usage          = UsageToD3D11Usage(m_Desc.Usage);
-    UINT  MiscFlags           = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
-    auto* pDeviceD3D11        = pRenderDeviceD3D11->GetD3D11Device();
+    const auto D3D11TexFormat      = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
+    const auto D3D11BindFlags      = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
+    const auto D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
+    const auto D3D11Usage          = UsageToD3D11Usage(m_Desc.Usage);
+    const auto MiscFlags           = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
 
     // clang-format off
     D3D11_TEXTURE1D_DESC Tex1DDesc = 
@@ -73,10 +72,12 @@ Texture1D_D3D11::Texture1D_D3D11(IReferenceCounters*        pRefCounters,
     std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>> D3D11InitData(STD_ALLOCATOR_RAW_MEM(D3D11_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D11_SUBRESOURCE_DATA>"));
     PrepareD3D11InitData(pInitData, Tex1DDesc.ArraySize * Tex1DDesc.MipLevels, D3D11InitData);
 
-    ID3D11Texture1D* ptex1D = nullptr;
-    HRESULT          hr     = pDeviceD3D11->CreateTexture1D(&Tex1DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex1D);
-    m_pd3d11Texture.Attach(ptex1D);
+    auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
+
+    CComPtr<ID3D11Texture1D> ptex1D;
+    HRESULT                  hr = pDeviceD3D11->CreateTexture1D(&Tex1DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex1D);
     CHECK_D3D_RESULT_THROW(hr, "Failed to create the Direct3D11 Texture1D");
+    m_pd3d11Texture = std::move(ptex1D);
 
     if (*m_Desc.Name != 0)
     {
@@ -161,8 +162,8 @@ void Texture1D_D3D11::CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceVi
     D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
     TextureViewDesc_to_D3D11_SRV_DESC(SRVDesc, D3D11_SRVDesc, m_Desc.SampleCount);
 
-    auto* pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
-    CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateShaderResourceView(m_pd3d11Texture, &D3D11_SRVDesc, ppD3D11SRV),
+    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    CHECK_D3D_RESULT_THROW(pd3d11Device->CreateShaderResourceView(m_pd3d11Texture, &D3D11_SRVDesc, ppD3D11SRV),
                            "Failed to create D3D11 shader resource view");
 }
 
@@ -182,8 +183,8 @@ void Texture1D_D3D11::CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView
     D3D11_RENDER_TARGET_VIEW_DESC D3D11_RTVDesc;
     TextureViewDesc_to_D3D11_RTV_DESC(RTVDesc, D3D11_RTVDesc, m_Desc.SampleCount);
 
-    auto* pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
-    CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateRenderTargetView(m_pd3d11Texture, &D3D11_RTVDesc, ppD3D11RTV),
+    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    CHECK_D3D_RESULT_THROW(pd3d11Device->CreateRenderTargetView(m_pd3d11Texture, &D3D11_RTVDesc, ppD3D11RTV),
                            "Failed to create D3D11 render target view");
 }
 
@@ -203,8 +204,8 @@ void Texture1D_D3D11::CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView
     D3D11_DEPTH_STENCIL_VIEW_DESC D3D11_DSVDesc;
     TextureViewDesc_to_D3D11_DSV_DESC(DSVDesc, D3D11_DSVDesc, m_Desc.SampleCount);
 
-    auto* pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
-    CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateDepthStencilView(m_pd3d11Texture, &D3D11_DSVDesc, ppD3D11DSV),
+    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    CHECK_D3D_RESULT_THROW(pd3d11Device->CreateDepthStencilView(m_pd3d11Texture, &D3D11_DSVDesc, ppD3D11DSV),
                            "Failed to create D3D11 depth stencil view");
 }
 
@@ -224,8 +225,8 @@ void Texture1D_D3D11::CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessV
     D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
     TextureViewDesc_to_D3D11_UAV_DESC(UAVDesc, D3D11_UAVDesc);
 
-    auto* pDeviceD3D11 = static_cast<RenderDeviceD3D11Impl*>(GetDevice())->GetD3D11Device();
-    CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateUnorderedAccessView(m_pd3d11Texture, &D3D11_UAVDesc, ppD3D11UAV),
+    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    CHECK_D3D_RESULT_THROW(pd3d11Device->CreateUnorderedAccessView(m_pd3d11Texture, &D3D11_UAVDesc, ppD3D11UAV),
                            "Failed to create D3D11 unordered access view");
 }
 

@@ -105,7 +105,7 @@ public:
             pTexture = pTexView ? pTexView->GetTexture<TextureBaseGL>() : nullptr;
             if (pTexView && SetSampler)
             {
-                pSampler = ValidatedCast<SamplerGLImpl>(pTexView->GetSampler());
+                pSampler = pTexView->GetSampler<SamplerGLImpl>();
             }
 
             pView = std::move(pTexView);
