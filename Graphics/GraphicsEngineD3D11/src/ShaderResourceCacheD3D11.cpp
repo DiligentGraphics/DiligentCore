@@ -60,6 +60,34 @@ size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResource
     return MemSize;
 }
 
+template <D3D11_RESOURCE_RANGE RangeType>
+void ShaderResourceCacheD3D11::ConstructResources(Uint32 ShaderInd)
+{
+    using ResourceType = typename CachedResourceTraits<RangeType>::CachedResourceType;
+
+    const auto ResCount = GetResourceCount<RangeType>(ShaderInd);
+    if (ResCount > 0)
+    {
+        const auto Arrays = GetResourceArrays<RangeType>(ShaderInd);
+        for (Uint32 r = 0; r < ResCount; ++r)
+            new (Arrays.first + r) ResourceType{};
+    }
+}
+
+template <D3D11_RESOURCE_RANGE RangeType>
+void ShaderResourceCacheD3D11::DestructResources(Uint32 ShaderInd)
+{
+    using ResourceType = typename CachedResourceTraits<RangeType>::CachedResourceType;
+
+    const auto ResCount = GetResourceCount<RangeType>(ShaderInd);
+    if (ResCount > 0)
+    {
+        auto Arrays = GetResourceArrays<RangeType>(ShaderInd);
+        for (Uint32 r = 0; r < ResCount; ++r)
+            Arrays.first[r].~ResourceType();
+    }
+}
+
 void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&        ResCount,
                                           IMemoryAllocator&                         MemAllocator,
                                           const std::array<Uint16, NumShaderTypes>* pDynamicCBSlotsMask)
@@ -114,37 +142,10 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
     // Explicitly construct all objects
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto CBCount = GetCBCount(ShaderInd);
-        if (CBCount != 0)
-        {
-            auto CBArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
-            for (Uint32 cb = 0; cb < CBCount; ++cb)
-                new (CBArrays.first + cb) CachedCB{};
-        }
-
-        const auto SRVCount = GetSRVCount(ShaderInd);
-        if (SRVCount != 0)
-        {
-            auto SRVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
-            for (Uint32 srv = 0; srv < SRVCount; ++srv)
-                new (SRVArrays.first + srv) CachedResource{};
-        }
-
-        const auto SamplerCount = GetSamplerCount(ShaderInd);
-        if (SamplerCount != 0)
-        {
-            auto SamArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd);
-            for (Uint32 sam = 0; sam < SamplerCount; ++sam)
-                new (SamArrays.first + sam) CachedSampler{};
-        }
-
-        const auto UAVCount = GetUAVCount(ShaderInd);
-        if (UAVCount != 0)
-        {
-            auto UAVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
-            for (Uint32 uav = 0; uav < UAVCount; ++uav)
-                new (UAVArrays.first + uav) CachedResource{};
-        }
+        ConstructResources<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
+        ConstructResources<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
+        ConstructResources<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd);
+        ConstructResources<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
     }
 
     m_IsInitialized = true;
@@ -157,37 +158,10 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
         // Explicitly destroy all objects
         for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
         {
-            const auto CBCount = GetCBCount(ShaderInd);
-            if (CBCount != 0)
-            {
-                auto CBArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
-                for (size_t cb = 0; cb < CBCount; ++cb)
-                    CBArrays.first[cb].~CachedCB();
-            }
-
-            const auto SRVCount = GetSRVCount(ShaderInd);
-            if (SRVCount != 0)
-            {
-                auto SRVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
-                for (size_t srv = 0; srv < SRVCount; ++srv)
-                    SRVArrays.first[srv].~CachedResource();
-            }
-
-            const auto SamplerCount = GetSamplerCount(ShaderInd);
-            if (SamplerCount != 0)
-            {
-                auto SamArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd);
-                for (size_t sam = 0; sam < SamplerCount; ++sam)
-                    SamArrays.first[sam].~CachedSampler();
-            }
-
-            const auto UAVCount = GetUAVCount(ShaderInd);
-            if (UAVCount != 0)
-            {
-                auto UAVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
-                for (size_t uav = 0; uav < UAVCount; ++uav)
-                    UAVArrays.first[uav].~CachedResource();
-            }
+            DestructResources<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
+            DestructResources<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
+            DestructResources<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd);
+            DestructResources<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
         }
         m_Offsets       = {};
         m_IsInitialized = false;
@@ -363,6 +337,5 @@ void ShaderResourceCacheD3D11::DbgVerifyDynamicBufferMasks() const
     }
 }
 #endif
-
 
 } // namespace Diligent

@@ -304,7 +304,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureVkImpl& Si
     m_DstRes            {m_CachedSet.GetResource(m_DstResCacheOffset)}
 // clang-format on
 {
-    VERIFY(ArrayIndex < m_ResDesc.ArraySize, "Array index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(ArrayIndex < m_ResDesc.ArraySize, "Array index is out of range, but it should've been corrected by ShaderVariableBase::SetArray()");
     VERIFY(m_DstRes.Type == m_Attribs.GetDescriptorType(), "Inconsistent types");
 
 #ifdef DILIGENT_DEBUG

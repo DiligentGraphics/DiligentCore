@@ -336,12 +336,16 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
         // the bit should not be set in CommitSRBMask.
         if (auto DynamicRootBuffersMask = pResourceCache->GetDynamicRootBuffersMask())
         {
-            VERIFY((RootInfo.DynamicSRBMask & SignBit) != 0, "There are dynamic root buffers in the cache, but the bit in DynamicSRBMask is not set");
+            DEV_CHECK_ERR((RootInfo.DynamicSRBMask & SignBit) != 0,
+                          "There are dynamic root buffers in the cache, but the bit in DynamicSRBMask is not set. This may indicate that resources "
+                          "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
             pSignature->CommitRootViews(CommitAttribs, DynamicRootBuffersMask);
         }
         else
         {
-            VERIFY((RootInfo.DynamicSRBMask & SignBit) == 0, "There are no dynamic root buffers in the cache, but the bit in DynamicSRBMask is set");
+            DEV_CHECK_ERR((RootInfo.DynamicSRBMask & SignBit) == 0,
+                          "There are no dynamic root buffers in the cache, but the bit in DynamicSRBMask is set. This may indicate that resources "
+                          "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
         }
     }
 

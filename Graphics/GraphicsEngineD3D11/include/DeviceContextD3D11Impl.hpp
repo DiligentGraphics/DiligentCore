@@ -395,17 +395,19 @@ private:
         }
     };
 
-    enum PixelShaderUAVBindMode
+    enum class PixelShaderUAVBindMode
     {
         Clear = 0,
         Keep,
         Bind
     };
 
+    // Binds all shader resource cache resources
     void BindCacheResources(const ShaderResourceCacheD3D11&    ResourceCache,
                             const D3D11ShaderResourceCounters& BaseBindings,
                             PixelShaderUAVBindMode&            PsUavBindMode);
 
+    // Binds constant buffers with dynamic offsets only
     void BindDynamicCBs(const ShaderResourceCacheD3D11&    ResourceCache,
                         const D3D11ShaderResourceCounters& BaseBindings);
 

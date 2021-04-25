@@ -126,7 +126,7 @@ void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& 
 
     if (TotalMemorySize)
     {
-        m_ResourceBuffer = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader resource layout resources", TotalMemorySize);
+        m_ResourceBuffer = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variable manager resources", TotalMemorySize);
     }
 
     // clang-format off
@@ -209,7 +209,7 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(const BindResour
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
-    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by ShaderVariableBase::SetArray()");
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
 
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
@@ -248,7 +248,7 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(const BindResourceIn
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
-    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by ShaderVariableBase::SetArray()");
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     if (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
@@ -312,7 +312,7 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(const BindResourceInfo
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
-    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by ShaderVariableBase::SetArray()");
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     if (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV)
@@ -366,7 +366,7 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(const BindReso
     const auto& Desc = GetDesc();
     const auto& Attr = GetAttribs();
 
-    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by VerifyAndCorrectSetArrayArguments()");
+    VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Index is out of range, but it should've been corrected by ShaderVariableBase::SetArray()");
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
@@ -564,7 +564,7 @@ Uint32 ShaderVariableManagerGL::GetVariableIndex(const IShaderResourceVariable& 
 {
     if (!m_ResourceBuffer)
     {
-        LOG_ERROR("This shader resource layout does not have resources");
+        LOG_ERROR("This shader variable manager does not have any resources");
         return ~0u;
     }
 
@@ -582,7 +582,7 @@ Uint32 ShaderVariableManagerGL::GetVariableIndex(const IShaderResourceVariable& 
     if (IdxLocator.TryResource<StorageBufferBindInfo>(m_VariableEndOffset, GetNumStorageBuffers()))
         return IdxLocator.GetIndex();
 
-    LOG_ERROR("Failed to get variable index. The variable ", &Var, " does not belong to this shader resource layout");
+    LOG_ERROR("Failed to get variable index. The variable ", &Var, " does not belong to this shader variable manager");
     return ~0u;
 }
 

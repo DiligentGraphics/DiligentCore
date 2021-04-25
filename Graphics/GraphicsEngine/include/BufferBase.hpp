@@ -49,7 +49,9 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps) no
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false);
 
 /// Validates and corrects buffer view description; throws an exception in case of an error.
-void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc, BufferViewDesc& ViewDesc) noexcept(false);
+void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc,
+                                      BufferViewDesc&   ViewDesc,
+                                      Uint32            StructuredBufferOffsetAlignment) noexcept(false);
 
 
 /// Template class implementing base functionality of the buffer object

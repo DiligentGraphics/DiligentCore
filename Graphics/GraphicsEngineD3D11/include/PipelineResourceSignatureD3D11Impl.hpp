@@ -114,7 +114,7 @@ private:
 
     static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
 
-    // Indicates which constant buffer slots may contain buffers with dynamic offsets.
+    // Indicates which constant buffer slots are allowed to contain buffers with dynamic offsets.
     std::array<Uint16, NumShaderTypes> m_DynamicCBSlotsMask{};
     static_assert(sizeof(m_DynamicCBSlotsMask[0]) * 8 >= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, "Not enough bits for all dynamic buffer slots");
 

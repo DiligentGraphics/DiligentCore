@@ -142,7 +142,9 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
 #undef VERIFY_BUFFER
 #undef LOG_BUFFER_ERROR_AND_THROW
 
-void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc, BufferViewDesc& ViewDesc) noexcept(false)
+void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc,
+                                      BufferViewDesc&   ViewDesc,
+                                      Uint32            StructuredBufferOffsetAlignment) noexcept(false)
 {
     if (ViewDesc.ByteWidth == 0)
     {
@@ -178,13 +180,31 @@ void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc, BufferViewDesc
             if (BuffDesc.Mode == BUFFER_MODE_RAW && BuffDesc.ElementByteStride == 0)
                 LOG_ERROR_AND_THROW("To enable formatted views of a raw buffer, element byte must be specified during buffer initialization");
             if (ViewElementStride != BuffDesc.ElementByteStride)
-                LOG_ERROR_AND_THROW("Buffer element byte stride (", BuffDesc.ElementByteStride, ") is not consistent with the size (", ViewElementStride, ") defined by the format of the view (", GetBufferFormatString(ViewDesc.Format), ')');
+            {
+                LOG_ERROR_AND_THROW("Buffer element byte stride (", BuffDesc.ElementByteStride,
+                                    ") is not consistent with the size (", ViewElementStride,
+                                    ") defined by the format of the view (", GetBufferFormatString(ViewDesc.Format), ')');
+            }
         }
 
         if (BuffDesc.Mode == BUFFER_MODE_RAW && ViewDesc.Format.ValueType == VT_UNDEFINED)
         {
             if ((ViewDesc.ByteOffset % 16) != 0)
-                LOG_ERROR_AND_THROW("When creating a RAW view, the offset of the first element from the start of the buffer (", ViewDesc.ByteOffset, ") must be a multiple of 16 bytes");
+            {
+                LOG_ERROR_AND_THROW("When creating a RAW view, the offset of the first element from the start of the buffer (",
+                                    ViewDesc.ByteOffset, ") must be a multiple of 16 bytes");
+            }
+        }
+
+        if (BuffDesc.Mode == BUFFER_MODE_STRUCTURED)
+        {
+            VERIFY_EXPR(StructuredBufferOffsetAlignment != 0);
+            if ((ViewDesc.ByteOffset % StructuredBufferOffsetAlignment) != 0)
+            {
+                LOG_ERROR_AND_THROW("Structured buffer view byte offset (", ViewDesc.ByteOffset,
+                                    ") is not a multiple of the required structured buffer offset alignment (",
+                                    StructuredBufferOffsetAlignment, ").");
+            }
         }
     }
 }

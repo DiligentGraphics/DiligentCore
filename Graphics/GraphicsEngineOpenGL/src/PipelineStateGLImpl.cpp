@@ -482,7 +482,7 @@ void PipelineStateGLImpl::DvpVerifySRBResources(const ShaderResourceCacheArrayTy
             continue;
 
         DEV_CHECK_ERR(GetBaseBindings(sign) == BaseBindings[sign],
-                      "Bound resources has incorrect base binding indices, this may indicate a bug in resource signature compatibility comparison.");
+                      "Bound resources use incorrect base binding indices. This may indicate a bug in resource signature compatibility comparison.");
     }
 
     using AttribIter = std::vector<ResourceAttribution>::const_iterator;

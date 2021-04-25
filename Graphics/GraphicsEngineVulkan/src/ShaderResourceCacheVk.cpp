@@ -731,7 +731,7 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetImageDescriptorWriteIn
     {
         // Immutable samplers are permanently bound into the set layout; later binding a sampler
         // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
-        const auto* pSamplerVk = ValidatedCast<const SamplerVkImpl>(pTexViewVk->GetSampler());
+        const auto* pSamplerVk = pTexViewVk->GetSampler<const SamplerVkImpl>();
         if (pSamplerVk != nullptr)
         {
             // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
