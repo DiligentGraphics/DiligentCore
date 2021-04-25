@@ -369,6 +369,8 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
     // Make sure dynamic offset is reset
     DstRes.BufferDynamicOffset = 0;
 
+    UpdateRevision();
+
     return DstRes;
 }
 

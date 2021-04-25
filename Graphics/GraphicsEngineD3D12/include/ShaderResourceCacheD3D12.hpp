@@ -117,7 +117,7 @@ namespace Diligent
 class CommandContext;
 class RenderDeviceD3D12Impl;
 
-class ShaderResourceCacheD3D12
+class ShaderResourceCacheD3D12 : public ShaderResourceCacheBase
 {
 public:
     explicit ShaderResourceCacheD3D12(ResourceCacheContentType ContentType) noexcept :

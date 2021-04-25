@@ -720,6 +720,10 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
         BindProgramResources(BindSRBMask);
     }
 
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
+
     const auto  CurrNativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
     const auto& PipelineDesc        = m_pPipelineState->GetGraphicsPipelineDesc();
     if (!m_ContextState.IsValidVAOBound())
@@ -763,10 +767,6 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     {
         GlTopology = PrimitiveTopologyToGLTopology(Topology);
     }
-
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
-#endif
 }
 
 void DeviceContextGLImpl::PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation, GLenum& GLIndexType, Uint32& FirstIndexByteOffset)
@@ -958,10 +958,6 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
     DvpVerifyDispatchArguments(Attribs);
 
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
-#endif
-
 #if GL_ARB_compute_shader
     // The program might have changed since the last SetPipelineState call if a shader was
     // created after the call (ShaderResourcesGL needs to bind a program to load uniforms).
@@ -970,6 +966,11 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
     {
         BindProgramResources(BindSRBMask);
     }
+
+#    ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#    endif
+
     glDispatchCompute(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
     DEV_CHECK_GL_ERROR("glDispatchCompute() failed");
 
@@ -983,10 +984,6 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
 {
     DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer);
 
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
-#endif
-
 #if GL_ARB_compute_shader
     // The program might have changed since the last SetPipelineState call if a shader was
     // created after the call (ShaderResourcesGL needs to bind a program to load uniforms).
@@ -995,6 +992,10 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
     {
         BindProgramResources(BindSRBMask);
     }
+
+#    ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#    endif
 
     auto* pBufferGL = ValidatedCast<BufferGLImpl>(pAttribsBuffer);
     pBufferGL->BufferMemoryBarrier(

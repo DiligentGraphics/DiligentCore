@@ -69,7 +69,7 @@ namespace Diligent
 class DeviceContextVkImpl;
 
 // sizeof(ShaderResourceCacheVk) == 24 (x64, msvc, Release)
-class ShaderResourceCacheVk
+class ShaderResourceCacheVk : public ShaderResourceCacheBase
 {
 public:
     explicit ShaderResourceCacheVk(ResourceCacheContentType ContentType) noexcept :

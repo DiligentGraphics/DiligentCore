@@ -43,6 +43,8 @@
 #include "ValidatedCast.hpp"
 #include "GraphicsAccessories.hpp"
 #include "TextureBase.hpp"
+#include "BasicMath.hpp"
+#include "PlatformMisc.hpp"
 
 namespace Diligent
 {
@@ -282,6 +284,9 @@ protected:
         // SRB array for each resource signature, corresponding to ResourceCaches
         std::array<RefCntWeakPtr<ShaderResourceBindingImplType>, MAX_RESOURCE_SIGNATURES> SRBs;
 
+        // Shader resource cache version for every SRB at the time when the SRB was set
+        std::array<Uint32, MAX_RESOURCE_SIGNATURES> CacheRevisions;
+
         // Indicates if the resources have been validated since they were committed
         bool ResourcesValidated = false;
 #endif
@@ -321,6 +326,7 @@ protected:
             SRBs[Index] = pSRB;
             if (pSRB != nullptr)
                 ResourcesValidated = false;
+            CacheRevisions[Index] = pResourceCache != nullptr ? pResourceCache->DvpGetRevision() : 0;
 #endif
         }
 
@@ -332,6 +338,10 @@ protected:
         // Returns the mask of SRBs whose resources need to be committed
         SRBMaskType GetCommitMask(bool DynamicResourcesIntact = false) const
         {
+#ifdef DILIGENT_DEVELOPMENT
+            DvpVerifyCacheRevisions();
+#endif
+
             // Stale SRBs always have to be committed
             auto CommitMask = StaleSRBMask;
             // If dynamic resources are not intact, SRBs with dynamic resources
@@ -342,6 +352,30 @@ protected:
             CommitMask &= ActiveSRBMask;
             return CommitMask;
         }
+
+#ifdef DILIGENT_DEVELOPMENT
+        void DvpVerifyCacheRevisions() const
+        {
+            for (Uint32 ActiveSRBs = ActiveSRBMask; ActiveSRBs != 0;)
+            {
+                const auto  SRBBit = ExtractLSB(ActiveSRBs);
+                const auto  Idx    = PlatformMisc::GetLSB(SRBBit);
+                const auto* pCache = ResourceCaches[Idx];
+                if (pCache != nullptr)
+                {
+                    DEV_CHECK_ERR(CacheRevisions[Idx] == pCache->DvpGetRevision(),
+                                  "Reivsion of the shader resource cache at index ", Idx,
+                                  " does not match the revision recorded when the SRB was committed. "
+                                  "This indicates that resources have been changed since that time, but "
+                                  "the SRB has not been committed with CommitShaderResources(). This usage is invalid.");
+                }
+                else
+                {
+                    // This error will be handled by DvpValidateCommittedShaderResources.
+                }
+            }
+        }
+#endif
     };
 
     /// Caches the render target and depth stencil views. Returns true if any view is different

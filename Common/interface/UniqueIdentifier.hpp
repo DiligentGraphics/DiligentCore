@@ -27,8 +27,9 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "../../Primitives/interface/BasicTypes.h"
-#include "../../Platforms/interface/Atomics.hpp"
 
 namespace Diligent
 {
@@ -65,8 +66,8 @@ public:
     {
         if (m_ID == 0)
         {
-            static Atomics::AtomicLong GlobalCounter; // = 0 causes gcc error
-            m_ID = static_cast<UniqueIdentifier>(Atomics::AtomicIncrement(GlobalCounter));
+            static std::atomic_int32_t GlobalCounter{0};
+            m_ID = GlobalCounter.fetch_add(1) + 1;
         }
         return m_ID;
     }
