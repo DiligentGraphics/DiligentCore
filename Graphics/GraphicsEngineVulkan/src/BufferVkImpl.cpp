@@ -78,11 +78,11 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     const auto& DeviceLimits   = PhysicalDevice.GetProperties().limits;
     m_DynamicOffsetAlignment   = std::max(Uint32{4}, static_cast<Uint32>(DeviceLimits.optimalBufferCopyOffsetAlignment));
 
-    VkBufferCreateInfo VkBuffCI = {};
-    VkBuffCI.sType              = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    VkBuffCI.pNext              = nullptr;
-    VkBuffCI.flags              = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
-    VkBuffCI.size               = m_Desc.uiSizeInBytes;
+    VkBufferCreateInfo VkBuffCI{};
+    VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    VkBuffCI.pNext = nullptr;
+    VkBuffCI.flags = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
+    VkBuffCI.size  = m_Desc.uiSizeInBytes;
     VkBuffCI.usage =
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | // The buffer can be used as the source of a transfer command
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;  // The buffer can be used as the destination of a transfer command
@@ -378,10 +378,10 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
                 // Copy commands MUST be recorded outside of a render pass instance. This is OK here
                 // as copy will be the only command in the cmd buffer
-                VkBufferCopy BuffCopy = {};
-                BuffCopy.srcOffset    = 0;
-                BuffCopy.dstOffset    = 0;
-                BuffCopy.size         = VkBuffCI.size;
+                VkBufferCopy BuffCopy{};
+                BuffCopy.srcOffset = 0;
+                BuffCopy.dstOffset = 0;
+                BuffCopy.size      = VkBuffCI.size;
                 vkCmdCopyBuffer(vkCmdBuff, StagingBuffer, m_VulkanBuffer, 1, &BuffCopy);
 
                 Uint32 QueueIndex = 0;

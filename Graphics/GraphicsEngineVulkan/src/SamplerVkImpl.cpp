@@ -46,8 +46,7 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
 {
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
-    VkSamplerCreateInfo SamplerCI = {};
-
+    VkSamplerCreateInfo SamplerCI{};
     SamplerCI.sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     SamplerCI.pNext            = nullptr;
     SamplerCI.flags            = 0; // reserved for future use

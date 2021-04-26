@@ -394,7 +394,7 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
         }
         else
         {
-            // Bind constant buffers with dynamic offsets. In Direct3D11 only these buffers are counted as dynamic.
+            // Bind constant buffers with dynamic offsets. In Direct3D11 only those buffers are counted as dynamic.
             VERIFY((m_BindInfo.DynamicSRBMask & SignBit) != 0,
                    "When bit in StaleSRBMask is not set, the same bit in DynamicSRBMask must be set. Check GetCommitMask().");
             DEV_CHECK_ERR(pResourceCache->HasDynamicResources(),

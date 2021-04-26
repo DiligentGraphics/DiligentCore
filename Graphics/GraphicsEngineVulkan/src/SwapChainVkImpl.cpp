@@ -72,8 +72,7 @@ void SwapChainVkImpl::CreateSurface()
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     if (m_Window.hWnd != NULL)
     {
-        VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
-
+        VkWin32SurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.hinstance = GetModuleHandle(NULL);
         surfaceCreateInfo.hwnd      = (HWND)m_Window.hWnd;
@@ -83,8 +82,7 @@ void SwapChainVkImpl::CreateSurface()
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     if (m_Window.pAWindow != nullptr)
     {
-        VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
-
+        VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.window = (ANativeWindow*)m_Window.pAWindow;
 
@@ -93,8 +91,7 @@ void SwapChainVkImpl::CreateSurface()
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     if (m_Window.pCALayer != nullptr)
     {
-        VkIOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
-
+        VkIOSSurfaceCreateInfoMVK surfaceCreateInfo{};
         surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
         surfaceCreateInfo.pView = m_Window.pCALayer;
 
@@ -103,8 +100,7 @@ void SwapChainVkImpl::CreateSurface()
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
     if (m_Window.pNSView != nullptr)
     {
-        VkMacOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
-
+        VkMacOSSurfaceCreateInfoMVK surfaceCreateInfo{};
         surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
         surfaceCreateInfo.pView = m_Window.pNSView;
 
@@ -113,8 +109,7 @@ void SwapChainVkImpl::CreateSurface()
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     if (m_Window.pDisplay != nullptr)
     {
-        VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
-
+        VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.display = reinterpret_cast<struct wl_display*>(m_Window.pDisplay);
         surfaceCreateInfo.Surface = reinterpret_cast<struct wl_surface*>(nullptr);
@@ -126,8 +121,7 @@ void SwapChainVkImpl::CreateSurface()
 #    if defined(VK_USE_PLATFORM_XCB_KHR)
     if (m_Window.pXCBConnection != nullptr && m_Window.WindowId != 0)
     {
-        VkXcbSurfaceCreateInfoKHR surfaceCreateInfo = {};
-
+        VkXcbSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.connection = reinterpret_cast<xcb_connection_t*>(m_Window.pXCBConnection);
         surfaceCreateInfo.window     = m_Window.WindowId;
@@ -139,8 +133,7 @@ void SwapChainVkImpl::CreateSurface()
 #    if defined(VK_USE_PLATFORM_XLIB_KHR)
     if ((m_Window.pDisplay != nullptr && m_Window.WindowId != 0) && m_VkSurface == VK_NULL_HANDLE)
     {
-        VkXlibSurfaceCreateInfoKHR surfaceCreateInfo = {};
-
+        VkXlibSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.dpy    = reinterpret_cast<Display*>(m_Window.pDisplay);
         surfaceCreateInfo.window = m_Window.WindowId;

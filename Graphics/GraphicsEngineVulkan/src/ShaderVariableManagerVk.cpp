@@ -379,11 +379,9 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
     }
     else
     {
-        if (m_DstRes.pObject && m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        {
-            LOG_ERROR_MESSAGE("Shader variable '", m_ResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
-                              "Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource.");
-        }
+        DEV_CHECK_ERR(m_DstRes.pObject == nullptr || m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC,
+                      "Shader variable '", m_ResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
+                      "Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource.");
 
         m_ResourceCache.ResetResource(m_Attribs.DescrSet, m_DstResCacheOffset);
     }

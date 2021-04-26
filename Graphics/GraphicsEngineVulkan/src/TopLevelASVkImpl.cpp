@@ -74,8 +74,7 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
         m_ScratchSize.Update = static_cast<Uint32>(vkSizeInfo.updateScratchSize);
     }
 
-    VkBufferCreateInfo vkBuffCI = {};
-
+    VkBufferCreateInfo vkBuffCI{};
     vkBuffCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     vkBuffCI.flags                 = 0;
     vkBuffCI.size                  = AccelStructSize;
@@ -98,8 +97,7 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
     auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_MemoryAlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
-    VkAccelerationStructureCreateInfoKHR vkAccelStrCI = {};
-
+    VkAccelerationStructureCreateInfoKHR vkAccelStrCI{};
     vkAccelStrCI.sType       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
     vkAccelStrCI.createFlags = 0;
     vkAccelStrCI.buffer      = m_VulkanBuffer;

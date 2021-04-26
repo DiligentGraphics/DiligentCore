@@ -117,8 +117,8 @@ public:
 /* 8 */ RefCntAutoPtr<IDeviceObject> pObject;
 
         // For uniform and storage buffers only
-/*12 */ Uint32                       BufferBaseOffset = 0; 
-/*16 */ Uint32                       BufferRangeSize  = 0;
+/*16 */ Uint32                       BufferBaseOffset = 0; 
+/*20 */ Uint32                       BufferRangeSize  = 0;
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo()                     const;
         VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo()                     const;
@@ -166,6 +166,11 @@ public:
 
         // clang-format off
 /* 0 */ const Uint32 m_NumResources = 0;
+    private:
+/* 8 */ Resource* const m_pResources = nullptr;
+/*16 */ DescriptorSetAllocation m_DescriptorSetAllocation;
+/*48 */ // End of structure
+        // clang-format on
 
     private:
         friend ShaderResourceCacheVk;
@@ -174,11 +179,6 @@ public:
             VERIFY(CacheOffset < m_NumResources, "Offset ", CacheOffset, " is out of range");
             return m_pResources[CacheOffset];
         }
-
-/* 8 */ Resource* const m_pResources = nullptr;
-/*16 */ DescriptorSetAllocation m_DescriptorSetAllocation;
-/*48 */ // End of structure
-        // clang-format on
     };
 
     const DescriptorSet& GetDescriptorSet(Uint32 Index) const

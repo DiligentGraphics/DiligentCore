@@ -339,7 +339,8 @@ public:
     // Returns the bitmask indicating root views with bound non-dynamic buffers
     Uint64 GetNonDynamicRootBuffersMask() const { return m_NonDynamicRootBuffersMask; }
 
-    // Returns true if the cache contains at least one dynamic resource
+    // Returns true if the cache contains at least one dynamic resource, i.e.
+    // dynamic buffer or a buffer range.
     bool HasDynamicResources() const { return GetDynamicRootBuffersMask() != 0; }
 
 #ifdef DILIGENT_DEBUG

@@ -786,8 +786,7 @@ void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Siz
     const auto& LogicalDevice    = m_pDevice->GetLogicalDevice();
     const auto& PhysDeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
 
-    VkMappedMemoryRange InvalidateRange = {};
-
+    VkMappedMemoryRange InvalidateRange{};
     InvalidateRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     InvalidateRange.pNext  = nullptr;
     InvalidateRange.memory = m_MemoryAllocation.Page->GetVkMemory();
