@@ -161,8 +161,7 @@ public:
 #endif
 
 private:
-    using StaticResCacheTblSizesArrayType = std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1>;
-    void AllocateRootParameters(StaticResCacheTblSizesArrayType& StaticResCacheTblSizes);
+    void AllocateRootParameters();
 
     void Destruct();
 

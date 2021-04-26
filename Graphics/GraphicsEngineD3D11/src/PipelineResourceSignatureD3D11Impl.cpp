@@ -90,48 +90,16 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
     {
         ValidatePipelineResourceSignatureDescD3D11(Desc);
 
-        auto& RawAllocator{GetRawAllocator()};
-        auto  MemPool = AllocateInternalObjects(RawAllocator, Desc,
-                                               [&Desc](FixedLinearAllocator& MemPool) //
-                                               {
-                                                   MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
-                                               });
-
-        m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
-
-        CreateLayout();
-
-        const auto NumStaticResStages = GetNumStaticResStages();
-        if (NumStaticResStages > 0)
-        {
-            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-            for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
+        Initialize(
+            GetRawAllocator(), Desc, m_ImmutableSamplers,
+            [this]() //
             {
-                Int8 Idx = m_StaticResStageIndex[i];
-                if (Idx >= 0)
-                {
-                    VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
-                    const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    m_StaticVarsMgrs[Idx].Initialize(*this, GetRawAllocator(), AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
-                }
-            }
-        }
-
-        if (m_Desc.SRBAllocationGranularity > 1)
-        {
-            std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
-            for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
+                CreateLayout();
+            },
+            [this]() //
             {
-                constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-
-                ShaderVariableDataSizes[s] = ShaderVariableManagerD3D11::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s));
-            }
-
-            const size_t CacheMemorySize = ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters);
-            m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
-        }
-
-        CalculateHash();
+                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters);
+            });
     }
     catch (...)
     {

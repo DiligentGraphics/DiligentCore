@@ -108,7 +108,7 @@ public:
                                         const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
                                         Uint32                                 NumAllowedTypes,
                                         SHADER_TYPE                            ShaderStages,
-                                        Uint32&                                NumVariables);
+                                        Uint32*                                pNumVariables = nullptr);
 
     Uint32 GetVariableCount() const { return m_NumVariables; }
 

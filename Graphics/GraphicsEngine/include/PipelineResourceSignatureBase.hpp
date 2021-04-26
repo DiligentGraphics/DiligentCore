@@ -34,6 +34,7 @@
 #include <limits>
 #include <algorithm>
 #include <memory>
+#include <functional>
 
 #include "PrivateConstants.h"
 #include "PipelineResourceSignature.h"
@@ -457,10 +458,12 @@ public:
     }
 
 protected:
-    template <typename TReserveCustomData>
-    FixedLinearAllocator AllocateInternalObjects(IMemoryAllocator&                    RawAllocator,
-                                                 const PipelineResourceSignatureDesc& Desc,
-                                                 TReserveCustomData                   ReserveCustomData) noexcept(false)
+    template <typename ImmutableSamplerAttribsType>
+    void Initialize(IMemoryAllocator&                    RawAllocator,
+                    const PipelineResourceSignatureDesc& Desc,
+                    ImmutableSamplerAttribsType*&        ImmutableSamAttribs,
+                    std::function<void()>                InitResourceLayout,
+                    std::function<size_t()>              GetRequiredResourceCacheMemorySize) noexcept(false)
     {
         FixedLinearAllocator Allocator{RawAllocator};
 
@@ -475,7 +478,7 @@ protected:
             Allocator.AddSpace<ShaderVariableManagerImplType>(NumStaticResStages);
         }
 
-        ReserveCustomData(Allocator);
+        Allocator.AddSpace<ImmutableSamplerAttribsType>(Desc.NumImmutableSamplers);
 
         Allocator.Reserve();
         // The memory is now owned by PipelineResourceSignatureBase and will be freed by Destruct().
@@ -497,7 +500,41 @@ protected:
             m_StaticVarsMgrs = Allocator.ConstructArray<ShaderVariableManagerImplType>(NumStaticResStages, std::ref(*this), std::ref(*m_pStaticResCache));
         }
 
-        return Allocator;
+        ImmutableSamAttribs = Allocator.ConstructArray<ImmutableSamplerAttribsType>(Desc.NumImmutableSamplers);
+
+        InitResourceLayout();
+
+        auto* const pThisImpl = static_cast<PipelineResourceSignatureImplType*>(this);
+
+        if (NumStaticResStages > 0)
+        {
+            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
+            for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
+            {
+                Int8 Idx = m_StaticResStageIndex[i];
+                if (Idx >= 0)
+                {
+                    VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
+                    const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
+                    m_StaticVarsMgrs[Idx].Initialize(*pThisImpl, RawAllocator, AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
+                }
+            }
+        }
+
+        if (Desc.SRBAllocationGranularity > 1)
+        {
+            std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
+            for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
+            {
+                constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[]{SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+                ShaderVariableDataSizes[s] = ShaderVariableManagerImplType::GetRequiredMemorySize(*pThisImpl, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s));
+            }
+
+            const size_t CacheMemorySize = GetRequiredResourceCacheMemorySize();
+            m_SRBMemAllocator.Initialize(Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
+        }
+
+        pThisImpl->CalculateHash();
     }
 
 private:
