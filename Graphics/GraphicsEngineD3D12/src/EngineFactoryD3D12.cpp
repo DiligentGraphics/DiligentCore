@@ -788,6 +788,12 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
                 }
             }
         }
+
+        // Buffer properties
+        {
+            Properties.Buffer.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+            Properties.Buffer.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
+        }
     }
 
     // Set texture and sampler capabilities
@@ -826,21 +832,12 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
         }
     }
 
-    // Set limits
-    {
-        auto& Limits = AdapterInfo.Limits;
-
-        Limits.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
-        Limits.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
-    }
-
     if (pd3Device == nullptr)
         d3d12Device->Release();
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
-    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+    static_assert(sizeof(DeviceProperties) == 28, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
 #endif
 }
 

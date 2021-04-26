@@ -181,6 +181,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
 
     FenceDesc FenceCI;
     FenceCI.Name = "CPU-GPU sync";
+    FenceCI.Type = FENCE_TYPE_GENERAL;
 
     RefCntAutoPtr<IFence> pFence;
     pDevice->CreateFence(FenceCI, &pFence);
@@ -285,6 +286,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 
     FenceDesc FenceCI;
     FenceCI.Name = "sync between queues";
+    FenceCI.Type = FENCE_TYPE_GENERAL;
 
     RefCntAutoPtr<IFence> pFence;
     pDevice->CreateFence(FenceCI, &pFence);

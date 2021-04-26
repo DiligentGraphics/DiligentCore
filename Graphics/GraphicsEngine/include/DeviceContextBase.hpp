@@ -439,6 +439,9 @@ protected:
 
     void EndQuery(IQuery* pQuery, int);
 
+    void EnqueueSignal(IFence* pFence, Uint64 Value, int);
+    void DeviceWaitForFence(IFence* pFence, Uint64 Value, int);
+
     void EndFrame()
     {
         ++m_FrameNumber;
@@ -1408,6 +1411,21 @@ inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, in
                   "BeginQuery with type ", GetQueryTypeString(QueryType), " is not supported in ", GetContextTypeString(m_Desc.ContextType), " context");
 
     ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(this);
+}
+
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::EnqueueSignal(IFence* pFence, Uint64 Value, int)
+{
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
+    DEV_CHECK_ERR(pFence, "Fence must not be null");
+}
+
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::DeviceWaitForFence(IFence* pFence, Uint64 Value, int)
+{
+    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be waited from immediate context");
+    DEV_CHECK_ERR(pFence, "Fence must not be null");
+    DEV_CHECK_ERR(pFence->GetDesc().Type == FENCE_TYPE_GENERAL, "Fence must be created with FENCE_TYPE_GENERAL");
 }
 
 template <typename ImplementationTraits>

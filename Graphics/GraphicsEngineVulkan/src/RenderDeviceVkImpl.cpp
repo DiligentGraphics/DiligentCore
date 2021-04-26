@@ -385,7 +385,8 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(CommandQueueIndex                  
         for (auto& val_fence : *pSignalFences)
         {
             auto* pFenceVkImpl = val_fence.second.RawPtr<FenceVkImpl>();
-            pFenceVkImpl->AddPendingSyncPoint(CommandQueueId, val_fence.first, pSyncPoint);
+            if (!pFenceVkImpl->IsTimelineSemaphore())
+                pFenceVkImpl->AddPendingSyncPoint(CommandQueueId, val_fence.first, pSyncPoint);
         }
     }
 }

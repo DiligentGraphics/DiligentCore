@@ -43,25 +43,24 @@ CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                      
                                        const ContextCreateInfo&                              CreateInfo) :
     // clang-format off
     TBase{pRefCounters},
-    m_LogicalDevice        {LogicalDevice},
-    m_VkQueue              {LogicalDevice->GetQueue(HardwareQueueId{CreateInfo.QueueId}, vkQueueIndex)},
-    m_QueueFamilyIndex     {CreateInfo.QueueId},
-    m_CommandQueueId       {static_cast<Uint8>(CommandQueueId)},
-    m_NumCommandQueues     {static_cast<Uint8>(NumCommandQueues)},
-    m_UseTimelineSemaphore {LogicalDevice->GetEnabledExtFeatures().TimelineSemaphore.timelineSemaphore == VK_TRUE},
-    m_NextFenceValue       {1},
-    m_SyncObjectManager    {std::make_shared<VulkanUtilities::VulkanSyncObjectManager>(*LogicalDevice)},
-    m_SyncPointAllocator   {GetRawAllocator(), SyncPointVk::SizeOf(m_NumCommandQueues), 16}
+    m_LogicalDevice             {LogicalDevice},
+    m_VkQueue                   {LogicalDevice->GetQueue(HardwareQueueId{CreateInfo.QueueId}, vkQueueIndex)},
+    m_QueueFamilyIndex          {CreateInfo.QueueId},
+    m_CommandQueueId            {static_cast<Uint8>(CommandQueueId)},
+    m_SupportedTimelineSemaphore{LogicalDevice->GetEnabledExtFeatures().TimelineSemaphore.timelineSemaphore == VK_TRUE},
+    m_NumCommandQueues          {static_cast<Uint8>(m_SupportedTimelineSemaphore ? 1u : NumCommandQueues)},
+    m_NextFenceValue            {1},
+    m_SyncObjectManager         {std::make_shared<VulkanUtilities::VulkanSyncObjectManager>(*LogicalDevice)},
+    m_SyncPointAllocator        {GetRawAllocator(), SyncPointVk::SizeOf(m_NumCommandQueues), 16}
 // clang-format on
 {
     VERIFY(m_CommandQueueId == CommandQueueId, "Not enough bits to store command queue index");
-    VERIFY(m_NumCommandQueues == NumCommandQueues, "Not enough bits to store command queue count");
+    VERIFY(m_SupportedTimelineSemaphore || m_NumCommandQueues == NumCommandQueues, "Not enough bits to store command queue count");
 
     if (CreateInfo.Name != nullptr)
         VulkanUtilities::SetQueueName(m_LogicalDevice->GetVkDevice(), m_VkQueue, CreateInfo.Name);
 
-    if (m_UseTimelineSemaphore)
-        m_TempSignalSemaphores.reserve(16);
+    m_TempSignalSemaphores.reserve(16);
 }
 
 CommandQueueVkImpl::~CommandQueueVkImpl()
@@ -137,8 +136,6 @@ __forceinline void SyncPointVk::GetSemaphores(std::vector<VkSemaphore>& Semaphor
 
 __forceinline SyncPointVkPtr CommandQueueVkImpl::CreateSyncPoint(Uint64 dbgValue)
 {
-    VERIFY_EXPR(!m_UseTimelineSemaphore);
-
     auto* pAllocator = &m_SyncPointAllocator;
     void* ptr        = pAllocator->Allocate(SyncPointVk::SizeOf(m_NumCommandQueues), "SyncPointVk", __FILE__, __LINE__);
     auto  Deleter    = [pAllocator](SyncPointVk* ptr) //
@@ -157,7 +154,7 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
     // Increment the value before submitting the buffer to be overly safe
     const uint64_t FenceValue = m_NextFenceValue.fetch_add(1);
 
-    if (m_UseTimelineSemaphore)
+    if (m_pFence->IsTimelineSemaphore())
     {
         const VkSemaphore vkTimelineSemaphore = m_pFence->GetVkSemaphore();
 
@@ -199,6 +196,19 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
 
         m_TempSignalSemaphores.clear();
         NewSyncPoint->GetSemaphores(m_TempSignalSemaphores);
+
+#ifdef DILIGENT_DEBUG
+        const VkBaseInStructure* pStruct = static_cast<const VkBaseInStructure*>(InSubmitInfo.pNext);
+        for (; pStruct != nullptr;)
+        {
+            if (pStruct->sType == VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO)
+            {
+                VERIFY(m_TempSignalSemaphores.empty(), "Can not append semaphores when timeline semaphores are used");
+                break;
+            }
+            pStruct = pStruct->pNext;
+        }
+#endif
 
         for (uint32_t s = 0; s < InSubmitInfo.signalSemaphoreCount; ++s)
             m_TempSignalSemaphores.push_back(InSubmitInfo.pSignalSemaphores[s]);
@@ -256,7 +266,7 @@ Uint64 CommandQueueVkImpl::WaitForIdle()
     // Update last completed fence value to unlock all waiting events.
     const auto FenceValue = m_NextFenceValue.fetch_add(1);
 
-    if (m_UseTimelineSemaphore)
+    if (m_pFence->IsTimelineSemaphore())
     {
         InternalSignalSemaphore(m_pFence->GetVkSemaphore(), FenceValue);
         m_pFence->Wait(FenceValue);
@@ -273,7 +283,6 @@ Uint64 CommandQueueVkImpl::WaitForIdle()
 
 Uint64 CommandQueueVkImpl::GetCompletedFenceValue()
 {
-    std::lock_guard<std::mutex> Lock{m_QueueMutex};
     return m_pFence->GetCompletedValue();
 }
 
@@ -297,7 +306,7 @@ void CommandQueueVkImpl::EnqueueSignal(VkSemaphore vkTimelineSemaphore, Uint64 V
 void CommandQueueVkImpl::InternalSignalSemaphore(VkSemaphore vkTimelineSemaphore, Uint64 Value)
 {
     DEV_CHECK_ERR(vkTimelineSemaphore != VK_NULL_HANDLE, "vkTimelineSemaphore must not be null");
-    DEV_CHECK_ERR(m_UseTimelineSemaphore, "Timeline semaphore is not supported");
+    DEV_CHECK_ERR(m_SupportedTimelineSemaphore, "Timeline semaphore is not supported");
 
     VkTimelineSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo{};
     TimelineSemaphoreSubmitInfo.sType                     = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;

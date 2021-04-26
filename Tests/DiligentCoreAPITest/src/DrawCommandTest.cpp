@@ -2473,7 +2473,7 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
     auto* pSwapChain = pEnv->GetSwapChain();
 
     const auto& adapterInfo = pDevice->GetAdapterInfo();
-    const auto& Limits      = adapterInfo.Limits;
+    const auto& Limits      = adapterInfo.Properties.Buffer;
 
     const auto UseSetOffset = (VarFlags & SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS) == 0 && (CBType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     if (adapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_D3D11 && BuffMode == BUFFER_MODE_STRUCTURED && UseSetOffset)

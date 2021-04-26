@@ -269,7 +269,7 @@ void BufferD3D11Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
 
 void BufferD3D11Impl::CreateUAV(BufferViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV)
 {
-    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc, GetDevice()->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
+    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc, GetDevice()->GetAdapterInfo().Properties.Buffer.StructuredBufferOffsetAlignment);
 
     D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
     BufferViewDesc_to_D3D11_UAV_DESC(m_Desc, UAVDesc, D3D11_UAVDesc);
@@ -281,7 +281,7 @@ void BufferD3D11Impl::CreateUAV(BufferViewDesc& UAVDesc, ID3D11UnorderedAccessVi
 
 void BufferD3D11Impl::CreateSRV(struct BufferViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV)
 {
-    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc, m_pDevice->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
+    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc, m_pDevice->GetAdapterInfo().Properties.Buffer.StructuredBufferOffsetAlignment);
 
     D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
     BufferViewDesc_to_D3D11_SRV_DESC(m_Desc, SRVDesc, D3D11_SRVDesc);

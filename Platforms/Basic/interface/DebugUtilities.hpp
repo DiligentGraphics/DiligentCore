@@ -91,6 +91,8 @@ void CheckDynamicType(SrcType* pSrcPtr)
 // clang-format on
 #endif
 
+#define DEV_ERROR(...) DEV_CHECK_ERR(false, __VA_ARGS__)
+
 #ifdef DILIGENT_DEVELOPMENT
 
 #    define DEV_CHECK_WARN CHECK_WARN

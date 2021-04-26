@@ -39,6 +39,8 @@ FenceD3D11Impl::FenceD3D11Impl(IReferenceCounters*    pRefCounters,
                                const FenceDesc&       Desc) :
     TFenceBase{pRefCounters, pDevice, Desc}
 {
+    if (m_Desc.Type != FENCE_TYPE_CPU_WAIT_ONLY)
+        LOG_ERROR_AND_THROW("Description of Fence '", m_Desc.Name, "' is invalid: ", GetFenceTypeString(m_Desc.Type), " is not supported in Direct3D11.");
 }
 
 FenceD3D11Impl::~FenceD3D11Impl()
@@ -92,7 +94,8 @@ void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
 
 void FenceD3D11Impl::Signal(Uint64 Value)
 {
-    DEV_CHECK_ERR(false, "Signal() is not supported in Direct3D11 backend");
+    DEV_CHECK_ERR(m_Desc.Type == FENCE_TYPE_GENERAL, "Fence must have been created with FENCE_TYPE_GENERAL");
+    DEV_ERROR("Signal() is not supported in Direct3D11 backend");
 }
 
 } // namespace Diligent

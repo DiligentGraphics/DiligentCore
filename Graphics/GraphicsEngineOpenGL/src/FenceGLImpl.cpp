@@ -46,6 +46,8 @@ FenceGLImpl::FenceGLImpl(IReferenceCounters* pRefCounters,
     }
 // clang-format on
 {
+    if (m_Desc.Type != FENCE_TYPE_CPU_WAIT_ONLY)
+        LOG_ERROR_AND_THROW("Description of Fence '", m_Desc.Name, "' is invalid: ", GetFenceTypeString(m_Desc.Type), " is not supported in OpenGL.");
 }
 
 FenceGLImpl::~FenceGLImpl()
@@ -109,7 +111,8 @@ void FenceGLImpl::DeviceWait(Uint64 Value)
 
 void FenceGLImpl::Signal(Uint64 NewValue)
 {
-    DEV_CHECK_ERR(false, "Signal() is not supported in OpenGL backend");
+    DEV_CHECK_ERR(m_Desc.Type == FENCE_TYPE_GENERAL, "Fence must have been created with FENCE_TYPE_GENERAL");
+    DEV_ERROR("Signal() is not supported in OpenGL backend");
 }
 
 void FenceGLImpl::Wait(Uint64 Value)

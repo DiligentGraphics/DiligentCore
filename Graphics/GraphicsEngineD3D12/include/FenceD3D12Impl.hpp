@@ -62,6 +62,7 @@ public:
     virtual ID3D12Fence* DILIGENT_CALL_TYPE GetD3D12Fence() override final { return m_pd3d12Fence; }
 
 private:
+    /// Access to the fence internal data is thread safe.
     CComPtr<ID3D12Fence> m_pd3d12Fence; ///< D3D12 Fence object
 };
 

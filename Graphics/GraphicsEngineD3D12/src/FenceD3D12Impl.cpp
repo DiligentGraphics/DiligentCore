@@ -42,7 +42,7 @@ FenceD3D12Impl::FenceD3D12Impl(IReferenceCounters*    pRefCounters,
                                const FenceDesc&       Desc) :
     TFenceBase{pRefCounters, pDevice, Desc}
 {
-    const auto  Flags        = pDevice->GetNumImmediateContexts() > 1 ? D3D12_FENCE_FLAG_SHARED : D3D12_FENCE_FLAG_NONE;
+    const auto  Flags        = (m_Desc.Type == FENCE_TYPE_GENERAL && pDevice->GetNumImmediateContexts() > 1) ? D3D12_FENCE_FLAG_SHARED : D3D12_FENCE_FLAG_NONE;
     auto* const pd3d12Device = pDevice->GetD3D12Device();
     auto        hr           = pd3d12Device->CreateFence(0, Flags, __uuidof(m_pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pd3d12Fence)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D12 fence");
@@ -63,6 +63,7 @@ Uint64 FenceD3D12Impl::GetCompletedValue()
 
 void FenceD3D12Impl::Signal(Uint64 Value)
 {
+    DEV_CHECK_ERR(m_Desc.Type == FENCE_TYPE_GENERAL, "Fence must be created with FENCE_TYPE_GENERAL");
     DEV_CHECK_ERR(GetDevice()->GetDeviceCaps().Features.NativeFence, "CPU side fence signal requires NativeFence feature");
     DvpSignal(Value);
 

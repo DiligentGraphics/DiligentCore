@@ -2153,13 +2153,13 @@ void DeviceContextD3D12Impl::ExecuteCommandLists(Uint32               NumCommand
 
 void DeviceContextD3D12Impl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
+    TDeviceContextBase::EnqueueSignal(pFence, Value, 0);
     m_SignalFences.emplace_back(Value, pFence);
 }
 
 void DeviceContextD3D12Impl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
-    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be waited from immediate context");
+    TDeviceContextBase::DeviceWaitForFence(pFence, Value, 0);
     m_WaitFences.emplace_back(Value, pFence);
 }
 
