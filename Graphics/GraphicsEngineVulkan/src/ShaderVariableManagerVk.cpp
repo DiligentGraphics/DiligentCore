@@ -83,20 +83,13 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
                                          Uint32                                 NumAllowedTypes,
                                          SHADER_TYPE                            ShaderType)
 {
-#ifdef DILIGENT_DEBUG
-    m_pDbgAllocator = &Allocator;
-#endif
-
-    VERIFY_EXPR(m_pSignature == nullptr);
-
     VERIFY_EXPR(m_NumVariables == 0);
     const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
 
     if (m_NumVariables == 0)
         return;
 
-    auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variables", MemSize);
-    m_pVariables  = reinterpret_cast<ShaderVariableVkImpl*>(pRawMem);
+    TBase::Initialize(Signature, Allocator, MemSize);
 
     Uint32 VarInd = 0;
     ProcessSignatureResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
@@ -106,26 +99,16 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
                                   ++VarInd;
                               });
     VERIFY_EXPR(VarInd == m_NumVariables);
-
-    m_pSignature = &Signature;
-}
-
-ShaderVariableManagerVk::~ShaderVariableManagerVk()
-{
-    VERIFY(m_pVariables == nullptr, "Destroy() has not been called");
 }
 
 void ShaderVariableManagerVk::Destroy(IMemoryAllocator& Allocator)
 {
     if (m_pVariables != nullptr)
     {
-        VERIFY(m_pDbgAllocator == &Allocator, "Inconsistent allocator");
-
         for (Uint32 v = 0; v < m_NumVariables; ++v)
             m_pVariables[v].~ShaderVariableVkImpl();
-        Allocator.Free(m_pVariables);
-        m_pVariables = nullptr;
     }
+    TBase::Destroy(Allocator);
 }
 
 ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name) const

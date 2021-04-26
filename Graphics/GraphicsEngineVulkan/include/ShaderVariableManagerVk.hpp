@@ -61,6 +61,7 @@
 
 #include <memory>
 
+#include "EngineVkImplTraits.hpp"
 #include "ShaderResourceVariableBase.hpp"
 #include "ShaderResourceCacheVk.hpp"
 #include "PipelineResourceAttribsVk.hpp"
@@ -71,13 +72,13 @@ namespace Diligent
 class ShaderVariableVkImpl;
 
 // sizeof(ShaderVariableManagerVk) == 40 (x64, msvc, Release)
-class ShaderVariableManagerVk
+class ShaderVariableManagerVk : ShaderVariableManagerBase<EngineVkImplTraits, ShaderVariableVkImpl>
 {
 public:
+    using TBase = ShaderVariableManagerBase<EngineVkImplTraits, ShaderVariableVkImpl>;
     ShaderVariableManagerVk(IObject&               Owner,
                             ShaderResourceCacheVk& ResourceCache) noexcept :
-        m_Owner{Owner},
-        m_ResourceCache{ResourceCache}
+        TBase{Owner, ResourceCache}
     {}
 
     void Initialize(const PipelineResourceSignatureVkImpl& Signature,
@@ -85,8 +86,6 @@ public:
                     const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
                     Uint32                                 NumAllowedTypes,
                     SHADER_TYPE                            ShaderType);
-
-    ~ShaderVariableManagerVk();
 
     void Destroy(IMemoryAllocator& Allocator);
 
@@ -128,25 +127,7 @@ private:
     const ResourceAttribs&      GetResourceAttribs(Uint32 Index) const;
 
 private:
-    PipelineResourceSignatureVkImpl const* m_pSignature = nullptr;
-
-    IObject& m_Owner;
-
-    // Variable mgr is owned by either Pipeline Resource Signature (in which case m_ResourceCache references
-    // static resource cache owned by the same PRS object), or by SRB object (in which case
-    // m_ResourceCache references the cache in the SRB). Thus the cache and the signature
-    // (which the variables reference) are guaranteed to be alive while the manager is alive.
-    ShaderResourceCacheVk& m_ResourceCache;
-
-    // Memory is allocated through the allocator provided by the resource signature. If allocation granularity > 1, fixed block
-    // memory allocator is used. This ensures that all resources from different shader resource bindings reside in
-    // continuous memory. If allocation granularity == 1, raw allocator is used.
-    ShaderVariableVkImpl* m_pVariables   = nullptr;
-    Uint32                m_NumVariables = 0;
-
-#ifdef DILIGENT_DEBUG
-    IMemoryAllocator* m_pDbgAllocator = nullptr;
-#endif
+    Uint32 m_NumVariables = 0;
 };
 
 // sizeof(ShaderVariableVkImpl) == 24 (x64)

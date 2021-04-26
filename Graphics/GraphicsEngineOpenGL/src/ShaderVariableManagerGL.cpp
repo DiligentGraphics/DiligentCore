@@ -93,13 +93,7 @@ void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& 
                                          Uint32                                 NumAllowedTypes,
                                          SHADER_TYPE                            ShaderType)
 {
-#ifdef DILIGENT_DEBUG
-    m_pDbgAllocator = &Allocator;
-#endif
-
     const auto Counters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
-
-    m_pSignature = &Signature;
 
     // Initialize offsets
     size_t CurrentOffset = 0;
@@ -123,11 +117,7 @@ void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& 
     // clang-format off
     auto TotalMemorySize = m_VariableEndOffset;
     VERIFY_EXPR(TotalMemorySize == GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType));
-
-    if (TotalMemorySize)
-    {
-        m_ResourceBuffer = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variable manager resources", TotalMemorySize);
-    }
+    TBase::Initialize(Signature, Allocator, TotalMemorySize);
 
     // clang-format off
     VERIFY_EXPR(Counters.NumUBs           == GetNumUBs()           );
@@ -174,34 +164,25 @@ void ShaderVariableManagerGL::Initialize(const PipelineResourceSignatureGLImpl& 
     // clang-format on
 }
 
-ShaderVariableManagerGL::~ShaderVariableManagerGL()
-{
-    VERIFY(m_ResourceBuffer == nullptr, "Destroy() has not been called");
-}
-
 void ShaderVariableManagerGL::Destroy(IMemoryAllocator& Allocator)
 {
-    if (m_ResourceBuffer == nullptr)
-        return;
-
-    VERIFY(m_pDbgAllocator == &Allocator, "Inconsistent allocator");
-
-    HandleResources(
-        [&](UniformBuffBindInfo& ub) {
-            ub.~UniformBuffBindInfo();
-        },
-        [&](TextureBindInfo& tex) {
-            tex.~TextureBindInfo();
-        },
-        [&](ImageBindInfo& img) {
-            img.~ImageBindInfo();
-        },
-        [&](StorageBufferBindInfo& ssbo) {
-            ssbo.~StorageBufferBindInfo();
-        });
-
-    Allocator.Free(m_ResourceBuffer);
-    m_ResourceBuffer = nullptr;
+    if (m_pVariables != nullptr)
+    {
+        HandleResources(
+            [&](UniformBuffBindInfo& ub) {
+                ub.~UniformBuffBindInfo();
+            },
+            [&](TextureBindInfo& tex) {
+                tex.~TextureBindInfo();
+            },
+            [&](ImageBindInfo& img) {
+                img.~ImageBindInfo();
+            },
+            [&](StorageBufferBindInfo& ssbo) {
+                ssbo.~StorageBufferBindInfo();
+            });
+    }
+    TBase::Destroy(Allocator);
 }
 
 void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(const BindResourceInfo& BindInfo)
@@ -526,7 +507,7 @@ public:
     ShaderVariableIndexLocator(const ShaderVariableManagerGL& _Mgr, const IShaderResourceVariable& Variable) :
         // clang-format off
         Mgr      {_Mgr},
-        VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Mgr.m_ResourceBuffer))
+        VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Mgr.m_pVariables))
     // clang-format on
     {}
 
@@ -562,7 +543,7 @@ private:
 
 Uint32 ShaderVariableManagerGL::GetVariableIndex(const IShaderResourceVariable& Var) const
 {
-    if (!m_ResourceBuffer)
+    if (m_pVariables == nullptr)
     {
         LOG_ERROR("This shader variable manager does not have any resources");
         return ~0u;

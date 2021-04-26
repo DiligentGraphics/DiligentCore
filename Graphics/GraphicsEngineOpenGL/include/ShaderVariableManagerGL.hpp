@@ -53,6 +53,7 @@
 
 #include <array>
 
+#include "EngineGLImplTraits.hpp"
 #include "Object.h"
 #include "PipelineResourceAttribsGL.hpp"
 #include "ShaderResourceVariableBase.hpp"
@@ -64,15 +65,13 @@ namespace Diligent
 class PipelineResourceSignatureGLImpl;
 
 // sizeof(ShaderVariableManagerGL) == 40 (x64, msvc, Release)
-class ShaderVariableManagerGL
+class ShaderVariableManagerGL : ShaderVariableManagerBase<EngineGLImplTraits, void>
 {
 public:
+    using TBase = ShaderVariableManagerBase<EngineGLImplTraits, void>;
     ShaderVariableManagerGL(IObject& Owner, ShaderResourceCacheGL& ResourceCache) noexcept :
-        m_Owner(Owner),
-        m_ResourceCache{ResourceCache}
+        TBase{Owner, ResourceCache}
     {}
-
-    ~ShaderVariableManagerGL();
 
     void Destroy(IMemoryAllocator& Allocator);
 
@@ -215,7 +214,7 @@ public:
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>(), ")");
         auto Offset = GetResourceOffset<ResourceType>();
-        return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
+        return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_pVariables) + Offset)[ResIndex];
     }
 
     Uint32 GetVariableIndex(const IShaderResourceVariable& Var) const;
@@ -243,7 +242,7 @@ private:
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>() - 1, ")");
         auto Offset = GetResourceOffset<ResourceType>();
-        return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
+        return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_pVariables) + Offset)[ResIndex];
     }
 
     template <typename ResourceType>
@@ -297,23 +296,11 @@ private:
     friend class ShaderVariableLocator;
 
 private:
-    PipelineResourceSignatureGLImpl const* m_pSignature = nullptr;
-
-    IObject& m_Owner;
-    // No need to use shared pointer, as the resource cache is either part of the same
-    // ShaderGLImpl object, or ShaderResourceBindingGLImpl object
-    ShaderResourceCacheGL& m_ResourceCache;
-    void*                  m_ResourceBuffer = nullptr;
-
     static constexpr OffsetType m_UBOffset            = 0;
     OffsetType                  m_TextureOffset       = 0;
     OffsetType                  m_ImageOffset         = 0;
     OffsetType                  m_StorageBufferOffset = 0;
     OffsetType                  m_VariableEndOffset   = 0;
-
-#ifdef DILIGENT_DEBUG
-    IMemoryAllocator* m_pDbgAllocator = nullptr;
-#endif
 };
 
 

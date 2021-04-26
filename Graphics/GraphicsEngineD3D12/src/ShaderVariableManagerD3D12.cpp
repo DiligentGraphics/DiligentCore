@@ -89,18 +89,13 @@ void ShaderVariableManagerD3D12::Initialize(const PipelineResourceSignatureD3D12
                                             Uint32                                    NumAllowedTypes,
                                             SHADER_TYPE                               ShaderType)
 {
-#ifdef DILIGENT_DEBUG
-    m_pDbgAllocator = &Allocator;
-#endif
-
     VERIFY_EXPR(m_NumVariables == 0);
     const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
 
     if (m_NumVariables == 0)
         return;
 
-    auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variables", MemSize);
-    m_pVariables  = reinterpret_cast<ShaderVariableD3D12Impl*>(pRawMem);
+    TBase::Initialize(Signature, Allocator, MemSize);
 
     Uint32 VarInd = 0;
     ProcessSignatureResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
@@ -110,26 +105,16 @@ void ShaderVariableManagerD3D12::Initialize(const PipelineResourceSignatureD3D12
                                   ++VarInd;
                               });
     VERIFY_EXPR(VarInd == m_NumVariables);
-
-    m_pSignature = &Signature;
-}
-
-ShaderVariableManagerD3D12::~ShaderVariableManagerD3D12()
-{
-    VERIFY(m_pVariables == nullptr, "Destroy() has not been called");
 }
 
 void ShaderVariableManagerD3D12::Destroy(IMemoryAllocator& Allocator)
 {
     if (m_pVariables != nullptr)
     {
-        VERIFY(m_pDbgAllocator == &Allocator, "Inconsistent allocator");
-
         for (Uint32 v = 0; v < m_NumVariables; ++v)
             m_pVariables[v].~ShaderVariableD3D12Impl();
-        Allocator.Free(m_pVariables);
-        m_pVariables = nullptr;
     }
+    TBase::Destroy(Allocator);
 }
 
 const PipelineResourceDesc& ShaderVariableManagerD3D12::GetResourceDesc(Uint32 Index) const
