@@ -29,7 +29,6 @@
 
 #include "Texture1D_GL.hpp"
 #include "RenderDeviceGLImpl.hpp"
-#include "DeviceContextGLImpl.hpp"
 #include "BufferGLImpl.hpp"
 #include "GLTypeConversions.hpp"
 

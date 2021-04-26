@@ -32,7 +32,7 @@
 #include "EngineGLImplTraits.hpp"
 #include "PipelineStateBase.hpp"
 
-#include "PipelineResourceSignatureGLImpl.hpp" // Requiured by PipelineStateBase
+#include "PipelineResourceSignatureGLImpl.hpp" // Required by PipelineStateBase
 #include "ShaderGLImpl.hpp"
 
 #include "GLObjectWrapper.hpp"

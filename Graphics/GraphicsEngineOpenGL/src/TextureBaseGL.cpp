@@ -343,7 +343,7 @@ TextureBaseGL::~TextureBaseGL()
     // flag is set, because CopyData() can bind
     // texture as render target even when no flag
     // is set
-    static_cast<RenderDeviceGLImpl*>(GetDevice())->OnReleaseTexture(this);
+    GetDevice()->OnReleaseTexture(this);
 }
 
 IMPLEMENT_QUERY_INTERFACE(TextureBaseGL, IID_TextureGL, TTextureBase)
@@ -585,7 +585,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             return;
         }
 
-        auto* pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
+        auto* pRenderDeviceGL = GetDevice();
 #ifdef DILIGENT_DEBUG
         {
             auto& TexViewObjAllocator = pRenderDeviceGL->GetTexViewObjAllocator();

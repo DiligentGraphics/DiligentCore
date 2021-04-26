@@ -207,8 +207,8 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     },
     // Attach to external buffer handle
     m_GlBuffer    {true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)},
-    m_BindTarget  {GetBufferBindTarget(m_Desc)   },
-    m_GLUsageHint {UsageToGLUsage(BuffDesc)}
+    m_BindTarget  {GetBufferBindTarget(m_Desc)},
+    m_GLUsageHint {UsageToGLUsage(BuffDesc)   }
 // clang-format on
 {
     m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
@@ -370,8 +370,9 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
 
         auto pContext = pDeviceGLImpl->GetImmediateContext();
         VERIFY(pContext, "Immediate context has been released");
+        auto& CtxState = pContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
 
-        *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewGLImpl instance", BufferViewGLImpl, bIsDefaultView ? this : nullptr)(pDeviceGLImpl, pContext, ViewDesc, this, bIsDefaultView);
+        *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewGLImpl instance", BufferViewGLImpl, bIsDefaultView ? this : nullptr)(pDeviceGLImpl, CtxState, ViewDesc, this, bIsDefaultView);
 
         if (!bIsDefaultView)
             (*ppView)->AddRef();
