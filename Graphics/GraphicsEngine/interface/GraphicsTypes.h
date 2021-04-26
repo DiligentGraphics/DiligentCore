@@ -171,12 +171,12 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// that can be read and written by GPU and can also be directly accessed by CPU.
     ///
     /// \remarks An application should check if unified memory is available on the device by querying
-    ///          the device caps (see Diligent::IRenderDevice::GetDeviceCaps and Diligent::GraphicsAdapterInfo).
+    ///          the adapter info (see Diligent::IRenderDevice::GraphicsAdapterInfo().Memory and Diligent::DeviceMemoryInfo).
     ///          If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
     /// 
     ///          Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
     ///          An application should check supported unified memory CPU access types by querying the device caps.
-    ///          (see Diligent::GraphicsAdapterInfo::UnifiedMemoryCPUAccess).
+    ///          (see Diligent::DeviceMemoryInfo::UnifiedMemoryCPUAccess).
     USAGE_UNIFIED,
 
     /// Helper value indicating the total number of elements in the enum
@@ -2014,8 +2014,8 @@ struct WaveOpProperties
 typedef struct WaveOpProperties WaveOpProperties;
 
 
-/// Describes the device limits
-struct DeviceLimits
+/// Buffer properties
+struct BufferProperties
 {
     /// The minimum required alignment, in bytes, for the constant buffer offsets.
     /// The Offset parameter passed to IShaderResourceVariable::SetBufferRange() or to
@@ -2029,7 +2029,7 @@ struct DeviceLimits
     /// set the offset of a structured buffer, must be an integer multiple of this limit.
     Uint32 StructuredBufferOffsetAlignment DEFAULT_INITIALIZER(0);
 };
-typedef struct DeviceLimits DeviceLimits;
+typedef struct BufferProperties BufferProperties;
 
 
 /// Device properties
@@ -2038,8 +2038,11 @@ struct DeviceProperties
     /// Maximum supported value for RayTracingPipelineDesc::MaxRecursionDepth.
     Uint32  MaxRayTracingRecursionDepth  DEFAULT_INITIALIZER(0);
 
-    /// Wave operation properties
-    WaveOpProperties WaveOp  DEFAULT_INITIALIZER({});
+    /// Wave operation properties, see Diligent::WaveOpProperties.
+    WaveOpProperties WaveOp;
+
+    /// Buffer properties, see Diligent::BufferProperties.
+    BufferProperties Buffer;
 };
 typedef struct DeviceProperties DeviceProperties;
 
@@ -2180,22 +2183,19 @@ struct GraphicsAdapterInfo
     /// Number of video outputs this adapter has (if available).
     Uint32 NumOutputs       DEFAULT_INITIALIZER(0);
 
-    /// Hardware features and properties. See Diligent::DeviceMemoryInfo.
+    /// Device memory information, See Diligent::DeviceMemoryInfo.
     DeviceMemoryInfo Memory;
 
-    /// See Diligent::DeviceCaps.
+    /// Device capabilities, see Diligent::DeviceCaps.
     DeviceCaps       Capabilities;
 
-    /// See Diligent::DeviceProperties.
+    /// Device properties, see Diligent::DeviceProperties.
     DeviceProperties Properties;
-
-    /// Device limits. See Diligent::DeviceLimits.
-    DeviceLimits     Limits;
-
+    
     /// Queue types which are supported by this device. See Diligent::DeviceQueueInfo.
     DeviceQueueInfo  Queues[DILIGENT_MAX_ADAPTER_QUEUES]  DEFAULT_INITIALIZER({});
 
-    ///
+    /// Number of queues.
     Uint32     NumQueues DEFAULT_INITIALIZER(0);
 };
 typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;

@@ -252,8 +252,9 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
 
     // Set properties
     {
-        const auto& Features   = AdapterInfo.Capabilities.Features;
-        auto&       Properties = AdapterInfo.Properties;
+        const auto& Features       = AdapterInfo.Capabilities.Features;
+        const auto& vkDeviceLimits = PhysicalDevice.GetProperties().limits;
+        auto&       Properties     = AdapterInfo.Properties;
 
         if (Features.RayTracing)
         {
@@ -266,6 +267,10 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
             Properties.WaveOp.MaxSize         = vkWaveProps.subgroupSize;
             Properties.WaveOp.SupportedStages = VkShaderStageFlagsToShaderTypes(vkWaveProps.supportedStages);
             Properties.WaveOp.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
+        }
+        {
+            Properties.Buffer.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
+            Properties.Buffer.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
         }
     }
 
@@ -336,19 +341,9 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
         }
     }
 
-    // Set limits
-    {
-        auto&       Limits         = AdapterInfo.Limits;
-        const auto& vkDeviceLimits = PhysicalDevice.GetProperties().limits;
-
-        Limits.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
-        Limits.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
-    }
-
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
-    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
-    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+    static_assert(sizeof(DeviceProperties) == 28, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
 #endif
 }
 

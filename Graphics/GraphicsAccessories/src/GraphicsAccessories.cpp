@@ -1737,4 +1737,19 @@ String GetContextTypeString(CONTEXT_TYPE Type)
     return Result;
 }
 
+const Char* GetFenceTypeString(FENCE_TYPE Type)
+{
+    static_assert(FENCE_TYPE_LAST == 1, "Please update the switch below to handle the new fence type");
+    switch (Type)
+    {
+        // clang-format off
+        case FENCE_TYPE_CPU_WAIT_ONLY: return "CPU_WAIT_ONLY";
+        case FENCE_TYPE_GENERAL:       return "GENERAL";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected fence type");
+            return "Unknown";
+    }
+}
+
 } // namespace Diligent

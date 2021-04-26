@@ -803,6 +803,11 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
         const bool bS3TC = CheckExtension("GL_EXT_texture_compression_s3tc");
         ENABLE_FEATURE(TextureCompressionBC, bRGTC && bBPTC && bS3TC);
 
+        // Buffer properties
+        {
+            Properties.Buffer.ConstantBufferOffsetAlignment   = 256;
+            Properties.Buffer.StructuredBufferOffsetAlignment = 16;
+        }
 #undef ENABLE_FEATURE
     }
 
@@ -817,18 +822,9 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
         AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    // Set limits
-    {
-        auto& Limits = AdapterInfo.Limits;
-
-        Limits.ConstantBufferOffsetAlignment   = 256;
-        Limits.StructuredBufferOffsetAlignment = 16;
-    }
-
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
-    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+    static_assert(sizeof(DeviceProperties) == 28, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
 #endif
 }
 

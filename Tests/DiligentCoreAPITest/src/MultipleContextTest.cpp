@@ -430,13 +430,14 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     RefCntAutoPtr<IFence> pGraphicsFence;
     RefCntAutoPtr<IFence> pComputeFence;
     {
-        FenceDesc Desc;
-        Desc.Name = "Graphics sync";
-        pDevice->CreateFence(Desc, &pGraphicsFence);
+        FenceDesc FenceCI;
+        FenceCI.Type = FENCE_TYPE_GENERAL;
+        FenceCI.Name = "Graphics sync";
+        pDevice->CreateFence(FenceCI, &pGraphicsFence);
         ASSERT_NE(pGraphicsFence, nullptr);
 
-        Desc.Name = "Compute sync";
-        pDevice->CreateFence(Desc, &pComputeFence);
+        FenceCI.Name = "Compute sync";
+        pDevice->CreateFence(FenceCI, &pComputeFence);
         ASSERT_NE(pComputeFence, nullptr);
     }
 
@@ -664,13 +665,14 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
     RefCntAutoPtr<IFence> pGraphicsFence;
     RefCntAutoPtr<IFence> pTransferFence;
     {
-        FenceDesc Desc;
-        Desc.Name = "Graphics sync";
-        pDevice->CreateFence(Desc, &pGraphicsFence);
+        FenceDesc FenceCI;
+        FenceCI.Type = FENCE_TYPE_GENERAL;
+        FenceCI.Name = "Graphics sync";
+        pDevice->CreateFence(FenceCI, &pGraphicsFence);
         ASSERT_NE(pGraphicsFence, nullptr);
 
-        Desc.Name = "Transfer sync";
-        pDevice->CreateFence(Desc, &pTransferFence);
+        FenceCI.Name = "Transfer sync";
+        pDevice->CreateFence(FenceCI, &pTransferFence);
         ASSERT_NE(pTransferFence, nullptr);
     }
 

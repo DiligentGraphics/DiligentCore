@@ -353,7 +353,7 @@ void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
 
 void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor) const
 {
-    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc, GetDevice()->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
+    ValidateAndCorrectBufferViewDesc(m_Desc, UAVDesc, GetDevice()->GetAdapterInfo().Properties.Buffer.StructuredBufferOffsetAlignment);
 
     D3D12_UNORDERED_ACCESS_VIEW_DESC D3D12_UAVDesc;
     BufferViewDesc_to_D3D12_UAV_DESC(m_Desc, UAVDesc, D3D12_UAVDesc);
@@ -364,7 +364,7 @@ void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HA
 
 void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor) const
 {
-    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc, GetDevice()->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
+    ValidateAndCorrectBufferViewDesc(m_Desc, SRVDesc, GetDevice()->GetAdapterInfo().Properties.Buffer.StructuredBufferOffsetAlignment);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
     BufferViewDesc_to_D3D12_SRV_DESC(m_Desc, SRVDesc, D3D12_SRVDesc);

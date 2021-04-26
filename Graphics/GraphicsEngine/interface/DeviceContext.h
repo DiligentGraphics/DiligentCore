@@ -2110,7 +2110,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///       If an application needs to wait for the fence in a loop, it must flush the context
     ///       after signalling the fence.
     ///
-    /// \param [in] pFence - The fence to signal
+    /// \param [in] pFence - The fence to signal. Fence must be created with type FENCE_TYPE_GENERAL.
     /// \param [in] Value  - The value to set the fence to. This value must be greater than the
     ///                      previously signaled value on the same fence.
     VIRTUAL void METHOD(EnqueueSignal)(THIS_
@@ -2120,7 +2120,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Waits until the specified fence reaches or exceeds the specified value, on the device.
     
-    /// \param [in] pFence - The fence to wait.
+    /// \param [in] pFence - The fence to wait. Fence must be created with type FENCE_TYPE_GENERAL.
     /// \param [in] Value  - The value that the context is waiting for the fence to reach.
     /// 
     /// \note  If NativeFence feature is not enabled (see Diligent::DeviceFeatures) then

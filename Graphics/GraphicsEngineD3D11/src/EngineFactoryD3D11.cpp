@@ -458,14 +458,14 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
         SamCaps.LODBiasSupported              = True;
     }
 
-    // Set limits
+    // Set properties
     {
-        auto& Limits = AdapterInfo.Limits;
+        auto& BufferProps = AdapterInfo.Properties.Buffer;
         // Offsets passed to *SSetConstantBuffers1 are measured in shader constants, which are
         // 16 bytes (4*32-bit components). Each offset must be a multiple of 16 constants,
         // i.e. 256 bytes.
-        Limits.ConstantBufferOffsetAlignment   = 256;
-        Limits.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
+        BufferProps.ConstantBufferOffsetAlignment   = 256;
+        BufferProps.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
     }
 
     if (pd3Device == nullptr)
@@ -473,8 +473,7 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-    static_assert(sizeof(DeviceProperties) == 20, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
-    static_assert(sizeof(DeviceLimits) == 8, "Did you add a new member to DeviceLimits? Please handle it here (if necessary).");
+    static_assert(sizeof(DeviceProperties) == 28, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
 #endif
 }
 

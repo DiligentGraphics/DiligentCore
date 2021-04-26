@@ -49,7 +49,8 @@ FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
     }
 // clang-format on
 {
-    if (pRendeDeviceVkImpl->GetDeviceCaps().Features.NativeFence)
+    if (m_Desc.Type == FENCE_TYPE_GENERAL &&
+        pRendeDeviceVkImpl->GetDeviceCaps().Features.NativeFence)
     {
         const auto& LogicalDevice = pRendeDeviceVkImpl->GetLogicalDevice();
         m_TimelineSemaphore       = LogicalDevice.CreateTimelineSemaphore(0, m_Desc.Name);
@@ -102,6 +103,8 @@ Uint64 FenceVkImpl::GetCompletedValue()
 {
     if (IsTimelineSemaphore())
     {
+        // GetSemaphoreCounter() is thread safe
+
         const auto& LogicalDevice    = m_pDevice->GetLogicalDevice();
         Uint64      SemaphoreCounter = ~Uint64{0};
         auto        err              = LogicalDevice.GetSemaphoreCounter(m_TimelineSemaphore, &SemaphoreCounter);
@@ -141,11 +144,13 @@ Uint64 FenceVkImpl::InternalGetCompletedValue()
 
 void FenceVkImpl::Signal(Uint64 Value)
 {
+    DEV_CHECK_ERR(m_Desc.Type == FENCE_TYPE_GENERAL, "Fence must have been created with FENCE_TYPE_GENERAL");
+
     if (IsTimelineSemaphore())
     {
         DvpSignal(Value);
 
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+        // SignalSemaphore() is thread safe
 
         VkSemaphoreSignalInfo SignalInfo{};
         SignalInfo.sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
@@ -153,12 +158,13 @@ void FenceVkImpl::Signal(Uint64 Value)
         SignalInfo.semaphore = m_TimelineSemaphore;
         SignalInfo.value     = Value;
 
-        auto err = LogicalDevice.SignalSemaphore(SignalInfo);
+        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+        auto        err           = LogicalDevice.SignalSemaphore(SignalInfo);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to signal timeline semaphore");
     }
     else
     {
-        DEV_CHECK_ERR(false, "Signal() is supported only with timeline semaphore, enable NativeFence feature to use it");
+        DEV_ERROR("Signal() is supported only with timeline semaphore, enable NativeFence feature to use it");
     }
 }
 
@@ -166,7 +172,7 @@ void FenceVkImpl::Reset(Uint64 Value)
 {
     if (IsTimelineSemaphore())
     {
-        DEV_CHECK_ERR(false, "Reset() is not supported for timeline semaphore");
+        DEV_ERROR("Reset() is not supported for timeline semaphore");
     }
     else
     {
@@ -222,9 +228,11 @@ void FenceVkImpl::Wait(Uint64 Value)
 
 VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(CommandQueueIndex CommandQueueId, Uint64 Value)
 {
+    DEV_CHECK_ERR(m_Desc.Type == FENCE_TYPE_GENERAL, "Fence must be created with FENCE_TYPE_GENERAL");
+
     if (IsTimelineSemaphore())
     {
-        DEV_CHECK_ERR(false, "Not supported when timeline semaphore is used");
+        DEV_ERROR("Not supported when timeline semaphore is used");
         return {};
     }
 
@@ -260,7 +268,7 @@ void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 V
 {
     if (IsTimelineSemaphore())
     {
-        DEV_CHECK_ERR(false, "Not supported when timeline semaphore is used");
+        DEV_ERROR("Not supported when timeline semaphore is used");
         return;
     }
     if (SyncPoint == nullptr)
@@ -295,7 +303,7 @@ void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 V
         InternalGetCompletedValue();
     }
 
-    VERIFY(m_SyncPoints.size() < RequiredArraySize * 2, "array of sync points is too large, none of the GetCompletedValue(), Wait() or ExtractSignalSemaphore() have been used.");
+    //VERIFY(m_SyncPoints.size() < RequiredArraySize * 2, "array of sync points is too big, none of the GetCompletedValue(), Wait() or ExtractSignalSemaphore() are used");
 
     m_SyncPoints.push_back({Value, std::move(SyncPoint)});
 }

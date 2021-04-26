@@ -505,7 +505,7 @@ void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
 VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDesc& ViewDesc)
 {
     VulkanUtilities::BufferViewWrapper BuffView;
-    ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, GetDevice()->GetAdapterInfo().Limits.StructuredBufferOffsetAlignment);
+    ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, GetDevice()->GetAdapterInfo().Properties.Buffer.StructuredBufferOffsetAlignment);
     if (m_Desc.Mode == BUFFER_MODE_FORMATTED)
     {
         VkBufferViewCreateInfo ViewCI{};

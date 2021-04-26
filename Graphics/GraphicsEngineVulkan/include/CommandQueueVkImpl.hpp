@@ -137,14 +137,12 @@ public:
 
     void SetFence(RefCntAutoPtr<FenceVkImpl> pFence)
     {
-        VERIFY_EXPR(pFence->IsTimelineSemaphore() == m_UseTimelineSemaphore);
+        VERIFY_EXPR(pFence->GetDesc().Type == FENCE_TYPE_CPU_WAIT_ONLY);
         m_pFence = std::move(pFence);
     }
 
     SyncPointVkPtr GetLastSyncPoint()
     {
-        VERIFY(!m_UseTimelineSemaphore, "Sync point is always null when timeline semaphores are used");
-
         ThreadingTools::LockHelper Lock(m_LastSyncPointGuard);
         return m_LastSyncPoint;
     }
@@ -159,8 +157,8 @@ private:
     const VkQueue           m_VkQueue;
     const HardwareQueueId   m_QueueFamilyIndex;
     const CommandQueueIndex m_CommandQueueId;
+    const bool              m_SupportedTimelineSemaphore;
     const Uint8             m_NumCommandQueues;
-    const bool              m_UseTimelineSemaphore;
 
     // Fence is signaled right after a command buffer has been
     // submitted to the command queue for execution.
