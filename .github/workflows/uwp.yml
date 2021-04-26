@@ -26,12 +26,10 @@ jobs:
 
     - name: Configure CMake
       if: success()
-      working-directory: ${{runner.workspace}}
       shell: bash
       run: |
-        mkdir build
-        cd ./build
-        cmake $GITHUB_WORKSPACE -G "Visual Studio 16 2019" -A ${{ matrix.toolset }} -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DCMAKE_INSTALL_PREFIX=install .
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        ./configure_cmake.sh "uwp" "${{runner.workspace}}" ${{ matrix.config }} ${{ matrix.toolset }}
 
     - name: Build
       if: success()

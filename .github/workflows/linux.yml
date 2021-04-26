@@ -35,11 +35,10 @@ jobs:
         CC: gcc-9
         CXX: g++-9
       shell: bash
-      working-directory: ${{runner.workspace}}
       run: |
-        mkdir build
-        cd ./build
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install ..
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        chmod +x configure_cmake.sh
+        ./configure_cmake.sh "linux" "${{runner.workspace}}" ${{ matrix.config }}
 
     - name: Build
       if: success()
@@ -95,11 +94,10 @@ jobs:
         CC: clang-9
         CXX: clang++-9
       shell: bash
-      working-directory: ${{runner.workspace}}
       run: |
-        mkdir build
-        cd ./build
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install ..
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        chmod +x configure_cmake.sh
+        ./configure_cmake.sh "linux" "${{runner.workspace}}" ${{ matrix.config }}
 
     - name: Build
       if: success()
