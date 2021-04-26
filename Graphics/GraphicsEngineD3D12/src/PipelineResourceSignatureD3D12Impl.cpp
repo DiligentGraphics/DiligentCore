@@ -121,59 +121,16 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
     {
         ValidatePipelineResourceSignatureDescD3D12(Desc);
 
-        auto& RawAllocator{GetRawAllocator()};
-        auto  MemPool = AllocateInternalObjects(RawAllocator, Desc,
-                                               [&Desc](FixedLinearAllocator& MemPool) //
-                                               {
-                                                   MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
-                                               });
-
-        m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
-
-        StaticResCacheTblSizesArrayType StaticResCacheTblSizes = {};
-        AllocateRootParameters(StaticResCacheTblSizes);
-
-        const auto NumStaticResStages = GetNumStaticResStages();
-        if (NumStaticResStages > 0)
-        {
-            m_pStaticResCache->Initialize(RawAllocator, static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
-
-            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-            for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
+        Initialize(
+            GetRawAllocator(), Desc, m_ImmutableSamplers,
+            [this]() //
             {
-                auto Idx = m_StaticResStageIndex[i];
-                if (Idx >= 0)
-                {
-                    VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
-                    const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    m_StaticVarsMgrs[Idx].Initialize(*this, RawAllocator, AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
-                }
-            }
-        }
-        else
-        {
-#ifdef DILIGENT_DEBUG
-            for (auto TblSize : StaticResCacheTblSizes)
-                VERIFY(TblSize == 0, "The size of every static resource cache table must be zero because there are no static resources in the PRS.");
-#endif
-        }
-
-        if (m_Desc.SRBAllocationGranularity > 1)
-        {
-            std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
-            for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
+                AllocateRootParameters();
+            },
+            [this]() //
             {
-                constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-
-                Uint32 UnusedNumVars       = 0;
-                ShaderVariableDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
-            }
-
-            auto CacheMemorySize = ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams);
-            m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize.TotalSize);
-        }
-
-        CalculateHash();
+                return ShaderResourceCacheD3D12::GetMemoryRequirements(m_RootParams).TotalSize;
+            });
     }
     catch (...)
     {
@@ -182,7 +139,7 @@ PipelineResourceSignatureD3D12Impl::PipelineResourceSignatureD3D12Impl(IReferenc
     }
 }
 
-void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTblSizesArrayType& StaticResCacheTblSizes)
+void PipelineResourceSignatureD3D12Impl::AllocateRootParameters()
 {
     // Index of the assigned sampler, for every texture SRV in m_Desc.Resources, or InvalidSamplerInd.
     std::vector<Uint32> TextureSrvToAssignedSamplerInd(m_Desc.NumResources, ResourceAttribs::InvalidSamplerInd);
@@ -229,7 +186,9 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
 
     // The total number of resources (counting array size), for every descriptor range type
     std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> NumResources = {};
-    StaticResCacheTblSizes.fill(0);
+
+    // Cache table sizes for static resources
+    std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> StaticResCacheTblSizes{};
 
     // Allocate registers for immutable samplers first
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
@@ -358,6 +317,18 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(StaticResCacheTb
             };
     }
     ParamsBuilder.InitializeMgr(GetRawAllocator(), m_RootParams);
+
+    if (GetNumStaticResStages() > 0)
+    {
+        m_pStaticResCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
+    }
+    else
+    {
+#ifdef DILIGENT_DEBUG
+        for (auto TblSize : StaticResCacheTblSizes)
+            VERIFY(TblSize == 0, "The size of every static resource cache table must be zero because there are no static resources in the PRS.");
+#endif
+    }
 }
 
 PipelineResourceSignatureD3D12Impl::~PipelineResourceSignatureD3D12Impl()

@@ -145,47 +145,16 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 {
     try
     {
-        auto& RawAllocator{GetRawAllocator()};
-        auto  MemPool = AllocateInternalObjects(RawAllocator, Desc,
-                                               [&Desc](FixedLinearAllocator& MemPool) //
-                                               {
-                                                   MemPool.AddSpace<ImmutableSamplerAttribs>(Desc.NumImmutableSamplers);
-                                               });
-
-        m_ImmutableSamplers = MemPool.ConstructArray<ImmutableSamplerAttribs>(m_Desc.NumImmutableSamplers);
-
-        const auto NumStaticResStages = GetNumStaticResStages();
-        if (NumStaticResStages > 0)
-        {
-            Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
-                                            // accounting for array sizes.
-            for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        Initialize(
+            GetRawAllocator(), Desc, m_ImmutableSamplers,
+            [this]() //
             {
-                const auto& ResDesc = Desc.Resources[i];
-                if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                    StaticResourceCount += ResDesc.ArraySize;
-            }
-            m_pStaticResCache->InitializeSets(RawAllocator, 1, &StaticResourceCount);
-        }
-
-        CreateSetLayouts();
-
-        if (NumStaticResStages > 0)
-        {
-            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-            for (Uint32 i = 0; i < m_StaticResStageIndex.size(); ++i)
+                CreateSetLayouts();
+            },
+            [this]() //
             {
-                Int8 Idx = m_StaticResStageIndex[i];
-                if (Idx >= 0)
-                {
-                    VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
-                    const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
-                    m_StaticVarsMgrs[Idx].Initialize(*this, RawAllocator, AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
-                }
-            }
-        }
-
-        CalculateHash();
+                return ShaderResourceCacheVk::GetRequiredMemorySize(GetNumDescriptorSets(), m_DescriptorSetSizes.data());
+            });
     }
     catch (...)
     {
@@ -196,6 +165,20 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
 void PipelineResourceSignatureVkImpl::CreateSetLayouts()
 {
+    // Initialize static resource cache first
+    if (auto NumStaticResStages = GetNumStaticResStages())
+    {
+        Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
+                                        // accounting for array sizes.
+        for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
+        {
+            const auto& ResDesc = m_Desc.Resources[i];
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                StaticResourceCount += ResDesc.ArraySize;
+        }
+        m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount);
+    }
+
     CacheOffsetsType CacheGroupSizes = {}; // Required cache size for each cache group
     BindingCountType BindingCount    = {}; // Binding count in each cache group
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
@@ -428,23 +411,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts()
     }
 #ifdef DILIGENT_DEBUG
     for (Uint32 i = 0; i < NumSets; ++i)
-        VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U);
+        VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U && m_DescriptorSetSizes[i] > 0);
 #endif
-
-    if (m_Desc.SRBAllocationGranularity > 1)
-    {
-        std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
-        for (Uint32 s = 0; s < GetNumActiveShaderStages(); ++s)
-        {
-            constexpr SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-
-            Uint32 UnusedNumVars       = 0;
-            ShaderVariableDataSizes[s] = ShaderVariableManagerVk::GetRequiredMemorySize(*this, AllowedVarTypes, _countof(AllowedVarTypes), GetActiveShaderStageType(s), UnusedNumVars);
-        }
-
-        const size_t CacheMemorySize = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, m_DescriptorSetSizes.data());
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumActiveShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
-    }
 
     VkDescriptorSetLayoutCreateInfo SetLayoutCI = {};
 

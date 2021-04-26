@@ -70,16 +70,19 @@ size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const PipelineResourceS
                                                          const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
                                                          Uint32                                    NumAllowedTypes,
                                                          SHADER_TYPE                               ShaderStages,
-                                                         Uint32&                                   NumVariables)
+                                                         Uint32*                                   pNumVariables)
 {
-    NumVariables = 0;
+    Uint32 NumVariables = 0;
+    if (pNumVariables == nullptr)
+        pNumVariables = &NumVariables;
+    *pNumVariables = 0;
     ProcessSignatureResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderStages,
-                              [&NumVariables](Uint32) //
+                              [pNumVariables](Uint32) //
                               {
-                                  ++NumVariables;
+                                  ++(*pNumVariables);
                               });
 
-    return NumVariables * sizeof(ShaderVariableD3D12Impl);
+    return (*pNumVariables) * sizeof(ShaderVariableD3D12Impl);
 }
 
 // Creates shader variable for every resource from Signature whose type is one AllowedVarTypes
@@ -90,7 +93,7 @@ void ShaderVariableManagerD3D12::Initialize(const PipelineResourceSignatureD3D12
                                             SHADER_TYPE                               ShaderType)
 {
     VERIFY_EXPR(m_NumVariables == 0);
-    const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
+    const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, &m_NumVariables);
 
     if (m_NumVariables == 0)
         return;

@@ -64,16 +64,19 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const PipelineResourceSign
                                                       const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes,
                                                       Uint32                                 NumAllowedTypes,
                                                       SHADER_TYPE                            ShaderStages,
-                                                      Uint32&                                NumVariables)
+                                                      Uint32*                                pNumVariables)
 {
-    NumVariables = 0;
+    Uint32 NumVariables = 0;
+    if (pNumVariables == nullptr)
+        pNumVariables = &NumVariables;
+    *pNumVariables = 0;
     ProcessSignatureResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderStages,
-                              [&NumVariables](Uint32) //
+                              [pNumVariables](Uint32) //
                               {
-                                  ++NumVariables;
+                                  ++(*pNumVariables);
                               });
 
-    return NumVariables * sizeof(ShaderVariableVkImpl);
+    return (*pNumVariables) * sizeof(ShaderVariableVkImpl);
 }
 
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
@@ -84,7 +87,7 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
                                          SHADER_TYPE                            ShaderType)
 {
     VERIFY_EXPR(m_NumVariables == 0);
-    const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, m_NumVariables);
+    const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, &m_NumVariables);
 
     if (m_NumVariables == 0)
         return;
