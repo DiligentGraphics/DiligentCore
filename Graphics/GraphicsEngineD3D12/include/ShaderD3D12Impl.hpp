@@ -76,7 +76,7 @@ public:
 
 private:
     // ShaderResources class instance must be referenced through the shared pointer, because
-    // it is referenced by ShaderResourceLayoutD3D12 class instances
+    // it is referenced by PipelineStateD3D12Impl class instances
     std::shared_ptr<const ShaderResourcesD3D12> m_pShaderResources;
 
     String m_EntryPoint;

@@ -39,7 +39,7 @@ SamplerD3D12Impl::SamplerD3D12Impl(IReferenceCounters*    pRefCounters,
                                    const SamplerDesc&     SamplerDesc) :
     TSamplerBase{pRefCounters, pRenderDeviceD3D12, SamplerDesc}
 {
-    auto* pD3D12Device = pRenderDeviceD3D12->GetD3D12Device();
+    auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
     D3D12_SAMPLER_DESC D3D12SamplerDesc =
         {
@@ -55,9 +55,8 @@ SamplerD3D12Impl::SamplerD3D12Impl(IReferenceCounters*    pRefCounters,
             SamplerDesc.MaxLOD //
         };
 
-    auto CPUDescriptorAlloc = pRenderDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-    m_Descriptor            = std::move(CPUDescriptorAlloc);
-    pD3D12Device->CreateSampler(&D3D12SamplerDesc, m_Descriptor.GetCpuHandle());
+    m_Descriptor = pRenderDeviceD3D12->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+    pd3d12Device->CreateSampler(&D3D12SamplerDesc, m_Descriptor.GetCpuHandle());
 }
 
 SamplerD3D12Impl::~SamplerD3D12Impl()

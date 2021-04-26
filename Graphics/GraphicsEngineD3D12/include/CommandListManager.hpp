@@ -29,6 +29,7 @@
 
 #include <vector>
 #include <mutex>
+#include <atomic>
 #include <stdint.h>
 
 namespace Diligent
@@ -60,9 +61,9 @@ public:
     void FreeAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator);
 
 #ifdef DILIGENT_DEVELOPMENT
-    Atomics::Long GetAllocatorCounter() const
+    Int32 GetAllocatorCounter() const
     {
-        return m_AllocatorCounter;
+        return m_AllocatorCounter.load();
     }
 #endif
 
@@ -72,10 +73,10 @@ private:
 
     RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
 
-    Atomics::AtomicLong m_NumAllocators = 0; // For debug purposes only
+    std::atomic_int32_t m_NumAllocators{0}; // For logging only
 
 #ifdef DILIGENT_DEVELOPMENT
-    Atomics::AtomicLong m_AllocatorCounter = 0;
+    std::atomic_int32_t m_AllocatorCounter{0};
 #endif
 };
 

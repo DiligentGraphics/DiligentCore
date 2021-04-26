@@ -127,25 +127,25 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCoun
         m_ScratchSize.Update = static_cast<Uint32>(d3d12BottomLevelPrebuildInfo.UpdateScratchDataSizeInBytes);
     }
 
-    D3D12_HEAP_PROPERTIES HeapProps;
+    D3D12_HEAP_PROPERTIES HeapProps{};
     HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
     HeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
     HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
     HeapProps.CreationNodeMask     = 1;
     HeapProps.VisibleNodeMask      = 1;
 
-    D3D12_RESOURCE_DESC ASDesc = {};
-    ASDesc.Dimension           = D3D12_RESOURCE_DIMENSION_BUFFER;
-    ASDesc.Alignment           = 0;
-    ASDesc.Width               = ResultDataMaxSizeInBytes;
-    ASDesc.Height              = 1;
-    ASDesc.DepthOrArraySize    = 1;
-    ASDesc.MipLevels           = 1;
-    ASDesc.Format              = DXGI_FORMAT_UNKNOWN;
-    ASDesc.SampleDesc.Count    = 1;
-    ASDesc.SampleDesc.Quality  = 0;
-    ASDesc.Layout              = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    ASDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    D3D12_RESOURCE_DESC ASDesc{};
+    ASDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+    ASDesc.Alignment          = 0;
+    ASDesc.Width              = ResultDataMaxSizeInBytes;
+    ASDesc.Height             = 1;
+    ASDesc.DepthOrArraySize   = 1;
+    ASDesc.MipLevels          = 1;
+    ASDesc.Format             = DXGI_FORMAT_UNKNOWN;
+    ASDesc.SampleDesc.Count   = 1;
+    ASDesc.SampleDesc.Quality = 0;
+    ASDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    ASDesc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
     auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                                                     &ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,

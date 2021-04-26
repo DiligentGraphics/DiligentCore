@@ -191,6 +191,7 @@ public:
         Uint32 BufferDynamicOffset = 0;
 
         // CPU descriptor handle of a cached resource in CPU-only descriptor heap.
+        // This handle may be null for CBVs that address the buffer range.
         D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {};
         RefCntAutoPtr<IDeviceObject> pObject;
 
@@ -332,7 +333,7 @@ public:
 
     ResourceCacheContentType GetContentType() const { return m_ContentType; }
 
-    // Returns the bitmask indicating root views with bound dynamic buffers
+    // Returns the bitmask indicating root views with bound dynamic buffers (including buffer ranges)
     Uint64 GetDynamicRootBuffersMask() const { return m_DynamicRootBuffersMask; }
 
     // Returns the bitmask indicating root views with bound non-dynamic buffers
@@ -385,7 +386,7 @@ private:
     // -1 indicates no allocation.
     std::array<std::array<Int8, ROOT_PARAMETER_GROUP_COUNT>, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> m_AllocationIndex{};
 
-    // The bitmask indicating root views with bound dynamic buffers
+    // The bitmask indicating root views with bound dynamic buffers (including buffer ranges)
     Uint64 m_DynamicRootBuffersMask = Uint64{0};
 
     // The bitmask indicating root views with bound non-dynamic buffers

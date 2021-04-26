@@ -31,7 +31,7 @@
 /// Declaration of Diligent::ShaderVariableManagerD3D12 and Diligent::ShaderVariableD3D12Impl classes
 
 //
-//  * ShaderVariableManagerD3D12 keeps the list of variables of specific types
+//  * ShaderVariableManagerD3D12 keeps the list of variables of specific types (static or mutable/dynamic)
 //  * Every ShaderVariableD3D12Impl references ResourceAttribs by index from PipelineResourceSignatureD3D12Impl
 //  * ShaderVariableManagerD3D12 keeps reference to ShaderResourceCacheD3D12
 //  * ShaderVariableManagerD3D12 is used by PipelineResourceSignatureD3D12Impl to manage static resources and by

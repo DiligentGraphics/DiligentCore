@@ -82,7 +82,7 @@ void CommandListManager::CreateNewCommandList(ID3D12GraphicsCommandList** List, 
 
 void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
 {
-    std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
+    std::lock_guard<std::mutex> LockGuard{m_AllocatorMutex};
 
     VERIFY((*ppAllocator) == nullptr, "Allocator pointer is not null");
     (*ppAllocator) = nullptr;
@@ -102,11 +102,11 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
         auto  hr           = pd3d12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
         VERIFY(SUCCEEDED(hr), "Failed to create command allocator");
         wchar_t AllocatorName[32];
-        swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", Atomics::AtomicIncrement(m_NumAllocators) - 1);
+        swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", m_NumAllocators.fetch_add(1));
         (*ppAllocator)->SetName(AllocatorName);
     }
 #ifdef DILIGENT_DEVELOPMENT
-    Atomics::AtomicIncrement(m_AllocatorCounter);
+    m_AllocatorCounter.fetch_add(1);
 #endif
 }
 
@@ -150,7 +150,7 @@ void CommandListManager::FreeAllocator(CComPtr<ID3D12CommandAllocator>&& Allocat
     std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
     m_FreeAllocators.emplace_back(std::move(Allocator));
 #ifdef DILIGENT_DEVELOPMENT
-    Atomics::AtomicDecrement(m_AllocatorCounter);
+    m_AllocatorCounter.fetch_add(-1);
 #endif
 }
 

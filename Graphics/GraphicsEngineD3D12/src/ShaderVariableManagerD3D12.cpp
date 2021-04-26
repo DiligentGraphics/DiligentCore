@@ -85,7 +85,7 @@ size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const PipelineResourceS
     return (*pNumVariables) * sizeof(ShaderVariableD3D12Impl);
 }
 
-// Creates shader variable for every resource from Signature whose type is one AllowedVarTypes
+// Creates shader variable for every resource from Signature whose type is one of AllowedVarTypes
 void ShaderVariableManagerD3D12::Initialize(const PipelineResourceSignatureD3D12Impl& Signature,
                                             IMemoryAllocator&                         Allocator,
                                             const SHADER_RESOURCE_VARIABLE_TYPE*      AllowedVarTypes,
