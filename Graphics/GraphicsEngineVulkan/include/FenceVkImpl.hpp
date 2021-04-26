@@ -53,6 +53,10 @@ public:
                 RenderDeviceVkImpl* pRendeDeviceVkImpl,
                 const FenceDesc&    Desc,
                 bool                IsDeviceInternal = false);
+    FenceVkImpl(IReferenceCounters* pRefCounters,
+                RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                const FenceDesc&    Desc,
+                VkSemaphore         vkTimelineSemaphore);
     ~FenceVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceVk, TFenceBase)
@@ -77,6 +81,8 @@ public:
 
     bool IsTimelineSemaphore() const { return m_TimelineSemaphore; }
 
+    void ImmediatelyReleaseResources();
+
 private:
     Uint64 InternalGetCompletedValue();
 
@@ -91,10 +97,6 @@ private:
     static constexpr Uint32   RequiredArraySize = 8;
     std::mutex                m_SyncPointsGuard; // Protects access to the m_SyncPoints
     std::deque<SyncPointData> m_SyncPoints;      // TODO: use ring buffer
-
-#ifdef DILIGENT_DEVELOPMENT
-    bool m_dvpUsedForGPUSync = false;
-#endif
 };
 
 } // namespace Diligent

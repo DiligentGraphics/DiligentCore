@@ -65,13 +65,16 @@ public:
     void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
     {
         m_PendingFences.emplace_back(Value, std::move(Fence));
-        VERIFY(m_PendingFences.size() < 16, "array of fences is too big, none of the GetCompletedValue(), HostWait() or DeviceWait() are used");
+        VERIFY(m_PendingFences.size() < RequiredArraySize, "array of fences is too big, none of the GetCompletedValue(), HostWait() or DeviceWait() are used");
+        DvpSignal(Value);
     }
 
     void HostWait(Uint64 Value, bool FlushCommands);
     void DeviceWait(Uint64 Value);
 
 private:
+    static constexpr Uint32 RequiredArraySize = 16;
+
     std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
 };
 

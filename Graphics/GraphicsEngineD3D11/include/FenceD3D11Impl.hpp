@@ -65,6 +65,7 @@ public:
     {
         m_PendingQueries.emplace_back(std::move(pCtx), std::move(pQuery), Value);
         VERIFY(m_PendingQueries.size() < 16, "array of queries is too big, none of the GetCompletedValue() or Wait() are used");
+        DvpSignal(Value);
     }
 
     void Wait(Uint64 Value, bool FlushCommands);

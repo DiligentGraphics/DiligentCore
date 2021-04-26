@@ -197,16 +197,6 @@ DILIGENT_TYPED_ENUM(CPU_ACCESS_FLAGS, Uint8)
 };
 DEFINE_FLAG_ENUM_OPERATORS(CPU_ACCESS_FLAGS)
 
-/// AZ TODO
-DILIGENT_TYPED_ENUM(RESOURCE_FLAGS, Uint8)
-{
-    RESOURCE_FLAG_UNKNOWN = 0,
-
-    /// Allows a resource to be simultaneously read from multiple contexts.
-    RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS = 0x01
-};
-DEFINE_FLAG_ENUM_OPERATORS(RESOURCE_FLAGS)
-
 /// Resource mapping type
 
 /// [D3D11_MAP]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_map
@@ -1821,7 +1811,10 @@ DILIGENT_TYPED_ENUM(ADAPTER_VENDOR, Uint8)
     ADAPTER_VENDOR_APPLE,
 
     /// Adapter vendor is Mesa (software rasterizer)
-    ADAPTER_VENDOR_MESA
+    ADAPTER_VENDOR_MESA,
+
+    /// Adapter vendor is Broadcom (Raspberry Pi)
+    ADAPTER_VENDOR_BROADCOM
 };
 
 
@@ -1893,6 +1886,11 @@ struct DeviceCaps
 
     /// \note For optional features requested during the initialization, the
     ///       struct will indicate the actual feature state (enabled or disabled).
+    /// 
+    /// \note When a feature is queried by IEngineFactory::EnumerateAdapters, the feature state indicates:
+    ///       - Disabled - the feature is not supported by device.
+    ///       - Enabled  - the feature is always enabled.
+    ///       - Optional - the feature is supported and can be enabled or disabled.
     DeviceFeatures Features;
 
 #if DILIGENT_CPP_INTERFACE
@@ -2309,6 +2307,15 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Setting this to true is typically needed for testing purposes only.
     bool ForceNonSeparablePrograms DEFAULT_INITIALIZER(false);
+
+#if DILIGENT_CPP_INTERFACE
+    EngineGLCreateInfo() noexcept : EngineGLCreateInfo{EngineCreateInfo{}}
+    {}
+
+    explicit EngineGLCreateInfo(const EngineCreateInfo &EngineCI) noexcept :
+        EngineCreateInfo{EngineCI}
+    {}
+#endif
 };
 typedef struct EngineGLCreateInfo EngineGLCreateInfo;
 
@@ -2338,7 +2345,12 @@ struct EngineD3D11CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     D3D11_VALIDATION_FLAGS D3D11ValidationFlags DEFAULT_INITIALIZER(D3D11_VALIDATION_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
-    EngineD3D11CreateInfo() noexcept
+    EngineD3D11CreateInfo() noexcept :
+        EngineD3D11CreateInfo{EngineCreateInfo{}}
+    {}
+
+    explicit EngineD3D11CreateInfo(const EngineCreateInfo &EngineCI) noexcept :
+        EngineCreateInfo{EngineCI}
     {
 #ifdef DILIGENT_DEVELOPMENT
         SetValidationLevel(VALIDATION_LEVEL_1);
@@ -2499,7 +2511,12 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     const char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
-    EngineD3D12CreateInfo() noexcept
+    EngineD3D12CreateInfo() noexcept :
+        EngineD3D12CreateInfo{EngineCreateInfo{}}
+    {}
+
+    explicit EngineD3D12CreateInfo(const EngineCreateInfo &EngineCI) noexcept :
+        EngineCreateInfo{EngineCI}
     {
 #ifdef DILIGENT_DEVELOPMENT
         SetValidationLevel(VALIDATION_LEVEL_1);
@@ -2667,6 +2684,16 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+
     /// features when compiling shaders from HLSL.
     const char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    EngineVkCreateInfo() noexcept :
+        EngineVkCreateInfo{EngineCreateInfo{}}
+    {}
+
+    explicit EngineVkCreateInfo(const EngineCreateInfo &EngineCI) noexcept :
+        EngineCreateInfo{EngineCI}
+    {}
+#endif
 };
 typedef struct EngineVkCreateInfo EngineVkCreateInfo;
 
@@ -2700,6 +2727,16 @@ struct EngineMtlCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     ///       Creating device objects will not leak memory even when
     ///       UseAutoreleasePoolsInContexts is set to false.
     bool UseAutoreleasePoolsInContexts  DEFAULT_INITIALIZER(true);
+
+#if DILIGENT_CPP_INTERFACE
+    EngineMtlCreateInfo() noexcept :
+        EngineMtlCreateInfo{EngineCreateInfo{}}
+    {}
+
+    explicit EngineMtlCreateInfo(const EngineCreateInfo &EngineCI) noexcept :
+        EngineCreateInfo{EngineCI}
+    {}
+#endif
 };
 typedef struct EngineMtlCreateInfo EngineMtlCreateInfo;
 

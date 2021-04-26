@@ -957,8 +957,6 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     {
         auto& RawMemAllocator = GetRawAllocator();
 
-        VERIFY_EXPR(memcmp(&AdapterInfo.Capabilities.Features, &EngineCI.Features, sizeof(EngineCI.Features)) == 0);
-
         RenderDeviceVkImpl* pRenderDeviceVk(NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, this, EngineCI, AdapterInfo, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice));
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 

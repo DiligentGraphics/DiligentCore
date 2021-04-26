@@ -559,11 +559,10 @@ private:
     // Can be used only if timeline semaphore extension is enabled
     std::vector<uint64_t> m_WaitSemaphoreValues;
     std::vector<uint64_t> m_SignalSemaphoreValues;
-    Uint32                m_NumSignalTimelineSemaphores = 0;
-    Uint32                m_NumWaitTimelineSemaphores   = 0;
 
-    // List of fences to signal next time the command context is flushed
+    // List of fences to signal/wait next time the command context is flushed
     std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>> m_SignalFences;
+    std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>> m_WaitFences;
 
     std::unordered_map<BufferVkImpl*, VulkanUploadAllocation> m_UploadAllocations;
 

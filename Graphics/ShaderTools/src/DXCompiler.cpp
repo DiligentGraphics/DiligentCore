@@ -72,8 +72,8 @@ class DXCompilerImpl final : public DXCompilerBase
 {
 public:
     DXCompilerImpl(DXCompilerTarget Target, Uint32 APIVersion, const char* pLibName) :
-        m_Target{Target},
         m_LibName{pLibName ? pLibName : (Target == DXCompilerTarget::Direct3D12 ? "dxcompiler" : "spv_dxcompiler")},
+        m_Target{Target},
         m_APIVersion{APIVersion}
     {}
 

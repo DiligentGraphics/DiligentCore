@@ -27,3 +27,9 @@
 
 #include <d3d12.h>
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/FenceD3D12.h"
+
+void TestFenceD3D12CInterface(IFenceD3D12* pFence)
+{
+    ID3D12Fence* pFenceD3D12 = IFenceD3D12_GetD3D12Fence(pFence);
+    (void)pFenceD3D12;
+}

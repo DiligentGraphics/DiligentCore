@@ -104,6 +104,12 @@ protected:
 
     bool CheckCSBasedMipGenerationSupport(VkFormat vkFmt) const;
 
+    void InitializeTextureContent(const TextureData*          pInitData,
+                                  const TextureFormatAttribs& FmtAttribs,
+                                  const VkImageCreateInfo&    ImageCI);
+    void CreateStagingTexture(const TextureData*          pInitData,
+                              const TextureFormatAttribs& FmtAttribs);
+
     VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc& ViewDesc);
 
     VulkanUtilities::ImageWrapper           m_VulkanImage;

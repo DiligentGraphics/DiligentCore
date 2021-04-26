@@ -50,6 +50,8 @@ FenceD3D12Impl::FenceD3D12Impl(IReferenceCounters*    pRefCounters,
 
 FenceD3D12Impl::~FenceD3D12Impl()
 {
+    // D3D12 object can only be destroyed when it is no longer used by the GPU
+    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Fence), ~0ull);
 }
 
 Uint64 FenceD3D12Impl::GetCompletedValue()
@@ -61,6 +63,9 @@ Uint64 FenceD3D12Impl::GetCompletedValue()
 
 void FenceD3D12Impl::Signal(Uint64 Value)
 {
+    DEV_CHECK_ERR(GetDevice()->GetDeviceCaps().Features.NativeFence, "CPU side fence signal requires NativeFence feature");
+    DvpSignal(Value);
+
     m_pd3d12Fence->Signal(Value);
 }
 

@@ -49,11 +49,30 @@ FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
     }
 // clang-format on
 {
-    const auto& LogicalDevice = pRendeDeviceVkImpl->GetLogicalDevice();
-    if (LogicalDevice.GetEnabledExtFeatures().TimelineSemaphore.timelineSemaphore == VK_TRUE)
+    if (pRendeDeviceVkImpl->GetDeviceCaps().Features.NativeFence)
     {
-        m_TimelineSemaphore = LogicalDevice.CreateTimelineSemaphore(0, m_Desc.Name);
+        const auto& LogicalDevice = pRendeDeviceVkImpl->GetLogicalDevice();
+        m_TimelineSemaphore       = LogicalDevice.CreateTimelineSemaphore(0, m_Desc.Name);
     }
+}
+
+FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
+                         RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                         const FenceDesc&    Desc,
+                         VkSemaphore         vkTimelineSemaphore) :
+    // clang-format off
+    TFenceBase
+    {
+        pRefCounters,
+        pRendeDeviceVkImpl,
+        Desc,
+        false
+    },
+    m_TimelineSemaphore{vkTimelineSemaphore}
+// clang-format on
+{
+    if (!pRendeDeviceVkImpl->GetDeviceCaps().Features.NativeFence)
+        LOG_ERROR_AND_THROW("Feature NativeFence is not enabled, can not create fence from Vulkan timeline semaphore.");
 }
 
 FenceVkImpl::~FenceVkImpl()
@@ -61,6 +80,7 @@ FenceVkImpl::~FenceVkImpl()
     if (IsTimelineSemaphore())
     {
         VERIFY_EXPR(m_SyncPoints.empty());
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_TimelineSemaphore), ~0ull);
     }
     else if (!m_SyncPoints.empty())
     {
@@ -71,6 +91,11 @@ FenceVkImpl::~FenceVkImpl()
         // (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyFence-fence-01120)
         Wait(UINT64_MAX);
     }
+}
+
+void FenceVkImpl::ImmediatelyReleaseResources()
+{
+    m_TimelineSemaphore.Release();
 }
 
 Uint64 FenceVkImpl::GetCompletedValue()
@@ -111,12 +136,6 @@ Uint64 FenceVkImpl::InternalGetCompletedValue()
         }
     }
 
-#ifdef DILIGENT_DEVELOPMENT
-    // Fence may sometimes be used for GPU sync, so set the flag only when the fence has pending sync points.
-    if (m_SyncPoints.empty())
-        m_dvpUsedForGPUSync = false;
-#endif
-
     return m_LastCompletedFenceValue.load();
 }
 
@@ -124,6 +143,8 @@ void FenceVkImpl::Signal(Uint64 Value)
 {
     if (IsTimelineSemaphore())
     {
+        DvpSignal(Value);
+
         const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
 
         VkSemaphoreSignalInfo SignalInfo{};
@@ -137,7 +158,7 @@ void FenceVkImpl::Signal(Uint64 Value)
     }
     else
     {
-        UNEXPECTED("Signal() is supported only with timeline semaphore, enable NativeFence feature to use it");
+        DEV_CHECK_ERR(false, "Signal() is supported only with timeline semaphore, enable NativeFence feature to use it");
     }
 }
 
@@ -145,14 +166,13 @@ void FenceVkImpl::Reset(Uint64 Value)
 {
     if (IsTimelineSemaphore())
     {
-        UNEXPECTED("Reset() is not supported for timeline semaphore");
+        DEV_CHECK_ERR(false, "Reset() is not supported for timeline semaphore");
     }
     else
     {
         std::lock_guard<std::mutex> Lock{m_SyncPointsGuard};
 
-        DEV_CHECK_ERR(!m_dvpUsedForGPUSync, "Reseting fence that is used for synchronization between queues is very dangerous and is not allowed as it may cause data race or a deadlock.");
-        DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue.load(), "Resetting the fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
+        DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue.load(), "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
         UpdateLastCompletedFenceValue(Value);
     }
 }
@@ -172,7 +192,7 @@ void FenceVkImpl::Wait(Uint64 Value)
         WaitInfo.pValues        = &Value;
 
         auto err = LogicalDevice.WaitSemaphores(WaitInfo, UINT64_MAX);
-        DEV_CHECK_ERR(err == VK_SUCCESS, "Timeline Semaphore Unknown Error");
+        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to wait timeline semaphore");
     }
     else
     {
@@ -197,12 +217,6 @@ void FenceVkImpl::Wait(Uint64 Value)
 
             m_SyncPoints.pop_front();
         }
-
-#ifdef DILIGENT_DEVELOPMENT
-        // Fence may sometimes be used for GPU sync, so set the flag only when the fence has pending sync points.
-        if (m_SyncPoints.empty())
-            m_dvpUsedForGPUSync = false;
-#endif
     }
 }
 
@@ -210,7 +224,7 @@ VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(Com
 {
     if (IsTimelineSemaphore())
     {
-        UNEXPECTED("Not supported when timeline semaphore is used");
+        DEV_CHECK_ERR(false, "Not supported when timeline semaphore is used");
         return {};
     }
 
@@ -219,13 +233,13 @@ VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(Com
     VulkanUtilities::VulkanRecycledSemaphore Result;
 
 #ifdef DILIGENT_DEVELOPMENT
-    if (!m_SyncPoints.empty())
     {
-        DEV_CHECK_ERR(Value <= m_SyncPoints.back().Value,
-                      "Can not wait for value ", Value, " that is greater than the last signaled value (", m_SyncPoints.back().Value,
-                      "). This will cause a deadlock. Use timeline semaphore to avoid this.");
+        const auto LastValue = m_SyncPoints.empty() ? m_LastCompletedFenceValue.load() : m_SyncPoints.back().Value;
+        DEV_CHECK_ERR(Value <= LastValue,
+                      "Can not wait for value ", Value, " that is greater than the last known value (", LastValue,
+                      "). Binary semaphore for these value is not enqueued for signal operation. ",
+                      "This may lead to a data race. Use the timeline semaphore to avoid this.");
     }
-    m_dvpUsedForGPUSync = true;
 #endif
 
     // Find the last non-null semaphore
@@ -239,23 +253,6 @@ VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(Com
             break;
     }
 
-    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-
-    // If IFence is used only for synchronization between queues, it will accumulate many more sync points.
-    // We need to check VkFence and remove already reached sync points.
-    while (!m_SyncPoints.empty())
-    {
-        auto& Item   = m_SyncPoints.front();
-        auto  status = LogicalDevice.GetFenceStatus(Item.SyncPoint->GetFence());
-        if (status == VK_NOT_READY)
-            break;
-
-        DEV_CHECK_ERR(status == VK_SUCCESS, "All pending fences must now be complete!");
-        UpdateLastCompletedFenceValue(Item.Value);
-
-        m_SyncPoints.pop_front();
-    }
-
     return Result;
 }
 
@@ -263,7 +260,7 @@ void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 V
 {
     if (IsTimelineSemaphore())
     {
-        UNEXPECTED("Not supported when timeline semaphore is used");
+        DEV_CHECK_ERR(false, "Not supported when timeline semaphore is used");
         return;
     }
     if (SyncPoint == nullptr)
@@ -272,14 +269,18 @@ void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 V
         return;
     }
 
+    DvpSignal(Value);
+
     std::lock_guard<std::mutex> Lock{m_SyncPointsGuard};
 
 #ifdef DILIGENT_DEVELOPMENT
+    {
+        const auto LastValue = m_SyncPoints.empty() ? m_LastCompletedFenceValue.load() : m_SyncPoints.back().Value;
+        DEV_CHECK_ERR(Value > LastValue,
+                      "New value (", Value, ") must be greater than previous value (", LastValue, ")");
+    }
     if (!m_SyncPoints.empty())
     {
-        DEV_CHECK_ERR(Value > m_SyncPoints.back().Value,
-                      "New fence value (", Value, ") must be greater than the previous value (", m_SyncPoints.back().Value, ")");
-
         DEV_CHECK_ERR(m_SyncPoints.back().SyncPoint->GetCommandQueueId() == CommandQueueId,
                       "Fence enqueued for signal operation in command queue ", CommandQueueId,
                       ", but previous signal operation was in command queue ", m_SyncPoints.back().SyncPoint->GetCommandQueueId(),
@@ -287,7 +288,8 @@ void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 V
     }
 #endif
 
-    // Remove already completed sync points
+    // If IFence is used only for synchronization between queues it will accumulate many more sync points.
+    // We need to check VkFence and remove already reached sync points.
     if (m_SyncPoints.size() > RequiredArraySize)
     {
         InternalGetCompletedValue();

@@ -369,7 +369,7 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(CommandQueueIndex                  
                                              const VkSubmitInfo&                                         SubmitInfo,
                                              Uint64&                                                     SubmittedCmdBuffNumber, // Number of the submitted command buffer
                                              Uint64&                                                     SubmittedFenceValue,    // Fence value associated with the submitted command buffer
-                                             std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pFences                 // List of fences to signal
+                                             std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences           // List of fences to signal
 )
 {
     // Submit the command list to the queue
@@ -377,12 +377,12 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(CommandQueueIndex                  
     SubmittedFenceValue    = CmbBuffInfo.FenceValue;
     SubmittedCmdBuffNumber = CmbBuffInfo.CmdBufferNumber;
 
-    if (pFences != nullptr && !pFences->empty())
+    if (pSignalFences != nullptr && !pSignalFences->empty())
     {
         auto* pQueue     = m_CommandQueues[CommandQueueId].CmdQueue.RawPtr<CommandQueueVkImpl>();
         auto  pSyncPoint = pQueue->GetLastSyncPoint();
 
-        for (auto& val_fence : *pFences)
+        for (auto& val_fence : *pSignalFences)
         {
             auto* pFenceVkImpl = val_fence.second.RawPtr<FenceVkImpl>();
             pFenceVkImpl->AddPendingSyncPoint(CommandQueueId, val_fence.first, pSyncPoint);
@@ -414,7 +414,8 @@ void RenderDeviceVkImpl::FlushStaleResources(CommandQueueIndex CmdQueueIndex)
 {
     // Submit empty command buffer to the queue. This will effectively signal the fence and
     // discard all resources
-    VkSubmitInfo DummySumbitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    VkSubmitInfo DummySumbitInfo{};
+    DummySumbitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     TRenderDeviceBase::SubmitCommandBuffer(CmdQueueIndex, true, DummySumbitInfo);
 }
 
@@ -647,6 +648,13 @@ void RenderDeviceVkImpl::CreateTLASFromVulkanResource(VkAccelerationStructureKHR
     CreateTLASImpl(ppTLAS, Desc, InitialState, vkTLAS);
 }
 
+void RenderDeviceVkImpl::CreateFenceFromVulkanResource(VkSemaphore      vkTimelineSemaphore,
+                                                       const FenceDesc& Desc,
+                                                       IFence**         ppFence)
+{
+    CreateFenceImpl(ppFence, Desc, vkTimelineSemaphore);
+}
+
 void RenderDeviceVkImpl::CreateTLAS(const TopLevelASDesc& Desc,
                                     ITopLevelAS**         ppTLAS)
 {
@@ -684,10 +692,11 @@ void RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueu
     for (; CommandQueueMask != 0 && inoutQueueFamilyIndicesCount < MaxCount;)
     {
         auto CmdQueueInd = PlatformMisc::GetLSB(CommandQueueMask);
-        CommandQueueMask &= ~(Uint64{1} << CmdQueueInd);
+        CommandQueueMask &= ~(Uint64{1} << Uint64{CmdQueueInd});
 
         auto& CmdQueue    = GetCommandQueue(CommandQueueIndex{CmdQueueInd});
         auto  FamilyIndex = CmdQueue.GetQueueFamilyIndex();
+        VERIFY_EXPR(FamilyIndex < MaxCount);
 
         if (!QueueFamilyBits[FamilyIndex])
         {
@@ -696,6 +705,12 @@ void RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueu
             outQueueFamilyIndices[inoutQueueFamilyIndicesCount++] = FamilyIndex;
         }
     }
+}
+
+HardwareQueueId RenderDeviceVkImpl::GetQueueFamilyIndex(CommandQueueIndex CmdQueueInd) const
+{
+    auto* CmdQueue = ValidatedCast<const CommandQueueVkImpl>(&GetCommandQueue(CommandQueueIndex{CmdQueueInd}));
+    return HardwareQueueId{CmdQueue->GetQueueFamilyIndex()};
 }
 
 } // namespace Diligent

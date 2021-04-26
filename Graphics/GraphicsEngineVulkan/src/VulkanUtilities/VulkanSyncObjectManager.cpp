@@ -34,6 +34,7 @@ VulkanSyncObjectManager::VulkanSyncObjectManager(VulkanLogicalDevice& LogicalDev
     m_LogicalDevice{LogicalDevice}
 {
     m_SemaphorePool.reserve(64);
+    m_FencePool.reserve(32);
 }
 
 VulkanSyncObjectManager::~VulkanSyncObjectManager()
@@ -93,10 +94,10 @@ VulkanRecycledFence VulkanSyncObjectManager::CreateFence()
         }
     }
 
-    VkFenceCreateInfo FenceCI{};
-    FenceCI.sType   = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    VkFence vkFence = VK_NULL_HANDLE;
+    VkFenceCreateInfo FenceCI = {};
+    VkFence           vkFence = VK_NULL_HANDLE;
 
+    FenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     vkCreateFence(m_LogicalDevice.GetVkDevice(), &FenceCI, nullptr, &vkFence);
 
     return {shared_from_this(), vkFence};

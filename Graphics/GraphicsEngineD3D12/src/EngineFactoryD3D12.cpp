@@ -717,7 +717,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
         Features.BindlessResources = DEVICE_FEATURE_STATE_ENABLED;
 
         Features.VertexPipelineUAVWritesAndAtomics = DEVICE_FEATURE_STATE_ENABLED;
-        Features.NativeFence                       = DEVICE_FEATURE_STATE_ENABLED;
+        Features.NativeFence                       = DEVICE_FEATURE_STATE_OPTIONAL; // can be disabled
 
         // Check if mesh shader is supported.
         bool MeshShadersSupported = false;

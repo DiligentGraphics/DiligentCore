@@ -246,13 +246,14 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 #    endif
 
             EngineD3D11CreateInfo CreateInfo;
+            CreateInfo.GraphicsAPIVersion   = Version{11, 0};
             CreateInfo.DebugMessageCallback = MessageCallback;
             CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 #    ifdef DILIGENT_DEVELOPMENT
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_2);
 #    endif
             auto* pFactoryD3D11 = GetEngineFactoryD3D11();
-            EnumerateAdapters(pFactoryD3D11, Version{11, 0});
+            EnumerateAdapters(pFactoryD3D11, CreateInfo.GraphicsAPIVersion);
 
             LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible adapters");
             for (Uint32 i = 0; i < Adapters.size(); ++i)
@@ -262,11 +263,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
                 std::vector<DisplayModeAttribs> DisplayModes;
                 if (AdapterInfo.NumOutputs > 0)
                 {
-                    const Version FeatureLevel{11, 0};
-                    Uint32        NumDisplayModes = 0;
-                    pFactoryD3D11->EnumerateDisplayModes(FeatureLevel, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, nullptr);
+                    Uint32 NumDisplayModes = 0;
+                    pFactoryD3D11->EnumerateDisplayModes(CreateInfo.GraphicsAPIVersion, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, nullptr);
                     DisplayModes.resize(NumDisplayModes);
-                    pFactoryD3D11->EnumerateDisplayModes(FeatureLevel, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, DisplayModes.data());
+                    pFactoryD3D11->EnumerateDisplayModes(CreateInfo.GraphicsAPIVersion, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, DisplayModes.data());
                 }
 
                 PrintAdapterInfo(i, AdapterInfo, DisplayModes);
@@ -298,9 +298,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
                 LOG_ERROR_AND_THROW("Failed to load d3d12 dll");
             }
 
-            EnumerateAdapters(pFactoryD3D12, Version{11, 0});
-
             EngineD3D12CreateInfo CreateInfo;
+            CreateInfo.GraphicsAPIVersion = Version{11, 0};
+
+            EnumerateAdapters(pFactoryD3D12, CreateInfo.GraphicsAPIVersion);
 
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
@@ -317,9 +318,9 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
                 if (AdapterInfo.NumOutputs > 0)
                 {
                     Uint32 NumDisplayModes = 0;
-                    pFactoryD3D12->EnumerateDisplayModes({11, 0}, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, nullptr);
+                    pFactoryD3D12->EnumerateDisplayModes(CreateInfo.GraphicsAPIVersion, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, nullptr);
                     DisplayModes.resize(NumDisplayModes);
-                    pFactoryD3D12->EnumerateDisplayModes({11, 0}, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, DisplayModes.data());
+                    pFactoryD3D12->EnumerateDisplayModes(CreateInfo.GraphicsAPIVersion, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, DisplayModes.data());
                 }
 
                 PrintAdapterInfo(i, AdapterInfo, DisplayModes);
@@ -329,8 +330,8 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
             AddContext(CONTEXT_TYPE_COMPUTE, "Compute", CI.AdapterId);
             AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", CI.AdapterId);
-            CreateInfo.pContextInfo = ContextCI.data();
             CreateInfo.NumContexts  = static_cast<Uint32>(ContextCI.size());
+            CreateInfo.pContextInfo = CreateInfo.NumContexts ? ContextCI.data() : nullptr;
 
             //CreateInfo.EnableGPUBasedValidation                = true;
             CreateInfo.CPUDescriptorHeapAllocationSize[0]      = 64; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
@@ -408,8 +409,8 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
 
             CreateInfo.AdapterId                 = CI.AdapterId;
-            CreateInfo.pContextInfo              = ContextCI.data();
             CreateInfo.NumContexts               = static_cast<Uint32>(ContextCI.size());
+            CreateInfo.pContextInfo              = CreateInfo.NumContexts ? ContextCI.data() : nullptr;
             CreateInfo.DebugMessageCallback      = MessageCallback;
             CreateInfo.MainDescriptorPoolSize    = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16, 16};
             CreateInfo.DynamicDescriptorPoolSize = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16, 16};
@@ -431,6 +432,14 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
         {
             EngineMtlCreateInfo CreateInfo;
 
+            auto* pFactoryMtl = GetEngineFactoryMtl();
+            EnumerateAdapters(pFactoryMtl, Version{});
+            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", 0);
+            AddContext(CONTEXT_TYPE_COMPUTE, "Compute", 0);
+            AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", 0);
+            CreateInfo.NumContexts  = static_cast<Uint32>(ContextCI.size());
+            CreateInfo.pContextInfo = CreateInfo.NumContexts ? ContextCI.data() : nullptr;
+
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
 
@@ -438,7 +447,6 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             NumDeferredCtx                  = CI.NumDeferredContexts;
             MtlAttribs.NumDeferredContexts  = NumDeferredCtx;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
-            auto* pFactoryMtl = GetEngineFactoryMtl();
             pFactoryMtl->CreateDeviceAndContextsMtl(CreateInfo, &m_pDevice, ppContexts.data());
         }
         break;
@@ -449,7 +457,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             break;
     }
 
-    constexpr Uint8 InvalidQueueId = 64;
+    constexpr Uint8 InvalidQueueId = 64; // MAX_COMMAND_QUEUES
     m_NumImmediateContexts         = std::max(1u, static_cast<Uint32>(ContextCI.size()));
     m_pDeviceContexts.resize(ppContexts.size());
     for (size_t i = 0; i < ppContexts.size(); ++i)
@@ -515,6 +523,9 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             break;
         case ADAPTER_VENDOR_MESA:
             AdapterInfoStr += "Mesa";
+            break;
+        case ADAPTER_VENDOR_BROADCOM:
+            AdapterInfoStr += "Broadcom";
             break;
         default:
             AdapterInfoStr += "Unknown";

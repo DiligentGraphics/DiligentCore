@@ -92,10 +92,9 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
     MISC_TEXTURE_FLAGS MiscFlags        DEFAULT_INITIALIZER(MISC_TEXTURE_FLAG_NONE);
 
-    /// Texture creation flags, see Diligent::RESOURCE_FLAGS for details
-    RESOURCE_FLAGS ResourceFlags        DEFAULT_INITIALIZER(RESOURCE_FLAG_UNKNOWN);
-
-    /// Defines which command queue will initially own the texture
+    /// Defines which command queue will initially own the texture.
+    /// Texture may have a write access in these queue during initialization,
+    /// you must synchronize futher read or write access in another queue using fence.
     Uint8        InitialCommandQueueId  DEFAULT_INITIALIZER(0);
 
     /// Optimized clear value
@@ -133,9 +132,9 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         BindFlags            {_BindFlags       },
         CPUAccessFlags       {_CPUAccessFlags  },
         MiscFlags            {_MiscFlags       },
+        InitialCommandQueueId{_InitialQueueId  },
         ClearValue           {_ClearValue      },
-        CommandQueueMask     {_CommandQueueMask},
-        InitialCommandQueueId{_InitialQueueId  }
+        CommandQueueMask     {_CommandQueueMask}
     {}
 
     /// Tests if two structures are equivalent

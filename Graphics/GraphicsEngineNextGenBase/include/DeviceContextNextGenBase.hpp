@@ -61,9 +61,11 @@ public:
         m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId}}
     // clang-format on
     {
-        this->m_Desc.CommandQueueId = static_cast<Uint8>(CommandQueueId);
-        VERIFY(bIsDeferred || ContextId == CommandQueueId,
-               "For immediate contexts, ContextId must match CommandQueueId");
+        if (!this->IsDeferred())
+        {
+            this->m_Desc.CommandQueueId = static_cast<Uint8>(CommandQueueId);
+            VERIFY(ContextId == CommandQueueId, "For immediate contexts, ContextId must match CommandQueueId");
+        }
     }
 
     ~DeviceContextNextGenBase()
@@ -77,7 +79,7 @@ public:
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return nullptr;
         }
-        return this->m_pDevice->LockCommandQueue(GetCommandQueueId());
+        return this->m_pDevice->LockCommandQueue(this->GetCommandQueueId());
     }
 
     virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final
@@ -87,18 +89,12 @@ public:
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return;
         }
-        this->m_pDevice->UnlockCommandQueue(GetCommandQueueId());
+        this->m_pDevice->UnlockCommandQueue(this->GetCommandQueueId());
     }
 
     ContextIndex GetContextId() const { return ContextIndex{m_ContextId}; }
 
     HardwareQueueId GetHardwareQueueId() const { return HardwareQueueId{this->m_Desc.QueueId}; }
-
-    CommandQueueIndex GetCommandQueueId() const
-    {
-        VERIFY_EXPR(this->m_Desc.CommandQueueId < MAX_COMMAND_QUEUES);
-        return CommandQueueIndex{this->m_Desc.CommandQueueId};
-    }
 
     Uint64 GetSubmittedBuffersCmdQueueMask() const { return m_SubmittedBuffersCmdQueueMask.load(); }
 
@@ -117,7 +113,7 @@ protected:
         }
         else
         {
-            this->m_pDevice->FlushStaleResources(GetCommandQueueId());
+            this->m_pDevice->FlushStaleResources(this->GetCommandQueueId());
         }
         TBase::EndFrame();
     }

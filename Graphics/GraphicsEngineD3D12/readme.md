@@ -22,7 +22,6 @@ EngineCI.CPUDescriptorHeapAllocationSize[0] = 1024;
 EngineCI.CPUDescriptorHeapAllocationSize[1] = 32;
 EngineCI.CPUDescriptorHeapAllocationSize[2] = 16;
 EngineCI.CPUDescriptorHeapAllocationSize[3] = 16;
-EngineCI.NumCommandsToFlushCmdList = 64;
 RefCntAutoPtr<IRenderDevice>  pRenderDevice;
 RefCntAutoPtr<IDeviceContext> pImmediateContext;
 SwapChainDesc SwapChainDesc;

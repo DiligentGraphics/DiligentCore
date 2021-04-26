@@ -317,6 +317,12 @@ void VulkanCommandBuffer::TransitionImageLayout(VkCommandBuffer                C
         }
     }
 
+    if ((SupportedStagesMask & VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT) == 0)
+    {
+        ImgBarrier.srcAccessMask &= ~VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+        ImgBarrier.dstAccessMask &= ~VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+    }
+
     SrcStages &= SupportedStagesMask;
     DestStages &= SupportedStagesMask;
     VERIFY(SrcStages != 0 && DestStages != 0, "Stage mask must not be 0");

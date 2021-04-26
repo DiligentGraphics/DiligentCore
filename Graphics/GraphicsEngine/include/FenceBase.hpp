@@ -69,6 +69,41 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Fence, TDeviceObjectBase)
 
+
+#ifdef DILIGENT_DEVELOPMENT
+    // Validate IFence::Signal() and IDeviceContext::EnqueueSignal()
+    void DvpSignal(Uint64 NewValue)
+    {
+        auto EnqueuedValue = m_EnqueuedFenceValue.load();
+        DEV_CHECK_ERR(NewValue >= EnqueuedValue,
+                      "Fence '", this->m_Desc.Name, "' signaled or equeued for signal with value (", NewValue,
+                      ") but previous value (", EnqueuedValue, ") is greater than new value");
+
+        while (!m_EnqueuedFenceValue.compare_exchange_weak(EnqueuedValue, std::max(EnqueuedValue, NewValue)))
+        {
+            // If exchange fails, EnqueuedValue will hold the actual value of m_EnqueuedFenceValue.
+        }
+    }
+
+    // Validate IDeviceContext::DeviceWaitForFence()
+    void DvpDeviceWait(Uint64 Value)
+    {
+        if (!this->GetDevice()->GetDeviceCaps().Features.NativeFence)
+        {
+            auto EnqueuedValue = m_EnqueuedFenceValue.load();
+            DEV_CHECK_ERR(Value < EnqueuedValue,
+                          "Can not wait for value (", Value, ") that is greater than last enqueued for signal value (", EnqueuedValue,
+                          "). This is not supported when NativeFence feature is disabled.");
+        }
+    }
+#else
+    void DvpSignal(Uint64 NewValue)
+    {}
+
+    void DvpDeviceWait(Uint64 Value)
+    {}
+#endif
+
 protected:
     void UpdateLastCompletedFenceValue(uint64_t NewValue)
     {
@@ -80,6 +115,10 @@ protected:
     }
 
     std::atomic_uint64_t m_LastCompletedFenceValue{0};
+
+#ifdef DILIGENT_DEVELOPMENT
+    std::atomic_uint64_t m_EnqueuedFenceValue{0};
+#endif
 };
 
 } // namespace Diligent

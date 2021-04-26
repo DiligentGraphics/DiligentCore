@@ -63,7 +63,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     )
 // clang-format on
 {
-    ValidateBufferInitData(BuffDesc, pBuffData);
+    ValidateBufferInitData(m_Desc, pBuffData);
 
     if (m_Desc.Usage == USAGE_UNIFIED)
     {
@@ -96,7 +96,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
     if ((m_Desc.Usage == USAGE_DYNAMIC) &&
         (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) == 0 &&
-        (BuffDesc.Mode == BUFFER_MODE_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_STRUCTURED))
+        (m_Desc.Mode == BUFFER_MODE_UNDEFINED || m_Desc.Mode == BUFFER_MODE_STRUCTURED))
     {
         // Dynamic constant/vertex/index buffers are suballocated in the upload heap when Map() is called.
         // Dynamic buffers with UAV flags as well as formatted buffers need to be allocated in GPU-only memory.
@@ -150,7 +150,9 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         if (!IsInKnownState())
             SetState(RESOURCE_STATE_UNDEFINED);
 
-        auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(GetState());
+        const auto CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
+        const auto StateMask   = GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd));
+        auto       D3D12State  = ResourceStateFlagsToD3D12ResourceStates(GetState()) & StateMask;
 
         auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                                                         &D3D12BuffDesc, D3D12State, nullptr,
@@ -187,8 +189,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             memcpy(DestAddress, pBuffData->pData, pBuffData->DataSize);
             UploadBuffer->Unmap(0, nullptr);
 
-            const auto CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
-            auto       InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
+            auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
             // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
             VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
             // We MUST NOT call TransitionResource() from here, because

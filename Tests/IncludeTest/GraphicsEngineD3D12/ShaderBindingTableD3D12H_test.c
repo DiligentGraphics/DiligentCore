@@ -27,3 +27,9 @@
 
 #include <D3D12.h>
 #include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/ShaderBindingTableD3D12.h"
+
+void TestShaderBindingTableD3D12_CInterface(IShaderBindingTableD3D12* pSBT)
+{
+    const D3D12_DISPATCH_RAYS_DESC* Table = IShaderBindingTableD3D12_GetD3D12BindingTable(pSBT);
+    (void)Table;
+}

@@ -224,6 +224,7 @@ public:
         TObjectBase             {pRefCounters},
         m_pEngineFactory        {pEngineFactory},
         m_ValidationFlags       {EngineCI.ValidationFlags},
+        m_AdapterInfo           {AdapterInfo},
         m_SamplersRegistry      {RawMemAllocator, "sampler"},
         m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
@@ -246,8 +247,7 @@ public:
         m_BLASAllocator         {RawMemAllocator, sizeof(BottomLevelASImplType),              16},
         m_TLASAllocator         {RawMemAllocator, sizeof(TopLevelASImplType),                 16},
         m_SBTAllocator          {RawMemAllocator, sizeof(ShaderBindingTableImplType),         16},
-        m_PipeResSignAllocator  {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128},
-        m_AdapterInfo           {AdapterInfo}
+        m_PipeResSignAllocator  {RawMemAllocator, sizeof(PipelineResourceSignatureImplType), 128}
     // clang-format on
     {
         // Initialize texture format info
@@ -345,7 +345,7 @@ public:
     }
 
     /// Implementation of IRenderDevice::GetAdapterInfo().
-    virtual const GraphicsAdapterInfo& GetAdapterInfo() const override final
+    virtual const GraphicsAdapterInfo& DILIGENT_CALL_TYPE GetAdapterInfo() const override final
     {
         return m_AdapterInfo;
     }
@@ -536,12 +536,13 @@ protected:
                            });
     }
 
-    void CreateFenceImpl(IFence** ppFence, const FenceDesc& Desc)
+    template <typename... ExtraArgsType>
+    void CreateFenceImpl(IFence** ppFence, const FenceDesc& Desc, const ExtraArgsType&... ExtraArgs)
     {
         CreateDeviceObject("Fence", Desc, ppFence,
                            [&]() //
                            {
-                               auto* pFenceImpl{NEW_RC_OBJ(m_FenceAllocator, "Fence instance", FenceImplType)(static_cast<RenderDeviceImplType*>(this), Desc)};
+                               auto* pFenceImpl{NEW_RC_OBJ(m_FenceAllocator, "Fence instance", FenceImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...)};
                                pFenceImpl->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
                            });
     }

@@ -313,6 +313,7 @@ void RenderDeviceD3D12Impl::SignalFences(CommandQueueIndex CommandQueueId, std::
         auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
         auto* pd3d12Fence     = pFenceD3D12Impl->GetD3D12Fence();
         CmdQueue->EnqueueSignal(pd3d12Fence, val_fence.first);
+        pFenceD3D12Impl->DvpSignal(val_fence.first);
     }
 }
 
@@ -324,6 +325,7 @@ void RenderDeviceD3D12Impl::WaitFences(CommandQueueIndex CommandQueueId, std::ve
         auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
         auto* pd3d12Fence     = pFenceD3D12Impl->GetD3D12Fence();
         CmdQueue->WaitFence(pd3d12Fence, val_fence.first);
+        pFenceD3D12Impl->DvpDeviceWait(val_fence.first);
     }
 }
 
@@ -345,6 +347,12 @@ void RenderDeviceD3D12Impl::ReleaseStaleResources(bool ForceRelease)
     PurgeReleaseQueues(ForceRelease);
 }
 
+
+D3D12_COMMAND_LIST_TYPE RenderDeviceD3D12Impl::GetCommandQueueType(CommandQueueIndex CmdQueueInd) const
+{
+    const auto* CmdQueue = ValidatedCast<const CommandQueueD3D12Impl>(&GetCommandQueue(CmdQueueInd));
+    return CmdQueue->GetCommandListType();
+}
 
 RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateCommandContext(CommandQueueIndex CommandQueueId, const Char* ID)
 {
