@@ -27,3 +27,9 @@
 
 #include "DiligentCore/ThirdParty/Vulkan-Headers/include/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/FenceVk.h"
+
+void TestFenceVk_CInterface(IFenceVk* pFence)
+{
+    VkSemaphore Sem = IFenceVk_GetVkSemaphore(pFence);
+    (void)Sem;
+}

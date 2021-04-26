@@ -56,7 +56,7 @@ void main(in uint vid : SV_VertexID,
 }
 )"};
 
-const std::string MultipleContextTest_ColorPS{R"(
+const std::string MultipleContextTest_BlendPS{R"(
 struct PSInput 
 { 
     float4 Pos   : SV_POSITION;
@@ -64,34 +64,57 @@ struct PSInput
     float2 UV    : TEXCOORD;
 };
 
+Texture2D<float4> g_Texture1;
+Texture2D<float4> g_Texture2;
+SamplerState      g_Sampler;
+
 float4 main(in PSInput PSIn) : SV_Target
 {
-    return float4(PSIn.Color.rgb, 1.0);
+    float4 Color1 = g_Texture1.Sample(g_Sampler, PSIn.UV, 0);
+    float4 Color2 = g_Texture2.Sample(g_Sampler, PSIn.UV, 0);
+
+    return (Color1 + Color2) * 0.5;
 }
 )"};
 
-const std::string MultipleContextTest_TexturedPS{R"(
+const std::string MultipleContextTest_ProceduralSrc{R"(
+cbuffer Constants
+{
+    float4 g_Time;
+};
+
+float4 GenColor(float2 uv)
+{
+    uv *= 10.0;
+    float4 col = float(0.0).xxxx;
+
+    col.r = sin(uv.x + g_Time.x) * cos(uv.y + g_Time.y);
+    col.g = frac(uv.x + g_Time.z) * frac(uv.y + g_Time.w);
+    return col;
+}
+)"};
+
+const std::string MultipleContextTest_ProceduralPS = R"(
 struct PSInput 
 { 
     float4 Pos   : SV_POSITION;
     float3 Color : COLOR;
     float2 UV    : TEXCOORD;
-};
-
-Texture2D<float4> g_Texture;
-SamplerState      g_Texture_sampler;
-
+};)"
++ MultipleContextTest_ProceduralSrc +
+R"(
 float4 main(in PSInput PSIn) : SV_Target
 {
-    return g_Texture.Sample(g_Texture_sampler, PSIn.UV, 0);
+    return GenColor(PSIn.UV);
 }
-)"};
+)";
 
-const std::string MultipleContextTest_CS{R"(
+const std::string MultipleContextTest_ProceduralCS = R"(
 RWTexture2D<float4> g_DstTexture;
-Texture2D<float4>   g_SrcTexture;
-
-[numthreads(1, 1, 1)]
+)"
++ MultipleContextTest_ProceduralSrc +
+R"(
+[numthreads(4, 4, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
     uint2 Dim;
@@ -99,17 +122,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
     if (DTid.x >= Dim.x || DTid.y >= Dim.y)
         return;
 
-    float2 uv  = float2(DTid.xy) / float2(Dim) * 10.0;
-    float4 col = float(0.0).xxxx;
-
-    col.r = sin(uv.x) * cos(uv.y);
-    col.g = frac(uv.x) * frac(uv.y);
-
-    float4 src = g_SrcTexture.Load(DTid);
-
-    g_DstTexture[DTid.xy] = col + src * 0.00005;
+    g_DstTexture[DTid.xy] = GenColor((float2(DTid.xy) + 0.5) / float2(Dim));
 }
-)"};
+)";
 // clang-format on
 
 
@@ -137,10 +152,11 @@ protected:
             auto&                           PSODesc          = PSOCreateInfo.PSODesc;
             auto&                           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-            PSODesc.Name         = "Multiple context test - graphics PSO";
-            PSODesc.PipelineType = PIPELINE_TYPE_GRAPHICS;
+            PSODesc.Name             = "Multiple context test - procedural graphics PSO";
+            PSODesc.PipelineType     = PIPELINE_TYPE_GRAPHICS;
+            PSODesc.CommandQueueMask = ~0ull;
 
-            PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+            PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
             GraphicsPipeline.NumRenderTargets             = 1;
             GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
@@ -158,46 +174,53 @@ protected:
                 ASSERT_NE(pVS, nullptr);
             }
 
-            RefCntAutoPtr<IShader> pPS;
+            RefCntAutoPtr<IShader> pProcPS;
             {
                 ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
                 ShaderCI.EntryPoint      = "main";
-                ShaderCI.Desc.Name       = "Multiple context test - PS";
-                ShaderCI.Source          = MultipleContextTest_ColorPS.c_str();
-                pDevice->CreateShader(ShaderCI, &pPS);
-                ASSERT_NE(pPS, nullptr);
+                ShaderCI.Desc.Name       = "Multiple context test - procedural PS";
+                ShaderCI.Source          = MultipleContextTest_ProceduralPS.c_str();
+                pDevice->CreateShader(ShaderCI, &pProcPS);
+                ASSERT_NE(pProcPS, nullptr);
             }
 
             PSOCreateInfo.pVS = pVS;
-            PSOCreateInfo.pPS = pPS;
-            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawPSO);
-            ASSERT_NE(sm_pDrawPSO, nullptr);
+            PSOCreateInfo.pPS = pProcPS;
+            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawProceduralPSO);
+            ASSERT_NE(sm_pDrawProceduralPSO, nullptr);
+
 
             SamplerDesc SamLinearWrapDesc{
                 FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
                 TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP, TEXTURE_ADDRESS_WRAP};
             ImmutableSamplerDesc ImmutableSamplers[] =
                 {
-                    {SHADER_TYPE_PIXEL, "g_Texture_sampler", SamLinearWrapDesc} //
+                    {SHADER_TYPE_PIXEL, "g_Sampler", SamLinearWrapDesc} //
+                };
+            ShaderResourceVariableDesc Veriables[] =
+                {
+                    {SHADER_TYPE_PIXEL, "g_Sampler", SHADER_RESOURCE_VARIABLE_TYPE_STATIC} //
                 };
             PSODesc.ResourceLayout.ImmutableSamplers    = ImmutableSamplers;
             PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImmutableSamplers);
-            PSODesc.ResourceLayout.DefaultVariableType  = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+            PSODesc.ResourceLayout.Variables            = Veriables;
+            PSODesc.ResourceLayout.NumVariables         = _countof(Veriables);
+            PSODesc.ResourceLayout.DefaultVariableType  = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
-            RefCntAutoPtr<IShader> pTexturedPS;
+            RefCntAutoPtr<IShader> pBlendPS;
             {
                 ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
                 ShaderCI.EntryPoint      = "main";
-                ShaderCI.Desc.Name       = "Multiple context test - textured PS";
-                ShaderCI.Source          = MultipleContextTest_TexturedPS.c_str();
-                pDevice->CreateShader(ShaderCI, &pTexturedPS);
-                ASSERT_NE(pTexturedPS, nullptr);
+                ShaderCI.Desc.Name       = "Multiple context test - blend PS";
+                ShaderCI.Source          = MultipleContextTest_BlendPS.c_str();
+                pDevice->CreateShader(ShaderCI, &pBlendPS);
+                ASSERT_NE(pBlendPS, nullptr);
             }
 
-            PSODesc.Name      = "Multiple context test - textured graphics PSO";
-            PSOCreateInfo.pPS = pTexturedPS;
-            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawTexturedPSO);
-            ASSERT_NE(sm_pDrawTexturedPSO, nullptr);
+            PSODesc.Name      = "Multiple context test - blend tex graphics PSO";
+            PSOCreateInfo.pPS = pBlendPS;
+            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pBlendTexPSO);
+            ASSERT_NE(sm_pBlendTexPSO, nullptr);
         }
 
         // Compute PSO
@@ -208,38 +231,48 @@ protected:
             {
                 ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
                 ShaderCI.EntryPoint      = "main";
-                ShaderCI.Desc.Name       = "Multiple context test - CS";
-                ShaderCI.Source          = MultipleContextTest_CS.c_str();
+                ShaderCI.Desc.Name       = "Multiple context test - procedural CS";
+                ShaderCI.Source          = MultipleContextTest_ProceduralCS.c_str();
                 pDevice->CreateShader(ShaderCI, &pCS);
                 ASSERT_NE(pCS, nullptr);
             }
 
-            PSOCreateInfo.PSODesc.Name = "Multiple context test - compute PSO";
+            PSOCreateInfo.PSODesc.Name = "Multiple context test - procedural compute PSO";
             PSOCreateInfo.pCS          = pCS;
 
+            PSOCreateInfo.PSODesc.CommandQueueMask                   = ~0ull;
             PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
-            pDevice->CreateComputePipelineState(PSOCreateInfo, &sm_pCompPSO);
-            ASSERT_NE(sm_pCompPSO, nullptr);
+            pDevice->CreateComputePipelineState(PSOCreateInfo, &sm_pCompProceduralPSO);
+            ASSERT_NE(sm_pCompProceduralPSO, nullptr);
         }
 
-        sm_pDrawTexturedPSO->CreateShaderResourceBinding(&sm_pDrawTexturedSRB, true);
-        ASSERT_NE(sm_pDrawTexturedSRB, nullptr);
-        sm_pCompPSO->CreateShaderResourceBinding(&sm_pCompSRB, true);
-        ASSERT_NE(sm_pCompSRB, nullptr);
+        sm_pBlendTexPSO->CreateShaderResourceBinding(&sm_pBlendTexSRB, true);
+        ASSERT_NE(sm_pBlendTexSRB, nullptr);
+        sm_pDrawProceduralPSO->CreateShaderResourceBinding(&sm_pDrawProceduralSRB, true);
+        ASSERT_NE(sm_pDrawProceduralSRB, nullptr);
+        sm_pCompProceduralPSO->CreateShaderResourceBinding(&sm_pCompProceduralSRB, true);
+        ASSERT_NE(sm_pCompProceduralSRB, nullptr);
+
+        const auto& SCDesc = pSwapChain->GetDesc();
+        sm_DispathSize     = uint2{(SCDesc.Width + 3) / 4, (SCDesc.Height + 3) / 4}; // must be same as numthreads(...)
     }
 
     static void TearDownTestSuite()
     {
-        sm_pDrawPSO.Release();
-        sm_pDrawTexturedPSO.Release();
-        sm_pCompPSO.Release();
+        sm_pBlendTexPSO.Release();
+        sm_pDrawProceduralPSO.Release();
+        sm_pCompProceduralPSO.Release();
+
+        sm_pBlendTexSRB.Release();
+        sm_pDrawProceduralSRB.Release();
+        sm_pCompProceduralSRB.Release();
 
         auto* pEnv = TestingEnvironment::GetInstance();
         pEnv->Reset();
     }
 
-    static RefCntAutoPtr<ITexture> CreateTexture(BIND_FLAGS Flags, USAGE Usage, Uint64 QueueMask, const char* Name)
+    static RefCntAutoPtr<ITexture> CreateTexture(BIND_FLAGS Flags, Uint64 QueueMask, const char* Name, IDeviceContext* pInitialCtx)
     {
         auto*       pEnv       = TestingEnvironment::GetInstance();
         auto*       pDevice    = pEnv->GetDevice();
@@ -247,34 +280,41 @@ protected:
         const auto& SCDesc     = pSwapChain->GetDesc();
 
         TextureDesc Desc;
-        Desc.Name             = Name;
-        Desc.Type             = RESOURCE_DIM_TEX_2D;
-        Desc.Width            = SCDesc.Width;
-        Desc.Height           = SCDesc.Height;
-        Desc.Format           = TEX_FORMAT_RGBA8_UNORM;
-        Desc.Usage            = Usage;
-        Desc.BindFlags        = Flags;
-        Desc.CommandQueueMask = QueueMask;
+        Desc.Name                  = Name;
+        Desc.Type                  = RESOURCE_DIM_TEX_2D;
+        Desc.Width                 = SCDesc.Width;
+        Desc.Height                = SCDesc.Height;
+        Desc.Format                = TEX_FORMAT_RGBA8_UNORM;
+        Desc.Usage                 = USAGE_DEFAULT;
+        Desc.BindFlags             = Flags;
+        Desc.CommandQueueMask      = QueueMask | (1ull << pInitialCtx->GetDesc().CommandQueueId);
+        Desc.InitialCommandQueueId = pInitialCtx->GetDesc().CommandQueueId;
 
         RefCntAutoPtr<ITexture> pTexture;
         pDevice->CreateTexture(Desc, nullptr, &pTexture);
         return pTexture;
     }
 
-    static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
-    static RefCntAutoPtr<IPipelineState> sm_pDrawTexturedPSO;
-    static RefCntAutoPtr<IPipelineState> sm_pCompPSO;
+    static RefCntAutoPtr<IPipelineState> sm_pBlendTexPSO;
+    static RefCntAutoPtr<IPipelineState> sm_pDrawProceduralPSO;
+    static RefCntAutoPtr<IPipelineState> sm_pCompProceduralPSO;
 
-    static RefCntAutoPtr<IShaderResourceBinding> sm_pDrawTexturedSRB;
-    static RefCntAutoPtr<IShaderResourceBinding> sm_pCompSRB;
+    static RefCntAutoPtr<IShaderResourceBinding> sm_pBlendTexSRB;
+    static RefCntAutoPtr<IShaderResourceBinding> sm_pDrawProceduralSRB;
+    static RefCntAutoPtr<IShaderResourceBinding> sm_pCompProceduralSRB;
+
+    static uint2 sm_DispathSize;
 };
 
-RefCntAutoPtr<IPipelineState> MultipleContextTest::sm_pDrawPSO;
-RefCntAutoPtr<IPipelineState> MultipleContextTest::sm_pDrawTexturedPSO;
-RefCntAutoPtr<IPipelineState> MultipleContextTest::sm_pCompPSO;
+RefCntAutoPtr<IPipelineState> MultipleContextTest::sm_pBlendTexPSO;
+RefCntAutoPtr<IPipelineState> MultipleContextTest::sm_pDrawProceduralPSO;
+RefCntAutoPtr<IPipelineState> MultipleContextTest::sm_pCompProceduralPSO;
 
-RefCntAutoPtr<IShaderResourceBinding> MultipleContextTest::sm_pDrawTexturedSRB;
-RefCntAutoPtr<IShaderResourceBinding> MultipleContextTest::sm_pCompSRB;
+RefCntAutoPtr<IShaderResourceBinding> MultipleContextTest::sm_pBlendTexSRB;
+RefCntAutoPtr<IShaderResourceBinding> MultipleContextTest::sm_pDrawProceduralSRB;
+RefCntAutoPtr<IShaderResourceBinding> MultipleContextTest::sm_pCompProceduralSRB;
+
+uint2 MultipleContextTest::sm_DispathSize;
 
 
 TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
@@ -282,7 +322,6 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     auto*           pEnv         = TestingEnvironment::GetInstance();
     auto*           pDevice      = pEnv->GetDevice();
     auto*           pSwapChain   = pEnv->GetSwapChain();
-    const auto&     SCDesc       = pSwapChain->GetDesc();
     IDeviceContext* pGraphicsCtx = nullptr;
     IDeviceContext* pComputeCtx  = nullptr;
     const auto      CtxTypeMask  = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE;
@@ -294,8 +333,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
         if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
             pGraphicsCtx = Ctx;
-
-        if (!pComputeCtx && ((Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_COMPUTE || ((Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS && Ctx != pGraphicsCtx)))
+        else if (!pComputeCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_COMPUTE)
             pComputeCtx = Ctx;
     }
 
@@ -303,52 +341,91 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     {
         GTEST_SKIP() << "Compute queue is not supported by this device";
     }
+    ASSERT_NE(pGraphicsCtx->GetDesc().CommandQueueId, pComputeCtx->GetDesc().CommandQueueId);
 
-    ASSERT_NE(pGraphicsCtx, pComputeCtx);
+    const Uint64 QueueMask = (1ull << pGraphicsCtx->GetDesc().CommandQueueId) | (1ull << pComputeCtx->GetDesc().CommandQueueId);
 
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    RefCntAutoPtr<IBuffer> pConstants1;
+    RefCntAutoPtr<IBuffer> pConstants2;
+    {
+        const float4 ConstData1 = float4(1.2f, 0.25f, 1.1f, 0.14f);
+        const float4 ConstData2 = float4(0.8f, 1.53f, 0.6f, 1.72f);
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        BufferDesc BuffDesc;
+        BuffDesc.Name             = "Constants";
+        BuffDesc.uiSizeInBytes    = sizeof(ConstData1);
+        BuffDesc.BindFlags        = BIND_UNIFORM_BUFFER;
+        BuffDesc.CommandQueueMask = QueueMask;
+
+        BufferData BuffData1{&ConstData1, sizeof(ConstData1)};
+        pDevice->CreateBuffer(BuffDesc, &BuffData1, &pConstants1);
+        ASSERT_NE(pConstants1, nullptr);
+
+        BufferData BuffData2{&ConstData2, sizeof(ConstData2)};
+        pDevice->CreateBuffer(BuffDesc, &BuffData2, &pConstants2);
+        ASSERT_NE(pConstants2, nullptr);
+    }
 
     // Draw reference in single queue
     {
-        auto pBackBufferUAV = pTestingSwapChain->GetCurrentBackBufferUAV();
-        auto pTexture       = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, USAGE_DEFAULT, (1ull << pGraphicsCtx->GetDesc().CommandQueueId), "Ref-RenderTarget");
-        ASSERT_NE(pTexture, nullptr);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto* pRTV        = pSwapChain->GetCurrentBackBufferRTV();
+        auto  pTextureRT  = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, 0, "TextureRT", pGraphicsCtx);
+        auto  pTextureUAV = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, 0, "TextureUAV", pGraphicsCtx);
+        ASSERT_NE(pTextureRT, nullptr);
+        ASSERT_NE(pTextureUAV, nullptr);
+
+        const auto DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
         // graphics pass
         {
-            ITextureView* pRTVs[] = {pTexture->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
-            pGraphicsCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            sm_pDrawProceduralSRB->GetVariableByName(SHADER_TYPE_PIXEL, "Constants")->Set(pConstants1);
 
-            const float ClearColor[4] = {1.0f, 0.0f, 0.0f, 0.0f};
-            pGraphicsCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            ITextureView* pRTVs[] = {pTextureRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
+            pGraphicsCtx->SetRenderTargets(1, pRTVs, nullptr, DefaultTransitionMode);
 
-            pGraphicsCtx->SetPipelineState(sm_pDrawPSO);
-            pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_VERIFY_STATES | DRAW_FLAG_VERIFY_DRAW_ATTRIBS});
-
-            pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+            pGraphicsCtx->SetPipelineState(sm_pDrawProceduralPSO);
+            pGraphicsCtx->CommitShaderResources(sm_pDrawProceduralSRB, DefaultTransitionMode);
+            pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_VERIFY_ALL});
         }
 
         // compute pass
         {
-            sm_pCompSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_SrcTexture")->Set(pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
-            sm_pCompSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DstTexture")->Set(pBackBufferUAV);
+            sm_pCompProceduralSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "Constants")->Set(pConstants2);
+            sm_pCompProceduralSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DstTexture")->Set(pTextureUAV->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS));
 
-            pGraphicsCtx->SetPipelineState(sm_pCompPSO);
-            pGraphicsCtx->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-            pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{SCDesc.Width, SCDesc.Height, 1});
+            pGraphicsCtx->SetPipelineState(sm_pCompProceduralPSO);
+            pGraphicsCtx->CommitShaderResources(sm_pCompProceduralSRB, DefaultTransitionMode);
+            pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+        }
+
+        // blend pass
+        {
+            sm_pBlendTexSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture1")->Set(pTextureRT->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            sm_pBlendTexSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pTextureUAV->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+
+            pGraphicsCtx->SetRenderTargets(1, &pRTV, nullptr, DefaultTransitionMode);
+
+            pGraphicsCtx->SetPipelineState(sm_pBlendTexPSO);
+            pGraphicsCtx->CommitShaderResources(sm_pBlendTexSRB, DefaultTransitionMode);
+            pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_VERIFY_ALL});
+
+            pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
 
             // Transition to CopySrc state to use in TakeSnapshot()
-            StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
+            StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
             pGraphicsCtx->TransitionResourceStates(1, &Barrier);
         }
 
         pGraphicsCtx->Flush();
         pGraphicsCtx->FinishFrame();
-        pTestingSwapChain->TakeSnapshot(pBackBufferUAV->GetTexture());
+        pTestingSwapChain->TakeSnapshot(pRTV->GetTexture());
     }
 
+
+    // Graphics:  |- draw -|  |- blend -|- present -|
+    // Compute:   |- compute -|
 
     RefCntAutoPtr<IFence> pGraphicsFence;
     RefCntAutoPtr<IFence> pComputeFence;
@@ -363,9 +440,8 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         ASSERT_NE(pComputeFence, nullptr);
     }
 
-    const Uint64 QueueMask   = (1ull << pGraphicsCtx->GetDesc().CommandQueueId) | (1ull << pComputeCtx->GetDesc().CommandQueueId);
-    auto         pTextureRT  = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, USAGE_DEFAULT, QueueMask, "TextureRT");
-    auto         pTextureUAV = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, USAGE_DEFAULT, QueueMask, "TextureUAV");
+    auto pTextureRT  = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, QueueMask, "TextureRT", pGraphicsCtx);
+    auto pTextureUAV = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, QueueMask, "TextureUAV", pComputeCtx);
     ASSERT_NE(pTextureRT, nullptr);
     ASSERT_NE(pTextureUAV, nullptr);
 
@@ -373,30 +449,29 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     pTextureRT->SetState(RESOURCE_STATE_UNKNOWN);
     pTextureUAV->SetState(RESOURCE_STATE_UNKNOWN);
 
-    Uint64 GraphicsFenceValue = 11;
-    Uint64 ComputeFenceValue  = 22;
+    const Uint64 GraphicsFenceValue    = 11;
+    const Uint64 ComputeFenceValue     = 22;
+    const auto   DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     // graphics pass
     {
-        const StateTransitionDesc Barriers1[] = {
-            {pTextureRT, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_RENDER_TARGET} //
-        };
+        sm_pDrawProceduralSRB->GetVariableByName(SHADER_TYPE_PIXEL, "Constants")->Set(pConstants1);
+
+        // undefined -> render_target
+        const StateTransitionDesc Barriers1[] = {{pTextureRT, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_RENDER_TARGET}};
         pGraphicsCtx->TransitionResourceStates(_countof(Barriers1), Barriers1);
 
         ITextureView* pRTVs[] = {pTextureRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
-        pGraphicsCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+        pGraphicsCtx->SetRenderTargets(1, pRTVs, nullptr, DefaultTransitionMode);
 
-        const float ClearColor[4] = {0.0f, 1.0f, 0.0f, 0.0f};
-        pGraphicsCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-        pGraphicsCtx->SetPipelineState(sm_pDrawPSO);
+        pGraphicsCtx->SetPipelineState(sm_pDrawProceduralPSO);
+        pGraphicsCtx->CommitShaderResources(sm_pDrawProceduralSRB, DefaultTransitionMode);
         pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_NONE});
 
-        pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+        pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, DefaultTransitionMode);
 
-        const StateTransitionDesc Barriers2[] = {
-            {pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE} //
-        };
+        // render_target -> shader_resource
+        const StateTransitionDesc Barriers2[] = {{pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE}};
         pGraphicsCtx->TransitionResourceStates(_countof(Barriers2), Barriers2);
 
         pGraphicsCtx->EnqueueSignal(pGraphicsFence, GraphicsFenceValue);
@@ -405,42 +480,44 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
     // compute pass
     {
-        pComputeCtx->DeviceWaitForFence(pGraphicsFence, GraphicsFenceValue);
+        sm_pCompProceduralSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "Constants")->Set(pConstants2);
+        sm_pCompProceduralSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DstTexture")->Set(pTextureUAV->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS));
 
-        sm_pCompSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_SrcTexture")->Set(pTextureRT->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
-        sm_pCompSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DstTexture")->Set(pTextureUAV->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS));
+        // undefined -> UAV
+        const StateTransitionDesc Barriers1[] = {{pTextureUAV, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_UNORDERED_ACCESS}};
+        pComputeCtx->TransitionResourceStates(_countof(Barriers1), Barriers1);
 
-        const StateTransitionDesc Barriers[] = {
-            {pTextureUAV, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_UNORDERED_ACCESS} //
-        };
-        pComputeCtx->TransitionResourceStates(_countof(Barriers), Barriers);
-
-        pComputeCtx->SetPipelineState(sm_pCompPSO);
-        pComputeCtx->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_NONE);
-        pComputeCtx->DispatchCompute(DispatchComputeAttribs{SCDesc.Width, SCDesc.Height, 1});
+        pComputeCtx->SetPipelineState(sm_pCompProceduralPSO);
+        pComputeCtx->CommitShaderResources(sm_pCompProceduralSRB, DefaultTransitionMode);
+        pComputeCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
 
         pComputeCtx->EnqueueSignal(pComputeFence, ComputeFenceValue);
         pComputeCtx->Flush();
     }
 
-    // present
+    // blend and present
     {
+        sm_pBlendTexSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture1")->Set(pTextureRT->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+        sm_pBlendTexSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pTextureUAV->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+
+        pGraphicsCtx->DeviceWaitForFence(pGraphicsFence, GraphicsFenceValue);
         pGraphicsCtx->DeviceWaitForFence(pComputeFence, ComputeFenceValue);
 
-        sm_pDrawTexturedSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture")->Set(pTextureUAV->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+        auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
 
-        auto*                     pRTV       = pSwapChain->GetCurrentBackBufferRTV();
         const StateTransitionDesc Barriers[] = {
-            {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true},
-            {pTextureUAV, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE} //
+            {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true}, // prev_state -> render_target
+            {pTextureUAV, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE}    // UAV -> shader_resource
         };
         pGraphicsCtx->TransitionResourceStates(_countof(Barriers), Barriers);
 
-        pGraphicsCtx->SetRenderTargets(1, &pRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+        pGraphicsCtx->SetRenderTargets(1, &pRTV, nullptr, DefaultTransitionMode);
 
-        pGraphicsCtx->SetPipelineState(sm_pDrawTexturedPSO);
-        pGraphicsCtx->CommitShaderResources(sm_pDrawTexturedSRB, RESOURCE_STATE_TRANSITION_MODE_NONE);
+        pGraphicsCtx->SetPipelineState(sm_pBlendTexPSO);
+        pGraphicsCtx->CommitShaderResources(sm_pBlendTexSRB, DefaultTransitionMode);
         pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_NONE});
+
+        pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, DefaultTransitionMode);
 
         pGraphicsCtx->Flush();
         pSwapChain->Present();
@@ -452,4 +529,242 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     pGraphicsFence->Wait(GraphicsFenceValue);
     pComputeFence->Wait(ComputeFenceValue);
 }
+
+
+TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
+{
+    auto*           pEnv         = TestingEnvironment::GetInstance();
+    auto*           pDevice      = pEnv->GetDevice();
+    auto*           pSwapChain   = pEnv->GetSwapChain();
+    const auto&     SCDesc       = pSwapChain->GetDesc();
+    IDeviceContext* pGraphicsCtx = nullptr;
+    IDeviceContext* pTransferCtx = nullptr;
+    const auto      CtxTypeMask  = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE | CONTEXT_TYPE_TRANSFER;
+
+    for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
+    {
+        auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
+        const auto& Desc = Ctx->GetDesc();
+
+        if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+            pGraphicsCtx = Ctx;
+        else if (!pTransferCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_TRANSFER)
+            pTransferCtx = Ctx;
+    }
+
+    if (!pGraphicsCtx || !pTransferCtx)
+    {
+        GTEST_SKIP() << "Transfer queue is not supported by this device";
+    }
+    ASSERT_NE(pGraphicsCtx->GetDesc().CommandQueueId, pTransferCtx->GetDesc().CommandQueueId);
+
+    std::vector<Uint8> Pixels;
+    {
+        Pixels.resize(SCDesc.Height * SCDesc.Width * 4);
+        for (Uint32 y = 0; y < SCDesc.Height; ++y)
+        {
+            for (Uint32 x = 0; x < SCDesc.Width; ++x)
+            {
+                Uint32 ix = x >> 4;
+                Uint32 iy = y >> 4;
+                Uint32 a1 = (ix >> 1) & 1;
+                Uint32 a2 = (iy >> 2) & 5;
+
+                iy = (iy << a1) | (iy >> a1);
+                ix = (ix << a2) | (ix >> a2);
+
+                const Uint32 i = (x + SCDesc.Width * y) * 4;
+                Pixels[i + 0]  = ((ix | iy) & 1) ? 255 : 0;
+                Pixels[i + 1]  = ((ix ^ iy) & 2) ? 255 : 0;
+                Pixels[i + 2]  = 0;
+                Pixels[i + 3]  = 255;
+            }
+        }
+    }
+
+    const Uint64 QueueMask = (1ull << pGraphicsCtx->GetDesc().CommandQueueId) | (1ull << pTransferCtx->GetDesc().CommandQueueId);
+
+    RefCntAutoPtr<IBuffer> pConstants;
+    {
+        const float4 ConstData = float4(0.8f, 1.53f, 0.6f, 1.72f);
+
+        BufferDesc BuffDesc;
+        BuffDesc.Name             = "Constants";
+        BuffDesc.uiSizeInBytes    = sizeof(ConstData);
+        BuffDesc.BindFlags        = BIND_UNIFORM_BUFFER;
+        BuffDesc.CommandQueueMask = QueueMask;
+
+        BufferData BuffData{&ConstData, sizeof(ConstData)};
+        pDevice->CreateBuffer(BuffDesc, &BuffData, &pConstants);
+        ASSERT_NE(pConstants, nullptr);
+    }
+
+    // Draw reference in single queue
+    {
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+
+        auto* pRTV           = pSwapChain->GetCurrentBackBufferRTV();
+        auto  pTextureRT     = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, 0, "TextureRT", pGraphicsCtx);
+        auto  pUploadTexture = CreateTexture(BIND_SHADER_RESOURCE, 0, "Upload Texture", pGraphicsCtx);
+        ASSERT_NE(pTextureRT, nullptr);
+        ASSERT_NE(pUploadTexture, nullptr);
+
+        const auto DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+
+        // graphics pass
+        {
+            sm_pDrawProceduralSRB->GetVariableByName(SHADER_TYPE_PIXEL, "Constants")->Set(pConstants);
+
+            ITextureView* pRTVs[] = {pTextureRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
+            pGraphicsCtx->SetRenderTargets(1, pRTVs, nullptr, DefaultTransitionMode);
+
+            pGraphicsCtx->SetPipelineState(sm_pDrawProceduralPSO);
+            pGraphicsCtx->CommitShaderResources(sm_pDrawProceduralSRB, DefaultTransitionMode);
+            pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_VERIFY_ALL});
+
+            pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+        }
+
+        // copy pass
+        {
+            TextureSubResData SubRes;
+            SubRes.pData  = Pixels.data();
+            SubRes.Stride = SCDesc.Width * 4;
+            Box Region{0, SCDesc.Width, 0, SCDesc.Height};
+            pGraphicsCtx->UpdateTexture(pUploadTexture, 0, 0, Region, SubRes, DefaultTransitionMode, DefaultTransitionMode);
+        }
+
+        // blend pass
+        {
+            sm_pBlendTexSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture1")->Set(pTextureRT->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            sm_pBlendTexSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pUploadTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+
+            pGraphicsCtx->SetRenderTargets(1, &pRTV, nullptr, DefaultTransitionMode);
+
+            pGraphicsCtx->SetPipelineState(sm_pBlendTexPSO);
+            pGraphicsCtx->CommitShaderResources(sm_pBlendTexSRB, DefaultTransitionMode);
+            pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_VERIFY_ALL});
+
+            pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+            // Transition to CopySrc state to use in TakeSnapshot()
+            StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
+            pGraphicsCtx->TransitionResourceStates(1, &Barrier);
+        }
+
+        pGraphicsCtx->Flush();
+        pGraphicsCtx->FinishFrame();
+        pTestingSwapChain->TakeSnapshot(pRTV->GetTexture());
+    }
+
+
+    // Graphics:  |- draw -|- blend -|- present -|
+    // Transfer:  |- copy -|
+
+    RefCntAutoPtr<IFence> pGraphicsFence;
+    RefCntAutoPtr<IFence> pTransferFence;
+    {
+        FenceDesc Desc;
+        Desc.Name = "Graphics sync";
+        pDevice->CreateFence(Desc, &pGraphicsFence);
+        ASSERT_NE(pGraphicsFence, nullptr);
+
+        Desc.Name = "Transfer sync";
+        pDevice->CreateFence(Desc, &pTransferFence);
+        ASSERT_NE(pTransferFence, nullptr);
+    }
+
+    //const uint3 Granularity = {pTransferCtx->GetDesc().TextureCopyGranularity[0],
+    //                           pTransferCtx->GetDesc().TextureCopyGranularity[1],
+    //                           pTransferCtx->GetDesc().TextureCopyGranularity[2]};
+
+    auto pTextureRT     = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, QueueMask, "TextureRT", pGraphicsCtx);
+    auto pUploadTexture = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, QueueMask, "Upload Texture", pTransferCtx);
+    ASSERT_NE(pTextureRT, nullptr);
+    ASSERT_NE(pUploadTexture, nullptr);
+
+    // disable implicit state transitions
+    pTextureRT->SetState(RESOURCE_STATE_UNKNOWN);
+    pUploadTexture->SetState(RESOURCE_STATE_UNKNOWN);
+
+    const Uint64 GraphicsFenceValue    = 11;
+    const Uint64 TransferFenceValue    = 22;
+    const auto   DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+    // graphics queue
+    {
+        sm_pDrawProceduralSRB->GetVariableByName(SHADER_TYPE_PIXEL, "Constants")->Set(pConstants);
+
+        // undefined -> render_target
+        const StateTransitionDesc Barriers1[] = {{pTextureRT, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_RENDER_TARGET}};
+        pGraphicsCtx->TransitionResourceStates(_countof(Barriers1), Barriers1);
+
+        ITextureView* pRTVs[] = {pTextureRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
+        pGraphicsCtx->SetRenderTargets(1, pRTVs, nullptr, DefaultTransitionMode);
+
+        pGraphicsCtx->SetPipelineState(sm_pDrawProceduralPSO);
+        pGraphicsCtx->CommitShaderResources(sm_pDrawProceduralSRB, DefaultTransitionMode);
+        pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_NONE});
+
+        pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, DefaultTransitionMode);
+
+        // render_target -> shader_resource
+        const StateTransitionDesc Barriers2[] = {{pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE}};
+        pGraphicsCtx->TransitionResourceStates(_countof(Barriers2), Barriers2);
+
+        pGraphicsCtx->EnqueueSignal(pGraphicsFence, GraphicsFenceValue);
+        pGraphicsCtx->Flush();
+    }
+
+    // transfer queue
+    {
+        // undefined -> copy_dst
+        const StateTransitionDesc Barriers1[] = {{pUploadTexture, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_COPY_DEST}};
+        pTransferCtx->TransitionResourceStates(_countof(Barriers1), Barriers1);
+
+        TextureSubResData SubRes;
+        SubRes.pData  = Pixels.data();
+        SubRes.Stride = SCDesc.Width * 4;
+        Box Region{0, SCDesc.Width, 0, SCDesc.Height};
+        pTransferCtx->UpdateTexture(pUploadTexture, 0, 0, Region, SubRes, DefaultTransitionMode, DefaultTransitionMode);
+
+        pTransferCtx->EnqueueSignal(pTransferFence, TransferFenceValue);
+        pTransferCtx->Flush();
+    }
+
+    // blend and present
+    {
+        sm_pBlendTexSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture1")->Set(pTextureRT->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+        sm_pBlendTexSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Texture2")->Set(pUploadTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+
+        pGraphicsCtx->DeviceWaitForFence(pGraphicsFence, GraphicsFenceValue);
+        pGraphicsCtx->DeviceWaitForFence(pTransferFence, TransferFenceValue);
+
+        auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+
+        const StateTransitionDesc Barriers[] = {
+            {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, true}, // prev_state -> render_target
+            {pUploadTexture, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_SHADER_RESOURCE}        // copy_dst -> shader_resource
+        };
+        pGraphicsCtx->TransitionResourceStates(_countof(Barriers), Barriers);
+
+        pGraphicsCtx->SetRenderTargets(1, &pRTV, nullptr, DefaultTransitionMode);
+
+        pGraphicsCtx->SetPipelineState(sm_pBlendTexPSO);
+        pGraphicsCtx->CommitShaderResources(sm_pBlendTexSRB, DefaultTransitionMode);
+        pGraphicsCtx->Draw(DrawAttribs{4, DRAW_FLAG_NONE});
+
+        pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, DefaultTransitionMode);
+
+        pGraphicsCtx->Flush();
+        pSwapChain->Present();
+    }
+
+    pGraphicsCtx->FinishFrame();
+    pTransferCtx->FinishFrame();
+
+    pGraphicsFence->Wait(GraphicsFenceValue);
+    pTransferFence->Wait(TransferFenceValue);
+}
+
 } // namespace

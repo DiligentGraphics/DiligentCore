@@ -1821,6 +1821,7 @@ static CComPtr<ID3D11Query> CreateD3D11QueryEvent(ID3D11Device* pd3d11Device)
 void DeviceContextD3D11Impl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
+    DEV_CHECK_ERR(pFence, "Fence must not be null");
     auto*                pd3d11Device = m_pDevice->GetD3D11Device();
     CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
     m_pd3d11DeviceContext->End(pd3d11Query);
@@ -1830,7 +1831,7 @@ void DeviceContextD3D11Impl::EnqueueSignal(IFence* pFence, Uint64 Value)
 
 void DeviceContextD3D11Impl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
-    UNEXPECTED("DeviceWaitForFence() is not supported in Direct3D11");
+    DEV_CHECK_ERR(false, "DeviceWaitForFence() is not supported in Direct3D11");
 }
 
 void DeviceContextD3D11Impl::WaitForIdle()

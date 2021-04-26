@@ -116,12 +116,16 @@ Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
 
 void CommandQueueD3D12Impl::EnqueueSignal(ID3D12Fence* pFence, Uint64 Value)
 {
+    DEV_CHECK_ERR(pFence, "Fence must not be null");
+
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
     m_pd3d12CmdQueue->Signal(pFence, Value);
 }
 
 void CommandQueueD3D12Impl::WaitFence(ID3D12Fence* pFence, Uint64 Value)
 {
+    DEV_CHECK_ERR(pFence, "Fence must not be null");
+
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
     m_pd3d12CmdQueue->Wait(pFence, Value);
 }

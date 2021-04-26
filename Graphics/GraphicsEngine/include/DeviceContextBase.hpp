@@ -44,6 +44,7 @@
 #include "ValidatedCast.hpp"
 #include "GraphicsAccessories.hpp"
 #include "TextureBase.hpp"
+#include "IndexWrapper.hpp"
 #include "BasicMath.hpp"
 #include "PlatformMisc.hpp"
 
@@ -69,7 +70,7 @@ bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttri
                                             const TextureDesc&                      DstTexDesc);
 
 bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs);
-bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier);
+bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier, CommandQueueIndex CmdQueueInd);
 
 bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs);
 bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs);
@@ -293,6 +294,12 @@ public:
     bool IsGraphicsCtx() const { return (m_Desc.ContextType & CONTEXT_TYPE_GRAPHICS) == CONTEXT_TYPE_GRAPHICS; }
     bool IsComputeCtx() const { return (m_Desc.ContextType & CONTEXT_TYPE_COMPUTE) == CONTEXT_TYPE_COMPUTE; }
     bool IsTransferCtx() const { return (m_Desc.ContextType & CONTEXT_TYPE_TRANSFER) == CONTEXT_TYPE_TRANSFER; }
+
+    CommandQueueIndex GetCommandQueueId() const
+    {
+        VERIFY_EXPR(this->m_Desc.CommandQueueId < MAX_COMMAND_QUEUES);
+        return CommandQueueIndex{this->m_Desc.CommandQueueId};
+    }
 
 protected:
     /// Committed shader resources for each resource signature
@@ -649,6 +656,8 @@ inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
     int /*Dummy*/)
 {
     DEV_CHECK_ERR(IsComputeCtx(), "SetPipelineState is not supported in ", GetContextTypeString(m_Desc.ContextType), " context");
+    DEV_CHECK_ERR((pPipelineState->GetDesc().CommandQueueMask & (Uint64{1} << GetCommandQueueId())) != 0,
+                  "PSO was not created for using in command queue ", Uint32{GetCommandQueueId()}, ".");
 
     m_pPipelineState = pPipelineState;
 }
@@ -2046,7 +2055,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectAr
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
 {
-    DEV_CHECK_ERR(VerifyStateTransitionDesc(m_pDevice, Barrier), "StateTransitionDesc are invalid");
+    DEV_CHECK_ERR(VerifyStateTransitionDesc(m_pDevice, Barrier, GetCommandQueueId()), "StateTransitionDesc are invalid");
 }
 
 template <typename ImplementationTraits>

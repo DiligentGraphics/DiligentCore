@@ -80,7 +80,6 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryIn
 
         case USAGE_DYNAMIC:
             VERIFY_BUFFER(Desc.CPUAccessFlags == CPU_ACCESS_WRITE, "dynamic buffers require CPU_ACCESS_WRITE flag.");
-            VERIFY_BUFFER((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) == 0, "dynamic buffers can not be shared between queues.");
             break;
 
         case USAGE_STAGING:
@@ -112,12 +111,6 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryIn
 
         default:
             UNEXPECTED("Unknown usage");
-    }
-
-    if ((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) != 0)
-    {
-        DEV_CHECK_ERR(PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1,
-                      "RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS is specified, but CommandQueueMask contains only single queue index");
     }
 
     VERIFY_BUFFER((Desc.CommandQueueMask & (Uint64{1} << Uint64{Desc.InitialCommandQueueId})) != 0,

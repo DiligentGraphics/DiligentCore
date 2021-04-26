@@ -177,6 +177,11 @@ public:
                                                                  RESOURCE_STATE             InitialState,
                                                                  ITopLevelAS**              ppTLAS) override final;
 
+    /// Implementation of IRenderDeviceVk::CreateFenceFromVulkanResource().
+    virtual void DILIGENT_CALL_TYPE CreateFenceFromVulkanResource(VkSemaphore      vkTimelineSemaphore,
+                                                                  const FenceDesc& Desc,
+                                                                  IFence**         ppFence) override final;
+
     /// Implementation of IRenderDevice::IdleGPU() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
@@ -244,6 +249,8 @@ public:
     void ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueueMask,
                                            uint32_t  outQueueFamilyIndices[],
                                            uint32_t& inoutQueueFamilyIndicesCount) const;
+
+    HardwareQueueId GetQueueFamilyIndex(CommandQueueIndex CmdQueueInd) const;
 
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;

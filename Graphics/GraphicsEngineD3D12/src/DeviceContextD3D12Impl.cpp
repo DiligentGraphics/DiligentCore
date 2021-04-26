@@ -1203,7 +1203,8 @@ void DeviceContextD3D12Impl::TransitionSubpassAttachments(Uint32 NextSubpass)
         auto        NewState = NextSubpass < RPDesc.SubpassCount ? m_pActiveRenderPass->GetAttachmentState(NextSubpass, att) : AttDesc.FinalState;
         if (OldState != NewState)
         {
-            auto& CmdCtx = GetCmdContext();
+            auto&      CmdCtx       = GetCmdContext();
+            const auto ResStateMask = GetSupportedD3D12ResourceStatesForCommandList(CmdCtx.GetCommandListType());
 
             auto* pViewD3D12 = ValidatedCast<TextureViewD3D12Impl>(FBDesc.ppAttachments[att]);
             if (pViewD3D12 == nullptr)
@@ -1218,8 +1219,9 @@ void DeviceContextD3D12Impl::TransitionSubpassAttachments(Uint32 NextSubpass)
             BarrierDesc.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             BarrierDesc.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
             BarrierDesc.Transition.pResource   = pTexD3D12->GetD3D12Resource();
-            BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(OldState);
-            BarrierDesc.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState);
+            BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(OldState) & ResStateMask;
+            BarrierDesc.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState) & ResStateMask;
+
             for (Uint32 mip = ViewDesc.MostDetailedMip; mip < ViewDesc.MostDetailedMip + ViewDesc.NumDepthSlices; ++mip)
             {
                 for (Uint32 slice = ViewDesc.FirstArraySlice; slice < ViewDesc.FirstArraySlice + ViewDesc.NumArraySlices; ++slice)
@@ -1792,10 +1794,12 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
     D3D12_RESOURCE_BARRIER BarrierDesc;
     if (StateTransitionRequired)
     {
+        const auto ResStateMask = GetSupportedD3D12ResourceStatesForCommandList(CmdCtx.GetCommandListType());
+
         BarrierDesc.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         BarrierDesc.Transition.pResource   = TextureD3D12.GetD3D12Resource();
         BarrierDesc.Transition.Subresource = DstSubResIndex;
-        BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(TextureD3D12.GetState());
+        BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(TextureD3D12.GetState()) & ResStateMask;
         BarrierDesc.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
         BarrierDesc.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
         pCmdList->ResourceBarrier(1, &BarrierDesc);
@@ -2128,7 +2132,7 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
 
     CommandListD3D12Impl* pCmdListD3D12(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)(m_pDevice, this, std::move(m_CurrCmdCtx)));
     pCmdListD3D12->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
-    Flush(true);
+    Flush(false);
 
     InvalidateState();
 }

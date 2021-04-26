@@ -27,3 +27,9 @@
 
 #include "DiligentCore/ThirdParty/Vulkan-Headers/include/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/ShaderBindingTableVk.h"
+
+void TestShaderBindingTableVk_CInterface(IShaderBindingTableVk* pSBT)
+{
+    const BindingTableVk* Table = IShaderBindingTableVk_GetVkBindingTable(pSBT);
+    (void)Table;
+}

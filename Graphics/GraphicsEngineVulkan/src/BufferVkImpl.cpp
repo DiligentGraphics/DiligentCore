@@ -57,7 +57,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     m_DynamicData(STD_ALLOCATOR_RAW_MEM(CtxDynamicData, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
 // clang-format on
 {
-    ValidateBufferInitData(BuffDesc, pBuffData);
+    ValidateBufferInitData(m_Desc, pBuffData);
 
     if (m_Desc.Usage == USAGE_IMMUTABLE)
         VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for immutable buffers");
@@ -173,9 +173,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_DYNAMIC)
     {
         auto CtxCount = pRenderDeviceVk->GetNumImmediateContexts() + pRenderDeviceVk->GetNumDeferredContexts();
-        m_DynamicData.reserve(CtxCount);
-        for (Uint32 ctx = 0; ctx < CtxCount; ++ctx)
-            m_DynamicData.emplace_back();
+        m_DynamicData.resize(CtxCount);
     }
 
     VkBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE; // Sharing mode of the buffer when it is accessed by multiple queue families.
@@ -184,10 +182,10 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                                                                 // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
 
     std::array<uint32_t, MAX_COMMAND_QUEUES> QueueFamilyIndices = {};
-    if (PlatformMisc::CountOneBits(BuffDesc.CommandQueueMask) > 1)
+    if (PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) > 1)
     {
         uint32_t queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
-        GetDevice()->ConvertCmdQueueIdsToQueueFamilies(BuffDesc.CommandQueueMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
+        GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.CommandQueueMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
 
         // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
         if (queueFamilyIndexCount > 1)

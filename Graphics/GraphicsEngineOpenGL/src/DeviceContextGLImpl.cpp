@@ -1146,6 +1146,7 @@ void DeviceContextGLImpl::ExecuteCommandLists(Uint32               NumCommandLis
 void DeviceContextGLImpl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
+    DEV_CHECK_ERR(pFence, "Fence must not be null");
     GLObjectWrappers::GLSyncObj GLFence{glFenceSync(
         GL_SYNC_GPU_COMMANDS_COMPLETE, // Condition must always be GL_SYNC_GPU_COMMANDS_COMPLETE
         0                              // Flags, must be 0
@@ -1158,8 +1159,10 @@ void DeviceContextGLImpl::EnqueueSignal(IFence* pFence, Uint64 Value)
 void DeviceContextGLImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 {
     DEV_CHECK_ERR(!IsDeferred(), "Fence can only be waited from immediate context");
+    DEV_CHECK_ERR(pFence, "Fence must not be null");
     auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
     pFenceGLImpl->DeviceWait(Value);
+    pFenceGLImpl->DvpDeviceWait(Value);
 }
 
 void DeviceContextGLImpl::WaitForIdle()

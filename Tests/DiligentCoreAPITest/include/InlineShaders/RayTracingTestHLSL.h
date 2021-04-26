@@ -295,7 +295,7 @@ struct LocalRootConst
     uint   GeometryID; // same as GeometryIndex() in DXR 1.1
 };
 #ifdef VULKAN
-  [[vk::shader_record_nv]]
+  [[vk::shader_record_ext]]
 #endif
 ConstantBuffer<LocalRootConst> g_LocalRoot : register(b0);
 )hlsl";
@@ -554,9 +554,9 @@ float4 MissShader()
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint2 Dim;
-	g_ColorBuffer.GetDimensions(Dim.x, Dim.y);
-	if (DTid.x >= Dim.x || DTid.y >= Dim.y)
+    uint2 Dim;
+    g_ColorBuffer.GetDimensions(Dim.x, Dim.y);
+    if (DTid.x >= Dim.x || DTid.y >= Dim.y)
         return;
 
     const float2 uv = (float2(DTid.xy) + 0.5) / float2(Dim.xy);

@@ -166,6 +166,22 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
                                                       const TopLevelASDesc REF   Desc,
                                                       RESOURCE_STATE             InitialState,
                                                       ITopLevelAS**              ppTLAS) PURE;
+    
+    /// Creates a fence object from native Vulkan resource
+    
+    /// \param [in]  vkTimelineSemaphore - Vulkan timeline semaphore handle.
+    /// \param [in]  Desc                - Fence description.
+    /// \param [out] ppFence             - Address of the memory location where the pointer to the
+    ///                                    fence interface will be stored.
+    ///                                    The function calls AddRef(), so that the new object will contain
+    ///                                    one reference.
+    /// \note  Created fence object does not take ownership of the Vulkan semaphore and will not
+    ///        destroy it once released. The application must not destroy Vulkan semaphore while it is
+    ///        in use by the engine.
+    VIRTUAL void METHOD(CreateFenceFromVulkanResource)(THIS_
+                                                       VkSemaphore         vkTimelineSemaphore,
+                                                       const FenceDesc REF Desc,
+                                                       IFence**            ppFence) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -185,6 +201,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDeviceVk_CreateBufferFromVulkanResource(This, ...) CALL_IFACE_METHOD(RenderDeviceVk, CreateBufferFromVulkanResource, This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateBLASFromVulkanResource(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateBLASFromVulkanResource,   This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateTLASFromVulkanResource(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateTLASFromVulkanResource,   This, __VA_ARGS__)
+#    define IRenderDeviceVk_CreateFenceFromVulkanResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceVk, CreateFenceFromVulkanResource,  This, __VA_ARGS__)
 
 // clang-format on
 

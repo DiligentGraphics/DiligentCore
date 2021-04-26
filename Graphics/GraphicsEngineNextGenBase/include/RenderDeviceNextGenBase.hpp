@@ -138,7 +138,7 @@ public:
 
     Uint64 GetCommandQueueMask() const
     {
-        return (m_CmdQueueCount < 64) ? ((Uint64{1} << Uint64{m_CmdQueueCount}) - 1) : ~Uint64{0};
+        return (m_CmdQueueCount < MAX_COMMAND_QUEUES) ? ((Uint64{1} << Uint64{m_CmdQueueCount}) - 1) : ~Uint64{0};
     }
 
     void PurgeReleaseQueues(bool ForceRelease = false)

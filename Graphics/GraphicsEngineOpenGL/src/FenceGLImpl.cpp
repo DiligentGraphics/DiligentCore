@@ -109,7 +109,7 @@ void FenceGLImpl::DeviceWait(Uint64 Value)
 
 void FenceGLImpl::Signal(Uint64 NewValue)
 {
-    UNEXPECTED("Signal() is not supported in OpenGL backend");
+    DEV_CHECK_ERR(false, "Signal() is not supported in OpenGL backend");
 }
 
 void FenceGLImpl::Wait(Uint64 Value)

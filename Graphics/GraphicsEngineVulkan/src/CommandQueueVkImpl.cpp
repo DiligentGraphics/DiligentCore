@@ -60,11 +60,17 @@ CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                      
     if (CreateInfo.Name != nullptr)
         VulkanUtilities::SetQueueName(m_LogicalDevice->GetVkDevice(), m_VkQueue, CreateInfo.Name);
 
-    m_TempSignalSemaphores.reserve(16);
+    if (m_UseTimelineSemaphore)
+        m_TempSignalSemaphores.reserve(16);
 }
 
 CommandQueueVkImpl::~CommandQueueVkImpl()
 {
+    // Fence have resources that will be added to release queue.
+    // But release queue will be destroyed after command queue and it will not release new resources.
+    if (m_pFence)
+        m_pFence->ImmediatelyReleaseResources();
+
     m_pFence.Release();
     m_LastSyncPoint.reset();
 
@@ -276,8 +282,6 @@ void CommandQueueVkImpl::EnqueueSignalFence(VkFence vkFence)
     DEV_CHECK_ERR(vkFence != VK_NULL_HANDLE, "vkFence must not be null");
 
     std::lock_guard<std::mutex> Lock{m_QueueMutex};
-
-    // AZ TODO: add sync point ?
 
     auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit fence signal command to the command queue");

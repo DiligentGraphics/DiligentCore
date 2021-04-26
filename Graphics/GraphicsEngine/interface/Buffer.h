@@ -94,10 +94,9 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Buffer mode, see Diligent::BUFFER_MODE
     BUFFER_MODE Mode                DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
 
-    /// Buffer creation flags, see Diligent::RESOURCE_FLAGS for details.
-    RESOURCE_FLAGS ResourceFlags    DEFAULT_INITIALIZER(RESOURCE_FLAG_UNKNOWN);
-
     /// Defines which command queue will initially own the buffer.
+    /// Buffer may have a write access in these queue during initialization,
+    /// you must synchronize futher read or write access in another queue using fence.
     Uint8    InitialCommandQueueId  DEFAULT_INITIALIZER(0);
 
     /// Buffer element stride, in bytes.
@@ -131,9 +130,9 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         Usage                {_Usage            },
         CPUAccessFlags       {_CPUAccessFlags   },
         Mode                 {_Mode             },
+        InitialCommandQueueId{_InitialQueueId   },
         ElementByteStride    {_ElementByteStride},
-        CommandQueueMask     {_CommandQueueMask },
-        InitialCommandQueueId{_InitialQueueId   }
+        CommandQueueMask     {_CommandQueueMask }
     {
     }
 

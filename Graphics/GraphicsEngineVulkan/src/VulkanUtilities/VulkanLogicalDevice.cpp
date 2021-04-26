@@ -318,11 +318,14 @@ SemaphoreWrapper VulkanLogicalDevice::CreateTimelineSemaphore(uint64_t InitialVa
 {
     VERIFY_EXPR(m_EnabledExtFeatures.TimelineSemaphore.timelineSemaphore == VK_TRUE);
 
-    VkSemaphoreTypeCreateInfo TimelineCI  = {VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO};
-    VkSemaphoreCreateInfo     SemaphoreCI = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &TimelineCI};
-
+    VkSemaphoreTypeCreateInfo TimelineCI{};
+    TimelineCI.sType         = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
     TimelineCI.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
     TimelineCI.initialValue  = InitialValue;
+
+    VkSemaphoreCreateInfo SemaphoreCI{};
+    SemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    SemaphoreCI.pNext = &TimelineCI;
 
     return CreateVulkanObject<VkSemaphore, VulkanHandleTypeId::Semaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "timeline semaphore");
 }

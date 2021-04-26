@@ -51,4 +51,5 @@ void TestRenderDeviceVkCInterface(IRenderDeviceVk* pDevice)
     IRenderDeviceVk_CreateBufferFromVulkanResource(pDevice, (VkBuffer)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
     IRenderDeviceVk_CreateBLASFromVulkanResource(pDevice, (VkAccelerationStructureKHR)NULL, (BottomLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (IBottomLevelAS**)NULL);
     IRenderDeviceVk_CreateTLASFromVulkanResource(pDevice, (VkAccelerationStructureKHR)NULL, (TopLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (ITopLevelAS**)NULL);
+    IRenderDeviceVk_CreateFenceFromVulkanResource(pDevice, (VkSemaphore)NULL, (const FenceDesc*)NULL, (IFence**)NULL);
 }

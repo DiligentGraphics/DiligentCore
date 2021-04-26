@@ -402,6 +402,44 @@ D3D12_RESOURCE_STATES ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE Sta
     return D3D12ResourceStates;
 }
 
+D3D12_RESOURCE_STATES GetSupportedD3D12ResourceStatesForCommandList(D3D12_COMMAND_LIST_TYPE CmdListType)
+{
+    constexpr D3D12_RESOURCE_STATES TransferResStates =
+        D3D12_RESOURCE_STATE_COMMON |
+        D3D12_RESOURCE_STATE_COPY_DEST |
+        D3D12_RESOURCE_STATE_COPY_SOURCE;
+
+    constexpr D3D12_RESOURCE_STATES ComputeResStates =
+        TransferResStates |
+        D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER |
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS |
+        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
+        D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT |
+        D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+
+    constexpr D3D12_RESOURCE_STATES GraphicsResStates =
+        ComputeResStates |
+        D3D12_RESOURCE_STATE_INDEX_BUFFER |
+        D3D12_RESOURCE_STATE_RENDER_TARGET |
+        D3D12_RESOURCE_STATE_DEPTH_WRITE |
+        D3D12_RESOURCE_STATE_DEPTH_READ |
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
+        D3D12_RESOURCE_STATE_STREAM_OUT |
+        D3D12_RESOURCE_STATE_RESOLVE_DEST |
+        D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+
+    switch (CmdListType)
+    {
+        // clang-format off
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return GraphicsResStates;
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return ComputeResStates;
+        case D3D12_COMMAND_LIST_TYPE_COPY:    return TransferResStates;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected command list type");
+            return D3D12_RESOURCE_STATE_COMMON;
+    }
+}
 
 static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STATES state)
 {

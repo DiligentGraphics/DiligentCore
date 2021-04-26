@@ -149,9 +149,11 @@ class StateTransitionHelper
 {
 public:
     StateTransitionHelper(const StateTransitionDesc&                                                       Barrier,
-                          std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER>>& d3d12PendingBarriers) :
+                          std::vector<D3D12_RESOURCE_BARRIER, STDAllocatorRawMem<D3D12_RESOURCE_BARRIER>>& d3d12PendingBarriers,
+                          D3D12_COMMAND_LIST_TYPE                                                          CmdListType) :
         m_Barrier{Barrier},
-        m_d3d12PendingBarriers{d3d12PendingBarriers}
+        m_d3d12PendingBarriers{d3d12PendingBarriers},
+        m_ResStateMask{GetSupportedD3D12ResourceStatesForCommandList(CmdListType)}
     {
         DEV_CHECK_ERR(m_Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
     }
@@ -178,6 +180,8 @@ private:
     ID3D12Resource* m_pd3d12Resource = nullptr;
 
     bool m_RequireUAVBarrier = false;
+
+    const D3D12_RESOURCE_STATES m_ResStateMask;
 };
 
 template <typename ResourceType>
@@ -318,8 +322,8 @@ void StateTransitionHelper::operator()(ResourceType& Resource)
         d3d12Barrier.Flags                  = TransitionTypeToD3D12ResourceBarrierFlag(m_Barrier.TransitionType);
         d3d12Barrier.Transition.pResource   = m_pd3d12Resource;
         d3d12Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        d3d12Barrier.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(m_OldState);
-        d3d12Barrier.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState);
+        d3d12Barrier.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(m_OldState) & m_ResStateMask;
+        d3d12Barrier.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState) & m_ResStateMask;
 
         AddD3D12ResourceBarriers(Resource, d3d12Barrier);
 
@@ -346,25 +350,25 @@ void StateTransitionHelper::operator()(ResourceType& Resource)
 
 void CommandContext::TransitionResource(TextureD3D12Impl& Texture, const StateTransitionDesc& Barrier)
 {
-    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers};
+    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers, GetCommandListType()};
     Helper(Texture);
 }
 
 void CommandContext::TransitionResource(BufferD3D12Impl& Buffer, const StateTransitionDesc& Barrier)
 {
-    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers};
+    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers, GetCommandListType()};
     Helper(Buffer);
 }
 
 void CommandContext::TransitionResource(BottomLevelASD3D12Impl& BLAS, const StateTransitionDesc& Barrier)
 {
-    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers};
+    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers, GetCommandListType()};
     Helper(BLAS);
 }
 
 void CommandContext::TransitionResource(TopLevelASD3D12Impl& TLAS, const StateTransitionDesc& Barrier)
 {
-    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers};
+    StateTransitionHelper Helper{Barrier, m_PendingResourceBarriers, GetCommandListType()};
     Helper(TLAS);
 }
 

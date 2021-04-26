@@ -188,14 +188,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     }
 #endif
 
-    UpdateAdapterInfo(m_AdapterInfo);
-    if (EngineCI.ForceNonSeparablePrograms)
-    {
-        LOG_INFO_MESSAGE("Forcing non-separable shader programs");
-        m_AdapterInfo.Capabilities.Features.SeparablePrograms = DEVICE_FEATURE_STATE_DISABLED;
-    }
-
+    UpdateAdapterInfo(m_AdapterInfo, EngineCI.ForceNonSeparablePrograms);
     auto EnabledFeatures = EngineCI.Features;
+
     EnableDeviceFeatures(m_AdapterInfo.Capabilities.Features, EnabledFeatures);
     m_AdapterInfo.Capabilities.Features = EnabledFeatures;
 
@@ -505,7 +500,7 @@ bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString) const
     return m_ExtensionStrings.find(ExtensionString) != m_ExtensionStrings.end();
 }
 
-void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo) const
+void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, bool ForceNonSeparablePrograms) const
 {
     const auto GLVersion = AdapterInfo.Capabilities.APIVersion;
 
@@ -654,6 +649,9 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo) con
             ENABLE_FEATURE(VertexPipelineUAVWritesAndAtomics, MaxVertexSSBOs);
         }
 
+        if (ForceNonSeparablePrograms)
+            LOG_INFO_MESSAGE("Forcing non-separable shader programs");
+
         if (AdapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_GL)
         {
             const bool IsGL46OrAbove = GLVersion >= Version{4, 6};
@@ -663,7 +661,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo) con
             const bool IsGL40OrAbove = GLVersion >= Version{4, 0};
 
             // clang-format off
-            ENABLE_FEATURE(ShaderResourceQueries,         Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED);
+            ENABLE_FEATURE(SeparablePrograms,             !ForceNonSeparablePrograms);
             ENABLE_FEATURE(IndirectRendering,             true);
             ENABLE_FEATURE(WireframeFill,                 true);
             ENABLE_FEATURE(MultithreadedResourceCreation, false);
@@ -718,8 +716,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo) con
             const bool IsGLES32OrAbove = GLVersion >= Version{3, 2};
 
             // clang-format off
-            ENABLE_FEATURE(SeparablePrograms,             IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects"));
-            ENABLE_FEATURE(ShaderResourceQueries,         Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED);
+            ENABLE_FEATURE(SeparablePrograms,             (IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects")) && !ForceNonSeparablePrograms);
             ENABLE_FEATURE(IndirectRendering,             IsGLES31OrAbove || strstr(Extensions, "draw_indirect"));
             ENABLE_FEATURE(WireframeFill,                 false);
             ENABLE_FEATURE(MultithreadedResourceCreation, false);
@@ -798,6 +795,8 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo) con
         {
             ENABLE_FEATURE(WaveOp, false);
         }
+
+        Features.ShaderResourceQueries = Features.SeparablePrograms;
 
         const bool bRGTC = CheckExtension("GL_ARB_texture_compression_rgtc");
         const bool bBPTC = CheckExtension("GL_ARB_texture_compression_bptc");

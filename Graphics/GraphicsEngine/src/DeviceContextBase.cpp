@@ -263,18 +263,20 @@ bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs)
     return true;
 }
 
-bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier)
+bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier, const CommandQueueIndex CmdQueueInd)
 {
 #define CHECK_STATE_TRANSITION_DESC(Expr, ...) CHECK_PARAMETER(Expr, "State transition parameters are invalid: ", __VA_ARGS__)
 
     CHECK_STATE_TRANSITION_DESC(Barrier.pResource != nullptr, "pResource must not be null.");
     CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "NewState state can't be UNKNOWN.");
 
-    RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN;
+    RESOURCE_STATE OldState         = RESOURCE_STATE_UNKNOWN;
+    Uint64         CommandQueueMask = 0;
 
     if (RefCntAutoPtr<ITexture> pTexture{Barrier.pResource, IID_Texture})
     {
         const auto& TexDesc = pTexture->GetDesc();
+        CommandQueueMask    = TexDesc.CommandQueueMask;
 
         CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(Barrier.NewState, true), "invalid new state specified for texture '", TexDesc.Name, "'.");
         OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTexture->GetState();
@@ -311,6 +313,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
     else if (RefCntAutoPtr<IBuffer> pBuffer{Barrier.pResource, IID_Buffer})
     {
         const auto& BuffDesc = pBuffer->GetDesc();
+        CommandQueueMask     = BuffDesc.CommandQueueMask;
         CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(Barrier.NewState, false), "invalid new state specified for buffer '", BuffDesc.Name, "'.");
         OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBuffer->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
@@ -319,6 +322,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
     else if (RefCntAutoPtr<IBottomLevelAS> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
     {
         const auto& BLASDesc = pBottomLevelAS->GetDesc();
+        CommandQueueMask     = BLASDesc.CommandQueueMask;
         OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBottomLevelAS->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of BLAS '", BLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE,
@@ -328,6 +332,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
     else if (RefCntAutoPtr<ITopLevelAS> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
     {
         const auto& TLASDesc = pTopLevelAS->GetDesc();
+        CommandQueueMask     = TLASDesc.CommandQueueMask;
         OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTopLevelAS->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of TLAS '", TLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE || Barrier.NewState == RESOURCE_STATE_RAY_TRACING,
@@ -338,6 +343,9 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
     {
         UNEXPECTED("unsupported resource type");
     }
+
+    CHECK_STATE_TRANSITION_DESC((CommandQueueMask & (Uint64{1} << Uint64{CmdQueueInd})) != 0,
+                                "resource was created with CommandQueueMask 0x", std::hex, CommandQueueMask, " and can not be used in command queue ", Uint32{CmdQueueInd}, ".");
 
     if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
     {

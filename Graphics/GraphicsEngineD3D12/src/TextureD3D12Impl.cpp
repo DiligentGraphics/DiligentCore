@@ -147,7 +147,10 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         }
     }
 
-    D3D12_RESOURCE_DESC Desc = GetD3D12TextureDesc();
+    D3D12_RESOURCE_DESC D3D12TexDesc = GetD3D12TextureDesc();
+
+    const auto CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
+    const auto StateMask   = GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd));
 
     auto* pd3d12Device       = pRenderDeviceD3D12->GetD3D12Device();
     bool  bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
@@ -155,22 +158,22 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     {
         D3D12_CLEAR_VALUE  ClearValue  = {};
         D3D12_CLEAR_VALUE* pClearValue = nullptr;
-        if (Desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+        if (D3D12TexDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
         {
             if (m_Desc.ClearValue.Format != TEX_FORMAT_UNKNOWN)
                 ClearValue.Format = TexFormatToDXGI_Format(m_Desc.ClearValue.Format);
             else
             {
                 auto Format       = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
-                ClearValue.Format = GetClearFormat(Format, Desc.Flags);
+                ClearValue.Format = GetClearFormat(Format, D3D12TexDesc.Flags);
             }
 
-            if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+            if (D3D12TexDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
             {
                 for (int i = 0; i < 4; ++i)
                     ClearValue.Color[i] = m_Desc.ClearValue.Color[i];
             }
-            else if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+            else if (D3D12TexDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
             {
                 ClearValue.DepthStencil.Depth   = m_Desc.ClearValue.DepthStencil.Depth;
                 ClearValue.DepthStencil.Stencil = m_Desc.ClearValue.DepthStencil.Stencil;
@@ -187,9 +190,10 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
         auto InitialState = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
         SetState(InitialState);
-        auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(InitialState);
+
+        auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(InitialState) & StateMask;
         auto hr =
-            pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &Desc, D3D12State, pClearValue, __uuidof(m_pd3d12Resource),
+            pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &D3D12TexDesc, D3D12State, pClearValue, __uuidof(m_pd3d12Resource),
                                                   reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create D3D12 texture");
@@ -199,12 +203,12 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
         if (bInitializeTexture)
         {
-            Uint32 ExpectedNumSubresources = Uint32{Desc.MipLevels} * (Desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Uint32{Desc.DepthOrArraySize});
+            Uint32 ExpectedNumSubresources = Uint32{D3D12TexDesc.MipLevels} * (D3D12TexDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Uint32{D3D12TexDesc.DepthOrArraySize});
             if (pInitData->NumSubresources != ExpectedNumSubresources)
                 LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", pInitData->NumSubresources, " provided");
 
             UINT64 uploadBufferSize = 0;
-            pd3d12Device->GetCopyableFootprints(&Desc, 0, pInitData->NumSubresources, 0, nullptr, nullptr, nullptr, &uploadBufferSize);
+            pd3d12Device->GetCopyableFootprints(&D3D12TexDesc, 0, pInitData->NumSubresources, 0, nullptr, nullptr, nullptr, &uploadBufferSize);
 
             D3D12_HEAP_PROPERTIES UploadHeapProps{};
             UploadHeapProps.Type                 = D3D12_HEAP_TYPE_UPLOAD;
@@ -234,8 +238,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap");
 
-            const auto CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
-            auto       InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
+            auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
             // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
             VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
             std::vector<D3D12_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D12_SUBRESOURCE_DATA>> D3D12SubResData(pInitData->NumSubresources, D3D12_SUBRESOURCE_DATA(), STD_ALLOCATOR_RAW_MEM(D3D12_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D12_SUBRESOURCE_DATA>"));
@@ -301,7 +304,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             UNEXPECTED("Unexpected CPU access");
 
         SetState(InitialState);
-        auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(InitialState);
+        auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(InitialState) & StateMask;
 
         StaginHeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         StaginHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
@@ -309,9 +312,9 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         StaginHeapProps.VisibleNodeMask      = 1;
 
         UINT64 stagingBufferSize = 0;
-        Uint32 NumSubresources   = Uint32{Desc.MipLevels} * (Desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Uint32{Desc.DepthOrArraySize});
+        Uint32 NumSubresources   = Uint32{D3D12TexDesc.MipLevels} * (D3D12TexDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Uint32{D3D12TexDesc.DepthOrArraySize});
         m_StagingFootprints      = ALLOCATE(GetRawAllocator(), "Memory for staging footprints", D3D12_PLACED_SUBRESOURCE_FOOTPRINT, NumSubresources + 1);
-        pd3d12Device->GetCopyableFootprints(&Desc, 0, NumSubresources, 0, m_StagingFootprints, nullptr, nullptr, &stagingBufferSize);
+        pd3d12Device->GetCopyableFootprints(&D3D12TexDesc, 0, NumSubresources, 0, m_StagingFootprints, nullptr, nullptr, &stagingBufferSize);
         m_StagingFootprints[NumSubresources] = D3D12_PLACED_SUBRESOURCE_FOOTPRINT{stagingBufferSize};
 
         D3D12_RESOURCE_DESC BufferDesc{};
@@ -340,7 +343,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
         if (bInitializeTexture)
         {
-            const auto FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+            const auto FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
 
             void* pStagingData = nullptr;
             m_pd3d12Resource->Map(0, nullptr, &pStagingData);
