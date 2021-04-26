@@ -92,7 +92,7 @@ D3D12DynamicMemoryManager::D3D12DynamicMemoryManager(IMemoryAllocator&      Allo
 
 D3D12DynamicPage D3D12DynamicMemoryManager::AllocatePage(Uint64 SizeInBytes)
 {
-    std::lock_guard<std::mutex> AvailablePagesLock(m_AvailablePagesMtx);
+    std::lock_guard<std::mutex> AvailablePagesLock{m_AvailablePagesMtx};
 #ifdef DILIGENT_DEVELOPMENT
     ++m_AllocatedPageCounter;
 #endif

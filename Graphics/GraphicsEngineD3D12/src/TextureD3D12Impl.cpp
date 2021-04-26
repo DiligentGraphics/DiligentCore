@@ -178,8 +178,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             pClearValue = &ClearValue;
         }
 
-        D3D12_HEAP_PROPERTIES HeapProps = {};
-
+        D3D12_HEAP_PROPERTIES HeapProps{};
         HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
         HeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
@@ -207,16 +206,14 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             UINT64 uploadBufferSize = 0;
             pd3d12Device->GetCopyableFootprints(&Desc, 0, pInitData->NumSubresources, 0, nullptr, nullptr, nullptr, &uploadBufferSize);
 
-            D3D12_HEAP_PROPERTIES UploadHeapProps = {};
-
+            D3D12_HEAP_PROPERTIES UploadHeapProps{};
             UploadHeapProps.Type                 = D3D12_HEAP_TYPE_UPLOAD;
             UploadHeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
             UploadHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
             UploadHeapProps.CreationNodeMask     = 1;
             UploadHeapProps.VisibleNodeMask      = 1;
 
-            D3D12_RESOURCE_DESC BufferDesc = {};
-
+            D3D12_RESOURCE_DESC BufferDesc{};
             BufferDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
             BufferDesc.Alignment          = 0;
             BufferDesc.Width              = uploadBufferSize;
@@ -283,7 +280,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     else if (m_Desc.Usage == USAGE_STAGING)
     {
         // Create staging buffer
-        D3D12_HEAP_PROPERTIES StaginHeapProps = {};
+        D3D12_HEAP_PROPERTIES StaginHeapProps{};
         DEV_CHECK_ERR((m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_READ ||
                           (m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_WRITE,
                       "Exactly one of CPU_ACCESS_READ or CPU_ACCESS_WRITE flags must be specified");
@@ -317,8 +314,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         pd3d12Device->GetCopyableFootprints(&Desc, 0, NumSubresources, 0, m_StagingFootprints, nullptr, nullptr, &stagingBufferSize);
         m_StagingFootprints[NumSubresources] = D3D12_PLACED_SUBRESOURCE_FOOTPRINT{stagingBufferSize};
 
-        D3D12_RESOURCE_DESC BufferDesc = {};
-
+        D3D12_RESOURCE_DESC BufferDesc{};
         BufferDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
         BufferDesc.Alignment          = 0;
         BufferDesc.Width              = stagingBufferSize;
@@ -457,7 +453,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
 
     try
     {
-        auto* pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
+        auto* pDeviceD3D12Impl = GetDevice();
         auto& TexViewAllocator = pDeviceD3D12Impl->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
@@ -568,8 +564,8 @@ void TextureD3D12Impl::CreateSRV(TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_
     D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
     TextureViewDesc_to_D3D12_SRV_DESC(SRVDesc, D3D12_SRVDesc, m_Desc.SampleCount);
 
-    auto* pDeviceD3D12 = static_cast<RenderDeviceD3D12Impl*>(GetDevice())->GetD3D12Device();
-    pDeviceD3D12->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVHandle);
+    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    pd3d12Device->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVHandle);
 }
 
 void TextureD3D12Impl::CreateRTV(TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle)
@@ -584,8 +580,8 @@ void TextureD3D12Impl::CreateRTV(TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_
     D3D12_RENDER_TARGET_VIEW_DESC D3D12_RTVDesc;
     TextureViewDesc_to_D3D12_RTV_DESC(RTVDesc, D3D12_RTVDesc, m_Desc.SampleCount);
 
-    auto* pDeviceD3D12 = static_cast<RenderDeviceD3D12Impl*>(GetDevice())->GetD3D12Device();
-    pDeviceD3D12->CreateRenderTargetView(m_pd3d12Resource, &D3D12_RTVDesc, RTVHandle);
+    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    pd3d12Device->CreateRenderTargetView(m_pd3d12Resource, &D3D12_RTVDesc, RTVHandle);
 }
 
 void TextureD3D12Impl::CreateDSV(TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle)
@@ -600,8 +596,8 @@ void TextureD3D12Impl::CreateDSV(TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_
     D3D12_DEPTH_STENCIL_VIEW_DESC D3D12_DSVDesc;
     TextureViewDesc_to_D3D12_DSV_DESC(DSVDesc, D3D12_DSVDesc, m_Desc.SampleCount);
 
-    auto* pDeviceD3D12 = static_cast<RenderDeviceD3D12Impl*>(GetDevice())->GetD3D12Device();
-    pDeviceD3D12->CreateDepthStencilView(m_pd3d12Resource, &D3D12_DSVDesc, DSVHandle);
+    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    pd3d12Device->CreateDepthStencilView(m_pd3d12Resource, &D3D12_DSVDesc, DSVHandle);
 }
 
 void TextureD3D12Impl::CreateUAV(TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle)
@@ -616,8 +612,8 @@ void TextureD3D12Impl::CreateUAV(TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_
     D3D12_UNORDERED_ACCESS_VIEW_DESC D3D12_UAVDesc;
     TextureViewDesc_to_D3D12_UAV_DESC(UAVDesc, D3D12_UAVDesc);
 
-    auto* pDeviceD3D12 = static_cast<RenderDeviceD3D12Impl*>(GetDevice())->GetD3D12Device();
-    pDeviceD3D12->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVHandle);
+    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    pd3d12Device->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVHandle);
 }
 
 void TextureD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)

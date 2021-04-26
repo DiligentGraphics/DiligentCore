@@ -53,9 +53,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
     }
     else
     {
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO d3d12TopLevelPrebuildInfo = {};
-        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  d3d12TopLevelInputs       = {};
-
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS d3d12TopLevelInputs{};
         d3d12TopLevelInputs.Type        = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
         d3d12TopLevelInputs.Flags       = BuildASFlagsToD3D12ASBuildFlags(m_Desc.Flags);
         d3d12TopLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
@@ -64,6 +62,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
         DEV_CHECK_ERR(m_Desc.MaxInstanceCount <= Limits.MaxInstancesPerTLAS,
                       "Max instance count (", m_Desc.MaxInstanceCount, ") exceeds device limit (", Limits.MaxInstancesPerTLAS, ").");
 
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO d3d12TopLevelPrebuildInfo{};
         pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12TopLevelInputs, &d3d12TopLevelPrebuildInfo);
         if (d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)
             LOG_ERROR_AND_THROW("Failed to get ray tracing acceleration structure prebuild info.");

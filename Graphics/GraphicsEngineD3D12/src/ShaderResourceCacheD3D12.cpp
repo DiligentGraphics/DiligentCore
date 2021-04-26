@@ -459,9 +459,9 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
                     (Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.uiSizeInBytes);
 
                 VERIFY(((m_DynamicRootBuffersMask & DynamicBufferBit) != 0) == IsDynamicBuffer,
-                       "Incorrect dynamic buffer bit set in the mask");
+                       "Incorrect bit set in the dynamic buffer mask");
                 VERIFY(((m_NonDynamicRootBuffersMask & DynamicBufferBit) != 0) == !IsDynamicBuffer,
-                       "Incorrect dynamic buffer bit set in the mask");
+                       "Incorrect bit set in the non-dynamic buffer mask");
             }
             else
             {

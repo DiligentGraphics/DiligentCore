@@ -52,8 +52,8 @@ public:
             pRefCounters,
             pDevice
         },
-        m_pDeferredCtx  {pDeferredCtx          },
-        m_pCmdContext   {std::move(pCmdContext)}
+        m_pDeferredCtx{pDeferredCtx          },
+        m_pCmdContext {std::move(pCmdContext)}
     // clang-format on
     {
     }
