@@ -26,12 +26,10 @@ jobs:
 
     - name: Configure CMake
       if: success()
-      working-directory: ${{runner.workspace}}
       shell: bash
       run: |
-        mkdir build
-        cd ./build
-        cmake $GITHUB_WORKSPACE -G "Visual Studio 16 2019" -A ${{ matrix.toolset }} -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install .
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        ./configure_cmake.sh "win10" "${{runner.workspace}}" ${{ matrix.config }} ${{ matrix.toolset }}
 
     - name: Build
       if: success()
@@ -100,12 +98,10 @@ jobs:
 
     - name: Configure CMake
       if: success()
-      working-directory: ${{runner.workspace}}
       shell: bash
       run: |
-        mkdir build
-        cd ./build
-        cmake $GITHUB_WORKSPACE -G "Visual Studio 16 2019" -A ${{ matrix.toolset }} -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install -DDILIGENT_DEVELOPMENT=ON .
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        ./configure_cmake.sh "win10-dev" "${{runner.workspace}}" ${{ matrix.config }} ${{ matrix.toolset }}
 
     - name: Build
       if: success()
@@ -153,12 +149,10 @@ jobs:
 
     - name: Configure CMake
       if: success()
-      working-directory: ${{runner.workspace}}
       shell: bash
       run: |
-        mkdir build
-        cd ./build
-        cmake $GITHUB_WORKSPACE -G "Visual Studio 16 2019" -A ${{ matrix.toolset }} -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install -DCMAKE_SYSTEM_VERSION=8.1 .
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        ./configure_cmake.sh "win8" "${{runner.workspace}}" ${{ matrix.config }} ${{ matrix.toolset }}
 
     - name: Build
       if: success()

@@ -33,12 +33,11 @@ jobs:
 
     - name: Configure CMake
       if: success()
-      working-directory: ${{runner.workspace}}
       shell: bash
       run: |
-        mkdir build
-        cd ./build
-        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDILIGENT_BUILD_TESTS=ON -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_OSX_ARCHITECTURES=arm64 -DVULKAN_SDK="${{ env.VULKAN_SDK }}" -DDILIGENT_NO_FORMAT_VALIDATION=ON -DCMAKE_INSTALL_PREFIX=install ..
+        cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
+        chmod +x configure_cmake.sh
+        ./configure_cmake.sh "ios" "${{runner.workspace}}" ${{ matrix.config }}
 
     - name: Build
       if: success()
