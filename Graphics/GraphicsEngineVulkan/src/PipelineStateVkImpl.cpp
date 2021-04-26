@@ -108,15 +108,13 @@ void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&       
 
         VERIFY_EXPR(Shaders.size() == SPIRVs.size());
 
-        VkPipelineShaderStageCreateInfo StageCI = {};
-
+        VkPipelineShaderStageCreateInfo StageCI{};
         StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         StageCI.pNext = nullptr;
         StageCI.flags = 0; //  reserved for future use
         StageCI.stage = ShaderTypeToVkShaderStageFlagBit(ShaderType);
 
-        VkShaderModuleCreateInfo ShaderModuleCI = {};
-
+        VkShaderModuleCreateInfo ShaderModuleCI{};
         ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         ShaderModuleCI.pNext = nullptr;
         ShaderModuleCI.flags = 0;
@@ -157,8 +155,7 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
-    VkComputePipelineCreateInfo PipelineCI = {};
-
+    VkComputePipelineCreateInfo PipelineCI{};
     PipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     PipelineCI.pNext = nullptr;
 #ifdef DILIGENT_DEBUG
@@ -196,8 +193,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         pRenderPass = RPCache.GetRenderPass(Key);
     }
 
-    VkGraphicsPipelineCreateInfo PipelineCI = {};
-
+    VkGraphicsPipelineCreateInfo PipelineCI{};
     PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     PipelineCI.pNext = nullptr;
 #ifdef DILIGENT_DEBUG
@@ -225,8 +221,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         VertexInputStateCI.pNext = &VertexInputDivisorCI;
     }
 
-    VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
-
+    VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI{};
     InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     InputAssemblyCI.pNext                  = nullptr;
     InputAssemblyCI.flags                  = 0; // reserved for future use
@@ -234,8 +229,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
 
 
-    VkPipelineTessellationStateCreateInfo TessStateCI = {};
-
+    VkPipelineTessellationStateCreateInfo TessStateCI{};
     TessStateCI.sType             = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
     TessStateCI.pNext             = nullptr;
     TessStateCI.flags             = 0; // reserved for future use
@@ -257,8 +251,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(GraphicsPipeline.PrimitiveTopology, InputAssemblyCI.topology, TessStateCI.patchControlPoints);
     }
 
-    VkPipelineViewportStateCreateInfo ViewPortStateCI = {};
-
+    VkPipelineViewportStateCreateInfo ViewPortStateCI{};
     ViewPortStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     ViewPortStateCI.pNext = nullptr;
     ViewPortStateCI.flags = 0; // reserved for future use
@@ -290,8 +283,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     PipelineCI.pRasterizationState = &RasterizerStateCI;
 
     // Multisample state (24)
-    VkPipelineMultisampleStateCreateInfo MSStateCI = {};
-
+    VkPipelineMultisampleStateCreateInfo MSStateCI{};
     MSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     MSStateCI.pNext = nullptr;
     MSStateCI.flags = 0; // reserved for future use
@@ -317,8 +309,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     VERIFY_EXPR(GraphicsPipeline.pRenderPass != nullptr || GraphicsPipeline.NumRenderTargets == NumRTAttachments);
     std::vector<VkPipelineColorBlendAttachmentState> ColorBlendAttachmentStates(NumRTAttachments);
 
-    VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
-
+    VkPipelineColorBlendStateCreateInfo BlendStateCI{};
     BlendStateCI.pAttachments    = !ColorBlendAttachmentStates.empty() ? ColorBlendAttachmentStates.data() : nullptr;
     BlendStateCI.attachmentCount = NumRTAttachments; // must equal the colorAttachmentCount for the subpass
                                                      // in which this pipeline is used.
@@ -326,8 +317,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     PipelineCI.pColorBlendState = &BlendStateCI;
 
 
-    VkPipelineDynamicStateCreateInfo DynamicStateCI = {};
-
+    VkPipelineDynamicStateCreateInfo DynamicStateCI{};
     DynamicStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     DynamicStateCI.pNext = nullptr;
     DynamicStateCI.flags = 0; // reserved for future use
@@ -378,8 +368,7 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
-    VkRayTracingPipelineCreateInfoKHR PipelineCI = {};
-
+    VkRayTracingPipelineCreateInfoKHR PipelineCI{};
     PipelineCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
     PipelineCI.pNext = nullptr;
 #ifdef DILIGENT_DEBUG
@@ -473,8 +462,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
     {
         const auto& TriHitShader = CreateInfo.pTriangleHitShaders[i];
 
-        VkRayTracingShaderGroupCreateInfoKHR Group = {};
-
+        VkRayTracingShaderGroupCreateInfoKHR Group{};
         Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
         Group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
         Group.generalShader      = VK_SHADER_UNUSED_KHR;
@@ -503,8 +491,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
     {
         const auto& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
 
-        VkRayTracingShaderGroupCreateInfoKHR Group = {};
-
+        VkRayTracingShaderGroupCreateInfoKHR Group{};
         Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
         Group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
         Group.generalShader      = VK_SHADER_UNUSED_KHR;
@@ -683,7 +670,6 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
 {
     std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
 
-    const auto&                       LayoutDesc = m_Desc.ResourceLayout;
     std::vector<PipelineResourceDesc> Resources;
     const char*                       pCombinedSamplerSuffix = nullptr;
 
@@ -698,7 +684,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                     // We can't skip immutable samplers because immutable sampler arrays have to be defined
                     // as both resource and sampler.
                     //if (Res.Type == SPIRVShaderResourceAttribs::SeparateSampler &&
-                    //    FindImmutableSampler(LayoutDesc.ImmutableSamplers, LayoutDesc.NumImmutableSamplers, Stage.Type, Res.Name,
+                    //    FindImmutableSampler(ResourceLayout.ImmutableSamplers, ResourceLayout.NumImmutableSamplers, Stage.Type, Res.Name,
                     //                         ShaderResources.GetCombinedSamplerSuffix()) >= 0)
                     //{
                     //    // Skip separate immutable samplers - they are not resources
@@ -710,7 +696,7 @@ RefCntAutoPtr<PipelineResourceSignatureVkImpl> PipelineStateVkImpl::CreateDefaul
                         ShaderResources.GetCombinedSamplerSuffix() :
                         nullptr;
 
-                    const auto VarDesc = FindPipelineResourceLayoutVariable(LayoutDesc, Attribs.Name, Stage.Type, SamplerSuffix);
+                    const auto VarDesc = FindPipelineResourceLayoutVariable(m_Desc.ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
                     const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{Attribs.Name, VarDesc.ShaderStages}, Attribs);
                     if (it_assigned.second)

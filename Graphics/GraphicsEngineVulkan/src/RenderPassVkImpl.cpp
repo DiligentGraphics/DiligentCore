@@ -41,8 +41,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                                    bool                  IsDeviceInternal) :
     TRenderPassBase{pRefCounters, pDevice, Desc, IsDeviceInternal}
 {
-    VkRenderPassCreateInfo RenderPassCI = {};
-
+    VkRenderPassCreateInfo RenderPassCI{};
     RenderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     RenderPassCI.pNext = nullptr;
     RenderPassCI.flags = 0;

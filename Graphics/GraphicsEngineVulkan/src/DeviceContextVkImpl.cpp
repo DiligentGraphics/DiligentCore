@@ -524,7 +524,7 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         // Allocate vulkan descriptor set for dynamic resources
         vkDynamicDescrSet = AllocateDynamicDescriptorSet(vkLayout, DynamicDescrSetName);
 
-        // Commit all dynamic resource descriptors
+        // Write all dynamic resource descriptors
         pSignature->CommitDynamicResources(ResourceCache, vkDynamicDescrSet);
 
         SetInfo.vkSets[DSIndex] = vkDynamicDescrSet;

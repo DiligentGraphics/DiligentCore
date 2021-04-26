@@ -54,8 +54,7 @@ VulkanUploadHeap::~VulkanUploadHeap()
 
 VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize SizeInBytes) const
 {
-    VkBufferCreateInfo StagingBufferCI = {};
-
+    VkBufferCreateInfo StagingBufferCI{};
     StagingBufferCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     StagingBufferCI.pNext                 = nullptr;
     StagingBufferCI.flags                 = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT

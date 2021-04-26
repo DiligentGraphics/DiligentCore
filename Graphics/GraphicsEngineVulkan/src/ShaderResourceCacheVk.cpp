@@ -90,7 +90,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
         auto* pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
         for (Uint32 t = 0; t < NumSets; ++t)
         {
-            new (&GetDescriptorSet(t)) DescriptorSet(SetSizes[t], SetSizes[t] > 0 ? pCurrResPtr : nullptr);
+            new (&GetDescriptorSet(t)) DescriptorSet{SetSizes[t], SetSizes[t] > 0 ? pCurrResPtr : nullptr};
             pCurrResPtr += SetSizes[t];
 #ifdef DILIGENT_DEBUG
             m_DbgInitializedResources[t].resize(SetSizes[t]);
@@ -347,10 +347,13 @@ const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(
         WriteDescrSet.pTexelBufferView = nullptr;
 
         // Do not zero-initialize!
-        VkDescriptorImageInfo                        vkDescrImageInfo;
-        VkDescriptorBufferInfo                       vkDescrBufferInfo;
-        VkBufferView                                 vkDescrBufferView;
-        VkWriteDescriptorSetAccelerationStructureKHR vkDescrAccelStructInfo;
+        union
+        {
+            VkDescriptorImageInfo                        vkDescrImageInfo;
+            VkDescriptorBufferInfo                       vkDescrBufferInfo;
+            VkBufferView                                 vkDescrBufferView;
+            VkWriteDescriptorSetAccelerationStructureKHR vkDescrAccelStructInfo;
+        };
 
         static_assert(static_cast<Uint32>(DescriptorType::Count) == 15, "Please update the switch below to handle the new descriptor type");
         switch (DstRes.Type)
@@ -508,7 +511,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
             case DescriptorType::StorageTexelBuffer_ReadOnly:
             {
                 auto* pBuffViewVk = Res.pObject.RawPtr<BufferViewVkImpl>();
-                auto* pBufferVk   = pBuffViewVk != nullptr ? ValidatedCast<BufferVkImpl>(pBuffViewVk->GetBuffer()) : nullptr;
+                auto* pBufferVk   = pBuffViewVk != nullptr ? pBuffViewVk->GetBuffer<BufferVkImpl>() : nullptr;
                 if (pBufferVk != nullptr && pBufferVk->IsInKnownState())
                 {
                     const RESOURCE_STATE RequiredState = DescriptorTypeToResourceState(Res.Type);
@@ -551,7 +554,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
             case DescriptorType::StorageImage:
             {
                 auto* pTextureViewVk = Res.pObject.RawPtr<TextureViewVkImpl>();
-                auto* pTextureVk     = pTextureViewVk != nullptr ? ValidatedCast<TextureVkImpl>(pTextureViewVk->GetTexture()) : nullptr;
+                auto* pTextureVk     = pTextureViewVk != nullptr ? pTextureViewVk->GetTexture<TextureVkImpl>() : nullptr;
                 if (pTextureVk != nullptr && pTextureVk->IsInKnownState())
                 {
                     // The image subresources for a storage image must be in the VK_IMAGE_LAYOUT_GENERAL layout in

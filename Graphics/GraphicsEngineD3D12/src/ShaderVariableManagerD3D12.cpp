@@ -603,11 +603,9 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
     }
     else
     {
-        if (m_DstRes.pObject != nullptr && m_ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-        {
-            LOG_ERROR_MESSAGE("Shader variable '", m_ResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
-                              "Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource.");
-        }
+        DEV_CHECK_ERR(m_DstRes.pObject == nullptr || m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC,
+                      "Shader variable '", m_ResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
+                      "Use another shader resource binding instance or label the variable as dynamic if you need to bind another resource.");
 
         m_ResourceCache.ResetResource(m_RootIndex, m_OffsetFromTableStart);
         if (m_Attribs.IsCombinedWithSampler())
@@ -623,11 +621,9 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
                 const auto  SamOffsetFromTableStart = SamplerAttribs.OffsetFromTableStart(m_CacheType) + SamplerArrInd;
                 const auto& DstSam                  = const_cast<const ShaderResourceCacheD3D12&>(m_ResourceCache).GetRootTable(SamRootIndex).GetResource(SamOffsetFromTableStart);
 
-                if (DstSam.pObject != nullptr && SamplerResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-                {
-                    LOG_ERROR_MESSAGE("Sampler variable '", SamplerResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
-                                      "Use another shader resource binding instance or label the variable as dynamic if you need to bind another sampler.");
-                }
+                DEV_CHECK_ERR(DstSam.pObject == nullptr || SamplerResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC,
+                              "Sampler variable '", SamplerResDesc.Name, "' is not dynamic, but is being reset to null. This is an error and may cause unpredicted behavior. ",
+                              "Use another shader resource binding instance or label the variable as dynamic if you need to bind another sampler.");
 
                 m_ResourceCache.ResetResource(SamRootIndex, SamOffsetFromTableStart);
             }

@@ -31,7 +31,7 @@
 /// Declaration of Diligent::ShaderVariableManagerVk and Diligent::ShaderVariableVkImpl classes
 
 //
-//  * ShaderVariableManagerVk keeps the list of variables of specific types
+//  * ShaderVariableManagerVk keeps the list of variables of specific types (static or mutable/dynamic)
 //  * Every ShaderVariableVkImpl references ResourceAttribs by index from PipelineResourceSignatureVkImpl
 //  * ShaderVariableManagerVk keeps reference to ShaderResourceCacheVk
 //  * ShaderVariableManagerVk is used by PipelineResourceSignatureVkImpl to manage static resources and by

@@ -56,8 +56,8 @@ VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Alloc
 // clang-format on
 {
     VERIFY((Size & (MasterBlockAlignment - 1)) == 0, "Heap size (", Size, " is not aligned by the master block alignment (", Uint32{MasterBlockAlignment}, ")");
-    VkBufferCreateInfo VkBuffCI = {};
 
+    VkBufferCreateInfo VkBuffCI{};
     VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     VkBuffCI.pNext = nullptr;
     VkBuffCI.flags = 0; // VK_BUFFER_CREATE_SPARSE_BINDING_BIT, VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT, VK_BUFFER_CREATE_SPARSE_ALIASED_BIT
@@ -79,8 +79,7 @@ VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Alloc
 
     const auto& PhysicalDevice = DeviceVk.GetPhysicalDevice();
 
-    VkMemoryAllocateInfo MemAlloc = {};
-
+    VkMemoryAllocateInfo MemAlloc{};
     MemAlloc.pNext          = nullptr;
     MemAlloc.sType          = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     MemAlloc.allocationSize = MemReqs.size;

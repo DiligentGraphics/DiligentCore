@@ -317,8 +317,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
     CmdPool = m_TransientCmdPoolMgr.AllocateCommandPool(DebugPoolName);
 
     // Allocate command buffer from the cmd pool
-    VkCommandBufferAllocateInfo BuffAllocInfo = {};
-
+    VkCommandBufferAllocateInfo BuffAllocInfo{};
     BuffAllocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     BuffAllocInfo.pNext              = nullptr;
     BuffAllocInfo.commandPool        = CmdPool;
@@ -329,8 +328,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(VulkanUtilities::CommandPoolWr
     DEV_CHECK_ERR(vkCmdBuff != VK_NULL_HANDLE, "Failed to allocate Vulkan command buffer");
 
 
-    VkCommandBufferBeginInfo CmdBuffBeginInfo = {};
-
+    VkCommandBufferBeginInfo CmdBuffBeginInfo{};
     CmdBuffBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     CmdBuffBeginInfo.pNext = nullptr;
     CmdBuffBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // Each recording of the command buffer will only be
@@ -354,8 +352,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32               
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer");
     (void)err;
 
-    VkSubmitInfo SubmitInfo = {};
-
+    VkSubmitInfo SubmitInfo{};
     SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.commandBufferCount = 1;
     SubmitInfo.pCommandBuffers    = &vkCmdBuff;
