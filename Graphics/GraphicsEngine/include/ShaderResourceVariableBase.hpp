@@ -38,6 +38,7 @@
 #include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
@@ -752,6 +753,76 @@ protected:
 
     // Resource index in pipeline resource signature m_Desc.Resources[]
     const Uint32 m_ResIndex;
+};
+
+template <class EngineImplTraits, typename VariableType>
+class ShaderVariableManagerBase
+{
+protected:
+    using ShaderResourceCacheType       = typename EngineImplTraits::ShaderResourceCacheImplType;
+    using PipelineResourceSignatureType = typename EngineImplTraits::PipelineResourceSignatureImplType;
+
+    ShaderVariableManagerBase(IObject&                 Owner,
+                              ShaderResourceCacheType& ResourceCache) noexcept :
+        m_Owner{Owner},
+        m_ResourceCache{ResourceCache}
+    {}
+
+    ~ShaderVariableManagerBase()
+    {
+        VERIFY(m_pVariables == nullptr, "Destroy() has not been called. The shader variable memory will leak.");
+    }
+
+    void Initialize(const PipelineResourceSignatureType& Signature, IMemoryAllocator& Allocator, size_t Size)
+    {
+        VERIFY_EXPR(m_pSignature == nullptr);
+        m_pSignature = &Signature;
+
+        if (Size > 0)
+        {
+            auto* pRawMem = ALLOCATE_RAW(Allocator, "Memory buffer for shader variables", Size);
+            m_pVariables  = reinterpret_cast<VariableType*>(pRawMem);
+        }
+
+#ifdef DILIGENT_DEBUG
+        m_pDbgAllocator = &Allocator;
+#endif
+    }
+
+    void Destroy(IMemoryAllocator& Allocator)
+    {
+        if (m_pVariables != nullptr)
+        {
+            VERIFY(m_pDbgAllocator == &Allocator, "The allocator is not the same as the one that was used to allocate memory");
+            Allocator.Free(m_pVariables);
+            m_pVariables = nullptr;
+        }
+#ifdef DILIGENT_DEBUG
+        m_pDbgAllocator = nullptr;
+#endif
+    }
+
+protected:
+    IObject& m_Owner;
+
+    // Variable manager is owned by either Pipeline Resource Signature (in which case m_ResourceCache references
+    // static resource cache owned by the same signature object), or by SRB object (in which case
+    // m_ResourceCache references the cache in the SRB). Thus the cache and the signature
+    // (which the variables reference) are guaranteed to be alive while the manager is alive.
+    ShaderResourceCacheType& m_ResourceCache;
+
+    PipelineResourceSignatureType const* m_pSignature = nullptr;
+
+    // Memory is allocated through the allocator provided by the pipeline resource signature. If allocation
+    // granularity > 1, fixed block memory allocator is used. This ensures that all resources from different
+    // shader resource bindings reside in continuous memory. If allocation granularity == 1, raw allocator is used.
+    VariableType* m_pVariables = nullptr;
+
+private:
+#ifdef DILIGENT_DEBUG
+    // Memory allocator that was used to allocate memory for m_pVariables (for debug purposes only).
+    IMemoryAllocator* m_pDbgAllocator = nullptr;
+#endif
 };
 
 } // namespace Diligent

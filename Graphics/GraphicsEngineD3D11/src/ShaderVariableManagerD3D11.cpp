@@ -67,41 +67,32 @@ void ProcessSignatureResources(const PipelineResourceSignatureD3D11Impl& Signatu
 }
 } // namespace
 
-ShaderVariableManagerD3D11::~ShaderVariableManagerD3D11()
-{
-    VERIFY(m_ResourceBuffer == nullptr, "DestroyVariables() has not been called");
-}
-
 void ShaderVariableManagerD3D11::Destroy(IMemoryAllocator& Allocator)
 {
-    if (m_ResourceBuffer == nullptr)
-        return;
+    if (m_pVariables != nullptr)
+    {
+        HandleResources(
+            [&](ConstBuffBindInfo& cb) {
+                cb.~ConstBuffBindInfo();
+            },
+            [&](TexSRVBindInfo& ts) {
+                ts.~TexSRVBindInfo();
+            },
+            [&](TexUAVBindInfo& uav) {
+                uav.~TexUAVBindInfo();
+            },
+            [&](BuffSRVBindInfo& srv) {
+                srv.~BuffSRVBindInfo();
+            },
+            [&](BuffUAVBindInfo& uav) {
+                uav.~BuffUAVBindInfo();
+            },
+            [&](SamplerBindInfo& sam) {
+                sam.~SamplerBindInfo();
+            });
+    }
 
-    VERIFY(m_pDbgAllocator == &Allocator, "Inconsistent allocator");
-
-    HandleResources(
-        [&](ConstBuffBindInfo& cb) {
-            cb.~ConstBuffBindInfo();
-        },
-        [&](TexSRVBindInfo& ts) {
-            ts.~TexSRVBindInfo();
-        },
-        [&](TexUAVBindInfo& uav) {
-            uav.~TexUAVBindInfo();
-        },
-        [&](BuffSRVBindInfo& srv) {
-            srv.~BuffSRVBindInfo();
-        },
-        [&](BuffUAVBindInfo& uav) {
-            uav.~BuffUAVBindInfo();
-        },
-        [&](SamplerBindInfo& sam) {
-            sam.~SamplerBindInfo();
-        });
-
-    Allocator.Free(m_ResourceBuffer);
-
-    m_ResourceBuffer = nullptr;
+    TBase::Destroy(Allocator);
 }
 
 const PipelineResourceDesc& ShaderVariableManagerD3D11::GetResourceDesc(Uint32 Index) const
@@ -171,13 +162,8 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
                                             Uint32                                    NumAllowedTypes,
                                             SHADER_TYPE                               ShaderType)
 {
-#ifdef DILIGENT_DEBUG
-    m_pDbgAllocator = &Allocator;
-#endif
-
     const auto ResCounters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
 
-    m_pSignature      = &Signature;
     m_ShaderTypeIndex = static_cast<Uint8>(GetShaderTypeIndex(ShaderType));
 
     // Initialize offsets
@@ -203,11 +189,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
     // clang-format on
 
     VERIFY_EXPR(m_MemorySize == GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType));
-
-    if (m_MemorySize > 0)
-    {
-        m_ResourceBuffer = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variable manager resources", m_MemorySize);
-    }
+    TBase::Initialize(Signature, Allocator, m_MemorySize);
 
     // clang-format off
     VERIFY_EXPR(ResCounters.NumCBs     == GetNumCBs()     );
@@ -548,7 +530,7 @@ public:
     ShaderVariableIndexLocator(const ShaderVariableManagerD3D11& _Mgr, const IShaderResourceVariable& Variable) :
         // clang-format off
         Mgr      {_Mgr},
-        VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Mgr.m_ResourceBuffer))
+        VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Mgr.m_pVariables))
     // clang-format on
     {}
 
@@ -589,7 +571,7 @@ private:
 
 Uint32 ShaderVariableManagerD3D11::GetVariableIndex(const IShaderResourceVariable& Variable) const
 {
-    if (m_ResourceBuffer == nullptr)
+    if (m_pVariables == nullptr)
     {
         LOG_ERROR("This shader variable manager does not have any resources");
         return ~0u;

@@ -30,6 +30,7 @@
 /// \file
 /// Declaration of Diligent::ShaderVariableManagerD3D11 class
 
+#include "EngineD3D11ImplTraits.hpp"
 #include "ShaderResources.hpp"
 #include "ShaderResourceVariableBase.hpp"
 #include "ShaderResourceVariableD3D.h"
@@ -41,17 +42,15 @@ namespace Diligent
 
 /// Diligent::ShaderVariableManagerD3D11 class
 // sizeof(ShaderVariableManagerD3D11) == 48, (Release, x64)
-class ShaderVariableManagerD3D11
+class ShaderVariableManagerD3D11 : ShaderVariableManagerBase<EngineD3D11ImplTraits, void>
 {
 public:
+    using TBase = ShaderVariableManagerBase<EngineD3D11ImplTraits, void>;
     ShaderVariableManagerD3D11(IObject&                  Owner,
                                ShaderResourceCacheD3D11& ResourceCache) noexcept :
-        m_Owner{Owner},
-        m_ResourceCache{ResourceCache}
+        TBase{Owner, ResourceCache}
     {
     }
-
-    ~ShaderVariableManagerD3D11();
 
     void Destroy(IMemoryAllocator& Allocator);
 
@@ -235,7 +234,7 @@ private:
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") must be less than (", GetNumResources<ResourceType>(), ")");
         auto Offset = GetResourceOffset<ResourceType>();
-        return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
+        return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_pVariables) + Offset)[ResIndex];
     }
 
     template <typename ResourceType>
@@ -243,7 +242,7 @@ private:
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") must be less than (", GetNumResources<ResourceType>(), ")");
         auto Offset = GetResourceOffset<ResourceType>();
-        return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_ResourceBuffer) + Offset)[ResIndex];
+        return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_pVariables) + Offset)[ResIndex];
     }
 
     template <typename ResourceType>
@@ -317,15 +316,6 @@ private:
     friend class ShaderVariableLocator;
 
 private:
-    PipelineResourceSignatureD3D11Impl const* m_pSignature = nullptr;
-
-    IObject& m_Owner;
-
-    // No need to use shared pointer, as the resource cache is either part of the same
-    // PipelineResourceSignatureD3D11Impl object, or ShaderResourceBindingD3D11Impl object.
-    ShaderResourceCacheD3D11& m_ResourceCache;
-    void*                     m_ResourceBuffer = nullptr;
-
     // Offsets in bytes
     OffsetType m_TexSRVsOffset  = 0;
     OffsetType m_TexUAVsOffset  = 0;
@@ -335,10 +325,6 @@ private:
     OffsetType m_MemorySize     = 0;
 
     Uint8 m_ShaderTypeIndex = 0;
-
-#ifdef DILIGENT_DEBUG
-    IMemoryAllocator* m_pDbgAllocator = nullptr;
-#endif
 };
 
 } // namespace Diligent
