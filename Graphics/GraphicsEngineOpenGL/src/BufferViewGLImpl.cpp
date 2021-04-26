@@ -39,7 +39,7 @@ namespace Diligent
 {
 BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
                                    RenderDeviceGLImpl*   pDevice,
-                                   IDeviceContext*       pContext,
+                                   GLContextState&       CtxState,
                                    const BufferViewDesc& ViewDesc,
                                    BufferGLImpl*         pBuffer,
                                    bool                  bIsDefaultView) :
@@ -68,11 +68,8 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
 #    pragma warning(pop)
 #endif
 
-        auto* pContextGL   = ValidatedCast<DeviceContextGLImpl>(pContext);
-        auto& ContextState = pContextGL->GetContextState();
-
         m_GLTexBuffer.Create();
-        ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer);
+        CtxState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer);
 
         const auto& BuffFmt  = ViewDesc.Format;
         GLenum      GLFormat = 0;
@@ -99,7 +96,7 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
         }
         CHECK_GL_ERROR_AND_THROW("Failed to create texture buffer");
 
-        ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, GLObjectWrappers::GLTextureObj(false));
+        CtxState.BindTexture(-1, GL_TEXTURE_BUFFER, GLObjectWrappers::GLTextureObj(false));
     }
 }
 

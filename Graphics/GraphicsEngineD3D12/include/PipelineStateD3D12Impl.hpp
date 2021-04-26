@@ -34,7 +34,7 @@
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "PipelineStateBase.hpp"
-#include "PipelineResourceSignatureD3D12Impl.hpp" // Requiured by PipelineStateBase
+#include "PipelineResourceSignatureD3D12Impl.hpp" // Required by PipelineStateBase
 #include "RootSignature.hpp"
 
 namespace Diligent

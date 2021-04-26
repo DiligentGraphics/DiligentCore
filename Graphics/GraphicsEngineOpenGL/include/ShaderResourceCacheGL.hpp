@@ -38,7 +38,6 @@
 namespace Diligent
 {
 
-/// The class implements a cache that holds resources bound to a specific GL program
 // All resources are stored in the continuous memory using the following layout:
 //
 //   |        Cached UBs        |     Cached Textures     |       Cached Images      | Cached Storage Blocks     |
@@ -62,7 +61,7 @@ public:
     ShaderResourceCacheGL& operator = (ShaderResourceCacheGL&&)      = delete;
     // clang-format on
 
-    /// Describes a resource bound to a uniform buffer or a shader storage block slot
+    /// Describes a resource bound to a uniform buffer slot
     struct CachedUB
     {
         /// Strong reference to the buffer
@@ -72,6 +71,9 @@ public:
         Uint32 RangeSize     = 0;
         Uint32 DynamicOffset = 0;
 
+        // In OpenGL dynamic buffers are only those that are not bound as a whole and
+        // can use a dynamic offset, irrespective of the variable type or whether the
+        // buffer is USAGE_DYNAMIC or not.
         bool IsDynamic() const
         {
             return pBuffer && RangeSize < pBuffer->GetDesc().uiSizeInBytes;
@@ -163,6 +165,8 @@ public:
         Uint64 UBBit = Uint64{1} << Uint64{CacheOffset};
         if (m_DynamicUBOSlotMask & UBBit)
         {
+            // Only set the flag for those slots that allow dynamic buffers
+            // (i.e. the variable was not created with NO_DYNAMIC_BUFFERS flag).
             if (UB.IsDynamic())
                 m_DynamicUBOMask |= UBBit;
             else
@@ -221,6 +225,8 @@ public:
         Uint64 SSBOBit = Uint64{1} << Uint64{CacheOffset};
         if (m_DynamicSSBOSlotMask & SSBOBit)
         {
+            // Only set the flag for those slots that allow dynamic buffers
+            // (i.e. the variable was not created with NO_DYNAMIC_BUFFERS flag).
             if (SSBO.IsDynamic())
                 m_DynamicSSBOMask |= SSBOBit;
             else
@@ -288,25 +294,25 @@ public:
     const CachedUB& GetConstUB(Uint32 CacheOffset) const
     {
         VERIFY(CacheOffset < GetUBCount(), "Uniform buffer index (", CacheOffset, ") is out of range");
-        return reinterpret_cast<CachedUB*>(m_pResourceData + m_UBsOffset)[CacheOffset];
+        return reinterpret_cast<CachedUB*>(m_pResourceData.get() + m_UBsOffset)[CacheOffset];
     }
 
     const CachedResourceView& GetConstTexture(Uint32 CacheOffset) const
     {
         VERIFY(CacheOffset < GetTextureCount(), "Texture index (", CacheOffset, ") is out of range");
-        return reinterpret_cast<CachedResourceView*>(m_pResourceData + m_TexturesOffset)[CacheOffset];
+        return reinterpret_cast<CachedResourceView*>(m_pResourceData.get() + m_TexturesOffset)[CacheOffset];
     }
 
     const CachedResourceView& GetConstImage(Uint32 CacheOffset) const
     {
         VERIFY(CacheOffset < GetImageCount(), "Image buffer index (", CacheOffset, ") is out of range");
-        return reinterpret_cast<CachedResourceView*>(m_pResourceData + m_ImagesOffset)[CacheOffset];
+        return reinterpret_cast<CachedResourceView*>(m_pResourceData.get() + m_ImagesOffset)[CacheOffset];
     }
 
     const CachedSSBO& GetConstSSBO(Uint32 CacheOffset) const
     {
         VERIFY(CacheOffset < GetSSBOCount(), "Shader storage block index (", CacheOffset, ") is out of range");
-        return reinterpret_cast<CachedSSBO*>(m_pResourceData + m_SSBOsOffset)[CacheOffset];
+        return reinterpret_cast<CachedSSBO*>(m_pResourceData.get() + m_SSBOsOffset)[CacheOffset];
     }
 
     bool IsInitialized() const
@@ -324,11 +330,13 @@ public:
     bool StaticResourcesInitialized() const { return m_bStaticResourcesInitialized; }
 #endif
 
+    // Binds all resources
     void BindResources(GLContextState&              GLState,
                        const std::array<Uint16, 4>& BaseBindings,
                        std::vector<TextureBaseGL*>& WritableTextures,
                        std::vector<BufferGLImpl*>&  WritableBuffers) const;
 
+    // Binds uniform and storage buffers with dynamic offsets only
     void BindDynamicBuffers(GLContextState&              GLState,
                             const std::array<Uint16, 4>& BaseBindings) const;
 
@@ -371,8 +379,7 @@ private:
     Uint16 m_SSBOsOffset     = InvalidResourceOffset;
     Uint16 m_MemoryEndOffset = InvalidResourceOffset;
 
-    Uint8*            m_pResourceData = nullptr;
-    IMemoryAllocator* m_pAllocator    = nullptr;
+    std::unique_ptr<Uint8, STDDeleter<Uint8, IMemoryAllocator>> m_pResourceData;
 
     // Indicates at which positions dynamic UBOs or SSBOs may be bound
     Uint64 m_DynamicUBOSlotMask  = 0;

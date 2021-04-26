@@ -55,8 +55,7 @@ void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAl
     m_DynamicUBOSlotMask  = DynamicUBOSlotMask;
     m_DynamicSSBOSlotMask = DynamicSSBOSlotMask;
 
-    VERIFY(m_pAllocator == nullptr && m_pResourceData == nullptr, "Cache already initialized");
-    m_pAllocator = &MemAllocator;
+    VERIFY(!m_pResourceData, "Cache has already been initialized");
 
     // clang-format off
     m_TexturesOffset  = static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER]);
@@ -70,15 +69,17 @@ void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAl
     VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(ResCount[BINDING_RANGE_STORAGE_BUFFER]));
     // clang-format on
 
-    VERIFY_EXPR(m_pResourceData == nullptr);
     size_t BufferSize = m_MemoryEndOffset;
 
     VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount));
 
     if (BufferSize > 0)
     {
-        m_pResourceData = ALLOCATE(MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize);
-        memset(m_pResourceData, 0, BufferSize);
+        m_pResourceData = decltype(m_pResourceData){
+            ALLOCATE(MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize),
+            STDDeleter<Uint8, IMemoryAllocator>(MemAllocator) //
+        };
+        memset(m_pResourceData.get(), 0, BufferSize);
     }
 
     // Explicitly construct all objects
@@ -111,15 +112,12 @@ ShaderResourceCacheGL::~ShaderResourceCacheGL()
         for (Uint32 s = 0; s < GetSSBOCount(); ++s)
             GetSSBO(s).~CachedSSBO();
 
-        if (m_pResourceData != nullptr)
-            m_pAllocator->Free(m_pResourceData);
-
-        m_pResourceData   = nullptr;
         m_TexturesOffset  = InvalidResourceOffset;
         m_ImagesOffset    = InvalidResourceOffset;
         m_SSBOsOffset     = InvalidResourceOffset;
         m_MemoryEndOffset = InvalidResourceOffset;
     }
+    m_pResourceData.reset();
 }
 
 void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,

@@ -130,7 +130,9 @@ private:
 private:
     TBindings m_BindingCount = {};
 
-    Uint64 m_DynamicUBOMask  = 0;
+    // Indicates which UBO slots allow binding buffers with dynamic offsets
+    Uint64 m_DynamicUBOMask = 0;
+    // Indicates which SSBO slots allow binding buffers with dynamic offsets
     Uint64 m_DynamicSSBOMask = 0;
 
     using SamplerPtr                = RefCntAutoPtr<ISampler>;

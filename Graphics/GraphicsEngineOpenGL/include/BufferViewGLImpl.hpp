@@ -34,6 +34,8 @@
 namespace Diligent
 {
 
+class GLContextState;
+
 /// Buffer view implementation in OpenGL backend.
 class BufferViewGLImpl final : public BufferViewBase<EngineGLImplTraits>
 {
@@ -42,7 +44,7 @@ public:
 
     BufferViewGLImpl(IReferenceCounters*   pRefCounters,
                      RenderDeviceGLImpl*   pDevice,
-                     IDeviceContext*       pContext,
+                     GLContextState&       CtxState,
                      const BufferViewDesc& ViewDesc,
                      BufferGLImpl*         pBuffer,
                      bool                  bIsDefaultView);
