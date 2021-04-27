@@ -257,7 +257,7 @@ bool AndroidFile::Read(void* Data, size_t BufferSize)
     {
         const uint8_t* src_data = (uint8_t*)AAsset_getBuffer(m_AssetFile);
         auto           FileSize = AAsset_getLength(m_AssetFile);
-        if (FileSize > BufferSize)
+        if (FileSize > static_cast<off_t>(BufferSize))
         {
             LOG_WARNING_MESSAGE("Requested buffer size (", BufferSize, ") exceeds file size (", FileSize, ")");
             BufferSize = FileSize;

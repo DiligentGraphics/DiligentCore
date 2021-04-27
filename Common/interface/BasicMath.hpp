@@ -1862,6 +1862,8 @@ struct Quaternion
     }
     Quaternion() noexcept {}
 
+    Quaternion(const Quaternion&) noexcept = default;
+
     bool operator==(const Quaternion& right) const
     {
         return q == right.q;
