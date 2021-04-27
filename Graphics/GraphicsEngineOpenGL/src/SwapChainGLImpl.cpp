@@ -123,8 +123,8 @@ void SwapChainGLImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
     auto* pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
     auto& GLContext = pDeviceGL->m_GLContext;
     GLContext.UpdateScreenSize();
-    const auto ScreenWidth  = GLContext.GetScreenWidth();
-    const auto ScreenHeight = GLContext.GetScreenHeight();
+    const auto ScreenWidth  = static_cast<Uint32>(GLContext.GetScreenWidth());
+    const auto ScreenHeight = static_cast<Uint32>(GLContext.GetScreenHeight());
 
     if (NewWidth == 0)
     {

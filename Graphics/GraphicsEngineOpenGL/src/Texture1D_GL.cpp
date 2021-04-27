@@ -151,6 +151,7 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
     const auto& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
+    (void)TransferAttribs;
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);

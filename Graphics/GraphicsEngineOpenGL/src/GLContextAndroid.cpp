@@ -262,11 +262,11 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     display_(EGL_NO_DISPLAY),
     surface_(EGL_NO_SURFACE),
     context_(EGL_NO_CONTEXT),
-    create_debug_context_(InitAttribs.EnableValidation),
-    egl_context_initialized_(false),
-    gles_initialized_(false),
+    //create_debug_context_(InitAttribs.EnableValidation),
     major_version_(0),
-    minor_version_(0)
+    minor_version_(0),
+    gles_initialized_(false),
+    egl_context_initialized_(false)
 {
     auto* NativeWindow = reinterpret_cast<ANativeWindow*>(InitAttribs.Window.pAWindow);
     Init(NativeWindow);

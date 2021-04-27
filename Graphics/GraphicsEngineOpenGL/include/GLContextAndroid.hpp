@@ -65,8 +65,6 @@ private:
     EGLContext     context_ = EGL_NO_CONTEXT;
     EGLConfig      config_;
 
-    const bool create_debug_context_;
-
     EGLint egl_major_version_ = 0;
     EGLint egl_minor_version_ = 0;
 
