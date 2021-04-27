@@ -79,7 +79,7 @@ jobs:
     strategy:
       matrix:
         toolset: [x64]
-        config: [Release]
+        config: [RelWithDebInfo]
 
     runs-on: windows-latest
     name: Windows 10, ${{ matrix.config }}Dev ${{ matrix.toolset }}
