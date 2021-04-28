@@ -220,9 +220,8 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
         GTEST_SKIP() << "NativeFence feature is not supported";
     }
 
-    IDeviceContext* pContext1   = nullptr;
-    IDeviceContext* pContext2   = nullptr;
-    const auto      CtxTypeMask = CONTEXT_TYPE_COMPUTE;
+    IDeviceContext* pContext1 = nullptr;
+    IDeviceContext* pContext2 = nullptr;
 
     for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
     {

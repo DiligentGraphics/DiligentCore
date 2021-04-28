@@ -1716,7 +1716,7 @@ void CopyTextureSubresource(const TextureSubResData& SrcSubres,
 
 String GetContextTypeString(CONTEXT_TYPE Type)
 {
-    static_assert(CONTEXT_TYPE_LAST == 7, "Please update the code below to handle the new context type");
+    static_assert(CONTEXT_TYPE_MAX_BIT == 0x7, "Please update the code below to handle the new context type");
 
     String Result;
     if ((Type & CONTEXT_TYPE_GRAPHICS) == CONTEXT_TYPE_GRAPHICS)

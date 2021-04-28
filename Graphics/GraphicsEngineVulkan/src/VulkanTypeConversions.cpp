@@ -1821,7 +1821,7 @@ ADAPTER_TYPE VkPhysicalDeviceTypeToAdapterType(VkPhysicalDeviceType DeviceType)
 
 CONTEXT_TYPE VkQueueFlagsToContextType(VkQueueFlags QueueFlags)
 {
-    static_assert(CONTEXT_TYPE_LAST == 7, "Please update the code below to handle the new context type");
+    static_assert(CONTEXT_TYPE_MAX_BIT == 0x7, "Please update the code below to handle the new context type");
 
     CONTEXT_TYPE Result = CONTEXT_TYPE_UNKNOWN;
 
