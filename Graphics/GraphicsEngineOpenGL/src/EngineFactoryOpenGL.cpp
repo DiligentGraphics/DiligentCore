@@ -107,6 +107,20 @@ public:
 #endif
 };
 
+static void SetDefaultGraphicsAdapterInfo(GraphicsAdapterInfo& AdapterInfo)
+{
+    AdapterInfo = {};
+
+    AdapterInfo.Capabilities.DevType = std::is_same<TRenderDeviceGLImpl, RenderDeviceGLImpl>::value ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES;
+
+    AdapterInfo.NumQueues = 1;
+
+    AdapterInfo.Queues[0].QueueType                 = CONTEXT_TYPE_GRAPHICS;
+    AdapterInfo.Queues[0].MaxDeviceContexts         = 1;
+    AdapterInfo.Queues[0].TextureCopyGranularity[0] = 1;
+    AdapterInfo.Queues[0].TextureCopyGranularity[1] = 1;
+    AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
+}
 
 void EngineFactoryOpenGLImpl::EnumerateAdapters(Version              MinVersion,
                                                 Uint32&              NumAdapters,
@@ -121,17 +135,7 @@ void EngineFactoryOpenGLImpl::EnumerateAdapters(Version              MinVersion,
     NumAdapters = std::min(1u, NumAdapters);
     if (NumAdapters > 0)
     {
-        *Adapters = {};
-
-        Adapters->Capabilities.DevType = std::is_same<TRenderDeviceGLImpl, RenderDeviceGLImpl>::value ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES;
-
-        Adapters->NumQueues = 1;
-
-        Adapters->Queues[0].QueueType                 = CONTEXT_TYPE_GRAPHICS;
-        Adapters->Queues[0].MaxDeviceContexts         = 1;
-        Adapters->Queues[0].TextureCopyGranularity[0] = 1;
-        Adapters->Queues[0].TextureCopyGranularity[1] = 1;
-        Adapters->Queues[0].TextureCopyGranularity[2] = 1;
+        SetDefaultGraphicsAdapterInfo(*Adapters);
     }
 }
 
@@ -185,10 +189,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
     try
     {
         GraphicsAdapterInfo AdapterInfo;
-        AdapterInfo.NumQueues                   = 1;
-        AdapterInfo.Queues[0].QueueType         = CONTEXT_TYPE_GRAPHICS;
-        AdapterInfo.Queues[0].MaxDeviceContexts = 1;
-
+        SetDefaultGraphicsAdapterInfo(AdapterInfo);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
@@ -280,10 +281,7 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
     try
     {
         GraphicsAdapterInfo AdapterInfo;
-        AdapterInfo.NumQueues                   = 1;
-        AdapterInfo.Queues[0].QueueType         = CONTEXT_TYPE_GRAPHICS;
-        AdapterInfo.Queues[0].MaxDeviceContexts = 1;
-
+        SetDefaultGraphicsAdapterInfo(AdapterInfo);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);

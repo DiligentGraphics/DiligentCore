@@ -2155,7 +2155,7 @@ struct DeviceQueueInfo
     /// Indicates which type of commands are supported by the queue.
     CONTEXT_TYPE QueueType       DEFAULT_INITIALIZER(CONTEXT_TYPE_UNKNOWN);
 
-    /// The number of queues that may be created using the combination of QueueType and QueueId.
+    /// The maximum number of immediate contexts that may be created for this queue type.
     Uint32       MaxDeviceContexts   DEFAULT_INITIALIZER(0);
 
     /// In Vulkan backend, transfer queue may require to align texture offset and size in copy operations.
@@ -2213,7 +2213,11 @@ struct ContextCreateInfo
     /// Queue index in GraphicsAdapterInfo::Queues.
     Uint8          QueueId      DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
 
-    /// Vulkan backend: all contexts with the same QueueId must have same priority.
+    /// Priority of the queue, see Diligent::QUEUE_PRIORITY.
+
+    /// Direct3D12 backend: each context may use a unique queue priority.
+    /// Vulkan backend:     all contexts with the same QueueId must use the same priority.
+    /// Other backends:     queue priority is ignored.
     QUEUE_PRIORITY Priority     DEFAULT_INITIALIZER(QUEUE_PRIORITY_MEDIUM);
 };
 typedef struct ContextCreateInfo ContextCreateInfo;
@@ -2259,6 +2263,9 @@ struct EngineCreateInfo
     ///             If the feature is not supported by the device/driver/platform,
     ///             the engine will successfully be initialized, but the feature will be disabled.
     ///             The actual feature state can be queried from DeviceCaps structure.
+    ///
+    ///             Applications can query available device features for each graphics adpater with
+    ///             IEngineFactory::EnumerateAdapters().
     DeviceFeatures Features;
 
     /// Enable backend-specific validation (e.g. use Direct3D11 debug device, enable Direct3D12
@@ -3161,61 +3168,79 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     RESOURCE_STATE_UNDEFINED            = 0x00001,
 
     /// The resource is accessed as a vertex buffer
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_VERTEX_BUFFER        = 0x00002,
 
     /// The resource is accessed as a constant (uniform) buffer
+    /// \remarks Supported contexts: graphics, compute.
     RESOURCE_STATE_CONSTANT_BUFFER      = 0x00004,
 
     /// The resource is accessed as an index buffer
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_INDEX_BUFFER         = 0x00008,
 
     /// The resource is accessed as a render target
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_RENDER_TARGET        = 0x00010,
-        
+
     /// The resource is used for unordered access
+    /// \remarks Supported contexts: graphics, compute.
     RESOURCE_STATE_UNORDERED_ACCESS     = 0x00020,
 
     /// The resource is used in a writable depth-stencil view or in clear operation
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_DEPTH_WRITE          = 0x00040,
 
     /// The resource is used in a read-only depth-stencil view
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_DEPTH_READ           = 0x00080,
 
     /// The resource is accessed from a shader
+    /// \remarks Supported contexts: graphics, compute.
     RESOURCE_STATE_SHADER_RESOURCE      = 0x00100,
         
     /// The resource is used as the destination for stream output
     RESOURCE_STATE_STREAM_OUT           = 0x00200,
 
     /// The resource is used as an indirect draw/dispatch arguments buffer
+    /// \remarks Supported contexts: graphics, compute.
     RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x00400,
 
     /// The resource is used as the destination in a copy operation
+    /// \remarks Supported contexts: graphics, compute, transfer.
     RESOURCE_STATE_COPY_DEST            = 0x00800,
 
     /// The resource is used as the source in a copy operation 
+    /// \remarks Supported contexts: graphics, compute, transfer.
     RESOURCE_STATE_COPY_SOURCE          = 0x01000,
         
     /// The resource is used as the destination in a resolve operation 
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_RESOLVE_DEST         = 0x02000,
         
     /// The resource is used as the source in a resolve operation 
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_RESOLVE_SOURCE       = 0x04000,
 
     /// The resource is used as an input attachment in a render pass subpass
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_INPUT_ATTACHMENT     = 0x08000,
 
     /// The resource is used for present
+    /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_PRESENT              = 0x10000,
 
     /// The resource is used as vertex/index/instance buffer in an AS building operation
     /// or as an acceleration structure source in an AS copy operation.
+    /// \remarks Supported contexts: graphics, compute.
     RESOURCE_STATE_BUILD_AS_READ        = 0x20000,
 
     /// The resource is used as the target for AS building or AS copy operations.
+    /// \remarks Supported contexts: graphics, compute.
     RESOURCE_STATE_BUILD_AS_WRITE       = 0x40000,
 
     /// The resource is used as a top-level AS shader resource in a trace rays operation.
+    /// \remarks Supported contexts: graphics, compute.
     RESOURCE_STATE_RAY_TRACING          = 0x80000,
 
     RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_RAY_TRACING,

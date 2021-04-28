@@ -100,7 +100,10 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Optimized clear value
     OptimizedClearValue ClearValue;
 
-    /// Defines which command queues this texture can be used with
+    /// Defines which command queues this texture can be used with.
+
+    /// \remarks    Only specify these bits that will indicate these queues where the texture will actually be used.
+    ///             Do not set unncessary bits as this will result in extra overhead.
     Uint64 CommandQueueMask             DEFAULT_INITIALIZER(1);
 
 
