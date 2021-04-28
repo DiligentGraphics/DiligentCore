@@ -83,6 +83,8 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
     /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
     ///                            null is provided, the number of available adapters is
     ///                            written to NumAdapters.
+    ///
+    /// \note OpenGL backend only supports one device; features and properties will have limited information.
     VIRTUAL void METHOD(EnumerateAdapters)(THIS_
                                            Version              MinVersion,
                                            Uint32 REF           NumAdapters,

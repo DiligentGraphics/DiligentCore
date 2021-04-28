@@ -108,7 +108,10 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// created for this buffer.
     Uint32 ElementByteStride        DEFAULT_INITIALIZER(0);
 
-    /// Defines which command queues this buffer can be used with
+    /// Defines which command queues this buffer can be used with.
+
+    /// \remarks    Only specify these bits that will indicate these queues where the buffer will actually be used.
+    ///             Do not set unncessary bits as this will result in extra overhead.
     Uint64 CommandQueueMask         DEFAULT_INITIALIZER(1);
 
 #if DILIGENT_CPP_INTERFACE

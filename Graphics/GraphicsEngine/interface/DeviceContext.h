@@ -189,6 +189,9 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE_TRANSITION_MODE, Uint8)
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
+    ///
+    /// \note    If a resource is used in multiple threads by multiple contexts, there will be race condition accessing
+    ///          internal resource state. An application should use manual resource state management in this case.
     RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
 
     /// Do not transition, but verify that states are correct.
@@ -1421,11 +1424,18 @@ struct StateTransitionDesc
     /// When transitioning a texture, number of array slices of the subresource range to transition.
     Uint32 ArraySliceCount   DEFAULT_INITIALIZER(REMAINING_ARRAY_SLICES);
 
-    /// Resource state before transition. If this value is RESOURCE_STATE_UNKNOWN,
-    /// internal resource state will be used, which must be defined in this case.
+    /// Resource state before transition.
+    /// If this value is RESOURCE_STATE_UNKNOWN, internal resource state will be used, which must be defined in this case.
+    /// If this value is RESOURCE_STATE_UNDEFINED, previous content of the resource will be invalidated.
+    /// Use RESOURCE_STATE_UNDEFINED if you don't know the previous state and will overwrite the resource content.
+    ///
+    /// \note  Resource state must be compatible with the context type.
     RESOURCE_STATE OldState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
 
     /// Resource state after transition.
+    /// Must not be RESOURCE_STATE_UNKNOWN or RESOURCE_STATE_UNDEFINED.
+    ///
+    /// \note  Resource state must be compatible with the context type.
     RESOURCE_STATE NewState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
 
     /// State transition type, see Diligent::STATE_TRANSITION_TYPE.
@@ -2105,31 +2115,37 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Tells the GPU to set a fence to a specified value after all previous work has completed.
 
+    /// \param [in] pFence - The fence to signal.
+    /// \param [in] Value  - The value to set the fence to. This value must be greater than the
+    ///                      previously signaled value on the same fence.
+    /// 
     /// \note The method does not flush the context (an application can do this explcitly if needed)
     ///       and the fence will be signaled only when the command context is flushed next time.
     ///       If an application needs to wait for the fence in a loop, it must flush the context
     ///       after signalling the fence.
     ///
-    /// \param [in] pFence - The fence to signal. Fence must be created with type FENCE_TYPE_GENERAL.
-    /// \param [in] Value  - The value to set the fence to. This value must be greater than the
-    ///                      previously signaled value on the same fence.
+    /// \note In Direct3D11 backend, the access to the fence is not thread-safe and
+    ///       must be externally synchronized.
+    ///       In Direct3D12 and Vulkan backends, the access to the fence is thread-safe.
     VIRTUAL void METHOD(EnqueueSignal)(THIS_
                                        IFence*    pFence,
                                        Uint64     Value) PURE;
 
 
     /// Waits until the specified fence reaches or exceeds the specified value, on the device.
-    
+
     /// \param [in] pFence - The fence to wait. Fence must be created with type FENCE_TYPE_GENERAL.
     /// \param [in] Value  - The value that the context is waiting for the fence to reach.
-    /// 
+    ///
     /// \note  If NativeFence feature is not enabled (see Diligent::DeviceFeatures) then
     ///        Value must be less than or equal to the last signaled or pending value.
     ///        Value becomes pending when the context is flushed.
     ///        Waiting for a value that is greater than any pending value will cause a deadlock.
-    /// 
+    ///
     /// \note  If NativeFence feature is enabled then waiting for a value that is greater than
     ///        any pending value will cause a GPU stall.
+    ///
+    /// \note  Direct3D12 and Vulkan backend: access to the fence is thread safe.
     ///
     /// \remarks  Wait is only allowed for immediate contexts.
     VIRTUAL void METHOD(DeviceWaitForFence)(THIS_
@@ -2379,28 +2395,26 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, the engine
     ///          executes UAV barrier on the resource. The barrier makes sure that all UAV accesses 
     ///          (reads or writes) are complete before any future UAV accesses (read or write) can begin.\n
-    /// 
+    ///
     ///          There are two main usage scenarios for this method:
     ///          1. An application knows specifics of resource state transitions not available to the engine.
     ///             For example, only single mip level needs to be transitioned.
     ///          2. An application manages resource states in multiple threads in parallel.
-    ///         
+    ///
     ///          The method always reads the states of all resources to transition. If the state of a resource is managed
     ///          by multiple threads in parallel, the resource must first be transitioned to unknown state
     ///          (Diligent::RESOURCE_STATE_UNKNOWN) to disable automatic state management in the engine.
-    ///          
+    ///
     ///          When StateTransitionDesc::UpdateResourceState is set to true, the method may update the state of the
     ///          corresponding resource which is not thread safe. No other threads should read or write the state of that 
     ///          resource.
     ///
-    /// \note    Any method that uses Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode may alter
-    ///          the state of resources it works with. Diligent::RESOURCE_STATE_TRANSITION_MODE_VERIFY mode
-    ///          makes the method read the states, but not write them. When Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE
-    ///          is used, the method assumes the states are guaranteed to be correct and does not read or write them.
-    ///          It is the responsibility of the application to make sure this is indeed true.
-    ///
-    ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
-    ///          of resource state management in Diligent Engine.
+    /// \note  Resource states for shader access (e.g. RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE)
+    ///        may map to different native state depending on what context type is used (see DeviceContextDesc::ContextType).
+    ///        To synchronize write access in compute shader in compute context with a pixel shader read in graphics context, an
+    ///        application should call TransitionResourceStates() in graphics context.
+    ///        Using TransitionResourceStates() with NewState = RESOURCE_STATE_SHADER_RESOURCE will not invalidate cache in graphics shaders
+    ///        and may cause undefined behaviour.
     VIRTUAL void METHOD(TransitionResourceStates)(THIS_
                                                   Uint32                     BarrierCount,
                                                   const StateTransitionDesc* pResourceBarriers) PURE;
