@@ -156,6 +156,9 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     bool  bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
+        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) <= 1,
+               "CommandQueueMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
+
         D3D12_CLEAR_VALUE  ClearValue  = {};
         D3D12_CLEAR_VALUE* pClearValue = nullptr;
         if (D3D12TexDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))

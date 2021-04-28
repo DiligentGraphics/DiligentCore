@@ -153,6 +153,14 @@ void ValidateTextureDesc(const TextureDesc& Desc) noexcept(false)
     {
         LOG_TEXTURE_ERROR_AND_THROW("CommandQueueMask (0x", std::hex, Desc.CommandQueueMask, ") must contains bit at index InitialCommandQueueId (", Uint32{Desc.InitialCommandQueueId}, ")");
     }
+
+    if (Desc.Usage == USAGE_DYNAMIC &&
+        PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1)
+    {
+        // Dynamic textures require implicit state transition that uses global state,
+        // which is not safe in multiple contexts.
+        LOG_TEXTURE_ERROR_AND_THROW("USAGE_DYNAMIC textures may only be used in single device context.");
+    }
 }
 
 

@@ -115,6 +115,18 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryIn
 
     VERIFY_BUFFER((Desc.CommandQueueMask & (Uint64{1} << Uint64{Desc.InitialCommandQueueId})) != 0,
                   "CommandQueueMask (0x", std::hex, Desc.CommandQueueMask, ") does not contain a bit at index InitialCommandQueueId (", Uint32{Desc.InitialCommandQueueId}, ")");
+
+    if (Desc.Usage == USAGE_DYNAMIC && PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1)
+    {
+        bool NeedsBackingResource = (Desc.BindFlags & BIND_UNORDERED_ACCESS) != 0 || Desc.Mode == BUFFER_MODE_FORMATTED;
+        if (NeedsBackingResource)
+        {
+            LOG_BUFFER_ERROR_AND_THROW("USAGE_DYNAMIC buffers that use UAV flag or FORMATTED mode require internal backing resource. "
+                                       "This resource is implicitly transitioned by the device context and thus can't be safely used in "
+                                       "multiple contexts. Create DYNAMIC buffer without UAV flag and use UNDEFINED mode and copy the contents to USAGE_DEFAULT buffer "
+                                       "with required flags, which can be sharead between contexts.");
+        }
+    }
 }
 
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false)

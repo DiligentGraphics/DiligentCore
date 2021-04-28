@@ -107,6 +107,9 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     }
     else
     {
+        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) <= 1,
+               "CommandQueueMask must contain single set bit, this error should've been handled in ValidateBufferDesc()");
+
         D3D12_RESOURCE_DESC D3D12BuffDesc{};
         D3D12BuffDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
         D3D12BuffDesc.Alignment          = 0;
