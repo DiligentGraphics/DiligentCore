@@ -176,7 +176,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
         if (AdapterId >= Adapters.size())
             AdapterId = 0;
 
-        constexpr auto   Mask          = CONTEXT_TYPE_TRANSFER | CONTEXT_TYPE_COMPUTE | CONTEXT_TYPE_GRAPHICS;
+        constexpr auto   QueueMask     = CONTEXT_TYPE_PRIMARY_MASK;
         constexpr Uint32 InvalidID     = ~0u;
         Uint32           AnyCompatible = InvalidID;
         Uint32           BestMatch     = InvalidID;
@@ -187,14 +187,14 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             if (CurQueue.MaxDeviceContexts == 0)
                 continue;
 
-            if ((CurQueue.QueueType & Mask) == Type)
+            if ((CurQueue.QueueType & QueueMask) == Type)
             {
                 BestMatch = q;
                 break;
             }
             if ((CurQueue.QueueType & Type) == Type &&
-                (CurQueue.QueueType & Mask) > (Type & Mask) &&
-                (AnyCompatible == InvalidID || (Queues[AnyCompatible].QueueType & Mask) > (CurQueue.QueueType & Mask)))
+                (CurQueue.QueueType & QueueMask) > (Type & QueueMask) &&
+                (AnyCompatible == InvalidID || (Queues[AnyCompatible].QueueType & QueueMask) > (CurQueue.QueueType & QueueMask)))
             {
                 AnyCompatible = q;
             }

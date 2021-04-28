@@ -70,7 +70,7 @@ bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttri
                                             const TextureDesc&                      DstTexDesc);
 
 bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs);
-bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier, CommandQueueIndex CmdQueueInd);
+bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier, CommandQueueIndex CmdQueueInd, CONTEXT_TYPE ContextType);
 
 bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs);
 bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs);
@@ -2073,7 +2073,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectAr
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
 {
-    DEV_CHECK_ERR(VerifyStateTransitionDesc(m_pDevice, Barrier, GetCommandQueueId()), "StateTransitionDesc are invalid");
+    DEV_CHECK_ERR(VerifyStateTransitionDesc(m_pDevice, Barrier, GetCommandQueueId(), this->m_Desc.ContextType), "StateTransitionDesc are invalid");
 }
 
 template <typename ImplementationTraits>

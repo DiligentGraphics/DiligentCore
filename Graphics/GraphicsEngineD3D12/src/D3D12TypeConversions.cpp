@@ -872,7 +872,7 @@ D3D12_COMMAND_LIST_TYPE QueueIdToD3D12CommandListType(HardwareQueueId QueueId)
 
 CONTEXT_TYPE D3D12CommandListTypeToContextType(D3D12_COMMAND_LIST_TYPE ListType)
 {
-    static_assert(CONTEXT_TYPE_LAST == 7, "Please update the switch below to handle the new context type");
+    static_assert(CONTEXT_TYPE_MAX_BIT == 0x7, "Please update the switch below to handle the new context type");
     switch (ListType)
     {
         // clang-format off

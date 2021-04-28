@@ -2078,10 +2078,13 @@ DILIGENT_TYPED_ENUM(CONTEXT_TYPE, Uint8)
     /// Context that supports graphics, compute, ray tracing and transfer commands.
     CONTEXT_TYPE_GRAPHICS       = 0x04 | CONTEXT_TYPE_COMPUTE,
 
+    /// Mask to extract primary type of context.
+    CONTEXT_TYPE_PRIMARY_MASK   = CONTEXT_TYPE_TRANSFER | CONTEXT_TYPE_COMPUTE | CONTEXT_TYPE_GRAPHICS,
+
     /// Reserved for future use.
     CONTEXT_TYPE_SPARSE_BINDING = 0x10,
 
-    CONTEXT_TYPE_LAST           = CONTEXT_TYPE_GRAPHICS
+    CONTEXT_TYPE_MAX_BIT        = CONTEXT_TYPE_GRAPHICS
 };
 DEFINE_FLAG_ENUM_OPERATORS(CONTEXT_TYPE)
 

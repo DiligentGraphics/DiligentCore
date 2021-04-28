@@ -263,7 +263,68 @@ bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs)
     return true;
 }
 
-bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier, const CommandQueueIndex CmdQueueInd)
+bool VarifyResourceState(RESOURCE_STATE States, CONTEXT_TYPE ContextType, const char* Name)
+{
+    ContextType &= CONTEXT_TYPE_PRIMARY_MASK;
+
+    bool Result = true;
+    while (States != 0)
+    {
+        auto State = ExtractLSB(States);
+
+        static_assert(RESOURCE_STATE_MAX_BIT == 0x80000, "Please update the switch below to handle the new resource state");
+        switch (State)
+        {
+            case RESOURCE_STATE_UNDEFINED:
+            case RESOURCE_STATE_COPY_DEST:
+            case RESOURCE_STATE_COPY_SOURCE:
+                if ((ContextType & CONTEXT_TYPE_TRANSFER) != CONTEXT_TYPE_TRANSFER)
+                {
+                    Result = false;
+                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetContextTypeString(ContextType), " context");
+                }
+                break;
+
+            case RESOURCE_STATE_CONSTANT_BUFFER:
+            case RESOURCE_STATE_UNORDERED_ACCESS:
+            case RESOURCE_STATE_SHADER_RESOURCE:
+            case RESOURCE_STATE_INDIRECT_ARGUMENT:
+            case RESOURCE_STATE_BUILD_AS_READ:
+            case RESOURCE_STATE_BUILD_AS_WRITE:
+            case RESOURCE_STATE_RAY_TRACING:
+                if ((ContextType & CONTEXT_TYPE_COMPUTE) != CONTEXT_TYPE_COMPUTE)
+                {
+                    Result = false;
+                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetContextTypeString(ContextType), " context");
+                }
+                break;
+
+            case RESOURCE_STATE_VERTEX_BUFFER:
+            case RESOURCE_STATE_INDEX_BUFFER:
+            case RESOURCE_STATE_RENDER_TARGET:
+            case RESOURCE_STATE_DEPTH_WRITE:
+            case RESOURCE_STATE_DEPTH_READ:
+            case RESOURCE_STATE_STREAM_OUT:
+            case RESOURCE_STATE_RESOLVE_DEST:
+            case RESOURCE_STATE_RESOLVE_SOURCE:
+            case RESOURCE_STATE_INPUT_ATTACHMENT:
+            case RESOURCE_STATE_PRESENT:
+                if ((ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+                {
+                    Result = false;
+                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetContextTypeString(ContextType), " context");
+                }
+                break;
+
+            default:
+                UNEXPECTED("Unexpected resource state");
+                break;
+        }
+    }
+    return Result;
+}
+
+bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier, const CommandQueueIndex CmdQueueInd, CONTEXT_TYPE ContextType)
 {
 #define CHECK_STATE_TRANSITION_DESC(Expr, ...) CHECK_PARAMETER(Expr, "State transition parameters are invalid: ", __VA_ARGS__)
 
@@ -356,6 +417,12 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
     {
         CHECK_STATE_TRANSITION_DESC(!Barrier.UpdateResourceState, "resource state can't be updated in begin-split barrier.");
     }
+
+    CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN && Barrier.NewState != RESOURCE_STATE_UNDEFINED,
+                                "NewState must not be UNKNOWN or UNDEFINED");
+
+    VarifyResourceState(Barrier.OldState, ContextType, "OldState");
+    VarifyResourceState(Barrier.NewState, ContextType, "NewState");
 
 #undef CHECK_STATE_TRANSITION_DESC
 
