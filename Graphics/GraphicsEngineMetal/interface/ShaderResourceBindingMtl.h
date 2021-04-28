@@ -30,17 +30,37 @@
 
 #include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {4D7AF38E-4650-4A11-B33B-FFC70A8CD68B}
 static const INTERFACE_ID IID_ShaderResourceBindingMtl =
     {0x4d7af38e, 0x4650, 0x4a11, {0xb3, 0x3b, 0xff, 0xc7, 0xa, 0x8c, 0xd6, 0x8b}};
 
-/// Exposes Metal-specific functionality of a shader resource binding object.
-class IShaderResourceBindingMtl : public IShaderResourceBinding
-{
-public:
-};
+#define DILIGENT_INTERFACE_NAME IShaderResourceBindingMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-} // namespace Diligent
+#define IShaderResourceBindingMtlInclusiveMethods \
+    IShaderResourceBindingInclusiveMethods
+//IShaderResourceBindingMtlMethods ShaderResourceBindingMtl
+
+#if DILIGENT_CPP_INTERFACE
+
+/// Exposes Metal-specific functionality of a shader resource binding object.
+DILIGENT_BEGIN_INTERFACE(IShaderResourceBindingMtl, IShaderResourceBinding){};
+DILIGENT_END_INTERFACE
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+typedef struct IShaderResourceBindingMtlVtbl
+{
+    IShaderResourceBindingMtlInclusiveMethods;
+} IShaderResourceBindingMtlVtbl;
+
+#endif
+
+
+DILIGENT_END_NAMESPACE // namespace Diligent

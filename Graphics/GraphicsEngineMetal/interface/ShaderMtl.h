@@ -30,19 +30,34 @@
 
 #include "../../GraphicsEngine/interface/Shader.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {07182C29-CC3B-43B2-99D8-A77F6FECBA82}
 static const INTERFACE_ID IID_ShaderMtl =
     {0x7182c29, 0xcc3b, 0x43b2, {0x99, 0xd8, 0xa7, 0x7f, 0x6f, 0xec, 0xba, 0x82}};
 
-/// Exposes Metal-specific functionality of a shader object.
-class IShaderMtl : public IShader
-{
-public:
-    /// Returns the point to Metal shader function (MTLFunction)
-    virtual id<MTLFunction> GetMtlShaderFunction() const = 0;
-};
+#define DILIGENT_INTERFACE_NAME IShaderMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-} // namespace Diligent
+#define IShaderMtlInclusiveMethods \
+    IShaderInclusiveMethods;       \
+    IShaderMtlMethods ShaderMtl
+
+/// Exposes Metal-specific functionality of a shader object.
+DILIGENT_BEGIN_INTERFACE(IShaderMtl, IShader)
+{
+    /// Returns the point to Metal shader function (MTLFunction)
+    VIRTUAL id<MTLFunction> METHOD(GetMtlShaderFunction)(THIS) CONST PURE;
+};
+DILIGENT_END_INTERFACE
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+#    define IShaderMtl_GetMtlShaderFunction(This) CALL_IFACE_METHOD(ShaderMtl, GetMtlShaderFunction, This)
+
+#endif
+
+
+DILIGENT_END_NAMESPACE // namespace Diligent

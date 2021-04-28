@@ -31,17 +31,37 @@
 #include "../../GraphicsEngine/interface/SwapChain.h"
 #include "TextureViewMtl.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {8ACDD0D9-FF1C-4A78-9866-924459A0D456}
 static const INTERFACE_ID IID_SwapChainMtl =
     {0x8acdd0d9, 0xff1c, 0x4a78, {0x98, 0x66, 0x92, 0x44, 0x59, 0xa0, 0xd4, 0x56}};
 
-/// Exposes Metal-specific functionality of a swap chain.
-class ISwapChainMtl : public ISwapChain
-{
-public:
-};
+#define DILIGENT_INTERFACE_NAME ISwapChainMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-} // namespace Diligent
+#define ISwapChainMtlInclusiveMethods \
+    ISwapChainInclusiveMethods
+//ISwapChainMtlMethods SwapChainMtl
+
+#if DILIGENT_CPP_INTERFACE
+
+/// Exposes Metal-specific functionality of a swap chain.
+DILIGENT_BEGIN_INTERFACE(ISwapChainMtl, ISwapChain){};
+DILIGENT_END_INTERFACE
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+typedef struct ISwapChainMtlVtbl
+{
+    ISwapChainMtlInclusiveMethods;
+} ISwapChainMtlVtbl;
+
+#endif
+
+
+DILIGENT_END_NAMESPACE // namespace Diligent

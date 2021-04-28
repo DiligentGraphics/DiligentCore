@@ -30,17 +30,47 @@
 
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {2DEA7704-C586-4BA7-B938-93B239DFA268}
 static const INTERFACE_ID IID_DeviceContextMtl =
     {0x2dea7704, 0xc586, 0x4ba7, {0xb9, 0x38, 0x93, 0xb2, 0x39, 0xdf, 0xa2, 0x68}};
 
-/// Exposes Metal-specific functionality of a device context.
-class IDeviceContextMtl : public IDeviceContext
-{
-public:
-};
+#define DILIGENT_INTERFACE_NAME IDeviceContextMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-} // namespace Diligent
+#define IDeviceContextMtlInclusiveMethods \
+    IDeviceContextInclusiveMethods
+//IDeviceContextMtlMethods DeviceContextMt
+
+// clang-format off
+
+#if DILIGENT_CPP_INTERFACE
+
+/// Exposes Metal-specific functionality of a device context.
+DILIGENT_BEGIN_INTERFACE(IDeviceContextMtl, IDeviceContext)
+{
+};
+DILIGENT_END_INTERFACE
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format off
+
+typedef struct IDeviceContextMtlVtbl
+{
+    IDeviceContextMtlInclusiveMethods;
+} IDeviceContextMtlVtbl;
+
+typedef struct IDeviceContextMtl
+{
+    struct IDeviceContextMtlVtbl* pVtbl;
+} IDeviceContextMtl;
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

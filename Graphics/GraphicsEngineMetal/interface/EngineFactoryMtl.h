@@ -28,8 +28,6 @@
 /// \file
 /// Declaration of functions that initialize Vulkan-based engine implementation
 
-#include <sstream>
-
 #include "../../GraphicsEngine/interface/EngineFactory.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
@@ -38,33 +36,60 @@
 // https://gcc.gnu.org/wiki/Visibility
 #define API_QUALIFIER __attribute__((visibility("default")))
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {CF4A590D-2E40-4F48-9579-0D25991F963B}
 static const INTERFACE_ID IID_EngineFactoryMtl =
     {0xcf4a590d, 0x2e40, 0x4f48, {0x95, 0x79, 0xd, 0x25, 0x99, 0x1f, 0x96, 0x3b}};
 
-class IEngineFactoryMtl : public IEngineFactory
+#define DILIGENT_INTERFACE_NAME IEngineFactoryMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IEngineFactoryMtlInclusiveMethods \
+    IEngineFactoryInclusiveMethods;       \
+    IEngineFactoryMtlMethods EngineFactoryMtl
+
+// clang-format off
+
+DILIGENT_BEGIN_INTERFACE(IEngineFactoryMtl, IEngineFactory)
 {
-public:
-    virtual void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo& Attribs,
-                                            IRenderDevice**            ppDevice,
-                                            IDeviceContext**           ppContexts) = 0;
+    VIRTUAL void METHOD(CreateDeviceAndContextsMtl)(
+        THIS_
+        const EngineMtlCreateInfo REF EngineCI,
+        IRenderDevice**               ppDevice,
+        IDeviceContext**              ppContexts) PURE;
 
-    virtual void CreateSwapChainMtl(IRenderDevice*       pDevice,
-                                    IDeviceContext*      pImmediateContext,
-                                    const SwapChainDesc& SCDesc,
-                                    const NativeWindow&  Window,
-                                    ISwapChain**         ppSwapChain) = 0;
+    VIRTUAL void METHOD(CreateSwapChainMtl)(
+        THIS_
+        IRenderDevice*          pDevice,
+        IDeviceContext*         pImmediateContext,
+        const SwapChainDesc REF SCDesc,
+        const NativeWindow REF  Window,
+        ISwapChain**            ppSwapChain) PURE;
 
-    virtual void AttachToMtlDevice(void*                      pMtlNativeDevice,
-                                   const EngineMtlCreateInfo& EngineAttribs,
-                                   IRenderDevice**            ppDevice,
-                                   IDeviceContext**           ppContexts) = 0;
+    VIRTUAL void METHOD(AttachToMtlDevice)(
+        THIS_
+        void*                         pMtlNativeDevice,
+        const EngineMtlCreateInfo REF EngineAttribs,
+        IRenderDevice**               ppDevice,
+        IDeviceContext**              ppContexts) PURE;
 };
+DILIGENT_END_INTERFACE
 
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-API_QUALIFIER IEngineFactoryMtl* GetEngineFactoryMtl();
+#if DILIGENT_C_INTERFACE
 
-} // namespace Diligent
+// clang-format off
+
+#    define IEngineFactoryMtl_CreateDeviceAndContextsMtl(This, ...) CALL_IFACE_METHOD(EngineFactoryMtl, CreateDeviceAndContextsMtl, This, __VA_ARGS__)
+#    define IEngineFactoryMtl_CreateSwapChainMtl(This, ...)         CALL_IFACE_METHOD(EngineFactoryMtl, CreateSwapChainMtl,         This, __VA_ARGS__)
+#    define IEngineFactoryMtl_AttachToMtlDevice(This, ...)          CALL_IFACE_METHOD(EngineFactoryMtl, AttachToMtlDevice,          This, __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+API_QUALIFIER IEngineFactoryMtl* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryMtl)();
+
+DILIGENT_END_NAMESPACE // namespace Diligent

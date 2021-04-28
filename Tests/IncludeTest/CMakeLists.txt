@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.6)
 
 project(DiligentCore-IncludeTest)
 
-file(GLOB_RECURSE SOURCE LIST_DIRECTORIES false *.cpp *.c)
+file(GLOB_RECURSE SOURCE LIST_DIRECTORIES false *.cpp *.c *.mm *.m)
 
 if(NOT D3D11_SUPPORTED)
     file(GLOB GRAPHICS_ENGINE_D3D11_INC_TEST LIST_DIRECTORIES false GraphicsEngineD3D11/*.cpp GraphicsEngineD3D11/*.c)
@@ -27,6 +27,11 @@ endif()
 if(NOT VULKAN_SUPPORTED)
     file(GLOB GRAPHICS_ENGINE_VK_INC_TEST LIST_DIRECTORIES false GraphicsEngineVk/*.cpp GraphicsEngineVk/*.c)
     list(REMOVE_ITEM SOURCE ${GRAPHICS_ENGINE_VK_INC_TEST})
+endif()
+
+if(NOT METAL_SUPPORTED)
+    file(GLOB GRAPHICS_ENGINE_MTL_INC_TEST LIST_DIRECTORIES false GraphicsEngineMetal/*.mm GraphicsEngineMetal/*.m)
+    list(REMOVE_ITEM SOURCE ${GRAPHICS_ENGINE_MTL_INC_TEST})
 endif()
 
 add_library(DiligentCore-IncludeTest ${SOURCE})
