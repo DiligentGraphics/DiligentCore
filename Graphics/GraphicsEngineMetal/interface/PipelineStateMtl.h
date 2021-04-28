@@ -30,25 +30,45 @@
 
 #include "../../GraphicsEngine/interface/PipelineState.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {B6A17C51-CCA9-44E1-A2DC-5DE250CF85AD}
 static const INTERFACE_ID IID_PipelineStateMtl =
     {0xb6a17c51, 0xcca9, 0x44e1, {0xa2, 0xdc, 0x5d, 0xe2, 0x50, 0xcf, 0x85, 0xad}};
 
+#define DILIGENT_INTERFACE_NAME IPipelineStateMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IPipelineStateMtlInclusiveMethods \
+    IPipelineStateInclusiveMethods;       \
+    IPipelineStateMtlMethods PipelineStateMtl
+
 /// Exposes Metal-specific functionality of a pipeline state object.
-class IPipelineStateMtl : public IPipelineState
+DILIGENT_BEGIN_INTERFACE(IPipelineStateMtl, IPipelineState)
 {
-public:
     /// Returns a pointer to Metal render pipeline (MTLRenderPipelineState)
-    virtual id<MTLRenderPipelineState> GetMtlRenderPipeline() const = 0;
+    VIRTUAL id<MTLRenderPipelineState> METHOD(GetMtlRenderPipeline)(THIS) CONST PURE;
 
     /// Returns a pointer to Metal compute pipeline (MTLComputePipelineState)
-    virtual id<MTLComputePipelineState> GetMtlComputePipeline() const = 0;
+    VIRTUAL id<MTLComputePipelineState> METHOD(GetMtlComputePipeline)(THIS) CONST PURE;
 
     /// Returns a pointer to Metal depth-stencil state object (MTLDepthStencilState)
-    virtual id<MTLDepthStencilState> GetMtlDepthStencilState() const = 0;
+    VIRTUAL id<MTLDepthStencilState> METHOD(GetMtlDepthStencilState)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format off
+
+#    define IPipelineStateMtl_GetMtlRenderPipeline(This)    CALL_IFACE_METHOD(PipelineStateMtl, GetMtlRenderPipeline,    This)
+#    define IPipelineStateMtl_GetMtlComputePipeline(This)   CALL_IFACE_METHOD(PipelineStateMtl, GetMtlComputePipeline,   This)
+#    define IPipelineStateMtl_GetMtlDepthStencilState(This) CALL_IFACE_METHOD(PipelineStateMtl, GetMtlDepthStencilState, This)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

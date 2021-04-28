@@ -30,19 +30,35 @@
 
 #include "../../GraphicsEngine/interface/Buffer.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {F8A1A3AC-923A-419D-AB9D-FE9E35DC654B}
 static const INTERFACE_ID IID_BufferMtl =
     {0xf8a1a3ac, 0x923a, 0x419d, {0xab, 0x9d, 0xfe, 0x9e, 0x35, 0xdc, 0x65, 0x4b}};
 
-/// Exposes Metal-specific functionality of a buffer object.
-class IBufferMtl : public IBuffer
-{
-public:
-    /// Returns a pointer to a Metal buffer object.
-    virtual id<MTLBuffer> GetMtlResource() const = 0;
-};
+#define DILIGENT_INTERFACE_NAME IBufferMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-} // namespace Diligent
+#define IBufferMtlInclusiveMethods \
+    IBufferInclusiveMethods;       \
+    IBufferMtlMethods BufferMtl
+
+// clang-format off
+
+/// Exposes Metal-specific functionality of a buffer object.
+DILIGENT_BEGIN_INTERFACE(IBufferMtl, IBuffer)
+{
+    /// Returns a pointer to a Metal buffer object.
+    VIRTUAL id<MTLBuffer> METHOD(GetMtlResource)(THIS) CONST PURE;
+};
+DILIGENT_END_INTERFACE
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+#    define IBufferMtl_GetMtlResource(This) CALL_IFACE_METHOD(BufferMtl, GetMtlResource, This)
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

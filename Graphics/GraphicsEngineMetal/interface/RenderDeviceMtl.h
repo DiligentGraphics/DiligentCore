@@ -30,33 +30,60 @@
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {8D483E4A-2D53-47B2-B8D7-276F4CE57F68}
 static const INTERFACE_ID IID_RenderDeviceMtl =
     {0x8d483e4a, 0x2d53, 0x47b2, {0xb8, 0xd7, 0x27, 0x6f, 0x4c, 0xe5, 0x7f, 0x68}};
 
+#define DILIGENT_INTERFACE_NAME IRenderDeviceMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IRenderDeviceMtlInclusiveMethods \
+    IRenderDeviceInclusiveMethods;       \
+    IRenderDeviceMtlMethods RenderDeviceMtl
+
+// clang-format off
+
 /// Exposes Metal-specific functionality of a render device.
-class IRenderDeviceMtl : public IRenderDevice
+DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
 {
-public:
     /// Returns the pointer to Metal device (MTLDevice).
-    virtual id<MTLDevice> GetMtlDevice() const = 0;
+    VIRTUAL id<MTLDevice> METHOD(GetMtlDevice)(THIS) CONST PURE;
 
     /// Returns the pointer to Metal command queue (MTLCommandQueue).
-    virtual id<MTLCommandQueue> GetMtlCommandQueue() const = 0;
+    VIRTUAL id<MTLCommandQueue> METHOD(GetMtlCommandQueue)(THIS) CONST PURE;
 
     /// Creates a texture from existing Metal resource
-    virtual void DILIGENT_CALL_TYPE CreateTextureFromMtlResource(id<MTLTexture> mtlTexture,
-                                                                 RESOURCE_STATE InitialState,
-                                                                 ITexture**     ppTexture) = 0;
+    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateTextureFromMtlResource)(
+        THIS_
+        id<MTLTexture> mtlTexture,
+        RESOURCE_STATE InitialState,
+        ITexture**     ppTexture) PURE;
 
     /// Creates a buffer from existing Metal resource
-    virtual void DILIGENT_CALL_TYPE CreateBufferFromMtlResource(id<MTLBuffer>     mtlBuffer,
-                                                                const BufferDesc& BuffDesc,
-                                                                RESOURCE_STATE    InitialState,
-                                                                IBuffer**         ppBuffer) = 0;
+    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateBufferFromMtlResource)(
+        THIS_
+        id<MTLBuffer>        mtlBuffer,
+        const BufferDesc REF BuffDesc,
+        RESOURCE_STATE       InitialState,
+        IBuffer**            ppBuffer) PURE;
 };
+DILIGENT_END_INTERFACE
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format off
+
+#    define IRenderDeviceMtl_GetMtlDevice(This)                      CALL_IFACE_METHOD(RenderDeviceMtl, GetMtlDevice,                 This)
+#    define IRenderDeviceMtl_GetMtlCommandQueue(This)                CALL_IFACE_METHOD(RenderDeviceMtl, GetMtlCommandQueue,           This)
+#    define IRenderDeviceMtl_CreateTextureFromMtlResource(This, ...) CALL_IFACE_METHOD(RenderDeviceMtl, CreateTextureFromMtlResource, This, __VA_ARGS__)
+#    define IRenderDeviceMtl_CreateBufferFromMtlResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceMtl, CreateBufferFromMtlResource,  This, __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

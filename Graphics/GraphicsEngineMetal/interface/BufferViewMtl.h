@@ -30,18 +30,34 @@
 
 #include "../../GraphicsEngine/interface/BufferView.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {6D8B8199-1011-42B6-80DF-A9FA8B4F33FF}
 static const INTERFACE_ID IID_BufferViewMtl =
     {0x6d8b8199, 0x1011, 0x42b6, {0x80, 0xdf, 0xa9, 0xfa, 0x8b, 0x4f, 0x33, 0xff}};
 
-/// Exposes Metal-specific functionality of a buffer view object.
-class IBufferViewMtl : public IBufferView
-{
-public:
-    virtual id<MTLTexture> GetMtlTextureView() const = 0;
-};
+#define DILIGENT_INTERFACE_NAME IBufferViewMtl
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-} // namespace Diligent
+#define IBufferViewMtlInclusiveMethods \
+    IBufferViewInclusiveMethods;       \
+    IBufferViewMtlMethods BufferViewMtl
+
+// clang-format off
+
+/// Exposes Metal-specific functionality of a buffer view object.
+DILIGENT_BEGIN_INTERFACE(IBufferViewMtl, IBufferView)
+{
+    VIRTUAL id<MTLTexture> METHOD(GetMtlTextureView)(THIS) CONST PURE;
+};
+DILIGENT_END_INTERFACE
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+#    define IBufferViewMtl_GetMtlTextureView(This) CALL_IFACE_METHOD(BufferViewMtl, GetMtlTextureView, This)
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent
