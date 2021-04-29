@@ -82,7 +82,7 @@ jobs:
         config: [RelWithDebInfo]
 
     runs-on: windows-latest
-    name: Windows 10, ${{ matrix.config }}Dev ${{ matrix.toolset }}
+    name: Windows 10, ${{ matrix.config }}-DEV ${{ matrix.toolset }}
 
     steps:
     - name: Clone repository
