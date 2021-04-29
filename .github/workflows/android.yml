@@ -30,4 +30,4 @@ jobs:
       run: |
         cd ./BuildTools/Android
         chmod +x gradlew
-        ./gradlew build
+        ./gradlew buildDebug
