@@ -35,7 +35,7 @@ jobs:
       if: success()
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install
+      run: cmake --build . --config ${{ matrix.config }} --target install -j2
 
     - name: DiligentCoreTest
       if: success()
@@ -107,7 +107,7 @@ jobs:
       if: success()
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install
+      run: cmake --build . --config ${{ matrix.config }} --target install -j2
 
     - name: DiligentCoreTest
       if: success()
@@ -158,7 +158,7 @@ jobs:
       if: success()
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{ matrix.config }} --target install
+      run: cmake --build . --config ${{ matrix.config }} --target install -j2
 
     - name: DiligentCoreTest
       if: success()
