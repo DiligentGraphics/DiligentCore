@@ -270,7 +270,7 @@ private:
     GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0
                                                // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1
 
-    std::array<CommandListManager, 3> m_CmdListManagers;
+    CommandListManager m_CmdListManagers[3];
 
     std::mutex                                                                  m_ContextPoolMutex;
     std::vector<PooledCommandContext, STDAllocatorRawMem<PooledCommandContext>> m_ContextPool;

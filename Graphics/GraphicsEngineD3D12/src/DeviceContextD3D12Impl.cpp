@@ -103,7 +103,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
 {
     if (!IsDeferred())
     {
-        InitializeForQueue(CommandQueueIndex{CommandQueueId});
+        InitializeForQueue(CommandQueueId);
     }
     auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
@@ -202,8 +202,8 @@ void DeviceContextD3D12Impl::InitializeForQueue(CommandQueueIndex CommandQueueIn
 {
     DEV_CHECK_ERR(CommandQueueInd < m_pDevice->GetCommandQueueCount(), "CommandQueueInd is out of range");
 
-    const auto* CmdQueue    = ValidatedCast<const CommandQueueD3D12Impl>(&m_pDevice->GetCommandQueue(CommandQueueInd));
-    const auto  CmdListType = CmdQueue->GetCommandListType();
+    const auto& CmdQueue    = m_pDevice->GetCommandQueue(CommandQueueInd);
+    const auto  CmdListType = ValidatedCast<const CommandQueueD3D12Impl>(&CmdQueue)->GetCommandListType();
     const auto  QueueId     = D3D12CommandListTypeToQueueId(CmdListType);
 
     m_Desc.QueueId                   = static_cast<Uint8>(QueueId);

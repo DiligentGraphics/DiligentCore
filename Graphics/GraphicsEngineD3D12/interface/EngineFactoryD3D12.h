@@ -85,13 +85,13 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
                                                       const EngineD3D12CreateInfo REF EngineCI,
                                                       IRenderDevice**                 ppDevice,
                                                       IDeviceContext**                ppContexts) PURE;
-    
+
     /// Creates a command queue from Direct3D12 native command queue.
-    
+
     /// \param [in]  pd3d12NativeDevice - Pointer to the native Direct3D12 device.
     /// \param [in]  pd3d12NativeDevice - Pointer to the native Direct3D12 command queue.
     /// \param [in]  pRawMemAllocator   - Pointer to the raw memory allocator.
-    ///                                   Must be same as EngineCreateInfo::pRawMemAllocator in the following AttachToD3D12Device() call.
+    ///                                   Must be the same as EngineCreateInfo::pRawMemAllocator in the following AttachToD3D12Device() call.
     /// \param [out] ppCommandQueue     - Address of the memory location where pointer to the command queue will be written.
     VIRTUAL void METHOD(CreateCommandQueueD3D12)(THIS_
                                                  void*                       pd3d12NativeDevice,

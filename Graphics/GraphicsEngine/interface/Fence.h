@@ -75,20 +75,20 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
 
 
     /// Resets the fence to the specified value.
-    
+
     /// \param [in] Value - New value to reset the fence to.
-    /// 
-    /// \note  Fence value will be changed immediatlly on the CPU side,
-    ///        use ICommandQueueVk::SignalFence or ICommandQueueD3D12::SignalFence to add signal command
-    ///        to the queue, value will be changed when all previously submitted commands will be completed.
+    ///
+    /// \note  The fence value will be changed immediately by the CPU.
+    ///        Use ICommandQueueVk::SignalFence or ICommandQueueD3D12::SignalFence to add a GPU signal command
+    ///        to the queue to chnage the value after all previously submitted commands are completed.
     VIRTUAL void METHOD(Reset)(THIS_
                                Uint64 Value) PURE;
-    
+
 
     /// Waits until the specified fence reaches or exceeds the specified value, on the host.
-    
+
     /// \param [in] Value - The value that the fence is waiting for to reach.
-    /// 
+    ///
     /// \note  The method blocks the execution of the calling thread until the wait is complete.
     VIRTUAL void METHOD(Wait)(THIS_
                               Uint64 Value) PURE;

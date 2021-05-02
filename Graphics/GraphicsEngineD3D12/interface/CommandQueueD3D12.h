@@ -77,11 +77,10 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, IObject)
     VIRTUAL void METHOD(SignalFence)(THIS_
                                      ID3D12Fence* pFence,
                                      Uint64       Value) PURE;
-    
-    /// GPU waits until fence reaches the specified value
+    /// Instructs the GPU to wait until the fence reaches the specified value
     VIRTUAL void METHOD(WaitFence)(THIS_
-                                     ID3D12Fence* pFence,
-                                     Uint64       Value) PURE;
+                                   ID3D12Fence* pFence,
+                                   Uint64       Value) PURE;
 };
 DILIGENT_END_INTERFACE
 

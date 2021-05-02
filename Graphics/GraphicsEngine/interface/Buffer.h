@@ -90,14 +90,14 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAGS for details.
     CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
-    
+
     /// Buffer mode, see Diligent::BUFFER_MODE
     BUFFER_MODE Mode                DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
 
-    /// Buffer creation flags, see Diligent::RESOURCE_FLAGS for details
+    /// Buffer creation flags, see Diligent::RESOURCE_FLAGS for details.
     RESOURCE_FLAGS ResourceFlags    DEFAULT_INITIALIZER(RESOURCE_FLAG_UNKNOWN);
-    
-    /// Defines which command queue will own buffer at start
+
+    /// Defines which command queue will initially own the buffer.
     Uint8    InitialCommandQueueId  DEFAULT_INITIALIZER(0);
 
     /// Buffer element stride, in bytes.
@@ -149,6 +149,8 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     {
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
+                // Similarly, InitialCommandQueueId is only used to define the command
+                // queue that initially owns the buffer.
         return  // strcmp(Name, RHS.Name) == 0          &&
                 // InitialCommandQueueId == RHS.InitialCommandQueueId &&
                 uiSizeInBytes     == RHS.uiSizeInBytes     && 

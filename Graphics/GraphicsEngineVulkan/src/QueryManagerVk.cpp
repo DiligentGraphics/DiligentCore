@@ -67,7 +67,7 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*     pRenderDeviceVk,
             (QueryType == QUERY_TYPE_PIPELINE_STATISTICS && !EnabledFeatures.pipelineStatisticsQuery))
             continue;
 
-        // Compute queue supports only time queries
+        // Compute queues only support time queries
         if ((QueryType != QUERY_TYPE_TIMESTAMP && QueryType != QUERY_TYPE_DURATION) && (QueueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
             continue;
 

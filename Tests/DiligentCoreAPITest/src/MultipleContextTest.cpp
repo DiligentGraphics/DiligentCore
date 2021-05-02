@@ -123,7 +123,7 @@ protected:
         auto* pSwapChain = pEnv->GetSwapChain();
 
         if (pEnv->GetNumImmediateContexts() == 1)
-            GTEST_SKIP() << "Multiple contexts is not supported by this device";
+            GTEST_SKIP() << "Multiple contexts are not supported by this device";
 
         TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 

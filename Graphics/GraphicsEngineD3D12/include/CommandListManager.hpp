@@ -42,11 +42,11 @@ class CommandListManager
 {
 public:
     CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl, D3D12_COMMAND_LIST_TYPE ListType);
-    CommandListManager(CommandListManager&& Other);
     ~CommandListManager();
 
     // clang-format off
     CommandListManager             (const CommandListManager&)  = delete;
+    CommandListManager             (      CommandListManager&&) = delete;
     CommandListManager& operator = (const CommandListManager&)  = delete;
     CommandListManager& operator = (      CommandListManager&&) = delete;
     // clang-format on

@@ -63,7 +63,7 @@ public:
     {
         this->m_Desc.CommandQueueId = static_cast<Uint8>(CommandQueueId);
         VERIFY(bIsDeferred || ContextId == CommandQueueId,
-               "For immediate contexts ContextId must be same as CommandQueueId");
+               "For immediate contexts, ContextId must match CommandQueueId");
     }
 
     ~DeviceContextNextGenBase()

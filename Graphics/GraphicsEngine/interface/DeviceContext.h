@@ -67,29 +67,36 @@ static const INTERFACE_ID IID_DeviceContext =
 /// Device context description.
 struct DeviceContextDesc
 {
-    /// Context name which is specified in ContextCreateInfo::Name.
+    /// Device context name. The name is what was specified in
+    ///ContextCreateInfo::Name when the engine was initialized.
     const char*  Name           DEFAULT_INITIALIZER(nullptr);
-    
-    /// Type of the queue which is the same as in GraphicsAdapterInfo::Queues[QueueId].QueueType.
+
+    /// Device context type. This type matached the GraphicsAdapterInfo::Queues[QueueId].QueueType.
     CONTEXT_TYPE ContextType    DEFAULT_INITIALIZER(CONTEXT_TYPE_UNKNOWN);
 
     /// Indicates if this is a deferred context.
     Bool         IsDeferred     DEFAULT_INITIALIZER(False);
-    
+
     /// Queue index in GraphicsAdapterInfo::Queues.
-    /// For deferred contexts value defined only between IDeviceContext::Begin() and IDeviceContext::FinishCommandList().
+    ///
+    /// For deferred contexts, this value is only between IDeviceContext::Begin() and
+    /// IDeviceContext::FinishCommandList() calls.
     /// 
     /// \remarks  Vulkan backend:     same as queue family index.
     ///           Direct3D12 backend: same as queue type.
     ///           Metal backend:      index of the unique command queue.
     Uint8        QueueId        DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
-    
-    /// Command queue index, same as immediate context index which defined in EngineCreateInfo::pContextInfo.
-    /// For deferred contexts value defined only between IDeviceContext::Begin() and IDeviceContext::FinishCommandList().
+
+    /// Command queue index, same as immediate context index defined in EngineCreateInfo::pContextInfo.
+    /// For deferred contexts, this value is only valid between IDeviceContext::Begin() and
+    /// IDeviceContext::FinishCommandList() calls.
     Uint8        CommandQueueId DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
 
-    /// In Vulkan backend transfer queue may require to align texture offset and size in copy operations.
-    /// Graphics and compute queues already specify alignment {1,1,1}.
+    /// Required texture granularity for copy operations, for a transfer queue.
+
+    /// \remarks  For graphics and compute queues, the granularity is always {1,1,1}.
+    ///           For transfer queues, the application must align the texture offsets and sizes
+    ///           by the granularity defined by this member.
     Uint32       TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
 };
 typedef struct DeviceContextDesc DeviceContextDesc;
@@ -1529,13 +1536,13 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     VIRTUAL const DeviceContextDesc REF METHOD(GetDesc)(THIS) CONST PURE;
 
     /// Begin recording to a deferred context.
-    
+
     /// \param [in] CommandQueueId - command queue index in EngineCreateInfo::pContextInfo.
     /// 
     /// \remarks Defered context can be executed only on immediate context with the same CommandQueueId.
     VIRTUAL void METHOD(Begin)(THIS_
                                Uint32 CommandQueueId) PURE;
-    
+
     /// Sets the pipeline state.
 
     /// \param [in] pPipelineState - Pointer to IPipelineState interface to bind to the context.

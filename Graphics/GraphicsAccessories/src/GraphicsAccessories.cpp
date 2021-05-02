@@ -1718,18 +1718,22 @@ String GetContextTypeString(CONTEXT_TYPE Type)
     static_assert(CONTEXT_TYPE_LAST == 7, "Please update the code below to handle the new context type");
 
     String Result;
+    if ((Type & CONTEXT_TYPE_GRAPHICS) == CONTEXT_TYPE_GRAPHICS)
+        Result = "GRAPHICS";
+    else if ((Type & CONTEXT_TYPE_COMPUTE) == CONTEXT_TYPE_COMPUTE)
+        Result = "COMPUTE";
+    else if ((Type & CONTEXT_TYPE_TRANSFER) == CONTEXT_TYPE_TRANSFER)
+        Result = "TRANSFER";
+    else
+    {
+        UNEXPECTED("Unexpected context type");
+        Result = "UNKNOWN";
+    }
+
     if ((Type & CONTEXT_TYPE_SPARSE_BINDING) != 0)
         Result += " | SPARSE_BINDING";
 
-    if ((Type & CONTEXT_TYPE_GRAPHICS) == CONTEXT_TYPE_GRAPHICS)
-        return "GRAPHICS" + Result;
-    if ((Type & CONTEXT_TYPE_COMPUTE) == CONTEXT_TYPE_COMPUTE)
-        return "COMPUTE" + Result;
-    if ((Type & CONTEXT_TYPE_TRANSFER) == CONTEXT_TYPE_TRANSFER)
-        return "TRANSFER" + Result;
-
-    UNEXPECTED("Unexpected context type");
-    return "Unknown context type";
+    return Result;
 }
 
 } // namespace Diligent

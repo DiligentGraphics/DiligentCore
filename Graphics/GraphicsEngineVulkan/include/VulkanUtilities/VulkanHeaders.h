@@ -40,7 +40,7 @@
 #    include "volk/volk.h"
 #endif
 
-#ifdef PLATFORM_WIN32
+#ifdef _WINBASE_
 #    undef CreateSemaphore
 #endif
 
@@ -62,7 +62,7 @@
 namespace VulkanUtilities
 {
 
-constexpr VkPipelineStageFlags AllShaderStagesVk =
+constexpr VkPipelineStageFlags VK_PIPELINE_STAGE_ALL_SHADERS =
     VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
     VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
     VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
@@ -73,7 +73,7 @@ constexpr VkPipelineStageFlags AllShaderStagesVk =
     VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV |
     VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
 
-constexpr VkPipelineStageFlags TransferQueueStagesVk =
+constexpr VkPipelineStageFlags VK_PIPELINE_STAGE_ALL_TRANSFER =
     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT |
     VK_PIPELINE_STAGE_TRANSFER_BIT |
     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT |

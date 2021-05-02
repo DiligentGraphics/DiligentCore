@@ -68,7 +68,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContextVk, IDeviceContext)
     VIRTUAL void METHOD(BufferMemoryBarrier)(THIS_
                                              IBuffer*      pBuffer,
                                              VkAccessFlags NewAccessFlags) PURE;
-    
+
     /// Returns a command buffer handle that is currently being recorded
 
     /// \return - a handle to the current command buffer

@@ -30,6 +30,7 @@
 /// \file
 /// Declaration of Diligent::RenderDeviceVkImpl class
 #include <memory>
+#include <unordered_map>
 
 #include "EngineVkImplTraits.hpp"
 
@@ -272,7 +273,7 @@ private:
     // These one-time command pools are used by buffer and texture constructors to
     // issue copy commands. Vulkan requires that every command pool is used by one thread
     // at a time, so every constructor must allocate command buffer from its own pool.
-    std::map<HardwareQueueId, CommandPoolManager> m_TransientCmdPoolMgrs;
+    std::unordered_map<HardwareQueueId, CommandPoolManager, HardwareQueueId::Hasher> m_TransientCmdPoolMgrs;
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
 

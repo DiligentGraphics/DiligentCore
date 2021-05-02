@@ -65,24 +65,24 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     VIRTUAL Uint32 METHOD(GetVkVersion)(THIS) PURE;
 
     /// Returns the fence value that will be signaled by the GPU command queue next
-    
-    /// \param [in] CommandQueueIndex - Index of the command queue that is the same as immediate context index.
+
+    /// \param [in] CommandQueueIndex - Index of the command queue, aka immediate context index.
     ///                                 See Diligent::EngineCreateInfo::pContextInfo.
     VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS_
                                              Uint32 CommandQueueIndex) PURE;
 
     /// Returns the last completed fence value for the given command queue
-    
-    /// \param [in] CommandQueueIndex - Index of the command queue that is the same as immediate context index.
+
+    /// \param [in] CommandQueueIndex - Index of the command queue, aka immediate context index.
     ///                                 See Diligent::EngineCreateInfo::pContextInfo.
     VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS_
                                                   Uint32 CommandQueueIndex) PURE;
 
     /// Checks if the fence value has been signaled by the GPU.
-    
+
     /// \return                         True if all associated work has been finished.
-    /// 
-    /// \param [in] CommandQueueIndex - Index of the command queue that is the same as immediate context index.
+    ///
+    /// \param [in] CommandQueueIndex - Index of the command queue, aka immediate context index.
     ///                                 See Diligent::EngineCreateInfo::pContextInfo.
     /// \param [in] FenceValue        - Value that associated with submitted commands.
     VIRTUAL Bool METHOD(IsFenceSignaled)(THIS_

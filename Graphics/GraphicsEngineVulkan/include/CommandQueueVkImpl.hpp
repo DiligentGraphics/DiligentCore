@@ -165,7 +165,7 @@ private:
     // Array used to merge semaphores from SubmitInfo and from SyncPointVk
     std::vector<VkSemaphore> m_TempSignalSemaphores;
 
-    // Fence and semaphores which was signaled when last submitted commands are completed.
+    // Fence and semaphores which were signaled when the last submitted commands have been completed.
     SyncPointVkPtr m_LastSyncPoint;
 
     std::shared_ptr<VulkanUtilities::VulkanSyncObjectManager> m_SyncObjectManager;

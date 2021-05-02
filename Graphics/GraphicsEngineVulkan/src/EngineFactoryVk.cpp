@@ -425,7 +425,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         auto vkDevice       = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
         auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, *Instance);
 
-        // Enable device feature if they are supported and throw error if not supported but required by user.
+        // Enable device features if they are supported and throw an error if not supported, but required by user.
         GraphicsAdapterInfo AdapterInfo;
         GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice, AdapterInfo);
         EnableDeviceFeatures(AdapterInfo.Capabilities.Features, EngineCI.Features);
@@ -444,7 +444,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         // Setup device queues
         if (EngineCI.NumContexts > 0)
         {
-            VERIFY(EngineCI.pContextInfo != nullptr, "Must be verified in VerifyEngineCreateInfo()");
+            VERIFY(EngineCI.pContextInfo != nullptr, "This error must have been caught by VerifyEngineCreateInfo()");
 
             const auto& QueueProperties = PhysicalDevice->GetQueueProperties();
             QueuePriorities.resize(EngineCI.NumContexts, 1.0f);
@@ -453,7 +453,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             {
                 const auto& ContextInfo = EngineCI.pContextInfo[CtxInd];
                 VERIFY(ContextInfo.QueueId < QueueProperties.size() && ContextInfo.QueueId < QueueIDtoQueueInfo.size(),
-                       "Must be verified in VerifyEngineCreateInfo()");
+                       "Must have been verified in VerifyEngineCreateInfo()");
 
                 auto& QueueIndex = QueueIDtoQueueInfo[ContextInfo.QueueId];
                 if (QueueIndex == DEFAULT_QUEUE_ID)
@@ -496,7 +496,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             QueuePriorities.resize(1);
 
             auto& QueueCI         = QueueInfos[0];
-            QueuePriorities[0]    = 1.0f; // Ask for highest priority for our queue. (range [0,1])
+            QueuePriorities[0]    = 1.0f; // Ask for the highest priority for our queue. (range [0,1])
             QueueIDtoQueueInfo[0] = 0;
 
             // If an implementation exposes any queue family that supports graphics operations,

@@ -94,11 +94,11 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
         auto&       StageMask = m_SupportedStagesMask[q];
 
         if (Queue.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            StageMask |= GraphicsStages | ComputeStages | TransferQueueStagesVk;
+            StageMask |= GraphicsStages | ComputeStages | VK_PIPELINE_STAGE_ALL_TRANSFER;
         if (Queue.queueFlags & VK_QUEUE_COMPUTE_BIT)
-            StageMask |= ComputeStages | TransferQueueStagesVk;
+            StageMask |= ComputeStages | VK_PIPELINE_STAGE_ALL_TRANSFER;
         if (Queue.queueFlags & VK_QUEUE_TRANSFER_BIT)
-            StageMask |= TransferQueueStagesVk;
+            StageMask |= VK_PIPELINE_STAGE_ALL_TRANSFER;
     }
 }
 

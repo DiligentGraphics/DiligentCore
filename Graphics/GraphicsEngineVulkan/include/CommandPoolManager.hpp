@@ -40,15 +40,19 @@ namespace Diligent
 class CommandPoolManager
 {
 public:
-    CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                       std::string                                 Name,
-                       HardwareQueueId                             queueFamilyIndex,
-                       VkCommandPoolCreateFlags                    flags) noexcept;
+    struct CreateInfo
+    {
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice;
+        std::string                                 Name;
+        const HardwareQueueId                       queueFamilyIndex;
+        const VkCommandPoolCreateFlags              flags;
+    };
 
-    CommandPoolManager(CommandPoolManager&& Other);
+    CommandPoolManager(const CreateInfo& CI) noexcept;
 
     // clang-format off
     CommandPoolManager             (const CommandPoolManager&)  = delete;
+    CommandPoolManager             (      CommandPoolManager&&) = delete;
     CommandPoolManager& operator = (const CommandPoolManager&)  = delete;
     CommandPoolManager& operator = (      CommandPoolManager&&) = delete;
     // clang-format on

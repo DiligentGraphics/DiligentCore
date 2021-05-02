@@ -72,7 +72,11 @@ CommandQueueVkImpl::~CommandQueueVkImpl()
     // is called on that device.
 }
 
-SyncPointVk::SyncPointVk(CommandQueueIndex CommandQueueId, Uint32 NumContexts, VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr, VkDevice LogicalDevice, Uint64 dbgValue) :
+SyncPointVk::SyncPointVk(CommandQueueIndex                         CommandQueueId,
+                         Uint32                                    NumContexts,
+                         VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr,
+                         VkDevice                                  LogicalDevice,
+                         Uint64                                    dbgValue) :
     m_CommandQueueId{CommandQueueId},
     m_NumSemaphores{static_cast<Uint8>(NumContexts)},
     m_Fence{SyncObjectMngr.CreateFence()}
@@ -84,24 +88,24 @@ SyncPointVk::SyncPointVk(CommandQueueIndex CommandQueueId, Uint32 NumContexts, V
     for (Uint32 s = _countof(m_Semaphores); s < NumContexts; ++s)
         new (&m_Semaphores[s]) VulkanUtilities::VulkanRecycledSemaphore{};
 
-    // Semaphores are used to synchronize between queues, semaphores are not used when created only one queue.
+    // Semaphores are used to synchronize between queues; they are not used for synchronization within one queue.
     if (NumContexts > 1)
     {
         SyncObjectMngr.CreateSemaphores(m_Semaphores, NumContexts - 1);
 
-        // Semaphore for current queue is not used.
+        // Semaphore for the current queue is not used.
         std::swap(m_Semaphores[CommandQueueId], m_Semaphores[NumContexts - 1]);
     }
 
 #ifdef DILIGENT_DEBUG
-    String Name = String{"Queue("} + std::to_string(CommandQueueId) + ") Value(" + std::to_string(dbgValue) + ")";
+    String Name = String{"Queue ("} + std::to_string(CommandQueueId) + ") Value (" + std::to_string(dbgValue) + ")";
     VulkanUtilities::SetFenceName(LogicalDevice, m_Fence, Name.c_str());
 
     for (Uint32 s = 0; s < m_NumSemaphores; ++s)
     {
         if (m_Semaphores[s])
         {
-            Name = String{"Queue("} + std::to_string(CommandQueueId) + ") Value(" + std::to_string(dbgValue) + ") Ctx(" + std::to_string(s) + ")";
+            Name = String{"Queue ("} + std::to_string(CommandQueueId) + ") Value (" + std::to_string(dbgValue) + ") Ctx (" + std::to_string(s) + ")";
             VulkanUtilities::SetSemaphoreName(LogicalDevice, m_Semaphores[s], Name.c_str());
         }
     }
@@ -134,7 +138,7 @@ __forceinline SyncPointVkPtr CommandQueueVkImpl::CreateSyncPoint(Uint64 dbgValue
         pAllocator->Free(ptr);
     };
 
-    return SyncPointVkPtr{new (ptr) SyncPointVk{m_CommandQueueId, m_NumCommandQueues, *m_SyncObjectManager, m_LogicalDevice->GetVkDevice(), dbgValue}, std::move(Deleter)};
+    return {new (ptr) SyncPointVk{m_CommandQueueId, m_NumCommandQueues, *m_SyncObjectManager, m_LogicalDevice->GetVkDevice(), dbgValue}, std::move(Deleter)};
 }
 
 Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
