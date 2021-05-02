@@ -156,16 +156,19 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     for (Uint32 q = 0; q < CommandQueueCount; ++q)
     {
-        auto QueueFanilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueIndex{q}).GetQueueFamilyIndex()};
+        auto QueueFamilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueIndex{q}).GetQueueFamilyIndex()};
 
-        if (m_TransientCmdPoolMgrs.find(QueueFanilyIndex) == m_TransientCmdPoolMgrs.end())
+        if (m_TransientCmdPoolMgrs.find(QueueFamilyIndex) == m_TransientCmdPoolMgrs.end())
         {
             m_TransientCmdPoolMgrs.emplace(
-                QueueFanilyIndex,
-                CommandPoolManager{GetLogicalDevice(),
-                                   "Transient command buffer pool manager",
-                                   QueueFanilyIndex,
-                                   VK_COMMAND_POOL_CREATE_TRANSIENT_BIT});
+                QueueFamilyIndex,
+                CommandPoolManager::CreateInfo{
+                    //
+                    GetLogicalDevice(),
+                    "Transient command buffer pool manager",
+                    QueueFamilyIndex,
+                    VK_COMMAND_POOL_CREATE_TRANSIENT_BIT //
+                });
         }
     }
 
@@ -215,10 +218,10 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(CommandQueueIndex             
                                                   VkCommandBuffer&                     vkCmdBuff,
                                                   const Char*                          DebugPoolName)
 {
-    auto QueueFanilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
-    auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFanilyIndex);
+    auto QueueFamilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
     VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
-           "Con not find transiend command pool manager for queue family index (", Uint32{QueueFanilyIndex}, ")");
+           "Con not find transiend command pool manager for queue family index (", Uint32{QueueFamilyIndex}, ")");
 
     CmdPool = CmdPoolMgrIter->second.AllocateCommandPool(DebugPoolName);
 
@@ -342,10 +345,10 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(CommandQueueIndex    
         VkCommandBuffer                     vkCmdBuffer = VK_NULL_HANDLE;
     };
 
-    auto QueueFanilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
-    auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFanilyIndex);
+    auto QueueFamilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
     VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
-           "Con not find transiend command pool manager for queue family index (", Uint32{QueueFanilyIndex}, ")");
+           "Unable to find transiend command pool manager for queue family index ", Uint32{QueueFamilyIndex}, ".");
 
     // Discard command pool directly to the release queue since we know exactly which queue it was submitted to
     // as well as the associated FenceValue
@@ -678,14 +681,13 @@ void RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueu
     const auto MaxCount = inoutQueueFamilyIndicesCount;
 
     inoutQueueFamilyIndicesCount = 0;
-
-    for (; CommandQueueMask != 0;)
+    for (; CommandQueueMask != 0 && inoutQueueFamilyIndicesCount < MaxCount;)
     {
         auto CmdQueueInd = PlatformMisc::GetLSB(CommandQueueMask);
-        CommandQueueMask &= ~(Uint64(1) << CmdQueueInd);
+        CommandQueueMask &= ~(Uint64{1} << CmdQueueInd);
 
-        auto* CmdQueue    = ValidatedCast<const CommandQueueVkImpl>(&GetCommandQueue(CommandQueueIndex{CmdQueueInd}));
-        auto  FamilyIndex = CmdQueue->GetQueueFamilyIndex();
+        auto& CmdQueue    = GetCommandQueue(CommandQueueIndex{CmdQueueInd});
+        auto  FamilyIndex = CmdQueue.GetQueueFamilyIndex();
 
         if (!QueueFamilyBits[FamilyIndex])
         {

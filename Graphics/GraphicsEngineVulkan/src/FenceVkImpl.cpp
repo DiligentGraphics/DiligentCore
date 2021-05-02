@@ -169,19 +169,19 @@ void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 V
     if (!m_SyncPoints.empty())
     {
         DEV_CHECK_ERR(Value > m_SyncPoints.back().Value,
-                      "New value for fence (", Value, ") must be greater than previous value (", m_SyncPoints.back().Value, ")");
+                      "New value for fence (", Value, ") must be greater than the previous value (", m_SyncPoints.back().Value, ")");
 
         DEV_CHECK_ERR(m_SyncPoints.back().SyncPoint->GetCommandQueueId() == CommandQueueId,
                       "Fence enqueued for signal operation in command queue (", CommandQueueId,
                       ") but previous signal operation was in command queue (", m_SyncPoints.back().SyncPoint->GetCommandQueueId(),
-                      ") this may cause the data race or deadlock. Call Wait() before to unsure that all pending signal operation have been completed.");
+                      ") this may cause data race or deadlock. Call Wait() before to ensure that all pending signal operation have been completed.");
     }
 #endif
 
     // Remove already completed sync points
     if (m_SyncPoints.size() > RequiredArraySize)
     {
-        (void)(InternalGetCompletedValue());
+        InternalGetCompletedValue();
     }
 
     VERIFY(m_SyncPoints.size() < RequiredArraySize * 2, "array of sync points is too big, none of the GetCompletedValue(), Wait() or ExtractSignalSemaphore() are used");

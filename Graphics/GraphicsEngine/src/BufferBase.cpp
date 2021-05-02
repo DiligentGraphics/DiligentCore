@@ -80,7 +80,7 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryIn
 
         case USAGE_DYNAMIC:
             VERIFY_BUFFER(Desc.CPUAccessFlags == CPU_ACCESS_WRITE, "dynamic buffers require CPU_ACCESS_WRITE flag.");
-            VERIFY_BUFFER((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) == 0, "dynamic buffers can not be shadred between queues.");
+            VERIFY_BUFFER((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) == 0, "dynamic buffers can not be shared between queues.");
             break;
 
         case USAGE_STAGING:
@@ -117,11 +117,11 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryIn
     if ((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) != 0)
     {
         DEV_CHECK_ERR(PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1,
-                      "RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS specified, but CommandQueueMask contains just 1 queue index");
+                      "RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS is specified, but CommandQueueMask contains only single queue index");
     }
 
-    VERIFY_BUFFER((Desc.CommandQueueMask & (Uint64(1) << Desc.InitialCommandQueueId)) != 0,
-                  "CommandQueueMask (0x", std::hex, Desc.CommandQueueMask, ") must contains bit at index InitialCommandQueueId (", Uint32{Desc.InitialCommandQueueId}, ")");
+    VERIFY_BUFFER((Desc.CommandQueueMask & (Uint64{1} << Uint64{Desc.InitialCommandQueueId})) != 0,
+                  "CommandQueueMask (0x", std::hex, Desc.CommandQueueMask, ") does not contain a bit at index InitialCommandQueueId (", Uint32{Desc.InitialCommandQueueId}, ")");
 }
 
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false)

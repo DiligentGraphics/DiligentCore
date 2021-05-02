@@ -1719,7 +1719,7 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
 
 void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
 {
-    DEV_CHECK_ERR(IsDeferred(), "Only deferred context can record command list");
+    DEV_CHECK_ERR(IsDeferred(), "Only deferred contexts can record command list");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
     CComPtr<ID3D11CommandList> pd3d11CmdList;

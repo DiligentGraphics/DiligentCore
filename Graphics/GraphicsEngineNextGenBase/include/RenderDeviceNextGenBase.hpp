@@ -62,7 +62,7 @@ public:
         TBase{pRefCounters, RawMemAllocator, pEngineFactory, EngineCI, AdapterInfo},
         m_CmdQueueCount{CmdQueueCount}
     {
-        VERIFY(m_CmdQueueCount < MAX_COMMAND_QUEUES, "Number of command queue is greater than maximum allowed value (", MAX_COMMAND_QUEUES, ")");
+        VERIFY(m_CmdQueueCount < MAX_COMMAND_QUEUES, "The number of command queue is greater than maximum allowed value (", MAX_COMMAND_QUEUES, ")");
 
         m_CommandQueues = ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", CommandQueue, m_CmdQueueCount);
         for (size_t q = 0; q < m_CmdQueueCount; ++q)

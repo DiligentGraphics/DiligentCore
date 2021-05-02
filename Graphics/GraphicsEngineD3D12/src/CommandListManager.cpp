@@ -41,15 +41,6 @@ CommandListManager::CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl, D
 {
 }
 
-CommandListManager::CommandListManager(CommandListManager&& Other) :
-    // clang-format off
-    m_DeviceD3D12Impl{Other.m_DeviceD3D12Impl},
-    m_FreeAllocators {std::move(Other.m_FreeAllocators)},
-    m_CmdListType    {Other.m_CmdListType}
-// clang-format on
-{
-}
-
 CommandListManager::~CommandListManager()
 {
     DEV_CHECK_ERR(m_AllocatorCounter == 0, m_AllocatorCounter, " allocator(s) have not been returned to the manager. This will cause a crash if these allocators are referenced by release queues and later returned via FreeAllocator()");

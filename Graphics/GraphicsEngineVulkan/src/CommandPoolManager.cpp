@@ -33,27 +33,13 @@
 namespace Diligent
 {
 
-CommandPoolManager::CommandPoolManager(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                       std::string                                 Name,
-                                       HardwareQueueId                             queueFamilyIndex,
-                                       VkCommandPoolCreateFlags                    flags) noexcept :
+CommandPoolManager::CommandPoolManager(const CreateInfo& CI) noexcept :
     // clang-format off
-    m_LogicalDevice   {LogicalDevice    },
-    m_Name            {std::move(Name)  },
-    m_QueueFamilyIndex{queueFamilyIndex },
-    m_CmdPoolFlags    {flags            },
+    m_LogicalDevice   {CI.LogicalDevice    },
+    m_Name            {std::move(CI.Name)  },
+    m_QueueFamilyIndex{CI.queueFamilyIndex },
+    m_CmdPoolFlags    {CI.flags            },
     m_CmdPools        (STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>"))
-// clang-format on
-{
-}
-
-CommandPoolManager::CommandPoolManager(CommandPoolManager&& Other) :
-    // clang-format off
-    m_LogicalDevice   {Other.m_LogicalDevice      },
-    m_Name            {std::move(Other.m_Name)    },
-    m_QueueFamilyIndex{Other.m_QueueFamilyIndex   },
-    m_CmdPoolFlags    {Other.m_CmdPoolFlags       },
-    m_CmdPools        {std::move(Other.m_CmdPools)}
 // clang-format on
 {
 }

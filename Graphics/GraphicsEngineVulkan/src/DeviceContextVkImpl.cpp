@@ -174,14 +174,14 @@ void DeviceContextVkImpl::InitializeForQueue(CommandQueueIndex CommandQueueId)
 
     const auto  QueueFamilyIndex = HardwareQueueId{m_pDevice->GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
     const auto& PhysicalDevice   = m_pDevice->GetPhysicalDevice();
-    const auto& QueuProps        = PhysicalDevice.GetQueueProperties();
+    const auto& QueueProps       = PhysicalDevice.GetQueueProperties();
 
-    DEV_CHECK_ERR(QueueFamilyIndex < QueuProps.size(), "QueueFamilyIndex is out of range");
+    DEV_CHECK_ERR(QueueFamilyIndex < QueueProps.size(), "QueueFamilyIndex is out of range");
 
     if (m_CmdPool)
         m_pDevice->SafeReleaseDeviceObject(std::move(m_CmdPool), ~Uint64{0});
 
-    // Command pools must be thread safe because command buffers are returned into pools by release queues
+    // Command pools must be thread-safe because command buffers are returned into pools by release queues
     // potentially running in another thread
     m_CmdPool.reset(new VulkanUtilities::VulkanCommandBufferPool{
         m_pDevice->GetLogicalDevice().GetSharedPtr(),
@@ -189,7 +189,7 @@ void DeviceContextVkImpl::InitializeForQueue(CommandQueueIndex CommandQueueId)
         VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT});
 
     // Set queue properties
-    const auto& QueueInfo = QueuProps[QueueFamilyIndex];
+    const auto& QueueInfo = QueueProps[QueueFamilyIndex];
 
     m_Desc.QueueId                   = static_cast<Uint8>(QueueFamilyIndex);
     m_Desc.CommandQueueId            = static_cast<Uint8>(CommandQueueId);
@@ -1241,7 +1241,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
     {
         auto* pCmdListVk = ValidatedCast<CommandListVkImpl>(ppCommandLists[i]);
         DEV_CHECK_ERR(pCmdListVk != nullptr, "Command list must not be null");
-        DEV_CHECK_ERR(pCmdListVk->GetQueueId() == GetDesc().QueueId, "Command list recorded for QueueId(", pCmdListVk->GetQueueId(), "), but executed on QueueId(", GetDesc().QueueId, ")");
+        DEV_CHECK_ERR(pCmdListVk->GetQueueId() == GetDesc().QueueId, "Command list recorded for QueueId ", pCmdListVk->GetQueueId(), ", but executed on QueueId ", GetDesc().QueueId, ".");
         DeferredCtxs.emplace_back();
         vkCmdBuffs.emplace_back();
         pCmdListVk->Close(DeferredCtxs.back(), vkCmdBuffs.back());

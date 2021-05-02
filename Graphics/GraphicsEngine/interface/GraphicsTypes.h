@@ -203,7 +203,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_FLAGS, Uint8)
     RESOURCE_FLAG_UNKNOWN = 0,
 
     /// Allows a resource to be simultaneously read from multiple contexts.
-    RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS = 0x01,
+    RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS = 0x01
 };
 DEFINE_FLAG_ENUM_OPERATORS(RESOURCE_FLAGS)
 
@@ -2142,13 +2142,13 @@ typedef struct DeviceMemoryInfo DeviceMemoryInfo;
 /// Device queue properties
 struct DeviceQueueInfo
 {
-    /// Indicates which type of commands supported by the queue.
+    /// Indicates which type of commands are supported by the queue.
     CONTEXT_TYPE QueueType       DEFAULT_INITIALIZER(CONTEXT_TYPE_UNKNOWN);
 
-    /// Number of queues which may be created with combination of QueueType and QueueId.
+    /// The number of queues that may be created using the combination of QueueType and QueueId.
     Uint32       MaxDeviceContexts   DEFAULT_INITIALIZER(0);
-    
-    /// In Vulkan backend transfer queue may require to align texture offset and size in copy operations.
+
+    /// In Vulkan backend, transfer queue may require to align texture offset and size in copy operations.
     /// Graphics and compute queues already specify alignment {1,1,1}.
     Uint32       TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
 };
@@ -2178,16 +2178,16 @@ struct GraphicsAdapterInfo
 
     /// Hardware features and properties. See Diligent::DeviceMemoryInfo.
     DeviceMemoryInfo Memory;
-    
+
     /// See Diligent::DeviceCaps.
     DeviceCaps       Capabilities;
 
     /// See Diligent::DeviceProperties.
     DeviceProperties Properties;
-    
+
     /// Device limits. See Diligent::DeviceLimits.
     DeviceLimits     Limits;
-    
+
     /// Queue types which are supported by this device. See Diligent::DeviceQueueInfo.
     DeviceQueueInfo  Queues[DILIGENT_MAX_ADAPTER_QUEUES]  DEFAULT_INITIALIZER({});
 
@@ -2217,7 +2217,7 @@ struct EngineCreateInfo
 {
     /// Engine API version number.
     Int32                    EngineAPIVersion       DEFAULT_INITIALIZER(DILIGENT_API_VERSION);
-    
+
     /// Id of the hardware adapter the engine should be initialized on.
     /// Call IEngineFactory::EnumerateAdapters() to get all available adapters.
     Uint32                   AdapterId              DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
@@ -2225,17 +2225,18 @@ struct EngineCreateInfo
     /// Minimum required graphics API version (feature level for Direct3D).
     Version                  GraphicsAPIVersion     DEFAULT_INITIALIZER({});
 
-    /// Immediate device contexts.
-    /// If not specified then a single graphics context will be created.
-    /// The recomended configuration:
-    ///   Modern discrete GPU:      1 graphics, 1 compute, 1 transfer contexts.
-    ///   Integrated or mobile GPU: 1..2 graphics contexts.
+    /// A pointer to the array of immediate device contexts.
+    /// If not specified, then a single graphics context will be created.
+    ///
+    /// Recomended configuration:
+    ///   * Modern discrete GPU:      1 graphics, 1 compute, 1 transfer contexts.
+    ///   * Integrated or mobile GPU: 1..2 graphics contexts.
     const ContextCreateInfo* pContextInfo           DEFAULT_INITIALIZER(nullptr);
 
-    /// Number of immediate contexts.
+    /// The number of immediate contexts in pContextInfo array.
     Uint32                   NumContexts            DEFAULT_INITIALIZER(0);
 
-    /// Number of deferred contexts to create when initializing the engine. If non-zero number 
+    /// The number of deferred contexts to create when initializing the engine. If non-zero number 
     /// is given, pointers to the contexts are written to ppContexts array by the engine factory 
     /// functions (IEngineFactoryD3D11::CreateDeviceAndContextsD3D11,
     /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12, and IEngineFactoryVk::CreateDeviceAndContextsVk)
@@ -2570,13 +2571,13 @@ typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
 
 /// Attributes specific to Vulkan engine
 struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
-        
-    /// Number of Vulkan instance extensions
+
+    /// The number of Vulkan instance extensions in ppInstanceExtensionNames array.
     Uint32             InstanceExtensionCount   DEFAULT_INITIALIZER(0);
 
-    /// List of Vulkan instance extensions to enable.
+    /// A list of InstanceExtensionCount Vulkan instance extensions to enable.
     const char* const* ppInstanceExtensionNames DEFAULT_INITIALIZER(nullptr);
-    
+
     /// Number of Vulkan device extensions
     Uint32             DeviceExtensionCount     DEFAULT_INITIALIZER(0);
 
@@ -2587,7 +2588,7 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Will be added to VkDeviceCreateInfo::pNext.
     void*              pDeviceExtensionFeatures DEFAULT_INITIALIZER(nullptr);
 
-    /// Allocator used as pAllocator parameter in callse to Vulkan Create* functions
+    /// Allocator used as pAllocator parameter in calls to Vulkan Create* functions
     void*              pVkAllocator             DEFAULT_INITIALIZER(nullptr);
 
     /// Size of the main descriptor pool that is used to allocate descriptor sets

@@ -30,6 +30,7 @@
 
 namespace VulkanUtilities
 {
+
 namespace
 {
 
@@ -66,7 +67,7 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
 
             // Read access to a uniform buffer
             case VK_ACCESS_UNIFORM_READ_BIT:
-                Stages |= AllShaderStagesVk;
+                Stages |= VK_PIPELINE_STAGE_ALL_SHADERS;
                 break;
 
             // Read access to an input attachment within a render pass during fragment shading
@@ -76,12 +77,12 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags AccessFla
 
             // Read access to a storage buffer, uniform texel buffer, storage texel buffer, sampled image, or storage image
             case VK_ACCESS_SHADER_READ_BIT:
-                Stages |= AllShaderStagesVk;
+                Stages |= VK_PIPELINE_STAGE_ALL_SHADERS;
                 break;
 
             // Write access to a storage buffer, storage texel buffer, or storage image
             case VK_ACCESS_SHADER_WRITE_BIT:
-                Stages |= AllShaderStagesVk;
+                Stages |= VK_PIPELINE_STAGE_ALL_SHADERS;
                 break;
 
             // Read access to a color attachment, such as via blending, logic operations, or via certain subpass load operations
@@ -249,6 +250,7 @@ static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
 
     return AccessMask;
 }
+
 } // namespace
 
 

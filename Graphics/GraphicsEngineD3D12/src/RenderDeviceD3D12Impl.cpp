@@ -77,9 +77,12 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         AdapterInfo
     },
     m_pd3d12Device   {pd3d12Device},
-    m_CmdListManagers{ CommandListManager{*this, D3D12_COMMAND_LIST_TYPE_DIRECT},
-                       CommandListManager{*this, D3D12_COMMAND_LIST_TYPE_COMPUTE},
-                       CommandListManager{*this, D3D12_COMMAND_LIST_TYPE_COPY} },
+    m_CmdListManagers
+    {
+        {*this, D3D12_COMMAND_LIST_TYPE_DIRECT},
+        {*this, D3D12_COMMAND_LIST_TYPE_COMPUTE},
+        {*this, D3D12_COMMAND_LIST_TYPE_COPY}
+    },
     m_CPUDescriptorHeaps
     {
         {RawMemAllocator, *this, EngineCI.CPUDescriptorHeapAllocationSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE},

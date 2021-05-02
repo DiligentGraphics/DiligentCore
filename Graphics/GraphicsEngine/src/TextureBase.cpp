@@ -152,7 +152,7 @@ void ValidateTextureDesc(const TextureDesc& Desc) noexcept(false)
     if ((Desc.ResourceFlags & RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS) != 0)
     {
         DEV_CHECK_ERR(PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1,
-                      "RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS specified, but CommandQueueMask contains just 1 queue index");
+                      "RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS is specified, but CommandQueueMask contains only 1 queue index");
     }
 
     if ((Desc.CommandQueueMask & (Uint64(1) << Desc.InitialCommandQueueId)) == 0)

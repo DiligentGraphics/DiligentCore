@@ -25,9 +25,11 @@
  *  of the possibility of such damages.
  */
 
-#include <array>
-#include "PrivateConstants.h"
 #include "EngineFactoryBase.hpp"
+
+#include <array>
+
+#include "PrivateConstants.h"
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 #include "Buffer.h"
@@ -48,7 +50,7 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
 
     if (EngineCI.NumContexts >= MaxImmediateContexts)
     {
-        LOG_ERROR_AND_THROW("NumContexts must be less than (", MaxImmediateContexts, ")");
+        LOG_ERROR_AND_THROW("NumContexts (", EngineCI.NumContexts, ") must be less than ", MaxImmediateContexts, "");
     }
 
     std::array<Uint32, DILIGENT_MAX_ADAPTER_QUEUES> QueueCount = {};
@@ -58,14 +60,14 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
 
         if (ContextInfo.QueueId >= AdapterInfo.NumQueues)
         {
-            LOG_ERROR_AND_THROW("pContextInfo[", CtxInd, "].QueueId with value (", ContextInfo.QueueId, ") must be less than (",
-                                AdapterInfo.NumQueues, ").");
+            LOG_ERROR_AND_THROW("pContextInfo[", CtxInd, "].QueueId (", ContextInfo.QueueId, ") must be less than ",
+                                AdapterInfo.NumQueues, ".");
         }
         QueueCount[ContextInfo.QueueId] += 1;
         if (QueueCount[ContextInfo.QueueId] > AdapterInfo.Queues[ContextInfo.QueueId].MaxDeviceContexts)
         {
-            LOG_ERROR_AND_THROW("pContextInfo[", CtxInd, "]: number of contexts with QueueId(", ContextInfo.QueueId,
-                                ") exceeds the maximum available number (", AdapterInfo.Queues[ContextInfo.QueueId].MaxDeviceContexts, ")");
+            LOG_ERROR_AND_THROW("pContextInfo[", CtxInd, "]: the number of contexts with QueueId ", ContextInfo.QueueId,
+                                " exceeds the maximum available number ", AdapterInfo.Queues[ContextInfo.QueueId].MaxDeviceContexts, ".");
         }
 
         switch (ContextInfo.Priority)
@@ -89,7 +91,7 @@ void EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures, DeviceFeature
         {
             case DEVICE_FEATURE_STATE_DISABLED:
                 return CurrentState == DEVICE_FEATURE_STATE_ENABLED ?
-                    DEVICE_FEATURE_STATE_ENABLED : // feature supported by default and can not be disabled
+                    DEVICE_FEATURE_STATE_ENABLED : // the feature is supported by default and can not be disabled
                     DEVICE_FEATURE_STATE_DISABLED;
 
             case DEVICE_FEATURE_STATE_ENABLED:

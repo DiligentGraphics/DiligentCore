@@ -88,14 +88,14 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAGS for details.
     CPU_ACCESS_FLAGS CPUAccessFlags     DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
-    
+
     /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
     MISC_TEXTURE_FLAGS MiscFlags        DEFAULT_INITIALIZER(MISC_TEXTURE_FLAG_NONE);
-    
+
     /// Texture creation flags, see Diligent::RESOURCE_FLAGS for details
     RESOURCE_FLAGS ResourceFlags        DEFAULT_INITIALIZER(RESOURCE_FLAG_UNKNOWN);
 
-    /// Defines which command queue will own texture at start
+    /// Defines which command queue will initially own the texture
     Uint8        InitialCommandQueueId  DEFAULT_INITIALIZER(0);
 
     /// Optimized clear value

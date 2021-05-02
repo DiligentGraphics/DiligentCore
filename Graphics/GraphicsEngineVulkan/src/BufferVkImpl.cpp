@@ -178,9 +178,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             m_DynamicData.emplace_back();
     }
 
-    VkBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE; // sharing mode of the buffer when it will be accessed by multiple queue families.
-    VkBuffCI.queueFamilyIndexCount = 0;                         // number of entries in the pQueueFamilyIndices array
-    VkBuffCI.pQueueFamilyIndices   = nullptr;                   // list of queue families that will access this buffer
+    VkBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE; // Sharing mode of the buffer when it is accessed by multiple queue families.
+    VkBuffCI.queueFamilyIndexCount = 0;                         // The number of entries in the pQueueFamilyIndices array.
+    VkBuffCI.pQueueFamilyIndices   = nullptr;                   // The list of queue families that will access this buffer
                                                                 // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
 
     std::array<uint32_t, MAX_COMMAND_QUEUES> QueueFamilyIndices = {};

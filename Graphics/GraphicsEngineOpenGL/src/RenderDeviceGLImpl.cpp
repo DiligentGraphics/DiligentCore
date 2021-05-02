@@ -670,12 +670,12 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo) con
             ENABLE_FEATURE(GeometryShaders,               IsGL40OrAbove || CheckExtension("GL_ARB_geometry_shader4"));
             ENABLE_FEATURE(Tessellation,                  IsGL40OrAbove || CheckExtension("GL_ARB_tessellation_shader"));
             ENABLE_FEATURE(BindlessResources,             false);
-            ENABLE_FEATURE(OcclusionQueries,              true);          // Present since 3.3
+            ENABLE_FEATURE(OcclusionQueries,              true);    // Present since 3.3
             ENABLE_FEATURE(BinaryOcclusionQueries,        true);    // Present since 3.3
-            ENABLE_FEATURE(TimestampQueries,              true);          // Present since 3.3
-            ENABLE_FEATURE(PipelineStatisticsQueries,     true); // Present since 3.3
-            ENABLE_FEATURE(DurationQueries,               true);           // Present since 3.3
-            ENABLE_FEATURE(DepthBiasClamp,                false);           // There is no depth bias clamp in OpenGL
+            ENABLE_FEATURE(TimestampQueries,              true);    // Present since 3.3
+            ENABLE_FEATURE(PipelineStatisticsQueries,     true);    // Present since 3.3
+            ENABLE_FEATURE(DurationQueries,               true);    // Present since 3.3
+            ENABLE_FEATURE(DepthBiasClamp,                false);   // There is no depth bias clamp in OpenGL
             ENABLE_FEATURE(DepthClamp,                    IsGL40OrAbove || CheckExtension("GL_ARB_depth_clamp"));
             ENABLE_FEATURE(IndependentBlend,              true);
             ENABLE_FEATURE(DualSourceBlend,               IsGL41OrAbove || CheckExtension("GL_ARB_blend_func_extended"));

@@ -423,7 +423,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 
         if (EngineCI.NumContexts > 0)
         {
-            VERIFY(EngineCI.pContextInfo != nullptr, "Must be verified in VerifyEngineCreateInfo()");
+            VERIFY(EngineCI.pContextInfo != nullptr, "Must have been caught by VerifyEngineCreateInfo()");
             for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumContexts; ++CtxInd)
                 CreateQueue(EngineCI.pContextInfo[CtxInd]);
         }
@@ -520,8 +520,8 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
 
             if (Desc.Type != CtxType)
             {
-                LOG_ERROR_MESSAGE("ppCommandQueues[", q, "] has type (", GetContextTypeString(D3D12CommandListTypeToContextType(Desc.Type)),
-                                  ") but EngineCI.pContextInfo[", q, "] hast incompatible type (", GetContextTypeString(D3D12CommandListTypeToContextType(CtxType)), ").");
+                LOG_ERROR_MESSAGE("ppCommandQueues[", q, "] has type ", GetContextTypeString(D3D12CommandListTypeToContextType(Desc.Type)),
+                                  ", but EngineCI.pContextInfo[", q, "] has incompatible type ", GetContextTypeString(D3D12CommandListTypeToContextType(CtxType)), ".");
                 return;
             }
         }

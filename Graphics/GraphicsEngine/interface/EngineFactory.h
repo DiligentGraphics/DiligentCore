@@ -69,7 +69,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
                         THIS_
                         const Char*                              SearchDirectories,
                         struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) CONST PURE;
-    
+
     /// Enumerates adapters available on this machine.
 
     /// \param [in]     MinVersion  - Minimum required API version (feature level for Direct3D).

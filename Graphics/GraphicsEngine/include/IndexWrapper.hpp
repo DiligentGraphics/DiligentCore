@@ -52,6 +52,19 @@ public:
         return m_Value;
     }
 
+    bool operator==(const TIndexWrapper& Other) const
+    {
+        return m_Value == Other.m_Value;
+    }
+
+    struct Hasher
+    {
+        size_t operator()(const TIndexWrapper& Idx) const
+        {
+            return size_t{Idx.m_Value};
+        }
+    };
+
 private:
     IndexType m_Value = 0;
 };

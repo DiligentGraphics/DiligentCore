@@ -395,7 +395,7 @@ public:
         m_wpDeferredContexts[Ctx] = pDeferredCtx;
     }
 
-    /// Returns number of immediate contexts
+    /// Returns the number of immediate contexts
     size_t GetNumImmediateContexts() const
     {
         return m_wpImmediateContexts.size();
@@ -635,8 +635,8 @@ protected:
     std::vector<TextureFormatInfoExt, STDAllocatorRawMem<TextureFormatInfoExt>> m_TextureFormatsInfo;
     std::vector<bool, STDAllocatorRawMem<bool>>                                 m_TexFmtInfoInitFlags;
 
-    /// Weak reference to the immediate contexts. Immediate contexts holds strong reference
-    /// to the device, so we must use weak reference to avoid circular dependencies.
+    /// Weak reference to the immediate contexts. Immediate contexts hold strong reference
+    /// to the device, so we must use weak references to avoid circular dependencies.
     std::vector<RefCntWeakPtr<IDeviceContext>, STDAllocatorRawMem<RefCntWeakPtr<IDeviceContext>>> m_wpImmediateContexts;
 
     /// Weak references to deferred contexts.

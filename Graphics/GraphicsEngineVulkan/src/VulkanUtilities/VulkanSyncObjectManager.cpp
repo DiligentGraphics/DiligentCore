@@ -58,28 +58,25 @@ VulkanSyncObjectManager::~VulkanSyncObjectManager()
 
 void VulkanSyncObjectManager::CreateSemaphores(VulkanRecycledSemaphore* pSemaphores, uint32_t Count)
 {
-    uint32_t i = 0;
+    uint32_t SemIdx = 0;
     {
         std::lock_guard<std::mutex> Lock{m_SemaphorePoolGuard};
-
-        const uint32_t NumSemInPool = std::min(static_cast<uint32_t>(m_SemaphorePool.size()), Count);
-
-        for (size_t p = m_SemaphorePool.size() - NumSemInPool; p < m_SemaphorePool.size(); ++i, ++p)
+        for (; SemIdx < Count && !m_SemaphorePool.empty(); ++SemIdx)
         {
-            pSemaphores[i] = VulkanRecycledSemaphore{shared_from_this(), m_SemaphorePool[p]};
+            pSemaphores[SemIdx] = VulkanRecycledSemaphore{shared_from_this(), m_SemaphorePool.back()};
+            m_SemaphorePool.pop_back();
         }
-        m_SemaphorePool.erase(m_SemaphorePool.end() - NumSemInPool, m_SemaphorePool.end());
     }
 
     // Create new semaphores.
-    VkSemaphoreCreateInfo SemCI = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    VkSemaphoreCreateInfo SemCI{};
+    SemCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    for (; i < Count; ++i)
+    for (; SemIdx < Count; ++SemIdx)
     {
         VkSemaphore vkSem = VK_NULL_HANDLE;
         vkCreateSemaphore(m_LogicalDevice.GetVkDevice(), &SemCI, nullptr, &vkSem);
-
-        pSemaphores[i] = VulkanRecycledSemaphore{shared_from_this(), vkSem};
+        pSemaphores[SemIdx] = VulkanRecycledSemaphore{shared_from_this(), vkSem};
     }
 }
 
@@ -92,16 +89,17 @@ VulkanRecycledFence VulkanSyncObjectManager::CreateFence()
         {
             auto vkFence = m_FencePool.back();
             m_FencePool.pop_back();
-            return VulkanRecycledFence{shared_from_this(), vkFence};
+            return {shared_from_this(), vkFence};
         }
     }
 
-    VkFenceCreateInfo FenceCI = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-    VkFence           vkFence = VK_NULL_HANDLE;
+    VkFenceCreateInfo FenceCI{};
+    FenceCI.sType   = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence vkFence = VK_NULL_HANDLE;
 
     vkCreateFence(m_LogicalDevice.GetVkDevice(), &FenceCI, nullptr, &vkFence);
 
-    return VulkanRecycledFence{shared_from_this(), vkFence};
+    return {shared_from_this(), vkFence};
 }
 
 void VulkanSyncObjectManager::Recycle(VkSemaphore vkSem, bool IsUnsignaled)

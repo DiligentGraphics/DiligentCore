@@ -14,6 +14,7 @@ set(INCLUDE
     include/EngineMemory.h
     include/FenceBase.hpp
     include/FramebufferBase.hpp
+    include/IndexWrapper.hpp
     include/PipelineStateBase.hpp
     include/PrivateConstants.h
     include/QueryBase.hpp
