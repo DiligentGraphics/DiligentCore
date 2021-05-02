@@ -28,6 +28,7 @@
 #include "TestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
+#include "Align.hpp"
 
 #include "gtest/gtest.h"
 
@@ -676,9 +677,8 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
         ASSERT_NE(pTransferFence, nullptr);
     }
 
-    //const uint3 Granularity = {pTransferCtx->GetDesc().TextureCopyGranularity[0],
-    //                           pTransferCtx->GetDesc().TextureCopyGranularity[1],
-    //                           pTransferCtx->GetDesc().TextureCopyGranularity[2]};
+    const uint2 Granularity = {pTransferCtx->GetDesc().TextureCopyGranularity[0],
+                               pTransferCtx->GetDesc().TextureCopyGranularity[1]};
 
     auto pTextureRT     = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, QueueMask, "TextureRT", pGraphicsCtx);
     auto pUploadTexture = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, QueueMask, "Upload Texture", pTransferCtx);
@@ -720,15 +720,33 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
     // transfer queue
     {
+        const uint2  TexDim    = {pUploadTexture->GetDesc().Width, pUploadTexture->GetDesc().Height};
+        const uint2  BlockSize = {AlignUp(TexDim.x / 8, Granularity.x), AlignUp(TexDim.y / 4, Granularity.y)};
+        const size_t DataSize  = BlockSize.x * BlockSize.y * 4;
+
+        VERIFY_EXPR(TexDim.x % BlockSize.x == 0);
+        VERIFY_EXPR(TexDim.y % BlockSize.y == 0);
+
         // undefined -> copy_dst
-        const StateTransitionDesc Barriers1[] = {{pUploadTexture, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_COPY_DEST}};
-        pTransferCtx->TransitionResourceStates(_countof(Barriers1), Barriers1);
+        const StateTransitionDesc Barriers[] = {{pUploadTexture, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_COPY_DEST}};
+        pTransferCtx->TransitionResourceStates(_countof(Barriers), Barriers);
 
         TextureSubResData SubRes;
-        SubRes.pData  = Pixels.data();
-        SubRes.Stride = SCDesc.Width * 4;
-        Box Region{0, SCDesc.Width, 0, SCDesc.Height};
-        pTransferCtx->UpdateTexture(pUploadTexture, 0, 0, Region, SubRes, DefaultTransitionMode, DefaultTransitionMode);
+        SubRes.Stride = TexDim.x * 4;
+
+        uint2 Offset;
+        for (Offset.y = 0; Offset.y < TexDim.y; Offset.y += BlockSize.y)
+        {
+            for (Offset.x = 0; Offset.x < TexDim.x; Offset.x += BlockSize.x)
+            {
+                size_t DataOffset = (Offset.x + Offset.y * TexDim.x) * 4;
+                VERIFY_EXPR(DataOffset + DataSize <= Pixels.size());
+
+                SubRes.pData = &Pixels[DataOffset];
+                Box Region{Offset.x, Offset.x + BlockSize.x, Offset.y, Offset.y + BlockSize.y};
+                pTransferCtx->UpdateTexture(pUploadTexture, 0, 0, Region, SubRes, DefaultTransitionMode, DefaultTransitionMode);
+            }
+        }
 
         pTransferCtx->EnqueueSignal(pTransferFence, TransferFenceValue);
         pTransferCtx->Flush();
