@@ -2078,7 +2078,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
     VERIFY(TexDesc.SampleCount == 1, "Only single-sample textures can be updated with vkCmdCopyBufferToImage()");
 
     const auto& DeviceLimits      = m_pDevice->GetPhysicalDevice().GetProperties().limits;
-    const auto  CopyInfo          = GetBufferToTextureCopyInfo(TexDesc, MipLevel, DstBox, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
+    const auto  CopyInfo          = GetBufferToTextureCopyInfo(TexDesc.Format, DstBox, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
     const auto  UpdateRegionDepth = CopyInfo.Region.MaxZ - CopyInfo.Region.MinZ;
 
     // For UpdateTextureRegion(), use UploadHeap, not dynamic heap
@@ -2283,7 +2283,7 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
             LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE has no effect in Vulkan backend");
 
         const auto& DeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
-        const auto  CopyInfo     = GetBufferToTextureCopyInfo(TexDesc, MipLevel, *pMapRegion, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
+        const auto  CopyInfo     = GetBufferToTextureCopyInfo(TexDesc.Format, *pMapRegion, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
         // Source buffer offset must be multiple of 4 (18.4)
         auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
         // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of
