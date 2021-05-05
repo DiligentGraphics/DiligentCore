@@ -2865,14 +2865,14 @@ struct TextureFormatAttribs
     }
 
     /// Initializes the structure
-    TextureFormatAttribs( const Char*    _Name,
-                            TEXTURE_FORMAT _Format, 
-                            Uint8          _ComponentSize,
-                            Uint8          _NumComponents,
-                            COMPONENT_TYPE _ComponentType,
-                            bool           _IsTypeless,
-                            Uint8          _BlockWidth,
-                            Uint8          _BlockHeight)noexcept : 
+    TextureFormatAttribs(const Char*    _Name,
+                         TEXTURE_FORMAT _Format, 
+                         Uint8          _ComponentSize,
+                         Uint8          _NumComponents,
+                         COMPONENT_TYPE _ComponentType,
+                         bool           _IsTypeless,
+                         Uint8          _BlockWidth,
+                         Uint8          _BlockHeight) noexcept : 
         Name         {_Name         },
         Format       {_Format       },
         ComponentSize{_ComponentSize},

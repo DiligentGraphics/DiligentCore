@@ -603,10 +603,9 @@ struct BufferToTextureCopyInfo
     /// Texture region
     Box Region;
 };
-BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
-                                                   Uint32             MipLevel,
-                                                   const Box&         Region,
-                                                   Uint32             RowStrideAlignment);
+BufferToTextureCopyInfo GetBufferToTextureCopyInfo(TEXTURE_FORMAT Format,
+                                                   const Box&     Region,
+                                                   Uint32         RowStrideAlignment);
 
 
 /// Copies texture subresource data on the CPU.

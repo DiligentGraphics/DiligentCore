@@ -1642,14 +1642,13 @@ Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
     return Offset;
 }
 
-BufferToTextureCopyInfo GetBufferToTextureCopyInfo(const TextureDesc& TexDesc,
-                                                   Uint32             MipLevel,
-                                                   const Box&         Region,
-                                                   Uint32             RowStrideAlignment)
+BufferToTextureCopyInfo GetBufferToTextureCopyInfo(TEXTURE_FORMAT Format,
+                                                   const Box&     Region,
+                                                   Uint32         RowStrideAlignment)
 {
     BufferToTextureCopyInfo CopyInfo;
 
-    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+    const auto& FmtAttribs = GetTextureFormatAttribs(Format);
     VERIFY_EXPR(Region.MaxX > Region.MinX && Region.MaxY > Region.MinY && Region.MaxZ > Region.MinZ);
     const auto UpdateRegionWidth  = Region.MaxX - Region.MinX;
     const auto UpdateRegionHeight = Region.MaxY - Region.MinY;
