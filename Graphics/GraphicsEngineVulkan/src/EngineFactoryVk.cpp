@@ -70,10 +70,25 @@ public:
                                                               IRenderDevice**           ppDevice,
                                                               IDeviceContext**          ppContexts) override final;
 
+    /// Attaches to existing Vulkan device
+
+    /// \param [in]  Instance          - shared pointer to a VulkanUtilities::VulkanInstance object.
+    /// \param [in]  PhysicalDevice    - pointer to the object representing physical device.
+    /// \param [in]  LogicalDevice     - shared pointer to a VulkanUtilities::VulkanLogicalDevice object.
+    /// \param [in]  CommandQueueCount - the number of command queues.
+    /// \param [in]  ppCommandQueues   - pointer to the implementation of command queues.
+    /// \param [in]  EngineCI          - Engine creation attributes.
+    /// \param [in]  AdapterInfo       - Graphics adapter information.
+    /// \param [out] ppDevice          - Address of the memory location where pointer to
+    ///                                  the created device will be written.
+    /// \param [out] ppContexts        - Address of the memory location where pointers to
+    ///                                  the contexts will be written. Immediate context goes at
+    ///                                  position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                                  pointers to the deferred contexts are written afterwards.
     void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                               std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
                               std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                              size_t                                                 CommandQueueCount,
+                              Uint32                                                 CommandQueueCount,
                               ICommandQueueVk**                                      ppCommandQueues,
                               const EngineVkCreateInfo&                              EngineCI,
                               const GraphicsAdapterInfo&                             AdapterInfo,
@@ -250,7 +265,7 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
         SamCaps.LODBiasSupported              = True;
     }
 
-    // Set properties
+    // Set limits and properties
     {
         const auto& Features       = AdapterInfo.Capabilities.Features;
         const auto& vkDeviceLimits = PhysicalDevice.GetProperties().limits;
@@ -262,10 +277,33 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
         }
         if (Features.WaveOp)
         {
-            const auto& vkWaveProps           = PhysicalDevice.GetExtProperties().Subgroup;
+            const auto& vkWaveProps       = PhysicalDevice.GetExtProperties().Subgroup;
+            const auto& DeviceFeatures    = PhysicalDevice.GetFeatures();
+            const auto& DeviceExtFeatures = PhysicalDevice.GetExtFeatures();
+            const auto  WaveOpStages      = vkWaveProps.supportedStages;
+
+            VkShaderStageFlags SupportedStages = WaveOpStages & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT);
+            if (DeviceFeatures.geometryShader != VK_FALSE)
+                SupportedStages |= WaveOpStages & VK_SHADER_STAGE_GEOMETRY_BIT;
+            if (DeviceFeatures.tessellationShader != VK_FALSE)
+                SupportedStages |= WaveOpStages & (VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+            if (DeviceExtFeatures.MeshShader.meshShader != VK_FALSE && DeviceExtFeatures.MeshShader.taskShader != VK_FALSE)
+                SupportedStages |= WaveOpStages & (VK_SHADER_STAGE_TASK_BIT_NV | VK_SHADER_STAGE_MESH_BIT_NV);
+            if (DeviceExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE)
+            {
+                constexpr auto VK_SHADER_STAGE_ALL_RAY_TRACING =
+                    VK_SHADER_STAGE_RAYGEN_BIT_KHR |
+                    VK_SHADER_STAGE_ANY_HIT_BIT_KHR |
+                    VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                    VK_SHADER_STAGE_MISS_BIT_KHR |
+                    VK_SHADER_STAGE_INTERSECTION_BIT_KHR |
+                    VK_SHADER_STAGE_CALLABLE_BIT_KHR;
+                SupportedStages |= WaveOpStages & VK_SHADER_STAGE_ALL_RAY_TRACING;
+            }
+
             Properties.WaveOp.MinSize         = vkWaveProps.subgroupSize;
             Properties.WaveOp.MaxSize         = vkWaveProps.subgroupSize;
-            Properties.WaveOp.SupportedStages = VkShaderStageFlagsToShaderTypes(vkWaveProps.supportedStages);
+            Properties.WaveOp.SupportedStages = VkShaderStageFlagsToShaderTypes(SupportedStages);
             Properties.WaveOp.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
         }
         {
@@ -897,7 +935,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             }
         };
 
-        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, AdapterInfo, ppDevice, ppContexts);
+        AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, static_cast<Uint32>(CommandQueues.size()), CommandQueues.data(), EngineCI, AdapterInfo, ppDevice, ppContexts);
 
         m_RenderDeviceCreated = true;
     }
@@ -907,23 +945,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
     }
 }
 
-/// Attaches to existing Vulkan device
-
-/// \param [in]  Instance       - shared pointer to a VulkanUtilities::VulkanInstance object
-/// \param [in]  PhysicalDevice - pointer to the object representing physical device
-/// \param [in]  LogicalDevice  - shared pointer to a VulkanUtilities::VulkanLogicalDevice object
-/// \param [in]  pCommandQueue  - pointer to the implementation of command queue
-/// \param [in]  EngineCI       - Engine creation attributes.
-/// \param [out] ppDevice       - Address of the memory location where pointer to
-///                               the created device will be written
-/// \param [out] ppContexts     - Address of the memory location where pointers to
-///                               the contexts will be written. Immediate context goes at
-///                               position 0. If EngineCI.NumDeferredContexts > 0,
-///                               pointers to the deferred contexts are written afterwards.
 void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                                                std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
                                                std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                                               size_t                                                 CommandQueueCount,
+                                               Uint32                                                 CommandQueueCount,
                                                ICommandQueueVk**                                      ppCommandQueues,
                                                const EngineVkCreateInfo&                              EngineCI,
                                                const GraphicsAdapterInfo&                             AdapterInfo,
@@ -943,10 +968,10 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     if (!LogicalDevice || !ppCommandQueues || !ppDevice || !ppContexts)
         return;
 
-    const Uint32 NumImmediateContexts = std::max(1u, EngineCI.NumContexts);
+    VERIFY_EXPR(std::max(1u, EngineCI.NumContexts) == CommandQueueCount);
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (NumImmediateContexts + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));
 
     try
     {
@@ -960,7 +985,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));
 
-        for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
+        for (Uint32 CtxInd = 0; CtxInd < CommandQueueCount; ++CtxInd)
         {
             RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk{NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineCI, ContextIndex{CtxInd}, CommandQueueIndex{CtxInd}, GenerateMipsHelper)};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
@@ -971,10 +996,10 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk{NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineCI, ContextIndex{NumImmediateContexts + DeferredCtx}, CommandQueueIndex{MAX_COMMAND_QUEUES}, GenerateMipsHelper)};
+            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk{NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineCI, ContextIndex{CommandQueueCount + DeferredCtx}, CommandQueueIndex{MAX_COMMAND_QUEUES}, GenerateMipsHelper)};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
-            pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + NumImmediateContexts + DeferredCtx));
+            pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CommandQueueCount + DeferredCtx));
             pRenderDeviceVk->SetDeferredContext(DeferredCtx, pDeferredCtxVk);
         }
     }
@@ -985,7 +1010,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for (Uint32 ctx = 0; ctx < NumImmediateContexts + EngineCI.NumDeferredContexts; ++ctx)
+        for (Uint32 ctx = 0; ctx < CommandQueueCount + EngineCI.NumDeferredContexts; ++ctx)
         {
             if (ppContexts[ctx] != nullptr)
             {

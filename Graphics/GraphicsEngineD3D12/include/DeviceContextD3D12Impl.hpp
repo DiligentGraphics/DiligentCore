@@ -415,7 +415,7 @@ private:
     TextureUploadSpace AllocateTextureUploadSpace(TEXTURE_FORMAT TexFmt,
                                                   const Box&     Region);
 
-    void InitializeForQueue(CommandQueueIndex QueueInd);
+    void InitializeForQueue(CommandQueueIndex CommandQueueId);
 
 
     friend class SwapChainD3D12Impl;

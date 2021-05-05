@@ -273,7 +273,7 @@ protected:
             sm_DefaultRayTracingPsoCI.GeneralShaderCount = static_cast<Uint32>(sm_GeneralGroups.size());
 
             RefCntAutoPtr<IPipelineState> pRayTracingPSO;
-            pDevice->CreateGraphicsPipelineState(GetMeshPSOCreateInfo("PSOCreationFailureTest - OK ray tracing PSO"), &pRayTracingPSO);
+            pDevice->CreateRayTracingPipelineState(GetRayTracingPSOCreateInfo("PSOCreationFailureTest - OK ray tracing PSO"), &pRayTracingPSO);
             ASSERT_TRUE(pRayTracingPSO);
         }
 

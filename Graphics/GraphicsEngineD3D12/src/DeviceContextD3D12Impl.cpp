@@ -103,7 +103,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
 {
     if (!IsDeferred())
     {
-        InitializeForQueue(CommandQueueId);
+        InitializeForQueue(CommandQueueIndex{CommandQueueId});
     }
     auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
@@ -213,7 +213,7 @@ void DeviceContextD3D12Impl::InitializeForQueue(CommandQueueIndex CommandQueueIn
     m_Desc.TextureCopyGranularity[1] = 1;
     m_Desc.TextureCopyGranularity[2] = 1;
 
-    VERIFY(m_Desc.QueueId == CommandQueueInd, "Not enough bits to store queue index");
+    VERIFY(m_Desc.QueueId == QueueId, "Not enough bits to store queue index");
     VERIFY(m_Desc.CommandQueueId == CommandQueueInd, "Not enough bits to store command queue index");
 
     RequestCommandContext();
