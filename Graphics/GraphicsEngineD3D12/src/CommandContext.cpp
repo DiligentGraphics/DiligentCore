@@ -40,8 +40,15 @@
 #include "CommandListManager.hpp"
 #include "D3D12TypeConversions.hpp"
 
-#ifdef DILIGENT_HAS_PIXEVENTRUNTIME
-#    include "pix3.h"
+#ifdef DILIGENT_USE_PIX
+
+#    if defined(DILIGENT_DEVELOPMENT) && !defined(USE_PIX)
+// PIX instrumentation is only enabled if one of the preprocessor symbols
+// USE_PIX, DBG, _DEBUG, PROFILE, or PROFILE_BUILD is defined.
+#        define USE_PIX
+#    endif
+
+#    include "include/WinPixEventRuntime/pix3.h"
 #endif
 
 namespace Diligent
@@ -389,7 +396,7 @@ void CommandContext::InsertAliasBarrier(D3D12ResourceBase& Before, D3D12Resource
         FlushResourceBarriers();
 }
 
-#ifdef DILIGENT_HAS_PIXEVENTRUNTIME
+#ifdef DILIGENT_USE_PIX
 inline UINT ConvertColor(const float* pColor)
 {
     if (pColor == nullptr)
@@ -414,6 +421,6 @@ void CommandContext::PixSetMarker(const Char* Label, const float* pColor)
 {
     PIXSetMarker(m_pCommandList.p, ConvertColor(pColor), Label);
 }
-#endif // DILIGENT_HAS_PIXEVENTRUNTIME
+#endif // DILIGENT_USE_PIX
 
 } // namespace Diligent

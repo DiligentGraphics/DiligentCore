@@ -2182,19 +2182,31 @@ void DeviceContextD3D11Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIn
 void DeviceContextD3D11Impl::BeginDebugGroup(const Char* Name, const float* pColor)
 {
     TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);
-    // Not supported in Direct3D11
+
+    if (CComQIPtr<ID3DUserDefinedAnnotation> pAnnotation{m_pd3d11DeviceContext})
+    {
+        pAnnotation->BeginEvent(WidenString(Name).c_str());
+    }
 }
 
 void DeviceContextD3D11Impl::EndDebugGroup()
 {
     TDeviceContextBase::EndDebugGroup(0);
-    // Not supported in Direct3D11
+
+    if (CComQIPtr<ID3DUserDefinedAnnotation> pAnnotation{m_pd3d11DeviceContext})
+    {
+        pAnnotation->EndEvent();
+    }
 }
 
 void DeviceContextD3D11Impl::InsertDebugLabel(const Char* Label, const float* pColor)
 {
     TDeviceContextBase::InsertDebugLabel(Label, pColor, 0);
-    // Not supported in Direct3D11
+
+    if (CComQIPtr<ID3DUserDefinedAnnotation> pAnnotation{m_pd3d11DeviceContext})
+    {
+        pAnnotation->SetMarker(WidenString(Label).c_str());
+    }
 }
 
 // clang-format off

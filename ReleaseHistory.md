@@ -1,5 +1,8 @@
 ## Current Progress
 
+* Added multiple immediate device contexts and refactored adapter queries (API Version 240095)
+* Added debug annotations `IDeviceContext::BeginDebugGroup`, `IDeviceContext::EndDebugGroup`,
+ `IDeviceContext::InsertDebugLabel` (API Version 240095)
 * Added `DefaultVariableMergeStages` member to `PipelineResourceLayoutDesc` struct (API240094)
 * Added `IShaderResourceVariable::SetBufferRange` and `IShaderResourceVariable::SetBufferOffset` methods,
   added `DeviceLimits` struct (API240093)

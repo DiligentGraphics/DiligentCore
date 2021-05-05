@@ -49,6 +49,13 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                         "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
             endforeach(DLL)
 
+            if(D3D12_SUPPORTED AND EXISTS ${DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH})
+                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        ${DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH}
+                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+            endif()
+
             if(VULKAN_SUPPORTED)
                 if(NOT DEFINED DILIGENT_DXCOMPILER_FOR_SPIRV_PATH)
                     message(FATAL_ERROR "DILIGENT_DXCOMPILER_FOR_SPIRV_PATH is undefined, check order of cmake includes")
