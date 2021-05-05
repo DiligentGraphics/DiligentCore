@@ -127,7 +127,7 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         VERIFY_EXPR(ExtensionCount == m_Extensions.size());
     }
 
-    std::vector<const char*> GlobalExtensions =
+    std::vector<const char*> InstanceExtensions =
     {
         VK_KHR_SURFACE_EXTENSION_NAME,
 
@@ -158,18 +158,18 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
     // This extension added to core in 1.1, but current version is 1.0
     if (IsExtensionAvailable(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
-        GlobalExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        InstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     }
 
     if (IsExtensionAvailable(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME))
     {
-        GlobalExtensions.push_back(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME);
+        InstanceExtensions.push_back(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME);
     }
 
     if (ppInstanceExtensionNames != nullptr)
     {
         for (uint32_t ext = 0; ext < InstanceExtensionCount; ++ext)
-            GlobalExtensions.push_back(ppInstanceExtensionNames[ext]);
+            InstanceExtensions.push_back(ppInstanceExtensionNames[ext]);
     }
     else
     {
@@ -178,7 +178,7 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
                               ". Please initialize 'ppInstanceExtensionNames' member of EngineVkCreateInfo struct.");
     }
 
-    for (const auto* ExtName : GlobalExtensions)
+    for (const auto* ExtName : InstanceExtensions)
     {
         if (!IsExtensionAvailable(ExtName))
             LOG_ERROR_AND_THROW("Required extension ", ExtName, " is not available");
@@ -189,7 +189,7 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         m_DebugUtilsEnabled = IsExtensionAvailable(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         if (m_DebugUtilsEnabled)
         {
-            GlobalExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            InstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
         else
         {
@@ -214,37 +214,32 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
     ApiVersion = VK_API_VERSION_1_0;
 #endif
 
-    VkApplicationInfo appInfo = {};
+    std::vector<const char*> InstanceLayers;
 
-    appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pNext              = nullptr; // Pointer to an extension-specific structure.
-    appInfo.pApplicationName   = nullptr;
-    appInfo.applicationVersion = 0; // Developer-supplied version number of the application
-    appInfo.pEngineName        = "Diligent Engine";
-    appInfo.engineVersion      = 0; // Developer-supplied version number of the engine used to create the application.
-    appInfo.apiVersion         = ApiVersion;
+    // Set to 1 and define environment variable VK_DEVSIM_FILENAME to enable device simulation layer
+#if 0
+    {
+        static const char* DeviceSimulationLayer = "VK_LAYER_LUNARG_device_simulation";
 
-    VkInstanceCreateInfo InstanceCreateInfo = {};
-
-    InstanceCreateInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    InstanceCreateInfo.pNext                   = nullptr; // Pointer to an extension-specific structure.
-    InstanceCreateInfo.flags                   = 0;       // Reserved for future use.
-    InstanceCreateInfo.pApplicationInfo        = &appInfo;
-    InstanceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(GlobalExtensions.size());
-    InstanceCreateInfo.ppEnabledExtensionNames = GlobalExtensions.empty() ? nullptr : GlobalExtensions.data();
+        uint32_t LayerVer = 0;
+        if (IsLayerAvailable(DeviceSimulationLayer, LayerVer))
+        {
+            InstanceLayers.push_back(DeviceSimulationLayer);
+        }
+    }
+#endif
 
     if (EnableValidation)
     {
-        bool ValidationLayersPresent = true;
         for (size_t l = 0; l < _countof(VulkanUtilities::ValidationLayerNames); ++l)
         {
             auto*    pLayerName = VulkanUtilities::ValidationLayerNames[l];
             uint32_t LayerVer   = ~0u; // Prevent warning if the layer is not found
-            if (!IsLayerAvailable(pLayerName, LayerVer))
-            {
-                ValidationLayersPresent = false;
+            if (IsLayerAvailable(pLayerName, LayerVer))
+                InstanceLayers.push_back(pLayerName);
+            else
                 LOG_WARNING_MESSAGE("Failed to find '", pLayerName, "' layer. Validation will be disabled");
-            }
+
             if (LayerVer < VK_HEADER_VERSION_COMPLETE)
             {
                 LOG_WARNING_MESSAGE("Layer '", pLayerName, "' version (", VK_VERSION_MAJOR(LayerVer), ".", VK_VERSION_MINOR(LayerVer), ".", VK_VERSION_PATCH(LayerVer),
@@ -253,12 +248,27 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
                                     ").");
             }
         }
-        if (ValidationLayersPresent)
-        {
-            InstanceCreateInfo.enabledLayerCount   = static_cast<uint32_t>(_countof(VulkanUtilities::ValidationLayerNames));
-            InstanceCreateInfo.ppEnabledLayerNames = VulkanUtilities::ValidationLayerNames;
-        }
     }
+
+    VkApplicationInfo appInfo{};
+    appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pNext              = nullptr; // Pointer to an extension-specific structure.
+    appInfo.pApplicationName   = nullptr;
+    appInfo.applicationVersion = 0; // Developer-supplied version number of the application
+    appInfo.pEngineName        = "Diligent Engine";
+    appInfo.engineVersion      = 0; // Developer-supplied version number of the engine used to create the application.
+    appInfo.apiVersion         = ApiVersion;
+
+    VkInstanceCreateInfo InstanceCreateInfo{};
+    InstanceCreateInfo.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    InstanceCreateInfo.pNext                   = nullptr; // Pointer to an extension-specific structure.
+    InstanceCreateInfo.flags                   = 0;       // Reserved for future use.
+    InstanceCreateInfo.pApplicationInfo        = &appInfo;
+    InstanceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(InstanceExtensions.size());
+    InstanceCreateInfo.ppEnabledExtensionNames = InstanceExtensions.empty() ? nullptr : InstanceExtensions.data();
+    InstanceCreateInfo.enabledLayerCount       = static_cast<uint32_t>(InstanceLayers.size());
+    InstanceCreateInfo.ppEnabledLayerNames     = InstanceLayers.empty() ? nullptr : InstanceLayers.data();
+
     auto res = vkCreateInstance(&InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create Vulkan instance");
 
@@ -266,7 +276,7 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
     volkLoadInstance(m_VkInstance);
 #endif
 
-    m_EnabledExtensions = std::move(GlobalExtensions);
+    m_EnabledExtensions = std::move(InstanceExtensions);
     m_VkVersion         = ApiVersion;
 
     // If requested, we enable the default validation layers for debugging
