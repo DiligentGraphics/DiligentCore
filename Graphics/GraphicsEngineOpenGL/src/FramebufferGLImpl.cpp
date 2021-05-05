@@ -129,6 +129,8 @@ FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                 FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr);
         }
 
+        RenderTargetFBO.SetName(m_Desc.Name);
+
         m_SubpassFramebuffers.emplace_back(std::move(RenderTargetFBO), std::move(ResolveFBO));
     }
 }

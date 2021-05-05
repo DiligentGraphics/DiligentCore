@@ -553,3 +553,27 @@ static void (*glPolygonMode)(GLenum face, GLenum mode) = nullptr;
 #define glFramebufferTexture(...)     UnsupportedGLFunctionStub("glFramebufferTexture")
 #define glFramebufferTexture1D(...)   UnsupportedGLFunctionStub("glFramebufferTexture1D")
 static void (*glGetQueryObjectui64v)(GLuint id, GLenum pname, GLuint64* params) = nullptr;
+
+#ifndef GL_BUFFER
+#    define GL_BUFFER 0x82E0
+#endif
+
+#ifndef GL_SHADER
+#    define GL_SHADER 0x82E1
+#endif
+
+#ifndef GL_PROGRAM
+#    define GL_PROGRAM 0x82E2
+#endif
+
+#ifndef GL_QUERY
+#    define GL_QUERY 0x82E3
+#endif
+
+#ifndef GL_PROGRAM_PIPELINE
+#    define GL_PROGRAM_PIPELINE 0x82E4
+#endif
+
+#ifndef GL_VERTEX_ARRAY
+#    define GL_VERTEX_ARRAY 0x8074
+#endif

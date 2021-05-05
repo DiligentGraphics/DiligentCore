@@ -504,6 +504,10 @@ protected:
     void TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const;
     void UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const;
 
+    void BeginDebugGroup(const Char* Name, const float* pColor, int);
+    void EndDebugGroup(int);
+    void InsertDebugLabel(const Char* Label, const float* pColor, int) const;
+
 protected:
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(Uint32) * 3; // D3D12: 12 bytes (x, y, z dimension)
                                                                                 // Vulkan: 8 bytes (task count, first task)
@@ -595,6 +599,9 @@ protected:
         MAP_TYPE MapType;
     };
     std::unordered_map<IBuffer*, DbgMappedBufferInfo> m_DbgMappedBuffers;
+#endif
+#ifdef DILIGENT_DEVELOPMENT
+    int m_DvpDebugGroupCount = 0;
 #endif
 };
 
@@ -1777,6 +1784,29 @@ void DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSB
     }
 }
 
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::BeginDebugGroup(const Char* Name, const float* pColor, int)
+{
+    DEV_CHECK_ERR(Name != nullptr, "Name must not be null");
+#ifdef DILIGENT_DEVELOPMENT
+    m_DvpDebugGroupCount += 1;
+#endif
+}
+
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::EndDebugGroup(int)
+{
+#ifdef DILIGENT_DEVELOPMENT
+    DEV_CHECK_ERR(m_DvpDebugGroupCount > 0, "There is no active debug group to end");
+    m_DvpDebugGroupCount -= 1;
+#endif
+}
+
+template <typename ImplementationTraits>
+void DeviceContextBase<ImplementationTraits>::InsertDebugLabel(const Char* Label, const float* pColor, int) const
+{
+    DEV_CHECK_ERR(Label != nullptr, "Label must not be null");
+}
 
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::PrepareCommittedResources(CommittedShaderResources& Resources, Uint32& DvpCompatibleSRBCount)

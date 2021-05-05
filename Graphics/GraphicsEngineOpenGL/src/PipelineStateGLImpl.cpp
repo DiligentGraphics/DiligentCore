@@ -247,6 +247,8 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
     {
         m_GLPrograms[0]  = ShaderGLImpl::LinkProgram(ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), false);
         m_ShaderTypes[0] = ActiveStages;
+
+        m_GLPrograms[0].SetName(m_Desc.Name);
     }
 
     InitResourceLayout(ShaderStages, ActiveStages);
@@ -397,6 +399,9 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
         glUseProgramStages(Pipeline, GLShaderBit, m_GLPrograms[i]);
         CHECK_GL_ERROR("glUseProgramStages() failed");
     }
+
+    ctx_pipeline.second.SetName(m_Desc.Name);
+
     return ctx_pipeline.second;
 }
 

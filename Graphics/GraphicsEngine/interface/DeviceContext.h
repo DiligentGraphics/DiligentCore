@@ -2581,6 +2581,36 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks    The method does *NOT* call AddRef()
     ///             for the object being returned.
     VIRTUAL IObject* METHOD(GetUserData)(THIS) CONST PURE;
+
+    
+    /// Begin debug group with name and color.
+    /// External debug tools may use this information when displaying context commands.
+
+    /// \param [in] Name   - Group name.
+    /// \param [in] pColor - Region color.
+    /// 
+    /// \remarks Supported contexts: graphics, compute, transfer.
+    VIRTUAL void METHOD(BeginDebugGroup)(THIS_
+                                        const Char*  Name,
+                                        const float* pColor DEFAULT_INITIALIZER(nullptr)) PURE;
+    
+    /// End debug group.
+    VIRTUAL void METHOD(EndDebugGroup)(THIS) PURE;
+    
+
+    /// Insert debug label with name and color.
+    /// External debug tools may use this information when displaying context commands.
+    
+    /// \param [in] Label  - Label name.
+    /// \param [in] pColor - Label color.
+    /// 
+    /// \remarks Supported contexts: graphics, compute, transfer.
+    ///          Not supported in Metal backend.
+    VIRTUAL void METHOD(InsertDebugLabel)(THIS_
+                                          const Char*  Label,
+                                          const float* pColor DEFAULT_INITIALIZER(nullptr)) PURE;
+
+
 };
 DILIGENT_END_INTERFACE
 
@@ -2649,6 +2679,9 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_UpdateSBT(This, ...)                 CALL_IFACE_METHOD(DeviceContext, UpdateSBT,                 This, __VA_ARGS__)
 #    define IDeviceContext_SetUserData(This, ...)               CALL_IFACE_METHOD(DeviceContext, SetUserData,               This, __VA_ARGS__)
 #    define IDeviceContext_GetUserData(This)                    CALL_IFACE_METHOD(DeviceContext, GetUserData,               This)
+#    define IDeviceContext_BeginDebugGroup(This, ...)           CALL_IFACE_METHOD(DeviceContext, BeginDebugGroup,           This, __VA_ARGS__)
+#    define IDeviceContext_EndDebugGroup(This)                  CALL_IFACE_METHOD(DeviceContext, EndDebugGroup,             This)
+#    define IDeviceContext_InsertDebugLabel(This, ...)          CALL_IFACE_METHOD(DeviceContext, InsertDebugLabel,          This, __VA_ARGS__)
 
 // clang-format on
 

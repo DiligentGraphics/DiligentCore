@@ -279,6 +279,15 @@ public:
     /// Implementation of IDeviceContext::UpdateSBT() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs) override final;
 
+    /// Implementation of IDeviceContext::BeginDebugGroup() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE BeginDebugGroup(const Char* Name, const float* pColor) override final;
+
+    /// Implementation of IDeviceContext::EndDebugGroup() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE EndDebugGroup() override final;
+
+    /// Implementation of IDeviceContext::InsertDebugLabel() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override final;
+
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal texture state is used as old state.

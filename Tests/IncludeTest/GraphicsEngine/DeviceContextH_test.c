@@ -106,4 +106,8 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     struct IObject* pUserData = NULL;
     IDeviceContext_SetUserData(pCtx, pUserData);
     pUserData = IDeviceContext_GetUserData(pCtx);
+
+    IDeviceContext_BeginDebugGroup(pCtx, (const Char*)NULL, (const float*)NULL);
+    IDeviceContext_EndDebugGroup(pCtx);
+    IDeviceContext_InsertDebugLabel(pCtx, (const Char*)NULL, (const float*)NULL);
 }

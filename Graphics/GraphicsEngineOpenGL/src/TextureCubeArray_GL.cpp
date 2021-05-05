@@ -112,6 +112,8 @@ TextureCubeArray_GL::TextureCubeArray_GL(IReferenceCounters*        pRefCounters
         }
     }
 
+    m_GlTexture.SetName(m_Desc.Name);
+
     GLState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 

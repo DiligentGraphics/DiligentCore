@@ -1623,4 +1623,34 @@ void DeviceContextGLImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
     UNSUPPORTED("UpdateSBT is not supported in OpenGL");
 }
 
+void DeviceContextGLImpl::BeginDebugGroup(const Char* Name, const float* pColor)
+{
+    TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);
+
+#if GL_KHR_debug
+    if (glPushDebugGroup)
+        glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, Name);
+#endif
+}
+
+void DeviceContextGLImpl::EndDebugGroup()
+{
+    TDeviceContextBase::EndDebugGroup(0);
+
+#if GL_KHR_debug
+    if (glPopDebugGroup)
+        glPopDebugGroup();
+#endif
+}
+
+void DeviceContextGLImpl::InsertDebugLabel(const Char* Label, const float* pColor)
+{
+    TDeviceContextBase::InsertDebugLabel(Label, pColor, 0);
+
+#if GL_KHR_debug
+    if (glDebugMessageInsert)
+        glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_OTHER, 0, GL_DEBUG_SEVERITY_MEDIUM, -1, Label);
+#endif
+}
+
 } // namespace Diligent

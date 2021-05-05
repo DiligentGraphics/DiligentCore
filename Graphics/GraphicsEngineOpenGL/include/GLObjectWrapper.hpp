@@ -113,9 +113,23 @@ public:
 
     operator GLuint() const { return m_uiHandle; }
 
+    explicit operator bool() const { return m_uiHandle != 0; }
+
     static GLObjWrapper Null()
     {
         return GLObjWrapper{false};
+    }
+
+    void SetName(const GLchar* Name)
+    {
+#if GL_KHR_debug
+        VERIFY_EXPR(Name != nullptr);
+        if (glObjectLabel && m_uiHandle)
+        {
+            glObjectLabel(m_CreateReleaseHelper.Type, m_uiHandle, -1, Name);
+            (void)glGetError();
+        }
+#endif
     }
 
 private:
@@ -149,6 +163,7 @@ public:
             glDeleteBuffers(1, &BuffObj);
     }
     static const char* Name;
+    static GLenum      Type;
 
 private:
     GLuint m_ExternalGLBufferHandle;
@@ -163,6 +178,7 @@ public:
     static void Release(GLuint ProgObj) { glDeleteProgram(ProgObj); }
 
     static const char* Name;
+    static GLenum      Type;
 };
 typedef GLObjWrapper<GLProgramObjCreateReleaseHelper> GLProgramObj;
 
@@ -176,6 +192,7 @@ public:
     void Release(GLuint ShaderObj) { glDeleteShader(ShaderObj); }
 
     static const char* Name;
+    static GLenum      Type;
 
 private:
     GLenum m_ShaderType;
@@ -190,6 +207,7 @@ public:
     void Release(GLuint Pipeline) { glDeleteProgramPipelines(1, &Pipeline); }
 
     static const char* Name;
+    static GLenum      Type;
 };
 typedef GLObjWrapper<GLPipelineObjCreateReleaseHelper> GLPipelineObj;
 
@@ -201,6 +219,7 @@ public:
     void Release(GLuint VAO) { glDeleteVertexArrays(1, &VAO); }
 
     static const char* Name;
+    static GLenum      Type;
 };
 typedef GLObjWrapper<GLVAOCreateReleaseHelper> GLVertexArrayObj;
 
@@ -229,6 +248,7 @@ public:
     }
 
     static const char* Name;
+    static GLenum      Type;
 
 private:
     GLuint m_ExternalGLTextureHandle;
@@ -242,6 +262,7 @@ public:
     void Release(GLuint Sampler) { glDeleteSamplers(1, &Sampler); }
 
     static const char* Name;
+    static GLenum      Type;
 };
 typedef GLObjWrapper<GLSamplerCreateReleaseHelper> GLSamplerObj;
 
@@ -270,6 +291,7 @@ public:
     }
 
     static const char* Name;
+    static GLenum      Type;
 
 private:
     GLuint m_ExternalFBOHandle;
@@ -284,6 +306,7 @@ public:
     void Release(GLuint RBO) { glDeleteRenderbuffers(1, &RBO); }
 
     static const char* Name;
+    static GLenum      Type;
 };
 typedef GLObjWrapper<GLRBOCreateReleaseHelper> GLRenderBufferObj;
 
@@ -337,6 +360,7 @@ public:
     void Release(GLuint Query) { glDeleteQueries(1, &Query); }
 
     static const char* Name;
+    static GLenum      Type;
 };
 typedef GLObjWrapper<GLQueryCreateReleaseHelper> GLQueryObj;
 

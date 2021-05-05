@@ -1229,6 +1229,11 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
                 m_CommandBuffer.EndRenderPass();
             }
 
+#ifdef DILIGENT_DEVELOPMENT
+            DEV_CHECK_ERR(m_DvpDebugGroupCount == 0, "Not all debug groups are ended");
+            m_DvpDebugGroupCount = 0;
+#endif
+
             m_CommandBuffer.FlushBarriers();
             m_CommandBuffer.EndCommandBuffer();
 
@@ -3500,6 +3505,44 @@ void DeviceContextVkImpl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndir
         // Ray tracing command can be used in parallel with the same SBT, so internal buffer state must be RESOURCE_STATE_RAY_TRACING to allow it.
         VERIFY(pSBTBufferVk->CheckState(RESOURCE_STATE_RAY_TRACING), "SBT buffer must always be in RESOURCE_STATE_RAY_TRACING state");
     }
+}
+
+void DeviceContextVkImpl::BeginDebugGroup(const Char* Name, const float* pColor)
+{
+    TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);
+
+    VkDebugUtilsLabelEXT Info{};
+    Info.sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+    Info.pLabelName = Name;
+
+    if (pColor != nullptr)
+        memcpy(Info.color, pColor, sizeof(Info.color));
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.BeginDebugUtilsLabel(Info);
+}
+
+void DeviceContextVkImpl::EndDebugGroup()
+{
+    TDeviceContextBase::EndDebugGroup(0);
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.EndDebugUtilsLabel();
+}
+
+void DeviceContextVkImpl::InsertDebugLabel(const Char* Label, const float* pColor)
+{
+    TDeviceContextBase::InsertDebugLabel(Label, pColor, 0);
+
+    VkDebugUtilsLabelEXT Info{};
+    Info.sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+    Info.pLabelName = Label;
+
+    if (pColor != nullptr)
+        memcpy(Info.color, pColor, sizeof(Info.color));
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.InsertDebugUtilsLabel(Info);
 }
 
 } // namespace Diligent
