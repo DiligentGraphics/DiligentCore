@@ -169,7 +169,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
         pContext->TransitionResourceStates(1, &Barrier);
-        pContext->Flush();
+        pContext->WaitForIdle();
 
         pTestingSwapChain->TakeSnapshot(pBackBufferUAV->GetTexture());
     }
@@ -205,6 +205,8 @@ TEST_F(FenceTest, GPUWaitForCPU)
     // GPU waits for fence signal
     pFence->Signal(100);
 
+    pContext->WaitForIdle();
+
     // Testing swapchain copy data from GPU side to CPU side and must be used after fence signal.
     // The default implementation of swapchain can be presented before fence signal command.
     pSwapChain->Present();
@@ -220,25 +222,36 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
         GTEST_SKIP() << "NativeFence feature is not supported";
     }
 
-    IDeviceContext* pContext1 = nullptr;
-    IDeviceContext* pContext2 = nullptr;
-
-    for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
+    IDeviceContext* pGraphicsCtx = nullptr;
+    IDeviceContext* pComputeCtx  = nullptr;
     {
-        auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
-        const auto& Desc = Ctx->GetDesc();
+        const auto      CtxTypeMask   = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE;
+        IDeviceContext* pGraphicsCtx2 = nullptr;
+        for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
+        {
+            auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
+            const auto& Desc = Ctx->GetDesc();
 
-        if (!pContext1 && (Desc.ContextType & CONTEXT_TYPE_GRAPHICS) == CONTEXT_TYPE_GRAPHICS)
-            pContext1 = Ctx;
-        else if (!pContext2 && (Desc.ContextType & CONTEXT_TYPE_COMPUTE) == CONTEXT_TYPE_COMPUTE)
-            pContext2 = Ctx;
+            if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+                pGraphicsCtx = Ctx;
+            else if (!pComputeCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_COMPUTE)
+                pComputeCtx = Ctx;
+            else if (!pGraphicsCtx2 && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+                pGraphicsCtx2 = Ctx;
+        }
+
+        if (pComputeCtx == nullptr)
+            pComputeCtx = pGraphicsCtx2;
     }
-
-    if (pEnv->GetNumImmediateContexts() <= 1 || !pContext1 || !pContext2)
+    if (!pGraphicsCtx || !pComputeCtx)
     {
-        GTEST_SKIP() << "Can not find 2 immediate contexts";
+        GTEST_SKIP() << "Unable to find two immediate contexts";
     }
-    ASSERT_NE(pContext1->GetDesc().CommandQueueId, pContext2->GetDesc().CommandQueueId);
+    if (pGraphicsCtx->GetDesc().QueueId == pComputeCtx->GetDesc().QueueId)
+    {
+        GTEST_SKIP() << "At least two different hardware queues are required";
+    }
+    ASSERT_NE(pGraphicsCtx->GetDesc().CommandQueueId, pComputeCtx->GetDesc().CommandQueueId);
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -260,26 +273,26 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 
     // Draw reference
     {
-        pContext1->UpdateBuffer(pConstants1, 0, sizeof(float4), &ConstData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pGraphicsCtx->UpdateBuffer(pConstants1, 0, sizeof(float4), &ConstData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         sm_pCompSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DstTexture")->Set(pBackBufferUAV);
         sm_pCompSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "Constants")->Set(pConstants1);
 
-        pContext1->SetPipelineState(sm_pCompPSO);
-        pContext1->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pContext1->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+        pGraphicsCtx->SetPipelineState(sm_pCompPSO);
+        pGraphicsCtx->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
 
         // Transition to CopySrc state to use in TakeSnapshot()
         StateTransitionDesc Barrier{pBackBufferUAV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, true};
-        pContext1->TransitionResourceStates(1, &Barrier);
-        pContext1->Flush();
+        pGraphicsCtx->TransitionResourceStates(1, &Barrier);
+        pGraphicsCtx->WaitForIdle();
 
         pTestingSwapChain->TakeSnapshot(pBackBufferUAV->GetTexture());
     }
 
     RefCntAutoPtr<IBuffer> pConstants2;
     BuffDesc.Name             = "Constants 2";
-    BuffDesc.CommandQueueMask = (1ull << pContext1->GetDesc().CommandQueueId) | (1ull << pContext2->GetDesc().CommandQueueId);
+    BuffDesc.CommandQueueMask = (1ull << pGraphicsCtx->GetDesc().CommandQueueId) | (1ull << pComputeCtx->GetDesc().CommandQueueId);
     pDevice->CreateBuffer(BuffDesc, nullptr, &pConstants2);
     ASSERT_NE(pConstants2, nullptr);
 
@@ -296,21 +309,22 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
         sm_pCompSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DstTexture")->Set(pBackBufferUAV);
         sm_pCompSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "Constants")->Set(pConstants1);
 
-        pContext1->SetPipelineState(sm_pCompPSO);
-        pContext1->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pContext1->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
+        pGraphicsCtx->SetPipelineState(sm_pCompPSO);
+        pGraphicsCtx->CommitShaderResources(sm_pCompSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pGraphicsCtx->DispatchCompute(DispatchComputeAttribs{sm_DispathSize.x, sm_DispathSize.y, 1});
 
-        pContext1->DeviceWaitForFence(pFence, 100);
-        pContext1->Flush();
+        pGraphicsCtx->DeviceWaitForFence(pFence, 100);
+        pGraphicsCtx->Flush();
     }
 
     // second context
     {
-        pContext2->UpdateBuffer(pConstants1, 0, sizeof(float4), &ConstData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        pContext2->EnqueueSignal(pFence, 100);
-        pContext2->Flush();
+        pComputeCtx->UpdateBuffer(pConstants1, 0, sizeof(float4), &ConstData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pComputeCtx->EnqueueSignal(pFence, 100);
+        pComputeCtx->Flush();
     }
 
+    pGraphicsCtx->WaitForIdle();
     pSwapChain->Present();
 }
 

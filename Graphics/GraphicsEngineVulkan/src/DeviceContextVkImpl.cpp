@@ -1333,7 +1333,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
 
     // Recycle semaphores
     {
-        auto& ReleaseQueue = m_pDevice->GetReleaseQueue(CommandQueueIndex{m_Desc.CommandQueueId});
+        auto& ReleaseQueue = m_pDevice->GetReleaseQueue(GetCommandQueueId());
         for (auto& Sem : m_WaitRecycledSemaphores)
         {
             Sem.SetUnsignaled();

@@ -1668,8 +1668,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    // TODO: bag in NVidia DX12 driver - can not use TLAS from descriptor table in pixel shader.
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2 || !pDevice->GetDeviceCaps().IsVulkanDevice())
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }

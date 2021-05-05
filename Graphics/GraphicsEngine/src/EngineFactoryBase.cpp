@@ -113,6 +113,19 @@ void EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures, DeviceFeature
         }
     };
 
+    if (SupportedFeatures.SeparablePrograms == DEVICE_FEATURE_STATE_ENABLED &&
+        RequestedFeatures.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
+    {
+        LOG_INFO_MESSAGE("Can not disable SeparablePrograms");
+    }
+
+    if (SupportedFeatures.RayTracing != DEVICE_FEATURE_STATE_DISABLED &&
+        RequestedFeatures.RayTracing == DEVICE_FEATURE_STATE_DISABLED &&
+        RequestedFeatures.RayTracing2 == DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("Can not enable RayTracing2 when RayTracing is disabled");
+    }
+
 #define ENABLE_FEATURE(Feature, FeatureName) \
     RequestedFeatures.Feature = GetFeatureState(RequestedFeatures.Feature, SupportedFeatures.Feature, FeatureName)
 

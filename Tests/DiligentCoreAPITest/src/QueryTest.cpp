@@ -113,7 +113,8 @@ protected:
         PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
         GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-        PSODesc.Name = "Query command test - procedural quad";
+        PSODesc.Name             = "Query command test - procedural quad";
+        PSODesc.CommandQueueMask = ~0ull;
 
         PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
         GraphicsPipeline.NumRenderTargets             = 1;
@@ -225,9 +226,7 @@ protected:
     static void WaitForQuery(IQuery* pQuery)
     {
         while (!pQuery->GetData(nullptr, 0))
-        {
-            std::this_thread::yield();
-        }
+            std::this_thread::sleep_for(std::chrono::microseconds{1});
     }
 
     static constexpr Uint32 sm_TextureSize = 512;

@@ -281,15 +281,14 @@ protected:
         const auto& SCDesc     = pSwapChain->GetDesc();
 
         TextureDesc Desc;
-        Desc.Name                  = Name;
-        Desc.Type                  = RESOURCE_DIM_TEX_2D;
-        Desc.Width                 = SCDesc.Width;
-        Desc.Height                = SCDesc.Height;
-        Desc.Format                = TEX_FORMAT_RGBA8_UNORM;
-        Desc.Usage                 = USAGE_DEFAULT;
-        Desc.BindFlags             = Flags;
-        Desc.CommandQueueMask      = QueueMask | (1ull << pInitialCtx->GetDesc().CommandQueueId);
-        Desc.InitialCommandQueueId = pInitialCtx->GetDesc().CommandQueueId;
+        Desc.Name             = Name;
+        Desc.Type             = RESOURCE_DIM_TEX_2D;
+        Desc.Width            = SCDesc.Width;
+        Desc.Height           = SCDesc.Height;
+        Desc.Format           = TEX_FORMAT_RGBA8_UNORM;
+        Desc.Usage            = USAGE_DEFAULT;
+        Desc.BindFlags        = Flags;
+        Desc.CommandQueueMask = QueueMask | (1ull << pInitialCtx->GetDesc().CommandQueueId);
 
         RefCntAutoPtr<ITexture> pTexture;
         pDevice->CreateTexture(Desc, nullptr, &pTexture);
@@ -325,20 +324,27 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     auto*           pSwapChain   = pEnv->GetSwapChain();
     IDeviceContext* pGraphicsCtx = nullptr;
     IDeviceContext* pComputeCtx  = nullptr;
-    const auto      CtxTypeMask  = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE;
-
-    for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
     {
-        auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
-        const auto& Desc = Ctx->GetDesc();
+        const auto      CtxTypeMask   = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE;
+        IDeviceContext* pGraphicsCtx2 = nullptr;
 
-        if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
-            pGraphicsCtx = Ctx;
-        else if (!pComputeCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_COMPUTE)
-            pComputeCtx = Ctx;
+        for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
+        {
+            auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
+            const auto& Desc = Ctx->GetDesc();
+
+            if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+                pGraphicsCtx = Ctx;
+            else if (!pGraphicsCtx2 && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+                pGraphicsCtx2 = Ctx;
+            else if (!pComputeCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_COMPUTE)
+                pComputeCtx = Ctx;
+        }
+
+        if (!pComputeCtx)
+            pComputeCtx = pGraphicsCtx2;
     }
-
-    if (pEnv->GetNumImmediateContexts() <= 1 || !pGraphicsCtx || !pComputeCtx)
+    if (!pGraphicsCtx || !pComputeCtx)
     {
         GTEST_SKIP() << "Compute queue is not supported by this device";
     }
@@ -419,8 +425,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
             pGraphicsCtx->TransitionResourceStates(1, &Barrier);
         }
 
-        pGraphicsCtx->Flush();
-        pGraphicsCtx->FinishFrame();
+        pGraphicsCtx->WaitForIdle();
         pTestingSwapChain->TakeSnapshot(pRTV->GetTexture());
     }
 
@@ -521,7 +526,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
         pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, DefaultTransitionMode);
 
-        pGraphicsCtx->Flush();
+        pGraphicsCtx->WaitForIdle();
         pSwapChain->Present();
     }
 
@@ -541,19 +546,26 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
     const auto&     SCDesc       = pSwapChain->GetDesc();
     IDeviceContext* pGraphicsCtx = nullptr;
     IDeviceContext* pTransferCtx = nullptr;
-    const auto      CtxTypeMask  = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE | CONTEXT_TYPE_TRANSFER;
-
-    for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
     {
-        auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
-        const auto& Desc = Ctx->GetDesc();
+        const auto      CtxTypeMask   = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE | CONTEXT_TYPE_TRANSFER;
+        IDeviceContext* pGraphicsCtx2 = nullptr;
 
-        if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
-            pGraphicsCtx = Ctx;
-        else if (!pTransferCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_TRANSFER)
-            pTransferCtx = Ctx;
+        for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
+        {
+            auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
+            const auto& Desc = Ctx->GetDesc();
+
+            if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+                pGraphicsCtx = Ctx;
+            else if (!pGraphicsCtx2 && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+                pGraphicsCtx2 = Ctx;
+            else if (!pTransferCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_TRANSFER)
+                pTransferCtx = Ctx;
+        }
+
+        if (!pTransferCtx)
+            pTransferCtx = pGraphicsCtx2;
     }
-
     if (!pGraphicsCtx || !pTransferCtx)
     {
         GTEST_SKIP() << "Transfer queue is not supported by this device";
@@ -654,13 +666,12 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
             pGraphicsCtx->TransitionResourceStates(1, &Barrier);
         }
 
-        pGraphicsCtx->Flush();
-        pGraphicsCtx->FinishFrame();
+        pGraphicsCtx->WaitForIdle();
         pTestingSwapChain->TakeSnapshot(pRTV->GetTexture());
     }
 
 
-    // Graphics:  |- draw -|- blend -|- present -|
+    // Graphics:  |- draw -| |- blend -|- present -|
     // Transfer:  |- copy -|
 
     RefCntAutoPtr<IFence> pGraphicsFence;
@@ -776,7 +787,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
         pGraphicsCtx->SetRenderTargets(0, nullptr, nullptr, DefaultTransitionMode);
 
-        pGraphicsCtx->Flush();
+        pGraphicsCtx->WaitForIdle();
         pSwapChain->Present();
     }
 

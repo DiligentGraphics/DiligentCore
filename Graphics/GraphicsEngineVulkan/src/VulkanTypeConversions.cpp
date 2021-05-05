@@ -1622,7 +1622,7 @@ VkAccessFlags AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags)
 
 VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
     VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "More than one shader type is specified");
     switch (ShaderType)
     {
@@ -1661,12 +1661,22 @@ VkShaderStageFlags ShaderTypesToVkShaderStageFlags(SHADER_TYPE ShaderTypes)
 
 SHADER_TYPE VkShaderStageFlagsToShaderTypes(VkShaderStageFlags StageFlags)
 {
+    if (StageFlags == VK_SHADER_STAGE_ALL_GRAPHICS)
+    {
+        return SHADER_TYPE_ALL_GRAPHICS;
+    }
+    else if (StageFlags == VK_SHADER_STAGE_ALL)
+    {
+        static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the return value below");
+        return SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE | SHADER_TYPE_ALL_MESH | SHADER_TYPE_ALL_RAY_TRACING;
+    }
+
     SHADER_TYPE Result = SHADER_TYPE_UNKNOWN;
     while (StageFlags != 0)
     {
         auto Type = ExtractLSB(StageFlags);
 
-        static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+        static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
         switch (Type)
         {
             // clang-format off

@@ -176,11 +176,8 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
         if (AdapterId >= Adapters.size())
             AdapterId = 0;
 
-        constexpr auto   QueueMask     = CONTEXT_TYPE_PRIMARY_MASK;
-        constexpr Uint32 InvalidID     = ~0u;
-        Uint32           AnyCompatible = InvalidID;
-        Uint32           BestMatch     = InvalidID;
-        auto*            Queues        = Adapters[AdapterId].Queues;
+        constexpr auto QueueMask = CONTEXT_TYPE_PRIMARY_MASK;
+        auto*          Queues    = Adapters[AdapterId].Queues;
         for (Uint32 q = 0, Count = Adapters[AdapterId].NumQueues; q < Count; ++q)
         {
             auto& CurQueue = Queues[q];
@@ -189,28 +186,15 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
             if ((CurQueue.QueueType & QueueMask) == Type)
             {
-                BestMatch = q;
-                break;
-            }
-            if ((CurQueue.QueueType & Type) == Type &&
-                (CurQueue.QueueType & QueueMask) > (Type & QueueMask) &&
-                (AnyCompatible == InvalidID || (Queues[AnyCompatible].QueueType & QueueMask) > (CurQueue.QueueType & QueueMask)))
-            {
-                AnyCompatible = q;
-            }
-        }
-        if (BestMatch == InvalidID)
-            BestMatch = AnyCompatible;
+                CurQueue.MaxDeviceContexts -= 1;
 
-        if (BestMatch != InvalidID)
-        {
-            Queues[BestMatch].MaxDeviceContexts -= 1;
-
-            ContextCreateInfo Ctx{};
-            Ctx.QueueId  = static_cast<Uint8>(BestMatch);
-            Ctx.Name     = Name;
-            Ctx.Priority = QUEUE_PRIORITY_MEDIUM;
-            ContextCI.push_back(Ctx);
+                ContextCreateInfo Ctx{};
+                Ctx.QueueId  = static_cast<Uint8>(q);
+                Ctx.Name     = Name;
+                Ctx.Priority = QUEUE_PRIORITY_MEDIUM;
+                ContextCI.push_back(Ctx);
+                return;
+            }
         }
     };
 
@@ -330,6 +314,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
             AddContext(CONTEXT_TYPE_COMPUTE, "Compute", CI.AdapterId);
             AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", CI.AdapterId);
+            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
             CreateInfo.NumContexts  = static_cast<Uint32>(ContextCI.size());
             CreateInfo.pContextInfo = CreateInfo.NumContexts ? ContextCI.data() : nullptr;
 
@@ -402,6 +387,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
             AddContext(CONTEXT_TYPE_COMPUTE, "Compute", CI.AdapterId);
             AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", CI.AdapterId);
+            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
 
             EngineVkCreateInfo CreateInfo;
 

@@ -503,6 +503,8 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
     if (!pd3d12NativeDevice || !ppCommandQueues || !ppDevice || !ppContexts)
         return;
 
+    VERIFY_EXPR(std::max(1u, EngineCI.NumContexts) == CommandQueueCount);
+
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));
 
