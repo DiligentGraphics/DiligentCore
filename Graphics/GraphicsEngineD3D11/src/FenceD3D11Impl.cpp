@@ -88,7 +88,7 @@ void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
 
         BOOL Data;
         while (QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), FlushCommands ? 0 : D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK)
-            std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::microseconds{1});
 
         VERIFY_EXPR(Data == TRUE);
         UpdateLastCompletedFenceValue(QueryData.Value);

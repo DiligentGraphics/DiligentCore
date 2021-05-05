@@ -103,7 +103,7 @@ void MultithreadedResourceCreationTest::WaitSiblingWorkerThreads(int SignalIdx)
     else
     {
         while (m_NumThreadsCompleted[SignalIdx] < NumThreads)
-            std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::microseconds{1});
     }
 }
 

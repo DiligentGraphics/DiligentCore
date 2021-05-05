@@ -1843,7 +1843,7 @@ void DeviceContextD3D11Impl::WaitForIdle()
     m_pd3d11DeviceContext->End(pd3d11Query);
     BOOL Data;
     while (m_pd3d11DeviceContext->GetData(pd3d11Query, &Data, sizeof(Data), 0) != S_OK)
-        std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::microseconds{1});
 }
 
 std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> DeviceContextD3D11Impl::BeginDisjointQuery()

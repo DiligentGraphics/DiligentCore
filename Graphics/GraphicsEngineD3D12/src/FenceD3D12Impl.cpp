@@ -40,8 +40,17 @@ namespace Diligent
 FenceD3D12Impl::FenceD3D12Impl(IReferenceCounters*    pRefCounters,
                                RenderDeviceD3D12Impl* pDevice,
                                const FenceDesc&       Desc) :
-    TFenceBase{pRefCounters, pDevice, Desc}
+    TFenceBase{pRefCounters, pDevice, Desc},
+    m_FenceCompleteEvent //
+    {
+        CreateEvent(NULL,  // default security attributes
+                    TRUE,  // manual-reset event
+                    FALSE, // initial state is nonsignaled
+                    NULL)  // object name
+    }
 {
+    VERIFY(m_FenceCompleteEvent != NULL, "Failed to create fence complete event");
+
     const auto  Flags        = (m_Desc.Type == FENCE_TYPE_GENERAL && pDevice->GetNumImmediateContexts() > 1) ? D3D12_FENCE_FLAG_SHARED : D3D12_FENCE_FLAG_NONE;
     auto* const pd3d12Device = pDevice->GetD3D12Device();
     auto        hr           = pd3d12Device->CreateFence(0, Flags, __uuidof(m_pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pd3d12Fence)));
@@ -52,6 +61,10 @@ FenceD3D12Impl::~FenceD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
     GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Fence), ~0ull);
+    if (m_FenceCompleteEvent != NULL)
+    {
+        CloseHandle(m_FenceCompleteEvent);
+    }
 }
 
 Uint64 FenceD3D12Impl::GetCompletedValue()
@@ -72,8 +85,19 @@ void FenceD3D12Impl::Signal(Uint64 Value)
 
 void FenceD3D12Impl::Wait(Uint64 Value)
 {
-    while (GetCompletedValue() < Value)
-        std::this_thread::yield();
+    if (GetCompletedValue() >= Value)
+        return;
+
+    if (m_FenceCompleteEvent != NULL)
+    {
+        m_pd3d12Fence->SetEventOnCompletion(Value, m_FenceCompleteEvent);
+        WaitForSingleObject(m_FenceCompleteEvent, INFINITE);
+    }
+    else
+    {
+        while (GetCompletedValue() < Value)
+            std::this_thread::sleep_for(std::chrono::microseconds{1});
+    }
 }
 
 } // namespace Diligent
