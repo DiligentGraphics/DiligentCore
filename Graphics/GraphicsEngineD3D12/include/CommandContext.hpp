@@ -230,7 +230,7 @@ public:
         m_pCommandList->ResolveQueryData(pQueryHeap, Type, StartIndex, NumQueries, pDestinationBuffer, AlignedDestinationBufferOffset);
     }
 
-#ifdef DILIGENT_HAS_PIXEVENTRUNTIME
+#ifdef DILIGENT_USE_PIX
     void PixBeginEvent(const Char* Name, const float* pColor);
     void PixEndEvent();
     void PixSetMarker(const Char* Label, const float* pColor);
