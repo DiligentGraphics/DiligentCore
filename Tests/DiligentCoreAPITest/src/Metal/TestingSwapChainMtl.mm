@@ -33,6 +33,7 @@
 #include "RenderDeviceMtl.h"
 #include "DeviceContextMtl.h"
 #include "TextureViewMtl.h"
+#include "TextureMtl.h"
 
 namespace Diligent
 {
@@ -69,6 +70,44 @@ void TestingSwapChainMtl::TakeSnapshot()
 
     auto* pRTV = ValidatedCast<ITextureViewMtl>(GetCurrentBackBufferRTV());
     auto mtlTexture = pRTV->GetMtlTexture();
+
+    m_ReferenceDataPitch = m_SwapChainDesc.Height * 4;
+    m_ReferenceData.resize(m_SwapChainDesc.Width * m_ReferenceDataPitch);
+
+    @autoreleasepool
+    {
+        // Command buffer is autoreleased
+        auto commandBuffer = [mtlCommandQueue commandBuffer];
+        // Command encoder is autoreleased
+        auto blitEncoder   = [commandBuffer blitCommandEncoder];
+        [blitEncoder copyFromTexture:mtlTexture
+            sourceSlice:0
+            sourceLevel:0
+            sourceOrigin:MTLOrigin{0,0,0}
+            sourceSize:MTLSize{m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1}
+            toBuffer:m_MtlStagingBuffer
+            destinationOffset:0
+            destinationBytesPerRow:m_ReferenceDataPitch
+            destinationBytesPerImage:0];
+        [blitEncoder synchronizeResource:m_MtlStagingBuffer];
+        [blitEncoder endEncoding];
+        [commandBuffer commit];
+        [commandBuffer waitUntilCompleted];
+        memcpy(m_ReferenceData.data(), [m_MtlStagingBuffer contents], m_ReferenceData.size());
+    }
+}
+
+void TestingSwapChainMtl::TakeSnapshot(ITexture* pBlitFrom)
+{
+    auto* pEnv = TestingEnvironmentMtl::GetInstance();
+    auto mtlCommandQueue = pEnv->GetMtlCommandQueue();
+
+    auto* pBlitFromMtl = ValidatedCast<ITextureMtl>(pBlitFrom);
+    auto  mtlTexture   = (id<MTLTexture>)pBlitFromMtl->GetMtlResource();
+
+    VERIFY_EXPR(m_SwapChainDesc.Width == pBlitFromMtl->GetDesc().Width);
+    VERIFY_EXPR(m_SwapChainDesc.Height == pBlitFromMtl->GetDesc().Height);
+    VERIFY_EXPR(m_SwapChainDesc.ColorBufferFormat == pBlitFromMtl->GetDesc().Format);
 
     m_ReferenceDataPitch = m_SwapChainDesc.Height * 4;
     m_ReferenceData.resize(m_SwapChainDesc.Width * m_ReferenceDataPitch);

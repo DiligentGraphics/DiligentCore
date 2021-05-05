@@ -420,18 +420,22 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
             auto* pFactoryMtl = GetEngineFactoryMtl();
             EnumerateAdapters(pFactoryMtl, Version{});
-            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", 0);
-            AddContext(CONTEXT_TYPE_COMPUTE, "Compute", 0);
-            AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", 0);
+            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
+            AddContext(CONTEXT_TYPE_COMPUTE, "Compute", CI.AdapterId);
+            AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", CI.AdapterId);
+            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
+
+            CreateInfo.AdapterId    = CI.AdapterId;
             CreateInfo.NumContexts  = static_cast<Uint32>(ContextCI.size());
             CreateInfo.pContextInfo = CreateInfo.NumContexts ? ContextCI.data() : nullptr;
+            CreateInfo.Features     = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
 
             CreateInfo.DebugMessageCallback = MessageCallback;
             NumDeferredCtx                  = CI.NumDeferredContexts;
-            MtlAttribs.NumDeferredContexts  = NumDeferredCtx;
+            CreateInfo.NumDeferredContexts  = NumDeferredCtx;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryMtl->CreateDeviceAndContextsMtl(CreateInfo, &m_pDevice, ppContexts.data());
         }

@@ -40,20 +40,18 @@ static const INTERFACE_ID IID_FenceMtl =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define IFenceMtlInclusiveMethods \
-    IFenceInclusiveMethods
-//IFenceMtlMethods FenceMtl
+    IFenceInclusiveMethods        \
+        IFenceMtlMethods FenceMtl
 
 // clang-format off
-
-#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Metal-specific functionality of a fence object.
 DILIGENT_BEGIN_INTERFACE(IFenceMtl, IFence)
 {
+    /// Returns a pointer to Metal shared event (MTLSharedEvent)
+    VIRTUAL id<MTLSharedEvent> METHOD(GetMtlSharedEvent)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
-
-#endif
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -61,17 +59,10 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-typedef struct IFenceMtlVtbl
-{
-    IFenceMtlInclusiveMethods;
-} IFenceMtlVtbl;
+#    define IFenceMtl_GetMtlSharedEvent(This)    CALL_IFACE_METHOD(FenceMtl, GetMtlSharedEvent, This)
 
-typedef struct IFenceMtl
-{
-    struct IFenceMtlVtbl* pVtbl;
-} IFenceMtl;
+// clang-format on
 
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent
-

@@ -47,6 +47,7 @@ public:
     ~TestingSwapChainMtl();
 
     virtual void TakeSnapshot() override final;
+    virtual void TakeSnapshot(ITexture* pBlitFrom) override final;
 
 private:
     id<MTLBuffer> m_MtlStagingBuffer;

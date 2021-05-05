@@ -29,3 +29,13 @@
 
 #define Rect DiligentRect
 #include "DiligentCore/Graphics/GraphicsEngineMetal/interface/DeviceContextMtl.h"
+
+void TestDeviceContextMtl_CInterface(IDeviceContextMtl* pContext)
+{
+    id<MTLCommandBuffer> mtlCmdBuf = IDeviceContextMtl_GetMtlCommandBuffer(pContext);
+    (void)mtlCmdBuf;
+
+    ICommandQueueMtl* pQueue = IDeviceContextMtl_LockCommandQueue(pContext);
+    (void)pQueue;
+    IDeviceContextMtl_UnlockCommandQueue(pContext);
+}

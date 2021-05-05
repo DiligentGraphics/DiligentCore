@@ -49,8 +49,12 @@ public:
 
     virtual void Reset() override final;
 
-    id<MTLDevice>       GetMtlDevice() const;
-    id<MTLCommandQueue> GetMtlCommandQueue() const;
+    id<MTLDevice>       GetMtlDevice() const { return m_MtlDevice; }
+    id<MTLCommandQueue> GetMtlCommandQueue() const { return m_MtlQueue; }
+
+private:
+    id<MTLDevice>       m_MtlDevice = nullptr;
+    id<MTLCommandQueue> m_MtlQueue  = nullptr;
 };
 
 } // namespace Testing

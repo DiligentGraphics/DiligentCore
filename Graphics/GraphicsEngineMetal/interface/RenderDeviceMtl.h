@@ -51,23 +51,43 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
     /// Returns the pointer to Metal device (MTLDevice).
     VIRTUAL id<MTLDevice> METHOD(GetMtlDevice)(THIS) CONST PURE;
 
-    /// Returns the pointer to Metal command queue (MTLCommandQueue).
-    VIRTUAL id<MTLCommandQueue> METHOD(GetMtlCommandQueue)(THIS) CONST PURE;
+    /// Returns the fence value that will be signaled by the GPU command queue next
+
+    /// \param [in] CommandQueueIndex - Index of the command queue that is the same as immediate context index.
+    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
+    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS_
+                                             Uint32 CommandQueueIndex) PURE;
+
+    /// Returns the last completed fence value for the given command queue
+
+    /// \param [in] CommandQueueIndex - Index of the command queue that is the same as immediate context index.
+    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
+    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS_
+                                                  Uint32 CommandQueueIndex) PURE;
+
+    /// Checks if the fence value has been signaled by the GPU.
+
+    /// \return                         True if all associated work has been finished.
+    ///
+    /// \param [in] CommandQueueIndex - Index of the command queue that is the same as immediate context index.
+    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
+    /// \param [in] FenceValue        - Value that associated with submitted commands.
+    VIRTUAL Bool METHOD(IsFenceSignaled)(THIS_
+                                         Uint32 CommandQueueIndex,
+                                         Uint64 FenceValue) PURE;
 
     /// Creates a texture from existing Metal resource
-    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateTextureFromMtlResource)(
-        THIS_
-        id<MTLTexture> mtlTexture,
-        RESOURCE_STATE InitialState,
-        ITexture**     ppTexture) PURE;
+    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateTextureFromMtlResource)(THIS_
+                                                                         id<MTLTexture> mtlTexture,
+                                                                         RESOURCE_STATE InitialState,
+                                                                         ITexture**     ppTexture) PURE;
 
     /// Creates a buffer from existing Metal resource
-    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateBufferFromMtlResource)(
-        THIS_
-        id<MTLBuffer>        mtlBuffer,
-        const BufferDesc REF BuffDesc,
-        RESOURCE_STATE       InitialState,
-        IBuffer**            ppBuffer) PURE;
+    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateBufferFromMtlResource)(THIS_
+                                                                        id<MTLBuffer>        mtlBuffer,
+                                                                        const BufferDesc REF BuffDesc,
+                                                                        RESOURCE_STATE       InitialState,
+                                                                        IBuffer**            ppBuffer) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -78,7 +98,9 @@ DILIGENT_END_INTERFACE
 // clang-format off
 
 #    define IRenderDeviceMtl_GetMtlDevice(This)                      CALL_IFACE_METHOD(RenderDeviceMtl, GetMtlDevice,                 This)
-#    define IRenderDeviceMtl_GetMtlCommandQueue(This)                CALL_IFACE_METHOD(RenderDeviceMtl, GetMtlCommandQueue,           This)
+#    define IRenderDeviceMtl_GetNextFenceValue(This, ...)            CALL_IFACE_METHOD(RenderDeviceMtl, GetNextFenceValue,            This, __VA_ARGS__)
+#    define IRenderDeviceMtl_GetCompletedFenceValue(This, ...)       CALL_IFACE_METHOD(RenderDeviceMtl, GetCompletedFenceValue,       This, __VA_ARGS__)
+#    define IRenderDeviceMtl_IsFenceSignaled(This, ...)              CALL_IFACE_METHOD(RenderDeviceMtl, IsFenceSignaled,              This, __VA_ARGS__)
 #    define IRenderDeviceMtl_CreateTextureFromMtlResource(This, ...) CALL_IFACE_METHOD(RenderDeviceMtl, CreateTextureFromMtlResource, This, __VA_ARGS__)
 #    define IRenderDeviceMtl_CreateBufferFromMtlResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceMtl, CreateBufferFromMtlResource,  This, __VA_ARGS__)
 
