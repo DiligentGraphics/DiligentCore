@@ -26,6 +26,7 @@
  */
 
 #include "Buffer.h"
+#include "DeviceContext.h"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent
@@ -113,8 +114,6 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryIn
             UNEXPECTED("Unknown usage");
     }
 
-    VERIFY_BUFFER((Desc.CommandQueueMask & (Uint64{1} << Uint64{Desc.InitialCommandQueueId})) != 0,
-                  "CommandQueueMask (0x", std::hex, Desc.CommandQueueMask, ") does not contain a bit at index InitialCommandQueueId (", Uint32{Desc.InitialCommandQueueId}, ")");
 
     if (Desc.Usage == USAGE_DYNAMIC && PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1)
     {
@@ -150,6 +149,19 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
         if (pBuffData != nullptr && pBuffData->pData != nullptr && (Desc.CPUAccessFlags & CPU_ACCESS_WRITE) == 0)
         {
             LOG_BUFFER_ERROR_AND_THROW("CPU_ACCESS_WRITE flag is required to initialize a unified buffer.");
+        }
+    }
+
+    if (pBuffData != nullptr && pBuffData->pContext != nullptr)
+    {
+        const auto& CtxDesc = pBuffData->pContext->GetDesc();
+        if (CtxDesc.IsDeferred)
+            LOG_BUFFER_ERROR_AND_THROW("Deferred contexts can't be used to initialize resources");
+        if ((Desc.CommandQueueMask & (Uint64{1} << CtxDesc.CommandQueueId)) == 0)
+        {
+            LOG_BUFFER_ERROR_AND_THROW("Can not initialize the buffer in command queue ", CtxDesc.CommandQueueId,
+                                       " as CommandQueueMask (", std::hex, Desc.CommandQueueMask, ") does not contain ",
+                                       std::hex, (Uint64{1} << CtxDesc.CommandQueueId), " bit.");
         }
     }
 }

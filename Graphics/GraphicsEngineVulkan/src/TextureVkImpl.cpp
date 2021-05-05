@@ -216,7 +216,10 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         auto err    = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
 
-        InitializeTextureContent(pInitData, FmtAttribs, ImageCI);
+        if (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0)
+            InitializeTextureContent(pInitData, FmtAttribs, ImageCI);
+        else
+            SetState(RESOURCE_STATE_UNDEFINED);
     }
     else if (m_Desc.Usage == USAGE_STAGING)
     {
@@ -234,33 +237,11 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
                                              const TextureFormatAttribs& FmtAttribs,
                                              const VkImageCreateInfo&    ImageCI)
 {
-    const bool  bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
-    const auto& LogicalDevice      = GetDevice()->GetLogicalDevice();
-    const auto  CmdQueueInd        = CommandQueueIndex{m_Desc.InitialCommandQueueId};
-    const auto  QueueFamilyInd     = GetDevice()->GetQueueFamilyIndex(CmdQueueInd);
-    const auto  QueueFlags         = GetDevice()->GetPhysicalDevice().GetQueueProperties()[QueueFamilyInd].queueFlags;
+    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
 
-    if (!bInitializeTexture)
-    {
-        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-        {
-            // vkCmdClearDepthStencilImage requires graphics queue
-            if ((QueueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
-            {
-                SetState(RESOURCE_STATE_UNDEFINED);
-                return;
-            }
-        }
-        else
-        {
-            // vkCmdClearColorImage requires graphics or compute queue
-            if ((QueueFlags & VK_QUEUE_COMPUTE_BIT) == 0)
-            {
-                SetState(RESOURCE_STATE_UNDEFINED);
-                return;
-            }
-        }
-    }
+    const auto CmdQueueInd = pInitData->pContext ?
+        ValidatedCast<DeviceContextVkImpl>(pInitData->pContext)->GetCommandQueueId() :
+        CommandQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
 
     // Vulkan validation layers do not like uninitialized memory, so if no initial data
     // is provided, we will clear the memory
@@ -274,11 +255,9 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
         aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
     {
-        if (bInitializeTexture)
-        {
-            UNSUPPORTED("Initializing depth-stencil texture is not currently supported");
-            // Only single aspect bit must be specified when copying texture data
-        }
+        UNSUPPORTED("Initializing depth-stencil texture is not currently supported");
+        // Only single aspect bit must be specified when copying texture data
+
         aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
     }
     else
@@ -297,170 +276,135 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
     const auto CurrentLayout = GetLayout();
     VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    if (bInitializeTexture)
+    Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
+    if (pInitData->NumSubresources != ExpectedNumSubresources)
+        LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", pInitData->NumSubresources, " provided");
+
+    std::vector<VkBufferImageCopy> Regions(pInitData->NumSubresources);
+
+    Uint64 uploadBufferSize = 0;
+    Uint32 subres           = 0;
+    for (Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
     {
-        Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
-        if (pInitData->NumSubresources != ExpectedNumSubresources)
-            LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", pInitData->NumSubresources, " provided");
-
-        std::vector<VkBufferImageCopy> Regions(pInitData->NumSubresources);
-
-        Uint64 uploadBufferSize = 0;
-        Uint32 subres           = 0;
-        for (Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
+        for (Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
         {
-            for (Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
-            {
-                const auto& SubResData = pInitData->pSubResources[subres];
-                (void)SubResData;
-                auto& CopyRegion = Regions[subres];
+            const auto& SubResData = pInitData->pSubResources[subres];
+            (void)SubResData;
+            auto& CopyRegion = Regions[subres];
 
-                auto MipInfo = GetMipLevelProperties(m_Desc, mip);
+            auto MipInfo = GetMipLevelProperties(m_Desc, mip);
 
-                CopyRegion.bufferOffset = uploadBufferSize; // offset in bytes from the start of the buffer object
-                // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion
-                // of a larger two- or three-dimensional image, and control the addressing calculations of
-                // data in buffer memory. If either of these values is zero, that aspect of the buffer memory
-                // is considered to be tightly packed according to the imageExtent. (18.4)
-                CopyRegion.bufferRowLength   = 0;
-                CopyRegion.bufferImageHeight = 0;
-                // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
-                CopyRegion.imageOffset = VkOffset3D{0, 0, 0};
-                CopyRegion.imageExtent = VkExtent3D{MipInfo.LogicalWidth, MipInfo.LogicalHeight, MipInfo.Depth};
+            CopyRegion.bufferOffset = uploadBufferSize; // offset in bytes from the start of the buffer object
+            // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion
+            // of a larger two- or three-dimensional image, and control the addressing calculations of
+            // data in buffer memory. If either of these values is zero, that aspect of the buffer memory
+            // is considered to be tightly packed according to the imageExtent. (18.4)
+            CopyRegion.bufferRowLength   = 0;
+            CopyRegion.bufferImageHeight = 0;
+            // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
+            CopyRegion.imageOffset = VkOffset3D{0, 0, 0};
+            CopyRegion.imageExtent = VkExtent3D{MipInfo.LogicalWidth, MipInfo.LogicalHeight, MipInfo.Depth};
 
-                CopyRegion.imageSubresource.aspectMask     = aspectMask;
-                CopyRegion.imageSubresource.mipLevel       = mip;
-                CopyRegion.imageSubresource.baseArrayLayer = layer;
-                CopyRegion.imageSubresource.layerCount     = 1;
+            CopyRegion.imageSubresource.aspectMask     = aspectMask;
+            CopyRegion.imageSubresource.mipLevel       = mip;
+            CopyRegion.imageSubresource.baseArrayLayer = layer;
+            CopyRegion.imageSubresource.layerCount     = 1;
 
-                VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipInfo.RowSize, "Stride is too small");
-                // For compressed-block formats, MipInfo.RowSize is the size of one row of blocks
-                VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.StorageHeight / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
+            VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipInfo.RowSize, "Stride is too small");
+            // For compressed-block formats, MipInfo.RowSize is the size of one row of blocks
+            VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.StorageHeight / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
 
-                // bufferOffset must be a multiple of 4 (18.4)
-                // If the calling command's VkImage parameter is a compressed image, bufferOffset
-                // must be a multiple of the compressed texel block size in bytes (18.4). This
-                // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
-                uploadBufferSize += (MipInfo.MipSize + 3) & (~3);
-                ++subres;
-            }
+            // bufferOffset must be a multiple of 4 (18.4)
+            // If the calling command's VkImage parameter is a compressed image, bufferOffset
+            // must be a multiple of the compressed texel block size in bytes (18.4). This
+            // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
+            uploadBufferSize += (MipInfo.MipSize + 3) & (~3);
+            ++subres;
         }
-        VERIFY_EXPR(subres == pInitData->NumSubresources);
+    }
+    VERIFY_EXPR(subres == pInitData->NumSubresources);
 
-        VkBufferCreateInfo VkStagingBuffCI    = {};
-        VkStagingBuffCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        VkStagingBuffCI.pNext                 = nullptr;
-        VkStagingBuffCI.flags                 = 0;
-        VkStagingBuffCI.size                  = uploadBufferSize;
-        VkStagingBuffCI.usage                 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        VkStagingBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
-        VkStagingBuffCI.queueFamilyIndexCount = 0;
-        VkStagingBuffCI.pQueueFamilyIndices   = nullptr;
+    VkBufferCreateInfo VkStagingBuffCI    = {};
+    VkStagingBuffCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    VkStagingBuffCI.pNext                 = nullptr;
+    VkStagingBuffCI.flags                 = 0;
+    VkStagingBuffCI.size                  = uploadBufferSize;
+    VkStagingBuffCI.usage                 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VkStagingBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
+    VkStagingBuffCI.queueFamilyIndexCount = 0;
+    VkStagingBuffCI.pQueueFamilyIndices   = nullptr;
 
-        std::string StagingBufferName = "Upload buffer for '";
-        StagingBufferName += m_Desc.Name;
-        StagingBufferName += '\'';
-        VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStagingBuffCI, StagingBufferName.c_str());
+    std::string StagingBufferName = "Upload buffer for '";
+    StagingBufferName += m_Desc.Name;
+    StagingBufferName += '\'';
+    VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStagingBuffCI, StagingBufferName.c_str());
 
-        VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
-        VERIFY(IsPowerOfTwo(StagingBufferMemReqs.alignment), "Alignment is not power of 2!");
-        // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges
-        // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
-        // to the host (10.2)
-        auto StagingMemoryAllocation = GetDevice()->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        auto StagingBufferMemory     = StagingMemoryAllocation.Page->GetVkMemory();
-        auto AlignedStagingMemOffset = AlignUp(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
-        VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
+    VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
+    VERIFY(IsPowerOfTwo(StagingBufferMemReqs.alignment), "Alignment is not power of 2!");
+    // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges
+    // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
+    // to the host (10.2)
+    auto StagingMemoryAllocation = GetDevice()->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    auto StagingBufferMemory     = StagingMemoryAllocation.Page->GetVkMemory();
+    auto AlignedStagingMemOffset = AlignUp(StagingMemoryAllocation.UnalignedOffset, StagingBufferMemReqs.alignment);
+    VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
 
-        auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
-        VERIFY_EXPR(StagingData != nullptr);
-        StagingData += AlignedStagingMemOffset;
+    auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
+    VERIFY_EXPR(StagingData != nullptr);
+    StagingData += AlignedStagingMemOffset;
 
-        subres = 0;
-        for (Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
+    subres = 0;
+    for (Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
+    {
+        for (Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
         {
-            for (Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
+            const auto& SubResData = pInitData->pSubResources[subres];
+            const auto& CopyRegion = Regions[subres];
+
+            auto MipInfo = GetMipLevelProperties(m_Desc, mip);
+
+            VERIFY_EXPR(MipInfo.LogicalWidth == CopyRegion.imageExtent.width);
+            VERIFY_EXPR(MipInfo.LogicalHeight == CopyRegion.imageExtent.height);
+            VERIFY_EXPR(MipInfo.Depth == CopyRegion.imageExtent.depth);
+
+            VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipInfo.RowSize, "Stride is too small");
+            // For compressed-block formats, MipInfo.RowSize is the size of one row of blocks
+            VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.StorageHeight / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
+
+            for (Uint32 z = 0; z < MipInfo.Depth; ++z)
             {
-                const auto& SubResData = pInitData->pSubResources[subres];
-                const auto& CopyRegion = Regions[subres];
-
-                auto MipInfo = GetMipLevelProperties(m_Desc, mip);
-
-                VERIFY_EXPR(MipInfo.LogicalWidth == CopyRegion.imageExtent.width);
-                VERIFY_EXPR(MipInfo.LogicalHeight == CopyRegion.imageExtent.height);
-                VERIFY_EXPR(MipInfo.Depth == CopyRegion.imageExtent.depth);
-
-                VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipInfo.RowSize, "Stride is too small");
-                // For compressed-block formats, MipInfo.RowSize is the size of one row of blocks
-                VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.StorageHeight / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
-
-                for (Uint32 z = 0; z < MipInfo.Depth; ++z)
+                for (Uint32 y = 0; y < MipInfo.StorageHeight; y += FmtAttribs.BlockHeight)
                 {
-                    for (Uint32 y = 0; y < MipInfo.StorageHeight; y += FmtAttribs.BlockHeight)
-                    {
-                        memcpy(StagingData + CopyRegion.bufferOffset + ((y + z * MipInfo.StorageHeight) / FmtAttribs.BlockHeight) * MipInfo.RowSize,
-                               // SubResData.Stride must be the stride of one row of compressed blocks
-                               reinterpret_cast<const uint8_t*>(SubResData.pData) + (y / FmtAttribs.BlockHeight) * SubResData.Stride + z * SubResData.DepthStride,
-                               MipInfo.RowSize);
-                    }
+                    memcpy(StagingData + CopyRegion.bufferOffset + ((y + z * MipInfo.StorageHeight) / FmtAttribs.BlockHeight) * MipInfo.RowSize,
+                           // SubResData.Stride must be the stride of one row of compressed blocks
+                           reinterpret_cast<const uint8_t*>(SubResData.pData) + (y / FmtAttribs.BlockHeight) * SubResData.Stride + z * SubResData.DepthStride,
+                           MipInfo.RowSize);
                 }
-
-                ++subres;
             }
+
+            ++subres;
         }
-        VERIFY_EXPR(subres == pInitData->NumSubresources);
-
-        auto err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
-        CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
-
-        VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, SupportedStagesMask);
-
-        // Copy commands MUST be recorded outside of a render pass instance. This is OK here
-        // as copy will be the only command in the cmd buffer
-        vkCmdCopyBufferToImage(vkCmdBuff, StagingBuffer, m_VulkanImage,
-                               CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
-                               static_cast<uint32_t>(Regions.size()), Regions.data());
-
-        GetDevice()->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
-
-        // After command buffer is submitted, safe-release resources. This strategy
-        // is little overconservative as the resources will be released after the first
-        // command buffer submitted through the immediate context will be completed
-        GetDevice()->SafeReleaseDeviceObject(std::move(StagingBuffer), Uint64{1} << Uint64{CmdQueueInd});
-        GetDevice()->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{CmdQueueInd});
     }
-    else
-    {
-        VkImageSubresourceRange Subresource;
-        Subresource.aspectMask     = aspectMask;
-        Subresource.baseMipLevel   = 0;
-        Subresource.levelCount     = VK_REMAINING_MIP_LEVELS;
-        Subresource.baseArrayLayer = 0;
-        Subresource.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-        if (aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
-        {
-            if (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED)
-            {
-                VkClearColorValue ClearColor = {};
-                vkCmdClearColorImage(vkCmdBuff, m_VulkanImage,
-                                     CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-                                     &ClearColor, 1, &Subresource);
-            }
-        }
-        else if (aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT ||
-                 aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))
-        {
-            VkClearDepthStencilValue ClearValue = {};
-            vkCmdClearDepthStencilImage(vkCmdBuff, m_VulkanImage,
-                                        CurrentLayout, // must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-                                        &ClearValue, 1, &Subresource);
-        }
-        else
-        {
-            UNEXPECTED("Unexpected aspect mask");
-        }
-        GetDevice()->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
-    }
+    VERIFY_EXPR(subres == pInitData->NumSubresources);
+
+    auto err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
+    CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
+
+    VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, SupportedStagesMask);
+
+    // Copy commands MUST be recorded outside of a render pass instance. This is OK here
+    // as copy will be the only command in the cmd buffer
+    vkCmdCopyBufferToImage(vkCmdBuff, StagingBuffer, m_VulkanImage,
+                           CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
+                           static_cast<uint32_t>(Regions.size()), Regions.data());
+
+    GetDevice()->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, vkCmdBuff, std::move(CmdPool));
+
+    // After command buffer is submitted, safe-release resources. This strategy
+    // is little overconservative as the resources will be released after the first
+    // command buffer submitted through the immediate context will be completed
+    GetDevice()->SafeReleaseDeviceObject(std::move(StagingBuffer), Uint64{1} << Uint64{CmdQueueInd});
+    GetDevice()->SafeReleaseDeviceObject(std::move(StagingMemoryAllocation), Uint64{1} << Uint64{CmdQueueInd});
 }
 
 void TextureVkImpl::CreateStagingTexture(const TextureData* pInitData, const TextureFormatAttribs& FmtAttribs)
@@ -631,7 +575,7 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
                 CreateMipLevelView(TEXTURE_VIEW_UNORDERED_ACCESS, MipLevel, &pMipLevelViews[MipLevel * 2 + 1]);
             }
 
-            if (auto pImmediateCtx = m_pDevice->GetImmediateContext(m_Desc.InitialCommandQueueId))
+            if (auto pImmediateCtx = m_pDevice->GetImmediateContext(PlatformMisc::GetLSB(m_Desc.CommandQueueMask)))
             {
                 auto& GenerateMipsHelper = pImmediateCtx.RawPtr<DeviceContextVkImpl>()->GetGenerateMipsHelper();
                 GenerateMipsHelper.WarmUpCache(pViewVk->GetDesc().Format);

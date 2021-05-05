@@ -94,11 +94,6 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Buffer mode, see Diligent::BUFFER_MODE
     BUFFER_MODE Mode                DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
 
-    /// Defines which command queue will initially own the buffer.
-    /// Buffer may have a write access in these queue during initialization,
-    /// you must synchronize futher read or write access in another queue using fence.
-    Uint8    InitialCommandQueueId  DEFAULT_INITIALIZER(0);
-
     /// Buffer element stride, in bytes.
 
     /// For a structured buffer (BufferDesc::Mode equals Diligent::BUFFER_MODE_STRUCTURED) this member 
@@ -126,14 +121,12 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                CPU_ACCESS_FLAGS _CPUAccessFlags    = BufferDesc{}.CPUAccessFlags,
                BUFFER_MODE      _Mode              = BufferDesc{}.Mode,
                Uint32           _ElementByteStride = BufferDesc{}.ElementByteStride,
-               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask,
-               Uint8            _InitialQueueId    = BufferDesc{}.InitialCommandQueueId) noexcept : 
+               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask) noexcept : 
         uiSizeInBytes        {_uiSizeInBytes    },
         BindFlags            {_BindFlags        },
         Usage                {_Usage            },
         CPUAccessFlags       {_CPUAccessFlags   },
         Mode                 {_Mode             },
-        InitialCommandQueueId{_InitialQueueId   },
         ElementByteStride    {_ElementByteStride},
         CommandQueueMask     {_CommandQueueMask }
     {
@@ -151,10 +144,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     {
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
-                // Similarly, InitialCommandQueueId is only used to define the command
-                // queue that initially owns the buffer.
         return  // strcmp(Name, RHS.Name) == 0          &&
-                // InitialCommandQueueId == RHS.InitialCommandQueueId &&
                 uiSizeInBytes     == RHS.uiSizeInBytes     && 
                 BindFlags         == RHS.BindFlags         &&
                 Usage             == RHS.Usage             &&
@@ -176,15 +166,25 @@ struct BufferData
     /// Data size, in bytes
     Uint32 DataSize   DEFAULT_INITIALIZER(0);
 
+    /// Defines which device context will be used to initialize the buffer.
+
+    /// The buffer will be in write state after the initialization.
+    /// If an application uses the buffer in another context afterwards, it
+    /// must synchronize the access to the buffer using fence.
+    /// When null is provided, the first context enabled by CommandQueueMask
+    /// will be used.
+    struct IDeviceContext*  pContext  DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
 
     BufferData() noexcept {}
 
-    BufferData(const void* _pData,
-               Uint32      _DataSize) :
+    BufferData(const void*     _pData,
+               Uint32          _DataSize,
+               IDeviceContext* _pContext = nullptr) :
         pData   {_pData   },
-        DataSize{_DataSize}
+        DataSize{_DataSize},
+        pContext{_pContext}
     {}
 #endif
 };

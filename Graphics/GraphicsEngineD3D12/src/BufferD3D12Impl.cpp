@@ -146,18 +146,23 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         HeapProps.CreationNodeMask     = 1;
         HeapProps.VisibleNodeMask      = 1;
 
-        bool bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
+        const bool bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
         if (bInitializeBuffer)
             SetState(RESOURCE_STATE_COPY_DEST);
 
         if (!IsInKnownState())
             SetState(RESOURCE_STATE_UNDEFINED);
 
-        const auto CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
-        const auto StateMask   = GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd));
-        auto       D3D12State  = ResourceStateFlagsToD3D12ResourceStates(GetState()) & StateMask;
+        const auto CmdQueueInd = pBuffData && pBuffData->pContext ?
+            ValidatedCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
+            CommandQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
 
-        auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+        const auto StateMask = bInitializeBuffer ?
+            GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
+            static_cast<D3D12_RESOURCE_STATES>(~0u);
+
+        auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(GetState()) & StateMask;
+        auto hr         = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                                                         &D3D12BuffDesc, D3D12State, nullptr,
                                                         __uuidof(m_pd3d12Resource),
                                                         reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));

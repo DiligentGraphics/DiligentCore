@@ -196,9 +196,13 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         }
     }
 
-    if (m_Desc.Usage == USAGE_DYNAMIC &&
-        (VkBuffCI.usage & (VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT)) == 0 &&
-        (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) == 0)
+    constexpr VkBufferUsageFlags UsageThatRequiresBackingBuffer =
+        VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
+        VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+    if (m_Desc.Usage == USAGE_DYNAMIC && (VkBuffCI.usage & UsageThatRequiresBackingBuffer) == 0)
     {
         VERIFY(VkBuffCI.sharingMode == VK_SHARING_MODE_EXCLUSIVE,
                "Sharing mode is not supported for dynamic buffers, must be handled by ValidateBufferDesc()");
@@ -291,10 +295,10 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         VkDeviceSize RequiredAlignment = MemReqs.alignment;
         if ((m_Desc.BindFlags & BIND_RAY_TRACING) != 0)
         {
-            // geometry.triangles.vertexData.deviceAddress must be aligned to the size in bytes of the smallest component of the format in vertexFormat (which is 4 bytes)
-            // geometry.triangles.indexData.deviceAddress must be aligned to the size in bytes of the type in indexType (which is 4 bytes)
-            // if geometry.triangles.transformData.deviceAddress is not 0, it must be aligned to 16 bytes
-            // geometry.aabbs.data.deviceAddress must be aligned to 8 bytes
+            // geometry.triangles.vertexData.deviceAddress must be aligned to the size in bytes of the smallest component of the format in vertexFormat (which is 4 bytes).
+            // geometry.triangles.indexData.deviceAddress must be aligned to the size in bytes of the type in indexType (which is 4 bytes).
+            // if geometry.triangles.transformData.deviceAddress is not 0, it must be aligned to 16 bytes.
+            // geometry.aabbs.data.deviceAddress must be aligned to 8 bytes.
             const VkDeviceSize ReadOnlyRTBufferAlign = 16u;
             const VkDeviceSize ScratchBufferAlign    = PhysicalDevice.GetExtProperties().AccelStruct.minAccelerationStructureScratchOffsetAlignment;
             RequiredAlignment                        = std::max(RequiredAlignment, std::max(ScratchBufferAlign, ReadOnlyRTBufferAlign));
@@ -328,7 +332,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         }
 #endif
 
-        bool           bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
+        const bool     bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);
         RESOURCE_STATE InitialState      = RESOURCE_STATE_UNDEFINED;
         if (bInitializeBuffer)
         {
@@ -384,7 +388,10 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
                 CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
-                const auto                          CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
+                const auto CmdQueueInd = pBuffData->pContext ?
+                    ValidatedCast<DeviceContextVkImpl>(pBuffData->pContext)->GetCommandQueueId() :
+                    CommandQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
+
                 VulkanUtilities::CommandPoolWrapper CmdPool;
                 VkCommandBuffer                     vkCmdBuff;
                 pRenderDeviceVk->AllocateTransientCmdPool(CmdQueueInd, CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");

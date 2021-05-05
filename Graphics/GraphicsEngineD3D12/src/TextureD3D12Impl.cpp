@@ -147,13 +147,18 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         }
     }
 
-    D3D12_RESOURCE_DESC D3D12TexDesc = GetD3D12TextureDesc();
+    D3D12_RESOURCE_DESC D3D12TexDesc       = GetD3D12TextureDesc();
+    const bool          bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
 
-    const auto CmdQueueInd = CommandQueueIndex{m_Desc.InitialCommandQueueId};
-    const auto StateMask   = GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd));
+    const auto CmdQueueInd = pInitData && pInitData->pContext ?
+        ValidatedCast<DeviceContextD3D12Impl>(pInitData->pContext)->GetCommandQueueId() :
+        CommandQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
 
-    auto* pd3d12Device       = pRenderDeviceD3D12->GetD3D12Device();
-    bool  bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
+    const auto StateMask = bInitializeTexture ?
+        GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
+        static_cast<D3D12_RESOURCE_STATES>(~0u);
+
+    auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
         VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) <= 1,
