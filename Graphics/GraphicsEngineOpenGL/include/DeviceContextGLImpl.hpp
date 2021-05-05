@@ -271,6 +271,15 @@ public:
     /// Implementation of IDeviceContext::UpdateSBT() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs) override final;
 
+    /// Implementation of IDeviceContext::BeginDebugGroup() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE BeginDebugGroup(const Char* Name, const float* pColor) override final;
+
+    /// Implementation of IDeviceContext::EndDebugGroup() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE EndDebugGroup() override final;
+
+    /// Implementation of IDeviceContext::InsertDebugLabel() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override final;
+
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 

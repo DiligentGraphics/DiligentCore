@@ -397,4 +397,20 @@ Func = (FuncType)eglGetProcAddress( #Func );\
     // Do not use stub
     glQueryCounter = (PFNGLQUERYCOUNTERPROC)eglGetProcAddress( "glQueryCounterEXT" );
 #endif
+
+#ifdef LOAD_GL_OBJECT_LABEL
+    glObjectLabel = (PFNGLOBJECTLABELPROC)eglGetProcAddress( "glObjectLabel" );
+#endif
+    
+#ifdef LOAD_GL_POP_DEBUG_GROUP
+    glPopDebugGroup = (PFNGLPOPDEBUGGROUPPROC)eglGetProcAddress( "glPopDebugGroup" );
+#endif
+    
+#ifdef LOAD_GL_PUSH_DEBUG_GROUP
+    glPushDebugGroup = (PFNGLPUSHDEBUGGROUPPROC)eglGetProcAddress( "glPushDebugGroup" );
+#endif
+
+#ifdef LOAD_GL_DEBUG_MESSAGE_INSERT
+    glDebugMessageInsert = (PFNGLDEBUGMESSAGEINSERTPROC)eglGetProcAddress( "glDebugMessageInsert" );
+#endif
 }

@@ -698,6 +698,39 @@ public:
 #endif
     }
 
+    __forceinline void BeginDebugUtilsLabel(const VkDebugUtilsLabelEXT& Label)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY_EXPR(Label.sType == VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT);
+
+        vkCmdBeginDebugUtilsLabelEXT(m_VkCmdBuffer, &Label);
+#else
+        UNSUPPORTED("Debug utils is not supported when vulkan library is linked statically");
+#endif
+    }
+
+    __forceinline void EndDebugUtilsLabel()
+    {
+#if DILIGENT_USE_VOLK
+        vkCmdEndDebugUtilsLabelEXT(m_VkCmdBuffer);
+#else
+        UNSUPPORTED("Debug utils is not supported when vulkan library is linked statically");
+#endif
+    }
+
+    __forceinline void InsertDebugUtilsLabel(const VkDebugUtilsLabelEXT& Label)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY_EXPR(Label.sType == VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT);
+
+        vkCmdInsertDebugUtilsLabelEXT(m_VkCmdBuffer, &Label);
+#else
+        UNSUPPORTED("Debug utils is not supported when vulkan library is linked statically");
+#endif
+    }
+
     void FlushBarriers();
 
     __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer, VkPipelineStageFlags StageMask)

@@ -44,4 +44,17 @@ const char *GLRBOCreateReleaseHelper        :: Name = "renderbuffer";
 const char *GLQueryCreateReleaseHelper      :: Name = "query";
 // clang-format on
 
+// clang-format off
+GLenum GLBufferObjCreateReleaseHelper  :: Type = GL_BUFFER;
+GLenum GLProgramObjCreateReleaseHelper :: Type = GL_PROGRAM;
+GLenum GLShaderObjCreateReleaseHelper  :: Type = GL_SHADER;
+GLenum GLPipelineObjCreateReleaseHelper:: Type = GL_PROGRAM_PIPELINE;
+GLenum GLVAOCreateReleaseHelper        :: Type = GL_VERTEX_ARRAY;
+GLenum GLTextureCreateReleaseHelper    :: Type = GL_TEXTURE;
+GLenum GLSamplerCreateReleaseHelper    :: Type = GL_SAMPLER;
+GLenum GLFBOCreateReleaseHelper        :: Type = GL_FRAMEBUFFER;
+GLenum GLRBOCreateReleaseHelper        :: Type = GL_RENDERBUFFER;
+GLenum GLQueryCreateReleaseHelper      :: Type = GL_QUERY;
+// clang-format on
+
 } // namespace GLObjectWrappers

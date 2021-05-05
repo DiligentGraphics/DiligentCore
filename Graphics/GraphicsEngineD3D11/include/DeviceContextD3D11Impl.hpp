@@ -240,32 +240,41 @@ public:
     /// Implementation of IDeviceContext::Flush() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE Flush() override final;
 
-    /// Implementation of IDeviceContext::BuildBLAS().
+    /// Implementation of IDeviceContext::BuildBLAS() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE BuildBLAS(const BuildBLASAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::BuildTLAS().
+    /// Implementation of IDeviceContext::BuildTLAS() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE BuildTLAS(const BuildTLASAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::CopyBLAS().
+    /// Implementation of IDeviceContext::CopyBLAS() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::CopyTLAS().
+    /// Implementation of IDeviceContext::CopyTLAS() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::WriteBLASCompactedSize().
+    /// Implementation of IDeviceContext::WriteBLASCompactedSize() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::WriteTLASCompactedSize().
+    /// Implementation of IDeviceContext::WriteTLASCompactedSize() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::TraceRays().
+    /// Implementation of IDeviceContext::TraceRays() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::TraceRaysIndirect().
+    /// Implementation of IDeviceContext::TraceRaysIndirect() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
 
-    /// Implementation of IDeviceContext::UpdateSBT().
+    /// Implementation of IDeviceContext::UpdateSBT() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs) override final;
+
+    /// Implementation of IDeviceContext::BeginDebugGroup() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE BeginDebugGroup(const Char* Name, const float* pColor) override final;
+
+    /// Implementation of IDeviceContext::EndDebugGroup() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE EndDebugGroup() override final;
+
+    /// Implementation of IDeviceContext::InsertDebugLabel() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override final;
 
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }

@@ -125,6 +125,8 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     glSamplerParameterf(m_GlSampler, GL_TEXTURE_MIN_LOD, SamplerDesc.MinLOD);
 
     CHECK_GL_ERROR_AND_THROW("Failed to create OpenGL texture sampler\n");
+
+    m_GlSampler.SetName(m_Desc.Name);
 }
 
 SamplerGLImpl::~SamplerGLImpl()

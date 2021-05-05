@@ -47,6 +47,7 @@ QueryGLImpl::QueryGLImpl(IReferenceCounters* pRefCounters,
     m_GlQuery{true}
 // clang-format on
 {
+    m_GlQuery.SetName(m_Desc.Name);
 }
 
 QueryGLImpl::~QueryGLImpl()

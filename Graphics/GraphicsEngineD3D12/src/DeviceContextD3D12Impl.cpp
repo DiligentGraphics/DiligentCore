@@ -2787,4 +2787,25 @@ void DeviceContextD3D12Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIn
     }
 }
 
+void DeviceContextD3D12Impl::BeginDebugGroup(const Char* Name, const float* pColor)
+{
+    TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);
+
+    GetCmdContext().PixBeginEvent(Name, pColor);
+}
+
+void DeviceContextD3D12Impl::EndDebugGroup()
+{
+    TDeviceContextBase::EndDebugGroup(0);
+
+    GetCmdContext().PixEndEvent();
+}
+
+void DeviceContextD3D12Impl::InsertDebugLabel(const Char* Label, const float* pColor)
+{
+    TDeviceContextBase::InsertDebugLabel(Label, pColor, 0);
+
+    GetCmdContext().PixSetMarker(Label, pColor);
+}
+
 } // namespace Diligent

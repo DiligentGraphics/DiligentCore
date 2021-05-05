@@ -287,6 +287,15 @@ public:
     /// Implementation of IDeviceContext::UpdateSBT() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs) override final;
 
+    /// Implementation of IDeviceContext::BeginDebugGroup() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE BeginDebugGroup(const Char* Name, const float* pColor) override final;
+
+    /// Implementation of IDeviceContext::EndDebugGroup() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE EndDebugGroup() override final;
+
+    /// Implementation of IDeviceContext::InsertDebugLabel() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override final;
+
     /// Implementation of IDeviceContextD3D12::ID3D12GraphicsCommandList() in Direct3D12 backend.
     virtual ID3D12GraphicsCommandList* DILIGENT_CALL_TYPE GetD3D12CommandList() override final;
 

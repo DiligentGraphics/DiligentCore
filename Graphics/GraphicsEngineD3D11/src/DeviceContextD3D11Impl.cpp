@@ -2179,6 +2179,24 @@ void DeviceContextD3D11Impl::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIn
     UNSUPPORTED("UpdateSBT is not supported in DirectX 11");
 }
 
+void DeviceContextD3D11Impl::BeginDebugGroup(const Char* Name, const float* pColor)
+{
+    TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);
+    // Not supported in Direct3D11
+}
+
+void DeviceContextD3D11Impl::EndDebugGroup()
+{
+    TDeviceContextBase::EndDebugGroup(0);
+    // Not supported in Direct3D11
+}
+
+void DeviceContextD3D11Impl::InsertDebugLabel(const Char* Label, const float* pColor)
+{
+    TDeviceContextBase::InsertDebugLabel(Label, pColor, 0);
+    // Not supported in Direct3D11
+}
+
 // clang-format off
 #ifdef DILIGENT_DEVELOPMENT
     DEFINE_D3D11CTX_FUNC_POINTERS(GetCBMethods,      GetConstantBuffers)

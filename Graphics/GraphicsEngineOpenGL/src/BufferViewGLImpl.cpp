@@ -97,6 +97,8 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
         CHECK_GL_ERROR_AND_THROW("Failed to create texture buffer");
 
         CtxState.BindTexture(-1, GL_TEXTURE_BUFFER, GLObjectWrappers::GLTextureObj(false));
+
+        m_GLTexBuffer.SetName(m_Desc.Name);
     }
 }
 

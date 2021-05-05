@@ -230,6 +230,17 @@ public:
         m_pCommandList->ResolveQueryData(pQueryHeap, Type, StartIndex, NumQueries, pDestinationBuffer, AlignedDestinationBufferOffset);
     }
 
+#ifdef DILIGENT_HAS_PIXEVENTRUNTIME
+    void PixBeginEvent(const Char* Name, const float* pColor);
+    void PixEndEvent();
+    void PixSetMarker(const Char* Label, const float* pColor);
+#else
+    void PixBeginEvent(const Char* Name, const float* pColor)
+    {}
+    void PixEndEvent() {}
+    void PixSetMarker(const Char* Label, const float* pColor) {}
+#endif
+
 protected:
     void InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, bool FlushImmediate = false);
 

@@ -158,6 +158,8 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     GLState.BindBuffer(m_BindTarget, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 
     m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
+
+    m_GlBuffer.SetName(m_Desc.Name);
 }
 
 static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc BuffDesc, GLuint BufferHandle)

@@ -171,7 +171,6 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(openglCallbackFunction, &m_ShowDebugGLOutput);
-        GLuint unusedIds = 0;
         if (glDebugMessageControl != nullptr)
         {
             glDebugMessageControl(
@@ -179,8 +178,18 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                 GL_DONT_CARE, // Type of debug messages to enable or disable
                 GL_DONT_CARE, // Severity of debug messages to enable or disable
                 0,            // The length of the array ids
-                &unusedIds,   // Array of unsigned integers containing the ids of the messages to enable or disable
+                nullptr,      // Array of unsigned integers containing the ids of the messages to enable or disable
                 GL_TRUE       // Flag determining whether the selected messages should be enabled or disabled
+            );
+
+            // Disable messages from glPushDebugGroup and glDebugMessageInsert
+            glDebugMessageControl(
+                GL_DEBUG_SOURCE_APPLICATION, // Source of debug messages to enable or disable
+                GL_DONT_CARE,                // Type of debug messages to enable or disable
+                GL_DONT_CARE,                // Severity of debug messages to enable or disable
+                0,                           // The length of the array ids
+                nullptr,                     // Array of unsigned integers containing the ids of the messages to enable or disable
+                GL_FALSE                     // Flag determining whether the selected messages should be enabled or disabled
             );
         }
         if (glGetError() != GL_NO_ERROR)
