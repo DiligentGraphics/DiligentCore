@@ -1223,25 +1223,25 @@ extern PFNGLQUERYCOUNTERPROC glQueryCounter;
     #define LOAD_DEBUG_MESSAGE_CONTROL
     typedef void (GL_APIENTRY* PFNGLDEBUGMESSAGECONTROLPROC) (GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint* ids, GLboolean enabled);
     extern PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl;
-    
+
     #define LOAD_GL_OBJECT_LABEL
     typedef void (GLAPIENTRY * PFNGLOBJECTLABELPROC) (GLenum identifier, GLuint name, GLsizei length, const GLchar* label);
     extern PFNGLOBJECTLABELPROC glObjectLabel;
-    
+
     #define LOAD_GL_POP_DEBUG_GROUP
     typedef void (GLAPIENTRY * PFNGLPOPDEBUGGROUPPROC) (void);
     extern PFNGLPOPDEBUGGROUPPROC glPopDebugGroup;
-    
+
     #define LOAD_GL_PUSH_DEBUG_GROUP
     typedef void (GLAPIENTRY * PFNGLPUSHDEBUGGROUPPROC) (GLenum source, GLuint id, GLsizei length, const GLchar * message);
     extern PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup;
-    
+
     #define LOAD_GL_DEBUG_MESSAGE_INSERT
     typedef void (GLAPIENTRY * PFNGLDEBUGMESSAGEINSERTPROC) (GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* buf);
     extern PFNGLDEBUGMESSAGEINSERTPROC glDebugMessageInsert;
 
 #endif
-    
+
 #ifndef GL_BUFFER
 #   define GL_BUFFER 0x82E0
 #endif

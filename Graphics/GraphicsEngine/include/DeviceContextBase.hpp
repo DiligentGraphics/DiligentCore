@@ -1789,7 +1789,7 @@ void DeviceContextBase<ImplementationTraits>::BeginDebugGroup(const Char* Name, 
 {
     DEV_CHECK_ERR(Name != nullptr, "Name must not be null");
 #ifdef DILIGENT_DEVELOPMENT
-    m_DvpDebugGroupCount += 1;
+    ++m_DvpDebugGroupCount;
 #endif
 }
 
@@ -1798,7 +1798,7 @@ void DeviceContextBase<ImplementationTraits>::EndDebugGroup(int)
 {
 #ifdef DILIGENT_DEVELOPMENT
     DEV_CHECK_ERR(m_DvpDebugGroupCount > 0, "There is no active debug group to end");
-    m_DvpDebugGroupCount -= 1;
+    --m_DvpDebugGroupCount;
 #endif
 }
 
