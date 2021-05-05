@@ -92,6 +92,11 @@ FenceVkImpl::~FenceVkImpl()
         // (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyFence-fence-01120)
         Wait(UINT64_MAX);
     }
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_MaxSyncPoints > RequiredArraySize * 2)
+        LOG_WARNING_MESSAGE("Max queue size of pending fences is too big. This may indicate that none of the GetCompletedValue(), Wait() or ExtractSignalSemaphore() have been used.");
+#endif
 }
 
 void FenceVkImpl::ImmediatelyReleaseResources()
@@ -302,8 +307,6 @@ void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 V
     {
         InternalGetCompletedValue();
     }
-
-    //VERIFY(m_SyncPoints.size() < RequiredArraySize * 2, "array of sync points is too big, none of the GetCompletedValue(), Wait() or ExtractSignalSemaphore() are used");
 
     m_SyncPoints.push_back({Value, std::move(SyncPoint)});
 }

@@ -96,7 +96,11 @@ private:
 
     static constexpr Uint32   RequiredArraySize = 8;
     std::mutex                m_SyncPointsGuard; // Protects access to the m_SyncPoints
-    std::deque<SyncPointData> m_SyncPoints;      // TODO: use ring buffer
+    std::deque<SyncPointData> m_SyncPoints;
+
+#ifdef DILIGENT_DEVELOPMENT
+    size_t m_MaxSyncPoints = 0;
+#endif
 };
 
 } // namespace Diligent

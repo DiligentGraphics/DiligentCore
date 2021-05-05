@@ -65,17 +65,22 @@ public:
     void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
     {
         m_PendingFences.emplace_back(Value, std::move(Fence));
-        VERIFY(m_PendingFences.size() < RequiredArraySize, "array of fences is too big, none of the GetCompletedValue(), HostWait() or DeviceWait() are used");
         DvpSignal(Value);
+
+#ifdef DILIGENT_DEVELOPMENT
+        m_MaxPendingFences = std::max(m_MaxPendingFences, m_PendingFences.size());
+#endif
     }
 
     void HostWait(Uint64 Value, bool FlushCommands);
     void DeviceWait(Uint64 Value);
 
 private:
-    static constexpr Uint32 RequiredArraySize = 16;
-
     std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
+
+#ifdef DILIGENT_DEVELOPMENT
+    size_t m_MaxPendingFences = 0;
+#endif
 };
 
 } // namespace Diligent
