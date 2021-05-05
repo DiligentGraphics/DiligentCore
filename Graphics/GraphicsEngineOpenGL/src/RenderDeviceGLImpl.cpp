@@ -590,6 +590,10 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
                 }
             }
             break;
+
+            default:
+                // No way to get memory info
+                break;
         }
     }
 

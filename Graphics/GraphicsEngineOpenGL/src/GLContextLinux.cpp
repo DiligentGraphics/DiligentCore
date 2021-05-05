@@ -38,7 +38,6 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
                      RENDER_DEVICE_TYPE&       DevType,
                      struct Version&           APIVersion,
                      const struct SwapChainDesc* /*pSCDesc*/) :
-    m_Context(0),
     m_WindowId(InitAttribs.Window.WindowId),
     m_pDisplay(InitAttribs.Window.pDisplay)
 {

@@ -53,13 +53,15 @@ void ComputeShaderReferenceMtl(ISwapChain* pSwapChain)
                                    options:nil
                                    error:&errors];
         ASSERT_TRUE(library != nil);
+        [library autorelease];
+
         id <MTLFunction> computeFunc = [library newFunctionWithName:@"CSMain"];
         ASSERT_TRUE(computeFunc != nil);
-        [library release];
+        [computeFunc autorelease];
 
         auto* computePipeline = [mtlDevice newComputePipelineStateWithFunction:computeFunc error:&errors];
         ASSERT_TRUE(computePipeline != nil);
-        [computeFunc release];
+        [computePipeline autorelease];
 
         auto* pTestingSwapChainMtl = ValidatedCast<TestingSwapChainMtl>(pSwapChain);
         auto* pUAV = pTestingSwapChainMtl->GetCurrentBackBufferUAV();

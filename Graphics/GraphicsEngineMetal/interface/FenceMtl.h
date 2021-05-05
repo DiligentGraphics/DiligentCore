@@ -49,7 +49,7 @@ static const INTERFACE_ID IID_FenceMtl =
 DILIGENT_BEGIN_INTERFACE(IFenceMtl, IFence)
 {
     /// Returns a pointer to Metal shared event (MTLSharedEvent)
-    VIRTUAL id<MTLSharedEvent> METHOD(GetMtlSharedEvent)(THIS) CONST PURE;
+    VIRTUAL id<MTLSharedEvent> METHOD(GetMtlSharedEvent)(THIS) CONST API_AVAILABLE(ios(12), macosx(10.14)) PURE;
 };
 DILIGENT_END_INTERFACE
 
