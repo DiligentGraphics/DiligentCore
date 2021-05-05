@@ -138,6 +138,7 @@ public:
     void SetFence(RefCntAutoPtr<FenceVkImpl> pFence)
     {
         VERIFY_EXPR(pFence->GetDesc().Type == FENCE_TYPE_CPU_WAIT_ONLY);
+        VERIFY_EXPR(!pFence->IsTimelineSemaphore());
         m_pFence = std::move(pFence);
     }
 

@@ -154,88 +154,50 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
     // Increment the value before submitting the buffer to be overly safe
     const uint64_t FenceValue = m_NextFenceValue.fetch_add(1);
 
-    if (m_pFence->IsTimelineSemaphore())
-    {
-        const VkSemaphore vkTimelineSemaphore = m_pFence->GetVkSemaphore();
+    auto NewSyncPoint = CreateSyncPoint(FenceValue);
 
-        VkTimelineSemaphoreSubmitInfo TimelineSemaphoreSubmitInfo{};
-        TimelineSemaphoreSubmitInfo.sType                     = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-        TimelineSemaphoreSubmitInfo.pNext                     = nullptr;
-        TimelineSemaphoreSubmitInfo.waitSemaphoreValueCount   = 0;
-        TimelineSemaphoreSubmitInfo.pWaitSemaphoreValues      = nullptr;
-        TimelineSemaphoreSubmitInfo.signalSemaphoreValueCount = 1;
-        TimelineSemaphoreSubmitInfo.pSignalSemaphoreValues    = &FenceValue;
-
-        VkSubmitInfo SubmitInfoTimelineSemaphore{};
-        SubmitInfoTimelineSemaphore.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        SubmitInfoTimelineSemaphore.pNext                = &TimelineSemaphoreSubmitInfo;
-        SubmitInfoTimelineSemaphore.waitSemaphoreCount   = 0;
-        SubmitInfoTimelineSemaphore.pWaitSemaphores      = nullptr;
-        SubmitInfoTimelineSemaphore.signalSemaphoreCount = 1;
-        SubmitInfoTimelineSemaphore.pSignalSemaphores    = &vkTimelineSemaphore;
-
-        // The first synchronization scope includes every command submitted in the same batch.
-        // Semaphore signal operations that are defined by vkQueueSubmit additionally include
-        // all commands that occur earlier in submission order.
-        const VkSubmitInfo SubmitInfoArray[] = {InSubmitInfo, SubmitInfoTimelineSemaphore};
-
-        const uint32_t SubmitCount =
-            (InSubmitInfo.waitSemaphoreCount != 0 ||
-             InSubmitInfo.commandBufferCount != 0 ||
-             InSubmitInfo.signalSemaphoreCount != 0) ?
-            2 :
-            1;
-
-        auto err = vkQueueSubmit(m_VkQueue, SubmitCount, SubmitInfoArray, VK_NULL_HANDLE);
-        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
-        (void)err;
-    }
-    else
-    {
-        auto NewSyncPoint = CreateSyncPoint(FenceValue);
-
-        m_TempSignalSemaphores.clear();
-        NewSyncPoint->GetSemaphores(m_TempSignalSemaphores);
+    m_TempSignalSemaphores.clear();
+    NewSyncPoint->GetSemaphores(m_TempSignalSemaphores);
 
 #ifdef DILIGENT_DEBUG
-        const VkBaseInStructure* pStruct = static_cast<const VkBaseInStructure*>(InSubmitInfo.pNext);
-        for (; pStruct != nullptr;)
+    const VkBaseInStructure* pStruct = static_cast<const VkBaseInStructure*>(InSubmitInfo.pNext);
+    for (; pStruct != nullptr;)
+    {
+        if (pStruct->sType == VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO)
         {
-            if (pStruct->sType == VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO)
-            {
-                VERIFY(m_TempSignalSemaphores.empty(), "Can not append semaphores when timeline semaphores are used");
-                break;
-            }
-            pStruct = pStruct->pNext;
+            VERIFY(m_TempSignalSemaphores.empty(), "Can not append semaphores when timeline semaphores are used");
+            break;
         }
+        pStruct = pStruct->pNext;
+    }
 #endif
 
-        for (uint32_t s = 0; s < InSubmitInfo.signalSemaphoreCount; ++s)
-            m_TempSignalSemaphores.push_back(InSubmitInfo.pSignalSemaphores[s]);
+    for (uint32_t s = 0; s < InSubmitInfo.signalSemaphoreCount; ++s)
+        m_TempSignalSemaphores.push_back(InSubmitInfo.pSignalSemaphores[s]);
 
-        VkSubmitInfo SubmitInfo         = InSubmitInfo;
-        SubmitInfo.signalSemaphoreCount = static_cast<Uint32>(m_TempSignalSemaphores.size());
-        SubmitInfo.pSignalSemaphores    = m_TempSignalSemaphores.data();
+    VkSubmitInfo SubmitInfo         = InSubmitInfo;
+    SubmitInfo.signalSemaphoreCount = static_cast<Uint32>(m_TempSignalSemaphores.size());
+    SubmitInfo.pSignalSemaphores    = m_TempSignalSemaphores.data();
 
-        const uint32_t SubmitCount =
-            (SubmitInfo.waitSemaphoreCount != 0 ||
-             SubmitInfo.commandBufferCount != 0 ||
-             SubmitInfo.signalSemaphoreCount != 0) ?
-            1 :
-            0;
+    const uint32_t SubmitCount =
+        (SubmitInfo.waitSemaphoreCount != 0 ||
+         SubmitInfo.commandBufferCount != 0 ||
+         SubmitInfo.signalSemaphoreCount != 0) ?
+        1 :
+        0;
 
-        auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, NewSyncPoint->GetFence());
-        DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
-        (void)err;
+    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, NewSyncPoint->GetFence());
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+    (void)err;
 
-        m_pFence->AddPendingSyncPoint(m_CommandQueueId, FenceValue, NewSyncPoint);
+    m_pFence->AddPendingSyncPoint(m_CommandQueueId, FenceValue, NewSyncPoint);
 
-        // Update last sync point
-        {
-            ThreadingTools::LockHelper Lock2(m_LastSyncPointGuard);
-            m_LastSyncPoint = std::move(NewSyncPoint);
-        }
+    // Update last sync point
+    {
+        ThreadingTools::LockHelper Lock2(m_LastSyncPointGuard);
+        m_LastSyncPoint = std::move(NewSyncPoint);
     }
+
     return FenceValue;
 }
 
@@ -266,18 +228,11 @@ Uint64 CommandQueueVkImpl::WaitForIdle()
     // Update last completed fence value to unlock all waiting events.
     const auto FenceValue = m_NextFenceValue.fetch_add(1);
 
-    if (m_pFence->IsTimelineSemaphore())
-    {
-        InternalSignalSemaphore(m_pFence->GetVkSemaphore(), FenceValue);
-        m_pFence->Wait(FenceValue);
-    }
-    else
-    {
-        vkQueueWaitIdle(m_VkQueue);
-        // For some reason after idling the queue not all fences are signaled
-        m_pFence->Wait(UINT64_MAX);
-        m_pFence->Reset(FenceValue);
-    }
+    vkQueueWaitIdle(m_VkQueue);
+    // For some reason after idling the queue not all fences are signaled
+    m_pFence->Wait(UINT64_MAX);
+    m_pFence->Reset(FenceValue);
+
     return FenceValue;
 }
 
