@@ -92,11 +92,6 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
     MISC_TEXTURE_FLAGS MiscFlags        DEFAULT_INITIALIZER(MISC_TEXTURE_FLAG_NONE);
 
-    /// Defines which command queue will initially own the texture.
-    /// Texture may have a write access in these queue during initialization,
-    /// you must synchronize futher read or write access in another queue using fence.
-    Uint8        InitialCommandQueueId  DEFAULT_INITIALIZER(0);
-
     /// Optimized clear value
     OptimizedClearValue ClearValue;
 
@@ -122,8 +117,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 CPU_ACCESS_FLAGS    _CPUAccessFlags   = TextureDesc{}.CPUAccessFlags,
                 MISC_TEXTURE_FLAGS  _MiscFlags        = TextureDesc{}.MiscFlags,
                 OptimizedClearValue _ClearValue       = TextureDesc{}.ClearValue,
-                Uint64              _CommandQueueMask = TextureDesc{}.CommandQueueMask,
-                Uint8               _InitialQueueId   = TextureDesc{}.InitialCommandQueueId) noexcept : 
+                Uint64              _CommandQueueMask = TextureDesc{}.CommandQueueMask) noexcept : 
         Type                 {_Type            }, 
         Width                {_Width           },
         Height               {_Height          },
@@ -135,7 +129,6 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         BindFlags            {_BindFlags       },
         CPUAccessFlags       {_CPUAccessFlags  },
         MiscFlags            {_MiscFlags       },
-        InitialCommandQueueId{_InitialQueueId  },
         ClearValue           {_ClearValue      },
         CommandQueueMask     {_CommandQueueMask}
     {}
@@ -153,7 +146,6 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
         return  // strcmp(Name, RHS.Name) == 0          &&
-                // InitialCommandQueueId == RHS.InitialCommandQueueId &&
                 Type             == RHS.Type           &&
                 Width            == RHS.Width          &&
                 Height           == RHS.Height         &&
@@ -241,13 +233,24 @@ struct TextureData
     /// occurs.
     Uint32             NumSubresources  DEFAULT_INITIALIZER(0);
 
+    /// Defines which device context will be used to initialize the texture.
+
+    /// The texture will be in write state after the initialization.
+    /// If an application uses the texture in another context afterwards, it
+    /// must synchronize the access to the texture using fence.
+    /// When null is provided, the first context enabled by CommandQueueMask
+    /// will be used.
+    struct IDeviceContext* pContext     DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE
     TextureData() noexcept {}
 
     TextureData(TextureSubResData* _pSubResources,
-                Uint32             _NumSubresources) noexcept :
+                Uint32             _NumSubresources,
+                IDeviceContext*    _pContext = nullptr) noexcept :
         pSubResources   {_pSubResources  },
-        NumSubresources {_NumSubresources}
+        NumSubresources {_NumSubresources},
+        pContext        {_pContext       }
     {}
 #endif
 };
