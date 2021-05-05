@@ -64,8 +64,11 @@ public:
     void AddPendingQuery(CComPtr<ID3D11DeviceContext1> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 Value)
     {
         m_PendingQueries.emplace_back(std::move(pCtx), std::move(pQuery), Value);
-        VERIFY(m_PendingQueries.size() < 16, "array of queries is too big, none of the GetCompletedValue() or Wait() are used");
         DvpSignal(Value);
+
+#ifdef DILIGENT_DEVELOPMENT
+        m_MaxPendingQueries = std::max(m_MaxPendingQueries, m_PendingQueries.size());
+#endif
     }
 
     void Wait(Uint64 Value, bool FlushCommands);
@@ -86,6 +89,10 @@ private:
         {}
     };
     std::deque<PendingFenceData> m_PendingQueries;
+
+#ifdef DILIGENT_DEVELOPMENT
+    size_t m_MaxPendingQueries = 0;
+#endif
 };
 
 } // namespace Diligent

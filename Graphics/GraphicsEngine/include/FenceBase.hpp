@@ -76,8 +76,9 @@ public:
     {
         auto EnqueuedValue = m_EnqueuedFenceValue.load();
         DEV_CHECK_ERR(NewValue >= EnqueuedValue,
-                      "Fence '", this->m_Desc.Name, "' signaled or equeued for signal with value (", NewValue,
-                      ") but previous value (", EnqueuedValue, ") is greater than new value");
+                      "Fence '", this->m_Desc.Name, "' signaled or equeued for signal with value ", NewValue,
+                      ", but the previous value (", EnqueuedValue, ") is greater than the new value. "
+                                                                   "Signal operation will have no effect.");
 
         while (!m_EnqueuedFenceValue.compare_exchange_weak(EnqueuedValue, std::max(EnqueuedValue, NewValue)))
         {

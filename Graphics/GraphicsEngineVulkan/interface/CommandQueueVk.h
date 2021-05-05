@@ -73,7 +73,7 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, IObject)
     ///
     /// \warning  Access to the VkQueue must be externally synchronized.
     ///           Don't use this method to submit commands directly, use SubmitCmdBuffer() or Submit(),
-    ///           which are safe.
+    ///           which are thread-safe.
     VIRTUAL VkQueue METHOD(GetVkQueue)(THIS) PURE;
 
     /// Returns vulkan command queue family index
