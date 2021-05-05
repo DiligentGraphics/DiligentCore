@@ -1,13 +1,12 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,22 +25,4 @@
  */
 
 #include <Metal/Metal.h>
-#include "DiligentCore/Graphics/GraphicsEngineMetal/interface/RenderDeviceMtl.h"
-
-void TestRenderDeviceMtl_CInterface(IRenderDeviceMtl* pDevice)
-{
-    id<MTLDevice> mtlDevice = IRenderDeviceMtl_GetMtlDevice(pDevice);
-    (void) mtlDevice;
-
-    Uint64 Value;
-    Value = IRenderDeviceMtl_GetNextFenceValue(0u);
-    (void)Value;
-    Value = IRenderDeviceMtl_GetCompletedFenceValue(1u);
-    (void)Value;
-
-    Bool bValue = IRenderDeviceMtl_IsFenceSignaled(0u, (Uint64)10);
-    (void)bValue;
-
-    IRenderDeviceMtl_CreateTextureFromMtlResource(pDevice, (id<MTLTexture>)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
-    IRenderDeviceMtl_CreateBufferFromMtlResource(pDevice, (id<MTLBuffer>)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
-}
+#include "DiligentCore/Graphics/GraphicsEngineMetal/interface/CommandQueueMtl.h"

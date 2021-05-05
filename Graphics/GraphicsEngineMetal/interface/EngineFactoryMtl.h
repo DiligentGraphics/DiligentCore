@@ -53,26 +53,66 @@ static const INTERFACE_ID IID_EngineFactoryMtl =
 
 DILIGENT_BEGIN_INTERFACE(IEngineFactoryMtl, IEngineFactory)
 {
-    VIRTUAL void METHOD(CreateDeviceAndContextsMtl)(
-        THIS_
-        const EngineMtlCreateInfo REF EngineCI,
-        IRenderDevice**               ppDevice,
-        IDeviceContext**              ppContexts) PURE;
+    /// Creates render device and device contexts for Metal-based engine implementation
 
-    VIRTUAL void METHOD(CreateSwapChainMtl)(
-        THIS_
-        IRenderDevice*          pDevice,
-        IDeviceContext*         pImmediateContext,
-        const SwapChainDesc REF SCDesc,
-        const NativeWindow REF  Window,
-        ISwapChain**            ppSwapChain) PURE;
+    /// \param [in]  EngineCI   - Engine creation attributes.
+    /// \param [out] ppDevice   - Address of the memory location where pointer to
+    ///                           the created device will be written.
+    /// \param [out] ppContexts - Address of the memory location where pointers to
+    ///                           the contexts will be written. Immediate context goes at
+    ///                           position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                           pointers to the deferred contexts go afterwards.
+    VIRTUAL void METHOD(CreateDeviceAndContextsMtl)(THIS_
+                                                    const EngineMtlCreateInfo REF EngineCI,
+                                                    IRenderDevice**               ppDevice,
+                                                    IDeviceContext**              ppContexts) PURE;
 
-    VIRTUAL void METHOD(AttachToMtlDevice)(
-        THIS_
-        void*                         pMtlNativeDevice,
-        const EngineMtlCreateInfo REF EngineAttribs,
-        IRenderDevice**               ppDevice,
-        IDeviceContext**              ppContexts) PURE;
+    /// Creates a swap chain for Metal-based engine implementation
+
+    /// \param [in] pDevice      - Pointer to the render device.
+    /// \param [in] pImmediateContext - Pointer to the immediate device context.
+    /// \param [in] SCDesc       - Swap chain description.
+    /// \param [in] Window       - Platform-specific native handle of the window.
+    /// \param [out] ppSwapChain - Address of the memory location where pointer to the new
+    ///                            swap chain will be written.
+    VIRTUAL void METHOD(CreateSwapChainMtl)(THIS_
+                                            IRenderDevice*          pDevice,
+                                            IDeviceContext*         pImmediateContext,
+                                            const SwapChainDesc REF SCDesc,
+                                            const NativeWindow REF  Window,
+                                            ISwapChain**            ppSwapChain) PURE;
+
+    /// Creates a command queue from Metal native command queue.
+    
+    /// \param [in]  pMtlNativeQueue  - Pointer to the native Metal command queue.
+    /// \param [in]  pRawMemAllocator - Pointer to the raw memory allocator.
+    ///                                 Must be same as EngineCreateInfo::pRawMemAllocator in the following AttachToMtlDevice() call.
+    /// \param [out] ppCommandQueue   - Address of the memory location where pointer to the command queue will be written.
+    VIRTUAL void METHOD(CreateCommandQueueMtl)(THIS_
+                                               void*                     pMtlNativeQueue,
+                                               struct IMemoryAllocator*  pRawAllocator,
+                                               struct ICommandQueueMtl** ppCommandQueue) PURE;
+
+    /// Attaches to existing Mtl render device and immediate context
+
+    /// \param [in]  pMtlNativeDevice  - pointer to native Mtl device
+    /// \param [in]  CommandQueueCount - Number of command queues.
+    /// \param [in]  ppCommandQueues   - Pointer to the array of command queues.
+    ///                                  Must be created from existing command queue using CreateCommandQueueMtl().
+    /// \param [in]  EngineCI          - Engine creation attributes.
+    /// \param [out] ppDevice          - Address of the memory location where pointer to
+    ///                                  the created device will be written
+    /// \param [out] ppContexts        - Address of the memory location where pointers to
+    ///                                  the contexts will be written. Immediate context goes at
+    ///                                  position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                                  pointers to the deferred contexts go afterwards.
+    VIRTUAL void METHOD(AttachToMtlDevice)(THIS_
+                                           void*                         pMtlNativeDevice,
+                                           Uint32                        CommandQueueCount,
+                                           struct ICommandQueueMtl**     ppCommandQueues,
+                                           const EngineMtlCreateInfo REF EngineCI,
+                                           IRenderDevice**               ppDevice,
+                                           IDeviceContext**              ppContexts) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -84,6 +124,7 @@ DILIGENT_END_INTERFACE
 
 #    define IEngineFactoryMtl_CreateDeviceAndContextsMtl(This, ...) CALL_IFACE_METHOD(EngineFactoryMtl, CreateDeviceAndContextsMtl, This, __VA_ARGS__)
 #    define IEngineFactoryMtl_CreateSwapChainMtl(This, ...)         CALL_IFACE_METHOD(EngineFactoryMtl, CreateSwapChainMtl,         This, __VA_ARGS__)
+#    define IEngineFactoryMtl_CreateCommandQueueMtl(This, ...)      CALL_IFACE_METHOD(EngineFactoryMtl, CreateCommandQueueMtl,      This, __VA_ARGS__)
 #    define IEngineFactoryMtl_AttachToMtlDevice(This, ...)          CALL_IFACE_METHOD(EngineFactoryMtl, AttachToMtlDevice,          This, __VA_ARGS__)
 
 // clang-format on

@@ -44,6 +44,12 @@ TestingEnvironmentMtl::TestingEnvironmentMtl(const CreateInfo&    CI,
                                              const SwapChainDesc& SCDesc) :
     TestingEnvironment{CI, SCDesc}
 {
+    m_MtlDevice = m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlDevice();
+    auto* Ctx   = ValidatedCast<IDeviceContextMtl>(GetDeviceContext());
+    auto* Queue = Ctx->LockCommandQueue();
+    m_MtlQueue  = Queue->GetMtlCommandQueue();
+    Ctx->UnlockCommandQueue();
+
     if (m_pSwapChain == nullptr)
     {
         CreateTestingSwapChainMtl(this, SCDesc, &m_pSwapChain);
@@ -62,16 +68,6 @@ TestingEnvironment* CreateTestingEnvironmentMtl(const TestingEnvironment::Create
                                                 const SwapChainDesc&                  SCDesc)
 {
     return new TestingEnvironmentMtl{CI, SCDesc};
-}
-
-id<MTLDevice> TestingEnvironmentMtl::GetMtlDevice() const
-{
-    return m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlDevice();
-}
-
-id<MTLCommandQueue> TestingEnvironmentMtl::GetMtlCommandQueue() const
-{
-    return m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlCommandQueue();
 }
 
 } // namespace Testing
