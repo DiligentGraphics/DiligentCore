@@ -706,7 +706,7 @@ public:
 
         vkCmdBeginDebugUtilsLabelEXT(m_VkCmdBuffer, &Label);
 #else
-        UNSUPPORTED("Debug utils is not supported when vulkan library is linked statically");
+        LOG_WARNING_MESSAGE("Debug utils are not supported when vulkan library is linked statically");
 #endif
     }
 
@@ -715,7 +715,7 @@ public:
 #if DILIGENT_USE_VOLK
         vkCmdEndDebugUtilsLabelEXT(m_VkCmdBuffer);
 #else
-        UNSUPPORTED("Debug utils is not supported when vulkan library is linked statically");
+        LOG_WARNING_MESSAGE("Debug utils are not supported when vulkan library is linked statically");
 #endif
     }
 
@@ -727,7 +727,7 @@ public:
 
         vkCmdInsertDebugUtilsLabelEXT(m_VkCmdBuffer, &Label);
 #else
-        UNSUPPORTED("Debug utils is not supported when vulkan library is linked statically");
+        LOG_WARNING_MESSAGE("Debug utils are not supported when vulkan library is linked statically");
 #endif
     }
 

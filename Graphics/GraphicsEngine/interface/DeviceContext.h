@@ -2577,33 +2577,33 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// set with SetUserData() method.
     ///
     /// \return     The pointer to the user data object.
-    /// 
+    ///
     /// \remarks    The method does *NOT* call AddRef()
     ///             for the object being returned.
     VIRTUAL IObject* METHOD(GetUserData)(THIS) CONST PURE;
 
-    
-    /// Begin debug group with name and color.
+
+    /// Begins a debug group with name and color.
     /// External debug tools may use this information when displaying context commands.
 
     /// \param [in] Name   - Group name.
     /// \param [in] pColor - Region color.
-    /// 
+    ///
     /// \remarks Supported contexts: graphics, compute, transfer.
     VIRTUAL void METHOD(BeginDebugGroup)(THIS_
                                         const Char*  Name,
                                         const float* pColor DEFAULT_INITIALIZER(nullptr)) PURE;
-    
-    /// End debug group.
-    VIRTUAL void METHOD(EndDebugGroup)(THIS) PURE;
-    
 
-    /// Insert debug label with name and color.
+    /// Ends a debug group that was previously started with IDeviceContext::BeginDebugGroup.
+    VIRTUAL void METHOD(EndDebugGroup)(THIS) PURE;
+
+
+    /// Inserts a debug label with name and color.
     /// External debug tools may use this information when displaying context commands.
-    
+
     /// \param [in] Label  - Label name.
     /// \param [in] pColor - Label color.
-    /// 
+    ///
     /// \remarks Supported contexts: graphics, compute, transfer.
     ///          Not supported in Metal backend.
     VIRTUAL void METHOD(InsertDebugLabel)(THIS_

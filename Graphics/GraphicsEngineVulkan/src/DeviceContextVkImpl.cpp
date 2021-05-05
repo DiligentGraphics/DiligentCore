@@ -1230,7 +1230,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
             }
 
 #ifdef DILIGENT_DEVELOPMENT
-            DEV_CHECK_ERR(m_DvpDebugGroupCount == 0, "Not all debug groups are ended");
+            DEV_CHECK_ERR(m_DvpDebugGroupCount == 0, "Not all debug groups have been ended");
             m_DvpDebugGroupCount = 0;
 #endif
 
