@@ -283,14 +283,11 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(Diligent-BuildSettings INTERFACE
-    	# errors
-        -Werror=init-self -Werror=parentheses -Werror=return-stack-address -Werror=return-type -Werror=unsupported-friend
-        -Werror=array-bounds -Werror=div-by-zero -Werror=address -Werror=unknown-warning-option -Werror=keyword-macro
-        -Werror=instantiation-after-specialization -Werror=method-signatures -Werror=self-assign -Werror=self-move -Werror=infinite-recursion
-        -Werror=pessimizing-move -Werror=dangling-else
-        # warnings
+    	# All warnings are errors
+        -Werror
+        # Some extra warnings
         -Wall -Wextra -Wuninitialized -Wconditional-uninitialized -Wextra-tokens -Wpointer-arith -Wloop-analysis -Wunused
-        # disable warnings
+        # Disable few warnings
         -Wno-overloaded-virtual -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unknown-pragmas
         -Wno-zero-as-null-pointer-constant -Wno-unused-parameter
     )

@@ -22,7 +22,7 @@ endif()
 
 add_subdirectory(ShaderTools)
 
-if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
+if(D3D12_SUPPORTED OR VULKAN_SUPPORTED OR METAL_SUPPORTED)
     add_subdirectory(GraphicsEngineNextGenBase)
 endif()
 

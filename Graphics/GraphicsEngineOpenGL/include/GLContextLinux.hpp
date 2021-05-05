@@ -45,9 +45,8 @@ public:
     NativeGLContextType GetCurrentNativeGLContext();
 
 private:
-    Uint32              m_WindowId = 0;
-    void*               m_pDisplay = nullptr;
-    NativeGLContextType m_Context;
+    Uint32 m_WindowId = 0;
+    void*  m_pDisplay = nullptr;
 };
 
 } // namespace Diligent
