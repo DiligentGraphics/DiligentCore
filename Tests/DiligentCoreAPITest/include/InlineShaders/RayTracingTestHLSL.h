@@ -552,7 +552,7 @@ float4 MissShader()
 }
 
 [numthreads(16, 16, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+void CSMain(uint3 DTid : SV_DispatchThreadID)
 {
     uint2 Dim;
     g_ColorBuffer.GetDimensions(Dim.x, Dim.y);

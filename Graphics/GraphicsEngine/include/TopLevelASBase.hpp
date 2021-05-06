@@ -68,7 +68,7 @@ private:
         Uint32                               InstanceIndex               = 0;
         RefCntAutoPtr<BottomLevelASImplType> pBLAS;
 #ifdef DILIGENT_DEVELOPMENT
-        Uint32 Version = 0;
+        Uint32 dvpVersion = 0;
 #endif
     };
 
@@ -128,7 +128,7 @@ public:
                 CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);
 
 #ifdef DILIGENT_DEVELOPMENT
-                Desc.Version = Desc.pBLAS->GetVersion();
+                Desc.dvpVersion = Desc.pBLAS->DvpGetVersion();
 #endif
                 bool IsUniqueName = this->m_Instances.emplace(NameCopy, Desc).second;
                 if (!IsUniqueName)
@@ -193,9 +193,9 @@ public:
             CalculateHitGroupIndex(Desc, InstanceOffset, HitGroupStride, BindingMode);
 
 #ifdef DILIGENT_DEVELOPMENT
-            Changed      = Changed || (pPrevBLAS != Desc.pBLAS);
-            Changed      = Changed || (PrevIndex != Desc.ContributionToHitGroupIndex);
-            Desc.Version = Desc.pBLAS->GetVersion();
+            Changed         = Changed || (pPrevBLAS != Desc.pBLAS);
+            Changed         = Changed || (PrevIndex != Desc.ContributionToHitGroupIndex);
+            Desc.dvpVersion = Desc.pBLAS->DvpGetVersion();
 #endif
         }
 
@@ -316,7 +316,7 @@ public:
         {
             const InstanceDesc& Inst = NameAndInst.second;
 
-            if (Inst.Version != Inst.pBLAS->GetVersion())
+            if (Inst.dvpVersion != Inst.pBLAS->DvpGetVersion())
             {
                 LOG_ERROR_MESSAGE("Instance with name '", NameAndInst.first.GetStr(), "' contains BLAS with name '", Inst.pBLAS->GetDesc().Name,
                                   "' that was changed after TLAS build, you must rebuild TLAS");

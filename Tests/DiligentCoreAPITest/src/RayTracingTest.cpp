@@ -36,6 +36,7 @@
 #include "gtest/gtest.h"
 
 #include "InlineShaders/RayTracingTestHLSL.h"
+#include "InlineShaders/RayTracingTestMSL.h"
 #include "RayTracingTestConstants.hpp"
 
 namespace Diligent
@@ -56,6 +57,10 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain);
 void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain);
 void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain);
 void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain);
+#endif
+
+#if METAL_SUPPORTED
+void InlineRayTracingInComputePplnReferenceMtl(ISwapChain* pSwapChain);
 #endif
 
 } // namespace Testing
@@ -2030,10 +2035,17 @@ class RT8 : public testing::TestWithParam<int>
 
 TEST_P(RT8, InlineRayTracing_ComputePSO)
 {
-    Uint32 TestId  = GetParam();
-    auto*  pEnv    = TestingEnvironment::GetInstance();
-    auto*  pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceInfo().Features.RayTracing2)
+    Uint32      TestId     = GetParam();
+    auto*       pEnv       = TestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+
+    if (DeviceInfo.IsMetalDevice())
+    {
+        if (!DeviceInfo.Features.RayTracing2)
+            GTEST_SKIP() << "Ray tracing is not supported by this device";
+    }
+    else if (!pEnv->SupportsRayTracing() || !DeviceInfo.Features.RayTracing2)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }
@@ -2062,6 +2074,11 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
                 break;
 #endif
 
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                InlineRayTracingInComputePplnReferenceMtl(pSwapChain);
+                break;
+#endif
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }
@@ -2084,10 +2101,17 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
         ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.ShaderCompiler  = SHADER_COMPILER_DXC;
         ShaderCI.HLSLVersion     = {6, 5};
-        ShaderCI.EntryPoint      = "main";
+        ShaderCI.EntryPoint      = "CSMain";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
         ShaderCI.Desc.Name       = "CS";
         ShaderCI.Source          = HLSL::RayTracingTest8_CS.c_str();
+
+        if (DeviceInfo.IsMetalDevice())
+        {
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL;
+            ShaderCI.Source         = MSL::RayTracingTest8_CS.c_str();
+        }
         pDevice->CreateShader(ShaderCI, &pCS);
         ASSERT_NE(pCS, nullptr);
     }
@@ -2158,6 +2182,10 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     DispatchComputeAttribs dispatchAttrs;
     dispatchAttrs.ThreadGroupCountX = (SCDesc.Width + 15) / 16;
     dispatchAttrs.ThreadGroupCountY = (SCDesc.Height + 15) / 16;
+
+    dispatchAttrs.MtlThreadGroupSizeX = 16;
+    dispatchAttrs.MtlThreadGroupSizeY = 16;
+    dispatchAttrs.MtlThreadGroupSizeZ = 1;
 
     pContext->DispatchCompute(dispatchAttrs);
 
