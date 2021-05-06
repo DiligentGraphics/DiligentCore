@@ -338,12 +338,6 @@ public:
         return GetAdapterInfo().Capabilities;
     }
 
-    /// Implementation of IRenderDevice::GetDeviceProperties().
-    virtual const DeviceProperties& DILIGENT_CALL_TYPE GetDeviceProperties() const override final
-    {
-        return GetAdapterInfo().Properties;
-    }
-
     /// Implementation of IRenderDevice::GetAdapterInfo().
     virtual const GraphicsAdapterInfo& DILIGENT_CALL_TYPE GetAdapterInfo() const override final
     {
