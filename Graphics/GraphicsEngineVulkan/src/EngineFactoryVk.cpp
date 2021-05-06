@@ -272,7 +272,7 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
 
         if (Features.RayTracing)
         {
-            Properties.MaxRayTracingRecursionDepth = PhysicalDevice.GetExtProperties().RayTracingPipeline.maxRayRecursionDepth;
+            Properties.RayTracing.MaxRecursionDepth = PhysicalDevice.GetExtProperties().RayTracingPipeline.maxRayRecursionDepth;
         }
         if (Features.WaveOp)
         {
