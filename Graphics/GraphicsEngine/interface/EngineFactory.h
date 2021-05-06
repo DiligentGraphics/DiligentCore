@@ -59,12 +59,13 @@ static const INTERFACE_ID IID_EngineFactory =
 /// Engine factory base interface
 DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
 {
-    /// Returns API info structure
+    /// Returns API info structure, see Diligent::APIInfo.
     VIRTUAL const APIInfo REF METHOD(GetAPIInfo)(THIS) CONST PURE;
 
     /// Creates default shader source input stream factory
+
     /// \param [in]  SearchDirectories           - Semicolon-seprated list of search directories.
-    /// \param [out] ppShaderSourceStreamFactory - Memory address where pointer to the shader source stream factory will be written.
+    /// \param [out] ppShaderSourceStreamFactory - Memory address where the pointer to the shader source stream factory will be written.
     VIRTUAL void METHOD(CreateDefaultShaderSourceStreamFactory)(
                         THIS_
                         const Char*                              SearchDirectories,
@@ -93,6 +94,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
 #if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
     /// CreateDefaultShaderSourceStreamFactory() method can be called.
+
     /// \param [in] NativeActivity          - Pointer to the native activity object (ANativeActivity).
     /// \param [in] NativeActivityClassName - Native activity class name.
     /// \param [in] AssetManager            - Pointer to the asset manager (AAssetManager).

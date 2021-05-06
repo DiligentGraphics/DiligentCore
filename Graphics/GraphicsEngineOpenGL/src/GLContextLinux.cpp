@@ -79,9 +79,8 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
     if (glGetError() != GL_NO_ERROR)
         LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-    DevType          = RENDER_DEVICE_TYPE_GL;
-    APIVersion.Major = static_cast<Uint8>(MajorVersion);
-    APIVersion.Minor = static_cast<Uint8>(MinorVersion);
+    DevType    = RENDER_DEVICE_TYPE_GL;
+    APIVersion = Version{MajorVersion, MinorVersion};
 }
 
 GLContext::~GLContext()
