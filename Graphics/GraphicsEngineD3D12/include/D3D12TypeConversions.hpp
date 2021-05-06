@@ -108,7 +108,7 @@ D3D12_SHADER_VISIBILITY ShaderStagesToD3D12ShaderVisibility(SHADER_TYPE Stages);
 
 HardwareQueueId              D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TYPE Type);
 D3D12_COMMAND_LIST_TYPE      QueueIdToD3D12CommandListType(HardwareQueueId QueueId);
-CONTEXT_TYPE                 D3D12CommandListTypeToContextType(D3D12_COMMAND_LIST_TYPE ListType);
+COMMAND_QUEUE_TYPE           D3D12CommandListTypeToCmdQueueType(D3D12_COMMAND_LIST_TYPE ListType);
 D3D12_COMMAND_QUEUE_PRIORITY QueuePriorityToD3D12QueuePriority(QUEUE_PRIORITY Priority);
 
 } // namespace Diligent

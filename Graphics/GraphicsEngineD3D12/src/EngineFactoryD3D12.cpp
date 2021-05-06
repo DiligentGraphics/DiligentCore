@@ -232,7 +232,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumContexts) + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
 
     std::vector<RefCntAutoPtr<CommandQueueD3D12Impl>> CmdQueueD3D12Refs;
     CComPtr<ID3D12Device>                             d3d12Device;
@@ -396,7 +396,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 
         // Describe and create the command queue.
         auto&      RawMemAllocator = GetRawAllocator();
-        const auto CreateQueue     = [&](const ContextCreateInfo& ContextCI) //
+        const auto CreateQueue     = [&](const ImmediateContextCreateInfo& ContextCI) //
         {
             D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 
@@ -421,15 +421,15 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             CmdQueues.push_back(pCmdQueueD3D12);
         };
 
-        if (EngineCI.NumContexts > 0)
+        if (EngineCI.NumImmediateContexts > 0)
         {
-            VERIFY(EngineCI.pContextInfo != nullptr, "Must have been caught by VerifyEngineCreateInfo()");
-            for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumContexts; ++CtxInd)
-                CreateQueue(EngineCI.pContextInfo[CtxInd]);
+            VERIFY(EngineCI.pImmediateContextInfo != nullptr, "Must have been caught by VerifyEngineCreateInfo()");
+            for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumImmediateContexts; ++CtxInd)
+                CreateQueue(EngineCI.pImmediateContextInfo[CtxInd]);
         }
         else
         {
-            ContextCreateInfo DefaultContext;
+            ImmediateContextCreateInfo DefaultContext;
             DefaultContext.Name    = "Main Command Queue";
             DefaultContext.QueueId = 0;
 
@@ -503,27 +503,27 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
     if (!pd3d12NativeDevice || !ppCommandQueues || !ppDevice || !ppContexts)
         return;
 
-    VERIFY_EXPR(std::max(1u, EngineCI.NumContexts) == CommandQueueCount);
+    VERIFY_EXPR(std::max(1u, EngineCI.NumImmediateContexts) == CommandQueueCount);
 
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));
 
-    if (EngineCI.NumContexts > 0)
+    if (EngineCI.NumImmediateContexts > 0)
     {
-        if (CommandQueueCount != EngineCI.NumContexts)
+        if (CommandQueueCount != EngineCI.NumImmediateContexts)
         {
-            LOG_ERROR_MESSAGE("EngineCI.NumContexts (", EngineCI.NumContexts, ") must be the same as CommandQueueCount (", CommandQueueCount, ") or zero.");
+            LOG_ERROR_MESSAGE("EngineCI.NumImmediateContexts (", EngineCI.NumImmediateContexts, ") must be the same as CommandQueueCount (", CommandQueueCount, ") or zero.");
             return;
         }
         for (Uint32 q = 0; q < CommandQueueCount; ++q)
         {
             auto Desc    = ppCommandQueues[q]->GetD3D12CommandQueue()->GetDesc();
-            auto CtxType = QueueIdToD3D12CommandListType(HardwareQueueId{EngineCI.pContextInfo[q].QueueId});
+            auto CtxType = QueueIdToD3D12CommandListType(HardwareQueueId{EngineCI.pImmediateContextInfo[q].QueueId});
 
             if (Desc.Type != CtxType)
             {
-                LOG_ERROR_MESSAGE("ppCommandQueues[", q, "] has type ", GetContextTypeString(D3D12CommandListTypeToContextType(Desc.Type)),
-                                  ", but EngineCI.pContextInfo[", q, "] has incompatible type ", GetContextTypeString(D3D12CommandListTypeToContextType(CtxType)), ".");
+                LOG_ERROR_MESSAGE("ppCommandQueues[", q, "] has type ", GetCommandQueueTypeString(D3D12CommandListTypeToCmdQueueType(Desc.Type)),
+                                  ", but EngineCI.pImmediateContextInfo[", q, "] has incompatible type ", GetCommandQueueTypeString(D3D12CommandListTypeToCmdQueueType(CtxType)), ".");
                 return;
             }
         }
@@ -826,7 +826,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
         for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
         {
             auto& Queue                     = AdapterInfo.Queues[q];
-            Queue.QueueType                 = D3D12CommandListTypeToContextType(QueueIdToD3D12CommandListType(HardwareQueueId{q}));
+            Queue.QueueType                 = D3D12CommandListTypeToCmdQueueType(QueueIdToD3D12CommandListType(HardwareQueueId{q}));
             Queue.MaxDeviceContexts         = 0xFF;
             Queue.TextureCopyGranularity[0] = 1;
             Queue.TextureCopyGranularity[1] = 1;

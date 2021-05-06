@@ -2077,49 +2077,50 @@ DILIGENT_TYPED_ENUM(VALIDATION_FLAGS, Uint32)
 DEFINE_FLAG_ENUM_OPERATORS(VALIDATION_FLAGS)
 
 
-/// Device context type
-DILIGENT_TYPED_ENUM(CONTEXT_TYPE, Uint8)
+/// Command queue type
+DILIGENT_TYPED_ENUM(COMMAND_QUEUE_TYPE, Uint8)
 {
-    CONTEXT_TYPE_UNKNOWN        = 0,
+    /// Queue type is unknown.
+    COMMAND_QUEUE_TYPE_UNKNOWN        = 0,
 
-    /// Context that supports only memory transfer commands.
-    CONTEXT_TYPE_TRANSFER       = 0x01,
+    /// Command queue that only supports memory transfer operations.
+    COMMAND_QUEUE_TYPE_TRANSFER       = 0x01,
 
-    /// Context that supports compute, ray tracing and transfer commands.
-    CONTEXT_TYPE_COMPUTE        = 0x02 | CONTEXT_TYPE_TRANSFER,
+    /// Command queue that supports compute, ray tracing and transfer commands.
+    COMMAND_QUEUE_TYPE_COMPUTE        = 0x02 | COMMAND_QUEUE_TYPE_TRANSFER,
 
-    /// Context that supports graphics, compute, ray tracing and transfer commands.
-    CONTEXT_TYPE_GRAPHICS       = 0x04 | CONTEXT_TYPE_COMPUTE,
+    /// Command queue that supports graphics, compute, ray tracing and transfer commands.
+    COMMAND_QUEUE_TYPE_GRAPHICS       = 0x04 | COMMAND_QUEUE_TYPE_COMPUTE,
 
-    /// Mask to extract primary type of context.
-    CONTEXT_TYPE_PRIMARY_MASK   = CONTEXT_TYPE_TRANSFER | CONTEXT_TYPE_COMPUTE | CONTEXT_TYPE_GRAPHICS,
+    /// Mask to extract primary command queue type.
+    COMMAND_QUEUE_TYPE_PRIMARY_MASK   = COMMAND_QUEUE_TYPE_TRANSFER | COMMAND_QUEUE_TYPE_COMPUTE | COMMAND_QUEUE_TYPE_GRAPHICS,
 
     /// Reserved for future use.
-    CONTEXT_TYPE_SPARSE_BINDING = 0x10,
+    COMMAND_QUEUE_TYPE_SPARSE_BINDING = 0x10,
 
-    CONTEXT_TYPE_MAX_BIT        = CONTEXT_TYPE_GRAPHICS
+    COMMAND_QUEUE_TYPE_MAX_BIT        = COMMAND_QUEUE_TYPE_GRAPHICS
 };
-DEFINE_FLAG_ENUM_OPERATORS(CONTEXT_TYPE)
+DEFINE_FLAG_ENUM_OPERATORS(COMMAND_QUEUE_TYPE)
 
 
 /// Queue priority
 DILIGENT_TYPED_ENUM(QUEUE_PRIORITY, Uint8)
 {
     QUEUE_PRIORITY_UNKNOWN = 0,
-        
+
     /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_LOW_EXT
     /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_NORMAL
     QUEUE_PRIORITY_LOW,
-        
+
     /// Default queue priority.
     /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_EXT
     /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_NORMAL
     QUEUE_PRIORITY_MEDIUM,
-        
+
     /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_HIGH_EXT
     /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_HIGH
     QUEUE_PRIORITY_HIGH,
-        
+
     /// Additional system privileges required to use this priority, read documentation for specific platform.
     /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_REALTIME_EXT
     /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME
@@ -2162,20 +2163,25 @@ struct DeviceMemoryInfo
 typedef struct DeviceMemoryInfo DeviceMemoryInfo;
 
 
-/// Device queue properties
-struct DeviceQueueInfo
+/// Command queue properties
+struct CommandQueueInfo
 {
-    /// Indicates which type of commands are supported by the queue.
-    CONTEXT_TYPE QueueType       DEFAULT_INITIALIZER(CONTEXT_TYPE_UNKNOWN);
+    /// Indicates which type of commands are supported by this queue, see Diligent::COMMAND_QUEUE_TYPE.
+    COMMAND_QUEUE_TYPE QueueType           DEFAULT_INITIALIZER(COMMAND_QUEUE_TYPE_UNKNOWN);
 
-    /// The maximum number of immediate contexts that may be created for this queue type.
-    Uint32       MaxDeviceContexts   DEFAULT_INITIALIZER(0);
+    /// The maximum number of immediate contexts that may be created for this queue.
+    Uint32             MaxDeviceContexts   DEFAULT_INITIALIZER(0);
 
-    /// In Vulkan backend, transfer queue may require to align texture offset and size in copy operations.
-    /// Graphics and compute queues already specify alignment {1,1,1}.
-    Uint32       TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
+    /// Defines required texture offset and size alignment for copy operations
+    /// in transfer queues.
+    
+    /// \remarks An application should check this member before performing copy operations
+    ///          in transfer queues.
+    ///          Graphics and compute queues don't have alignment requirements (e.g
+    ///          TextureCopyGranularity is always {1,1,1}).
+    Uint32  TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
 };
-typedef struct DeviceQueueInfo DeviceQueueInfo;
+typedef struct CommandQueueInfo CommandQueueInfo;
 
 
 /// Graphics adapter properties
@@ -2207,23 +2213,28 @@ struct GraphicsAdapterInfo
 
     /// Device properties, see Diligent::DeviceProperties.
     DeviceProperties Properties;
-    
-    /// Queue types which are supported by this device. See Diligent::DeviceQueueInfo.
-    DeviceQueueInfo  Queues[DILIGENT_MAX_ADAPTER_QUEUES]  DEFAULT_INITIALIZER({});
 
-    /// Number of queues.
+    /// An array of NumQueues command queues supported by this device. See Diligent::CommandQueueInfo.
+    CommandQueueInfo  Queues[DILIGENT_MAX_ADAPTER_QUEUES]  DEFAULT_INITIALIZER({});
+
+    /// The number of queues in Queues array.
     Uint32     NumQueues DEFAULT_INITIALIZER(0);
 };
 typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;
 
 
-/// Device context create info
-struct ContextCreateInfo
+/// Immediate device context create info
+struct ImmediateContextCreateInfo
 {
     /// Context name.
     const char*    Name         DEFAULT_INITIALIZER(nullptr);
 
     /// Queue index in GraphicsAdapterInfo::Queues.
+
+    /// \remarks An immediate device context creates a software command queue for the
+    ///          hardware queue with id QueueId. The total number of contexts created for
+    ///          this queue must not exceed the value of MaxDeviceContexts member of CommandQueueInfo
+    ///          for this queue.
     Uint8          QueueId      DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
 
     /// Priority of the queue, see Diligent::QUEUE_PRIORITY.
@@ -2233,38 +2244,43 @@ struct ContextCreateInfo
     /// Other backends:     queue priority is ignored.
     QUEUE_PRIORITY Priority     DEFAULT_INITIALIZER(QUEUE_PRIORITY_MEDIUM);
 };
-typedef struct ContextCreateInfo ContextCreateInfo;
+typedef struct ImmediateContextCreateInfo ImmediateContextCreateInfo;
 
 
-/// Engine creation attributes
+/// Engine creation information
 struct EngineCreateInfo
 {
     /// Engine API version number.
     Int32                    EngineAPIVersion       DEFAULT_INITIALIZER(DILIGENT_API_VERSION);
 
-    /// Id of the hardware adapter the engine should be initialized on.
-    /// Call IEngineFactory::EnumerateAdapters() to get all available adapters.
+    /// Id of the hardware adapter the engine should use.
+    /// Call IEngineFactory::EnumerateAdapters() to get the list of available adapters.
     Uint32                   AdapterId              DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
 
     /// Minimum required graphics API version (feature level for Direct3D).
     Version                  GraphicsAPIVersion     DEFAULT_INITIALIZER({});
 
-    /// A pointer to the array of immediate device contexts.
-    /// If not specified, then a single graphics context will be created.
+    /// A pointer to the array of NumImmediateContexts structs decribing immediate
+    /// device contexts to create. See Diligent::ImmediateContextCreateInfo.
+
+    /// Every immediate device contexts encompases a command queue of a specific type.
+    /// It may record commands directly or execute command lists recorded by deferred contexts.
+    ///
+    /// If not specified, a single graphics context will be created.
     ///
     /// Recomended configuration:
-    ///   * Modern discrete GPU:      1 graphics, 1 compute, 1 transfer contexts.
+    ///   * Modern discrete GPU:      1 graphics, 1 compute, 1 transfer context.
     ///   * Integrated or mobile GPU: 1..2 graphics contexts.
-    const ContextCreateInfo* pContextInfo           DEFAULT_INITIALIZER(nullptr);
+    const ImmediateContextCreateInfo* pImmediateContextInfo DEFAULT_INITIALIZER(nullptr);
 
-    /// The number of immediate contexts in pContextInfo array.
-    Uint32                   NumContexts            DEFAULT_INITIALIZER(0);
+    /// The number of immediate contexts in pImmediateContextInfo array.
+    Uint32                   NumImmediateContexts   DEFAULT_INITIALIZER(0);
 
     /// The number of deferred contexts to create when initializing the engine. If non-zero number 
     /// is given, pointers to the contexts are written to ppContexts array by the engine factory 
     /// functions (IEngineFactoryD3D11::CreateDeviceAndContextsD3D11,
     /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12, and IEngineFactoryVk::CreateDeviceAndContextsVk)
-    /// starting at position max(1, NumContexts).
+    /// starting at position max(1, NumImmediateContexts).
     Uint32                   NumDeferredContexts    DEFAULT_INITIALIZER(0);
 
     /// Requested device features.
@@ -2309,7 +2325,7 @@ struct EngineCreateInfo
     void SetValidationLevel(VALIDATION_LEVEL Level)
     {
         EnableValidation = (Level > VALIDATION_LEVEL_DISABLED);
-        
+
         ValidationFlags = VALIDATION_FLAG_NONE;
         if (Level >= VALIDATION_LEVEL_1)
         {
@@ -2384,7 +2400,7 @@ struct EngineD3D11CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     void SetValidationLevel(VALIDATION_LEVEL Level)
     {
         EngineCreateInfo::SetValidationLevel(Level);
-        
+
         D3D11ValidationFlags = D3D11_VALIDATION_FLAG_NONE;
         if (Level >= VALIDATION_LEVEL_2)
         {

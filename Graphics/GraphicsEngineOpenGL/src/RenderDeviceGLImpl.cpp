@@ -828,7 +828,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
     {
         AdapterInfo.NumQueues = 1;
 
-        AdapterInfo.Queues[0].QueueType                 = CONTEXT_TYPE_GRAPHICS;
+        AdapterInfo.Queues[0].QueueType                 = COMMAND_QUEUE_TYPE_GRAPHICS;
         AdapterInfo.Queues[0].MaxDeviceContexts         = 1;
         AdapterInfo.Queues[0].TextureCopyGranularity[0] = 1;
         AdapterInfo.Queues[0].TextureCopyGranularity[1] = 1;

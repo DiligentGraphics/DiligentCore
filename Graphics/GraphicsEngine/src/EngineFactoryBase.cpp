@@ -40,23 +40,23 @@ namespace Diligent
 
 void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdapterInfo& AdapterInfo) noexcept(false)
 {
-    if ((EngineCI.NumContexts > 0) != (EngineCI.pContextInfo != nullptr))
+    if ((EngineCI.NumImmediateContexts > 0) != (EngineCI.pImmediateContextInfo != nullptr))
     {
-        LOG_ERROR_AND_THROW("NumContexts is not zero then pContextInfo must not be null");
+        LOG_ERROR_AND_THROW("NumImmediateContexts is not zero then pContextInfo must not be null");
     }
 
     constexpr auto MaxImmediateContexts = 8 * std::min(sizeof(decltype(BufferDesc::CommandQueueMask)), sizeof(decltype(TextureDesc::CommandQueueMask)));
     static_assert(MAX_COMMAND_QUEUES == MaxImmediateContexts, "Number of bits in CommandQueueMask must be equal to MAX_COMMAND_QUEUES");
 
-    if (EngineCI.NumContexts >= MaxImmediateContexts)
+    if (EngineCI.NumImmediateContexts >= MaxImmediateContexts)
     {
-        LOG_ERROR_AND_THROW("NumContexts (", EngineCI.NumContexts, ") must be less than ", MaxImmediateContexts, "");
+        LOG_ERROR_AND_THROW("NumImmediateContexts (", EngineCI.NumImmediateContexts, ") must be less than ", MaxImmediateContexts, "");
     }
 
     std::array<Uint32, DILIGENT_MAX_ADAPTER_QUEUES> QueueCount = {};
-    for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumContexts; ++CtxInd)
+    for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumImmediateContexts; ++CtxInd)
     {
-        const auto& ContextInfo = EngineCI.pContextInfo[CtxInd];
+        const auto& ContextInfo = EngineCI.pImmediateContextInfo[CtxInd];
 
         if (ContextInfo.QueueId >= AdapterInfo.NumQueues)
         {

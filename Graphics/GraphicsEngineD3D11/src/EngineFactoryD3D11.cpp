@@ -130,7 +130,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     }
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumContexts) + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
 
     // This flag adds support for surfaces with a different color channel ordering
     // than the API default. It is required for compatibility with Direct2D.
@@ -268,12 +268,12 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         return;
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumContexts) + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
 
-    if (EngineCI.NumContexts > 1)
+    if (EngineCI.NumImmediateContexts > 1)
     {
         LOG_WARNING_MESSAGE("Direct3D11 back-end does not support multiple immediate contexts");
-        EngineCI.NumContexts = 1;
+        EngineCI.NumImmediateContexts = 1;
     }
 
     try

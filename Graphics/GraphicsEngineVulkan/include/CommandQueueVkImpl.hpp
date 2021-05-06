@@ -100,7 +100,7 @@ public:
                        CommandQueueIndex                                     CommandQueueId,
                        Uint32                                                NumCommandQueues,
                        Uint32                                                vkQueueIndex,
-                       const ContextCreateInfo&                              CreateInfo);
+                       const ImmediateContextCreateInfo&                     CreateInfo);
     ~CommandQueueVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueVk, TBase)

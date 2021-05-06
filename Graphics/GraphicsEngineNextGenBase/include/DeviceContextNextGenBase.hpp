@@ -109,7 +109,7 @@ protected:
 
             this->m_Desc.QueueId        = MAX_COMMAND_QUEUES;
             this->m_Desc.CommandQueueId = MAX_COMMAND_QUEUES;
-            this->m_Desc.ContextType    = CONTEXT_TYPE_UNKNOWN;
+            this->m_Desc.QueueType      = COMMAND_QUEUE_TYPE_UNKNOWN;
         }
         else
         {

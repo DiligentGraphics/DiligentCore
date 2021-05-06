@@ -115,7 +115,7 @@ static void SetDefaultGraphicsAdapterInfo(GraphicsAdapterInfo& AdapterInfo)
 
     AdapterInfo.NumQueues = 1;
 
-    AdapterInfo.Queues[0].QueueType                 = CONTEXT_TYPE_GRAPHICS;
+    AdapterInfo.Queues[0].QueueType                 = COMMAND_QUEUE_TYPE_GRAPHICS;
     AdapterInfo.Queues[0].MaxDeviceContexts         = 1;
     AdapterInfo.Queues[0].TextureCopyGranularity[0] = 1;
     AdapterInfo.Queues[0].TextureCopyGranularity[1] = 1;
@@ -176,7 +176,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         EngineCI.NumDeferredContexts = 0;
     }
 
-    if (EngineCI.NumContexts > 1)
+    if (EngineCI.NumImmediateContexts > 1)
     {
         LOG_ERROR_MESSAGE("OpenGL back-end does not support multiple immediate contexts");
         return;
@@ -198,7 +198,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         RenderDeviceGLImpl* pRenderDeviceOpenGL(NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI, &SCDesc));
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, (EngineCI.pContextInfo ? EngineCI.pContextInfo[0].Name : ""), false));
+        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, (EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : ""), false));
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
@@ -269,7 +269,7 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
         EngineCI.NumDeferredContexts = 0;
     }
 
-    if (EngineCI.NumContexts > 1)
+    if (EngineCI.NumImmediateContexts > 1)
     {
         LOG_ERROR_MESSAGE("OpenGL back-end does not support multiple immediate contexts");
         return;
@@ -290,7 +290,7 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
         RenderDeviceGLImpl* pRenderDeviceOpenGL(NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI));
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, (EngineCI.pContextInfo ? EngineCI.pContextInfo[0].Name : ""), false));
+        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, (EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : ""), false));
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));

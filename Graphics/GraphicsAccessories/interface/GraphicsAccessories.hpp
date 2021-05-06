@@ -350,8 +350,8 @@ String GetBufferDescString(const BufferDesc& Desc);
 const Char* GetResourceStateFlagString(RESOURCE_STATE State);
 String      GetResourceStateString(RESOURCE_STATE State);
 
-/// Returns the string containing the context type
-String GetContextTypeString(CONTEXT_TYPE Type);
+/// Returns the string containing the command queue type
+String GetCommandQueueTypeString(COMMAND_QUEUE_TYPE Type);
 
 /// Returns the string containing the fence type
 const Char* GetFenceTypeString(FENCE_TYPE Type);

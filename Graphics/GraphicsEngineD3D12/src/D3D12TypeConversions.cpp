@@ -870,19 +870,19 @@ D3D12_COMMAND_LIST_TYPE QueueIdToD3D12CommandListType(HardwareQueueId QueueId)
     }
 }
 
-CONTEXT_TYPE D3D12CommandListTypeToContextType(D3D12_COMMAND_LIST_TYPE ListType)
+COMMAND_QUEUE_TYPE D3D12CommandListTypeToCmdQueueType(D3D12_COMMAND_LIST_TYPE ListType)
 {
-    static_assert(CONTEXT_TYPE_MAX_BIT == 0x7, "Please update the switch below to handle the new context type");
+    static_assert(COMMAND_QUEUE_TYPE_MAX_BIT == 0x7, "Please update the switch below to handle the new context type");
     switch (ListType)
     {
         // clang-format off
-        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return CONTEXT_TYPE_GRAPHICS;
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return CONTEXT_TYPE_COMPUTE;
-        case D3D12_COMMAND_LIST_TYPE_COPY:    return CONTEXT_TYPE_TRANSFER;
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return COMMAND_QUEUE_TYPE_GRAPHICS;
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return COMMAND_QUEUE_TYPE_COMPUTE;
+        case D3D12_COMMAND_LIST_TYPE_COPY:    return COMMAND_QUEUE_TYPE_TRANSFER;
         // clang-format on
         default:
             UNEXPECTED("Unexpected command list type");
-            return CONTEXT_TYPE_UNKNOWN;
+            return COMMAND_QUEUE_TYPE_UNKNOWN;
     }
 }
 
