@@ -1822,18 +1822,21 @@ DILIGENT_TYPED_ENUM(ADAPTER_VENDOR, Uint8)
 struct Version
 {
     /// Major revision
-    Uint8 Major DEFAULT_INITIALIZER(0);
+    Uint32 Major DEFAULT_INITIALIZER(0);
 
     /// Minor revision
-    Uint8 Minor DEFAULT_INITIALIZER(0);
+    Uint32 Minor DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     Version() noexcept
     {}
-    Version(Uint8 _Major, Uint8 _Minor) noexcept :
-        Major{_Major},
-        Minor{_Minor}
-    {}
+
+    template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
+    Version(T _Major, T _Minor) noexcept :
+        Major{static_cast<decltype(Major)>(_Major)},
+        Minor{static_cast<decltype(Minor)>(_Minor)}
+    {
+    }
 
     bool operator==(const Version& rhs) const
     {
@@ -1858,6 +1861,16 @@ struct Version
     bool operator<=(const Version& rhs) const
     {
         return !(*this > rhs);
+    }
+
+    static Version Min(const Version& V1, const Version& V2)
+    {
+        return V1 < V2 ? V1 : V2;
+    }
+
+    static Version Max(const Version& V1, const Version& V2)
+    {
+        return V1 > V2 ? V1 : V2;
     }
 #endif
 };

@@ -39,7 +39,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
     m_Context{0},
     m_WindowHandleToDeviceContext{0}
 {
-    Int32 MajorVersion = 0, MinorVersion = 0;
+    int MajorVersion = 0, MinorVersion = 0;
     if (InitAttribs.Window.hWnd != nullptr)
     {
         HWND hWnd = reinterpret_cast<HWND>(InitAttribs.Window.hWnd);
@@ -212,10 +212,9 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
     if (glGetError() != GL_NO_ERROR)
         LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-    DevType          = RENDER_DEVICE_TYPE_GL;
-    APIVersion.Major = static_cast<Uint8>(MajorVersion);
-    APIVersion.Minor = static_cast<Uint8>(MinorVersion);
-    VERIFY(APIVersion.Major == MajorVersion && APIVersion.Minor == MinorVersion,
+    DevType    = RENDER_DEVICE_TYPE_GL;
+    APIVersion = Version{MajorVersion, MinorVersion};
+    VERIFY(static_cast<int>(APIVersion.Major) == MajorVersion && static_cast<int>(APIVersion.Minor) == MinorVersion,
            "Not enought bits to store version number");
 }
 

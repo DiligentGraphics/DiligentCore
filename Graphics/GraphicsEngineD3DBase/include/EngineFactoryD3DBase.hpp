@@ -236,7 +236,7 @@ public:
 protected:
     static D3D_FEATURE_LEVEL GetD3DFeatureLevel(Version MinVersion)
     {
-        const D3D_FEATURE_LEVEL FeatureLevel = static_cast<D3D_FEATURE_LEVEL>((Uint32{MinVersion.Major} << 12) | (Uint32{MinVersion.Minor} << 8));
+        const D3D_FEATURE_LEVEL FeatureLevel = static_cast<D3D_FEATURE_LEVEL>((Uint32{MinVersion.Major} << 12u) | (Uint32{MinVersion.Minor} << 8u));
 
 #ifdef DILIGENT_DEBUG
         switch (MinVersion.Major)

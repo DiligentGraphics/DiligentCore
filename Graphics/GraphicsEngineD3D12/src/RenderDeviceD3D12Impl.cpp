@@ -136,8 +136,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             LOG_INFO_MESSAGE("Max device shader model: ", (MaxShaderModel >> 4) & 0xF, '_', MaxShaderModel & 0xF);
         }
 
-        m_Properties.MaxShaderVersion.Major = static_cast<Uint8>((MaxShaderModel >> 4) & 0xF);
-        m_Properties.MaxShaderVersion.Minor = static_cast<Uint8>(MaxShaderModel & 0xF);
+        m_Properties.MaxShaderVersion = Version{(MaxShaderModel >> 4) & 0xFu, MaxShaderModel & 0xFu};
 
 #ifdef DILIGENT_DEVELOPMENT
 #    define CHECK_D3D12_DEVICE_VERSION(Version)               \

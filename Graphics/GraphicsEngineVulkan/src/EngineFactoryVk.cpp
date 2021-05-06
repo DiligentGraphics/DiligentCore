@@ -128,9 +128,8 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
     {
         const auto& DeviceProps = PhysicalDevice.GetProperties();
 
-        AdapterInfo.Capabilities.DevType          = RENDER_DEVICE_TYPE_VULKAN;
-        AdapterInfo.Capabilities.APIVersion.Major = static_cast<Uint8>(VK_VERSION_MAJOR(VkVersion));
-        AdapterInfo.Capabilities.APIVersion.Minor = static_cast<Uint8>(VK_VERSION_MINOR(VkVersion));
+        AdapterInfo.Capabilities.DevType    = RENDER_DEVICE_TYPE_VULKAN;
+        AdapterInfo.Capabilities.APIVersion = Version{VK_VERSION_MAJOR(VkVersion), VK_VERSION_MINOR(VkVersion)};
 
         static_assert(_countof(AdapterInfo.Description) <= _countof(DeviceProps.deviceName), "");
         for (size_t i = 0; i < _countof(AdapterInfo.Description) - 1 && DeviceProps.deviceName[i] != 0; ++i)
