@@ -100,7 +100,7 @@ VkCopyAccelerationStructureModeKHR   CopyASModeToVkCopyAccelerationStructureMode
 WAVE_FEATURE VkSubgroupFeatureFlagsToWaveFeatures(VkSubgroupFeatureFlags FeatureFlags);
 ADAPTER_TYPE VkPhysicalDeviceTypeToAdapterType(VkPhysicalDeviceType DeviceType);
 
-CONTEXT_TYPE             VkQueueFlagsToContextType(VkQueueFlags QueueFlags);
+COMMAND_QUEUE_TYPE       VkQueueFlagsToCmdQueueType(VkQueueFlags QueueFlags);
 VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Priority);
 
 } // namespace Diligent

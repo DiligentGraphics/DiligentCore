@@ -228,7 +228,7 @@ public:
         m_SamplersRegistry      {RawMemAllocator, "sampler"},
         m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
-        m_wpImmediateContexts   (std::max(1u, EngineCI.NumContexts), RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
+        m_wpImmediateContexts   (std::max(1u, EngineCI.NumImmediateContexts), RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
         m_wpDeferredContexts    (EngineCI.NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
         m_RawMemAllocator       {RawMemAllocator},
         m_TexObjAllocator       {RawMemAllocator, sizeof(TextureImplType),                    64},

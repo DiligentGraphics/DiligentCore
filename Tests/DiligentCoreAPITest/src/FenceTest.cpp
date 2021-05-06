@@ -225,18 +225,18 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
     IDeviceContext* pGraphicsCtx = nullptr;
     IDeviceContext* pComputeCtx  = nullptr;
     {
-        const auto      CtxTypeMask   = CONTEXT_TYPE_GRAPHICS | CONTEXT_TYPE_COMPUTE;
+        constexpr auto  QueueTypeMask = COMMAND_QUEUE_TYPE_GRAPHICS | COMMAND_QUEUE_TYPE_COMPUTE;
         IDeviceContext* pGraphicsCtx2 = nullptr;
         for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
         {
             auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
             const auto& Desc = Ctx->GetDesc();
 
-            if (!pGraphicsCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+            if (!pGraphicsCtx && (Desc.QueueType & QueueTypeMask) == COMMAND_QUEUE_TYPE_GRAPHICS)
                 pGraphicsCtx = Ctx;
-            else if (!pComputeCtx && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_COMPUTE)
+            else if (!pComputeCtx && (Desc.QueueType & QueueTypeMask) == COMMAND_QUEUE_TYPE_COMPUTE)
                 pComputeCtx = Ctx;
-            else if (!pGraphicsCtx2 && (Desc.ContextType & CtxTypeMask) == CONTEXT_TYPE_GRAPHICS)
+            else if (!pGraphicsCtx2 && (Desc.QueueType & QueueTypeMask) == COMMAND_QUEUE_TYPE_GRAPHICS)
                 pGraphicsCtx2 = Ctx;
         }
 

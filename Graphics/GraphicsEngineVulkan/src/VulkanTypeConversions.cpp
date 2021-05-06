@@ -1829,25 +1829,25 @@ ADAPTER_TYPE VkPhysicalDeviceTypeToAdapterType(VkPhysicalDeviceType DeviceType)
     }
 }
 
-CONTEXT_TYPE VkQueueFlagsToContextType(VkQueueFlags QueueFlags)
+COMMAND_QUEUE_TYPE VkQueueFlagsToCmdQueueType(VkQueueFlags QueueFlags)
 {
-    static_assert(CONTEXT_TYPE_MAX_BIT == 0x7, "Please update the code below to handle the new context type");
+    static_assert(COMMAND_QUEUE_TYPE_MAX_BIT == 0x7, "Please update the code below to handle the new context type");
 
-    CONTEXT_TYPE Result = CONTEXT_TYPE_UNKNOWN;
+    COMMAND_QUEUE_TYPE Result = COMMAND_QUEUE_TYPE_UNKNOWN;
 
     if (QueueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
-        Result |= CONTEXT_TYPE_SPARSE_BINDING;
+        Result |= COMMAND_QUEUE_TYPE_SPARSE_BINDING;
 
     if ((QueueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-        return Result | CONTEXT_TYPE_GRAPHICS;
+        return Result | COMMAND_QUEUE_TYPE_GRAPHICS;
 
     if ((QueueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
-        return Result | CONTEXT_TYPE_COMPUTE;
+        return Result | COMMAND_QUEUE_TYPE_COMPUTE;
 
     if ((QueueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
-        return Result | CONTEXT_TYPE_TRANSFER;
+        return Result | COMMAND_QUEUE_TYPE_TRANSFER;
 
-    return CONTEXT_TYPE_UNKNOWN;
+    return COMMAND_QUEUE_TYPE_UNKNOWN;
 }
 
 VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Priority)

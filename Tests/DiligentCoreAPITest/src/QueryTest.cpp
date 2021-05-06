@@ -255,7 +255,7 @@ TEST_F(QueryTest, PipelineStats)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
 
-        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+        if ((pContext->GetDesc().QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) != COMMAND_QUEUE_TYPE_GRAPHICS)
             continue;
 
         QueryDesc queryDesc;
@@ -307,7 +307,7 @@ TEST_F(QueryTest, Occlusion)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
 
-        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+        if ((pContext->GetDesc().QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) != COMMAND_QUEUE_TYPE_GRAPHICS)
             continue;
 
         QueryDesc queryDesc;
@@ -351,7 +351,7 @@ TEST_F(QueryTest, BinaryOcclusion)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
 
-        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+        if ((pContext->GetDesc().QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) != COMMAND_QUEUE_TYPE_GRAPHICS)
             continue;
 
         QueryDesc queryDesc;
@@ -394,7 +394,7 @@ TEST_F(QueryTest, Timestamp)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
 
-        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+        if ((pContext->GetDesc().QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) != COMMAND_QUEUE_TYPE_GRAPHICS)
             continue;
 
         QueryDesc queryDesc;
@@ -461,7 +461,7 @@ TEST_F(QueryTest, Duration)
     {
         auto* pContext = pEnv->GetDeviceContext(q);
 
-        if ((pContext->GetDesc().ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+        if ((pContext->GetDesc().QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) != COMMAND_QUEUE_TYPE_GRAPHICS)
             continue;
 
         QueryDesc queryDesc;

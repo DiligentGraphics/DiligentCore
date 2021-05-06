@@ -370,7 +370,7 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
             const auto& SrcQueue = QueueProperties[q];
             auto&       DstQueue = AdapterInfo.Queues[q];
 
-            DstQueue.QueueType                 = VkQueueFlagsToContextType(SrcQueue.queueFlags);
+            DstQueue.QueueType                 = VkQueueFlagsToCmdQueueType(SrcQueue.queueFlags);
             DstQueue.MaxDeviceContexts         = SrcQueue.queueCount;
             DstQueue.TextureCopyGranularity[0] = SrcQueue.minImageTransferGranularity.width;
             DstQueue.TextureCopyGranularity[1] = SrcQueue.minImageTransferGranularity.height;
@@ -441,7 +441,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
     SetRawAllocator(EngineCI.pRawMemAllocator);
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumContexts) + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
 
     try
     {
@@ -478,16 +478,16 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         QueueIDtoPriority.fill(QUEUE_PRIORITY_UNKNOWN);
 
         // Setup device queues
-        if (EngineCI.NumContexts > 0)
+        if (EngineCI.NumImmediateContexts > 0)
         {
-            VERIFY(EngineCI.pContextInfo != nullptr, "This error must have been caught by VerifyEngineCreateInfo()");
+            VERIFY(EngineCI.pImmediateContextInfo != nullptr, "This error must have been caught by VerifyEngineCreateInfo()");
 
             const auto& QueueProperties = PhysicalDevice->GetQueueProperties();
-            QueuePriorities.resize(EngineCI.NumContexts, 1.0f);
+            QueuePriorities.resize(EngineCI.NumImmediateContexts, 1.0f);
 
-            for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumContexts; ++CtxInd)
+            for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumImmediateContexts; ++CtxInd)
             {
-                const auto& ContextInfo = EngineCI.pContextInfo[CtxInd];
+                const auto& ContextInfo = EngineCI.pImmediateContextInfo[CtxInd];
                 VERIFY(ContextInfo.QueueId < QueueProperties.size() && ContextInfo.QueueId < QueueIDtoQueueInfo.size(),
                        "Must have been verified in VerifyEngineCreateInfo()");
 
@@ -889,22 +889,22 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
         auto& RawMemAllocator = GetRawAllocator();
 
-        std::vector<RefCntAutoPtr<CommandQueueVkImpl>> CommandQueuesVk{std::max(1u, EngineCI.NumContexts)};
+        std::vector<RefCntAutoPtr<CommandQueueVkImpl>> CommandQueuesVk{std::max(1u, EngineCI.NumImmediateContexts)};
         std::vector<ICommandQueueVk*>                  CommandQueues{CommandQueuesVk.size()};
 
-        if (EngineCI.NumContexts > 0)
+        if (EngineCI.NumImmediateContexts > 0)
         {
             for (Uint32 QInd = 0; QInd < QueueInfos.size(); ++QInd)
                 QueueInfos[QInd].queueCount = 0;
 
             for (Uint32 CtxInd = 0; CtxInd < CommandQueuesVk.size(); ++CtxInd)
             {
-                const auto& ContextInfo = EngineCI.pContextInfo[CtxInd];
+                const auto& ContextInfo = EngineCI.pImmediateContextInfo[CtxInd];
                 const auto  QueueIndex  = QueueIDtoQueueInfo[ContextInfo.QueueId];
                 VERIFY_EXPR(QueueIndex != DEFAULT_QUEUE_ID);
                 auto& QueueCI = QueueInfos[QueueIndex];
 
-                CommandQueuesVk[CtxInd] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, CommandQueueIndex{CtxInd}, EngineCI.NumContexts, QueueCI.queueCount, ContextInfo);
+                CommandQueuesVk[CtxInd] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, CommandQueueIndex{CtxInd}, EngineCI.NumImmediateContexts, QueueCI.queueCount, ContextInfo);
                 CommandQueues[CtxInd]   = CommandQueuesVk[CtxInd];
                 QueueCI.queueCount += 1;
             }
@@ -912,7 +912,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         else
         {
             VERIFY_EXPR(CommandQueuesVk.size() == 1);
-            ContextCreateInfo DefaultContextInfo{};
+            ImmediateContextCreateInfo DefaultContextInfo{};
             DefaultContextInfo.Name    = "Graphics context";
             DefaultContextInfo.QueueId = static_cast<Uint8>(QueueInfos[0].queueFamilyIndex);
 
@@ -967,7 +967,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     if (!LogicalDevice || !ppCommandQueues || !ppDevice || !ppContexts)
         return;
 
-    VERIFY_EXPR(std::max(1u, EngineCI.NumContexts) == CommandQueueCount);
+    VERIFY_EXPR(std::max(1u, EngineCI.NumImmediateContexts) == CommandQueueCount);
 
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));

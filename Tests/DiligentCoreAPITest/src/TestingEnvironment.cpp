@@ -150,9 +150,9 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
     Uint32 NumDeferredCtx = 0;
 
-    std::vector<IDeviceContext*>     ppContexts;
-    std::vector<GraphicsAdapterInfo> Adapters;
-    std::vector<ContextCreateInfo>   ContextCI;
+    std::vector<IDeviceContext*>            ppContexts;
+    std::vector<GraphicsAdapterInfo>        Adapters;
+    std::vector<ImmediateContextCreateInfo> ContextCI;
 
     auto EnumerateAdapters = [&Adapters](IEngineFactory* pFactory, Version MinVersion) //
     {
@@ -171,12 +171,12 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
         }
     };
 
-    auto AddContext = [&ContextCI, &Adapters](CONTEXT_TYPE Type, const char* Name, Uint32 AdapterId) //
+    auto AddContext = [&ContextCI, &Adapters](COMMAND_QUEUE_TYPE Type, const char* Name, Uint32 AdapterId) //
     {
         if (AdapterId >= Adapters.size())
             AdapterId = 0;
 
-        constexpr auto QueueMask = CONTEXT_TYPE_PRIMARY_MASK;
+        constexpr auto QueueMask = COMMAND_QUEUE_TYPE_PRIMARY_MASK;
         auto*          Queues    = Adapters[AdapterId].Queues;
         for (Uint32 q = 0, Count = Adapters[AdapterId].NumQueues; q < Count; ++q)
         {
@@ -188,7 +188,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             {
                 CurQueue.MaxDeviceContexts -= 1;
 
-                ContextCreateInfo Ctx{};
+                ImmediateContextCreateInfo Ctx{};
                 Ctx.QueueId  = static_cast<Uint8>(q);
                 Ctx.Name     = Name;
                 Ctx.Priority = QUEUE_PRIORITY_MEDIUM;
@@ -311,12 +311,12 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             }
 
             CreateInfo.AdapterId = FindAdapater(Adapters, CI.AdapterType, CI.AdapterId);
-            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_COMPUTE, "Compute", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
-            CreateInfo.NumContexts  = static_cast<Uint32>(ContextCI.size());
-            CreateInfo.pContextInfo = CreateInfo.NumContexts ? ContextCI.data() : nullptr;
+            AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_COMPUTE, "Compute", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_TRANSFER, "Transfer", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
+            CreateInfo.NumImmediateContexts  = static_cast<Uint32>(ContextCI.size());
+            CreateInfo.pImmediateContextInfo = CreateInfo.NumImmediateContexts > 0 ? ContextCI.data() : nullptr;
 
             //CreateInfo.EnableGPUBasedValidation                = true;
             CreateInfo.CPUDescriptorHeapAllocationSize[0]      = 64; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
@@ -384,10 +384,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
             auto* pFactoryVk = GetEngineFactoryVk();
             EnumerateAdapters(pFactoryVk, Version{});
-            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_COMPUTE, "Compute", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_COMPUTE, "Compute", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_TRANSFER, "Transfer", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
 
             EngineVkCreateInfo CreateInfo;
 
@@ -395,8 +395,8 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
 
             CreateInfo.AdapterId                 = CI.AdapterId;
-            CreateInfo.NumContexts               = static_cast<Uint32>(ContextCI.size());
-            CreateInfo.pContextInfo              = CreateInfo.NumContexts ? ContextCI.data() : nullptr;
+            CreateInfo.NumImmediateContexts      = static_cast<Uint32>(ContextCI.size());
+            CreateInfo.pImmediateContextInfo     = CreateInfo.NumImmediateContexts > 0 ? ContextCI.data() : nullptr;
             CreateInfo.DebugMessageCallback      = MessageCallback;
             CreateInfo.MainDescriptorPoolSize    = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16, 16};
             CreateInfo.DynamicDescriptorPoolSize = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16, 16};
@@ -420,10 +420,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 
             auto* pFactoryMtl = GetEngineFactoryMtl();
             EnumerateAdapters(pFactoryMtl, Version{});
-            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_COMPUTE, "Compute", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_TRANSFER, "Transfer", CI.AdapterId);
-            AddContext(CONTEXT_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_COMPUTE, "Compute", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_TRANSFER, "Transfer", CI.AdapterId);
+            AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
 
             CreateInfo.AdapterId    = CI.AdapterId;
             CreateInfo.NumContexts  = static_cast<Uint32>(ContextCI.size());

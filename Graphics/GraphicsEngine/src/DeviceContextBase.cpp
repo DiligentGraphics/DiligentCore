@@ -263,9 +263,9 @@ bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs)
     return true;
 }
 
-bool VarifyResourceState(RESOURCE_STATE States, CONTEXT_TYPE ContextType, const char* Name)
+bool VarifyResourceState(RESOURCE_STATE States, COMMAND_QUEUE_TYPE QueueType, const char* Name)
 {
-    ContextType &= CONTEXT_TYPE_PRIMARY_MASK;
+    QueueType &= COMMAND_QUEUE_TYPE_PRIMARY_MASK;
 
     bool Result = true;
     while (States != 0)
@@ -278,10 +278,10 @@ bool VarifyResourceState(RESOURCE_STATE States, CONTEXT_TYPE ContextType, const 
             case RESOURCE_STATE_UNDEFINED:
             case RESOURCE_STATE_COPY_DEST:
             case RESOURCE_STATE_COPY_SOURCE:
-                if ((ContextType & CONTEXT_TYPE_TRANSFER) != CONTEXT_TYPE_TRANSFER)
+                if ((QueueType & COMMAND_QUEUE_TYPE_TRANSFER) != COMMAND_QUEUE_TYPE_TRANSFER)
                 {
                     Result = false;
-                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetContextTypeString(ContextType), " context");
+                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetCommandQueueTypeString(QueueType), " context");
                 }
                 break;
 
@@ -292,10 +292,10 @@ bool VarifyResourceState(RESOURCE_STATE States, CONTEXT_TYPE ContextType, const 
             case RESOURCE_STATE_BUILD_AS_READ:
             case RESOURCE_STATE_BUILD_AS_WRITE:
             case RESOURCE_STATE_RAY_TRACING:
-                if ((ContextType & CONTEXT_TYPE_COMPUTE) != CONTEXT_TYPE_COMPUTE)
+                if ((QueueType & COMMAND_QUEUE_TYPE_COMPUTE) != COMMAND_QUEUE_TYPE_COMPUTE)
                 {
                     Result = false;
-                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetContextTypeString(ContextType), " context");
+                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetCommandQueueTypeString(QueueType), " context");
                 }
                 break;
 
@@ -309,10 +309,10 @@ bool VarifyResourceState(RESOURCE_STATE States, CONTEXT_TYPE ContextType, const 
             case RESOURCE_STATE_RESOLVE_SOURCE:
             case RESOURCE_STATE_INPUT_ATTACHMENT:
             case RESOURCE_STATE_PRESENT:
-                if ((ContextType & CONTEXT_TYPE_GRAPHICS) != CONTEXT_TYPE_GRAPHICS)
+                if ((QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) != COMMAND_QUEUE_TYPE_GRAPHICS)
                 {
                     Result = false;
-                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetContextTypeString(ContextType), " context");
+                    CHECK_PARAMETER(Name, " contains state ", GetResourceStateFlagString(State), " that is not supported in ", GetCommandQueueTypeString(QueueType), " context");
                 }
                 break;
 
@@ -324,7 +324,10 @@ bool VarifyResourceState(RESOURCE_STATE States, CONTEXT_TYPE ContextType, const 
     return Result;
 }
 
-bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransitionDesc& Barrier, const CommandQueueIndex CmdQueueInd, CONTEXT_TYPE ContextType)
+bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
+                               const StateTransitionDesc& Barrier,
+                               const CommandQueueIndex    CmdQueueInd,
+                               COMMAND_QUEUE_TYPE         QueueType)
 {
 #define CHECK_STATE_TRANSITION_DESC(Expr, ...) CHECK_PARAMETER(Expr, "State transition parameters are invalid: ", __VA_ARGS__)
 
@@ -421,8 +424,8 @@ bool VerifyStateTransitionDesc(const IRenderDevice* pDevice, const StateTransiti
     CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN && Barrier.NewState != RESOURCE_STATE_UNDEFINED,
                                 "NewState must not be UNKNOWN or UNDEFINED");
 
-    VarifyResourceState(Barrier.OldState, ContextType, "OldState");
-    VarifyResourceState(Barrier.NewState, ContextType, "NewState");
+    VarifyResourceState(Barrier.OldState, QueueType, "OldState");
+    VarifyResourceState(Barrier.NewState, QueueType, "NewState");
 
 #undef CHECK_STATE_TRANSITION_DESC
 

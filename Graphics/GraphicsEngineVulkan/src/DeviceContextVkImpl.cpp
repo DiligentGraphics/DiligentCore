@@ -71,7 +71,7 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
         pDeviceVkImpl,
         ContextId,
         CommandQueueId,
-        (ContextId < EngineCI.NumContexts ? EngineCI.pContextInfo[ContextId].Name : ""),
+        (ContextId < EngineCI.NumImmediateContexts ? EngineCI.pImmediateContextInfo[ContextId].Name : ""),
         bIsDeferred
     },
     m_CmdListAllocator { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
@@ -193,7 +193,7 @@ void DeviceContextVkImpl::InitializeForQueue(CommandQueueIndex CommandQueueId)
 
     m_Desc.QueueId                   = static_cast<Uint8>(QueueFamilyIndex);
     m_Desc.CommandQueueId            = static_cast<Uint8>(CommandQueueId);
-    m_Desc.ContextType               = VkQueueFlagsToContextType(QueueInfo.queueFlags);
+    m_Desc.QueueType                 = VkQueueFlagsToCmdQueueType(QueueInfo.queueFlags);
     m_Desc.TextureCopyGranularity[0] = QueueInfo.minImageTransferGranularity.width;
     m_Desc.TextureCopyGranularity[1] = QueueInfo.minImageTransferGranularity.height;
     m_Desc.TextureCopyGranularity[2] = QueueInfo.minImageTransferGranularity.depth;
@@ -2421,8 +2421,8 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     m_State          = ContextState{};
     m_pPipelineState = nullptr;
 
-    m_Desc.QueueId     = DEFAULT_QUEUE_ID;
-    m_Desc.ContextType = CONTEXT_TYPE_UNKNOWN;
+    m_Desc.QueueId   = DEFAULT_QUEUE_ID;
+    m_Desc.QueueType = COMMAND_QUEUE_TYPE_UNKNOWN;
 
     InvalidateState();
 }

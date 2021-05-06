@@ -67,21 +67,22 @@ static const INTERFACE_ID IID_DeviceContext =
 /// Device context description.
 struct DeviceContextDesc
 {
-    /// Device context name. The name is what was specified in
-    ///ContextCreateInfo::Name when the engine was initialized.
-    const char*  Name           DEFAULT_INITIALIZER(nullptr);
+    /// Device context name. This name is what was specified in
+    /// ImmediateContextCreateInfo::Name when the engine was initialized.
+    const char*  Name            DEFAULT_INITIALIZER(nullptr);
 
-    /// Device context type. This type matached the GraphicsAdapterInfo::Queues[QueueId].QueueType.
-    CONTEXT_TYPE ContextType    DEFAULT_INITIALIZER(CONTEXT_TYPE_UNKNOWN);
+    /// Command queue type that this context uses.
+    /// This type matches the GraphicsAdapterInfo::Queues[QueueId].QueueType.
+    COMMAND_QUEUE_TYPE QueueType DEFAULT_INITIALIZER(COMMAND_QUEUE_TYPE_UNKNOWN);
 
     /// Indicates if this is a deferred context.
-    Bool         IsDeferred     DEFAULT_INITIALIZER(False);
+    Bool         IsDeferred      DEFAULT_INITIALIZER(False);
 
     /// Queue index in GraphicsAdapterInfo::Queues.
     ///
-    /// For deferred contexts, this value is only between IDeviceContext::Begin() and
+    /// For deferred contexts, this value is only valid between IDeviceContext::Begin() and
     /// IDeviceContext::FinishCommandList() calls.
-    /// 
+    ///
     /// \remarks  Vulkan backend:     same as queue family index.
     ///           Direct3D12 backend: same as queue type.
     ///           Metal backend:      index of the unique command queue.
@@ -95,7 +96,7 @@ struct DeviceContextDesc
     /// Required texture granularity for copy operations, for a transfer queue.
 
     /// \remarks  For graphics and compute queues, the granularity is always {1,1,1}.
-    ///           For transfer queues, the application must align the texture offsets and sizes
+    ///           For transfer queues, an application must align the texture offsets and sizes
     ///           by the granularity defined by this member.
     Uint32       TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
 };

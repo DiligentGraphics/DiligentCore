@@ -74,7 +74,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         pDeviceD3D12Impl,
         ContextId,
         CommandQueueId,
-        (ContextId < EngineCI.NumContexts ? EngineCI.pContextInfo[ContextId].Name : ""),
+        (ContextId < EngineCI.NumImmediateContexts ? EngineCI.pImmediateContextInfo[ContextId].Name : ""),
         bIsDeferred
     },
     m_DynamicHeap
@@ -208,7 +208,7 @@ void DeviceContextD3D12Impl::InitializeForQueue(CommandQueueIndex CommandQueueIn
 
     m_Desc.QueueId                   = static_cast<Uint8>(QueueId);
     m_Desc.CommandQueueId            = static_cast<Uint8>(CommandQueueInd);
-    m_Desc.ContextType               = D3D12CommandListTypeToContextType(CmdListType);
+    m_Desc.QueueType                 = D3D12CommandListTypeToCmdQueueType(CmdListType);
     m_Desc.TextureCopyGranularity[0] = 1;
     m_Desc.TextureCopyGranularity[1] = 1;
     m_Desc.TextureCopyGranularity[2] = 1;

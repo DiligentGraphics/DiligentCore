@@ -56,7 +56,7 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
     {
         pRefCounters,
         pDevice,
-        (EngineCI.pContextInfo ? EngineCI.pContextInfo[0].Name : ""),
+        (EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : ""),
         bIsDeferred
     },
     m_pd3d11DeviceContext {pd3d11DeviceContext           },
@@ -76,7 +76,7 @@ void DeviceContextD3D11Impl::Begin(Uint32 CommandQueueId)
 
     m_Desc.CommandQueueId = 0;
     m_Desc.QueueId        = 0;
-    m_Desc.ContextType    = CONTEXT_TYPE_GRAPHICS;
+    m_Desc.QueueType      = COMMAND_QUEUE_TYPE_GRAPHICS;
 }
 
 void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
@@ -1756,7 +1756,7 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
 
     m_Desc.CommandQueueId = MAX_COMMAND_QUEUES;
     m_Desc.QueueId        = MAX_COMMAND_QUEUES;
-    m_Desc.ContextType    = CONTEXT_TYPE_UNKNOWN;
+    m_Desc.QueueType      = COMMAND_QUEUE_TYPE_UNKNOWN;
 }
 
 void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommandLists,

@@ -40,7 +40,7 @@ CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                      
                                        CommandQueueIndex                                     CommandQueueId,
                                        Uint32                                                NumCommandQueues,
                                        Uint32                                                vkQueueIndex,
-                                       const ContextCreateInfo&                              CreateInfo) :
+                                       const ImmediateContextCreateInfo&                     CreateInfo) :
     // clang-format off
     TBase{pRefCounters},
     m_LogicalDevice             {LogicalDevice},
