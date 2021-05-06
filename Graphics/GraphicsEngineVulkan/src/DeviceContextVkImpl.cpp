@@ -3214,7 +3214,7 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
     ++m_State.NumCommands;
 
 #ifdef DILIGENT_DEVELOPMENT
-    pBLASVk->UpdateVersion();
+    pBLASVk->DvpUpdateVersion();
 #endif
 }
 
@@ -3349,7 +3349,7 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
     ++m_State.NumCommands;
 
 #ifdef DILIGENT_DEVELOPMENT
-    pDstVk->UpdateVersion();
+    pDstVk->DvpUpdateVersion();
 #endif
 }
 

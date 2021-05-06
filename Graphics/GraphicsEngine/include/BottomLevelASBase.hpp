@@ -191,12 +191,12 @@ public:
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    void UpdateVersion()
+    void DvpUpdateVersion()
     {
         this->m_DvpVersion.fetch_add(1);
     }
 
-    Uint32 GetVersion() const
+    Uint32 DvpGetVersion() const
     {
         return this->m_DvpVersion.load();
     }

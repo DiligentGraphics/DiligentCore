@@ -24,30 +24,6 @@
  *  all other commercial damages or losses), even if such Contributor has been advised 
  *  of the possibility of such damages.
  */
-
+ 
 #include <Metal/Metal.h>
-#include "DiligentCore/Graphics/GraphicsEngineMetal/interface/RenderDeviceMtl.h"
-
-void TestRenderDeviceMtl_CInterface(IRenderDeviceMtl* pDevice)
-{
-    id<MTLDevice> mtlDevice = IRenderDeviceMtl_GetMtlDevice(pDevice);
-    (void) mtlDevice;
-
-    Uint64 Value;
-    Value = IRenderDeviceMtl_GetNextFenceValue(pDevice, 0u);
-    (void)Value;
-    Value = IRenderDeviceMtl_GetCompletedFenceValue(pDevice, 1u);
-    (void)Value;
-
-    Bool bValue = IRenderDeviceMtl_IsFenceSignaled(pDevice, 0u, (Uint64)10);
-    (void)bValue;
-
-    IRenderDeviceMtl_CreateTextureFromMtlResource(pDevice, (id<MTLTexture>)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
-    IRenderDeviceMtl_CreateBufferFromMtlResource(pDevice, (id<MTLBuffer>)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
-    
-    if (@available(macos 11.0, ios 14.0, *))
-    {
-        IRenderDeviceMtl_CreateBLASFromMtlResource(pDevice, (id<MTLAccelerationStructure>)nil, (const BottomLevelASDesc*)NULL, RESOURCE_STATE_RAY_TRACING, (IBottomLevelAS**)NULL);
-        IRenderDeviceMtl_CreateTLASFromMtlResource(pDevice, (id<MTLAccelerationStructure>)nil, (const TopLevelASDesc*)NULL, RESOURCE_STATE_RAY_TRACING, (ITopLevelAS**)NULL);
-    }
-}
+#include "DiligentCore/Graphics/GraphicsEngineMetal/interface/BottomLevelASMtl.h"

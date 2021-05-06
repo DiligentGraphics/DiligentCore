@@ -2496,7 +2496,7 @@ void DeviceContextD3D12Impl::BuildBLAS(const BuildBLASAttribs& Attribs)
     ++m_State.NumCommands;
 
 #ifdef DILIGENT_DEVELOPMENT
-    pBLASD3D12->UpdateVersion();
+    pBLASD3D12->DvpUpdateVersion();
 #endif
 }
 
@@ -2610,7 +2610,7 @@ void DeviceContextD3D12Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
     ++m_State.NumCommands;
 
 #ifdef DILIGENT_DEVELOPMENT
-    pDstD3D12->UpdateVersion();
+    pDstD3D12->DvpUpdateVersion();
 #endif
 }
 
