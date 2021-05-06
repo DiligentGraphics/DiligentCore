@@ -2045,11 +2045,20 @@ struct BufferProperties
 typedef struct BufferProperties BufferProperties;
 
 
+/// Ray tracing properties
+struct RayTracingProperties
+{
+    /// Maximum supported value for RayTracingPipelineDesc::MaxRecursionDepth.
+    Uint32  MaxRecursionDepth  DEFAULT_INITIALIZER(0);
+};
+typedef struct RayTracingProperties RayTracingProperties;
+
+
 /// Device properties
 struct DeviceProperties
 {
-    /// Maximum supported value for RayTracingPipelineDesc::MaxRecursionDepth.
-    Uint32  MaxRayTracingRecursionDepth  DEFAULT_INITIALIZER(0);
+    /// Ray tracing properties, see Diligent::RayTracingProperties.
+    RayTracingProperties RayTracing;
 
     /// Wave operation properties, see Diligent::WaveOpProperties.
     WaveOpProperties WaveOp;

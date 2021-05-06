@@ -781,8 +781,8 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
             {
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
                 {
-                    Features.RayTracing                    = DEVICE_FEATURE_STATE_ENABLED;
-                    Properties.MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+                    Features.RayTracing                     = DEVICE_FEATURE_STATE_ENABLED;
+                    Properties.RayTracing.MaxRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
                 }
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
                 {
