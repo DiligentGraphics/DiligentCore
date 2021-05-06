@@ -1408,7 +1408,7 @@ TEST(RayTracingTest, ResourceBinding)
 
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || pDevice->GetDeviceProperties().MaxRayTracingRecursionDepth < RayTracingDepth)
+    if (!pEnv->SupportsRayTracing() || pDevice->GetAdapterInfo().Properties.MaxRayTracingRecursionDepth < RayTracingDepth)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }

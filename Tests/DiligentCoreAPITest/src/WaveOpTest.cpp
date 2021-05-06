@@ -52,7 +52,7 @@ TEST(WaveOpTest, CompileShader_HLSL)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    const auto& WaveOpProps = pDevice->GetDeviceProperties().WaveOp;
+    const auto& WaveOpProps = pDevice->GetAdapterInfo().Properties.WaveOp;
 
     auto WaveOpFeatures = WaveOpProps.Features;
 
@@ -171,7 +171,7 @@ TEST(WaveOpTest, CompileShader_GLSL)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    const auto& WaveOpProps = pDevice->GetDeviceProperties().WaveOp;
+    const auto& WaveOpProps = pDevice->GetAdapterInfo().Properties.WaveOp;
 
     ASSERT_NE(WaveOpProps.Features, WAVE_FEATURE_UNKNOWN);
     ASSERT_TRUE((WaveOpProps.Features & WAVE_FEATURE_BASIC) != 0);

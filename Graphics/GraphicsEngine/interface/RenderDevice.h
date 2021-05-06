@@ -290,10 +290,6 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// AZ TODO: deprecated, use GetAdapterInfo()
     VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;
 
-    /// Gets the device properties, see Diligent::DeviceProperties for details.
-    /// AZ TODO: deprecated, use GetAdapterInfo()
-    VIRTUAL const DeviceProperties REF METHOD(GetDeviceProperties)(THIS) CONST PURE;
-
     /// Gets the graphics adapter information, see Diligent::GraphicsAdapterInfo for details.
     VIRTUAL const GraphicsAdapterInfo REF METHOD(GetAdapterInfo)(THIS) CONST PURE;
 
@@ -367,6 +363,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDevice_CreateTLAS(This, ...)                      CALL_IFACE_METHOD(RenderDevice, CreateTLAS,                      This, __VA_ARGS__)
 #    define IRenderDevice_CreateSBT(This, ...)                       CALL_IFACE_METHOD(RenderDevice, CreateSBT,                       This, __VA_ARGS__)
 #    define IRenderDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(RenderDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
+#    define IRenderDevice_GetAdapterInfo(This)                       CALL_IFACE_METHOD(RenderDevice, GetAdapterInfo,                  This)
 #    define IRenderDevice_GetDeviceCaps(This)                        CALL_IFACE_METHOD(RenderDevice, GetDeviceCaps,                   This)
 #    define IRenderDevice_GetTextureFormatInfo(This, ...)            CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,            This, __VA_ARGS__)
 #    define IRenderDevice_GetTextureFormatInfoExt(This, ...)         CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,         This, __VA_ARGS__)

@@ -36,6 +36,7 @@ int TestRenderDeviceCInterface_Misc(struct IRenderDevice* pRenderDevice)
     IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
     DeviceCaps                deviceCaps;
+    GraphicsAdapterInfo       AdapterInfo;
     TextureFormatInfo         TexFmtInfo;
     TextureFormatInfoExt      TexFmtInfoExt;
     IEngineFactory*           pFactory = NULL;
@@ -59,6 +60,10 @@ int TestRenderDeviceCInterface_Misc(struct IRenderDevice* pRenderDevice)
 
     deviceCaps = *IRenderDevice_GetDeviceCaps(pRenderDevice);
     if (deviceCaps.DevType == RENDER_DEVICE_TYPE_UNDEFINED)
+        ++num_errors;
+
+    AdapterInfo = *IRenderDevice_GetAdapterInfo(pRenderDevice);
+    if (AdapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_UNDEFINED)
         ++num_errors;
 
     TexFmtInfo = *IRenderDevice_GetTextureFormatInfo(pRenderDevice, TEX_FORMAT_RGBA8_UNORM);
