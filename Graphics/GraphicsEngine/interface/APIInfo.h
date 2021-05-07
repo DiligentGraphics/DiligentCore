@@ -49,8 +49,8 @@ struct APIInfo
     size_t BufferViewDescSize                    DEFAULT_INITIALIZER(0);
     size_t StencilOpDescSize                     DEFAULT_INITIALIZER(0);
     size_t DepthStencilStateDescSize             DEFAULT_INITIALIZER(0);
-    size_t SamplerCapsSize                       DEFAULT_INITIALIZER(0);
-    size_t TextureCapsSize                       DEFAULT_INITIALIZER(0);
+    size_t SamplerPropertiesSize                 DEFAULT_INITIALIZER(0);
+    size_t TexturePropertiesSize                 DEFAULT_INITIALIZER(0);
     size_t DeviceCapsSize                        DEFAULT_INITIALIZER(0);
     size_t DrawAttribsSize                       DEFAULT_INITIALIZER(0);
     size_t DispatchComputeAttribsSize            DEFAULT_INITIALIZER(0);

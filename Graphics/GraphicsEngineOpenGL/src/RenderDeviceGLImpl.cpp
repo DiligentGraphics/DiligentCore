@@ -602,10 +602,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
 #define ENABLE_FEATURE(FeatureName, Supported) \
     Features.FeatureName = (Supported) ? DEVICE_FEATURE_STATE_OPTIONAL : DEVICE_FEATURE_STATE_DISABLED;
 
-        auto& Features   = AdapterInfo.Capabilities.Features;
-        auto& TexCaps    = AdapterInfo.Capabilities.TexCaps;
-        auto& SamCaps    = AdapterInfo.Capabilities.SamCaps;
-        auto& Properties = AdapterInfo.Properties;
+        auto& Features = AdapterInfo.Capabilities.Features;
 
         GLint MaxTextureSize = 0;
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, &MaxTextureSize);
@@ -665,6 +662,8 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
         if (ForceNonSeparablePrograms)
             LOG_INFO_MESSAGE("Forcing non-separable shader programs");
 
+        auto& TexProps = AdapterInfo.Properties.Texture;
+        auto& SamProps = AdapterInfo.Properties.Sampler;
         if (AdapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_GL)
         {
             const bool IsGL46OrAbove = GLVersion >= Version{4, 6};
@@ -703,20 +702,26 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
             ENABLE_FEATURE(UniformBuffer8BitAccess,       CheckExtension("GL_EXT_shader_8bit_storage"));
             // clang-format on
 
-            TexCaps.MaxTexture1DDimension     = MaxTextureSize;
-            TexCaps.MaxTexture1DArraySlices   = MaxLayers;
-            TexCaps.MaxTexture2DDimension     = MaxTextureSize;
-            TexCaps.MaxTexture2DArraySlices   = MaxLayers;
-            TexCaps.MaxTexture3DDimension     = Max3DTextureSize;
-            TexCaps.MaxTextureCubeDimension   = MaxCubeTextureSize;
-            TexCaps.Texture2DMSSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
-            TexCaps.Texture2DMSArraySupported = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
-            TexCaps.TextureViewSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_view");
-            TexCaps.CubemapArraysSupported    = IsGL43OrAbove || CheckExtension("GL_ARB_texture_cube_map_array");
+            TexProps.MaxTexture1DDimension     = MaxTextureSize;
+            TexProps.MaxTexture1DArraySlices   = MaxLayers;
+            TexProps.MaxTexture2DDimension     = MaxTextureSize;
+            TexProps.MaxTexture2DArraySlices   = MaxLayers;
+            TexProps.MaxTexture3DDimension     = Max3DTextureSize;
+            TexProps.MaxTextureCubeDimension   = MaxCubeTextureSize;
+            TexProps.Texture2DMSSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
+            TexProps.Texture2DMSArraySupported = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
+            TexProps.TextureViewSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_view");
+            TexProps.CubemapArraysSupported    = IsGL43OrAbove || CheckExtension("GL_ARB_texture_cube_map_array");
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(TexProps) == 28, "Did you add a new member to TextureProperites? Please initialize it here.");
+#endif
 
-            SamCaps.BorderSamplingModeSupported   = True;
-            SamCaps.AnisotropicFilteringSupported = IsGL46OrAbove || CheckExtension("GL_ARB_texture_filter_anisotropic");
-            SamCaps.LODBiasSupported              = True;
+            SamProps.BorderSamplingModeSupported   = True;
+            SamProps.AnisotropicFilteringSupported = IsGL46OrAbove || CheckExtension("GL_ARB_texture_filter_anisotropic");
+            SamProps.LODBiasSupported              = True;
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(SamProps) == 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
+#endif
         }
         else
         {
@@ -765,20 +770,26 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
             ENABLE_FEATURE(UniformBuffer8BitAccess,   strstr(Extensions, "shader_8bit_storage"));
             // clang-format on
 
-            TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
-            TexCaps.MaxTexture1DArraySlices   = 0; // Not supported in GLES 3.2
-            TexCaps.MaxTexture2DDimension     = MaxTextureSize;
-            TexCaps.MaxTexture2DArraySlices   = MaxLayers;
-            TexCaps.MaxTexture3DDimension     = Max3DTextureSize;
-            TexCaps.MaxTextureCubeDimension   = MaxCubeTextureSize;
-            TexCaps.Texture2DMSSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_storage_multisample");
-            TexCaps.Texture2DMSArraySupported = IsGLES32OrAbove || strstr(Extensions, "texture_storage_multisample_2d_array");
-            TexCaps.TextureViewSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_view");
-            TexCaps.CubemapArraysSupported    = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
+            TexProps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
+            TexProps.MaxTexture1DArraySlices   = 0; // Not supported in GLES 3.2
+            TexProps.MaxTexture2DDimension     = MaxTextureSize;
+            TexProps.MaxTexture2DArraySlices   = MaxLayers;
+            TexProps.MaxTexture3DDimension     = Max3DTextureSize;
+            TexProps.MaxTextureCubeDimension   = MaxCubeTextureSize;
+            TexProps.Texture2DMSSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_storage_multisample");
+            TexProps.Texture2DMSArraySupported = IsGLES32OrAbove || strstr(Extensions, "texture_storage_multisample_2d_array");
+            TexProps.TextureViewSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_view");
+            TexProps.CubemapArraysSupported    = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(TexProps) == 28, "Did you add a new member to TextureProperites? Please initialize it here.");
+#endif
 
-            SamCaps.BorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
-            SamCaps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && strstr(Extensions, "texture_filter_anisotropic");
-            SamCaps.LODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
+            SamProps.BorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
+            SamProps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && strstr(Extensions, "texture_filter_anisotropic");
+            SamProps.LODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(SamProps) == 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
+#endif
         }
 
 #ifdef GL_KHR_shader_subgroup
@@ -796,10 +807,16 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
             glGetIntegerv(GL_SUBGROUP_SUPPORTED_FEATURES_KHR, &SubgroupFeatures);
             CHECK_GL_ERROR("glGetIntegerv(GL_SUBGROUP_SUPPORTED_FEATURES_KHR)");
 
-            Properties.WaveOp.MinSize         = static_cast<Uint32>(SubgroupSize);
-            Properties.WaveOp.MaxSize         = static_cast<Uint32>(SubgroupSize);
-            Properties.WaveOp.SupportedStages = GLShaderBitsToShaderTypes(SubgroupStages);
-            Properties.WaveOp.Features        = GLSubgroupFeatureBitsToWaveFeatures(SubgroupFeatures);
+            {
+                auto& WaveOpProps{AdapterInfo.Properties.WaveOp};
+                WaveOpProps.MinSize         = static_cast<Uint32>(SubgroupSize);
+                WaveOpProps.MaxSize         = static_cast<Uint32>(SubgroupSize);
+                WaveOpProps.SupportedStages = GLShaderBitsToShaderTypes(SubgroupStages);
+                WaveOpProps.Features        = GLSubgroupFeatureBitsToWaveFeatures(SubgroupFeatures);
+#    if defined(_MSC_VER) && defined(_WIN64)
+                static_assert(sizeof(WaveOpProps) == 16, "Did you add a new member to WaveOpProperties? Please initialize it here.");
+#    endif
+            }
 
             ENABLE_FEATURE(WaveOp, true);
         }
@@ -818,8 +835,12 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
 
         // Buffer properties
         {
-            Properties.Buffer.ConstantBufferOffsetAlignment   = 256;
-            Properties.Buffer.StructuredBufferOffsetAlignment = 16;
+            auto& BufferProps{AdapterInfo.Properties.Buffer};
+            BufferProps.ConstantBufferOffsetAlignment   = 256;
+            BufferProps.StructuredBufferOffsetAlignment = 16;
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(BufferProps) == 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+#endif
         }
 #undef ENABLE_FEATURE
     }
@@ -837,7 +858,6 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-    static_assert(sizeof(DeviceProperties) == 28, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
 #endif
 }
 
@@ -1087,9 +1107,9 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     // Disable debug messages - errors are exepcted
     m_ShowDebugGLOutput = 0;
 
+    const auto& TexProps = GetAdapterInfo().Properties.Texture;
     // Create test texture 1D
-    if (GetDeviceCaps().TexCaps.MaxTexture1DDimension != 0 &&
-        TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
+    if (TexProps.MaxTexture1DDimension != 0 && TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
     {
         if (CreateTestGLTexture(ContextState, GL_TEXTURE_1D,
                                 [&]() //
@@ -1144,7 +1164,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
             {
                 TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE;
 
-                if (GetDeviceCaps().TexCaps.CubemapArraysSupported)
+                if (TexProps.CubemapArraysSupported)
                 {
                     if (CreateTestGLTexture(
                             ContextState, GL_TEXTURE_CUBE_MAP_ARRAY,
@@ -1251,8 +1271,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 
     TexFormatInfo.SampleCounts = 0x01;
-    if (TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED &&
-        GetDeviceCaps().TexCaps.Texture2DMSSupported)
+    if (TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED && TexProps.Texture2DMSSupported)
     {
 #if GL_ARB_texture_storage_multisample
         for (GLsizei SampleCount = 2; SampleCount <= 8; SampleCount *= 2)

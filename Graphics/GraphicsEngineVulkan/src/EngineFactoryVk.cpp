@@ -244,36 +244,48 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
         const auto& vkDeviceLimits = PhysicalDevice.GetProperties().limits;
         const auto& vkFeatures     = PhysicalDevice.GetFeatures();
 
-        auto& TexCaps = AdapterInfo.Capabilities.TexCaps;
+        {
+            auto& TexProps{AdapterInfo.Properties.Texture};
+            TexProps.MaxTexture1DDimension     = vkDeviceLimits.maxImageDimension1D;
+            TexProps.MaxTexture1DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
+            TexProps.MaxTexture2DDimension     = vkDeviceLimits.maxImageDimension2D;
+            TexProps.MaxTexture2DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
+            TexProps.MaxTexture3DDimension     = vkDeviceLimits.maxImageDimension3D;
+            TexProps.MaxTextureCubeDimension   = vkDeviceLimits.maxImageDimensionCube;
+            TexProps.Texture2DMSSupported      = True;
+            TexProps.Texture2DMSArraySupported = True;
+            TexProps.TextureViewSupported      = True;
+            TexProps.CubemapArraysSupported    = vkFeatures.imageCubeArray;
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(TexProps) == 28, "Did you add a new member to TextureProperites? Please initialize it here.");
+#endif
+        }
 
-        TexCaps.MaxTexture1DDimension     = vkDeviceLimits.maxImageDimension1D;
-        TexCaps.MaxTexture1DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
-        TexCaps.MaxTexture2DDimension     = vkDeviceLimits.maxImageDimension2D;
-        TexCaps.MaxTexture2DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
-        TexCaps.MaxTexture3DDimension     = vkDeviceLimits.maxImageDimension3D;
-        TexCaps.MaxTextureCubeDimension   = vkDeviceLimits.maxImageDimensionCube;
-        TexCaps.Texture2DMSSupported      = True;
-        TexCaps.Texture2DMSArraySupported = True;
-        TexCaps.TextureViewSupported      = True;
-        TexCaps.CubemapArraysSupported    = vkFeatures.imageCubeArray;
-
-        auto& SamCaps = AdapterInfo.Capabilities.SamCaps;
-
-        SamCaps.BorderSamplingModeSupported   = True;
-        SamCaps.AnisotropicFilteringSupported = vkFeatures.samplerAnisotropy;
-        SamCaps.LODBiasSupported              = True;
+        {
+            auto& SamProps{AdapterInfo.Properties.Sampler};
+            SamProps.BorderSamplingModeSupported   = True;
+            SamProps.AnisotropicFilteringSupported = vkFeatures.samplerAnisotropy;
+            SamProps.LODBiasSupported              = True;
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(SamProps) == 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
+#endif
+        }
     }
 
     // Set limits and properties
     {
         const auto& Features       = AdapterInfo.Capabilities.Features;
         const auto& vkDeviceLimits = PhysicalDevice.GetProperties().limits;
-        auto&       Properties     = AdapterInfo.Properties;
 
         if (Features.RayTracing)
         {
-            Properties.RayTracing.MaxRecursionDepth = PhysicalDevice.GetExtProperties().RayTracingPipeline.maxRayRecursionDepth;
+            auto& RayTracingProps{AdapterInfo.Properties.RayTracing};
+            RayTracingProps.MaxRecursionDepth = PhysicalDevice.GetExtProperties().RayTracingPipeline.maxRayRecursionDepth;
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(RayTracingProps) == 4, "Did you add a new member to RayTracingProperites? Please initialize it here.");
+#endif
         }
+
         if (Features.WaveOp)
         {
             const auto& vkWaveProps       = PhysicalDevice.GetExtProperties().Subgroup;
@@ -300,14 +312,25 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
                 SupportedStages |= WaveOpStages & VK_SHADER_STAGE_ALL_RAY_TRACING;
             }
 
-            Properties.WaveOp.MinSize         = vkWaveProps.subgroupSize;
-            Properties.WaveOp.MaxSize         = vkWaveProps.subgroupSize;
-            Properties.WaveOp.SupportedStages = VkShaderStageFlagsToShaderTypes(SupportedStages);
-            Properties.WaveOp.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
+            {
+                auto& WaveOpProps{AdapterInfo.Properties.WaveOp};
+                WaveOpProps.MinSize         = vkWaveProps.subgroupSize;
+                WaveOpProps.MaxSize         = vkWaveProps.subgroupSize;
+                WaveOpProps.SupportedStages = VkShaderStageFlagsToShaderTypes(SupportedStages);
+                WaveOpProps.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
+#if defined(_MSC_VER) && defined(_WIN64)
+                static_assert(sizeof(WaveOpProps) == 16, "Did you add a new member to WaveOpProperties? Please initialize it here.");
+#endif
+            }
         }
+
         {
-            Properties.Buffer.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
-            Properties.Buffer.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
+            auto& BufferProps{AdapterInfo.Properties.Buffer};
+            BufferProps.ConstantBufferOffsetAlignment   = static_cast<Uint32>(vkDeviceLimits.minUniformBufferOffsetAlignment);
+            BufferProps.StructuredBufferOffsetAlignment = static_cast<Uint32>(vkDeviceLimits.minStorageBufferOffsetAlignment);
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(BufferProps) == 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+#endif
         }
     }
 
@@ -380,7 +403,6 @@ void GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalD
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
-    static_assert(sizeof(DeviceProperties) == 28, "Did you add a new peroperties to DeviceProperties? Please handle its satus here.");
 #endif
 }
 

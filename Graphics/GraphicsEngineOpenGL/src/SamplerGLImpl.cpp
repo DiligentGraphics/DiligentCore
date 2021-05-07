@@ -45,7 +45,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     m_GlSampler{true}
 // clang-format on
 {
-    const auto& SamCaps = pDeviceGL->GetDeviceCaps().SamCaps;
+    const auto& SamPrpos = pDeviceGL->GetAdapterInfo().Properties.Sampler;
 
     Bool   bMinAnisotropic = False, bMagAnisotropic = False, bMipAnisotropic = False;
     Bool   bMinComparison = False, bMagComparison = False, bMipComparison = False;
@@ -83,7 +83,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     {
         auto& WrapMode = WrapModes[i];
         WrapMode       = TexAddressModeToGLAddressMode(AddressModes[i]);
-        if (!SamCaps.BorderSamplingModeSupported && WrapMode == GL_CLAMP_TO_BORDER)
+        if (!SamPrpos.BorderSamplingModeSupported && WrapMode == GL_CLAMP_TO_BORDER)
         {
             LOG_ERROR_MESSAGE("GL_CLAMP_TO_BORDER filtering mode is not supported. Defaulting to GL_CLAMP_TO_EDGE.\n");
             WrapMode = GL_CLAMP_TO_EDGE;
@@ -93,7 +93,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     glSamplerParameteri(m_GlSampler, GL_TEXTURE_WRAP_T, WrapModes[1]);
     glSamplerParameteri(m_GlSampler, GL_TEXTURE_WRAP_R, WrapModes[2]);
 
-    if (SamCaps.LODBiasSupported) // Can be unsupported
+    if (SamPrpos.LODBiasSupported) // Can be unsupported
         glSamplerParameterf(m_GlSampler, GL_TEXTURE_LOD_BIAS, SamplerDesc.MipLODBias);
     else
     {
@@ -101,7 +101,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
             LOG_WARNING_MESSAGE("Texture LOD bias sampler attribute is not supported\n");
     }
 
-    if (SamCaps.AnisotropicFilteringSupported) // Can be unsupported
+    if (SamPrpos.AnisotropicFilteringSupported) // Can be unsupported
         glSamplerParameterf(m_GlSampler, GL_TEXTURE_MAX_ANISOTROPY_EXT, bMipAnisotropic ? static_cast<float>(SamplerDesc.MaxAnisotropy) : 1.f);
     else
     {
@@ -111,7 +111,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
 
     glSamplerParameteri(m_GlSampler, GL_TEXTURE_COMPARE_MODE, bMinComparison ? GL_COMPARE_REF_TO_TEXTURE : GL_NONE);
 
-    if (SamCaps.BorderSamplingModeSupported) // Can be unsupported
+    if (SamPrpos.BorderSamplingModeSupported) // Can be unsupported
         glSamplerParameterfv(m_GlSampler, GL_TEXTURE_BORDER_COLOR, SamplerDesc.BorderColor);
     else
     {
