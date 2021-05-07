@@ -395,6 +395,13 @@ public:
         return m_pEngineFactory.RawPtr<IEngineFactory>();
     }
 
+    /// Base implementation of IRenderDevice::CreateTilePipelineState().
+    virtual void DILIGENT_CALL_TYPE CreateTilePipelineState(const TilePipelineStateCreateInfo& PSOCreateInfo,
+                                                            IPipelineState**                   ppPipelineState) override
+    {
+        UNSUPPORTED("Tile pipeline is not supported by this device. Please check DeviceFeatures.TileShaders feature.");
+    }
+
     StateObjectsRegistry<SamplerDesc>& GetSamplerRegistry() { return m_SamplersRegistry; }
 
     /// Set weak reference to the immediate context

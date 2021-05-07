@@ -138,7 +138,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     }
     else
     {
-        UNEXPECTED(GetPipelineTypeString(Desc.PipelineType), " pipelines '", Desc.Name, "' are not supported in OpenGL");
+        UNEXPECTED(GetPipelineTypeString(Desc.PipelineType), " pipelines '", Desc.Name, "' are not supported in Direct3D11 backend");
     }
 
     Uint32 DvpCompatibleSRBCount = 0;
@@ -905,7 +905,7 @@ void DeviceContextD3D11Impl::UpdateTexture(ITexture*                      pTextu
     auto*       pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexture);
     const auto& Desc      = pTexD3D11->GetDesc();
 
-    // OpenGL backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
+    // Direct3D11 backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
     DEV_CHECK_ERR(Desc.Usage == USAGE_DEFAULT, "Only USAGE_DEFAULT textures should be updated with UpdateData()");
 
     if (SubresData.pSrcBuffer != nullptr)

@@ -468,7 +468,7 @@ inline Int32 ExtractFirstShaderStageIndex(SHADER_TYPE& Stages)
 }
 
 
-static_assert(SHADER_TYPE_LAST == 0x2000, "Please add the new shader type index below");
+static_assert(SHADER_TYPE_LAST == 0x4000, "Please add the new shader type index below");
 
 static constexpr Int32 VSInd   = 0;
 static constexpr Int32 PSInd   = 1;
@@ -484,8 +484,9 @@ static constexpr Int32 RCHSInd = 10;
 static constexpr Int32 RAHSInd = 11;
 static constexpr Int32 RISInd  = 12;
 static constexpr Int32 RCSInd  = 13;
+static constexpr Int32 TLSInd  = 14;
 
-static constexpr Int32 LastShaderInd = RCSInd;
+static constexpr Int32 LastShaderInd = TLSInd;
 
 // clang-format off
 static_assert(SHADER_TYPE_VERTEX           == (1 << VSInd),   "VSInd is not consistent with SHADER_TYPE_VERTEX");
@@ -502,6 +503,7 @@ static_assert(SHADER_TYPE_RAY_CLOSEST_HIT  == (1 << RCHSInd), "RCHSInd is not co
 static_assert(SHADER_TYPE_RAY_ANY_HIT      == (1 << RAHSInd), "RAHSInd is not consistent with SHADER_TYPE_RAY_ANY_HIT");
 static_assert(SHADER_TYPE_RAY_INTERSECTION == (1 << RISInd),  "RISInd is not consistent with SHADER_TYPE_RAY_INTERSECTION");
 static_assert(SHADER_TYPE_CALLABLE         == (1 << RCSInd),  "RCSInd is not consistent with SHADER_TYPE_CALLABLE");
+static_assert(SHADER_TYPE_TILE             == (1 << TLSInd),  "TLSInd is not consistent with SHADER_TYPE_TILE");
 
 static_assert(SHADER_TYPE_LAST == (1 << LastShaderInd), "LastShaderInd is not consistent with SHADER_TYPE_LAST");
 // clang-format on

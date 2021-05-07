@@ -249,6 +249,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         RootInfo.MakeAllStale();
     }
 
+    static_assert(PIPELINE_TYPE_LAST == 4, "Please update the switch below to handle the new pipeline type");
     switch (PSODesc.PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
@@ -299,8 +300,11 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
             RTCtx.SetComputeRootSignature(pd3d12RootSig);
             break;
         }
+        case PIPELINE_TYPE_TILE:
+            UNEXPECTED("Unsupported pipeline type");
+            break;
         default:
-            UNEXPECTED("unknown pipeline type");
+            UNEXPECTED("Unknown pipeline type");
     }
 }
 
@@ -1132,8 +1136,8 @@ void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE 
         auto* pTexture = ValidatedCast<TextureD3D12Impl>(pDSV->GetTexture());
         //if (bReadOnlyDepth)
         //{
-        //	TransitionResource(*pTexture, D3D12_RESOURCE_STATE_DEPTH_READ);
-        //	m_pCommandList->OMSetRenderTargets( NumRTVs, RTVHandles, FALSE, &DSV->GetDSV_DepthReadOnly() );
+        //  TransitionResource(*pTexture, D3D12_RESOURCE_STATE_DEPTH_READ);
+        //  m_pCommandList->OMSetRenderTargets( NumRTVs, RTVHandles, FALSE, &DSV->GetDSV_DepthReadOnly() );
         //}
         //else
         {

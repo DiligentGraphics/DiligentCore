@@ -209,6 +209,7 @@ public:
             Features.PixelUAVWritesAndAtomics      = DEVICE_FEATURE_STATE_ENABLED;
             Features.TextureUAVExtendedFormats     = DEVICE_FEATURE_STATE_ENABLED;
             Features.InstanceDataStepRate          = DEVICE_FEATURE_STATE_ENABLED;
+            Features.TileShaders                   = DEVICE_FEATURE_STATE_DISABLED;
         }
 
         // Set memory properties

@@ -783,7 +783,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Diligent::DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)

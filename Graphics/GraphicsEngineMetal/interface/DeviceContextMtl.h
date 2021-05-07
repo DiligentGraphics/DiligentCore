@@ -65,6 +65,26 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContextMtl, IDeviceContext)
     ///
     ///           Engine will end all active encoders.
     VIRTUAL id<MTLCommandBuffer> METHOD(GetMtlCommandBuffer)(THIS) PURE;
+
+
+    /// Sets the size of a block of threadgroup memory.
+
+    /// \param [in] Length - The size of the threadgroup memory, in bytes. Must be a multiple of 16 bytes.
+    /// \param [in] Index  - The index in the threadgroup memory argument table.
+    VIRTUAL void METHOD(SetComputeThreadgroupMemoryLength)(THIS_
+                                                           Uint32 Length,
+                                                           Uint32 Index) PURE;
+
+
+    /// Sets the size of a threadgroup memory buffer for the tile function at an index in the argument table.
+
+    /// \param [in] Length - The threadgroup memory length, in bytes.
+    /// \param [in] Offset - The distance, in bytes, between the start of the data and the start of the threadgroup memory.
+    /// \param [in] Index  - The argument table index.
+    VIRTUAL void METHOD(SetTileThreadgroupMemoryLength)(THIS_
+                                                        Uint32 Length,
+                                                        Uint32 Offset,
+                                                        Uint32 Index) API_AVAILABLE(ios(11), macosx(11.0)) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -74,7 +94,9 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IDeviceContextMtl_GetMtlCommandBuffer(This)  CALL_IFACE_METHOD(DeviceContextMtl, GetMtlCommandBuffer,   This)
+#    define IDeviceContextMtl_GetMtlCommandBuffer(This)                     CALL_IFACE_METHOD(DeviceContextMtl, GetMtlCommandBuffer,   This)
+#    define IDeviceContextMtl_SetComputeThreadgroupMemoryLength(This, ...)  CALL_IFACE_METHOD(DeviceContextMtl, SetComputeThreadgroupMemoryLength, This, __VA_ARGS__)
+#    define IDeviceContextMtl_SetTileThreadgroupMemoryLength(This, ...)     CALL_IFACE_METHOD(DeviceContextMtl, SetTileThreadgroupMemoryLength,    This, __VA_ARGS__)
 
 // clang-format on
 

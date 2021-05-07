@@ -362,7 +362,6 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc, const 
     }
 }
 
-} // namespace
 
 #define VALIDATE_SHADER_TYPE(Shader, ExpectedType, ShaderName)                                                                           \
     if (Shader != nullptr && Shader->GetDesc().ShaderType != ExpectedType)                                                               \
@@ -554,6 +553,24 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                        
     }
 }
 
+void ValidateTilePipelineCreateInfo(const TilePipelineStateCreateInfo& CreateInfo,
+                                    const DeviceFeatures&              Features) noexcept(false)
+{
+    const auto& PSODesc = CreateInfo.PSODesc;
+    if (PSODesc.PipelineType != PIPELINE_TYPE_TILE)
+        LOG_PSO_ERROR_AND_THROW("Pipeline type must be TILE.");
+
+    ValidatePipelineResourceSignatures(CreateInfo, Features);
+    ValidatePipelineResourceLayoutDesc(PSODesc, Features);
+
+    if (CreateInfo.pTS == nullptr)
+        LOG_PSO_ERROR_AND_THROW("Tile shader must not be null.");
+
+    VALIDATE_SHADER_TYPE(CreateInfo.pTS, SHADER_TYPE_TILE, "tile")
+}
+
+} // namespace
+
 void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToGroupIndex,
                             const RayTracingPipelineStateCreateInfo&                                CreateInfo,
                             FixedLinearAllocator&                                                   MemPool) noexcept
@@ -673,6 +690,40 @@ ShaderResourceVariableDesc FindPipelineResourceLayoutVariable(
     if (ShaderStage & LayoutDesc.DefaultVariableMergeStages)
         ShaderStage = LayoutDesc.DefaultVariableMergeStages;
     return {ShaderStage, Name, LayoutDesc.DefaultVariableType};
+}
+
+
+template <>
+void ValidatePSOCreateInfo<GraphicsPipelineStateCreateInfo>(IRenderDevice*                         pDevice,
+                                                            const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+    ValidateGraphicsPipelineCreateInfo(CreateInfo, pDevice->GetDeviceInfo().Features);
+}
+
+template <>
+void ValidatePSOCreateInfo<ComputePipelineStateCreateInfo>(IRenderDevice*                        pDevice,
+                                                           const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+    ValidateComputePipelineCreateInfo(CreateInfo, pDevice->GetDeviceInfo().Features);
+}
+
+
+template <>
+void ValidatePSOCreateInfo<RayTracingPipelineStateCreateInfo>(IRenderDevice*                           pDevice,
+                                                              const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+    ValidateRayTracingPipelineCreateInfo(pDevice, CreateInfo);
+}
+
+template <>
+void ValidatePSOCreateInfo<TilePipelineStateCreateInfo>(IRenderDevice*                     pDevice,
+                                                        const TilePipelineStateCreateInfo& CreateInfo) noexcept(false)
+{
+    VERIFY_EXPR(pDevice != nullptr);
+    ValidateTilePipelineCreateInfo(CreateInfo, pDevice->GetDeviceInfo().Features);
 }
 
 } // namespace Diligent

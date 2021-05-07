@@ -73,7 +73,7 @@ namespace
 
 EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off
@@ -92,6 +92,9 @@ EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
         case SHADER_TYPE_RAY_INTERSECTION: return EShLangIntersect;
         case SHADER_TYPE_CALLABLE:         return EShLangCallable;
         // clang-format on
+        case SHADER_TYPE_TILE:
+            UNEXPECTED("Unsupported shader type");
+            return EShLangCount;
         default:
             UNEXPECTED("Unexpected shader type");
             return EShLangCount;

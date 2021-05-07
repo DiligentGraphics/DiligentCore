@@ -81,6 +81,8 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
     ///     - OpenGL(ES) HLSL: HLSL2GLSL converter and native compiler
     ///     - Vulkan GLSL:     built-in glslang
     ///     - Vulkan HLSL:     built-in glslang (with limited support for Shader Model 6.x)
+    ///     - Metal GLSL/HLSL: built-in glslang (HLSL with limited support for Shader Model 6.x)
+    ///     - Metal MSL:       native compiler
     SHADER_COMPILER_DEFAULT = 0,
 
     /// Built-in glslang compiler for GLSL and HLSL.

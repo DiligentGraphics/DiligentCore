@@ -281,6 +281,18 @@ public:
         return m_pUserData.RawPtr<IObject>();
     }
 
+    /// Base implementation of IDeviceContext::DispatchTile.
+    virtual void DILIGENT_CALL_TYPE DispatchTile(const DispatchTileAttribs& Attribs) override
+    {
+        UNSUPPORTED("Tile pipeline is not supported by this device. Please check DeviceFeatures.TileShaders feature.");
+    }
+
+    /// Base implementation of IDeviceContext::GetTileSize.
+    virtual void DILIGENT_CALL_TYPE GetTileSize(Uint32& TileSizeX, Uint32& TileSizeY) override
+    {
+        UNSUPPORTED("Tile pipeline is not supported by this device. Please check DeviceFeatures.TileShaders feature.");
+    }
+
     /// Returns currently bound pipeline state and blend factors
     inline void GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef);
 
@@ -505,6 +517,8 @@ protected:
     void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
     void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const;
 
+    void DvpVerifyDispatchTileArguments(const DispatchTileAttribs& Attribs) const;
+
     void DvpVerifyRenderTargets() const;
     void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const;
     void DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName) const;
@@ -529,6 +543,8 @@ protected:
 
     void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {}
     void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {}
+
+    void DvpVerifyDispatchTileArguments(const DispatchTileAttribs& Attribs) const {}
 
     void DvpVerifyRenderTargets()const {}
     void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const {}
@@ -2151,6 +2167,15 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectAr
     DEV_CHECK_ERR(VerifyDispatchComputeIndirectAttribs(Attribs, pAttribsBuffer), "DispatchComputeIndirectAttribs are invalid");
 }
 
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchTileArguments(const DispatchTileAttribs& Attribs) const
+{
+    DEV_CHECK_ERR(m_pPipelineState, "DispatchTile command arguments are invalid: no pipeline state is bound.");
+
+    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_TILE,
+                  "DispatchTile command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name,
+                  "' is not a tile pipeline.");
+}
 
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const

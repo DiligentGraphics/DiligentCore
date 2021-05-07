@@ -1,5 +1,11 @@
 ## Current Progress
 
+* Added tile shaders (API Version 240098)
+  * Added `PIPELINE_TYPE_TILE` and `SHADER_TYPE_TILE` enum values
+  * Added `TileShaders` device feature
+  * Added `TilePipelineDesc`, `TilePipelineStateCreateInfo` and `DispatchTileAttribs` structs
+  * Added `IRenderDevice::CreateTilePipelineState`, `IPipelineState::GetTilePipelineDesc`,
+    `IDeviceContext::DispatchTile` and `IDeviceContext::GetTileSize` methods
 * Removed `GetNextFenceValue`, `GetCompletedFenceValue`, and `IsFenceSignaled` methods from `IRenderDeviceD3D12` and `IRenderDeviceVk` interfaces
   as they are now in `ICommandQueue` interface (API Version 240097)
 * Added `ICommandQueue` interface, `IDeviceContext::LockCommandQueue` and `IDeviceContext::UnlockCommandQueue` methods,

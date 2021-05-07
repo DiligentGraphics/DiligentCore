@@ -154,7 +154,7 @@ add_library(Diligent-GraphicsEngineOpenGL-shared SHARED
 )
 if(MSVC)
     target_sources(Diligent-GraphicsEngineOpenGL-shared 
-    PRIVATE	
+    PRIVATE
         src/DLLMain.cpp
         src/GraphicsEngineOpenGL.def
     )

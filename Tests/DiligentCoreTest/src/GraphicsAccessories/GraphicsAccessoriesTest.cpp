@@ -489,7 +489,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the test below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the test below to handle the new shader type");
 
     // clang-format off
     EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_UNKNOWN),             -1);
@@ -507,6 +507,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
     EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_RAY_ANY_HIT),      RAHSInd);
     EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_RAY_INTERSECTION), RISInd);
     EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_CALLABLE),         RCSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_TILE),             TLSInd);
     EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_LAST),             LastShaderInd);
     // clang-format on
 
@@ -519,7 +520,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromIndex)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the test below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the test below to handle the new shader type");
 
     EXPECT_EQ(GetShaderTypeFromIndex(VSInd), SHADER_TYPE_VERTEX);
     EXPECT_EQ(GetShaderTypeFromIndex(PSInd), SHADER_TYPE_PIXEL);
@@ -535,6 +536,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromIndex)
     EXPECT_EQ(GetShaderTypeFromIndex(RAHSInd), SHADER_TYPE_RAY_ANY_HIT);
     EXPECT_EQ(GetShaderTypeFromIndex(RISInd), SHADER_TYPE_RAY_INTERSECTION);
     EXPECT_EQ(GetShaderTypeFromIndex(RCSInd), SHADER_TYPE_CALLABLE);
+    EXPECT_EQ(GetShaderTypeFromIndex(TLSInd), SHADER_TYPE_TILE);
 
     EXPECT_EQ(GetShaderTypeFromIndex(LastShaderInd), SHADER_TYPE_LAST);
 
@@ -547,6 +549,9 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromIndex)
 
 TEST(GraphicsAccessories_GraphicsAccessories, IsConsistentShaderType)
 {
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the code below to handle the new shader type");
+    static_assert(PIPELINE_TYPE_LAST == 4, "Please update the code below to handle the new pipeline type");
+
     {
         std::array<bool, LastShaderInd + 1> ValidGraphicsStages;
         ValidGraphicsStages.fill(false);
@@ -605,6 +610,18 @@ TEST(GraphicsAccessories_GraphicsAccessories, IsConsistentShaderType)
             EXPECT_EQ(IsConsistentShaderType(ShaderType, PIPELINE_TYPE_RAY_TRACING), ValidRayTracingStages[i]);
         }
     }
+
+    {
+        std::array<bool, LastShaderInd + 1> ValidTileStages;
+        ValidTileStages.fill(false);
+        ValidTileStages[TLSInd] = true;
+
+        for (Int32 i = 0; i <= LastShaderInd; ++i)
+        {
+            auto ShaderType = GetShaderTypeFromIndex(i);
+            EXPECT_EQ(IsConsistentShaderType(ShaderType, PIPELINE_TYPE_TILE), ValidTileStages[i]);
+        }
+    }
 }
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypePipelineIndex)
@@ -652,6 +669,9 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromPipelineIndex)
 
 TEST(GraphicsAccessories_GraphicsAccessories, PipelineTypeFromShaderStages)
 {
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the code below to handle the new shader type");
+    static_assert(PIPELINE_TYPE_LAST == 4, "Please update the code below to handle the new pipeline type");
+
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_VERTEX), PIPELINE_TYPE_GRAPHICS);
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_PIXEL), PIPELINE_TYPE_GRAPHICS);
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_GEOMETRY), PIPELINE_TYPE_GRAPHICS);
@@ -671,6 +691,8 @@ TEST(GraphicsAccessories_GraphicsAccessories, PipelineTypeFromShaderStages)
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_ANY_HIT), PIPELINE_TYPE_RAY_TRACING);
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_RAY_INTERSECTION), PIPELINE_TYPE_RAY_TRACING);
     EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_CALLABLE), PIPELINE_TYPE_RAY_TRACING);
+
+    EXPECT_EQ(PipelineTypeFromShaderStages(SHADER_TYPE_TILE), PIPELINE_TYPE_TILE);
 }
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineResourceFlagsString)

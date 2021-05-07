@@ -164,6 +164,9 @@ public:
     virtual void DILIGENT_CALL_TYPE DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
     // clang-format on
 
+    /// Implementation of IDeviceContext::GetTileSize() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE GetTileSize(Uint32& TileSizeX, Uint32& TileSizeY) override final;
+
     /// Implementation of IDeviceContext::ClearDepthStencil() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE ClearDepthStencil(ITextureView*                  pView,
                                                       CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,

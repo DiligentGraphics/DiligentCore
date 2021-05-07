@@ -585,7 +585,7 @@ D3D12_SHADER_VISIBILITY ShaderTypeToD3D12ShaderVisibility(SHADER_TYPE ShaderType
 {
     VERIFY(IsPowerOfTwo(ShaderType), "Only single shader stage should be provided");
 
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         // clang-format off
@@ -606,15 +606,18 @@ D3D12_SHADER_VISIBILITY ShaderTypeToD3D12ShaderVisibility(SHADER_TYPE ShaderType
         case SHADER_TYPE_RAY_INTERSECTION:
         case SHADER_TYPE_CALLABLE:          return D3D12_SHADER_VISIBILITY_ALL;
         // clang-format on
+        case SHADER_TYPE_TILE:
+            UNSUPPORTED("Unsupported shader type (", GetShaderTypeLiteralName(ShaderType), ")");
+            return D3D12_SHADER_VISIBILITY_ALL;
         default:
-            LOG_ERROR("Unknown shader type (", ShaderType, ")");
+            UNSUPPORTED("Unknown shader type (", ShaderType, ")");
             return D3D12_SHADER_VISIBILITY_ALL;
     }
 }
 
 SHADER_TYPE D3D12ShaderVisibilityToShaderType(D3D12_SHADER_VISIBILITY ShaderVisibility)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
     switch (ShaderVisibility)
     {
         // clang-format off

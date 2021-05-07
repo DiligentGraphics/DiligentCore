@@ -304,6 +304,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     auto vkPipeline = pPipelineStateVk->GetVkPipeline();
 
+    static_assert(PIPELINE_TYPE_LAST == 4, "Please update the switch below to handle the new pipeline type");
     switch (PSODesc.PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
@@ -338,6 +339,9 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
             m_State.vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
             break;
         }
+        case PIPELINE_TYPE_TILE:
+            UNEXPECTED("Unsupported pipeline type");
+            break;
         default:
             UNEXPECTED("unknown pipeline type");
     }
@@ -382,12 +386,14 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
     static_assert(PIPELINE_TYPE_COMPUTE     == 1, "PIPELINE_TYPE_COMPUTE == 1 is expected");
     static_assert(PIPELINE_TYPE_MESH        == 2, "PIPELINE_TYPE_MESH == 2 is expected");
     static_assert(PIPELINE_TYPE_RAY_TRACING == 3, "PIPELINE_TYPE_RAY_TRACING == 3 is expected");
+    static_assert(PIPELINE_TYPE_TILE        == 4, "PIPELINE_TYPE_TILE == 4 is expected");
     // clang-format on
     constexpr size_t Indices[] = {
         0, // PIPELINE_TYPE_GRAPHICS
         1, // PIPELINE_TYPE_COMPUTE
         0, // PIPELINE_TYPE_MESH
-        2  // PIPELINE_TYPE_RAY_TRACING
+        2, // PIPELINE_TYPE_RAY_TRACING
+        0, // PIPELINE_TYPE_TILE
     };
     static_assert(_countof(Indices) == Uint32{PIPELINE_TYPE_LAST} + 1, "Please add the new pipeline type to the list above");
 
@@ -922,6 +928,22 @@ void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
 
     m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.DispatchArgsByteOffset);
     ++m_State.NumCommands;
+}
+
+void DeviceContextVkImpl::GetTileSize(Uint32& TileSizeX, Uint32& TileSizeY)
+{
+    TileSizeX = 0;
+    TileSizeY = 0;
+
+    if (m_vkRenderPass != VK_NULL_HANDLE)
+    {
+        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+        VkExtent2D  Granularity   = {};
+        vkGetRenderAreaGranularity(LogicalDevice.GetVkDevice(), m_vkRenderPass, &Granularity);
+
+        TileSizeX = Granularity.width;
+        TileSizeY = Granularity.height;
+    }
 }
 
 

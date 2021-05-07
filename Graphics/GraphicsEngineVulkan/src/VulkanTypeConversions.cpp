@@ -1622,7 +1622,7 @@ VkAccessFlags AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags)
 
 VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
     VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "More than one shader type is specified");
     switch (ShaderType)
     {
@@ -1642,9 +1642,12 @@ VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
         case SHADER_TYPE_RAY_INTERSECTION: return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
         case SHADER_TYPE_CALLABLE:         return VK_SHADER_STAGE_CALLABLE_BIT_KHR;
         // clang-format on
+        case SHADER_TYPE_TILE:
+            UNEXPECTED("Unsupported shader type");
+            return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
         default:
             UNEXPECTED("Unknown shader type");
-            return VK_SHADER_STAGE_VERTEX_BIT;
+            return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
     }
 }
 
@@ -1667,7 +1670,7 @@ SHADER_TYPE VkShaderStageFlagsToShaderTypes(VkShaderStageFlags StageFlags)
     }
     else if (StageFlags == VK_SHADER_STAGE_ALL)
     {
-        static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the return value below");
+        static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the return value below");
         return SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE | SHADER_TYPE_ALL_MESH | SHADER_TYPE_ALL_RAY_TRACING;
     }
 
@@ -1676,7 +1679,7 @@ SHADER_TYPE VkShaderStageFlagsToShaderTypes(VkShaderStageFlags StageFlags)
     {
         auto Type = ExtractLSB(StageFlags);
 
-        static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
+        static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
         switch (Type)
         {
             // clang-format off
@@ -1968,10 +1971,12 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     const auto& TimelineSemaphoreFeats = ExtFeatures.TimelineSemaphore;
     INIT_FEATURE(NativeFence,
                  TimelineSemaphoreFeats.timelineSemaphore != VK_FALSE);
+
+    INIT_FEATURE(TileShaders, false); // Not currently supported
 #undef INIT_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     return Features;

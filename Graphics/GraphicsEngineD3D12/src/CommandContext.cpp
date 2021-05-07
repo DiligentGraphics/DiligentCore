@@ -99,7 +99,7 @@ ID3D12GraphicsCommandList* CommandContext::Close(CComPtr<ID3D12CommandAllocator>
     FlushResourceBarriers();
 
     //if (m_ID.length() > 0)
-    //	EngineProfiling::EndBlock(this);
+    //  EngineProfiling::EndBlock(this);
 
     VERIFY_EXPR(m_pCurrentAllocator != nullptr);
     auto hr = m_pCommandList->Close();
