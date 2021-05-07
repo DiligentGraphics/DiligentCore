@@ -40,9 +40,15 @@ namespace Diligent
 
 void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdapterInfo& AdapterInfo) noexcept(false)
 {
+    if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
+    {
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
+        return;
+    }
+
     if ((EngineCI.NumImmediateContexts > 0) != (EngineCI.pImmediateContextInfo != nullptr))
     {
-        LOG_ERROR_AND_THROW("NumImmediateContexts is not zero then pContextInfo must not be null");
+        LOG_ERROR_AND_THROW("If NumImmediateContexts is not zero, pContextInfo must not be null");
     }
 
     constexpr auto MaxImmediateContexts = 8 * std::min(sizeof(decltype(BufferDesc::CommandQueueMask)), sizeof(decltype(TextureDesc::CommandQueueMask)));

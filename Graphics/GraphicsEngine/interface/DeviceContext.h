@@ -2222,7 +2222,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Updates the data in the buffer.
 
-    /// \param [in] pBuffer             - Pointer to the buffer to updates.
+    /// \param [in] pBuffer             - Pointer to the buffer to update.
     /// \param [in] Offset              - Offset in bytes from the beginning of the buffer to the update region.
     /// \param [in] Size                - Size in bytes of the data region to update.
     /// \param [in] pData               - Pointer to the data to write to the buffer.

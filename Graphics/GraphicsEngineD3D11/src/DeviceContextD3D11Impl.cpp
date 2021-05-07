@@ -56,7 +56,7 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
     {
         pRefCounters,
         pDevice,
-        (EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : ""),
+        (EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : "Default immediate context"),
         bIsDeferred
     },
     m_pd3d11DeviceContext {pd3d11DeviceContext           },
