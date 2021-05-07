@@ -31,6 +31,7 @@
 /// Declaration of Diligent::FenceD3D11Impl class
 
 #include <deque>
+#include <algorithm>
 #include <atlbase.h>
 
 #include "EngineD3D11ImplTraits.hpp"
@@ -66,9 +67,7 @@ public:
         m_PendingQueries.emplace_back(std::move(pCtx), std::move(pQuery), Value);
         DvpSignal(Value);
 
-#ifdef DILIGENT_DEVELOPMENT
         m_MaxPendingQueries = std::max(m_MaxPendingQueries, m_PendingQueries.size());
-#endif
     }
 
     void Wait(Uint64 Value, bool FlushCommands);
@@ -90,9 +89,7 @@ private:
     };
     std::deque<PendingFenceData> m_PendingQueries;
 
-#ifdef DILIGENT_DEVELOPMENT
     size_t m_MaxPendingQueries = 0;
-#endif
 };
 
 } // namespace Diligent

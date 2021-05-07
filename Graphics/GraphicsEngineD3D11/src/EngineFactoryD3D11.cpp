@@ -81,6 +81,13 @@ public:
     virtual void InitializeGraphicsAdapterInfo(void*                pd3Device,
                                                IDXGIAdapter1*       pDXIAdapter,
                                                GraphicsAdapterInfo& AdapterInfo) const override final;
+
+private:
+    static void CreateD3D11DeviceAndContextForAdapter(IDXGIAdapter*         pAdapter,
+                                                      D3D_DRIVER_TYPE       DriverType,
+                                                      UINT                  Flags,
+                                                      ID3D11Device**        ppd3d11Device,
+                                                      ID3D11DeviceContext** ppd3d11Context);
 };
 
 
@@ -105,6 +112,40 @@ inline bool SdkLayersAvailable()
 }
 #endif
 
+void EngineFactoryD3D11Impl::CreateD3D11DeviceAndContextForAdapter(
+    IDXGIAdapter*         pAdapter,
+    D3D_DRIVER_TYPE       DriverType,
+    UINT                  Flags,
+    ID3D11Device**        ppd3d11Device,
+    ID3D11DeviceContext** ppd3d11Context)
+{
+    // This page https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-d3d11createdevice says the following:
+    //     If you provide a D3D_FEATURE_LEVEL array that contains D3D_FEATURE_LEVEL_11_1 on a computer that doesn't have the Direct3D 11.1
+    //     runtime installed, D3D11CreateDevice immediately fails with E_INVALIDARG.
+    // To avoid failure in this case we will try one feature level at a time
+    for (auto FeatureLevel : {Version{11, 1}, Version{11, 0}, Version{10, 1}, Version{10, 0}})
+    {
+        auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+        auto hr              = D3D11CreateDevice(
+            pAdapter,          // Specify nullptr to use the default adapter.
+            DriverType,        // If no adapter specified, request hardware graphics driver.
+            0,                 // Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
+            Flags,             // Set debug and Direct2D compatibility flags.
+            &d3dFeatureLevel,  // List of feature levels this app can support.
+            1,                 // Size of the list above.
+            D3D11_SDK_VERSION, // Always set this to D3D11_SDK_VERSION for Windows Store apps.
+            ppd3d11Device,     // Returns the Direct3D device created.
+            nullptr,           // Returns feature level of device created.
+            ppd3d11Context     // Returns the device immediate context.
+        );
+
+        if (SUCCEEDED(hr))
+        {
+            VERIFY_EXPR((*ppd3d11Device != nullptr) && (ppd3d11Context == nullptr || *ppd3d11Context != nullptr));
+            break;
+        }
+    }
+}
 
 void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI,
                                                           IRenderDevice**              ppDevice,
@@ -161,8 +202,6 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     CComPtr<ID3D11Device>        pd3d11Device;
     CComPtr<ID3D11DeviceContext> pd3d11Context;
 
-    const Version FeatureLevelList[] = {{11, 1}, {11, 0}, {10, 1}, {10, 0}};
-
     for (int adapterType = 0; adapterType < 2 && !pd3d11Device; ++adapterType)
     {
         IDXGIAdapter*   adapter    = nullptr;
@@ -182,32 +221,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
                 UNEXPECTED("Unexpected adapter type");
         }
 
-        // This page https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-d3d11createdevice says the following:
-        //     If you provide a D3D_FEATURE_LEVEL array that contains D3D_FEATURE_LEVEL_11_1 on a computer that doesn't have the Direct3D 11.1
-        //     runtime installed, this function immediately fails with E_INVALIDARG.
-        // To avoid failure in this case we will try one feature level at a time
-        for (auto FeatureLevel : FeatureLevelList)
-        {
-            auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
-            auto hr              = D3D11CreateDevice(
-                adapter,           // Specify nullptr to use the default adapter.
-                driverType,        // If no adapter specified, request hardware graphics driver.
-                0,                 // Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
-                creationFlags,     // Set debug and Direct2D compatibility flags.
-                &d3dFeatureLevel,  // List of feature levels this app can support.
-                1,                 // Size of the list above.
-                D3D11_SDK_VERSION, // Always set this to D3D11_SDK_VERSION for Windows Store apps.
-                &pd3d11Device,     // Returns the Direct3D device created.
-                nullptr,           // Returns feature level of device created.
-                &pd3d11Context     // Returns the device immediate context.
-            );
-
-            if (SUCCEEDED(hr))
-            {
-                VERIFY_EXPR(pd3d11Device && pd3d11Context);
-                break;
-            }
-        }
+        CreateD3D11DeviceAndContextForAdapter(adapter, driverType, creationFlags, &pd3d11Device, &pd3d11Context);
     }
 
     if (!pd3d11Device)
@@ -272,15 +286,15 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
 
     if (EngineCI.NumImmediateContexts > 1)
     {
-        LOG_WARNING_MESSAGE("Direct3D11 back-end does not support multiple immediate contexts");
+        LOG_WARNING_MESSAGE("Direct3D11 backend does not support multiple immediate contexts");
         EngineCI.NumImmediateContexts = 1;
     }
 
     try
     {
-        ID3D11Device*        pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
-        ID3D11DeviceContext* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
-        auto                 pDXGIAdapter1      = DXGIAdapterFromD3D11Device(pd3d11Device);
+        auto* pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
+        auto* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
+        auto  pDXGIAdapter1      = DXGIAdapterFromD3D11Device(pd3d11Device);
 
         GraphicsAdapterInfo AdapterInfo;
         InitializeGraphicsAdapterInfo(pd3d11NativeDevice, pDXGIAdapter1, AdapterInfo);
@@ -386,30 +400,13 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
 
     AdapterInfo.Capabilities.DevType = RENDER_DEVICE_TYPE_D3D11;
 
-    ID3D11Device* pd3d11Device = reinterpret_cast<ID3D11Device*>(pd3Device);
+    auto* pd3d11Device = reinterpret_cast<ID3D11Device*>(pd3Device);
+
+    CComPtr<ID3D11Device> pd3d11TmpDevice;
     if (pd3d11Device == nullptr)
     {
-        const Version FeatureLevelList[] = {{11, 1}, {11, 0}, {10, 1}, {10, 0}};
-        for (auto FeatureLevel : FeatureLevelList)
-        {
-            auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
-            auto hr              = D3D11CreateDevice(
-                pDXIAdapter,             // Specify nullptr to use the default adapter.
-                D3D_DRIVER_TYPE_UNKNOWN, // If no adapter specified, request hardware graphics driver.
-                0,                       // Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
-                0,                       // Set debug and Direct2D compatibility flags.
-                &d3dFeatureLevel,        // List of feature levels this app can support.
-                1,                       // Size of the list above.
-                D3D11_SDK_VERSION,       // Always set this to D3D11_SDK_VERSION for Windows Store apps.
-                &pd3d11Device,           // Returns the Direct3D device created.
-                nullptr,                 // Returns feature level of device created.
-                nullptr                  // Returns the device immediate context.
-            );
-            if (SUCCEEDED(hr))
-                break;
-        }
-        if (pd3d11Device == nullptr)
-            return;
+        CreateD3D11DeviceAndContextForAdapter(pDXIAdapter, D3D_DRIVER_TYPE_UNKNOWN, 0, &pd3d11TmpDevice, nullptr);
+        pd3d11Device = pd3d11TmpDevice;
     }
     VERIFY_EXPR(pd3d11Device != nullptr);
 
@@ -467,9 +464,6 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
         BufferProps.ConstantBufferOffsetAlignment   = 256;
         BufferProps.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
     }
-
-    if (pd3Device == nullptr)
-        pd3d11Device->Release();
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");

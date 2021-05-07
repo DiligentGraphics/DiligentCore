@@ -147,9 +147,8 @@ public:
 
         CComPtr<IDXGIAdapter1> pDXIAdapter;
 
-        auto d3dFeatureLevel = GetD3DFeatureLevel(MinVersion);
-        UINT adapter         = 0;
-        for (; pFactory->EnumAdapters1(adapter, &pDXIAdapter) != DXGI_ERROR_NOT_FOUND; ++adapter, pDXIAdapter.Release())
+        const auto d3dFeatureLevel = GetD3DFeatureLevel(MinVersion);
+        for (UINT adapter = 0; pFactory->EnumAdapters1(adapter, &pDXIAdapter) != DXGI_ERROR_NOT_FOUND; ++adapter, pDXIAdapter.Release())
         {
             DXGI_ADAPTER_DESC1 AdapterDesc;
             pDXIAdapter->GetDesc1(&AdapterDesc);
