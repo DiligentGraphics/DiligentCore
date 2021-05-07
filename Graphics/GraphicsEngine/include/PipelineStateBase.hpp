@@ -49,17 +49,29 @@
 namespace Diligent
 {
 
+template <typename PSOCreateInfoType>
+void ValidatePSOCreateInfo(IRenderDevice*           pDevice,
+                           const PSOCreateInfoType& CreateInfo) noexcept(false);
+
 // Validates graphics pipeline create attributes and throws an exception in case of an error.
-void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo,
-                                        const DeviceFeatures&                  Features) noexcept(false);
+template <>
+void ValidatePSOCreateInfo<GraphicsPipelineStateCreateInfo>(IRenderDevice*                         pDevice,
+                                                            const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 // Validates compute pipeline create attributes and throws an exception in case of an error.
-void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo,
-                                       const DeviceFeatures&                 Features) noexcept(false);
+template <>
+void ValidatePSOCreateInfo<ComputePipelineStateCreateInfo>(IRenderDevice*                        pDevice,
+                                                           const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 // Validates ray-tracing pipeline create attributes and throws an exception in case of an error.
-void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                           pDevice,
-                                          const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
+template <>
+void ValidatePSOCreateInfo<RayTracingPipelineStateCreateInfo>(IRenderDevice*                           pDevice,
+                                                              const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
+
+// Validates tile pipeline create attributes and throws an exception in case of an error.
+template <>
+void ValidatePSOCreateInfo<TilePipelineStateCreateInfo>(IRenderDevice*                     pDevice,
+                                                        const TilePipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 /// Validates that pipeline resource description 'ResDesc' is compatible with the actual resource
 /// attributes and throws an exception in case of an error.
@@ -148,90 +160,33 @@ private:
 
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>;
 
+public:
+    /// Initializes the object as a specific pipeline
+
+    /// \tparam PSOCreateInfoType - Pipeline state create info type (GraphicsPipelineStateCreateInfo,
+    ///                             ComputePipelineStateCreateInfo, etc.)
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this PSO
     /// \param pDevice           - Pointer to the device.
     /// \param CreateInfo        - Pipeline state create info.
     /// \param bIsDeviceInternal - Flag indicating if the pipeline state is an internal device object and
     ///							   must not keep a strong reference to the device.
-    PipelineStateBase(IReferenceCounters*            pRefCounters,
-                      RenderDeviceImplType*          pDevice,
-                      const PipelineStateCreateInfo& CreateInfo,
-                      bool                           bIsDeviceInternal = false) :
+    template <typename PSOCreateInfoType>
+    PipelineStateBase(IReferenceCounters*      pRefCounters,
+                      RenderDeviceImplType*    pDevice,
+                      const PSOCreateInfoType& CreateInfo,
+                      bool                     bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, CreateInfo.PSODesc, bIsDeviceInternal},
         m_UsingImplicitSignature{CreateInfo.ppResourceSignatures == nullptr || CreateInfo.ResourceSignaturesCount == 0}
     {
-        Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
-        DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
-                      "No bits in the immediate mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
-                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available software command queues.");
-        this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
-    }
-
-public:
-    /// Initializes the object as graphics pipeline
-
-    /// \param pRefCounters       - Reference counters object that controls the lifetime of this PSO
-    /// \param pDevice            - Pointer to the device.
-    /// \param GraphicsPipelineCI - Graphics pipeline create information.
-    /// \param bIsDeviceInternal  - Flag indicating if the pipeline state is an internal device object and
-    ///							    must not keep a strong reference to the device.
-    PipelineStateBase(IReferenceCounters*                    pRefCounters,
-                      RenderDeviceImplType*                  pDevice,
-                      const GraphicsPipelineStateCreateInfo& GraphicsPipelineCI,
-                      bool                                   bIsDeviceInternal = false) :
-        PipelineStateBase{pRefCounters, pDevice, static_cast<const PipelineStateCreateInfo&>(GraphicsPipelineCI), bIsDeviceInternal}
-    {
         try
         {
-            ValidateGraphicsPipelineCreateInfo(GraphicsPipelineCI, pDevice->GetFeatures());
-        }
-        catch (...)
-        {
-            Destruct();
-            throw;
-        }
-    }
+            ValidatePSOCreateInfo(pDevice, CreateInfo);
 
-    /// Initializes the object as compute pipeline
-
-    /// \param pRefCounters       - Reference counters object that controls the lifetime of this PSO
-    /// \param pDevice            - Pointer to the device.
-    /// \param ComputePipelineCI  - Compute pipeline create information.
-    /// \param bIsDeviceInternal  - Flag indicating if the pipeline state is an internal device object and
-    ///							    must not keep a strong reference to the device.
-    PipelineStateBase(IReferenceCounters*                   pRefCounters,
-                      RenderDeviceImplType*                 pDevice,
-                      const ComputePipelineStateCreateInfo& ComputePipelineCI,
-                      bool                                  bIsDeviceInternal = false) :
-        PipelineStateBase{pRefCounters, pDevice, static_cast<const PipelineStateCreateInfo&>(ComputePipelineCI), bIsDeviceInternal}
-    {
-        try
-        {
-            ValidateComputePipelineCreateInfo(ComputePipelineCI, pDevice->GetFeatures());
-        }
-        catch (...)
-        {
-            Destruct();
-            throw;
-        }
-    }
-
-    /// Initializes the object as ray tracing pipeline
-
-    /// \param pRefCounters         - Reference counters object that controls the lifetime of this PSO
-    /// \param pDevice              - Pointer to the device.
-    /// \param RayTracingPipelineCI - Ray tracing pipeline create information.
-    /// \param bIsDeviceInternal    - Flag indicating if the pipeline state is an internal device object and
-    ///							      must not keep a strong reference to the device.
-    PipelineStateBase(IReferenceCounters*                      pRefCounters,
-                      RenderDeviceImplType*                    pDevice,
-                      const RayTracingPipelineStateCreateInfo& RayTracingPipelineCI,
-                      bool                                     bIsDeviceInternal = false) :
-        PipelineStateBase{pRefCounters, pDevice, static_cast<const PipelineStateCreateInfo&>(RayTracingPipelineCI), bIsDeviceInternal}
-    {
-        try
-        {
-            ValidateRayTracingPipelineCreateInfo(pDevice, RayTracingPipelineCI);
+            Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
+            DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
+                          "No bits in the immediate mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
+                          ") correspond to one of ", pDevice->GetCommandQueueCount(), " available software command queues.");
+            this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
         }
         catch (...)
         {
@@ -274,6 +229,10 @@ public:
         else if (this->m_Desc.IsRayTracingPipeline() && m_pRayTracingPipelineData != nullptr)
         {
             m_pRayTracingPipelineData->~RayTracingPipelineData();
+        }
+        else if (this->m_Desc.IsTilePipeline() && m_pTilePipelineData != nullptr)
+        {
+            m_pTilePipelineData->~TilePipelineData();
         }
 
         if (m_Signatures != nullptr)
@@ -331,6 +290,13 @@ public:
         VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
         VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
         return m_pRayTracingPipelineData->Desc;
+    }
+
+    virtual const TilePipelineDesc& DILIGENT_CALL_TYPE GetTilePipelineDesc() const override final
+    {
+        VERIFY_EXPR(this->m_Desc.IsTilePipeline());
+        VERIFY_EXPR(m_pTilePipelineData != nullptr);
+        return m_pTilePipelineData->Desc;
     }
 
     inline void CopyShaderHandle(const char* Name, void* pData, size_t DataSize) const
@@ -560,6 +526,13 @@ protected:
         ReserveResourceSignatures(CreateInfo, MemPool);
     }
 
+    void ReserveSpaceForPipelineDesc(const TilePipelineStateCreateInfo& CreateInfo,
+                                     FixedLinearAllocator&              MemPool) noexcept
+    {
+        MemPool.AddSpace<TilePipelineData>();
+        ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
+        ReserveResourceSignatures(CreateInfo, MemPool);
+    }
 
     template <typename ShaderImplType, typename TShaderStages>
     void ExtractShaders(const GraphicsPipelineStateCreateInfo& CreateInfo,
@@ -686,6 +659,23 @@ protected:
         VERIFY_EXPR(!ShaderStages.empty());
     }
 
+    template <typename ShaderImplType, typename TShaderStages>
+    void ExtractShaders(const TilePipelineStateCreateInfo& CreateInfo,
+                        TShaderStages&                     ShaderStages)
+    {
+        VERIFY_EXPR(this->m_Desc.IsTilePipeline());
+
+        ShaderStages.clear();
+
+        VERIFY_EXPR(CreateInfo.PSODesc.PipelineType == PIPELINE_TYPE_TILE);
+        VERIFY_EXPR(CreateInfo.pTS != nullptr);
+        VERIFY_EXPR(CreateInfo.pTS->GetDesc().ShaderType == SHADER_TYPE_TILE);
+
+        ShaderStages.emplace_back(ValidatedCast<ShaderImplType>(CreateInfo.pTS));
+        m_ActiveShaderStages = SHADER_TYPE_TILE;
+
+        VERIFY_EXPR(!ShaderStages.empty());
+    }
 
     void InitializePipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
                                 FixedLinearAllocator&                  MemPool)
@@ -860,6 +850,18 @@ protected:
         CopyResourceSignatures(CreateInfo, MemPool);
     }
 
+    void InitializePipelineDesc(const TilePipelineStateCreateInfo& CreateInfo,
+                                FixedLinearAllocator&              MemPool)
+    {
+        this->m_pTilePipelineData = MemPool.Construct<TilePipelineData>();
+        void* Ptr                 = MemPool.ReleaseOwnership();
+        VERIFY_EXPR(Ptr == m_pPipelineDataRawMem);
+
+        this->m_pTilePipelineData->Desc = CreateInfo.TilePipeline;
+
+        CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
+        CopyResourceSignatures(CreateInfo, MemPool);
+    }
 
     // Resource attribution properties
     struct ResourceAttribution
@@ -1139,10 +1141,16 @@ protected:
     };
     static_assert(offsetof(RayTracingPipelineData, ShaderHandles) % sizeof(void*) == 0, "ShaderHandles member is expected to be sizeof(void*)-aligned");
 
+    struct TilePipelineData
+    {
+        TilePipelineDesc Desc;
+    };
+
     union
     {
         GraphicsPipelineData*   m_pGraphicsPipelineData;
         RayTracingPipelineData* m_pRayTracingPipelineData;
+        TilePipelineData*       m_pTilePipelineData;
         void*                   m_pPipelineDataRawMem = nullptr;
     };
 

@@ -202,7 +202,7 @@ public:
     // clang-format off
     size_t GetNumHandles()          const { return m_NumHandles;              }
     bool   IsNull()                 const { return m_FirstCpuHandle.ptr == 0; }
-	bool   IsShaderVisible()        const { return m_FirstGpuHandle.ptr != 0; }
+    bool   IsShaderVisible()        const { return m_FirstGpuHandle.ptr != 0; }
     size_t GetAllocationManagerId() const { return m_AllocationManagerId;     }
     UINT  GetDescriptorSize()       const { return m_DescriptorSize;          }
     // clang-format on
@@ -275,7 +275,7 @@ public:
         m_HeapDesc                  {rhs.m_HeapDesc                  },
         m_DescriptorSize            {rhs.m_DescriptorSize            },
         m_NumDescriptorsInAllocation{rhs.m_NumDescriptorsInAllocation},
-	    m_FirstCPUHandle            {rhs.m_FirstCPUHandle            },
+        m_FirstCPUHandle            {rhs.m_FirstCPUHandle            },
         m_FirstGPUHandle            {rhs.m_FirstGPUHandle            },
         m_MaxAllocatedSize          {rhs.m_MaxAllocatedSize          },
         // Mutex is not movable
@@ -311,7 +311,7 @@ public:
 
     // clang-format off
     size_t GetNumAvailableDescriptors()const { return m_FreeBlockManager.GetFreeSize(); }
-	Uint32 GetMaxDescriptors()         const { return m_NumDescriptorsInAllocation;     }
+    Uint32 GetMaxDescriptors()         const { return m_NumDescriptorsInAllocation;     }
     size_t GetMaxAllocatedSize()       const { return m_MaxAllocatedSize;               }
     // clang-format on
 

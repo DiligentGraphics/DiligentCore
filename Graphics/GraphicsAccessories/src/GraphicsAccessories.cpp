@@ -475,7 +475,7 @@ const Char* GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType)
 
 const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off
@@ -497,6 +497,7 @@ const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
         RETURN_SHADER_TYPE_NAME(SHADER_TYPE_RAY_ANY_HIT     )
         RETURN_SHADER_TYPE_NAME(SHADER_TYPE_RAY_INTERSECTION)
         RETURN_SHADER_TYPE_NAME(SHADER_TYPE_CALLABLE        )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_TILE            )
 #undef  RETURN_SHADER_TYPE_NAME
             // clang-format on
 
@@ -1144,7 +1145,7 @@ const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform)
 
 const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
 {
-    static_assert(PIPELINE_TYPE_LAST == 3, "Please update this function to handle the new pipeline type");
+    static_assert(PIPELINE_TYPE_LAST == 4, "Please update this function to handle the new pipeline type");
     switch (PipelineType)
     {
         // clang-format off
@@ -1152,6 +1153,7 @@ const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
         case PIPELINE_TYPE_GRAPHICS:    return "graphics";
         case PIPELINE_TYPE_MESH:        return "mesh";
         case PIPELINE_TYPE_RAY_TRACING: return "ray tracing";
+        case PIPELINE_TYPE_TILE:        return "tile";
         // clang-format on
         default:
             UNEXPECTED("Unexpected pipeline type");
@@ -1406,7 +1408,8 @@ ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
 
 bool IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
+    static_assert(PIPELINE_TYPE_LAST == 4, "Please update the switch below to handle the new pipeline type");
     switch (PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
@@ -1432,6 +1435,9 @@ bool IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType)
                 ShaderType == SHADER_TYPE_RAY_INTERSECTION ||
                 ShaderType == SHADER_TYPE_CALLABLE;
 
+        case PIPELINE_TYPE_TILE:
+            return ShaderType == SHADER_TYPE_TILE;
+
         default:
             UNEXPECTED("Unexpected pipeline type");
             return false;
@@ -1444,7 +1450,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
            " is inconsistent with pipeline type ", GetPipelineTypeString(PipelineType));
     VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "More than one shader type is specified");
 
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         case SHADER_TYPE_UNKNOWN:
@@ -1454,6 +1460,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
         case SHADER_TYPE_AMPLIFICATION: // Mesh
         case SHADER_TYPE_COMPUTE:       // Compute
         case SHADER_TYPE_RAY_GEN:       // Ray tracing
+        case SHADER_TYPE_TILE:          // Tile
             return 0;
 
         case SHADER_TYPE_HULL:     // Graphics
@@ -1484,7 +1491,8 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
 
 SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
+    static_assert(PIPELINE_TYPE_LAST == 4, "Please update the switch below to handle the new pipeline type");
     switch (PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
@@ -1538,6 +1546,16 @@ SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineTy
                     return SHADER_TYPE_UNKNOWN;
             }
 
+        case PIPELINE_TYPE_TILE:
+            switch (Index)
+            {
+                case 0: return SHADER_TYPE_TILE;
+
+                default:
+                    UNEXPECTED("Index ", Index, " is not a valid tile pipeline shader index");
+                    return SHADER_TYPE_UNKNOWN;
+            }
+
         default:
             UNEXPECTED("Unexpected pipeline type");
             return SHADER_TYPE_UNKNOWN;
@@ -1546,6 +1564,9 @@ SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineTy
 
 PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages)
 {
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the code below to handle the new shader type");
+    static_assert(PIPELINE_TYPE_LAST == 4, "Please update the code below to handle the new pipeline type");
+
     if (ShaderStages & (SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH))
     {
         VERIFY((ShaderStages & SHADER_TYPE_ALL_MESH) == ShaderStages,
@@ -1563,6 +1584,12 @@ PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages)
         VERIFY((ShaderStages & SHADER_TYPE_COMPUTE) == ShaderStages,
                "Compute stage can't be combined with any other shader stage");
         return PIPELINE_TYPE_COMPUTE;
+    }
+    if (ShaderStages & SHADER_TYPE_TILE)
+    {
+        VERIFY((ShaderStages & SHADER_TYPE_TILE) == ShaderStages,
+               "Tile stage can't be combined with any other shader stage");
+        return PIPELINE_TYPE_TILE;
     }
     if (ShaderStages & SHADER_TYPE_ALL_RAY_TRACING)
     {

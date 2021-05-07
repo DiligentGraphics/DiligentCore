@@ -194,7 +194,7 @@ PIPELINE_RESOURCE_FLAGS SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Res
 
 spv::ExecutionModel ShaderTypeToSpvExecutionModel(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off
@@ -213,9 +213,12 @@ spv::ExecutionModel ShaderTypeToSpvExecutionModel(SHADER_TYPE ShaderType)
         case SHADER_TYPE_RAY_INTERSECTION: return spv::ExecutionModelIntersectionKHR;
         case SHADER_TYPE_CALLABLE:         return spv::ExecutionModelCallableKHR;
         // clang-format on
+        case SHADER_TYPE_TILE:
+            UNEXPECTED("Unsupported shader type");
+            return spv::ExecutionModelMax;
         default:
             UNEXPECTED("Unexpected shader type");
-            return spv::ExecutionModelVertex;
+            return spv::ExecutionModelMax;
     }
 }
 

@@ -80,7 +80,8 @@ DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
     SHADER_TYPE_RAY_ANY_HIT      = 0x0800, ///< Ray any hit shader
     SHADER_TYPE_RAY_INTERSECTION = 0x1000, ///< Ray intersection shader
     SHADER_TYPE_CALLABLE         = 0x2000, ///< Callable shader
-    SHADER_TYPE_LAST             = SHADER_TYPE_CALLABLE,
+    SHADER_TYPE_TILE             = 0x4000, ///< Tile shader (Only for Metal backend)
+    SHADER_TYPE_LAST             = SHADER_TYPE_TILE,
 
     /// All graphics pipeline shader stages
     SHADER_TYPE_ALL_GRAPHICS    = SHADER_TYPE_VERTEX   |
@@ -116,17 +117,17 @@ DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
 {
     BIND_NONE                = 0x0,   ///< Undefined binding
-    BIND_VERTEX_BUFFER	     = 0x1,   ///< A buffer can be bound as a vertex buffer
-    BIND_INDEX_BUFFER	     = 0x2,   ///< A buffer can be bound as an index buffer
-    BIND_UNIFORM_BUFFER	     = 0x4,   ///< A buffer can be bound as a uniform buffer
+    BIND_VERTEX_BUFFER       = 0x1,   ///< A buffer can be bound as a vertex buffer
+    BIND_INDEX_BUFFER        = 0x2,   ///< A buffer can be bound as an index buffer
+    BIND_UNIFORM_BUFFER      = 0x4,   ///< A buffer can be bound as a uniform buffer
                                        ///  \warning This flag may not be combined with any other bind flag
-    BIND_SHADER_RESOURCE	 = 0x8,   ///< A buffer or a texture can be bound as a shader resource
+    BIND_SHADER_RESOURCE     = 0x8,   ///< A buffer or a texture can be bound as a shader resource
                                        ///  \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag 
-    BIND_STREAM_OUTPUT	     = 0x10,  ///< A buffer can be bound as a target for stream output stage
-    BIND_RENDER_TARGET	     = 0x20,  ///< A texture can be bound as a render target
-    BIND_DEPTH_STENCIL	     = 0x40,  ///< A texture can be bound as a depth-stencil target
-    BIND_UNORDERED_ACCESS	 = 0x80,  ///< A buffer or a texture can be bound as an unordered access view
-    BIND_INDIRECT_DRAW_ARGS	 = 0x100, ///< A buffer can be bound as the source buffer for indirect draw commands
+    BIND_STREAM_OUTPUT       = 0x10,  ///< A buffer can be bound as a target for stream output stage
+    BIND_RENDER_TARGET       = 0x20,  ///< A texture can be bound as a render target
+    BIND_DEPTH_STENCIL       = 0x40,  ///< A texture can be bound as a depth-stencil target
+    BIND_UNORDERED_ACCESS    = 0x80,  ///< A buffer or a texture can be bound as an unordered access view
+    BIND_INDIRECT_DRAW_ARGS  = 0x100, ///< A buffer can be bound as the source buffer for indirect draw commands
     BIND_INPUT_ATTACHMENT    = 0x200, ///< A texture can be used as render pass input attachment
     BIND_RAY_TRACING         = 0x400, ///< A buffer can be used as a scratch buffer or as the source of primitive data 
                                       ///  for acceleration structure building
@@ -894,28 +895,28 @@ DILIGENT_TYPED_ENUM(TEXTURE_ADDRESS_MODE, Uint8)
 
     /// Tile the texture at every integer junction. \n
     /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_WRAP/D3D12_TEXTURE_ADDRESS_MODE_WRAP. OpenGL counterpart: GL_REPEAT
-    TEXTURE_ADDRESS_WRAP	= 1,
+    TEXTURE_ADDRESS_WRAP    = 1,
 
     /// Flip the texture at every integer junction. \n
     /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR/D3D12_TEXTURE_ADDRESS_MODE_MIRROR. OpenGL counterpart: GL_MIRRORED_REPEAT
-    TEXTURE_ADDRESS_MIRROR	= 2,
+    TEXTURE_ADDRESS_MIRROR  = 2,
 
     /// Texture coordinates outside the range [0.0, 1.0] are set to the 
     /// texture color at 0.0 or 1.0, respectively. \n
     /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_CLAMP/D3D12_TEXTURE_ADDRESS_MODE_CLAMP. OpenGL counterpart: GL_CLAMP_TO_EDGE
-    TEXTURE_ADDRESS_CLAMP	= 3,
+    TEXTURE_ADDRESS_CLAMP   = 3,
 
     /// Texture coordinates outside the range [0.0, 1.0] are set to the border color
     /// specified in SamplerDesc structure. \n
     /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_BORDER/D3D12_TEXTURE_ADDRESS_MODE_BORDER. OpenGL counterpart: GL_CLAMP_TO_BORDER
-    TEXTURE_ADDRESS_BORDER	= 4,
+    TEXTURE_ADDRESS_BORDER  = 4,
 
     /// Similar to TEXTURE_ADDRESS_MIRROR and TEXTURE_ADDRESS_CLAMP. Takes the absolute 
     /// value of the texture coordinate (thus, mirroring around 0), and then clamps to 
     /// the maximum value. \n
     /// Direct3D Counterpart: D3D11_TEXTURE_ADDRESS_MIRROR_ONCE/D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE. OpenGL counterpart: GL_MIRROR_CLAMP_TO_EDGE
     /// \note GL_MIRROR_CLAMP_TO_EDGE is only available in OpenGL4.4+, and is not available until at least OpenGLES3.1
-    TEXTURE_ADDRESS_MIRROR_ONCE	= 5,
+    TEXTURE_ADDRESS_MIRROR_ONCE = 5,
 
     /// Helper value that stores the total number of texture address modes in the enumeration
     TEXTURE_ADDRESS_NUM_MODES
@@ -1679,6 +1680,9 @@ struct DeviceFeatures
     /// If not natively supported by the device, the fence is emulated where possible.
     DEVICE_FEATURE_STATE NativeFence                      DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports tile shaders.
+    DEVICE_FEATURE_STATE TileShaders                      DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     DeviceFeatures() noexcept {}
 
@@ -1719,10 +1723,11 @@ struct DeviceFeatures
         ShaderResourceRuntimeArray        {State},
         WaveOp                            {State},
         InstanceDataStepRate              {State},
-        NativeFence                       {State}
+        NativeFence                       {State},
+        TileShaders                       {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 37, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 38, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -2842,18 +2847,18 @@ struct Box
     Uint32 MaxZ DEFAULT_INITIALIZER(1); ///< Maximal Z coordinate. Default value is 1
 
 #if DILIGENT_CPP_INTERFACE
-    Box(Uint32 _MinX, Uint32 _MaxX,	
-        Uint32 _MinY, Uint32 _MaxY,	
-        Uint32 _MinZ, Uint32 _MaxZ) noexcept: 	
+    Box(Uint32 _MinX, Uint32 _MaxX,
+        Uint32 _MinY, Uint32 _MaxY,
+        Uint32 _MinZ, Uint32 _MaxZ) noexcept:
         MinX {_MinX},
         MaxX {_MaxX},
         MinY {_MinY},
         MaxY {_MaxY},
         MinZ {_MinZ},
-        MaxZ {_MaxZ}	
+        MaxZ {_MaxZ}
     {}
 
-    Box(Uint32 _MinX, Uint32 _MaxX,	
+    Box(Uint32 _MinX, Uint32 _MaxX,
         Uint32 _MinY, Uint32 _MaxY) noexcept:
         Box{_MinX, _MaxX, _MinY, _MaxY, 0, 1}
     {}
@@ -3278,7 +3283,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is accessed from a shader
     /// \remarks Supported contexts: graphics, compute.
     RESOURCE_STATE_SHADER_RESOURCE      = 0x00100,
-        
+
     /// The resource is used as the destination for stream output
     RESOURCE_STATE_STREAM_OUT           = 0x00200,
 
@@ -3293,11 +3298,11 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is used as the source in a copy operation 
     /// \remarks Supported contexts: graphics, compute, transfer.
     RESOURCE_STATE_COPY_SOURCE          = 0x01000,
-        
+
     /// The resource is used as the destination in a resolve operation 
     /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_RESOLVE_DEST         = 0x02000,
-        
+
     /// The resource is used as the source in a resolve operation 
     /// \remarks Supported contexts: graphics.
     RESOURCE_STATE_RESOLVE_SOURCE       = 0x04000,

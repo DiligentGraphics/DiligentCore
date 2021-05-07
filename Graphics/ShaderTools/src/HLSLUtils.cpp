@@ -69,7 +69,7 @@ String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel)
 {
     String strShaderProfile;
 
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         // clang-format off
@@ -87,6 +87,9 @@ String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel)
         case SHADER_TYPE_RAY_ANY_HIT:
         case SHADER_TYPE_RAY_INTERSECTION:
         case SHADER_TYPE_CALLABLE:         strShaderProfile = "lib"; break;
+        case SHADER_TYPE_TILE:
+            UNSUPPORTED("Unsupoorted shader type");
+            break;
         // clang-format on
         default: UNEXPECTED("Unknown shader type");
     }

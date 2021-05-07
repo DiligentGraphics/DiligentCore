@@ -167,7 +167,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateGraphicsPipelineState)(THIS_
                                                      const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
                                                      IPipelineState**                          ppPipelineState) PURE;
-    
+
     /// Creates a new compute pipeline state object
 
     /// \param [in]  PSOCreateInfo   - Compute pipeline state create info, see Diligent::ComputePipelineStateCreateInfo for details.
@@ -178,7 +178,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateComputePipelineState)(THIS_
                                                     const ComputePipelineStateCreateInfo REF PSOCreateInfo,
                                                     IPipelineState**                         ppPipelineState) PURE;
-    
+
     /// Creates a new ray tracing pipeline state object
 
     /// \param [in]  PSOCreateInfo   - Ray tracing pipeline state create info, see Diligent::RayTracingPipelineStateCreateInfo for details.
@@ -189,6 +189,17 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateRayTracingPipelineState)(THIS_
                                                        const RayTracingPipelineStateCreateInfo REF PSOCreateInfo,
                                                        IPipelineState**                            ppPipelineState) PURE;
+
+    /// Creates a new tile pipeline state object
+
+    /// \param [in]  PSOCreateInfo   - Tile pipeline state create info, see Diligent::TilePipelineStateCreateInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
+    ///                                pipeline state interface will be stored.
+    ///                                The function calls AddRef(), so that the new object will have
+    ///                                one reference.
+    VIRTUAL void METHOD(CreateTilePipelineState)(THIS_
+                                                 const TilePipelineStateCreateInfo REF PSOCreateInfo,
+                                                 IPipelineState**                      ppPipelineState) PURE;
 
     /// Creates a new fence object
 
@@ -249,7 +260,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateBLAS)(THIS_
                                     const BottomLevelASDesc REF Desc,
                                     IBottomLevelAS**            ppBLAS) PURE;
-    
+
 
     /// Creates a top-level acceleration structure object (TLAS).
 
@@ -261,8 +272,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateTLAS)(THIS_
                                     const TopLevelASDesc REF Desc,
                                     ITopLevelAS**            ppTLAS) PURE;
-    
-    
+
+
     /// Creates a shader resource binding table object (SBT).
 
     /// \param [in]  Desc    - SBT description, see Diligent::ShaderBindingTableDesc for details.

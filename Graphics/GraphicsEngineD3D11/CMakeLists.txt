@@ -13,7 +13,7 @@ set(INCLUDE
     include/DisjointQueryPool.hpp
     include/EngineD3D11ImplTraits.hpp
     include/pch.h
-	include/FenceD3D11Impl.hpp
+    include/FenceD3D11Impl.hpp
     include/FramebufferD3D11Impl.hpp
     include/PipelineStateD3D11Impl.hpp
     include/PipelineResourceAttribsD3D11.hpp

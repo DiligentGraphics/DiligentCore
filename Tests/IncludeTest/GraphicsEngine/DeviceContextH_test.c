@@ -114,4 +114,7 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     struct ICommandQueue* pQueue = IDeviceContext_LockCommandQueue(pCtx);
     (void)pQueue;
     IDeviceContext_UnlockCommandQueue(pCtx);
+
+    IDeviceContext_DispatchTile(pCtx, (const struct DispatchTileAttribs*)NULL);
+    IDeviceContext_GetTileSize(pCtx, (Uint32*)NULL, (Uint32*)NULL);
 }

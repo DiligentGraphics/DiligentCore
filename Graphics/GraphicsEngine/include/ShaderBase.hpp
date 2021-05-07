@@ -81,8 +81,11 @@ public:
         if ((ShdrDesc.ShaderType == SHADER_TYPE_AMPLIFICATION || ShdrDesc.ShaderType == SHADER_TYPE_MESH) && !deviceFeatures.MeshShaders)
             LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device.");
 
-        if ((ShdrDesc.ShaderType >= SHADER_TYPE_RAY_GEN && ShdrDesc.ShaderType <= SHADER_TYPE_CALLABLE) && !deviceFeatures.RayTracing)
+        if ((ShdrDesc.ShaderType & SHADER_TYPE_ALL_RAY_TRACING) != 0 && !deviceFeatures.RayTracing)
             LOG_ERROR_AND_THROW("Ray tracing shaders are not supported by this device.");
+
+        if (ShdrDesc.ShaderType == SHADER_TYPE_TILE && !deviceFeatures.TileShaders)
+            LOG_ERROR_AND_THROW("Tile shaders are not supported by this device.");
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)

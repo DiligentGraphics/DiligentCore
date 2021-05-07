@@ -54,7 +54,7 @@ const ShaderMacro RCMacros[]  = {{"RAY_CALLABLE_SHADER", "1"}, {}};
 
 const ShaderMacro* GetShaderTypeMacros(SHADER_TYPE Type)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
     switch (Type)
     {
         // clang-format off
@@ -73,6 +73,9 @@ const ShaderMacro* GetShaderTypeMacros(SHADER_TYPE Type)
         case SHADER_TYPE_RAY_INTERSECTION: return RIMacros;
         case SHADER_TYPE_CALLABLE:         return RCMacros;
         // clang-format on
+        case SHADER_TYPE_TILE:
+            UNEXPECTED("Unsupported shader type");
+            return nullptr;
         default:
             UNEXPECTED("Unexpected shader type");
             return nullptr;

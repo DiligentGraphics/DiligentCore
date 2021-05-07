@@ -663,6 +663,38 @@ struct DispatchComputeIndirectAttribs
 typedef struct DispatchComputeIndirectAttribs DispatchComputeIndirectAttribs;
 
 
+/// Describes tile dispatch command arguments.
+
+/// This structure is used by IDeviceContext::DispatchTile().
+struct DispatchTileAttribs
+{
+    /// The number of threads in one tile dispatched in X direction.
+    /// Must not be greater than TileSizeX returned by IDeviceContext::GetTileSize().
+    Uint32 ThreadsPerTileX DEFAULT_INITIALIZER(1);
+
+    /// The number of threads in one tile dispatched in Y direction.
+    /// Must not be greater than TileSizeY returned by IDeviceContext::GetTileSize().
+    Uint32 ThreadsPerTileY DEFAULT_INITIALIZER(1);
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+#if DILIGENT_CPP_INTERFACE
+    DispatchTileAttribs()noexcept{}
+
+    /// Initializes the structure with user-specified values.
+    DispatchTileAttribs(Uint32     _ThreadsX,
+                        Uint32     _ThreadsY,
+                        DRAW_FLAGS _Flags = DRAW_FLAG_NONE)noexcept :
+        ThreadsPerTileX {_ThreadsX},
+        ThreadsPerTileY {_ThreadsY},
+        Flags           {_Flags  }
+    {}
+#endif
+};
+typedef struct DispatchTileAttribs DispatchTileAttribs;
+
+
 /// Describes multi-sampled texture resolve command arguments.
 
 /// This structure is used by IDeviceContext::ResolveTextureSubresource().
@@ -2081,6 +2113,24 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                                  IBuffer*                                 pAttribsBuffer) PURE;
 
 
+    /// Executes a dispatch tile command.
+
+    /// \param [in] Attribs - The command attributes, see Diligent::DispatchTileAttribs for details.
+    VIRTUAL void METHOD(DispatchTile)(THIS_
+                                      const DispatchTileAttribs REF Attribs) PURE;
+
+
+    /// Returns current render pass tile size.
+
+    /// \param [out] TileSizeX - Tile size in X direction.
+    /// \param [out] TileSizeY - Tile size in X direction.
+    ///
+    /// \remarks Result will be zero if there are no active render pass or render targets.
+    VIRTUAL void METHOD(GetTileSize)(THIS_
+                                     Uint32 REF TileSizeX,
+                                     Uint32 REF TileSizeY) PURE;
+
+
     /// Clears a depth-stencil view.
 
     /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be 
@@ -2713,6 +2763,8 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_DrawMeshIndirectCount(This, ...)     CALL_IFACE_METHOD(DeviceContext, DrawMeshIndirectCount,     This, __VA_ARGS__)
 #    define IDeviceContext_DispatchCompute(This, ...)           CALL_IFACE_METHOD(DeviceContext, DispatchCompute,           This, __VA_ARGS__)
 #    define IDeviceContext_DispatchComputeIndirect(This, ...)   CALL_IFACE_METHOD(DeviceContext, DispatchComputeIndirect,   This, __VA_ARGS__)
+#    define IDeviceContext_DispatchTile(This, ...)              CALL_IFACE_METHOD(DeviceContext, DispatchTile,              This, __VA_ARGS__)
+#    define IDeviceContext_GetTileSize(This, ...)               CALL_IFACE_METHOD(DeviceContext, GetTileSize,               This, __VA_ARGS__)
 #    define IDeviceContext_ClearDepthStencil(This, ...)         CALL_IFACE_METHOD(DeviceContext, ClearDepthStencil,         This, __VA_ARGS__)
 #    define IDeviceContext_ClearRenderTarget(This, ...)         CALL_IFACE_METHOD(DeviceContext, ClearRenderTarget,         This, __VA_ARGS__)
 #    define IDeviceContext_FinishCommandList(This, ...)         CALL_IFACE_METHOD(DeviceContext, FinishCommandList,         This, __VA_ARGS__)
