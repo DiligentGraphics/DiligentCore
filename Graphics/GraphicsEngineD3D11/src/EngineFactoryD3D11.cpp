@@ -419,7 +419,7 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
         default: UNEXPECTED("Unexpected D3D feature level");
     }
 
-    // Set texture and sampler capabilities
+    // Initialize features
     {
         auto& Features = AdapterInfo.Capabilities.Features;
         {
@@ -434,28 +434,41 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
             }
             Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
         }
-
-        auto& TexCaps = AdapterInfo.Capabilities.TexCaps;
-
-        TexCaps.MaxTexture1DDimension     = D3D11_REQ_TEXTURE1D_U_DIMENSION;
-        TexCaps.MaxTexture1DArraySlices   = D3D11_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
-        TexCaps.MaxTexture2DDimension     = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-        TexCaps.MaxTexture2DArraySlices   = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
-        TexCaps.MaxTexture3DDimension     = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
-        TexCaps.MaxTextureCubeDimension   = D3D11_REQ_TEXTURECUBE_DIMENSION;
-        TexCaps.Texture2DMSSupported      = True;
-        TexCaps.Texture2DMSArraySupported = True;
-        TexCaps.TextureViewSupported      = True;
-        TexCaps.CubemapArraysSupported    = True;
-
-        auto& SamCaps = AdapterInfo.Capabilities.SamCaps;
-
-        SamCaps.BorderSamplingModeSupported   = True;
-        SamCaps.AnisotropicFilteringSupported = True;
-        SamCaps.LODBiasSupported              = True;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(Features) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+#endif
     }
 
-    // Set properties
+    // Texture properties
+    {
+        auto& TexProps{AdapterInfo.Properties.Texture};
+        TexProps.MaxTexture1DDimension     = D3D11_REQ_TEXTURE1D_U_DIMENSION;
+        TexProps.MaxTexture1DArraySlices   = D3D11_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
+        TexProps.MaxTexture2DDimension     = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        TexProps.MaxTexture2DArraySlices   = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        TexProps.MaxTexture3DDimension     = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        TexProps.MaxTextureCubeDimension   = D3D11_REQ_TEXTURECUBE_DIMENSION;
+        TexProps.Texture2DMSSupported      = True;
+        TexProps.Texture2DMSArraySupported = True;
+        TexProps.TextureViewSupported      = True;
+        TexProps.CubemapArraysSupported    = True;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(TexProps) == 28, "Did you add a new member to TextureProperites? Please initialize it here.");
+#endif
+    }
+
+    // Sampler properties
+    {
+        auto& SamProps{AdapterInfo.Properties.Sampler};
+        SamProps.BorderSamplingModeSupported   = True;
+        SamProps.AnisotropicFilteringSupported = True;
+        SamProps.LODBiasSupported              = True;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(SamProps) == 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
+#endif
+    }
+
+    // Buffer properties
     {
         auto& BufferProps = AdapterInfo.Properties.Buffer;
         // Offsets passed to *SSetConstantBuffers1 are measured in shader constants, which are
@@ -463,12 +476,10 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
         // i.e. 256 bytes.
         BufferProps.ConstantBufferOffsetAlignment   = 256;
         BufferProps.StructuredBufferOffsetAlignment = D3D11_RAW_UAV_SRV_BYTE_ALIGNMENT;
-    }
-
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-    static_assert(sizeof(DeviceProperties) == 28, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
+        static_assert(sizeof(BufferProps) == 8, "Did you add a new member to BufferProperites? Please initialize it here.");
 #endif
+    }
 }
 
 #ifdef DOXYGEN

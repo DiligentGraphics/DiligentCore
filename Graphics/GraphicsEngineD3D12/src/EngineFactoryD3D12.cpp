@@ -710,8 +710,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
 
     // Enable features and set properties
     {
-        auto& Features   = AdapterInfo.Capabilities.Features;
-        auto& Properties = AdapterInfo.Properties;
+        auto& Features = AdapterInfo.Capabilities.Features;
 
         // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
         // so bindless resources are always available.
@@ -755,13 +754,18 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
             {
                 if (d3d12Features1.WaveOps != FALSE)
                 {
-                    Features.WaveOp                   = DEVICE_FEATURE_STATE_ENABLED;
-                    Properties.WaveOp.MinSize         = d3d12Features1.WaveLaneCountMin;
-                    Properties.WaveOp.MaxSize         = d3d12Features1.WaveLaneCountMax;
-                    Properties.WaveOp.SupportedStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
-                    Properties.WaveOp.Features        = WAVE_FEATURE_BASIC | WAVE_FEATURE_VOTE | WAVE_FEATURE_ARITHMETIC | WAVE_FEATURE_BALLOUT | WAVE_FEATURE_QUAD;
+                    Features.WaveOp = DEVICE_FEATURE_STATE_ENABLED;
+
+                    auto& WaveOpProps{AdapterInfo.Properties.WaveOp};
+                    WaveOpProps.MinSize         = d3d12Features1.WaveLaneCountMin;
+                    WaveOpProps.MaxSize         = d3d12Features1.WaveLaneCountMax;
+                    WaveOpProps.SupportedStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
+                    WaveOpProps.Features        = WAVE_FEATURE_BASIC | WAVE_FEATURE_VOTE | WAVE_FEATURE_ARITHMETIC | WAVE_FEATURE_BALLOUT | WAVE_FEATURE_QUAD;
                     if (MeshShadersSupported)
-                        Properties.WaveOp.SupportedStages |= SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH;
+                        WaveOpProps.SupportedStages |= SHADER_TYPE_AMPLIFICATION | SHADER_TYPE_MESH;
+#if defined(_MSC_VER) && defined(_WIN64)
+                    static_assert(sizeof(WaveOpProps) == 16, "Did you add a new member to WaveOpProperties? Please initialize it here.");
+#endif
                 }
             }
 
@@ -781,8 +785,13 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
             {
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
                 {
-                    Features.RayTracing                     = DEVICE_FEATURE_STATE_ENABLED;
-                    Properties.RayTracing.MaxRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+                    Features.RayTracing = DEVICE_FEATURE_STATE_ENABLED;
+
+                    auto& RayTracingProps{AdapterInfo.Properties.RayTracing};
+                    RayTracingProps.MaxRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+#if defined(_MSC_VER) && defined(_WIN64)
+                    static_assert(sizeof(RayTracingProps) == 4, "Did you add a new member to RayTracingProperites? Please initialize it here.");
+#endif
                 }
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
                 {
@@ -793,31 +802,43 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
 
         // Buffer properties
         {
-            Properties.Buffer.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
-            Properties.Buffer.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
+            auto& BufferProps{AdapterInfo.Properties.Buffer};
+            BufferProps.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+            BufferProps.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(BufferProps) == 8, "Did you add a new member to BufferProperites? Please initialize it here.");
+#endif
         }
     }
 
-    // Set texture and sampler capabilities
+    // Texture properties
     {
-        auto& TexCaps = AdapterInfo.Capabilities.TexCaps;
+        auto& TexProps{AdapterInfo.Properties.Texture};
+        TexProps.MaxTexture1DDimension     = D3D12_REQ_TEXTURE1D_U_DIMENSION;
+        TexProps.MaxTexture1DArraySlices   = D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
+        TexProps.MaxTexture2DDimension     = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        TexProps.MaxTexture2DArraySlices   = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        TexProps.MaxTexture3DDimension     = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        TexProps.MaxTextureCubeDimension   = D3D12_REQ_TEXTURECUBE_DIMENSION;
+        TexProps.Texture2DMSSupported      = True;
+        TexProps.Texture2DMSArraySupported = True;
+        TexProps.TextureViewSupported      = True;
+        TexProps.CubemapArraysSupported    = True;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(TexProps) == 28, "Did you add a new member to TextureProperites? Please initialize it here.");
+#endif
+    }
 
-        TexCaps.MaxTexture1DDimension     = D3D12_REQ_TEXTURE1D_U_DIMENSION;
-        TexCaps.MaxTexture1DArraySlices   = D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
-        TexCaps.MaxTexture2DDimension     = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-        TexCaps.MaxTexture2DArraySlices   = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
-        TexCaps.MaxTexture3DDimension     = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
-        TexCaps.MaxTextureCubeDimension   = D3D12_REQ_TEXTURECUBE_DIMENSION;
-        TexCaps.Texture2DMSSupported      = True;
-        TexCaps.Texture2DMSArraySupported = True;
-        TexCaps.TextureViewSupported      = True;
-        TexCaps.CubemapArraysSupported    = True;
+    // Sampler properties
+    {
 
-        auto& SamCaps = AdapterInfo.Capabilities.SamCaps;
-
-        SamCaps.BorderSamplingModeSupported   = True;
-        SamCaps.AnisotropicFilteringSupported = True;
-        SamCaps.LODBiasSupported              = True;
+        auto& SamProps{AdapterInfo.Properties.Sampler};
+        SamProps.BorderSamplingModeSupported   = True;
+        SamProps.AnisotropicFilteringSupported = True;
+        SamProps.LODBiasSupported              = True;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(SamProps) == 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
+#endif
     }
 
     // Set queue info
@@ -839,7 +860,6 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-    static_assert(sizeof(DeviceProperties) == 28, "Did you add a new peroperty to DeviceProperties? Please handle its satus here.");
 #endif
 }
 

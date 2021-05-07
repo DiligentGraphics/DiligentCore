@@ -1507,56 +1507,6 @@ enum RENDER_DEVICE_TYPE
     RENDER_DEVICE_TYPE_METAL           ///< Metal device (not yet implemented)
 };
 
-
-/// Texture sampler capabilities
-struct SamplerCaps
-{
-    /// Indicates if device supports border texture addressing mode
-    Bool BorderSamplingModeSupported   DEFAULT_INITIALIZER(False);
-
-    /// Indicates if device supports anisotrpoic filtering
-    Bool AnisotropicFilteringSupported DEFAULT_INITIALIZER(False);
-
-    /// Indicates if device supports MIP load bias
-    Bool LODBiasSupported              DEFAULT_INITIALIZER(False);
-};
-typedef struct SamplerCaps SamplerCaps;
-
-
-/// Texture capabilities
-struct TextureCaps
-{
-    /// Maximum dimension (width) of a 1D texture, or 0 if 1D textures are not supported.
-    Uint32 MaxTexture1DDimension   DEFAULT_INITIALIZER(0);
-
-    /// Maximum number of slices in a 1D texture array, or 0 if 1D texture arrays are not supported.
-    Uint32 MaxTexture1DArraySlices DEFAULT_INITIALIZER(0);
-
-    /// Maximum dimension (width or height) of a 2D texture.
-    Uint32 MaxTexture2DDimension   DEFAULT_INITIALIZER(0);
-
-    /// Maximum number of slices in a 2D texture array, or 0 if 2D texture arrays are not supported.
-    Uint32 MaxTexture2DArraySlices DEFAULT_INITIALIZER(0);
-
-    /// Maximum dimension (width, height, or depth) of a 3D texture, or 0 if 3D textures are not supported.
-    Uint32 MaxTexture3DDimension   DEFAULT_INITIALIZER(0);
-
-    /// Maximum dimension (width or height) of a cubemap face, or 0 if cubemap textures are not supported.
-    Uint32 MaxTextureCubeDimension DEFAULT_INITIALIZER(0);
-
-    /// Indicates if device supports 2D multisampled textures
-    Bool Texture2DMSSupported      DEFAULT_INITIALIZER(False);
-
-    /// Indicates if device supports 2D multisampled texture arrays
-    Bool Texture2DMSArraySupported DEFAULT_INITIALIZER(False);
-
-    /// Indicates if device supports texture views
-    Bool TextureViewSupported      DEFAULT_INITIALIZER(False);
-
-    /// Indicates if device supports cubemap arrays
-    Bool CubemapArraysSupported    DEFAULT_INITIALIZER(False);
-};
-typedef struct TextureCaps TextureCaps;
     
 
 /// Device feature state
@@ -1889,11 +1839,6 @@ struct DeviceCaps
     /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
     Version APIVersion DEFAULT_INITIALIZER({});
 
-    /// Texture sampling capabilities. See Diligent::SamplerCaps.
-    SamplerCaps SamCaps;
-
-    /// Texture capabilities. See Diligent::TextureCaps.
-    TextureCaps TexCaps;
 
     /// Device features. See Diligent::DeviceFeatures.
 
@@ -2006,6 +1951,57 @@ DILIGENT_TYPED_ENUM(VALIDATION_LEVEL, Uint8)
 };
 
 
+/// Texture properites
+struct TextureProperties
+{
+    /// Maximum dimension (width) of a 1D texture, or 0 if 1D textures are not supported.
+    Uint32 MaxTexture1DDimension   DEFAULT_INITIALIZER(0);
+
+    /// Maximum number of slices in a 1D texture array, or 0 if 1D texture arrays are not supported.
+    Uint32 MaxTexture1DArraySlices DEFAULT_INITIALIZER(0);
+
+    /// Maximum dimension (width or height) of a 2D texture.
+    Uint32 MaxTexture2DDimension   DEFAULT_INITIALIZER(0);
+
+    /// Maximum number of slices in a 2D texture array, or 0 if 2D texture arrays are not supported.
+    Uint32 MaxTexture2DArraySlices DEFAULT_INITIALIZER(0);
+
+    /// Maximum dimension (width, height, or depth) of a 3D texture, or 0 if 3D textures are not supported.
+    Uint32 MaxTexture3DDimension   DEFAULT_INITIALIZER(0);
+
+    /// Maximum dimension (width or height) of a cubemap face, or 0 if cubemap textures are not supported.
+    Uint32 MaxTextureCubeDimension DEFAULT_INITIALIZER(0);
+
+    /// Indicates if device supports 2D multisampled textures
+    Bool Texture2DMSSupported      DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports 2D multisampled texture arrays
+    Bool Texture2DMSArraySupported DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports texture views
+    Bool TextureViewSupported      DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports cubemap arrays
+    Bool CubemapArraysSupported    DEFAULT_INITIALIZER(False);
+};
+typedef struct TextureProperties TextureProperties;
+
+
+/// Texture sampler properties
+struct SamplerProperties
+{
+    /// Indicates if device supports border texture addressing mode
+    Bool BorderSamplingModeSupported   DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports anisotrpoic filtering
+    Bool AnisotropicFilteringSupported DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports MIP load bias
+    Bool LODBiasSupported              DEFAULT_INITIALIZER(False);
+};
+typedef struct SamplerProperties SamplerProperties;
+
+
 /// Wave operation properties
 struct WaveOpProperties
 {
@@ -2065,6 +2061,12 @@ struct DeviceProperties
 
     /// Buffer properties, see Diligent::BufferProperties.
     BufferProperties Buffer;
+
+    /// Texture properties, see Diligent::TextureProperties.
+    TextureProperties Texture;
+
+    /// Sampler properties, see Diligent::SamplerProperties.
+    SamplerProperties Sampler;
 };
 typedef struct DeviceProperties DeviceProperties;
 

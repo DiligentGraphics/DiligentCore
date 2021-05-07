@@ -192,7 +192,7 @@ protected:
         auto*       pDevice        = pEnv->GetDevice();
         auto*       pDeviceContext = pEnv->GetDeviceContext();
         const auto& deviceCaps     = pDevice->GetDeviceCaps();
-        const auto& TexCaps        = deviceCaps.TexCaps;
+        const auto& TexProps       = pDevice->GetAdapterInfo().Properties.Texture;
 
         TextureDesc TexDesc;
         TexDesc.Name  = "Test Texture";
@@ -277,12 +277,12 @@ protected:
             }
         }
 
-        if (!TexCaps.TextureViewSupported)
+        if (!TexProps.TextureViewSupported)
         {
             LOG_WARNING_MESSAGE_ONCE("Texture views are not supported!\n");
         }
 
-        if (TexCaps.TextureViewSupported && !FmtInfo.IsTypeless)
+        if (TexProps.TextureViewSupported && !FmtInfo.IsTypeless)
         {
             TextureViewDesc ViewDesc;
             ViewDesc.TextureDim = TexDesc.Type;
@@ -375,7 +375,7 @@ protected:
 
         auto*       pDevice    = pEnv->GetDevice();
         const auto& deviceCaps = pDevice->GetDeviceCaps();
-        const auto& TexCaps    = deviceCaps.TexCaps;
+        const auto& TexProps   = pDevice->GetAdapterInfo().Properties.Texture;
 
         TextureDesc TexDesc;
         TexDesc.Name        = "Test Cube MapTextureCreation";
@@ -412,7 +412,7 @@ protected:
             pCreateObjFromNativeRes->CreateTexture(pTestCubemap);
         }
 
-        if (TexCaps.TextureViewSupported && !FmtInfo.IsTypeless)
+        if (TexProps.TextureViewSupported && !FmtInfo.IsTypeless)
         {
             TextureViewDesc ViewDesc;
             if (TexDesc.BindFlags & BIND_SHADER_RESOURCE)
@@ -529,7 +529,7 @@ protected:
             }
         }
 
-        if (deviceCaps.TexCaps.CubemapArraysSupported)
+        if (TexProps.CubemapArraysSupported)
         {
             TexDesc.ArraySize = 24;
             TexDesc.Type      = RESOURCE_DIM_TEX_CUBE_ARRAY;
@@ -575,9 +575,9 @@ TEST_P(TextureCreationTest, CreateTexture)
     EXPECT_TRUE(TestInfo.PixelSize == Uint32{FmtInfo.ComponentSize} * Uint32{FmtInfo.NumComponents} ||
                 FmtInfo.ComponentType == COMPONENT_TYPE_COMPRESSED);
 
-    const auto& TexCaps = pDevice->GetDeviceCaps().TexCaps;
+    const auto& TexProps = pDevice->GetAdapterInfo().Properties.Texture;
     // Test texture 1D / texture 1D array
-    if (TexCaps.MaxTexture1DDimension != 0)
+    if (TexProps.MaxTexture1DDimension != 0)
     {
         if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_1D)
             CreateTestTexture(RESOURCE_DIM_TEX_1D, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
@@ -587,7 +587,7 @@ TEST_P(TextureCreationTest, CreateTexture)
         LOG_WARNING_MESSAGE_ONCE("Texture 1D is not supported\n");
     }
 
-    if (TexCaps.MaxTexture1DArraySlices != 0)
+    if (TexProps.MaxTexture1DArraySlices != 0)
     {
         if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_1D_ARRAY)
             CreateTestTexture(RESOURCE_DIM_TEX_1D_ARRAY, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
@@ -616,7 +616,7 @@ TEST_P(TextureCreationTest, CreateTexture)
     if (TestInfo.Fmt != TEX_FORMAT_RGB9E5_SHAREDEXP &&
         FmtInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
     {
-        if (TexCaps.Texture2DMSSupported)
+        if (TexProps.Texture2DMSSupported)
         {
             if ((FmtInfo.SampleCounts & 0x04) != 0 && (TestInfo.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0)
             {
@@ -629,7 +629,7 @@ TEST_P(TextureCreationTest, CreateTexture)
             LOG_WARNING_MESSAGE_ONCE("Texture 2D MS is not supported\n");
         }
 
-        if (TexCaps.Texture2DMSArraySupported)
+        if (TexProps.Texture2DMSArraySupported)
         {
             if ((FmtInfo.SampleCounts & 0x04) != 0 && (TestInfo.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0)
             {
