@@ -111,8 +111,6 @@ static void SetDefaultGraphicsAdapterInfo(GraphicsAdapterInfo& AdapterInfo)
 {
     AdapterInfo = {};
 
-    AdapterInfo.Capabilities.DevType = std::is_same<TRenderDeviceGLImpl, RenderDeviceGLImpl>::value ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES;
-
     AdapterInfo.NumQueues = 1;
 
     AdapterInfo.Queues[0].QueueType                 = COMMAND_QUEUE_TYPE_GRAPHICS;
@@ -244,12 +242,10 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
 ///                         the created device will be written.
 /// \param [out] ppImmediateContext - Address of the memory location where pointers to
 ///                                   the immediate context will be written.
-void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& _EngineCI,
+void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
                                                       IRenderDevice**           ppDevice,
                                                       IDeviceContext**          ppImmediateContext)
 {
-    EngineGLCreateInfo EngineCI = _EngineCI;
-
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
@@ -265,8 +261,8 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
 
     if (EngineCI.NumDeferredContexts > 0)
     {
-        LOG_WARNING_MESSAGE("OpenGL back-end does not support deferred contexts");
-        EngineCI.NumDeferredContexts = 0;
+        LOG_ERROR_MESSAGE("OpenGL back-end does not support deferred contexts");
+        return;
     }
 
     if (EngineCI.NumImmediateContexts > 1)

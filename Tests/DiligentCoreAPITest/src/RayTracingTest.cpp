@@ -587,7 +587,7 @@ TEST_P(RT1, TriangleClosestHitShader)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -771,7 +771,7 @@ TEST_P(RT2, TriangleAnyHitShader)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -965,7 +965,7 @@ TEST_P(RT3, ProceduralIntersection)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -1157,7 +1157,7 @@ TEST_P(RT4, MultiGeometry)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -1408,7 +1408,7 @@ TEST(RayTracingTest, ResourceBinding)
 
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || pDevice->GetAdapterInfo().Properties.RayTracing.MaxRecursionDepth < RayTracingDepth)
+    if (!pEnv->SupportsRayTracing() || pDevice->GetAdapterInfo().RayTracing.MaxRecursionDepth < RayTracingDepth)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
@@ -1510,7 +1510,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceInfo().Features.RayTracing2)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }
@@ -1524,7 +1524,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -1668,7 +1668,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceInfo().Features.RayTracing2)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }
@@ -1682,7 +1682,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -1822,7 +1822,7 @@ TEST_P(RT7, TraceRaysIndirect)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceInfo().Features.RayTracing2)
     {
         GTEST_SKIP() << "Indirect ray tracing is not supported by this device";
     }
@@ -1836,7 +1836,7 @@ TEST_P(RT7, TraceRaysIndirect)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -2033,7 +2033,7 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceCaps().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceInfo().Features.RayTracing2)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }
@@ -2047,7 +2047,7 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED

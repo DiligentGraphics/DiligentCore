@@ -40,7 +40,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
 {
     const auto& LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
-    const auto& Limits          = PhysicalDevice.GetExtProperties().AccelStruct;
+    const auto& RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
     Uint32      AccelStructSize = m_Desc.CompactedSize;
 
     if (AccelStructSize == 0)
@@ -88,8 +88,8 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                               ") and pTriangles[", i, "].VertexComponentCount (", src.VertexComponentCount, ") is not supported by this device.");
 #endif
             }
-            DEV_CHECK_ERR(MaxPrimitiveCount <= Limits.maxPrimitiveCount,
-                          "Max primitives count (", MaxPrimitiveCount, ") exceeds device limit (", Limits.maxPrimitiveCount, ")");
+            DEV_CHECK_ERR(MaxPrimitiveCount <= RTProps.MaxPrimitivesPerBLAS,
+                          "Max primitives count (", MaxPrimitiveCount, ") exceeds device limit (", RTProps.MaxPrimitivesPerBLAS, ")");
         }
         else if (m_Desc.pBoxes != nullptr)
         {
@@ -110,8 +110,8 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
 
                 MaxBoxCount += src.MaxBoxCount;
             }
-            DEV_CHECK_ERR(MaxBoxCount <= Limits.maxPrimitiveCount,
-                          "Max box count (", MaxBoxCount, ") exceeds device limit (", Limits.maxPrimitiveCount, ")");
+            DEV_CHECK_ERR(MaxBoxCount <= RTProps.MaxPrimitivesPerBLAS,
+                          "Max box count (", MaxBoxCount, ") exceeds device limit (", RTProps.MaxPrimitivesPerBLAS, ")");
         }
         else
         {
@@ -124,7 +124,8 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
         vkBuildInfo.pGeometries   = vkGeometries.data();
         vkBuildInfo.geometryCount = static_cast<uint32_t>(vkGeometries.size());
 
-        VERIFY_EXPR(vkBuildInfo.geometryCount <= Limits.maxGeometryCount);
+        DEV_CHECK_ERR(vkBuildInfo.geometryCount <= RTProps.MaxGeometriesPerBLAS, "Geometry count (", vkBuildInfo.geometryCount,
+                      ") exceeds device limit (", RTProps.MaxGeometriesPerBLAS, ").");
 
         LogicalDevice.GetAccelerationStructureBuildSizes(vkBuildInfo, MaxPrimitiveCounts.data(), vkSizeInfo);
 

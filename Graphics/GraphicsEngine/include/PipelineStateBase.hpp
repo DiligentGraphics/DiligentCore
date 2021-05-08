@@ -59,9 +59,7 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 
 // Validates ray-tracing pipeline create attributes and throws an exception in case of an error.
 void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                           pDevice,
-                                          Uint32                                   MaxRecursion,
-                                          const RayTracingPipelineStateCreateInfo& CreateInfo,
-                                          const DeviceFeatures&                    Features) noexcept(false);
+                                          const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 /// Validates that pipeline resource description 'ResDesc' is compatible with the actual resource
 /// attributes and throws an exception in case of an error.
@@ -185,7 +183,7 @@ public:
     {
         try
         {
-            ValidateGraphicsPipelineCreateInfo(GraphicsPipelineCI, pDevice->GetDeviceCaps().Features);
+            ValidateGraphicsPipelineCreateInfo(GraphicsPipelineCI, pDevice->GetFeatures());
         }
         catch (...)
         {
@@ -209,7 +207,7 @@ public:
     {
         try
         {
-            ValidateComputePipelineCreateInfo(ComputePipelineCI, pDevice->GetDeviceCaps().Features);
+            ValidateComputePipelineCreateInfo(ComputePipelineCI, pDevice->GetFeatures());
         }
         catch (...)
         {
@@ -233,8 +231,7 @@ public:
     {
         try
         {
-            ValidateRayTracingPipelineCreateInfo(pDevice, pDevice->GetProperties().MaxRayTracingRecursionDepth,
-                                                 RayTracingPipelineCI, pDevice->GetDeviceCaps().Features);
+            ValidateRayTracingPipelineCreateInfo(pDevice, RayTracingPipelineCI);
         }
         catch (...)
         {
@@ -540,7 +537,7 @@ protected:
     {
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // Reserve space for shader handles
-        const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
+        const auto ShaderHandleSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         // Extra bytes were reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::ShaderHandles);
@@ -841,7 +838,7 @@ protected:
     {
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // Allocate space for shader handles
-        const auto ShaderHandleSize = this->m_pDevice->GetProperties().ShaderGroupHandleSize;
+        const auto ShaderHandleSize = this->m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
         const auto ShaderDataSize   = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         RTDataSize += ShaderDataSize;
         // Extra bytes were reserved to avoid compiler errors on zero-sized arrays

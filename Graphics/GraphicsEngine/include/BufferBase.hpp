@@ -43,7 +43,7 @@ namespace Diligent
 {
 
 /// Validates buffer description and throws an exception in case of an error.
-void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryInfo) noexcept(false);
+void ValidateBufferDesc(const BufferDesc& Desc, const AdapterMemoryInfo& memoryInfo) noexcept(false);
 
 /// Validates initial buffer data parameters and throws an exception in case of an error.
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false);

@@ -239,24 +239,9 @@ public:
     GET_D3D12_DEVICE(5)
 #undef GET_D3D12_DEVICE
 
-    struct Properties
+    const ShaderVersion& GetMaxShaderVersion() const
     {
-        const Uint32 ShaderGroupHandleSize       = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-        const Uint32 MaxShaderRecordStride       = D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE;
-        const Uint32 ShaderGroupBaseAlignment    = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
-        const Uint32 MaxDrawMeshTasksCount       = 64000; // from specs: https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
-        const Uint32 MaxRayTracingRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
-        const Uint32 MaxRayGenThreads            = D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS;
-        const Uint32 MaxInstancesPerTLAS         = D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE;
-        const Uint32 MaxPrimitivesPerBLAS        = D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
-        const Uint32 MaxGeometriesPerBLAS        = D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
-
-        ShaderVersion MaxShaderVersion;
-    };
-
-    const Properties& GetProperties() const
-    {
-        return m_Properties;
+        return m_MaxShaderVersion;
     }
 
 private:
@@ -287,7 +272,7 @@ private:
 
     QueryManagerD3D12 m_QueryMgr;
 
-    Properties m_Properties;
+    ShaderVersion m_MaxShaderVersion;
 
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
 

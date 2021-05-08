@@ -35,7 +35,7 @@ int TestRenderDeviceCInterface_Misc(struct IRenderDevice* pRenderDevice)
 {
     IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
-    DeviceCaps                deviceCaps;
+    RenderDeviceInfo          DeviceInfo;
     GraphicsAdapterInfo       AdapterInfo;
     TextureFormatInfo         TexFmtInfo;
     TextureFormatInfoExt      TexFmtInfoExt;
@@ -58,13 +58,12 @@ int TestRenderDeviceCInterface_Misc(struct IRenderDevice* pRenderDevice)
     if (RefCnt2 != RefCnt1 - 1)
         ++num_errors;
 
-    deviceCaps = *IRenderDevice_GetDeviceCaps(pRenderDevice);
-    if (deviceCaps.DevType == RENDER_DEVICE_TYPE_UNDEFINED)
+    DeviceInfo = *IRenderDevice_GetDeviceInfo(pRenderDevice);
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_UNDEFINED)
         ++num_errors;
 
     AdapterInfo = *IRenderDevice_GetAdapterInfo(pRenderDevice);
-    if (AdapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_UNDEFINED)
-        ++num_errors;
+    (void)AdapterInfo;
 
     TexFmtInfo = *IRenderDevice_GetTextureFormatInfo(pRenderDevice, TEX_FORMAT_RGBA8_UNORM);
     if (TexFmtInfo._TextureFormatAttribs.Format != TEX_FORMAT_RGBA8_UNORM)
@@ -270,14 +269,14 @@ int TestRenderDeviceCInterface_CreateFence(struct IRenderDevice* pRenderDevice)
 
 int TestRenderDeviceCInterface_CreateQuery(struct IRenderDevice* pRenderDevice)
 {
-    struct QueryDesc  queryDesc;
-    struct IQuery*    pQuery = NULL;
-    struct DeviceCaps deviceCaps;
+    struct QueryDesc        queryDesc;
+    struct IQuery*          pQuery = NULL;
+    struct RenderDeviceInfo DeviceInfo;
 
     int num_errors = 0;
 
-    deviceCaps = *IRenderDevice_GetDeviceCaps(pRenderDevice);
-    if (deviceCaps.Features.TimestampQueries)
+    DeviceInfo = *IRenderDevice_GetDeviceInfo(pRenderDevice);
+    if (DeviceInfo.Features.TimestampQueries)
     {
         memset(&queryDesc, 0, sizeof(queryDesc));
         queryDesc._DeviceObjectAttribs.Name = "Test Query";

@@ -77,7 +77,7 @@ Uint64 FenceD3D12Impl::GetCompletedValue()
 void FenceD3D12Impl::Signal(Uint64 Value)
 {
     DEV_CHECK_ERR(m_Desc.Type == FENCE_TYPE_GENERAL, "Fence must be created with FENCE_TYPE_GENERAL");
-    DEV_CHECK_ERR(GetDevice()->GetDeviceCaps().Features.NativeFence, "CPU side fence signal requires NativeFence feature");
+    DEV_CHECK_ERR(GetDevice()->GetFeatures().NativeFence, "CPU side fence signal requires NativeFence feature");
     DvpSignal(Value);
 
     m_pd3d12Fence->Signal(Value);

@@ -210,7 +210,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             default: AdapterTypeStr = "Type unknown";
         }
         LOG_INFO_MESSAGE("Adapter ", AdapterId, ": '", AdapterInfo.Description, "' (",
-                         AdapterTypeStr, ", ", AdapterInfo.Memory.DeviceLocalMemory / (1 << 20), " MB); ",
+                         AdapterTypeStr, ", ", AdapterInfo.Memory.LocalMemory / (1 << 20), " MB); ",
                          DisplayModes.size(), (DisplayModes.size() == 1 ? " display mode" : " display modes"));
     };
 #endif
@@ -521,7 +521,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             AdapterInfoStr += "Unknown";
     }
     AdapterInfoStr += ". Local memory: ";
-    AdapterInfoStr += std::to_string(AdapterInfo.Memory.DeviceLocalMemory >> 20);
+    AdapterInfoStr += std::to_string(AdapterInfo.Memory.LocalMemory >> 20);
     AdapterInfoStr += " MB. Host-visible memory: ";
     AdapterInfoStr += std::to_string(AdapterInfo.Memory.HostVisibileMemory >> 20);
     AdapterInfoStr += " MB. Unified memory: ";
@@ -610,7 +610,7 @@ RefCntAutoPtr<ISampler> TestingEnvironment::CreateSampler(const SamplerDesc& Des
 
 void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
 {
-    switch (m_pDevice->GetDeviceCaps().DevType)
+    switch (m_pDevice->GetDeviceInfo().Type)
     {
         case RENDER_DEVICE_TYPE_D3D12:
             switch (compiler)
@@ -696,7 +696,7 @@ void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
 
 SHADER_COMPILER TestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const
 {
-    if (m_pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN &&
+    if (m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_VULKAN &&
         lang != SHADER_SOURCE_LANGUAGE_HLSL)
         return SHADER_COMPILER_GLSLANG;
     else

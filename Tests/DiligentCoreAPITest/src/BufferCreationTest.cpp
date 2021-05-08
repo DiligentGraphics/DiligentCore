@@ -71,8 +71,8 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        const auto DevCaps = pDevice->GetDeviceCaps();
-        switch (DevCaps.DevType)
+        const auto& DevInfo = pDevice->GetDeviceInfo();
+        switch (DevInfo.Type)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
@@ -171,8 +171,8 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-    const auto& DevCaps = pDevice->GetDeviceCaps();
-    if (!(DevCaps.Features.ComputeShaders && DevCaps.Features.IndirectRendering))
+    const auto& DevInfo = pDevice->GetDeviceInfo();
+    if (!(DevInfo.Features.ComputeShaders && DevInfo.Features.IndirectRendering))
     {
         GTEST_SKIP();
     }
@@ -217,8 +217,8 @@ TEST_F(BufferCreationTest, CreateStructuredBuffer)
 
     TestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-    const auto& DevCaps = pDevice->GetDeviceCaps();
-    if (!DevCaps.Features.ComputeShaders)
+    const auto& DevInfo = pDevice->GetDeviceInfo();
+    if (!DevInfo.Features.ComputeShaders)
     {
         GTEST_SKIP();
     }

@@ -62,7 +62,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
     DEV_CHECK_ERR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT, "only default compiler is supported in OpenGL");
 
-    const auto& deviceCaps = pDeviceGL->GetDeviceCaps();
+    const auto& DeviceInfo  = pDeviceGL->GetDeviceInfo();
+    const auto& AdapterInfo = pDeviceGL->GetAdapterInfo();
 
     // Note: there is a simpler way to create the program:
     //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
@@ -99,7 +100,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     {
         // Build the full source code string that will contain GLSL version declaration,
         // platform definitions, user-provided shader macros, etc.
-        GLSLSourceString = BuildGLSLSourceString(ShaderCI, deviceCaps, TargetGLSLCompiler::driver);
+        GLSLSourceString = BuildGLSLSourceString(ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver);
         ShaderStrings[0] = GLSLSourceString.c_str();
         Lengths[0]       = static_cast<GLint>(GLSLSourceString.length());
     }
@@ -158,7 +159,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         LOG_ERROR_AND_THROW(ErrorMsgSS.str().c_str());
     }
 
-    if (deviceCaps.Features.SeparablePrograms)
+    if (DeviceInfo.Features.SeparablePrograms)
     {
         ShaderGLImpl* const            ThisShader[]  = {this};
         GLObjectWrappers::GLProgramObj Program       = LinkProgram(ThisShader, 1, true);
@@ -240,7 +241,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* pp
 
 Uint32 ShaderGLImpl::GetResourceCount() const
 {
-    if (m_pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    if (m_pDevice->GetFeatures().SeparablePrograms)
     {
         return m_pShaderResources->GetVariableCount();
     }
@@ -253,7 +254,7 @@ Uint32 ShaderGLImpl::GetResourceCount() const
 
 void ShaderGLImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const
 {
-    if (m_pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    if (m_pDevice->GetFeatures().SeparablePrograms)
     {
         DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
         ResourceDesc = m_pShaderResources->GetResourceDesc(Index);

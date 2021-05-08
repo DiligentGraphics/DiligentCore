@@ -1334,7 +1334,7 @@ inline void DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureV
                           "' is not bound as framebuffer attachment. ClearDepthStencil command inside a render pass "
                           "requires depth-stencil view to be bound as a framebuffer attachment.");
 
-            if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            if (m_pDevice->GetDeviceInfo().IsGLDevice())
             {
                 LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
                                   "' is not bound to the device context. ClearDepthStencil command requires "
@@ -1378,7 +1378,7 @@ inline void DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureV
                           "' is not bound as framebuffer attachment. ClearRenderTarget command inside a render pass "
                           "requires render target view to be bound as a framebuffer attachment.");
 
-            if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            if (m_pDevice->GetDeviceInfo().IsGLDevice())
             {
                 LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
                                   "' is not bound to the device context. ClearRenderTarget command "
@@ -1653,7 +1653,7 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
 {
     DEV_CHECK_ERR(IsComputeCtx(), "BuildBLAS is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildBLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyBuildBLASAttribs(Attribs), "BuildBLASAttribs are invalid");
 }
@@ -1662,7 +1662,7 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
 {
     DEV_CHECK_ERR(IsComputeCtx(), "BuildTLAS is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildTLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyBuildTLASAttribs(Attribs), "BuildTLASAttribs are invalid");
 }
@@ -1671,7 +1671,7 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
 {
     DEV_CHECK_ERR(IsComputeCtx(), "CopyBLAS is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyBLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyCopyBLASAttribs(m_pDevice, Attribs), "CopyBLASAttribs are invalid");
 }
@@ -1680,7 +1680,7 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
 {
     DEV_CHECK_ERR(IsComputeCtx(), "CopyTLAS is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyTLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyCopyTLASAttribs(Attribs), "CopyTLASAttribs are invalid");
     DEV_CHECK_ERR(ValidatedCast<TopLevelASType>(Attribs.pSrc)->ValidateContent(), "IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
@@ -1690,7 +1690,7 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
 {
     DEV_CHECK_ERR(IsComputeCtx(), "WriteBLASCompactedSize is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::WriteBLASCompactedSize: command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyWriteBLASCompactedSizeAttribs(m_pDevice, Attribs), "WriteBLASCompactedSizeAttribs are invalid");
 }
@@ -1699,7 +1699,7 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
 {
     DEV_CHECK_ERR(IsComputeCtx(), "WriteTLASCompactedSize is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::WriteTLASCompactedSize: command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyWriteTLASCompactedSizeAttribs(m_pDevice, Attribs), "WriteTLASCompactedSizeAttribs are invalid");
 }
@@ -1709,7 +1709,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
 {
     DEV_CHECK_ERR(IsComputeCtx(), "TraceRays is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
 
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing,
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing,
                   "IDeviceContext::TraceRays: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pPipelineState,
                   "IDeviceContext::TraceRays command arguments are invalid: no pipeline state is bound.");
@@ -1735,9 +1735,10 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
            "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer is expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
            GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
 
-    DEV_CHECK_ERR((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) <= m_pDevice->GetProperties().MaxRayGenThreads,
+    const auto MaxRayGenThreads = m_pDevice->GetAdapterInfo().RayTracing.MaxRayGenThreads;
+    DEV_CHECK_ERR((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) <= MaxRayGenThreads,
                   "IDeviceContext::TraceRays command arguments are invalid: the dimension must not exceed the ",
-                  m_pDevice->GetProperties().MaxRayGenThreads, " threads");
+                  MaxRayGenThreads, " threads");
 }
 
 template <typename ImplementationTraits>
@@ -1745,7 +1746,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
 {
     DEV_CHECK_ERR(IsComputeCtx(), "TraceRaysIndirect is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
 
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing2,
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing2,
                   "IDeviceContext::TraceRaysIndirect: indirect trace rays is not supported by this device");
     DEV_CHECK_ERR(m_pPipelineState,
                   "IDeviceContext::TraceRaysIndirect command arguments are invalid: no pipeline state is bound.");
@@ -1779,7 +1780,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const
 {
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.RayTracing, "IDeviceContext::UpdateSBT: ray tracing is not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::UpdateSBT: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::UpdateSBT must be performed outside of render pass");
     DEV_CHECK_ERR(pSBT != nullptr, "IDeviceContext::UpdateSBT command arguments are invalid: pSBT must not be null");
 
@@ -1919,7 +1920,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(
 
     DEV_CHECK_ERR(IsGraphicsCtx(), "DrawMesh is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
 
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.MeshShaders, "DrawMesh: mesh shaders are not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMesh: mesh shaders are not supported by this device");
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawMesh command arguments are invalid: no pipeline state is bound.");
 
@@ -1927,7 +1928,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(
                   "DrawMesh command arguments are invalid: pipeline state '",
                   m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
 
-    DEV_CHECK_ERR(VerifyDrawMeshAttribs(m_pDevice->GetProperties().MaxDrawMeshTasksCount, Attribs), "DrawMeshAttribs are invalid");
+    DEV_CHECK_ERR(VerifyDrawMeshAttribs(m_pDevice->GetAdapterInfo().MeshShader.MaxTaskCount, Attribs), "DrawMeshAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
@@ -1988,7 +1989,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectAr
 
     DEV_CHECK_ERR(IsGraphicsCtx(), "DrawMeshIndirect is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
 
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.MeshShaders, "DrawMeshIndirect: mesh shaders are not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMeshIndirect: mesh shaders are not supported by this device");
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawMeshIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -2010,7 +2011,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectCo
 
     DEV_CHECK_ERR(IsGraphicsCtx(), "DrawMeshIndirectCount is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
 
-    DEV_CHECK_ERR(m_pDevice->GetDeviceCaps().Features.MeshShaders, "DrawMeshIndirectCount: mesh shaders are not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMeshIndirectCount: mesh shaders are not supported by this device");
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawMeshIndirectCount command arguments are invalid: no pipeline state is bound.");
 

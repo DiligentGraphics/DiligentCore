@@ -46,7 +46,7 @@ namespace Diligent
 void CreateTextureUploader(IRenderDevice* pDevice, const TextureUploaderDesc& Desc, ITextureUploader** ppUploader)
 {
     *ppUploader = nullptr;
-    switch (pDevice->GetDeviceCaps().DevType)
+    switch (pDevice->GetDeviceInfo().Type)
     {
 #if D3D11_SUPPORTED
         case RENDER_DEVICE_TYPE_D3D11:

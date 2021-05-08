@@ -127,7 +127,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.NativeFence)
+    if (!pDevice->GetDeviceInfo().Features.NativeFence)
     {
         GTEST_SKIP() << "NativeFence feature is not supported";
     }
@@ -217,7 +217,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.NativeFence)
+    if (!pDevice->GetDeviceInfo().Features.NativeFence)
     {
         GTEST_SKIP() << "NativeFence feature is not supported";
     }

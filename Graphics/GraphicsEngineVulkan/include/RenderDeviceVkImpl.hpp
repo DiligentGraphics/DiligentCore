@@ -241,11 +241,6 @@ public:
         const Uint32 MaxRayGenThreads;
     };
 
-    const Properties& GetProperties() const
-    {
-        return m_Properties;
-    }
-
     void ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueueMask,
                                            uint32_t  outQueueFamilyIndices[],
                                            uint32_t& inoutQueueFamilyIndicesCount) const;
@@ -287,8 +282,6 @@ private:
     VulkanDynamicMemoryManager m_DynamicMemoryManager;
 
     std::unique_ptr<IDXCompiler> m_pDxCompiler;
-
-    Properties m_Properties;
 };
 
 } // namespace Diligent

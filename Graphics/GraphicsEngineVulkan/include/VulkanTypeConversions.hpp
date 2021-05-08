@@ -33,6 +33,7 @@
 #include <array>
 #include "GraphicsTypes.h"
 #include "InputLayout.h"
+#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 
 namespace Diligent
 {
@@ -102,5 +103,11 @@ ADAPTER_TYPE VkPhysicalDeviceTypeToAdapterType(VkPhysicalDeviceType DeviceType);
 
 COMMAND_QUEUE_TYPE       VkQueueFlagsToCmdQueueType(VkQueueFlags QueueFlags);
 VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Priority);
+
+DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                          vkVersion,
+                                          const VkPhysicalDeviceFeatures&                                   vkFeatures,
+                                          const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures&   ExtFeatures,
+                                          const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
+                                          DEVICE_FEATURE_STATE                                              EnabledState = DEVICE_FEATURE_STATE_ENABLED);
 
 } // namespace Diligent

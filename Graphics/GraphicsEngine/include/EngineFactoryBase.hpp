@@ -41,7 +41,6 @@ namespace Diligent
 const APIInfo& GetAPIInfo();
 
 void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdapterInfo& AdapterInfo) noexcept(false);
-void EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures, DeviceFeatures& RequestedFeatures) noexcept(false);
 
 /// Template class implementing base functionality of the engine factory
 

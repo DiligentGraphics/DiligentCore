@@ -88,7 +88,7 @@ public:
 
     virtual bool SupportsRayTracing() const override final
     {
-        return m_pDevice->GetDeviceCaps().Features.RayTracing && HasDXCompiler();
+        return m_pDevice->GetDeviceInfo().Features.RayTracing && HasDXCompiler();
     }
 
     HRESULT CompileDXILShader(const std::string& Source,

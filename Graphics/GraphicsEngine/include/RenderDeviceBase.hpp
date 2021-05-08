@@ -169,10 +169,32 @@ struct hash<Diligent::TextureViewDesc>
         return Seed;
     }
 };
+
 } // namespace std
 
 namespace Diligent
 {
+
+/// Returns enabled device features based on the supported features and requested features,
+/// and throws an exception in case requested features are missing:
+///
+/// | SupportedFeature  |  RequestedFeature  |     Result    |
+/// |-------------------|--------------------|---------------|
+/// |    DISABLED       |     DISABLED       |   DISABLED    |
+/// |    OPTIONAL       |     DISABLED       |   DISABLED    |
+/// |    ENABLED        |     DISABLED       |   ENABLED     |
+/// |                   |                    |               |
+/// |    DISABLED       |     OPTIONAL       |   DISABLED    |
+/// |    OPTIONAL       |     OPTIONAL       |   ENABLED     |
+/// |    ENABLED        |     OPTIONAL       |   ENABLED     |
+/// |                   |                    |               |
+/// |    DISABLED       |     ENABLED        |   EXCEPTION   |
+/// |    OPTIONAL       |     ENABLED        |   ENABLED     |
+/// |    ENABLED        |     ENABLED        |   ENABLED     |
+///
+DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
+                                    const DeviceFeatures& RequestedFeatures) noexcept(false);
+
 
 /// Base implementation of a render device
 
@@ -332,10 +354,10 @@ public:
     }
 
 
-    /// Implementation of IRenderDevice::GetDeviceCaps().
-    virtual const DeviceCaps& DILIGENT_CALL_TYPE GetDeviceCaps() const override final
+    /// Implementation of IRenderDevice::GetProperties().
+    virtual const RenderDeviceInfo& DILIGENT_CALL_TYPE GetDeviceInfo() const override final
     {
-        return GetAdapterInfo().Capabilities;
+        return m_DeviceInfo;
     }
 
     /// Implementation of IRenderDevice::GetAdapterInfo().
@@ -409,6 +431,11 @@ public:
     FixedBlockMemoryAllocator& GetSRBAllocator() { return m_SRBAllocator; }
 
     VALIDATION_FLAGS GetValidationFlags() const { return m_ValidationFlags; }
+
+    const DeviceFeatures& GetFeatures() const
+    {
+        return m_DeviceInfo.Features;
+    }
 
 protected:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) = 0;
@@ -616,12 +643,12 @@ protected:
                            });
     }
 
-
 protected:
     RefCntAutoPtr<IEngineFactory> m_pEngineFactory;
 
     const VALIDATION_FLAGS m_ValidationFlags;
     GraphicsAdapterInfo    m_AdapterInfo;
+    RenderDeviceInfo       m_DeviceInfo;
 
     // All state object registries hold raw pointers.
     // This is safe because every object unregisters itself

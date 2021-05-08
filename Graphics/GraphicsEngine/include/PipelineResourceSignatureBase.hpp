@@ -119,7 +119,7 @@ public:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
-        ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetDeviceCaps().Features);
+        ValidatePipelineResourceSignatureDesc(Desc, pDevice->GetFeatures());
 
         // Determine shader stages that have any resources as well as
         // shader stages that have static resources.

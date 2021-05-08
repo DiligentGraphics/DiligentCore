@@ -171,12 +171,12 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// that can be read and written by GPU and can also be directly accessed by CPU.
     ///
     /// \remarks An application should check if unified memory is available on the device by querying
-    ///          the adapter info (see Diligent::IRenderDevice::GraphicsAdapterInfo().Memory and Diligent::DeviceMemoryInfo).
+    ///          the adapter info (see Diligent::IRenderDevice::GraphicsAdapterInfo().Memory and Diligent::AdapterMemoryInfo).
     ///          If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
     /// 
     ///          Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
     ///          An application should check supported unified memory CPU access types by querying the device caps.
-    ///          (see Diligent::DeviceMemoryInfo::UnifiedMemoryCPUAccess).
+    ///          (see Diligent::AdapterMemoryInfo::UnifiedMemoryCPUAccess).
     USAGE_UNIFIED,
 
     /// Helper value indicating the total number of elements in the enum
@@ -1827,95 +1827,6 @@ struct Version
 typedef struct Version Version;
 
 
-/// Device capabilities
-struct DeviceCaps
-{
-    /// Device type. See Diligent::DeviceType.
-    enum RENDER_DEVICE_TYPE DevType DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
-
-    /// Major revision of the graphics API supported by the graphics adapter.
-    /// Note that this value indicates the maximum supported feature level, so,
-    /// for example, if the device type is D3D11, this value will be 10 when 
-    /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
-    Version APIVersion DEFAULT_INITIALIZER({});
-
-
-    /// Device features. See Diligent::DeviceFeatures.
-
-    /// \note For optional features requested during the initialization, the
-    ///       struct will indicate the actual feature state (enabled or disabled).
-    /// 
-    /// \note When a feature is queried by IEngineFactory::EnumerateAdapters, the feature state indicates:
-    ///       - Disabled - the feature is not supported by device.
-    ///       - Enabled  - the feature is always enabled.
-    ///       - Optional - the feature is supported and can be enabled or disabled.
-    DeviceFeatures Features;
-
-#if DILIGENT_CPP_INTERFACE
-    bool IsGLDevice()const
-    {
-        return DevType == RENDER_DEVICE_TYPE_GL || DevType == RENDER_DEVICE_TYPE_GLES;
-    }
-    bool IsD3DDevice()const
-    {
-        return DevType == RENDER_DEVICE_TYPE_D3D11 || DevType == RENDER_DEVICE_TYPE_D3D12;
-    }
-    bool IsVulkanDevice()const
-    {
-        return DevType == RENDER_DEVICE_TYPE_VULKAN;
-    }
-    bool IsMetalDevice()const
-    {
-        return DevType == RENDER_DEVICE_TYPE_METAL;
-    }
-
-    struct NDCAttribs
-    {
-        const float MinZ;          // Minimum z value of normalized device coordinate space
-        const float ZtoDepthScale; // NDC z to depth scale
-        const float YtoVScale;     // Scale to transform NDC y coordinate to texture V coordinate
-
-        float GetZtoDepthBias() const
-        {
-            // Returns ZtoDepthBias such that given NDC z coordinate, depth value can be
-            // computed as follows:
-            // d = z * ZtoDepthScale + ZtoDepthBias
-            return -MinZ * ZtoDepthScale;
-        }
-    };
-
-    const NDCAttribs& GetNDCAttribs()const
-    {
-        if (IsVulkanDevice())
-        {
-            // Note that Vulkan itself does not invert Y coordinate when transforming
-            // normalized device Y to window space. However, we use negative viewport
-            // height which achieves the same effect as in D3D, thererfore we need to
-            // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
-            static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, -0.5f};
-            return NDCAttribsVk;
-        }
-        else if (IsD3DDevice())
-        {
-            static constexpr const NDCAttribs NDCAttribsD3D {0.0f, 1.0f, -0.5f};
-            return NDCAttribsD3D;
-        }
-        else if (IsGLDevice())
-        {
-            static constexpr const NDCAttribs NDCAttribsGL {-1.0f, 0.5f, 0.5f};
-            return NDCAttribsGL;
-        }
-        else
-        {
-            static constexpr const NDCAttribs NDCAttribsDefault {0.0f, 1.0f, 0.5f};
-            return NDCAttribsDefault;
-        }
-    }
-#endif
-};
-typedef struct DeviceCaps DeviceCaps;
-
-
 /// Describes the wave feature types.
 /// In Vulkan backend, you should check which features are supported by device.
 /// In Direct3D12 backend, all shader model 6.0 wave functions are supported if WaveOp feature is enabled.
@@ -2045,30 +1956,117 @@ typedef struct BufferProperties BufferProperties;
 struct RayTracingProperties
 {
     /// Maximum supported value for RayTracingPipelineDesc::MaxRecursionDepth.
-    Uint32  MaxRecursionDepth  DEFAULT_INITIALIZER(0);
+    Uint32 MaxRecursionDepth        DEFAULT_INITIALIZER(0);
+
+    Uint32 ShaderGroupHandleSize    DEFAULT_INITIALIZER(0);
+    Uint32 MaxShaderRecordStride    DEFAULT_INITIALIZER(0);
+    Uint32 ShaderGroupBaseAlignment DEFAULT_INITIALIZER(0);
+
+    /// The maximum total number of ray generation threads in one dispatch.
+    Uint32 MaxRayGenThreads         DEFAULT_INITIALIZER(0);
+
+    /// The maximum number of instances in a top-level AS.
+    Uint32 MaxInstancesPerTLAS      DEFAULT_INITIALIZER(0);
+
+    /// The maximum number of primitives in a bottom-level AS.
+    Uint32 MaxPrimitivesPerBLAS     DEFAULT_INITIALIZER(0);
+
+    /// The maximum number of geometries in a bottom-level AS.
+    Uint32 MaxGeometriesPerBLAS     DEFAULT_INITIALIZER(0);
 };
 typedef struct RayTracingProperties RayTracingProperties;
 
 
-/// Device properties
-struct DeviceProperties
+/// Mesh Shader Properties
+struct MeshShaderProperties
 {
-    /// Ray tracing properties, see Diligent::RayTracingProperties.
-    RayTracingProperties RayTracing;
-
-    /// Wave operation properties, see Diligent::WaveOpProperties.
-    WaveOpProperties WaveOp;
-
-    /// Buffer properties, see Diligent::BufferProperties.
-    BufferProperties Buffer;
-
-    /// Texture properties, see Diligent::TextureProperties.
-    TextureProperties Texture;
-
-    /// Sampler properties, see Diligent::SamplerProperties.
-    SamplerProperties Sampler;
+    /// The maximum number of mesh shader tasks per draw command.
+    Uint32 MaxTaskCount DEFAULT_INITIALIZER(0);
 };
-typedef struct DeviceProperties DeviceProperties;
+typedef struct MeshShaderProperties MeshShaderProperties;
+
+
+/// Render device information
+struct RenderDeviceInfo
+{
+    /// Device type. See Diligent::RENDER_DEVICE_TYPE.
+    enum RENDER_DEVICE_TYPE Type DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
+
+    /// Major revision of the graphics API supported by the graphics adapter.
+    /// Note that this value indicates the maximum supported feature level, so,
+    /// for example, if the device type is D3D11, this value will be 10 when 
+    /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
+    Version APIVersion DEFAULT_INITIALIZER({});
+
+    /// Enabled device features. See Diligent::DeviceFeatures.
+
+    /// \note For optional features requested during the initialization, the
+    ///       struct will indicate the actual feature state (enabled or disabled).
+    DeviceFeatures Features;
+
+#if DILIGENT_CPP_INTERFACE
+    bool IsGLDevice()const
+    {
+        return Type == RENDER_DEVICE_TYPE_GL || Type == RENDER_DEVICE_TYPE_GLES;
+    }
+    bool IsD3DDevice()const
+    {
+        return Type == RENDER_DEVICE_TYPE_D3D11 || Type == RENDER_DEVICE_TYPE_D3D12;
+    }
+    bool IsVulkanDevice()const
+    {
+        return Type == RENDER_DEVICE_TYPE_VULKAN;
+    }
+    bool IsMetalDevice()const
+    {
+        return Type == RENDER_DEVICE_TYPE_METAL;
+    }
+
+    struct NDCAttribs
+    {
+        const float MinZ;          // Minimum z value of normalized device coordinate space
+        const float ZtoDepthScale; // NDC z to depth scale
+        const float YtoVScale;     // Scale to transform NDC y coordinate to texture V coordinate
+
+        float GetZtoDepthBias() const
+        {
+            // Returns ZtoDepthBias such that given NDC z coordinate, depth value can be
+            // computed as follows:
+            // d = z * ZtoDepthScale + ZtoDepthBias
+            return -MinZ * ZtoDepthScale;
+        }
+    };
+
+    const NDCAttribs& GetNDCAttribs()const
+    {
+        if (IsVulkanDevice())
+        {
+            // Note that Vulkan itself does not invert Y coordinate when transforming
+            // normalized device Y to window space. However, we use negative viewport
+            // height which achieves the same effect as in D3D, thererfore we need to
+            // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
+            static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, -0.5f};
+            return NDCAttribsVk;
+        }
+        else if (IsD3DDevice())
+        {
+            static constexpr const NDCAttribs NDCAttribsD3D {0.0f, 1.0f, -0.5f};
+            return NDCAttribsD3D;
+        }
+        else if (IsGLDevice())
+        {
+            static constexpr const NDCAttribs NDCAttribsGL {-1.0f, 0.5f, 0.5f};
+            return NDCAttribsGL;
+        }
+        else
+        {
+            static constexpr const NDCAttribs NDCAttribsDefault {0.0f, 1.0f, 0.5f};
+            return NDCAttribsDefault;
+        }
+    }
+#endif
+};
+typedef struct RenderDeviceInfo RenderDeviceInfo;
 
 
 /// Commomn validation options.
@@ -2142,7 +2140,7 @@ DILIGENT_TYPED_ENUM(QUEUE_PRIORITY, Uint8)
 
 
 /// Device memory properties
-struct DeviceMemoryInfo
+struct AdapterMemoryInfo
 {
     /// The amount of local video memory that is inaccessible by CPU, in bytes.
 
@@ -2151,7 +2149,7 @@ struct DeviceMemoryInfo
     ///
     ///       On some devices it may not be possible to query the memory size,
     ///       in which case all memory sizes will be zero.
-    Uint64  DeviceLocalMemory   DEFAULT_INITIALIZER(0);
+    Uint64  LocalMemory         DEFAULT_INITIALIZER(0);
 
 
     /// The amount of host-visible memory that can be accessed by CPU and is visible by GPU, in bytes.
@@ -2171,7 +2169,7 @@ struct DeviceMemoryInfo
     /// Supported access types for the unified memory.
     CPU_ACCESS_FLAGS UnifiedMemoryCPUAccess DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
 };
-typedef struct DeviceMemoryInfo DeviceMemoryInfo;
+typedef struct AdapterMemoryInfo AdapterMemoryInfo;
 
 
 /// Command queue properties
@@ -2216,14 +2214,34 @@ struct GraphicsAdapterInfo
     /// Number of video outputs this adapter has (if available).
     Uint32 NumOutputs       DEFAULT_INITIALIZER(0);
 
-    /// Device memory information, See Diligent::DeviceMemoryInfo.
-    DeviceMemoryInfo Memory;
+    /// Device memory information, see Diligent::AdapterMemoryInfo.
+    AdapterMemoryInfo Memory;
 
-    /// Device capabilities, see Diligent::DeviceCaps.
-    DeviceCaps       Capabilities;
+    /// Ray tracing properties, see Diligent::RayTracingProperties.
+    RayTracingProperties RayTracing;
 
-    /// Device properties, see Diligent::DeviceProperties.
-    DeviceProperties Properties;
+    /// Wave operation properties, see Diligent::WaveOpProperties.
+    WaveOpProperties WaveOp;
+
+    /// Buffer properties, see Diligent::BufferProperties.
+    BufferProperties Buffer;
+
+    /// Texture properties, see Diligent::TextureProperties.
+    TextureProperties Texture;
+
+    /// Sampler properties, see Diligent::SamplerProperties.
+    SamplerProperties Sampler;
+
+    /// Mesh shader properties, see Diligent::MeshShaderProperties.
+    MeshShaderProperties MeshShader;
+
+    /// Supported device features, see Diligent::DeviceFeatures.
+
+    /// \note The feature state indicates:
+    ///       - Disabled - the feature is not supported by device.
+    ///       - Enabled  - the feature is always enabled.
+    ///       - Optional - the feature is supported and can be enabled or disabled.
+    DeviceFeatures Features;
 
     /// An array of NumQueues command queues supported by this device. See Diligent::CommandQueueInfo.
     CommandQueueInfo  Queues[DILIGENT_MAX_ADAPTER_QUEUES]  DEFAULT_INITIALIZER({});

@@ -68,7 +68,7 @@ public:
                bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal}
     {
-        const auto& deviceFeatures = pDevice->GetDeviceCaps().Features;
+        const auto& deviceFeatures = pDevice->GetFeatures();
         if (ShdrDesc.ShaderType == SHADER_TYPE_GEOMETRY && !deviceFeatures.GeometryShaders)
             LOG_ERROR_AND_THROW("Geometry shaders are not supported by this device.");
 

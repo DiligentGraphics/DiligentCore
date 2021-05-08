@@ -78,9 +78,8 @@ public:
                                                         IRenderDevice**              ppDevice,
                                                         IDeviceContext**             ppContexts) override final;
 
-    virtual void InitializeGraphicsAdapterInfo(void*                pd3Device,
-                                               IDXGIAdapter1*       pDXIAdapter,
-                                               GraphicsAdapterInfo& AdapterInfo) const override final;
+    virtual GraphicsAdapterInfo GetGraphicsAdapterInfo(void*          pd3dDevice,
+                                                       IDXGIAdapter1* pDXIAdapter) const override final;
 
 private:
     static void CreateD3D11DeviceAndContextForAdapter(IDXGIAdapter*         pAdapter,
@@ -262,18 +261,22 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D11Device(ID3D11Device* pd3d11Dev
 
 void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd3d11NativeDevice,
                                                  void*                        pd3d11ImmediateContext,
-                                                 const EngineD3D11CreateInfo& _EngineCI,
+                                                 const EngineD3D11CreateInfo& EngineCI,
                                                  IRenderDevice**              ppDevice,
                                                  IDeviceContext**             ppContexts)
 {
-    EngineD3D11CreateInfo EngineCI = _EngineCI;
-
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
         LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
+        return;
+    }
+
+    if (EngineCI.NumImmediateContexts > 1)
+    {
+        LOG_ERROR_MESSAGE("Direct3D11 backend does not support multiple immediate contexts");
         return;
     }
 
@@ -284,22 +287,13 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
 
-    if (EngineCI.NumImmediateContexts > 1)
-    {
-        LOG_WARNING_MESSAGE("Direct3D11 backend does not support multiple immediate contexts");
-        EngineCI.NumImmediateContexts = 1;
-    }
-
     try
     {
         auto* pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
         auto* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
         auto  pDXGIAdapter1      = DXGIAdapterFromD3D11Device(pd3d11Device);
 
-        GraphicsAdapterInfo AdapterInfo;
-        InitializeGraphicsAdapterInfo(pd3d11NativeDevice, pDXGIAdapter1, AdapterInfo);
-        EnableDeviceFeatures(AdapterInfo.Capabilities.Features, EngineCI.Features);
-        AdapterInfo.Capabilities.Features = EngineCI.Features;
+        const auto AdapterInfo = GetGraphicsAdapterInfo(pd3d11NativeDevice, pDXGIAdapter1);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
@@ -392,56 +386,39 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
 }
 
 
-void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                pd3Device,
-                                                           IDXGIAdapter1*       pDXIAdapter,
-                                                           GraphicsAdapterInfo& AdapterInfo) const
+GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*          pd3dDevice,
+                                                                   IDXGIAdapter1* pDXIAdapter) const
 {
-    TBase::InitializeGraphicsAdapterInfo(pd3Device, pDXIAdapter, AdapterInfo);
+    auto AdapterInfo = TBase::GetGraphicsAdapterInfo(pd3dDevice, pDXIAdapter);
 
-    AdapterInfo.Capabilities.DevType = RENDER_DEVICE_TYPE_D3D11;
-
-    auto* pd3d11Device = reinterpret_cast<ID3D11Device*>(pd3Device);
-
-    CComPtr<ID3D11Device> pd3d11TmpDevice;
-    if (pd3d11Device == nullptr)
+    CComPtr<ID3D11Device> pd3d11Device{reinterpret_cast<ID3D11Device*>(pd3dDevice)};
+    if (!pd3d11Device)
     {
-        CreateD3D11DeviceAndContextForAdapter(pDXIAdapter, D3D_DRIVER_TYPE_UNKNOWN, 0, &pd3d11TmpDevice, nullptr);
-        pd3d11Device = pd3d11TmpDevice;
-    }
-    VERIFY_EXPR(pd3d11Device != nullptr);
-
-    switch (pd3d11Device->GetFeatureLevel())
-    {
-        case D3D_FEATURE_LEVEL_11_1: AdapterInfo.Capabilities.APIVersion = {11, 1}; break;
-        case D3D_FEATURE_LEVEL_11_0: AdapterInfo.Capabilities.APIVersion = {11, 0}; break;
-        case D3D_FEATURE_LEVEL_10_1: AdapterInfo.Capabilities.APIVersion = {10, 1}; break;
-        case D3D_FEATURE_LEVEL_10_0: AdapterInfo.Capabilities.APIVersion = {10, 0}; break;
-        default: UNEXPECTED("Unexpected D3D feature level");
+        CreateD3D11DeviceAndContextForAdapter(pDXIAdapter, D3D_DRIVER_TYPE_UNKNOWN, 0, &pd3d11Device, nullptr);
+        VERIFY_EXPR(pd3d11Device);
     }
 
-    // Initialize features
+    auto& Features = AdapterInfo.Features;
     {
-        auto& Features = AdapterInfo.Capabilities.Features;
+        bool ShaderFloat16Supported = false;
+
+        D3D11_FEATURE_DATA_SHADER_MIN_PRECISION_SUPPORT d3d11MinPrecisionSupport{};
+        if (SUCCEEDED(pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_SHADER_MIN_PRECISION_SUPPORT, &d3d11MinPrecisionSupport, sizeof(d3d11MinPrecisionSupport))))
         {
-            bool ShaderFloat16Supported = false;
-
-            D3D11_FEATURE_DATA_SHADER_MIN_PRECISION_SUPPORT d3d11MinPrecisionSupport = {};
-            if (SUCCEEDED(pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_SHADER_MIN_PRECISION_SUPPORT, &d3d11MinPrecisionSupport, sizeof(d3d11MinPrecisionSupport))))
-            {
-                ShaderFloat16Supported =
-                    (d3d11MinPrecisionSupport.PixelShaderMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0 &&
-                    (d3d11MinPrecisionSupport.AllOtherShaderStagesMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0;
-            }
-            Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+            ShaderFloat16Supported =
+                (d3d11MinPrecisionSupport.PixelShaderMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0 &&
+                (d3d11MinPrecisionSupport.AllOtherShaderStagesMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0;
         }
-#if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Features) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
-#endif
+        Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
     }
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(Features) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+#endif
+
 
     // Texture properties
     {
-        auto& TexProps{AdapterInfo.Properties.Texture};
+        auto& TexProps{AdapterInfo.Texture};
         TexProps.MaxTexture1DDimension     = D3D11_REQ_TEXTURE1D_U_DIMENSION;
         TexProps.MaxTexture1DArraySlices   = D3D11_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
         TexProps.MaxTexture2DDimension     = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
@@ -459,7 +436,7 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
 
     // Sampler properties
     {
-        auto& SamProps{AdapterInfo.Properties.Sampler};
+        auto& SamProps{AdapterInfo.Sampler};
         SamProps.BorderSamplingModeSupported   = True;
         SamProps.AnisotropicFilteringSupported = True;
         SamProps.LODBiasSupported              = True;
@@ -470,7 +447,7 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
 
     // Buffer properties
     {
-        auto& BufferProps = AdapterInfo.Properties.Buffer;
+        auto& BufferProps = AdapterInfo.Buffer;
         // Offsets passed to *SSetConstantBuffers1 are measured in shader constants, which are
         // 16 bytes (4*32-bit components). Each offset must be a multiple of 16 constants,
         // i.e. 256 bytes.
@@ -480,6 +457,8 @@ void EngineFactoryD3D11Impl::InitializeGraphicsAdapterInfo(void*                
         static_assert(sizeof(BufferProps) == 8, "Did you add a new member to BufferProperites? Please initialize it here.");
 #endif
     }
+
+    return AdapterInfo;
 }
 
 #ifdef DOXYGEN

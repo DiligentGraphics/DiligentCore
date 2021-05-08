@@ -737,7 +737,7 @@ bool TestingEnvironmentVk::SupportsRayTracing() const
 {
     // DXC requires Vulkan 1.2 othervise tests will fail.
     RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice.RawPtr<IRenderDevice>(), IID_RenderDeviceVk};
-    return pRenderDeviceVk->GetDeviceCaps().Features.RayTracing &&
+    return pRenderDeviceVk->GetDeviceInfo().Features.RayTracing &&
         pRenderDeviceVk->GetVkVersion() >= VK_API_VERSION_1_2 &&
         HasDXCompiler();
 }

@@ -1867,4 +1867,112 @@ VkQueueGlobalPriorityEXT QueuePriorityToVkQueueGlobalPriority(QUEUE_PRIORITY Pri
     }
 }
 
+DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                          vkVersion,
+                                          const VkPhysicalDeviceFeatures&                                   vkFeatures,
+                                          const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures&   ExtFeatures,
+                                          const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
+                                          DEVICE_FEATURE_STATE                                              EnabledState)
+{
+    VERIFY_EXPR(EnabledState != DEVICE_FEATURE_STATE_DISABLED);
+
+    DeviceFeatures Features;
+
+    // Enable features
+#define INIT_FEATURE(FeatureName, Supported) \
+    Features.FeatureName = (Supported) ? EnabledState : DEVICE_FEATURE_STATE_DISABLED;
+
+    // The following features are always enabled
+    Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+    Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
+    Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
+    Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
+    Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
+    Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
+    Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
+    Features.TimestampQueries              = DEVICE_FEATURE_STATE_ENABLED;
+    Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
+
+    // clang-format off
+    INIT_FEATURE(GeometryShaders,                   vkFeatures.geometryShader);
+    INIT_FEATURE(Tessellation,                      vkFeatures.tessellationShader);
+    INIT_FEATURE(PipelineStatisticsQueries,         vkFeatures.pipelineStatisticsQuery);
+    INIT_FEATURE(OcclusionQueries,                  vkFeatures.occlusionQueryPrecise);
+    INIT_FEATURE(WireframeFill,                     vkFeatures.fillModeNonSolid);
+    INIT_FEATURE(DepthBiasClamp,                    vkFeatures.depthBiasClamp);
+    INIT_FEATURE(DepthClamp,                        vkFeatures.depthClamp);
+    INIT_FEATURE(IndependentBlend,                  vkFeatures.independentBlend);
+    INIT_FEATURE(DualSourceBlend,                   vkFeatures.dualSrcBlend);
+    INIT_FEATURE(MultiViewport,                     vkFeatures.multiViewport);
+    INIT_FEATURE(TextureCompressionBC,              vkFeatures.textureCompressionBC);
+    INIT_FEATURE(VertexPipelineUAVWritesAndAtomics, vkFeatures.vertexPipelineStoresAndAtomics);
+    INIT_FEATURE(PixelUAVWritesAndAtomics,          vkFeatures.fragmentStoresAndAtomics);
+    INIT_FEATURE(TextureUAVExtendedFormats,         vkFeatures.shaderStorageImageExtendedFormats);
+    // clang-format on
+
+    const auto& MeshShaderFeats = ExtFeatures.MeshShader;
+    INIT_FEATURE(MeshShaders, MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE);
+
+    const auto& ShaderFloat16Int8Feats = ExtFeatures.ShaderFloat16Int8;
+    // clang-format off
+    INIT_FEATURE(ShaderFloat16, ShaderFloat16Int8Feats.shaderFloat16 != VK_FALSE);
+    INIT_FEATURE(ShaderInt8,    ShaderFloat16Int8Feats.shaderInt8    != VK_FALSE);
+    // clang-format on
+
+    const auto& Storage16BitFeats = ExtFeatures.Storage16Bit;
+    // clang-format off
+    INIT_FEATURE(ResourceBuffer16BitAccess, Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE && vkFeatures.shaderInt16 != VK_FALSE);
+    INIT_FEATURE(UniformBuffer16BitAccess,  Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE && vkFeatures.shaderInt16 != VK_FALSE);
+    INIT_FEATURE(ShaderInputOutput16,       Storage16BitFeats.storageInputOutput16               != VK_FALSE && vkFeatures.shaderInt16 != VK_FALSE);
+    // clang-format on
+
+    const auto& Storage8BitFeats = ExtFeatures.Storage8Bit;
+    // clang-format off
+    INIT_FEATURE(ResourceBuffer8BitAccess, Storage8BitFeats.storageBuffer8BitAccess           != VK_FALSE);
+    INIT_FEATURE(UniformBuffer8BitAccess,  Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE);
+    // clang-format on
+
+    const auto& DescrIndexingFeats = ExtFeatures.DescriptorIndexing;
+    INIT_FEATURE(ShaderResourceRuntimeArray, DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE);
+    const auto& AccelStructFeats = ExtFeatures.AccelStruct;
+    const auto& RayTracingFeats  = ExtFeatures.RayTracingPipeline;
+    const auto& RayQueryFeats    = ExtFeatures.RayQuery;
+    // clang-format off
+    INIT_FEATURE(RayTracing,
+                 vkVersion                              >= VK_API_VERSION_1_1 &&
+                 AccelStructFeats.accelerationStructure != VK_FALSE           &&
+                 RayTracingFeats.rayTracingPipeline     != VK_FALSE);
+    INIT_FEATURE(RayTracing2,
+                 vkVersion                                           >= VK_API_VERSION_1_1 &&
+                 AccelStructFeats.accelerationStructure              != VK_FALSE           &&
+                 RayTracingFeats.rayTracingPipeline                  != VK_FALSE           &&
+                 RayTracingFeats.rayTracingPipelineTraceRaysIndirect != VK_FALSE           &&
+                 RayTracingFeats.rayTraversalPrimitiveCulling        != VK_FALSE           &&
+                 RayQueryFeats.rayQuery                              != VK_FALSE);
+    // clang-format on
+
+    const auto& SubgroupProps          = ExtProps.Subgroup;
+    const auto  RequiredSubgroupFeats  = VK_SUBGROUP_FEATURE_BASIC_BIT;
+    const auto  RequiredSubgroupStages = VK_SHADER_STAGE_COMPUTE_BIT;
+    INIT_FEATURE(WaveOp,
+                 (vkVersion >= VK_API_VERSION_1_1 &&
+                  (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
+                  (SubgroupProps.supportedStages & RequiredSubgroupStages) == RequiredSubgroupStages));
+
+    const auto& VertexAttribDivisorFeats = ExtFeatures.VertexAttributeDivisor;
+    INIT_FEATURE(InstanceDataStepRate,
+                 (VertexAttribDivisorFeats.vertexAttributeInstanceRateDivisor != VK_FALSE &&
+                  VertexAttribDivisorFeats.vertexAttributeInstanceRateZeroDivisor != VK_FALSE));
+
+    const auto& TimelineSemaphoreFeats = ExtFeatures.TimelineSemaphore;
+    INIT_FEATURE(NativeFence,
+                 TimelineSemaphoreFeats.timelineSemaphore != VK_FALSE);
+#undef INIT_FEATURE
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+#endif
+
+    return Features;
+}
+
 } // namespace Diligent

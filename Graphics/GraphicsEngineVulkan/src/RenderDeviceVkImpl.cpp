@@ -140,19 +140,19 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI.DynamicHeapSize,
         ~Uint64{0}
     },
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_PhysicalDevice->GetVkVersion(), EngineCI.pDxCompilerPath)},
-    m_Properties
-    {
-        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupHandleSize,
-        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxShaderGroupStride,
-        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.shaderGroupBaseAlignment,
-        m_PhysicalDevice->GetExtProperties().MeshShader.maxDrawMeshTasksCount,
-        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayRecursionDepth,
-        m_PhysicalDevice->GetExtProperties().RayTracingPipeline.maxRayDispatchInvocationCount
-    }
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_PhysicalDevice->GetVkVersion(), EngineCI.pDxCompilerPath)}
 // clang-format on
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
+
+    const auto vkVersion    = m_PhysicalDevice->GetVkVersion();
+    m_DeviceInfo.Type       = RENDER_DEVICE_TYPE_VULKAN;
+    m_DeviceInfo.APIVersion = Version{VK_VERSION_MAJOR(vkVersion), VK_VERSION_MINOR(vkVersion)};
+
+    m_DeviceInfo.Features = VkFeaturesToDeviceFeatures(vkVersion,
+                                                       m_LogicalVkDevice->GetEnabledFeatures(),
+                                                       m_LogicalVkDevice->GetEnabledExtFeatures(),
+                                                       m_PhysicalDevice->GetExtProperties());
 
     for (Uint32 q = 0; q < CommandQueueCount; ++q)
     {

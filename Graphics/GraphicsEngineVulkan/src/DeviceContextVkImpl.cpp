@@ -3423,7 +3423,7 @@ void DeviceContextVkImpl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAtt
 
 void DeviceContextVkImpl::CreateASCompactedSizeQueryPool()
 {
-    if (m_pDevice->GetDeviceCaps().Features.RayTracing == DEVICE_FEATURE_STATE_ENABLED)
+    if (m_pDevice->GetFeatures().RayTracing == DEVICE_FEATURE_STATE_ENABLED)
     {
         const auto&           LogicalDevice = m_pDevice->GetLogicalDevice();
         VkQueryPoolCreateInfo Info          = {};

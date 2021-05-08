@@ -203,10 +203,10 @@ void PipelineStateGLImpl::InitResourceLayout(const TShaderStages& ShaderStages,
 template <typename PSOCreateInfoType>
 void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages)
 {
-    const auto& deviceCaps = GetDevice()->GetDeviceCaps();
-    VERIFY(deviceCaps.DevType != RENDER_DEVICE_TYPE_UNDEFINED, "Device caps are not initialized");
+    const auto& DeviceInfo = GetDevice()->GetDeviceInfo();
+    VERIFY(DeviceInfo.Type != RENDER_DEVICE_TYPE_UNDEFINED, "Device info is not initialized");
 
-    m_IsProgramPipelineSupported = deviceCaps.Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED;
+    m_IsProgramPipelineSupported = DeviceInfo.Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED;
     m_NumPrograms                = m_IsProgramPipelineSupported ? static_cast<Uint8>(ShaderStages.size()) : 1;
 
     FixedLinearAllocator MemPool{GetRawAllocator()};
