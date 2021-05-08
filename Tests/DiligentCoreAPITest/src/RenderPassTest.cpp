@@ -205,7 +205,7 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
 {
     auto*      pDevice    = TestingEnvironment::GetInstance()->GetDevice();
     auto*      pContext   = TestingEnvironment::GetInstance()->GetDeviceContext();
-    const auto DeviceType = pDevice->GetDeviceCaps().DevType;
+    const auto DeviceType = pDevice->GetDeviceInfo().Type;
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -568,7 +568,7 @@ TEST_F(RenderPassTest, MSResolve)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D11_SUPPORTED
@@ -711,7 +711,7 @@ void RenderPassTest::TestInputAttachment(bool UseSignature)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D11_SUPPORTED
@@ -852,7 +852,7 @@ void RenderPassTest::TestInputAttachment(bool UseSignature)
         GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-        auto IsVulkan = pEnv->GetDevice()->GetDeviceCaps().IsVulkanDevice();
+        auto IsVulkan = pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice();
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage = IsVulkan ?

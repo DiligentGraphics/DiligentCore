@@ -57,6 +57,24 @@
 namespace Diligent
 {
 
+static D3D_FEATURE_LEVEL GetD3DFeatureLevelFromDevice(ID3D12Device* pd3d12Device)
+{
+    D3D_FEATURE_LEVEL FeatureLevels[] =
+        {
+            D3D_FEATURE_LEVEL_12_1,
+            D3D_FEATURE_LEVEL_12_0,
+            D3D_FEATURE_LEVEL_11_1,
+            D3D_FEATURE_LEVEL_11_0,
+            D3D_FEATURE_LEVEL_10_1,
+            D3D_FEATURE_LEVEL_10_0 //
+        };
+    D3D12_FEATURE_DATA_FEATURE_LEVELS FeatureLevelsData{};
+    FeatureLevelsData.pFeatureLevelsRequested = FeatureLevels;
+    FeatureLevelsData.NumFeatureLevels        = _countof(FeatureLevels);
+    pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &FeatureLevelsData, sizeof(FeatureLevelsData));
+    return FeatureLevelsData.MaxSupportedFeatureLevel;
+}
+
 RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
                                              IEngineFactory*              pEngineFactory,
@@ -104,14 +122,30 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     m_RootSignatureCache    {*this}
 // clang-format on
 {
+    m_DeviceInfo.Type = RENDER_DEVICE_TYPE_D3D12;
+
     try
     {
+        // Enable requested device features
+        m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
+
+        auto FeatureLevel = GetD3DFeatureLevelFromDevice(m_pd3d12Device);
+        switch (FeatureLevel)
+        {
+            case D3D_FEATURE_LEVEL_12_1: m_DeviceInfo.APIVersion = {12, 1}; break;
+            case D3D_FEATURE_LEVEL_12_0: m_DeviceInfo.APIVersion = {12, 0}; break;
+            case D3D_FEATURE_LEVEL_11_1: m_DeviceInfo.APIVersion = {11, 1}; break;
+            case D3D_FEATURE_LEVEL_11_0: m_DeviceInfo.APIVersion = {11, 0}; break;
+            case D3D_FEATURE_LEVEL_10_1: m_DeviceInfo.APIVersion = {10, 1}; break;
+            case D3D_FEATURE_LEVEL_10_0: m_DeviceInfo.APIVersion = {10, 0}; break;
+            default: UNEXPECTED("Unexpected D3D feature level");
+        }
+
         // Detect maximum  shader model.
-        D3D_SHADER_MODEL MaxShaderModel = D3D_SHADER_MODEL_5_1;
         {
             // Direct3D12 supports shader model 5.1 on all feature levels.
             // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-            MaxShaderModel = D3D_SHADER_MODEL_5_1;
+            D3D_SHADER_MODEL MaxShaderModel = D3D_SHADER_MODEL_5_1;
 
             // Header may not have constants for D3D_SHADER_MODEL_6_1 and above.
             const D3D_SHADER_MODEL Models[] = //
@@ -133,10 +167,10 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                     break;
                 }
             }
-            LOG_INFO_MESSAGE("Max device shader model: ", (MaxShaderModel >> 4) & 0xF, '_', MaxShaderModel & 0xF);
-        }
+            m_MaxShaderVersion = Version{(MaxShaderModel >> 4) & 0xFu, MaxShaderModel & 0xFu};
 
-        m_Properties.MaxShaderVersion = Version{(MaxShaderModel >> 4) & 0xFu, MaxShaderModel & 0xFu};
+            LOG_INFO_MESSAGE("Max device shader model: ", Uint32{m_MaxShaderVersion.Major}, '_', Uint32{m_MaxShaderVersion.Minor} & 0xF);
+        }
 
 #ifdef DILIGENT_DEVELOPMENT
 #    define CHECK_D3D12_DEVICE_VERSION(Version)               \

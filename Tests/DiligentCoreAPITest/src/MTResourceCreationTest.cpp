@@ -286,7 +286,7 @@ TEST_F(MultithreadedResourceCreationTest, CreateResources)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (pDevice->GetDeviceCaps().IsGLDevice())
+    if (pDevice->GetDeviceInfo().IsGLDevice())
     {
         GTEST_SKIP() << "Multithreading resource creation is not supported in OpenGL";
     }

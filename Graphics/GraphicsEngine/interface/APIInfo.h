@@ -51,7 +51,7 @@ struct APIInfo
     size_t DepthStencilStateDescSize             DEFAULT_INITIALIZER(0);
     size_t SamplerPropertiesSize                 DEFAULT_INITIALIZER(0);
     size_t TexturePropertiesSize                 DEFAULT_INITIALIZER(0);
-    size_t DeviceCapsSize                        DEFAULT_INITIALIZER(0);
+    size_t RenderDeviceInfoSize                  DEFAULT_INITIALIZER(0);
     size_t DrawAttribsSize                       DEFAULT_INITIALIZER(0);
     size_t DispatchComputeAttribsSize            DEFAULT_INITIALIZER(0);
     size_t ViewportSize                          DEFAULT_INITIALIZER(0);

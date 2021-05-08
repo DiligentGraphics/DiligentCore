@@ -286,11 +286,10 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                                          IPipelineResourceSignature**            ppSignature) PURE;
 
 
-    /// Gets the device capabilities, see Diligent::DeviceCaps for details.
-    /// AZ TODO: deprecated, use GetAdapterInfo()
-    VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;
+    /// Returns the device information, see Diligent::RenderDeviceInfo for details.
+    VIRTUAL const RenderDeviceInfo REF METHOD(GetDeviceInfo)(THIS) CONST PURE;
 
-    /// Gets the graphics adapter information, see Diligent::GraphicsAdapterInfo for details.
+    /// Returns the graphics adapter information, see Diligent::GraphicsAdapterInfo for details.
     VIRTUAL const GraphicsAdapterInfo REF METHOD(GetAdapterInfo)(THIS) CONST PURE;
 
     /// Returns the basic texture format information.
@@ -364,7 +363,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDevice_CreateSBT(This, ...)                       CALL_IFACE_METHOD(RenderDevice, CreateSBT,                       This, __VA_ARGS__)
 #    define IRenderDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(RenderDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
 #    define IRenderDevice_GetAdapterInfo(This)                       CALL_IFACE_METHOD(RenderDevice, GetAdapterInfo,                  This)
-#    define IRenderDevice_GetDeviceCaps(This)                        CALL_IFACE_METHOD(RenderDevice, GetDeviceCaps,                   This)
+#    define IRenderDevice_GetDeviceInfo(This)                        CALL_IFACE_METHOD(RenderDevice, GetDeviceInfo,                   This)
 #    define IRenderDevice_GetTextureFormatInfo(This, ...)            CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,            This, __VA_ARGS__)
 #    define IRenderDevice_GetTextureFormatInfoExt(This, ...)         CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,         This, __VA_ARGS__)
 #    define IRenderDevice_ReleaseStaleResources(This, ...)           CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,           This, __VA_ARGS__)

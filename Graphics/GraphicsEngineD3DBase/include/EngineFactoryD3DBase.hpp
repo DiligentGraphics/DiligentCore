@@ -61,15 +61,15 @@ public:
             for (Uint32 adapter = 0; adapter < NumAdapters; ++adapter)
             {
                 IDXGIAdapter1* pDXIAdapter = DXGIAdapters[adapter];
-                auto&          Attribs     = Adapters[adapter];
+                auto&          AdapterInfo = Adapters[adapter];
 
-                InitializeGraphicsAdapterInfo(nullptr, pDXIAdapter, Attribs);
+                AdapterInfo = GetGraphicsAdapterInfo(nullptr, pDXIAdapter);
 
-                Attribs.NumOutputs = 0;
+                AdapterInfo.NumOutputs = 0;
                 CComPtr<IDXGIOutput> pOutput;
-                while (pDXIAdapter->EnumOutputs(Attribs.NumOutputs, &pOutput) != DXGI_ERROR_NOT_FOUND)
+                while (pDXIAdapter->EnumOutputs(AdapterInfo.NumOutputs, &pOutput) != DXGI_ERROR_NOT_FOUND)
                 {
-                    ++Attribs.NumOutputs;
+                    ++AdapterInfo.NumOutputs;
                     pOutput.Release();
                 };
             }
@@ -163,15 +163,14 @@ public:
     }
 
 
-    virtual void InitializeGraphicsAdapterInfo(void*                pd3Device,
-                                               IDXGIAdapter1*       pDXIAdapter,
-                                               GraphicsAdapterInfo& AdapterInfo) const
+    virtual GraphicsAdapterInfo GetGraphicsAdapterInfo(void*          pd3Device,
+                                                       IDXGIAdapter1* pDXIAdapter) const
     {
         DXGI_ADAPTER_DESC1 dxgiAdapterDesc = {};
         if (pDXIAdapter)
             pDXIAdapter->GetDesc1(&dxgiAdapterDesc);
 
-        AdapterInfo = {};
+        GraphicsAdapterInfo AdapterInfo;
 
         // Set graphics adapter properties
         {
@@ -187,8 +186,7 @@ public:
 
         // Enable features
         {
-            auto& Features = AdapterInfo.Capabilities.Features;
-
+            auto& Features{AdapterInfo.Features};
             Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
             Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
             Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
@@ -216,7 +214,7 @@ public:
         // Set memory properties
         {
             auto& Mem              = AdapterInfo.Memory;
-            Mem.DeviceLocalMemory  = dxgiAdapterDesc.DedicatedVideoMemory;
+            Mem.LocalMemory        = dxgiAdapterDesc.DedicatedVideoMemory;
             Mem.HostVisibileMemory = dxgiAdapterDesc.SharedSystemMemory;
             Mem.UnifiedMemory      = 0;
         }
@@ -230,6 +228,8 @@ public:
             AdapterInfo.Queues[0].TextureCopyGranularity[1] = 1;
             AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
         }
+
+        return AdapterInfo;
     }
 
 protected:

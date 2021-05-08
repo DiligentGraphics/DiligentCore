@@ -40,7 +40,7 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
 {
     const auto& LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
-    const auto& Limits          = PhysicalDevice.GetExtProperties().AccelStruct;
+    const auto& RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
     Uint32      AccelStructSize = m_Desc.CompactedSize;
 
     if (AccelStructSize == 0)
@@ -60,8 +60,8 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
         vkBuildInfo.pGeometries   = &vkGeometry;
         vkBuildInfo.geometryCount = 1;
 
-        DEV_CHECK_ERR(m_Desc.MaxInstanceCount <= Limits.maxInstanceCount,
-                      "Max instance count (", m_Desc.MaxInstanceCount, ") exceeds device limit (", Limits.maxInstanceCount, ").");
+        DEV_CHECK_ERR(m_Desc.MaxInstanceCount <= RTProps.MaxInstancesPerTLAS,
+                      "Max instance count (", m_Desc.MaxInstanceCount, ") exceeds device limit (", RTProps.MaxInstancesPerTLAS, ").");
 
         VkAccelerationStructureBuildSizesInfoKHR vkSizeInfo{};
         vkSizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;

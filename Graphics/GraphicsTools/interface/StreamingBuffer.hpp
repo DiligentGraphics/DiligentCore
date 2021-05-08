@@ -56,7 +56,7 @@ public:
     {}
 
     explicit StreamingBuffer(const StreamingBufferCreateInfo& CI) :
-        m_UsePersistentMap{CI.AllowPersistentMapping && (CI.pDevice->GetDeviceCaps().IsVulkanDevice() || CI.pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)},
+        m_UsePersistentMap{CI.AllowPersistentMapping && (CI.pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_VULKAN || CI.pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)},
         m_BufferSize{CI.BuffDesc.uiSizeInBytes},
         m_OnBufferResizeCallback{CI.OnBufferResizeCallback},
         m_MapInfo(CI.NumContexts)

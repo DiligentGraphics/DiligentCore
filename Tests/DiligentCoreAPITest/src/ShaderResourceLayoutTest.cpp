@@ -112,7 +112,7 @@ protected:
     {
         auto* const pEnv       = TestingEnvironment::GetInstance();
         auto* const pDevice    = pEnv->GetDevice();
-        const auto& deviceCaps = pDevice->GetDeviceCaps();
+        const auto& deviceCaps = pDevice->GetDeviceInfo();
 
         RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
         pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/ShaderResourceLayout", &pShaderSourceFactory);
@@ -251,7 +251,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pSwapChain = pEnv->GetSwapChain();
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& deviceCaps = pDevice->GetDeviceInfo();
 
     float ClearColor[] = {0.25, 0.5, 0.75, 0.125};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -490,7 +490,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pSwapChain = pEnv->GetSwapChain();
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     float ClearColor[] = {0.625, 0.125, 0.25, 0.875};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -518,8 +518,8 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     static constexpr size_t BuffArr_DynIdx[]    = {6, 7};
 
     const Uint32 VSResArrId = 0;
-    const Uint32 PSResArrId = deviceCaps.Features.SeparablePrograms ? 1 : 0;
-    VERIFY_EXPR(deviceCaps.IsGLDevice() || PSResArrId != VSResArrId);
+    const Uint32 PSResArrId = DeviceInfo.Features.SeparablePrograms ? 1 : 0;
+    VERIFY_EXPR(DeviceInfo.IsGLDevice() || PSResArrId != VSResArrId);
 
     ShaderMacroHelper Macros;
 
@@ -554,7 +554,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
     // Vulkan only allows 16 dynamic storage buffer bindings among all stages, so
     // use arrays only in fragment shader for structured buffer test.
-    const auto UseArraysInPSOnly = !IsFormatted && (deviceCaps.IsVulkanDevice() || deviceCaps.IsMetalDevice());
+    const auto UseArraysInPSOnly = !IsFormatted && (DeviceInfo.IsVulkanDevice() || DeviceInfo.IsMetalDevice());
 
     // clang-format off
     std::vector<ShaderResourceDesc> Resources = 
@@ -578,12 +578,12 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
     const char*            ShaderFileName = nullptr;
     SHADER_SOURCE_LANGUAGE SrcLang        = SHADER_SOURCE_LANGUAGE_DEFAULT;
-    if (pDevice->GetDeviceCaps().IsD3DDevice())
+    if (DeviceInfo.IsD3DDevice())
     {
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
-    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice() || pDevice->GetDeviceCaps().IsMetalDevice())
+    else if (DeviceInfo.IsVulkanDevice() || DeviceInfo.IsGLDevice() || DeviceInfo.IsMetalDevice())
     {
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.glsl";
         SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
@@ -624,7 +624,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
     auto AddVar = [&](const char* Name, SHADER_RESOURCE_VARIABLE_TYPE VarType) //
     {
-        if (deviceCaps.Features.SeparablePrograms)
+        if (DeviceInfo.Features.SeparablePrograms)
         {
             // Use separate variables for each stage
             Vars.emplace_back(SHADER_TYPE_VERTEX, Name, VarType);
@@ -729,7 +729,7 @@ TEST_F(ShaderResourceLayoutTest, StructuredBuffers)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (pDevice->GetDeviceCaps().IsGLDevice())
+    if (pDevice->GetDeviceInfo().IsGLDevice())
     {
         GTEST_SKIP() << "Read-only structured buffers in glsl are currently "
                         "identified as UAVs in OpenGL backend because "
@@ -750,7 +750,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 
     ComputeShaderReference(pSwapChain);
 
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     constexpr Uint32 MaxStaticBuffArraySize  = 4;
     constexpr Uint32 MaxMutableBuffArraySize = 3;
@@ -763,7 +763,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
         1 /*output UAV texture*/;
 
     bool UseReducedUAVCount = false;
-    switch (deviceCaps.DevType)
+    switch (DeviceInfo.Type)
     {
         case RENDER_DEVICE_TYPE_D3D11:
         case RENDER_DEVICE_TYPE_GL:
@@ -830,12 +830,12 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 
     const char*            ShaderFileName = nullptr;
     SHADER_SOURCE_LANGUAGE SrcLang        = SHADER_SOURCE_LANGUAGE_DEFAULT;
-    if (pDevice->GetDeviceCaps().IsD3DDevice())
+    if (pDevice->GetDeviceInfo().IsD3DDevice())
     {
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
-    else if (deviceCaps.IsVulkanDevice() || deviceCaps.IsGLDevice() || deviceCaps.IsMetalDevice())
+    else if (DeviceInfo.IsVulkanDevice() || DeviceInfo.IsGLDevice() || DeviceInfo.IsMetalDevice())
     {
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.glsl";
         SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
@@ -960,7 +960,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
 
     ComputeShaderReference(pSwapChain);
 
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     constexpr Uint32 MaxStaticTexArraySize  = 2;
     constexpr Uint32 MaxMutableTexArraySize = 4;
@@ -973,7 +973,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
         1 /*output UAV texture*/;
 
     bool UseReducedUAVCount = false;
-    switch (deviceCaps.DevType)
+    switch (DeviceInfo.Type)
     {
         case RENDER_DEVICE_TYPE_D3D11:
         case RENDER_DEVICE_TYPE_GL:
@@ -1136,7 +1136,7 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     float ClearColor[] = {0.875, 0.75, 0.625, 0.125};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -1158,18 +1158,18 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     static constexpr size_t BuffArr_DynIdx[]    = {7, 2};
 
     const Uint32 VSResArrId = 0;
-    const Uint32 PSResArrId = deviceCaps.Features.SeparablePrograms ? 1 : 0;
-    VERIFY_EXPR(deviceCaps.IsGLDevice() || PSResArrId != VSResArrId);
+    const Uint32 PSResArrId = DeviceInfo.Features.SeparablePrograms ? 1 : 0;
+    VERIFY_EXPR(DeviceInfo.IsGLDevice() || PSResArrId != VSResArrId);
 
     //  Vulkan allows 15 dynamic uniform buffer bindings among all stages
     const Uint32 StaticCBArraySize  = 2;
-    const Uint32 MutableCBArraySize = deviceCaps.IsVulkanDevice() ? 1 : 4;
-    const Uint32 DynamicCBArraySize = deviceCaps.IsVulkanDevice() ? 1 : 3;
+    const Uint32 MutableCBArraySize = DeviceInfo.IsVulkanDevice() ? 1 : 4;
+    const Uint32 DynamicCBArraySize = DeviceInfo.IsVulkanDevice() ? 1 : 3;
 
     const auto CBArraysSupported =
-        deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 ||
-        deviceCaps.DevType == RENDER_DEVICE_TYPE_VULKAN ||
-        deviceCaps.DevType == RENDER_DEVICE_TYPE_METAL;
+        DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 ||
+        DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN ||
+        DeviceInfo.Type == RENDER_DEVICE_TYPE_METAL;
 
     ShaderMacroHelper Macros;
 
@@ -1237,7 +1237,7 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 
     auto AddVar = [&](const char* Name, SHADER_RESOURCE_VARIABLE_TYPE VarType) //
     {
-        if (deviceCaps.Features.SeparablePrograms)
+        if (DeviceInfo.Features.SeparablePrograms)
         {
             // Use separate variables for each stage
             Vars.emplace_back(SHADER_TYPE_VERTEX, Name, VarType);
@@ -1327,7 +1327,7 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (pDevice->GetDeviceCaps().IsGLDevice())
+    if (pDevice->GetDeviceInfo().IsGLDevice())
     {
         GTEST_SKIP() << "OpenGL does not support separate samplers";
     }
@@ -1477,7 +1477,7 @@ TEST_F(ShaderResourceLayoutTest, MergedVarStages)
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& DeviceProps = pDevice->GetDeviceInfo();
 
     float ClearColor[] = {0.125, 0.875, 0.25, 0.125};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -1523,7 +1523,7 @@ TEST_F(ShaderResourceLayoutTest, MergedVarStages)
         ShaderResourceDesc{"g_Tex2D_Mut",    SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
         ShaderResourceDesc{"g_Tex2D_Dyn",    SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1}
     };
-    if (!deviceCaps.IsGLDevice())
+    if (!DeviceProps.IsGLDevice())
     {
         Resources.emplace_back("g_Tex2D_Static_sampler", SHADER_RESOURCE_TYPE_SAMPLER, 1);
         Resources.emplace_back("g_Tex2D_Mut_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, 1);

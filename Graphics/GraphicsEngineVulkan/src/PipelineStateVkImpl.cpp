@@ -215,7 +215,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
 
     if (VertexInputDivisorCI.vertexBindingDivisorCount > 0)
     {
-        if (!pDeviceVk->GetDeviceCaps().Features.InstanceDataStepRate)
+        if (!pDeviceVk->GetFeatures().InstanceDataStepRate)
             LOG_ERROR_MESSAGE("InstanceDataStepRate device feature is not enabled");
 
         VertexInputStateCI.pNext = &VertexInputDivisorCI;

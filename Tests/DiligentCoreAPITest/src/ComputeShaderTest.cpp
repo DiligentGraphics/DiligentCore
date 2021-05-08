@@ -63,7 +63,7 @@ void ComputeShaderReference(ISwapChain* pSwapChain)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    auto deviceType = pDevice->GetDeviceCaps().DevType;
+    auto deviceType = pDevice->GetDeviceInfo().Type;
     switch (deviceType)
     {
 #if D3D11_SUPPORTED
@@ -122,7 +122,7 @@ TEST(ComputeShaderTest, FillTexture)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.ComputeShaders)
+    if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "Compute shaders are not supported by this device";
     }

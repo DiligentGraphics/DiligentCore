@@ -99,14 +99,14 @@ public:
             RenderTargetDesc.SampleCount = 1;
             RenderTargetDesc.Usage       = USAGE_DEFAULT;
             RenderTargetDesc.BindFlags   = BIND_RENDER_TARGET;
-            if (pDevice->GetDeviceCaps().Features.ComputeShaders)
+            if (pDevice->GetDeviceInfo().Features.ComputeShaders)
                 RenderTargetDesc.BindFlags |= BIND_UNORDERED_ACCESS;
             m_pDevice->CreateTexture(RenderTargetDesc, nullptr, static_cast<ITexture**>(&m_pRenderTarget));
             VERIFY_EXPR(m_pRenderTarget != nullptr);
             m_pRTV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
             VERIFY_EXPR(m_pRTV != nullptr);
 
-            if (pDevice->GetDeviceCaps().Features.ComputeShaders)
+            if (pDevice->GetDeviceInfo().Features.ComputeShaders)
             {
                 m_pUAV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
                 VERIFY_EXPR(m_pUAV != nullptr);
@@ -175,7 +175,7 @@ public:
         MappedTextureSubresource MapData;
 
         auto MapFlag = MAP_FLAG_DO_NOT_WAIT;
-        if (m_pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D11)
+        if (m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
         {
             // As a matter of fact, we should be able to always use MAP_FLAG_DO_NOT_WAIT flag
             // as we flush the context and idle the GPU before mapping the staging texture.

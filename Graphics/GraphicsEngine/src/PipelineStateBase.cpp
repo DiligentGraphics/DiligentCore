@@ -468,27 +468,27 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 }
 
 void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                           pDevice,
-                                          Uint32                                   MaxRecursion,
-                                          const RayTracingPipelineStateCreateInfo& CreateInfo,
-                                          const DeviceFeatures&                    Features) noexcept(false)
+                                          const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
-    const auto& PSODesc = CreateInfo.PSODesc;
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& RTProps    = pDevice->GetAdapterInfo().RayTracing;
+    const auto& PSODesc    = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING.");
 
-    ValidatePipelineResourceSignatures(CreateInfo, Features);
-    ValidatePipelineResourceLayoutDesc(PSODesc, Features);
+    ValidatePipelineResourceSignatures(CreateInfo, DeviceInfo.Features);
+    ValidatePipelineResourceLayoutDesc(PSODesc, DeviceInfo.Features);
 
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
     {
         if ((CreateInfo.pShaderRecordName != nullptr) != (CreateInfo.RayTracingPipeline.ShaderRecordSize > 0))
             LOG_PSO_ERROR_AND_THROW("pShaderRecordName must not be null if RayTracingPipeline.ShaderRecordSize is not zero.");
     }
 
-    if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > MaxRecursion)
+    if (CreateInfo.RayTracingPipeline.MaxRecursionDepth > RTProps.MaxRecursionDepth)
     {
         LOG_PSO_ERROR_AND_THROW("MaxRecursionDepth (", Uint32{CreateInfo.RayTracingPipeline.MaxRecursionDepth},
-                                ") exceeds device limit (", MaxRecursion, ").");
+                                ") exceeds device limit (", RTProps.MaxRecursionDepth, ").");
     }
 
     std::unordered_set<HashMapStringKey, HashMapStringKey::Hasher> GroupNames;

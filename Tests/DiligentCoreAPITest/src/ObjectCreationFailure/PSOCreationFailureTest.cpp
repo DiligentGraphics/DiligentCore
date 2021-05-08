@@ -136,9 +136,9 @@ protected:
     {
         auto* const pEnv       = TestingEnvironment::GetInstance();
         auto* const pDevice    = pEnv->GetDevice();
-        const auto& deviceCaps = pDevice->GetDeviceCaps();
+        const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-        sm_HasMeshShader = deviceCaps.Features.MeshShaders && pEnv->HasDXCompiler();
+        sm_HasMeshShader = DeviceInfo.Features.MeshShaders && pEnv->HasDXCompiler();
         sm_HasRayTracing = pEnv->SupportsRayTracing();
 
         ShaderCreateInfo ShaderCI;
@@ -341,7 +341,7 @@ protected:
             ASSERT_TRUE(sm_pSignature0A);
         }
 
-        if (deviceCaps.Features.GeometryShaders)
+        if (DeviceInfo.Features.GeometryShaders)
         {
             PipelineResourceDesc Resources[] = //
                 {
@@ -356,7 +356,7 @@ protected:
             ASSERT_TRUE(sm_pSignature1);
         }
 
-        if (deviceCaps.Features.GeometryShaders)
+        if (DeviceInfo.Features.GeometryShaders)
         {
             PipelineResourceDesc Resources[] = //
                 {
@@ -1001,7 +1001,7 @@ TEST_F(PSOCreationFailureTest, ConflictingImmutableSamplerStages)
     PsoCI.ResourceSignaturesCount             = _countof(pSignatures);
 
     // In case of non-separable programs, there is another error - a resource ("g_Texture") is found in different signatures
-    const auto* ExpectedError = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.SeparablePrograms ?
+    const auto* ExpectedError = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms ?
         "Immutable sampler 'g_Texture_sampler' is found in more than one resource signature ('PRS1A' and 'PRS0')" :
         "shader resource 'g_Texture' is found in more than one resource signature ('PRS1A' and 'PRS0')";
     TestCreatePSOFailure(PsoCI, ExpectedError);
@@ -1071,7 +1071,7 @@ TEST_F(PSOCreationFailureTest, InvalidRTPipelineType)
 
 TEST_F(PSOCreationFailureTest, InvalidShaderRecord)
 {
-    if (!HasRayTracing() || !TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().IsD3DDevice())
+    if (!HasRayTracing() || !TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().IsD3DDevice())
         GTEST_SKIP();
 
     auto PsoCI{GetRayTracingPSOCreateInfo("PSO Create Failure - Invalid shader record")};
@@ -1294,7 +1294,7 @@ TEST_F(PSOCreationFailureTest, MissingResource)
     PsoCI.pPS = GetTexturePS();
 
     std::string ExpectedErrorString = "contains resource 'g_Texture' that is not present in any pipeline resource signature";
-    if (pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    if (pDevice->GetDeviceInfo().Features.SeparablePrograms)
         ExpectedErrorString = std::string{"Shader 'TexturePS (PSOCreationFailureTest)' "} + ExpectedErrorString;
     // In non-separable programs case, PSO name is used instead of the shader name
 
@@ -1326,7 +1326,7 @@ TEST_F(PSOCreationFailureTest, InvalidResourceType)
     PsoCI.pPS = GetTexturePS();
 
     std::string ExpectedErrorString = "contains resource with name 'g_Texture' and type 'texture SRV' that is not compatible with type 'buffer SRV'";
-    if (pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    if (pDevice->GetDeviceInfo().Features.SeparablePrograms)
         ExpectedErrorString = std::string{"Shader 'TexturePS (PSOCreationFailureTest)' "} + ExpectedErrorString;
     // In non-separable programs case, PSO name is used of the shader name
 
@@ -1378,7 +1378,7 @@ TEST_F(PSOCreationFailureTest, InvalidArraySize)
     PsoCI.pPS = pPS;
 
     std::string ExpectedErrorString = "contains resource 'g_Texture' whose array size (3) is greater than the array size (2)";
-    if (pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    if (pDevice->GetDeviceInfo().Features.SeparablePrograms)
         ExpectedErrorString = std::string{"Shader 'Invalid Array Size (PSOCreationFailureTest)' "} + ExpectedErrorString;
     // In non-separable programs case, PSO name is used
 
@@ -1390,9 +1390,9 @@ TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
 {
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!pDevice->GetDeviceCaps().Features.ShaderResourceRuntimeArray)
+    if (!DeviceInfo.Features.ShaderResourceRuntimeArray)
     {
         GTEST_SKIP();
     }
@@ -1431,7 +1431,7 @@ TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
     ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
     ShaderCI.Desc.Name       = "Invalid Run-Time Array (PSOCreationFailureTest)";
     ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-    if (deviceCaps.IsD3DDevice())
+    if (DeviceInfo.IsD3DDevice())
     {
         ShaderCI.Source         = PSSource_HLSL;
         ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -1474,7 +1474,7 @@ TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
 
 TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateResources)
 {
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.SeparablePrograms)
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP();
     }
@@ -1493,7 +1493,7 @@ TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateResources)
 
 TEST_F(PSOCreationFailureTest, NonSeparablePrograms_SeparateImmutableSamplers)
 {
-    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().Features.SeparablePrograms)
+    if (TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP();
     }

@@ -40,9 +40,10 @@ enum class TargetGLSLCompiler
     driver
 };
 
-String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
-                             const DeviceCaps&       deviceCaps,
-                             TargetGLSLCompiler      TargetCompiler,
-                             const char*             ExtraDefinitions = nullptr);
+String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
+                             const RenderDeviceInfo&    DeviceInfo,
+                             const GraphicsAdapterInfo& AdaterInfo,
+                             TargetGLSLCompiler         TargetCompiler,
+                             const char*                ExtraDefinitions = nullptr);
 
 } // namespace Diligent

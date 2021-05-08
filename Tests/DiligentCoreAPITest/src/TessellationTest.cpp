@@ -72,14 +72,14 @@ TEST(TessellationTest, DrawQuad)
 {
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!deviceCaps.Features.Tessellation)
+    if (!DeviceInfo.Features.Tessellation)
     {
         GTEST_SKIP() << "Tessellation is not supported by this device";
     }
 
-    if (!deviceCaps.Features.SeparablePrograms)
+    if (!DeviceInfo.Features.SeparablePrograms)
     {
         GTEST_SKIP() << "Tessellation test requires separable programs";
     }
@@ -95,7 +95,7 @@ TEST(TessellationTest, DrawQuad)
         pConext->Flush();
         pConext->InvalidateState();
 
-        switch (deviceCaps.DevType)
+        switch (DeviceInfo.Type)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
@@ -150,10 +150,10 @@ TEST(TessellationTest, DrawQuad)
     GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
     GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_BACK;
     GraphicsPipeline.RasterizerDesc.FillMode =
-        pDevice->GetDeviceCaps().Features.WireframeFill ?
+        DeviceInfo.Features.WireframeFill ?
         FILL_MODE_WIREFRAME :
         FILL_MODE_SOLID;
-    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = DeviceInfo.IsGLDevice();
 
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 

@@ -81,6 +81,7 @@ set(SOURCE
     src/FramebufferBase.cpp
     src/PipelineResourceSignatureBase.cpp
     src/PipelineStateBase.cpp
+    src/RenderDeviceBase.cpp
     src/ResourceMappingBase.cpp
     src/ShaderBindingTableBase.cpp
     src/RenderPassBase.cpp

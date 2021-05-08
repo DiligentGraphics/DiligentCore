@@ -67,7 +67,7 @@ TEST(SeparateTextureSampler, CreateSampler)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    if (pDevice->GetDeviceCaps().IsGLDevice())
+    if (pDevice->GetDeviceInfo().IsGLDevice())
     {
         GTEST_SKIP() << "Separate texture samplers are not supported in OpenGL";
     }

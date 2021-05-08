@@ -76,7 +76,7 @@ void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D11_SUPPORTED
@@ -1614,7 +1614,7 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.IndirectRendering)
+    if (!pDevice->GetDeviceInfo().Features.IndirectRendering)
         GTEST_SKIP() << "Indirect rendering is not supported on this device";
 
     auto* pContext = pEnv->GetDeviceContext();
@@ -1719,7 +1719,7 @@ TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.InstanceDataStepRate)
+    if (!pDevice->GetDeviceInfo().Features.InstanceDataStepRate)
         GTEST_SKIP() << "InstanceDataStepRate is not supported";
 
     auto* pContext   = pEnv->GetDeviceContext();
@@ -2309,7 +2309,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
 
     auto* const pEnv       = TestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -2339,7 +2339,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         ShaderCI.Desc.Name       = "Draw command test structured buffers - VS";
         if (BuffMode == BUFFER_MODE_STRUCTURED)
         {
-            if (deviceCaps.IsD3DDevice())
+            if (DeviceInfo.IsD3DDevice())
             {
                 ShaderCI.Source = UseArray ? HLSL::DrawTest_VSStructuredBufferArray.c_str() : HLSL::DrawTest_VSStructuredBuffers.c_str();
             }
@@ -2379,7 +2379,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
 
     for (Uint32 UseDynamicBuffers = 0; UseDynamicBuffers < 2; ++UseDynamicBuffers)
     {
-        if (BuffMode == BUFFER_MODE_STRUCTURED && UseArray && UseDynamicBuffers && deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12)
+        if (BuffMode == BUFFER_MODE_STRUCTURED && UseArray && UseDynamicBuffers && DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
         {
             std::cout << TestingEnvironment::GetTestSkippedString() << " Dynamic structured buffers can't be bound to array variables in D3D12" << std::endl;
             continue;
@@ -2472,11 +2472,10 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
     auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    const auto& adapterInfo = pDevice->GetAdapterInfo();
-    const auto& Limits      = adapterInfo.Properties.Buffer;
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     const auto UseSetOffset = (VarFlags & SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS) == 0 && (CBType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-    if (adapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_D3D11 && BuffMode == BUFFER_MODE_STRUCTURED && UseSetOffset)
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11 && BuffMode == BUFFER_MODE_STRUCTURED && UseSetOffset)
     {
         // Offsets for structured buffers are not supported in D3D11
         return;
@@ -2536,8 +2535,9 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
         ASSERT_TRUE(pSRB1 != nullptr);
     }
 
-    const auto IsStructured    = BuffMode == BUFFER_MODE_STRUCTURED;
-    const auto OffsetAlignment = IsStructured ? Limits.StructuredBufferOffsetAlignment : Limits.ConstantBufferOffsetAlignment;
+    const auto& BufferProps     = pDevice->GetAdapterInfo().Buffer;
+    const auto  IsStructured    = BuffMode == BUFFER_MODE_STRUCTURED;
+    const auto  OffsetAlignment = IsStructured ? BufferProps.StructuredBufferOffsetAlignment : BufferProps.ConstantBufferOffsetAlignment;
 
     Uint32 BaseOffset = sizeof(float4) * 4;
     while (BaseOffset < OffsetAlignment)

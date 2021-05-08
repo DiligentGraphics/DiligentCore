@@ -95,7 +95,7 @@ void TextureUploaderTest(bool IsRenderThread)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    if (pDevice->GetDeviceCaps().IsMetalDevice())
+    if (pDevice->GetDeviceInfo().IsMetalDevice())
     {
         GTEST_SKIP() << "Texture uploader is not currently implemented in Metal";
     }

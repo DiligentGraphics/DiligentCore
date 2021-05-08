@@ -261,7 +261,7 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
             RangeIsOutOfBounds = true;
         }
 
-        const auto OffsetAlignment = pBufferImpl->GetDevice()->GetAdapterInfo().Properties.Buffer.ConstantBufferOffsetAlignment;
+        const auto OffsetAlignment = pBufferImpl->GetDevice()->GetAdapterInfo().Buffer.ConstantBufferOffsetAlignment;
         VERIFY_EXPR(OffsetAlignment != 0);
         if ((BindInfo.BufferBaseOffset % OffsetAlignment) != 0)
         {
@@ -567,11 +567,11 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
             BindingOK = false;
         }
 
-        const auto& Limits = pBuffer->GetDevice()->GetAdapterInfo().Properties.Buffer;
+        const auto& BufferProps = pBuffer->GetDevice()->GetAdapterInfo().Buffer;
 
         const auto OffsetAlignment = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER) ?
-            Limits.ConstantBufferOffsetAlignment :
-            Limits.StructuredBufferOffsetAlignment;
+            BufferProps.ConstantBufferOffsetAlignment :
+            BufferProps.StructuredBufferOffsetAlignment;
         VERIFY_EXPR(OffsetAlignment != 0);
 
         if ((BufferDynamicOffset % OffsetAlignment) != 0)

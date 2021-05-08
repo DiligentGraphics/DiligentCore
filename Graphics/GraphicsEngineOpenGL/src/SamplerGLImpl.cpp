@@ -45,7 +45,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     m_GlSampler{true}
 // clang-format on
 {
-    const auto& SamPrpos = pDeviceGL->GetAdapterInfo().Properties.Sampler;
+    const auto& SamPrpos = pDeviceGL->GetAdapterInfo().Sampler;
 
     Bool   bMinAnisotropic = False, bMagAnisotropic = False, bMipAnisotropic = False;
     Bool   bMinComparison = False, bMagComparison = False, bMipComparison = False;

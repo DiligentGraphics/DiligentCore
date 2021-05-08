@@ -43,7 +43,7 @@ namespace Diligent
     } while (false)
 
 
-void ValidateBufferDesc(const BufferDesc& Desc, const DeviceMemoryInfo& memoryInfo) noexcept(false)
+void ValidateBufferDesc(const BufferDesc& Desc, const AdapterMemoryInfo& memoryInfo) noexcept(false)
 {
     static_assert(BIND_FLAGS_LAST == 0x400L, "Please update this function to handle the new bind flags");
 

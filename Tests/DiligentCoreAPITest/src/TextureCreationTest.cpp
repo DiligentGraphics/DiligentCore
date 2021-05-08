@@ -89,8 +89,8 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        const auto DevCaps = pDevice->GetDeviceCaps();
-        switch (DevCaps.DevType)
+        const auto& DeviceInfo = pDevice->GetDeviceInfo();
+        switch (DeviceInfo.Type)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
@@ -191,8 +191,8 @@ protected:
 
         auto*       pDevice        = pEnv->GetDevice();
         auto*       pDeviceContext = pEnv->GetDeviceContext();
-        const auto& deviceCaps     = pDevice->GetDeviceCaps();
-        const auto& TexProps       = pDevice->GetAdapterInfo().Properties.Texture;
+        const auto& DeviceInfo     = pDevice->GetDeviceInfo();
+        const auto& TexProps       = pDevice->GetAdapterInfo().Texture;
 
         TextureDesc TexDesc;
         TexDesc.Name  = "Test Texture";
@@ -217,7 +217,7 @@ protected:
         }
 
         TexDesc.MipLevels = SampleCount == 1 ? 0 : 1;
-        if ((TexDesc.Type == RESOURCE_DIM_TEX_1D || TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY) && deviceCaps.IsMetalDevice())
+        if ((TexDesc.Type == RESOURCE_DIM_TEX_1D || TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY) && DeviceInfo.IsMetalDevice())
         {
             // 1D textures in Metal must have 1 mip level
             TexDesc.MipLevels = 1;
@@ -253,7 +253,7 @@ protected:
 
             pCreateObjFromNativeRes->CreateTexture(pTestTex2);
 
-            if (deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D11 &&
+            if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11 &&
                 ((TexDesc.BindFlags & BIND_DEPTH_STENCIL) != 0 || TexDesc.SampleCount > 1))
             {
                 // In D3D11 if CopySubresourceRegion is used with Multisampled or D3D11_BIND_DEPTH_STENCIL Resources,
@@ -301,17 +301,17 @@ protected:
             if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY || TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY)
             {
                 ViewDesc.FirstArraySlice = 3;
-                ViewDesc.NumArraySlices  = (deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 || ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE) ? 4 : 1;
+                ViewDesc.NumArraySlices  = (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11 || DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 || ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE) ? 4 : 1;
             }
             else if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
             {
-                if (deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12)
+                if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11 || DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
                 {
                     ViewDesc.FirstDepthSlice = 3;
                     ViewDesc.NumDepthSlices  = 4;
                 }
-                else if ((deviceCaps.DevType == RENDER_DEVICE_TYPE_VULKAN && ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET && ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL) ||
-                         deviceCaps.DevType != RENDER_DEVICE_TYPE_VULKAN)
+                else if ((DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN && ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET && ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL) ||
+                         DeviceInfo.Type != RENDER_DEVICE_TYPE_VULKAN)
                 {
                     // OpenGL cannot create views for separate depth slices
                     ViewDesc.FirstDepthSlice = 0;
@@ -374,8 +374,8 @@ protected:
         auto* pEnv = TestingEnvironment::GetInstance();
 
         auto*       pDevice    = pEnv->GetDevice();
-        const auto& deviceCaps = pDevice->GetDeviceCaps();
-        const auto& TexProps   = pDevice->GetAdapterInfo().Properties.Texture;
+        const auto& DeviceInfo = pDevice->GetDeviceInfo();
+        const auto& TexProps   = pDevice->GetAdapterInfo().Texture;
 
         TextureDesc TexDesc;
         TexDesc.Name        = "Test Cube MapTextureCreation";
@@ -510,7 +510,7 @@ protected:
                 }
 
                 ViewDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
-                if (deviceCaps.DevType == RENDER_DEVICE_TYPE_GL || deviceCaps.DevType == RENDER_DEVICE_TYPE_GLES)
+                if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GL || DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES)
                 {
                     ViewDesc.NumArraySlices  = 1;
                     ViewDesc.FirstArraySlice = 2;
@@ -575,7 +575,7 @@ TEST_P(TextureCreationTest, CreateTexture)
     EXPECT_TRUE(TestInfo.PixelSize == Uint32{FmtInfo.ComponentSize} * Uint32{FmtInfo.NumComponents} ||
                 FmtInfo.ComponentType == COMPONENT_TYPE_COMPRESSED);
 
-    const auto& TexProps = pDevice->GetAdapterInfo().Properties.Texture;
+    const auto& TexProps = pDevice->GetAdapterInfo().Texture;
     // Test texture 1D / texture 1D array
     if (TexProps.MaxTexture1DDimension != 0)
     {

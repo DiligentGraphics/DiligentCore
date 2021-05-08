@@ -106,9 +106,8 @@ public:
                                                           Uint32&             NumDisplayModes,
                                                           DisplayModeAttribs* DisplayModes) override final;
 
-    virtual void InitializeGraphicsAdapterInfo(void*                pd3Device,
-                                               IDXGIAdapter1*       pDXIAdapter,
-                                               GraphicsAdapterInfo& AdapterInfo) const override final;
+    virtual GraphicsAdapterInfo GetGraphicsAdapterInfo(void*          pd3dDevice,
+                                                       IDXGIAdapter1* pDXIAdapter) const override final;
 
 
 private:
@@ -388,9 +387,8 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 #endif
 
         {
-            auto                pDXGIAdapter1 = DXGIAdapterFromD3D12Device(d3d12Device);
-            GraphicsAdapterInfo AdapterInfo;
-            InitializeGraphicsAdapterInfo(d3d12Device, pDXGIAdapter1, AdapterInfo);
+            auto       pDXGIAdapter1 = DXGIAdapterFromD3D12Device(d3d12Device);
+            const auto AdapterInfo   = GetGraphicsAdapterInfo(d3d12Device, pDXGIAdapter1);
             VerifyEngineCreateInfo(EngineCI, AdapterInfo);
         }
 
@@ -538,11 +536,8 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
 
         ValidateD3D12CreateInfo(EngineCI);
 
-        GraphicsAdapterInfo AdapterInfo;
-        InitializeGraphicsAdapterInfo(pd3d12NativeDevice, pDXGIAdapter1, AdapterInfo);
-        DeviceFeatures ValidatedFeatures = EngineCI.Features;
-        EnableDeviceFeatures(AdapterInfo.Capabilities.Features, ValidatedFeatures);
-        AdapterInfo.Capabilities.Features = ValidatedFeatures;
+        const auto AdapterInfo = GetGraphicsAdapterInfo(pd3d12NativeDevice, pDXGIAdapter1);
+        VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         RenderDeviceD3D12Impl* pRenderDeviceD3D12(NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, this, EngineCI, AdapterInfo, d3d12Device, CommandQueueCount, ppCommandQueues));
         pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
@@ -652,35 +647,13 @@ void EngineFactoryD3D12Impl::EnumerateDisplayModes(Version             MinFeatur
 }
 
 
-static D3D_FEATURE_LEVEL GetD3DFeatureLevelFromDevice(ID3D12Device* pd3d12Device)
+GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*          pd3dDevice,
+                                                                   IDXGIAdapter1* pDXIAdapter) const
 {
-    D3D_FEATURE_LEVEL FeatureLevels[] =
-        {
-            D3D_FEATURE_LEVEL_12_1,
-            D3D_FEATURE_LEVEL_12_0,
-            D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL_11_0,
-            D3D_FEATURE_LEVEL_10_1,
-            D3D_FEATURE_LEVEL_10_0 //
-        };
-    D3D12_FEATURE_DATA_FEATURE_LEVELS FeatureLevelsData = {};
+    auto AdapterInfo = TBase::GetGraphicsAdapterInfo(pd3dDevice, pDXIAdapter);
 
-    FeatureLevelsData.pFeatureLevelsRequested = FeatureLevels;
-    FeatureLevelsData.NumFeatureLevels        = _countof(FeatureLevels);
-    pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &FeatureLevelsData, sizeof(FeatureLevelsData));
-    return FeatureLevelsData.MaxSupportedFeatureLevel;
-}
-
-void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                pd3Device,
-                                                           IDXGIAdapter1*       pDXIAdapter,
-                                                           GraphicsAdapterInfo& AdapterInfo) const
-{
-    TBase::InitializeGraphicsAdapterInfo(pd3Device, pDXIAdapter, AdapterInfo);
-
-    AdapterInfo.Capabilities.DevType = RENDER_DEVICE_TYPE_D3D12;
-
-    ID3D12Device* d3d12Device = reinterpret_cast<ID3D12Device*>(pd3Device);
-    if (d3d12Device == nullptr)
+    CComPtr<ID3D12Device> d3d12Device{reinterpret_cast<ID3D12Device*>(pd3dDevice)};
+    if (!d3d12Device)
     {
         const Version FeatureLevelList[] = {{12, 1}, {12, 0}, {11, 1}, {11, 0}};
         for (auto FeatureLevel : FeatureLevelList)
@@ -696,21 +669,23 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
         }
     }
 
-    auto FeatureLevel = GetD3DFeatureLevelFromDevice(d3d12Device);
-    switch (FeatureLevel)
+    // Set queue info
     {
-        case D3D_FEATURE_LEVEL_12_1: AdapterInfo.Capabilities.APIVersion = {12, 1}; break;
-        case D3D_FEATURE_LEVEL_12_0: AdapterInfo.Capabilities.APIVersion = {12, 0}; break;
-        case D3D_FEATURE_LEVEL_11_1: AdapterInfo.Capabilities.APIVersion = {11, 1}; break;
-        case D3D_FEATURE_LEVEL_11_0: AdapterInfo.Capabilities.APIVersion = {11, 0}; break;
-        case D3D_FEATURE_LEVEL_10_1: AdapterInfo.Capabilities.APIVersion = {10, 1}; break;
-        case D3D_FEATURE_LEVEL_10_0: AdapterInfo.Capabilities.APIVersion = {10, 0}; break;
-        default: UNEXPECTED("Unexpected D3D feature level");
+        AdapterInfo.NumQueues = 3;
+        for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
+        {
+            auto& Queue                     = AdapterInfo.Queues[q];
+            Queue.QueueType                 = D3D12CommandListTypeToCmdQueueType(QueueIdToD3D12CommandListType(HardwareQueueId{q}));
+            Queue.MaxDeviceContexts         = 0xFF;
+            Queue.TextureCopyGranularity[0] = 1;
+            Queue.TextureCopyGranularity[1] = 1;
+            Queue.TextureCopyGranularity[2] = 1;
+        }
     }
 
     // Enable features and set properties
     {
-        auto& Features = AdapterInfo.Capabilities.Features;
+        auto& Features = AdapterInfo.Features;
 
         // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
         // so bindless resources are always available.
@@ -736,7 +711,17 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
         }
 #endif
 
-        Features.MeshShaders                = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+        if (MeshShadersSupported)
+        {
+            Features.MeshShaders = DEVICE_FEATURE_STATE_ENABLED;
+
+            auto& MeshProps{AdapterInfo.MeshShader};
+            MeshProps.MaxTaskCount = 64000; // from specs: https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(MeshProps) == 4, "Did you add a new member to MeshShaderProperties? Please initialize it here.");
+#endif
+        }
+
         Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_ENABLED;
 
         {
@@ -756,7 +741,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
                 {
                     Features.WaveOp = DEVICE_FEATURE_STATE_ENABLED;
 
-                    auto& WaveOpProps{AdapterInfo.Properties.WaveOp};
+                    auto& WaveOpProps{AdapterInfo.WaveOp};
                     WaveOpProps.MinSize         = d3d12Features1.WaveLaneCountMin;
                     WaveOpProps.MaxSize         = d3d12Features1.WaveLaneCountMax;
                     WaveOpProps.SupportedStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
@@ -769,7 +754,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
                 }
             }
 
-            D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Features4 = {};
+            D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Features4{};
             if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &d3d12Features4, sizeof(d3d12Features4))))
             {
                 if (d3d12Features4.Native16BitShaderOpsSupported)
@@ -780,17 +765,24 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
                 }
             }
 
-            D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features5 = {};
+            D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features5{};
             if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &d3d12Features5, sizeof(d3d12Features5))))
             {
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
                 {
                     Features.RayTracing = DEVICE_FEATURE_STATE_ENABLED;
 
-                    auto& RayTracingProps{AdapterInfo.Properties.RayTracing};
-                    RayTracingProps.MaxRecursionDepth = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+                    auto& RayTracingProps{AdapterInfo.RayTracing};
+                    RayTracingProps.MaxRecursionDepth        = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
+                    RayTracingProps.ShaderGroupHandleSize    = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+                    RayTracingProps.MaxShaderRecordStride    = D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE;
+                    RayTracingProps.ShaderGroupBaseAlignment = D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT;
+                    RayTracingProps.MaxRayGenThreads         = D3D12_RAYTRACING_MAX_RAY_GENERATION_SHADER_THREADS;
+                    RayTracingProps.MaxInstancesPerTLAS      = D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE;
+                    RayTracingProps.MaxPrimitivesPerBLAS     = D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
+                    RayTracingProps.MaxGeometriesPerBLAS     = D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
 #if defined(_MSC_VER) && defined(_WIN64)
-                    static_assert(sizeof(RayTracingProps) == 4, "Did you add a new member to RayTracingProperites? Please initialize it here.");
+                    static_assert(sizeof(RayTracingProps) == 32, "Did you add a new member to RayTracingProperites? Please initialize it here.");
 #endif
                 }
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
@@ -802,7 +794,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
 
         // Buffer properties
         {
-            auto& BufferProps{AdapterInfo.Properties.Buffer};
+            auto& BufferProps{AdapterInfo.Buffer};
             BufferProps.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
             BufferProps.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
 #if defined(_MSC_VER) && defined(_WIN64)
@@ -813,7 +805,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
 
     // Texture properties
     {
-        auto& TexProps{AdapterInfo.Properties.Texture};
+        auto& TexProps{AdapterInfo.Texture};
         TexProps.MaxTexture1DDimension     = D3D12_REQ_TEXTURE1D_U_DIMENSION;
         TexProps.MaxTexture1DArraySlices   = D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
         TexProps.MaxTexture2DDimension     = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
@@ -832,7 +824,7 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
     // Sampler properties
     {
 
-        auto& SamProps{AdapterInfo.Properties.Sampler};
+        auto& SamProps{AdapterInfo.Sampler};
         SamProps.BorderSamplingModeSupported   = True;
         SamProps.AnisotropicFilteringSupported = True;
         SamProps.LODBiasSupported              = True;
@@ -841,26 +833,11 @@ void EngineFactoryD3D12Impl::InitializeGraphicsAdapterInfo(void*                
 #endif
     }
 
-    // Set queue info
-    {
-        AdapterInfo.NumQueues = 3;
-        for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
-        {
-            auto& Queue                     = AdapterInfo.Queues[q];
-            Queue.QueueType                 = D3D12CommandListTypeToCmdQueueType(QueueIdToD3D12CommandListType(HardwareQueueId{q}));
-            Queue.MaxDeviceContexts         = 0xFF;
-            Queue.TextureCopyGranularity[0] = 1;
-            Queue.TextureCopyGranularity[1] = 1;
-            Queue.TextureCopyGranularity[2] = 1;
-        }
-    }
-
-    if (pd3Device == nullptr)
-        d3d12Device->Release();
-
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
+
+    return AdapterInfo;
 }
 
 #ifdef DOXYGEN

@@ -60,7 +60,7 @@ static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const S
         CompilerSM = ShaderVersion{5, 1};
     }
 
-    const auto DeviceSM       = pDevice->GetProperties().MaxShaderVersion;
+    const auto DeviceSM       = pDevice->GetMaxShaderVersion();
     const auto MaxSupportedSM = ShaderVersion::Min(DeviceSM, CompilerSM);
     if (HLSLVersion == ShaderVersion{0, 0})
     {

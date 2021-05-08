@@ -119,7 +119,8 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                     {
                         // Build the full source code string that will contain GLSL version declaration,
                         // platform definitions, user-provided shader macros, etc.
-                        GLSLSourceString = BuildGLSLSourceString(ShaderCI, pRenderDeviceVk->GetDeviceCaps(), TargetGLSLCompiler::glslang, VulkanDefine);
+                        GLSLSourceString = BuildGLSLSourceString(ShaderCI, pRenderDeviceVk->GetDeviceInfo(), pRenderDeviceVk->GetAdapterInfo(),
+                                                                 TargetGLSLCompiler::glslang, VulkanDefine);
                         ShaderSource     = GLSLSourceString.c_str();
                         SourceLength     = GLSLSourceString.length();
                     }

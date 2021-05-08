@@ -63,7 +63,7 @@ protected:
         Attrs.UseCombinedTextureSamplers = true;
         pDevice->CreateShader(Attrs, &sm_Resources.pTrivialVS);
 
-        Uint32 MaxTestRenderTargets = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_GLES ? 4 : 8;
+        Uint32 MaxTestRenderTargets = pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_GLES ? 4 : 8;
         for (Uint32 NumRTs = 1; NumRTs <= MaxTestRenderTargets; ++NumRTs)
         {
             std::stringstream source_ss;
@@ -275,10 +275,10 @@ TEST_P(BlendFactorTest, CreatePSO)
     const auto BlendFactor  = static_cast<BLEND_FACTOR>(std::get<0>(Param));
     const bool TestingAlpha = std::get<1>(Param);
 
-    const auto& DevCaps              = pDevice->GetDeviceCaps();
-    Uint32      MaxTestRenderTargets = (DevCaps.DevType == RENDER_DEVICE_TYPE_GLES) ? 4 : 8;
+    const auto& DeviceInfo           = pDevice->GetDeviceInfo();
+    Uint32      MaxTestRenderTargets = (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES) ? 4 : 8;
 
-    const bool TestSRC1 = DevCaps.DevType != RENDER_DEVICE_TYPE_GLES; // || DevCaps.Vendor == GPU_VENDOR::NVIDIA;
+    const bool TestSRC1 = DeviceInfo.Type != RENDER_DEVICE_TYPE_GLES; // || DevCaps.Vendor == GPU_VENDOR::NVIDIA;
     if (BlendFactor == BLEND_FACTOR_SRC1_COLOR ||
         BlendFactor == BLEND_FACTOR_INV_SRC1_COLOR ||
         BlendFactor == BLEND_FACTOR_SRC1_ALPHA ||
@@ -434,8 +434,8 @@ TEST_P(BlendOperationTest, CreatePSO)
     const auto BlendOp      = static_cast<BLEND_OPERATION>(std::get<0>(Param));
     const auto TestingAlpha = std::get<1>(Param);
 
-    const auto&  DevCaps              = pDevice->GetDeviceCaps();
-    const Uint32 MaxTestRenderTargets = (DevCaps.DevType == RENDER_DEVICE_TYPE_GLES) ? 4 : 8;
+    const auto&  DeviceInfo           = pDevice->GetDeviceInfo();
+    const Uint32 MaxTestRenderTargets = (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES) ? 4 : 8;
 
     for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {

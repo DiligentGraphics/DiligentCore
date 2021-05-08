@@ -41,7 +41,7 @@ TEST(WaveOpTest, CompileShader_HLSL)
     auto* const pEnv    = TestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
 
-    if (!pDevice->GetDeviceCaps().Features.WaveOp)
+    if (!pDevice->GetDeviceInfo().Features.WaveOp)
     {
         GTEST_SKIP() << "Wave operations are not supported by this device";
     }
@@ -52,7 +52,7 @@ TEST(WaveOpTest, CompileShader_HLSL)
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    const auto& WaveOpProps = pDevice->GetAdapterInfo().Properties.WaveOp;
+    const auto& WaveOpProps = pDevice->GetAdapterInfo().WaveOp;
 
     auto WaveOpFeatures = WaveOpProps.Features;
 
@@ -156,22 +156,22 @@ void main(uint DTid : SV_DispatchThreadID)
 
 TEST(WaveOpTest, CompileShader_GLSL)
 {
-    auto* const pEnv    = TestingEnvironment::GetInstance();
-    auto* const pDevice = pEnv->GetDevice();
-    const auto& Caps    = pDevice->GetDeviceCaps();
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!Caps.IsVulkanDevice() && !Caps.IsGLDevice())
+    if (!DeviceInfo.IsVulkanDevice() && !DeviceInfo.IsGLDevice())
     {
         GTEST_SKIP();
     }
-    if (!Caps.Features.WaveOp)
+    if (!DeviceInfo.Features.WaveOp)
     {
         GTEST_SKIP() << "Wave operations are not supported by this device";
     }
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    const auto& WaveOpProps = pDevice->GetAdapterInfo().Properties.WaveOp;
+    const auto& WaveOpProps = pDevice->GetAdapterInfo().WaveOp;
 
     ASSERT_NE(WaveOpProps.Features, WAVE_FEATURE_UNKNOWN);
     ASSERT_TRUE((WaveOpProps.Features & WAVE_FEATURE_BASIC) != 0);

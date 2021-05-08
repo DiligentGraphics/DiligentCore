@@ -365,8 +365,8 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                     " specified by the barrier is out of range. Array size of texture '",
                                     TexDesc.Name, "' is ", TexDesc.ArraySize);
 
-        auto DevType = pDevice->GetDeviceCaps().DevType;
-        if (DevType != RENDER_DEVICE_TYPE_D3D12 && DevType != RENDER_DEVICE_TYPE_VULKAN)
+        auto DeviceType = pDevice->GetDeviceInfo().Type;
+        if (DeviceType != RENDER_DEVICE_TYPE_D3D12 && DeviceType != RENDER_DEVICE_TYPE_VULKAN)
         {
             CHECK_STATE_TRANSITION_DESC(Barrier.FirstMipLevel == 0 && (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || Barrier.MipLevelsCount == TexDesc.MipLevels),
                                         "failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device.");
@@ -693,7 +693,7 @@ bool VerifyCopyBLASAttribs(const IRenderDevice* pDevice, const CopyBLASAttribs& 
 
     if (Attribs.Mode == COPY_AS_MODE_CLONE)
     {
-        if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN)
+        if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_VULKAN)
         {
             auto& SrcDesc = Attribs.pSrc->GetDesc();
             auto& DstDesc = Attribs.pDst->GetDesc();
@@ -818,7 +818,7 @@ bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const Wri
     const BufferDesc& DstDesc = Attribs.pDestBuffer->GetDesc();
     CHECK_WRITE_BLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= DstDesc.uiSizeInBytes, "pDestBuffer is too small.");
 
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
     {
         CHECK_WRITE_BLAS_SIZE_ATTRIBS((DstDesc.BindFlags & BIND_UNORDERED_ACCESS) == BIND_UNORDERED_ACCESS,
                                       "pDestBuffer must have been created with BIND_UNORDERED_ACCESS flag in Direct3D12.");
@@ -842,7 +842,7 @@ bool VerifyWriteTLASCompactedSizeAttribs(const IRenderDevice* pDevice, const Wri
     const BufferDesc& DstDesc = Attribs.pDestBuffer->GetDesc();
     CHECK_WRITE_TLAS_SIZE_ATTRIBS(Attribs.DestBufferOffset + sizeof(Uint64) <= DstDesc.uiSizeInBytes, "pDestBuffer is too small.");
 
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
     {
         CHECK_WRITE_TLAS_SIZE_ATTRIBS((DstDesc.BindFlags & BIND_UNORDERED_ACCESS) == BIND_UNORDERED_ACCESS,
                                       "pDestBuffer must have been created with BIND_UNORDERED_ACCESS flag.");

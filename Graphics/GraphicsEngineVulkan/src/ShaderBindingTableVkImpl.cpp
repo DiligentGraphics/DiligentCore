@@ -61,7 +61,7 @@ void ShaderBindingTableVkImpl::GetData(BufferVkImpl*& pSBTBufferVk,
     m_VkBindingTable.HitShader      = {pSBTBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
     m_VkBindingTable.CallableShader = {pSBTBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
 
-    const auto ShaderGroupBaseAlignment = m_pDevice->GetProperties().ShaderGroupBaseAlignment;
+    const auto ShaderGroupBaseAlignment = m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupBaseAlignment;
     VERIFY_EXPR(m_VkBindingTable.RaygenShader.deviceAddress   % ShaderGroupBaseAlignment == 0);
     VERIFY_EXPR(m_VkBindingTable.MissShader.deviceAddress     % ShaderGroupBaseAlignment == 0);
     VERIFY_EXPR(m_VkBindingTable.HitShader.deviceAddress      % ShaderGroupBaseAlignment == 0);

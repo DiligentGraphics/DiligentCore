@@ -121,7 +121,7 @@ protected:
         ShaderCI.UseCombinedTextureSamplers = false;
         ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
-        if (pDevice->GetDeviceCaps().IsGLDevice())
+        if (pDevice->GetDeviceInfo().IsGLDevice())
             ShaderCI.UseCombinedTextureSamplers = true;
 
         ModifyCIHandler(ShaderCI);
@@ -282,7 +282,7 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_Static", Set, RefTextures.GetViewObjects(Tex2D_StaticIdx)[0]);
     SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2DArr_Static", SetArray, RefTextures.GetViewObjects(Tex2DArr_StaticIdx), 0, StaticTexArraySize);
 
-    if (!pDevice->GetDeviceCaps().IsGLDevice())
+    if (!pDevice->GetDeviceInfo().IsGLDevice())
     {
         RefCntAutoPtr<ISampler> pSampler;
         pDevice->CreateSampler(SamplerDesc{}, &pSampler);
@@ -319,7 +319,7 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
 
-    if (!pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    if (!pDevice->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP();
     }
@@ -391,7 +391,7 @@ TEST_F(PipelineResourceSignatureTest, MultiSignatures)
     SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
     SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_3", Set, RefTextures.GetView(2));
 
-    if (!pDevice->GetDeviceCaps().IsGLDevice())
+    if (!pDevice->GetDeviceInfo().IsGLDevice())
     {
         RefCntAutoPtr<ISampler> pSampler;
         pDevice->CreateSampler(SamplerDesc{}, &pSampler);
@@ -436,7 +436,7 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
 
-    if (!pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    if (!pDevice->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP();
     }
@@ -554,7 +554,7 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
     auto* const pDevice  = pEnv->GetDevice();
     auto*       pContext = pEnv->GetDeviceContext();
 
-    if (!pDevice->GetDeviceCaps().Features.SeparablePrograms)
+    if (!pDevice->GetDeviceInfo().Features.SeparablePrograms)
     {
         GTEST_SKIP();
     }
@@ -1071,7 +1071,7 @@ TEST_F(PipelineResourceSignatureTest, GraphicsAndMeshShader)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    if (!pDevice->GetDeviceCaps().Features.MeshShaders)
+    if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
@@ -1271,7 +1271,7 @@ TEST_F(PipelineResourceSignatureTest, CombinedImageSamplers)
 {
     auto* const pEnv    = TestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().IsVulkanDevice() && !pDevice->GetDeviceCaps().IsGLDevice())
+    if (!pDevice->GetDeviceInfo().IsVulkanDevice() && !pDevice->GetDeviceInfo().IsGLDevice())
     {
         GTEST_SKIP();
     }
@@ -1405,7 +1405,7 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pContext   = pEnv->GetDeviceContext();
     auto* const pSwapChain = pEnv->GetSwapChain();
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& deviceCaps = pDevice->GetDeviceInfo();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -1551,7 +1551,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& deviceCaps = pDevice->GetDeviceInfo();
     if (!deviceCaps.Features.ShaderResourceRuntimeArray)
     {
         GTEST_SKIP() << "Shader Resource Runtime Arrays are not supported by this device";
@@ -1574,7 +1574,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     bool UAVTextureNonUniformIndexing     = true;
 
 #if VULKAN_SUPPORTED
-    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    if (pDevice->GetDeviceInfo().IsVulkanDevice())
     {
         auto* pEnvVk                     = static_cast<TestingEnvironmentVk*>(pEnv);
         ConstantBufferNonUniformIndexing = (pEnvVk->DescriptorIndexing.shaderUniformBufferArrayNonUniformIndexing == VK_TRUE);

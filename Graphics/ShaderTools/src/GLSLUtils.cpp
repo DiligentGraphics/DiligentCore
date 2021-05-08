@@ -40,10 +40,11 @@
 namespace Diligent
 {
 
-String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
-                             const DeviceCaps&       deviceCaps,
-                             TargetGLSLCompiler      TargetCompiler,
-                             const char*             ExtraDefinitions)
+String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
+                             const RenderDeviceInfo&    DeviceInfo,
+                             const GraphicsAdapterInfo& AdaterInfo,
+                             TargetGLSLCompiler         TargetCompiler,
+                             const char*                ExtraDefinitions)
 {
     // clang-format off
     VERIFY(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
@@ -83,20 +84,20 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
     bool IsES30        = false;
     bool IsES31OrAbove = false;
     bool IsES32OrAbove = false;
-    if (deviceCaps.DevType == RENDER_DEVICE_TYPE_VULKAN)
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN)
     {
         IsES30        = false;
         IsES31OrAbove = true;
         IsES32OrAbove = false;
         GLSLSource.append("#version 310 es\n");
     }
-    else if (deviceCaps.DevType == RENDER_DEVICE_TYPE_GLES)
+    else if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES)
     {
-        IsES30        = deviceCaps.APIVersion == Version{3, 0};
-        IsES31OrAbove = deviceCaps.APIVersion >= Version{3, 1};
-        IsES32OrAbove = deviceCaps.APIVersion >= Version{3, 2};
+        IsES30        = DeviceInfo.APIVersion == Version{3, 0};
+        IsES31OrAbove = DeviceInfo.APIVersion >= Version{3, 1};
+        IsES32OrAbove = DeviceInfo.APIVersion >= Version{3, 2};
         std::stringstream versionss;
-        versionss << "#version " << deviceCaps.APIVersion.Major << deviceCaps.APIVersion.Minor << "0 es\n";
+        versionss << "#version " << Uint32{DeviceInfo.APIVersion.Major} << Uint32{DeviceInfo.APIVersion.Minor} << "0 es\n";
         GLSLSource.append(versionss.str());
     }
     else
@@ -104,10 +105,10 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
         UNEXPECTED("Unexpected device type");
     }
 
-    if (deviceCaps.Features.SeparablePrograms && !IsES31OrAbove)
+    if (DeviceInfo.Features.SeparablePrograms && !IsES31OrAbove)
         GLSLSource.append("#extension GL_EXT_separate_shader_objects : enable\n");
 
-    if (deviceCaps.TexCaps.CubemapArraysSupported && !IsES32OrAbove)
+    if (AdaterInfo.Texture.CubemapArraysSupported && !IsES32OrAbove)
         GLSLSource.append("#extension GL_EXT_texture_cube_map_array : enable\n");
 
     if (ShaderType == SHADER_TYPE_GEOMETRY && !IsES32OrAbove)
@@ -163,7 +164,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
         ); // clang-format on
     }
 
-    if (deviceCaps.TexCaps.CubemapArraysSupported)
+    if (AdaterInfo.Texture.CubemapArraysSupported)
     {
         GLSLSource.append(
             "precision highp samplerCubeArray;\n"
@@ -173,7 +174,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
         ); // clang-format on
     }
 
-    if (deviceCaps.TexCaps.Texture2DMSSupported)
+    if (AdaterInfo.Texture.Texture2DMSSupported)
     {
         GLSLSource.append(
             "precision highp sampler2DMS;\n"
@@ -182,7 +183,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
         ); // clang-format on
     }
 
-    if (deviceCaps.Features.ComputeShaders)
+    if (DeviceInfo.Features.ComputeShaders)
     {
         GLSLSource.append(
             "precision highp image2D;\n"
@@ -210,7 +211,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
         }
     }
 
-    if (IsES30 && deviceCaps.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
+    if (IsES30 && DeviceInfo.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
     {
         // From https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gles.txt:
         //
@@ -297,7 +298,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
         // all shader stages.
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
-        Attribs.UseInOutLocationQualifiers = deviceCaps.Features.SeparablePrograms;
+        Attribs.UseInOutLocationQualifiers = DeviceInfo.Features.SeparablePrograms;
         auto ConvertedSource               = Converter.Convert(Attribs);
 
         GLSLSource.append(ConvertedSource);

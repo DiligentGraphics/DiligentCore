@@ -89,7 +89,7 @@ public:
     // Validate IDeviceContext::DeviceWaitForFence()
     void DvpDeviceWait(Uint64 Value)
     {
-        if (!this->GetDevice()->GetDeviceCaps().Features.NativeFence)
+        if (!this->GetDevice()->GetFeatures().NativeFence)
         {
             auto EnqueuedValue = m_EnqueuedFenceValue.load();
             DEV_CHECK_ERR(Value < EnqueuedValue,

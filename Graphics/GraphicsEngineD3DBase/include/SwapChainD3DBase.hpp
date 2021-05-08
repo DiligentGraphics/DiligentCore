@@ -197,7 +197,7 @@ protected:
         // DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT enables querying a waitable object that can be
         // used to synchronize presentation with CPU timeline.
         // The flag is not supported in D3D11 fullscreen mode.
-        if (!(m_FSDesc.Fullscreen && m_pRenderDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D11))
+        if (!(m_FSDesc.Fullscreen && m_pRenderDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11))
         {
             // We do not need pDXGIFactory3 itself, however DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT flag
             // is only supported starting with Windows 8.1, and so is IDXGIFactory3 interface. We query this

@@ -61,7 +61,7 @@ static APIInfo InitAPIInfo()
     INIT_STRUCTURE_SIZE(DepthStencilStateDesc);
     INIT_STRUCTURE_SIZE(SamplerProperties);
     INIT_STRUCTURE_SIZE(TextureProperties);
-    INIT_STRUCTURE_SIZE(DeviceCaps);
+    INIT_STRUCTURE_SIZE(RenderDeviceInfo);
     INIT_STRUCTURE_SIZE(DrawAttribs);
     INIT_STRUCTURE_SIZE(DispatchComputeAttribs);
     INIT_STRUCTURE_SIZE(Viewport);

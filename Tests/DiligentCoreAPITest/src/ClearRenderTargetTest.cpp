@@ -75,7 +75,7 @@ void ClearRenderTargetReference(IRenderDevice* pDevice,
                                 ISwapChain*    pSwapChain,
                                 const float    ClearColor[])
 {
-    auto deviceType = pDevice->GetDeviceCaps().DevType;
+    auto deviceType = pDevice->GetDeviceInfo().Type;
     switch (deviceType)
     {
 #if D3D11_SUPPORTED
@@ -154,7 +154,7 @@ TEST(ClearRenderTargetTest, AsAttachment)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+    if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
     {
         GTEST_SKIP() << "D3D12 does not allow render target clears within render pass";
     }

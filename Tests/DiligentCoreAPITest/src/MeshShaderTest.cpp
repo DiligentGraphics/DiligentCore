@@ -64,7 +64,7 @@ TEST(MeshShaderTest, DrawTriangle)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.MeshShaders)
+    if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
@@ -80,7 +80,7 @@ TEST(MeshShaderTest, DrawTriangle)
         pConext->Flush();
         pConext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -175,7 +175,7 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.MeshShaders)
+    if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
@@ -191,7 +191,7 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
         pConext->Flush();
         pConext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -238,7 +238,7 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
     GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
     GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
-    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceInfo().IsGLDevice();
 
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
@@ -283,7 +283,7 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
     };
     IndirectAndCountBuffData Data;
 
-    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    if (pDevice->GetDeviceInfo().IsVulkanDevice())
     {
         Data.IndirectData[0] = 1;   // TaskCount
         Data.IndirectData[1] = 0;   // FirstTask
@@ -324,7 +324,7 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.MeshShaders)
+    if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
@@ -340,7 +340,7 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
         pConext->Flush();
         pConext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED
@@ -387,7 +387,7 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
     GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
     GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
-    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceInfo().IsGLDevice();
 
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
@@ -432,7 +432,7 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
     };
     IndirectAndCountBuffData Data;
 
-    if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    if (pDevice->GetDeviceInfo().IsVulkanDevice())
     {
         Data.IndirectData[0] = 1;   // TaskCount
         Data.IndirectData[1] = 0;   // FirstTask
@@ -477,7 +477,7 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.MeshShaders)
+    if (!pDevice->GetDeviceInfo().Features.MeshShaders)
     {
         GTEST_SKIP() << "Mesh shader is not supported by this device";
     }
@@ -493,7 +493,7 @@ TEST(MeshShaderTest, DrawTrisWithAmplificationShader)
         pConext->Flush();
         pConext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        auto deviceType = pDevice->GetDeviceInfo().Type;
         switch (deviceType)
         {
 #if D3D12_SUPPORTED

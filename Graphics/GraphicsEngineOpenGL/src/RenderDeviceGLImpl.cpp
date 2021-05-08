@@ -149,7 +149,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         GraphicsAdapterInfo{}
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
-    m_GLContext{EngineCI, m_AdapterInfo.Capabilities.DevType, m_AdapterInfo.Capabilities.APIVersion, pSCDesc}
+    m_GLContext{EngineCI, m_DeviceInfo.Type, m_DeviceInfo.APIVersion, pSCDesc}
 // clang-format on
 {
     DEV_CHECK_ERR(EngineCI.NumDeferredContexts == 0, "EngineCI.NumDeferredContexts > 0 should've been caught by CreateDeviceAndSwapChainGL() or AttachToActiveGLContext()");
@@ -197,12 +197,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     }
 #endif
 
-    UpdateAdapterInfo(m_AdapterInfo, EngineCI.ForceNonSeparablePrograms);
-    auto EnabledFeatures = EngineCI.Features;
-
-    EnableDeviceFeatures(m_AdapterInfo.Capabilities.Features, EnabledFeatures);
-    m_AdapterInfo.Capabilities.Features = EnabledFeatures;
-
+    InitAdapterInfo(EngineCI.ForceNonSeparablePrograms);
+    m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
     FlagSupportedTexFormats();
 
     // get device limits
@@ -213,7 +209,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &m_DeviceLimits.MaxTextureUnits);
         CHECK_GL_ERROR("glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS) failed");
 
-        if (m_AdapterInfo.Capabilities.Features.ComputeShaders)
+        if (m_AdapterInfo.Features.ComputeShaders)
         {
 #if GL_ARB_shader_storage_buffer_object
             glGetIntegerv(GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS, &m_DeviceLimits.MaxStorageBlock);
@@ -509,9 +505,9 @@ bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString) const
     return m_ExtensionStrings.find(ExtensionString) != m_ExtensionStrings.end();
 }
 
-void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, bool ForceNonSeparablePrograms) const
+void RenderDeviceGLImpl::InitAdapterInfo(bool ForceNonSeparablePrograms)
 {
-    const auto GLVersion = AdapterInfo.Capabilities.APIVersion;
+    const auto GLVersion = m_DeviceInfo.APIVersion;
 
     // Set graphics adapter properties
     {
@@ -519,34 +515,34 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
         std::string                Vendor      = StrToLower(std::string(glstrVendor.begin(), glstrVendor.end()));
         LOG_INFO_MESSAGE("GPU Vendor: ", Vendor);
 
-        for (size_t i = 0; i < _countof(AdapterInfo.Description) - 1 && i < glstrVendor.length(); ++i)
-            AdapterInfo.Description[i] = glstrVendor[i];
+        for (size_t i = 0; i < _countof(m_AdapterInfo.Description) - 1 && i < glstrVendor.length(); ++i)
+            m_AdapterInfo.Description[i] = glstrVendor[i];
 
-        AdapterInfo.Type       = ADAPTER_TYPE_UNKNOWN;
-        AdapterInfo.VendorId   = 0;
-        AdapterInfo.DeviceId   = 0;
-        AdapterInfo.NumOutputs = 0;
+        m_AdapterInfo.Type       = ADAPTER_TYPE_UNKNOWN;
+        m_AdapterInfo.VendorId   = 0;
+        m_AdapterInfo.DeviceId   = 0;
+        m_AdapterInfo.NumOutputs = 0;
 
         if (Vendor.find("intel") != std::string::npos)
-            AdapterInfo.Vendor = ADAPTER_VENDOR_INTEL;
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_INTEL;
         else if (Vendor.find("nvidia") != std::string::npos)
-            AdapterInfo.Vendor = ADAPTER_VENDOR_NVIDIA;
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_NVIDIA;
         else if (Vendor.find("ati") != std::string::npos ||
                  Vendor.find("amd") != std::string::npos)
-            AdapterInfo.Vendor = ADAPTER_VENDOR_AMD;
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_AMD;
         else if (Vendor.find("qualcomm"))
-            AdapterInfo.Vendor = ADAPTER_VENDOR_QUALCOMM;
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_QUALCOMM;
         else if (Vendor.find("arm"))
-            AdapterInfo.Vendor = ADAPTER_VENDOR_ARM;
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_ARM;
         else
-            AdapterInfo.Vendor = ADAPTER_VENDOR_UNKNOWN;
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_UNKNOWN;
     }
 
     // Set memory properties
     {
-        auto& Mem = AdapterInfo.Memory;
+        auto& Mem = m_AdapterInfo.Memory;
 
-        switch (AdapterInfo.Vendor)
+        switch (m_AdapterInfo.Vendor)
         {
             case ADAPTER_VENDOR_NVIDIA:
             {
@@ -558,7 +554,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
                 glGetIntegerv(GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX, &AvailableMemoryKb);
                 if (glGetError() == GL_NO_ERROR)
                 {
-                    Mem.DeviceLocalMemory = static_cast<Uint64>(AvailableMemoryKb) * Uint64{1024};
+                    Mem.LocalMemory = static_cast<Uint64>(AvailableMemoryKb) * Uint64{1024};
                 }
                 else
                 {
@@ -582,7 +578,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
                 glGetIntegerv(GL_TEXTURE_FREE_MEMORY_ATI, MemoryParamsKb);
                 if (glGetError() == GL_NO_ERROR)
                 {
-                    Mem.DeviceLocalMemory = static_cast<Uint64>(MemoryParamsKb[0]) * Uint64{1024};
+                    Mem.LocalMemory = static_cast<Uint64>(MemoryParamsKb[0]) * Uint64{1024};
                 }
                 else
                 {
@@ -602,7 +598,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
 #define ENABLE_FEATURE(FeatureName, Supported) \
     Features.FeatureName = (Supported) ? DEVICE_FEATURE_STATE_OPTIONAL : DEVICE_FEATURE_STATE_DISABLED;
 
-        auto& Features = AdapterInfo.Capabilities.Features;
+        auto& Features = m_AdapterInfo.Features;
 
         GLint MaxTextureSize = 0;
         glGetIntegerv(GL_MAX_TEXTURE_SIZE, &MaxTextureSize);
@@ -648,8 +644,8 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
         {
             GLint MaxVertexSSBOs = 0;
 #if GL_ARB_shader_storage_buffer_object
-            bool IsGL43OrAbove   = (AdapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_GL) && (GLVersion >= Version{4, 3});
-            bool IsGLES31OrAbove = (AdapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_GLES) && (GLVersion >= Version{3, 1});
+            bool IsGL43OrAbove   = (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GL) && (GLVersion >= Version{4, 3});
+            bool IsGLES31OrAbove = (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES) && (GLVersion >= Version{3, 1});
             if (IsGL43OrAbove || IsGLES31OrAbove)
             {
                 glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &MaxVertexSSBOs);
@@ -662,9 +658,9 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
         if (ForceNonSeparablePrograms)
             LOG_INFO_MESSAGE("Forcing non-separable shader programs");
 
-        auto& TexProps = AdapterInfo.Properties.Texture;
-        auto& SamProps = AdapterInfo.Properties.Sampler;
-        if (AdapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_GL)
+        auto& TexProps = m_AdapterInfo.Texture;
+        auto& SamProps = m_AdapterInfo.Sampler;
+        if (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GL)
         {
             const bool IsGL46OrAbove = GLVersion >= Version{4, 6};
             const bool IsGL43OrAbove = GLVersion >= Version{4, 3};
@@ -725,7 +721,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
         }
         else
         {
-            VERIFY(AdapterInfo.Capabilities.DevType == RENDER_DEVICE_TYPE_GLES, "Unexpected device type: OpenGLES expected");
+            VERIFY(m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES, "Unexpected device type: OpenGLES expected");
 
             const auto* Extensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
             LOG_INFO_MESSAGE("Supported extensions: \n", Extensions);
@@ -808,7 +804,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
             CHECK_GL_ERROR("glGetIntegerv(GL_SUBGROUP_SUPPORTED_FEATURES_KHR)");
 
             {
-                auto& WaveOpProps{AdapterInfo.Properties.WaveOp};
+                auto& WaveOpProps{m_AdapterInfo.WaveOp};
                 WaveOpProps.MinSize         = static_cast<Uint32>(SubgroupSize);
                 WaveOpProps.MaxSize         = static_cast<Uint32>(SubgroupSize);
                 WaveOpProps.SupportedStages = GLShaderBitsToShaderTypes(SubgroupStages);
@@ -835,7 +831,7 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
 
         // Buffer properties
         {
-            auto& BufferProps{AdapterInfo.Properties.Buffer};
+            auto& BufferProps{m_AdapterInfo.Buffer};
             BufferProps.ConstantBufferOffsetAlignment   = 256;
             BufferProps.StructuredBufferOffsetAlignment = 16;
 #if defined(_MSC_VER) && defined(_WIN64)
@@ -847,13 +843,13 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
 
     // Set queue info
     {
-        AdapterInfo.NumQueues = 1;
+        m_AdapterInfo.NumQueues = 1;
 
-        AdapterInfo.Queues[0].QueueType                 = COMMAND_QUEUE_TYPE_GRAPHICS;
-        AdapterInfo.Queues[0].MaxDeviceContexts         = 1;
-        AdapterInfo.Queues[0].TextureCopyGranularity[0] = 1;
-        AdapterInfo.Queues[0].TextureCopyGranularity[1] = 1;
-        AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
+        m_AdapterInfo.Queues[0].QueueType                 = COMMAND_QUEUE_TYPE_GRAPHICS;
+        m_AdapterInfo.Queues[0].MaxDeviceContexts         = 1;
+        m_AdapterInfo.Queues[0].TextureCopyGranularity[0] = 1;
+        m_AdapterInfo.Queues[0].TextureCopyGranularity[1] = 1;
+        m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
@@ -863,8 +859,8 @@ void RenderDeviceGLImpl::UpdateAdapterInfo(GraphicsAdapterInfo& AdapterInfo, boo
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
-    const auto& DeviceCaps   = GetDeviceCaps();
-    bool        bGL33OrAbove = DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL && DeviceCaps.APIVersion >= Version{4, 3};
+    const auto& DeviceInfo   = GetDeviceInfo();
+    bool        bGL33OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
 
     bool bRGTC      = CheckExtension("GL_ARB_texture_compression_rgtc");
     bool bBPTC      = CheckExtension("GL_ARB_texture_compression_bptc");
@@ -984,7 +980,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     // clang-format on
 
 #ifdef DILIGENT_DEBUG
-    const bool bGL43OrAbove = DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL && DeviceCaps.APIVersion >= Version{4, 3};
+    const bool bGL43OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
 
     constexpr int      TestTextureDim = 8;
     constexpr int      MaxTexelSize   = 16;
@@ -1107,7 +1103,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     // Disable debug messages - errors are exepcted
     m_ShowDebugGLOutput = 0;
 
-    const auto& TexProps = GetAdapterInfo().Properties.Texture;
+    const auto& TexProps = GetAdapterInfo().Texture;
     // Create test texture 1D
     if (TexProps.MaxTexture1DDimension != 0 && TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
     {
@@ -1250,7 +1246,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         }
 
 #if GL_ARB_shader_image_load_store
-        if (GetDeviceCaps().Features.PixelUAVWritesAndAtomics)
+        if (GetDeviceInfo().Features.PixelUAVWritesAndAtomics)
         {
             GLuint    CurrentImg     = 0;
             GLint     CurrentLevel   = 0;

@@ -130,7 +130,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
     CHECK_D3D_RESULT_THROW(hr, "Failed to create dispatch indirect command signature");
 
 #ifdef D3D12_H_HAS_MESH_SHADER
-    if (pDeviceD3D12Impl->GetDeviceCaps().Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED)
+    if (pDeviceD3D12Impl->GetFeatures().MeshShaders == DEVICE_FEATURE_STATE_ENABLED)
     {
         CmdSignatureDesc.ByteStride = sizeof(UINT) * 3;
         IndirectArg.Type            = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
@@ -139,7 +139,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         VERIFY_EXPR(CmdSignatureDesc.ByteStride == DrawMeshIndirectCommandStride);
     }
 #endif
-    if (pDeviceD3D12Impl->GetDeviceCaps().Features.RayTracing2 == DEVICE_FEATURE_STATE_ENABLED)
+    if (pDeviceD3D12Impl->GetFeatures().RayTracing2 == DEVICE_FEATURE_STATE_ENABLED)
     {
         CmdSignatureDesc.ByteStride = sizeof(D3D12_DISPATCH_RAYS_DESC);
         IndirectArg.Type            = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS;

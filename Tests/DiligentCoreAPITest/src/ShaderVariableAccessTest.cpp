@@ -88,8 +88,8 @@ TEST(ShaderResourceLayout, VariableAccess)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
-    if (!deviceCaps.Features.SeparablePrograms)
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    if (!DeviceInfo.Features.SeparablePrograms)
     {
         GTEST_SKIP() << "Shader variable access test requires separate programs";
     }
@@ -239,7 +239,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     {
         ShaderCI.Desc.Name       = "Shader variable access test VS";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        if (deviceCaps.IsD3DDevice())
+        if (DeviceInfo.IsD3DDevice())
         {
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
             ShaderCI.FilePath       = "ShaderVariableAccessTestDX.vsh";
@@ -255,7 +255,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         ASSERT_NE(pVS, nullptr);
         TestShaderCInterface(pVS);
 
-        if (!deviceCaps.IsMetalDevice())
+        if (!DeviceInfo.IsMetalDevice())
         {
             // Resource queries from shader are not supported in Metal
             Diligent::Testing::PrintShaderResources(pVS);
@@ -322,7 +322,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     {
         ShaderCI.Desc.Name       = "Shader variable access test PS";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        if (deviceCaps.IsD3DDevice())
+        if (DeviceInfo.IsD3DDevice())
         {
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
             ShaderCI.FilePath       = "ShaderVariableAccessTestDX.psh";
@@ -336,7 +336,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
 
-        if (!deviceCaps.IsMetalDevice())
+        if (!DeviceInfo.IsMetalDevice())
         {
             // Resource queries from shader are not supported in Metal
             Diligent::Testing::PrintShaderResources(pPS);

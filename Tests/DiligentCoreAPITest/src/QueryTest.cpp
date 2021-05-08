@@ -212,7 +212,7 @@ protected:
             pContext->FinishFrame();
         }
         pContext->WaitForIdle();
-        if (pDevice->GetDeviceCaps().IsGLDevice())
+        if (pDevice->GetDeviceInfo().IsGLDevice())
         {
             // glFinish() is not a guarantee that queries will become available.
             // Even using glFenceSync + glClientWaitSync does not help.
@@ -240,7 +240,7 @@ RefCntAutoPtr<IPipelineState> QueryTest::sm_pPSO;
 
 TEST_F(QueryTest, PipelineStats)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!deviceCaps.Features.PipelineStatisticsQueries)
     {
         GTEST_SKIP() << "Pipeline statistics queries are not supported by this device";
@@ -294,7 +294,7 @@ TEST_F(QueryTest, PipelineStats)
 
 TEST_F(QueryTest, Occlusion)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!deviceCaps.Features.OcclusionQueries)
     {
         GTEST_SKIP() << "Occlusion queries are not supported by this device";
@@ -338,7 +338,7 @@ TEST_F(QueryTest, Occlusion)
 
 TEST_F(QueryTest, BinaryOcclusion)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!deviceCaps.Features.BinaryOcclusionQueries)
     {
         GTEST_SKIP() << "Binary occlusion queries are not supported by this device";
@@ -382,7 +382,7 @@ TEST_F(QueryTest, Timestamp)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    const auto& deviceCaps = pDevice->GetDeviceInfo();
     if (!deviceCaps.Features.TimestampQueries)
     {
         GTEST_SKIP() << "Timestamp queries are not supported by this device";
@@ -420,7 +420,7 @@ TEST_F(QueryTest, Timestamp)
             pContext->Flush();
             pContext->FinishFrame();
             pContext->WaitForIdle();
-            if (pDevice->GetDeviceCaps().IsGLDevice())
+            if (pDevice->GetDeviceInfo().IsGLDevice())
             {
                 // glFinish() is not a guarantee that queries will become available
                 // Even using glFenceSync + glClientWaitSync does not help.
@@ -448,7 +448,7 @@ TEST_F(QueryTest, Timestamp)
 
 TEST_F(QueryTest, Duration)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!deviceCaps.Features.DurationQueries)
     {
         GTEST_SKIP() << "Duration queries are not supported by this device";
