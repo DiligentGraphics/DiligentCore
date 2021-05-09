@@ -96,10 +96,10 @@ int TestRenderDeviceCInterface_CreateBuffer(struct IRenderDevice* pRenderDevice)
 
     BuffDesc._DeviceObjectAttribs.Name = "Vertex buffer";
 
-    BuffDesc.uiSizeInBytes    = 256;
-    BuffDesc.BindFlags        = BIND_VERTEX_BUFFER;
-    BuffDesc.Usage            = USAGE_DEFAULT;
-    BuffDesc.CommandQueueMask = 1;
+    BuffDesc.uiSizeInBytes        = 256;
+    BuffDesc.BindFlags            = BIND_VERTEX_BUFFER;
+    BuffDesc.Usage                = USAGE_DEFAULT;
+    BuffDesc.ImmediateContextMask = 1;
 
     InitData.DataSize = BuffDesc.uiSizeInBytes;
     void* pData       = malloc(InitData.DataSize);
@@ -166,7 +166,7 @@ int TestRenderDeviceCInterface_CreateTexture(struct IRenderDevice* pRenderDevice
     TexDesc.Format                    = TEX_FORMAT_RGBA8_UNORM;
     TexDesc.Usage                     = USAGE_DEFAULT;
     TexDesc.BindFlags                 = BIND_SHADER_RESOURCE;
-    TexDesc.CommandQueueMask          = 1;
+    TexDesc.ImmediateContextMask      = 1;
 
     int   DataSize = TexDesc.Width * TexDesc.Height * 4;
     void* pData    = malloc(DataSize);

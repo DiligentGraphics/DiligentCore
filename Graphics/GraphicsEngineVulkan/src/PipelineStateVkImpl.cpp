@@ -936,8 +936,8 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
 
 void PipelineStateVkImpl::Destruct()
 {
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
-    m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.ImmediateContextMask);
+    m_PipelineLayout.Release(m_pDevice, m_Desc.ImmediateContextMask);
 
     TPipelineStateBase::Destruct();
 }

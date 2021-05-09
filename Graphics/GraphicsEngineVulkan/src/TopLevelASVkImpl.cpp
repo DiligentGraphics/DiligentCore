@@ -128,11 +128,11 @@ TopLevelASVkImpl::~TopLevelASVkImpl()
 {
     // Vk object can only be destroyed when it is no longer used by the GPU
     if (m_VulkanTLAS != VK_NULL_HANDLE)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanTLAS), m_Desc.CommandQueueMask);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanTLAS), m_Desc.ImmediateContextMask);
     if (m_VulkanBuffer != VK_NULL_HANDLE)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanBuffer), m_Desc.CommandQueueMask);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanBuffer), m_Desc.ImmediateContextMask);
     if (m_MemoryAllocation.Page != nullptr)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.ImmediateContextMask);
 }
 
 } // namespace Diligent

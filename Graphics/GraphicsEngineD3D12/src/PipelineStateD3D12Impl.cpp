@@ -936,7 +936,7 @@ void PipelineStateD3D12Impl::Destruct()
     if (m_pd3d12PSO)
     {
         // D3D12 object can only be destroyed when it is no longer used by the GPU
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_pd3d12PSO), m_Desc.CommandQueueMask);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_pd3d12PSO), m_Desc.ImmediateContextMask);
     }
 
     TPipelineStateBase::Destruct();

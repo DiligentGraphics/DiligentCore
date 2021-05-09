@@ -51,7 +51,7 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
         LOG_ERROR_AND_THROW("If NumImmediateContexts is not zero, pContextInfo must not be null");
     }
 
-    constexpr auto MaxImmediateContexts = 8 * std::min(sizeof(decltype(BufferDesc::CommandQueueMask)), sizeof(decltype(TextureDesc::CommandQueueMask)));
+    constexpr auto MaxImmediateContexts = 8 * std::min(sizeof(decltype(BufferDesc::ImmediateContextMask)), sizeof(decltype(TextureDesc::ImmediateContextMask)));
     static_assert(MAX_COMMAND_QUEUES == MaxImmediateContexts, "Number of bits in CommandQueueMask must be equal to MAX_COMMAND_QUEUES");
 
     if (EngineCI.NumImmediateContexts >= MaxImmediateContexts)

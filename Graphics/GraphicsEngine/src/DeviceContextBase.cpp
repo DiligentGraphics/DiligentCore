@@ -334,13 +334,13 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     CHECK_STATE_TRANSITION_DESC(Barrier.pResource != nullptr, "pResource must not be null.");
     CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "NewState state can't be UNKNOWN.");
 
-    RESOURCE_STATE OldState         = RESOURCE_STATE_UNKNOWN;
-    Uint64         CommandQueueMask = 0;
+    RESOURCE_STATE OldState             = RESOURCE_STATE_UNKNOWN;
+    Uint64         ImmediateContextMask = 0;
 
     if (RefCntAutoPtr<ITexture> pTexture{Barrier.pResource, IID_Texture})
     {
-        const auto& TexDesc = pTexture->GetDesc();
-        CommandQueueMask    = TexDesc.CommandQueueMask;
+        const auto& TexDesc  = pTexture->GetDesc();
+        ImmediateContextMask = TexDesc.ImmediateContextMask;
 
         CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(Barrier.NewState, true), "invalid new state specified for texture '", TexDesc.Name, "'.");
         OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTexture->GetState();
@@ -377,7 +377,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     else if (RefCntAutoPtr<IBuffer> pBuffer{Barrier.pResource, IID_Buffer})
     {
         const auto& BuffDesc = pBuffer->GetDesc();
-        CommandQueueMask     = BuffDesc.CommandQueueMask;
+        ImmediateContextMask = BuffDesc.ImmediateContextMask;
         CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(Barrier.NewState, false), "invalid new state specified for buffer '", BuffDesc.Name, "'.");
         OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBuffer->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
@@ -386,7 +386,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     else if (RefCntAutoPtr<IBottomLevelAS> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
     {
         const auto& BLASDesc = pBottomLevelAS->GetDesc();
-        CommandQueueMask     = BLASDesc.CommandQueueMask;
+        ImmediateContextMask = BLASDesc.ImmediateContextMask;
         OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBottomLevelAS->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of BLAS '", BLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE,
@@ -396,7 +396,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     else if (RefCntAutoPtr<ITopLevelAS> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
     {
         const auto& TLASDesc = pTopLevelAS->GetDesc();
-        CommandQueueMask     = TLASDesc.CommandQueueMask;
+        ImmediateContextMask = TLASDesc.ImmediateContextMask;
         OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTopLevelAS->GetState();
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of TLAS '", TLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE || Barrier.NewState == RESOURCE_STATE_RAY_TRACING,
@@ -408,8 +408,8 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
         UNEXPECTED("unsupported resource type");
     }
 
-    CHECK_STATE_TRANSITION_DESC((CommandQueueMask & (Uint64{1} << Uint64{ExecutionCtxId})) != 0,
-                                "resource was created with CommandQueueMask 0x", std::hex, CommandQueueMask, " and can not be used in device context '", CtxDesc.Name, "'.");
+    CHECK_STATE_TRANSITION_DESC((ImmediateContextMask & (Uint64{1} << Uint64{ExecutionCtxId})) != 0,
+                                "resource was created with ImmediateContextMask 0x", std::hex, ImmediateContextMask, " and can not be used in device context '", CtxDesc.Name, "'.");
 
     if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
     {

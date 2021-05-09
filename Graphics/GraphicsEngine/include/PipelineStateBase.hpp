@@ -161,10 +161,10 @@ private:
         m_UsingImplicitSignature{CreateInfo.ppResourceSignatures == nullptr || CreateInfo.ResourceSignaturesCount == 0}
     {
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
-        DEV_CHECK_ERR((this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0,
-                      "No bits in the command queue mask (0x", std::hex, this->m_Desc.CommandQueueMask,
+        DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
+                      "No bits in the immediate mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
                       ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues.");
-        this->m_Desc.CommandQueueMask &= DeviceQueuesMask;
+        this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
     }
 
 public:

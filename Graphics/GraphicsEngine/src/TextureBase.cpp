@@ -150,7 +150,7 @@ void ValidateTextureDesc(const TextureDesc& Desc) noexcept(false)
     }
 
     if (Desc.Usage == USAGE_DYNAMIC &&
-        PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1)
+        PlatformMisc::CountOneBits(Desc.ImmediateContextMask) > 1)
     {
         // Dynamic textures require implicit state transition that uses global state,
         // which is not safe in multiple contexts.

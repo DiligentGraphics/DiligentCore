@@ -152,7 +152,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
     const auto CmdQueueInd = pInitData && pInitData->pContext ?
         ValidatedCast<DeviceContextD3D12Impl>(pInitData->pContext)->GetCommandQueueId() :
-        SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
+        SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
     const auto StateMask = bInitializeTexture ?
         GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
@@ -161,8 +161,8 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
-        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) <= 1,
-               "CommandQueueMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
+        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
+               "ImmediateContextMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
 
         D3D12_CLEAR_VALUE  ClearValue  = {};
         D3D12_CLEAR_VALUE* pClearValue = nullptr;
@@ -557,7 +557,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
 TextureD3D12Impl::~TextureD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
+    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.ImmediateContextMask);
     if (m_StagingFootprints != nullptr)
     {
         FREE(GetRawAllocator(), m_StagingFootprints);

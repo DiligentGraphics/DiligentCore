@@ -132,10 +132,10 @@ public:
         }
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
-        DEV_CHECK_ERR((this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0,
-                      "No bits in the command queue mask (0x", std::hex, this->m_Desc.CommandQueueMask,
-                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
-        this->m_Desc.CommandQueueMask &= DeviceQueuesMask;
+        DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
+                      "No bits in the immediate context mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
+                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device software command queues");
+        this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
 
         if ((this->m_Desc.BindFlags & BIND_INPUT_ATTACHMENT) != 0)
             this->m_Desc.BindFlags |= BIND_SHADER_RESOURCE;
