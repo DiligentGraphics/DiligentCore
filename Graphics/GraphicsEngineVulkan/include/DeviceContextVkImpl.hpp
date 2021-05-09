@@ -481,7 +481,7 @@ private:
 
     void CreateASCompactedSizeQueryPool();
 
-    void InitializeForQueue(SoftwareQueueIndex CommandQueueId);
+    void PrepareCommandPool(SoftwareQueueIndex CommandQueueId);
 
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
@@ -600,7 +600,10 @@ private:
     };
     std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher> m_MappedTextures;
 
-    std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool> m_CmdPool;
+    // Command pools for every queue family
+    std::unique_ptr<std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>[]> m_QueueFamilyCmdPools;
+    // Command pool for the familiy for which we are recording commands
+    VulkanUtilities::VulkanCommandBufferPool* m_CmdPool = nullptr;
 
     VulkanUploadHeap              m_UploadHeap;
     VulkanDynamicHeap             m_DynamicHeap;

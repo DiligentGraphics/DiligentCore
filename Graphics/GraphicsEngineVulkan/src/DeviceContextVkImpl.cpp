@@ -71,6 +71,14 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
     },
     m_CmdListAllocator { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
     // Upload heap must always be thread-safe as Finish() may be called from another thread
+    m_QueueFamilyCmdPools
+    {
+        new std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>[ 
+            // Note that for immediate contexts we will always use one pool,
+            // but we still allocate space for all queue families for consistency.
+            pDeviceVkImpl->GetPhysicalDevice().GetQueueProperties().size()
+        ]
+    },
     m_UploadHeap
     {
         *pDeviceVkImpl,
@@ -93,7 +101,7 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
 {
     if (!IsDeferred())
     {
-        InitializeForQueue(GetCommandQueueId());
+        PrepareCommandPool(GetCommandQueueId());
         m_QueryMgr.reset(new QueryManagerVk{pDeviceVkImpl, EngineCI.QueryPoolSizes, GetCommandQueueId()});
     }
 
@@ -156,14 +164,14 @@ DeviceContextVkImpl::~DeviceContextVkImpl()
     //     Also note that command buffers are disposed directly into the release queue, but
     //     the command pool goes into the stale objects queue and is moved into the release queue
     //     when the next command buffer is submitted.
-    if (m_CmdPool)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_CmdPool), ~Uint64{0});
+    if (m_QueueFamilyCmdPools)
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_QueueFamilyCmdPools), ~Uint64{0});
 
     // NB: Upload heap, dynamic heap and dynamic descriptor manager return their resources to
     //     global managers and do not need to wait for GPU to idle.
 }
 
-void DeviceContextVkImpl::InitializeForQueue(SoftwareQueueIndex CommandQueueId)
+void DeviceContextVkImpl::PrepareCommandPool(SoftwareQueueIndex CommandQueueId)
 {
     DEV_CHECK_ERR(CommandQueueId < m_pDevice->GetCommandQueueCount(), "CommandQueueId is out of range");
 
@@ -171,15 +179,17 @@ void DeviceContextVkImpl::InitializeForQueue(SoftwareQueueIndex CommandQueueId)
     const auto& QueueProps       = m_pDevice->GetPhysicalDevice().GetQueueProperties();
     DEV_CHECK_ERR(QueueFamilyIndex < QueueProps.size(), "QueueFamilyIndex is out of range");
 
-    if (m_CmdPool)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_CmdPool), ~Uint64{0});
-
-    // Command pools must be thread-safe because command buffers are returned into pools by release queues
-    // potentially running in another thread
-    m_CmdPool.reset(new VulkanUtilities::VulkanCommandBufferPool{
-        m_pDevice->GetLogicalDevice().GetSharedPtr(),
-        QueueFamilyIndex,
-        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT});
+    auto& Pool = m_QueueFamilyCmdPools[QueueFamilyIndex];
+    if (!Pool)
+    {
+        // Command pools must be thread-safe because command buffers are returned into pools by release queues
+        // potentially running in another thread
+        Pool = std::make_unique<VulkanUtilities::VulkanCommandBufferPool>(
+            m_pDevice->GetLogicalDevice().GetSharedPtr(),
+            QueueFamilyIndex,
+            VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    }
+    m_CmdPool = Pool.get();
 
     // Set queue properties
     const auto& QueueInfo{QueueProps[QueueFamilyIndex]};
@@ -193,7 +203,7 @@ void DeviceContextVkImpl::InitializeForQueue(SoftwareQueueIndex CommandQueueId)
 void DeviceContextVkImpl::Begin(Uint32 ImmediateContextId)
 {
     DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
-    InitializeForQueue(SoftwareQueueIndex{ImmediateContextId});
+    PrepareCommandPool(SoftwareQueueIndex{ImmediateContextId});
     m_DstImmediateContextId = static_cast<Uint8>(ImmediateContextId);
 }
 
@@ -2409,9 +2419,6 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     m_CommandBuffer.Reset();
     m_State          = ContextState{};
     m_pPipelineState = nullptr;
-
-    m_Desc.QueueId   = DEFAULT_QUEUE_ID;
-    m_Desc.QueueType = COMMAND_QUEUE_TYPE_UNKNOWN;
 
     InvalidateState();
 

@@ -150,7 +150,7 @@ void SwapChainVkImpl::CreateSurface()
     {
         auto*       pRenderDeviceVk  = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
         const auto& PhysicalDevice   = pRenderDeviceVk->GetPhysicalDevice();
-        auto&       CmdQueueVK       = pRenderDeviceVk->GetCommandQueue(SoftwareQueueIndex{pContext->GetDesc().ContextId});
+        auto&       CmdQueueVK       = pRenderDeviceVk->GetCommandQueue(pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId());
         auto        QueueFamilyIndex = HardwareQueueIndex{CmdQueueVK.GetQueueFamilyIndex()};
         if (!PhysicalDevice.CheckPresentSupport(QueueFamilyIndex, m_VkSurface))
         {
@@ -722,7 +722,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         VkResult Result             = VK_SUCCESS;
         PresentInfo.pResults        = &Result;
         pDeviceVk->LockCmdQueueAndRun(
-            SoftwareQueueIndex{pImmediateCtxVk->GetDesc().ContextId},
+            pImmediateCtxVk->GetCommandQueueId(),
             [&PresentInfo](ICommandQueueVk* pCmdQueueVk) //
             {
                 pCmdQueueVk->Present(PresentInfo);

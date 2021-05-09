@@ -50,7 +50,11 @@ class SyncPointVk final : public std::enable_shared_from_this<SyncPointVk>
 {
 private:
     friend class CommandQueueVkImpl;
-    SyncPointVk(SoftwareQueueIndex CommandQueueId, Uint32 NumContexts, VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr, VkDevice LogicalDevice, Uint64 dbgValue);
+    SyncPointVk(SoftwareQueueIndex                        CommandQueueId,
+                Uint32                                    NumContexts,
+                VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr,
+                VkDevice                                  LogicalDevice,
+                Uint64                                    dbgValue);
 
     void GetSemaphores(std::vector<VkSemaphore>& Semaphores);
 
@@ -144,7 +148,7 @@ public:
 
     SyncPointVkPtr GetLastSyncPoint()
     {
-        ThreadingTools::LockHelper Lock(m_LastSyncPointGuard);
+        ThreadingTools::LockHelper Lock{m_LastSyncPointGuard};
         return m_LastSyncPoint;
     }
 

@@ -31,6 +31,7 @@
 /// Declaration of Diligent::RenderDeviceVkImpl class
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "EngineVkImplTraits.hpp"
 
@@ -241,9 +242,8 @@ public:
         const Uint32 MaxRayGenThreads;
     };
 
-    void ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueueMask,
-                                           uint32_t  outQueueFamilyIndices[],
-                                           uint32_t& inoutQueueFamilyIndicesCount) const;
+    // TODO: use small_vector
+    std::vector<uint32_t> ConvertCmdQueueIdsToQueueFamilies(Uint64 CommandQueueMask) const;
 
     HardwareQueueIndex GetQueueFamilyIndex(SoftwareQueueIndex CmdQueueInd) const;
 

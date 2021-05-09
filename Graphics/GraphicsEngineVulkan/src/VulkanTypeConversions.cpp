@@ -1871,15 +1871,15 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                                           const VkPhysicalDeviceFeatures&                                   vkFeatures,
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures&   ExtFeatures,
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
-                                          DEVICE_FEATURE_STATE                                              EnabledState)
+                                          DEVICE_FEATURE_STATE                                              OptionalState)
 {
-    VERIFY_EXPR(EnabledState != DEVICE_FEATURE_STATE_DISABLED);
+    VERIFY_EXPR(OptionalState != DEVICE_FEATURE_STATE_DISABLED);
 
     DeviceFeatures Features;
 
     // Enable features
 #define INIT_FEATURE(FeatureName, Supported) \
-    Features.FeatureName = (Supported) ? EnabledState : DEVICE_FEATURE_STATE_DISABLED;
+    Features.FeatureName = (Supported) ? OptionalState : DEVICE_FEATURE_STATE_DISABLED;
 
     // The following features are always enabled
     Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
