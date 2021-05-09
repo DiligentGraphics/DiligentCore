@@ -32,7 +32,6 @@
 #include <dxgi1_4.h>
 #include <vector>
 
-#include "D3D12TypeConversions.hpp"
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
@@ -48,9 +47,9 @@
 #include "TopLevelASD3D12Impl.hpp"
 #include "ShaderBindingTableD3D12Impl.hpp"
 #include "PipelineResourceSignatureD3D12Impl.hpp"
-#include "CommandQueueD3D12Impl.hpp"
 
 #include "EngineMemory.h"
+#include "D3D12TypeConversions.hpp"
 #include "DXGITypeConversions.hpp"
 
 
@@ -195,10 +194,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
 CommandListManager& RenderDeviceD3D12Impl::GetCmdListManager(SoftwareQueueIndex CommandQueueId)
 {
-    const auto* CmdQueue         = ValidatedCast<const CommandQueueD3D12Impl>(&GetCommandQueue(CommandQueueId));
-    const auto  ExpectedListType = CmdQueue->GetCommandListType();
-    const auto  QueueId          = D3D12CommandListTypeToQueueId(ExpectedListType);
-    return m_CmdListManagers[QueueId];
+    return GetCmdListManager(GetCommandQueueType(CommandQueueId));
 }
 
 CommandListManager& RenderDeviceD3D12Impl::GetCmdListManager(D3D12_COMMAND_LIST_TYPE CmdListType)
@@ -380,12 +376,6 @@ void RenderDeviceD3D12Impl::ReleaseStaleResources(bool ForceRelease)
     PurgeReleaseQueues(ForceRelease);
 }
 
-
-D3D12_COMMAND_LIST_TYPE RenderDeviceD3D12Impl::GetCommandQueueType(SoftwareQueueIndex CmdQueueInd) const
-{
-    const auto* CmdQueue = ValidatedCast<const CommandQueueD3D12Impl>(&GetCommandQueue(CmdQueueInd));
-    return CmdQueue->GetCommandListType();
-}
 
 RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateCommandContext(SoftwareQueueIndex CommandQueueId, const Char* ID)
 {

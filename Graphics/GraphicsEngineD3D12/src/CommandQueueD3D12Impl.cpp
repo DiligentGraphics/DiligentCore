@@ -37,6 +37,7 @@ CommandQueueD3D12Impl::CommandQueueD3D12Impl(IReferenceCounters* pRefCounters,
     // clang-format off
     TBase{pRefCounters},
     m_pd3d12CmdQueue       {pd3d12NativeCmdQueue},
+    m_d3d12CmdQueueDesc    {pd3d12NativeCmdQueue->GetDesc()},
     m_d3d12Fence           {pd3d12Fence         },
     m_NextFenceValue       {1                   },
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)}
@@ -49,11 +50,6 @@ CommandQueueD3D12Impl::CommandQueueD3D12Impl(IReferenceCounters* pRefCounters,
 CommandQueueD3D12Impl::~CommandQueueD3D12Impl()
 {
     CloseHandle(m_WaitForGPUEventHandle);
-}
-
-D3D12_COMMAND_LIST_TYPE CommandQueueD3D12Impl::GetCommandListType() const
-{
-    return m_pd3d12CmdQueue->GetDesc().Type;
 }
 
 Uint64 CommandQueueD3D12Impl::Submit(Uint32                    NumCommandLists,

@@ -40,7 +40,6 @@
 #include "D3D11TypeConversions.hpp"
 #include "EngineMemory.h"
 #include "EngineFactoryD3DBase.hpp"
-#include "EngineFactoryBase.hpp"
 
 namespace Diligent
 {
@@ -297,8 +296,12 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
-        auto&                  RawAlloctor = GetRawAllocator();
-        RenderDeviceD3D11Impl* pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(RawAlloctor, this, EngineCI, AdapterInfo, pd3d11Device));
+        auto& RawAlloctor = GetRawAllocator();
+
+        RenderDeviceD3D11Impl* pRenderDeviceD3D11{
+            NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(
+                RawAlloctor, this, EngineCI, AdapterInfo, pd3d11Device) //
+        };
         pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         CComQIPtr<ID3D11DeviceContext1> pd3d11ImmediateCtx1{pd3d11ImmediateCtx};
@@ -311,10 +314,10 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
                 DeviceContextDesc{
                     EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : nullptr,
                     COMMAND_QUEUE_TYPE_GRAPHICS,
-                    False,
-                    0, // Context id
-                    0  // Queue id
-                }      //
+                    False, // IsDefered
+                    0,     // Context id
+                    0      // Queue id
+                }          //
                 )};
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D11 will
         // keep a weak reference to the context

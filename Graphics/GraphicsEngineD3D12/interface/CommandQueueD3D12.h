@@ -82,6 +82,9 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, IObject)
     VIRTUAL void METHOD(WaitFence)(THIS_
                                    ID3D12Fence* pFence,
                                    Uint64       Value) PURE;
+
+    /// Returns the Direct3D12 command queue description
+    VIRTUAL const D3D12_COMMAND_QUEUE_DESC REF METHOD(GetD3D12CommandQueueDesc)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -91,13 +94,14 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define ICommandQueueD3D12_GetNextFenceValue(This)      CALL_IFACE_METHOD(CommandQueueD3D12, GetNextFenceValue,     This)
-#    define ICommandQueueD3D12_Submit(This, ...)            CALL_IFACE_METHOD(CommandQueueD3D12, Submit,                This, __VA_ARGS__)
-#    define ICommandQueueD3D12_GetD3D12CommandQueue(This)   CALL_IFACE_METHOD(CommandQueueD3D12, GetD3D12CommandQueue,  This)
-#    define ICommandQueueD3D12_GetCompletedFenceValue(This) CALL_IFACE_METHOD(CommandQueueD3D12, GetCompletedFenceValue,This)
-#    define ICommandQueueD3D12_WaitForIdle(This)            CALL_IFACE_METHOD(CommandQueueD3D12, WaitForIdle,           This)
-#    define ICommandQueueD3D12_EnqueueSignal(This, ...)     CALL_IFACE_METHOD(CommandQueueD3D12, EnqueueSignal,         This, __VA_ARGS__)
-#    define ICommandQueueD3D12_WaitFence(This, ...)         CALL_IFACE_METHOD(CommandQueueD3D12, WaitFence,             This, __VA_ARGS__)
+#    define ICommandQueueD3D12_GetNextFenceValue(This)        CALL_IFACE_METHOD(CommandQueueD3D12, GetNextFenceValue,        This)
+#    define ICommandQueueD3D12_Submit(This, ...)              CALL_IFACE_METHOD(CommandQueueD3D12, Submit,                   This, __VA_ARGS__)
+#    define ICommandQueueD3D12_GetD3D12CommandQueue(This)     CALL_IFACE_METHOD(CommandQueueD3D12, GetD3D12CommandQueue,     This)
+#    define ICommandQueueD3D12_GetCompletedFenceValue(This)   CALL_IFACE_METHOD(CommandQueueD3D12, GetCompletedFenceValue,   This)
+#    define ICommandQueueD3D12_WaitForIdle(This)              CALL_IFACE_METHOD(CommandQueueD3D12, WaitForIdle,              This)
+#    define ICommandQueueD3D12_EnqueueSignal(This, ...)       CALL_IFACE_METHOD(CommandQueueD3D12, EnqueueSignal,            This, __VA_ARGS__)
+#    define ICommandQueueD3D12_WaitFence(This, ...)           CALL_IFACE_METHOD(CommandQueueD3D12, WaitFence,                This, __VA_ARGS__)
+#    define ICommandQueueD3D12_GetD3D12CommandQueueDesc(This) CALL_IFACE_METHOD(CommandQueueD3D12, GetD3D12CommandQueueDesc, This)
 
 // clang-format on
 

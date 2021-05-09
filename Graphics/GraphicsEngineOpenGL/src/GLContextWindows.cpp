@@ -35,7 +35,10 @@
 namespace Diligent
 {
 
-GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& DevType, Version& APIVersion, const SwapChainDesc* pSCDesc) :
+GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
+                     RENDER_DEVICE_TYPE&       DevType,
+                     Version&                  APIVersion,
+                     const SwapChainDesc*      pSCDesc) :
     m_Context{0},
     m_WindowHandleToDeviceContext{0}
 {

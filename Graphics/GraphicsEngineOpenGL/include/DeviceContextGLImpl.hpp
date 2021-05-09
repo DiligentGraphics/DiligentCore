@@ -61,7 +61,7 @@ public:
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IDeviceContext::Begin() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE Begin(Uint32 CommandQueueId) override final;
+    virtual void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;

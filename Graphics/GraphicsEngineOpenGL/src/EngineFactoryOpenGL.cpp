@@ -191,7 +191,11 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto& RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceGLImpl* pRenderDeviceOpenGL(NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI, &SCDesc));
+        RenderDeviceGLImpl* pRenderDeviceOpenGL{
+            NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(
+                RawMemAllocator, this, EngineCI, &SCDesc //
+                )                                        //
+        };
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         DeviceContextGLImpl* pDeviceContextOpenGL{
@@ -200,9 +204,10 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
                 DeviceContextDesc{
                     EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : nullptr,
                     COMMAND_QUEUE_TYPE_GRAPHICS,
-                    False,
-                    0 // Context id
-                })    //
+                    False, // IsDeferred
+                    0,     // Context id
+                    0      // QueueId
+                })         //
         };
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
@@ -290,7 +295,11 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto& RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceGLImpl* pRenderDeviceOpenGL(NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI));
+        RenderDeviceGLImpl* pRenderDeviceOpenGL{
+            NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(
+                RawMemAllocator, this, EngineCI //
+                )                               //
+        };
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         DeviceContextGLImpl* pDeviceContextOpenGL{
@@ -299,10 +308,10 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
                 DeviceContextDesc{
                     EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : nullptr,
                     COMMAND_QUEUE_TYPE_GRAPHICS,
-                    False,
-                    0, // Context Id
-                    0  // Queue Id
-                })     //
+                    False, // IsDeferred
+                    0,     // Context Id
+                    0      // Queue Id
+                })         //
         };
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context

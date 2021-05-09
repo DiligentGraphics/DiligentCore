@@ -145,7 +145,10 @@ bool EngineFactoryD3D12Impl::LoadD3D12(const char* DllName)
     return true;
 }
 
-static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter, D3D_FEATURE_LEVEL FeatureLevel)
+namespace
+{
+
+void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter, D3D_FEATURE_LEVEL FeatureLevel)
 {
     CComPtr<IDXGIAdapter1> adapter;
     *ppAdapter = nullptr;
@@ -172,7 +175,7 @@ static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapte
     *ppAdapter = adapter.Detach();
 }
 
-static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Device)
+CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Device)
 {
     CComPtr<IDXGIFactory4> pDXIFactory;
 
@@ -192,7 +195,7 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Dev
     return nullptr;
 }
 
-static void ValidateD3D12CreateInfo(const EngineD3D12CreateInfo& EngineCI) noexcept(false)
+void ValidateD3D12CreateInfo(const EngineD3D12CreateInfo& EngineCI) noexcept(false)
 {
     for (Uint32 Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
     {
@@ -209,6 +212,23 @@ static void ValidateD3D12CreateInfo(const EngineD3D12CreateInfo& EngineCI) noexc
         }
     }
 }
+
+RefCntAutoPtr<CommandQueueD3D12Impl> CreateCommandQueueD3D12(ID3D12Device*       pd3d12Device,
+                                                             ID3D12CommandQueue* pd3d12Queue,
+                                                             LPCWSTR             FenceName)
+{
+
+    CComPtr<ID3D12Fence> pd3d12Fence;
+
+    auto hr = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&pd3d12Fence)));
+    CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue fence");
+    hr = pd3d12Fence->SetName(FenceName);
+    VERIFY_EXPR(SUCCEEDED(hr));
+
+    return RefCntAutoPtr<CommandQueueD3D12Impl>{NEW_RC_OBJ(GetRawAllocator(), "CommandQueueD3D12 instance", CommandQueueD3D12Impl)(pd3d12Queue, pd3d12Fence)};
+}
+
+} // namespace
 
 void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI,
                                                           IRenderDevice**              ppDevice,
@@ -267,7 +287,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
         // Direct3D12 does not allow feature levels below 11.0 (D3D12CreateDevice fails to create a device).
-        const auto MinimumFeatureLevel = EngineCI.GraphicsAPIVersion >= Version{11, 0} ? EngineCI.GraphicsAPIVersion : Version{11, 0};
+        const auto MinimumFeatureLevel = Version::Max(EngineCI.GraphicsAPIVersion, Version{11, 0});
 
         CComPtr<IDXGIAdapter1> hardwareAdapter;
         if (EngineCI.AdapterId == DEFAULT_ADAPTER_ID)
@@ -406,13 +426,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             hr = pd3d12CmdQueue->SetName(WidenString(ContextCI.Name).c_str());
             VERIFY_EXPR(SUCCEEDED(hr));
 
-            CComPtr<ID3D12Fence> pd3d12Fence;
-            hr = d3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&pd3d12Fence)));
-            CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue fence");
-            hr = pd3d12Fence->SetName((WidenString(ContextCI.Name) + L" Fence").c_str());
-            VERIFY_EXPR(SUCCEEDED(hr));
-
-            RefCntAutoPtr<CommandQueueD3D12Impl> pCmdQueueD3D12{NEW_RC_OBJ(GetRawAllocator(), "CommandQueueD3D12 instance", CommandQueueD3D12Impl)(pd3d12CmdQueue, pd3d12Fence)};
+            auto pCmdQueueD3D12 = Diligent::CreateCommandQueueD3D12(d3d12Device, pd3d12CmdQueue, (WidenString(ContextCI.Name) + L" Fence").c_str());
             CmdQueueD3D12Refs.push_back(pCmdQueueD3D12);
             CmdQueues.push_back(pCmdQueueD3D12);
         };
@@ -456,18 +470,11 @@ void EngineFactoryD3D12Impl::CreateCommandQueueD3D12(void*                pd3d12
     try
     {
         SetRawAllocator(pRawMemAllocator);
-        auto& RawMemAllocator = GetRawAllocator();
-        auto  d3d12Device     = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
-        auto  d3d12CmdQueue   = reinterpret_cast<ID3D12CommandQueue*>(pd3d12NativeCommandQueue);
+        auto* d3d12Device   = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
+        auto* d3d12CmdQueue = reinterpret_cast<ID3D12CommandQueue*>(pd3d12NativeCommandQueue);
 
-        CComPtr<ID3D12Fence> pd3d12Fence;
-        auto                 hr = d3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&pd3d12Fence)));
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue fence");
-        hr = pd3d12Fence->SetName(L"User-defined command queue fence");
-        VERIFY_EXPR(SUCCEEDED(hr));
-
-        RefCntAutoPtr<CommandQueueD3D12Impl> pCmdQueueD3D12{NEW_RC_OBJ(RawMemAllocator, "CommandQueueD3D12 instance", CommandQueueD3D12Impl)(d3d12CmdQueue, pd3d12Fence)};
-        *ppCommandQueue = pCmdQueueD3D12.Detach();
+        auto pCmdQueueD3D12 = Diligent::CreateCommandQueueD3D12(d3d12Device, d3d12CmdQueue, L"Fence for user-provided command queue");
+        *ppCommandQueue     = pCmdQueueD3D12.Detach();
     }
     catch (const std::runtime_error&)
     {
@@ -509,7 +516,6 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));
 
-    std::vector<D3D12_COMMAND_LIST_TYPE> d3d12CmdQueueTypes(CommandQueueCount);
     if (EngineCI.NumImmediateContexts > 0)
     {
         if (CommandQueueCount != EngineCI.NumImmediateContexts)
@@ -528,8 +534,6 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
                                   ", but EngineCI.pImmediateContextInfo[", q, "] has incompatible type ", GetCommandQueueTypeString(D3D12CommandListTypeToCmdQueueType(CmdListType)), ".");
                 return;
             }
-
-            d3d12CmdQueueTypes[q] = CmdListType;
         }
     }
 
@@ -551,7 +555,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
 
         for (Uint32 CtxInd = 0; CtxInd < CommandQueueCount; ++CtxInd)
         {
-            const auto d3d12CmdListType = d3d12CmdQueueTypes[CtxInd];
+            const auto d3d12CmdListType = ppCommandQueues[CtxInd]->GetD3D12CommandQueueDesc().Type;
             const auto QueueId          = D3D12CommandListTypeToQueueId(d3d12CmdListType);
             const auto QueueType        = D3D12CommandListTypeToCmdQueueType(d3d12CmdListType);
 
