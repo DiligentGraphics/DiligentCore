@@ -115,7 +115,7 @@ void ValidateBufferDesc(const BufferDesc& Desc, const AdapterMemoryInfo& memoryI
     }
 
 
-    if (Desc.Usage == USAGE_DYNAMIC && PlatformMisc::CountOneBits(Desc.CommandQueueMask) > 1)
+    if (Desc.Usage == USAGE_DYNAMIC && PlatformMisc::CountOneBits(Desc.ImmediateContextMask) > 1)
     {
         bool NeedsBackingResource = (Desc.BindFlags & BIND_UNORDERED_ACCESS) != 0 || Desc.Mode == BUFFER_MODE_FORMATTED;
         if (NeedsBackingResource)
@@ -157,10 +157,10 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
         const auto& CtxDesc = pBuffData->pContext->GetDesc();
         if (CtxDesc.IsDeferred)
             LOG_BUFFER_ERROR_AND_THROW("Deferred contexts can't be used to initialize resources");
-        if ((Desc.CommandQueueMask & (Uint64{1} << CtxDesc.ContextId)) == 0)
+        if ((Desc.ImmediateContextMask & (Uint64{1} << CtxDesc.ContextId)) == 0)
         {
             LOG_BUFFER_ERROR_AND_THROW("Can not initialize the buffer in device context '", CtxDesc.Name,
-                                       "' as CommandQueueMask (", std::hex, Desc.CommandQueueMask, ") does not contain ",
+                                       "' as ImmediateContextMask (", std::hex, Desc.ImmediateContextMask, ") does not contain ",
                                        std::hex, (Uint64{1} << CtxDesc.ContextId), " bit.");
         }
     }

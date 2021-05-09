@@ -97,8 +97,8 @@ public:
         ValidateBufferDesc(this->m_Desc, pDevice->GetAdapterInfo().Memory);
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
-        DEV_CHECK_ERR((this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0, "No bits in the command queue mask (0x", std::hex, this->m_Desc.CommandQueueMask, ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
-        this->m_Desc.CommandQueueMask &= DeviceQueuesMask;
+        DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0, "No bits in the immediate context mask (0x", std::hex, this->m_Desc.ImmediateContextMask, ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device software queues");
+        this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Buffer, TDeviceObjectBase)

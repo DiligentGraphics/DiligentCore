@@ -55,7 +55,7 @@ BufferViewVkImpl::BufferViewVkImpl(IReferenceCounters*                  pRefCoun
 
 BufferViewVkImpl::~BufferViewVkImpl()
 {
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_BuffView), m_pBuffer->GetDesc().CommandQueueMask);
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_BuffView), m_pBuffer->GetDesc().ImmediateContextMask);
 }
 
 } // namespace Diligent

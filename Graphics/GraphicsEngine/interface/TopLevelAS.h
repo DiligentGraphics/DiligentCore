@@ -53,14 +53,21 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Ray tracing build flags, see Diligent::RAYTRACING_BUILD_AS_FLAGS.
     RAYTRACING_BUILD_AS_FLAGS Flags            DEFAULT_INITIALIZER(RAYTRACING_BUILD_AS_NONE);
-    
+
     /// The size returned by IDeviceContext::WriteTLASCompactedSize(), if this acceleration structure
     /// is going to be the target of a compacting copy command (IDeviceContext::CopyTLAS() with COPY_AS_MODE_COMPACT).
     Uint32                    CompactedSize    DEFAULT_INITIALIZER(0);
-    
-    /// Defines which command queues this BLAS can be used with.
-    Uint64                    CommandQueueMask DEFAULT_INITIALIZER(1);
-    
+
+    /// Defines which immediate contexts this TLAS can be used in.
+
+    /// When ImmediateContextMask contains 1 bit at position n, the TLAS may be
+    /// used in the immediate context with index n directly. It may also be used in a command list
+    /// recorded by a deferred context that will be executed through that immediate context.
+    ///
+    /// \remarks    Only specify these bits that will indicate those immediate contexts where the TLAS
+    ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.
+    Uint64                    ImmediateContextMask    DEFAULT_INITIALIZER(1);
+
 #if DILIGENT_CPP_INTERFACE
     TopLevelASDesc() noexcept {}
 #endif

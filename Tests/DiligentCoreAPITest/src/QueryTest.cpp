@@ -113,8 +113,8 @@ protected:
         PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
         GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-        PSODesc.Name             = "Query command test - procedural quad";
-        PSODesc.CommandQueueMask = ~0ull;
+        PSODesc.Name                 = "Query command test - procedural quad";
+        PSODesc.ImmediateContextMask = ~0ull;
 
         PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
         GraphicsPipeline.NumRenderTargets             = 1;

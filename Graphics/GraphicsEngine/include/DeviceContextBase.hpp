@@ -709,7 +709,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
     int /*Dummy*/)
 {
     DEV_CHECK_ERR(IsComputeCtx(), "SetPipelineState is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-    DEV_CHECK_ERR((pPipelineState->GetDesc().CommandQueueMask & (Uint64{1} << GetExecutionCtxId())) != 0,
+    DEV_CHECK_ERR((pPipelineState->GetDesc().ImmediateContextMask & (Uint64{1} << GetExecutionCtxId())) != 0,
                   "The PSO was not created for using in device context '", m_Desc.Name, "'.");
 
     m_pPipelineState = pPipelineState;

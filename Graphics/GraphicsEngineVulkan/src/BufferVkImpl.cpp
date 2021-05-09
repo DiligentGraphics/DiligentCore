@@ -182,10 +182,10 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                                                                 // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
 
     std::array<uint32_t, MAX_COMMAND_QUEUES> QueueFamilyIndices = {};
-    if (PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) > 1)
+    if (PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1)
     {
         uint32_t queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
-        GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.CommandQueueMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
+        GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
 
         // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
         if (queueFamilyIndexCount > 1)
@@ -235,7 +235,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     }
     else
     {
-        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) <= 1,
+        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
                "CommandQueueMask must contain single set bit, this error should've been handled in ValidateBufferDesc()");
 
         m_VulkanBuffer = LogicalDevice.CreateBuffer(VkBuffCI, m_Desc.Name);
@@ -390,7 +390,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
                 const auto CmdQueueInd = pBuffData->pContext ?
                     ValidatedCast<DeviceContextVkImpl>(pBuffData->pContext)->GetCommandQueueId() :
-                    SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
+                    SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
                 VulkanUtilities::CommandPoolWrapper CmdPool;
                 VkCommandBuffer                     vkCmdBuff;
@@ -476,9 +476,9 @@ BufferVkImpl::~BufferVkImpl()
 {
     // Vk object can only be destroyed when it is no longer used by the GPU
     if (m_VulkanBuffer != VK_NULL_HANDLE)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanBuffer), m_Desc.CommandQueueMask);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanBuffer), m_Desc.ImmediateContextMask);
     if (m_MemoryAllocation.Page != nullptr)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.ImmediateContextMask);
 }
 
 void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView)

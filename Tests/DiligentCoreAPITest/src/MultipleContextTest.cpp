@@ -153,9 +153,9 @@ protected:
             auto&                           PSODesc          = PSOCreateInfo.PSODesc;
             auto&                           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-            PSODesc.Name             = "Multiple context test - procedural graphics PSO";
-            PSODesc.PipelineType     = PIPELINE_TYPE_GRAPHICS;
-            PSODesc.CommandQueueMask = ~0ull;
+            PSODesc.Name                 = "Multiple context test - procedural graphics PSO";
+            PSODesc.PipelineType         = PIPELINE_TYPE_GRAPHICS;
+            PSODesc.ImmediateContextMask = ~0ull;
 
             PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
@@ -241,7 +241,7 @@ protected:
             PSOCreateInfo.PSODesc.Name = "Multiple context test - procedural compute PSO";
             PSOCreateInfo.pCS          = pCS;
 
-            PSOCreateInfo.PSODesc.CommandQueueMask                   = ~0ull;
+            PSOCreateInfo.PSODesc.ImmediateContextMask               = ~0ull;
             PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
             pDevice->CreateComputePipelineState(PSOCreateInfo, &sm_pCompProceduralPSO);
@@ -281,14 +281,14 @@ protected:
         const auto& SCDesc     = pSwapChain->GetDesc();
 
         TextureDesc Desc;
-        Desc.Name             = Name;
-        Desc.Type             = RESOURCE_DIM_TEX_2D;
-        Desc.Width            = SCDesc.Width;
-        Desc.Height           = SCDesc.Height;
-        Desc.Format           = TEX_FORMAT_RGBA8_UNORM;
-        Desc.Usage            = USAGE_DEFAULT;
-        Desc.BindFlags        = Flags;
-        Desc.CommandQueueMask = QueueMask | (1ull << pInitialCtx->GetDesc().ContextId);
+        Desc.Name                 = Name;
+        Desc.Type                 = RESOURCE_DIM_TEX_2D;
+        Desc.Width                = SCDesc.Width;
+        Desc.Height               = SCDesc.Height;
+        Desc.Format               = TEX_FORMAT_RGBA8_UNORM;
+        Desc.Usage                = USAGE_DEFAULT;
+        Desc.BindFlags            = Flags;
+        Desc.ImmediateContextMask = QueueMask | (1ull << pInitialCtx->GetDesc().ContextId);
 
         RefCntAutoPtr<ITexture> pTexture;
         pDevice->CreateTexture(Desc, nullptr, &pTexture);
@@ -359,10 +359,10 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         const float4 ConstData2 = float4(0.8f, 1.53f, 0.6f, 1.72f);
 
         BufferDesc BuffDesc;
-        BuffDesc.Name             = "Constants";
-        BuffDesc.uiSizeInBytes    = sizeof(ConstData1);
-        BuffDesc.BindFlags        = BIND_UNIFORM_BUFFER;
-        BuffDesc.CommandQueueMask = QueueMask;
+        BuffDesc.Name                 = "Constants";
+        BuffDesc.uiSizeInBytes        = sizeof(ConstData1);
+        BuffDesc.BindFlags            = BIND_UNIFORM_BUFFER;
+        BuffDesc.ImmediateContextMask = QueueMask;
 
         BufferData BuffData1{&ConstData1, sizeof(ConstData1)};
         pDevice->CreateBuffer(BuffDesc, &BuffData1, &pConstants1);
@@ -603,10 +603,10 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
         const float4 ConstData = float4(0.8f, 1.53f, 0.6f, 1.72f);
 
         BufferDesc BuffDesc;
-        BuffDesc.Name             = "Constants";
-        BuffDesc.uiSizeInBytes    = sizeof(ConstData);
-        BuffDesc.BindFlags        = BIND_UNIFORM_BUFFER;
-        BuffDesc.CommandQueueMask = QueueMask;
+        BuffDesc.Name                 = "Constants";
+        BuffDesc.uiSizeInBytes        = sizeof(ConstData);
+        BuffDesc.BindFlags            = BIND_UNIFORM_BUFFER;
+        BuffDesc.ImmediateContextMask = QueueMask;
 
         BufferData BuffData{&ConstData, sizeof(ConstData)};
         pDevice->CreateBuffer(BuffDesc, &BuffData, &pConstants);

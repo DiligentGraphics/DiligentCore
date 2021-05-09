@@ -176,7 +176,7 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
 BottomLevelASD3D12Impl::~BottomLevelASD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
+    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.ImmediateContextMask);
 }
 
 } // namespace Diligent

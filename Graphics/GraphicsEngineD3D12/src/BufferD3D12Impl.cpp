@@ -107,8 +107,8 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     }
     else
     {
-        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) <= 1,
-               "CommandQueueMask must contain single set bit, this error should've been handled in ValidateBufferDesc()");
+        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
+               "ImmediateContextMask must contain single set bit, this error should've been handled in ValidateBufferDesc()");
 
         D3D12_RESOURCE_DESC D3D12BuffDesc{};
         D3D12BuffDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -155,7 +155,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
         const auto CmdQueueInd = pBuffData && pBuffData->pContext ?
             ValidatedCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
-            SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
+            SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
         const auto StateMask = bInitializeBuffer ?
             GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
@@ -318,7 +318,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 BufferD3D12Impl::~BufferD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
-    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
+    GetDevice()->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.ImmediateContextMask);
 }
 
 void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView)

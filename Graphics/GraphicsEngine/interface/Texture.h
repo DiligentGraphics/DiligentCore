@@ -95,11 +95,15 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Optimized clear value
     OptimizedClearValue ClearValue;
 
-    /// Defines which command queues this texture can be used with.
+    /// Defines which immediate contexts this texture can be used in.
 
-    /// \remarks    Only specify these bits that will indicate these queues where the texture will actually be used.
-    ///             Do not set unncessary bits as this will result in extra overhead.
-    Uint64 CommandQueueMask             DEFAULT_INITIALIZER(1);
+    /// When ImmediateContextMask contains 1 bit at position n, the texture may be
+    /// used in the immediate context with index n directly. It may also be used in a command list
+    /// recorded by a deferred context that will be executed through that immediate context.
+    ///
+    /// \remarks    Only specify these bits that will indicate those immediate contexts where the texture
+    ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.
+    Uint64 ImmediateContextMask         DEFAULT_INITIALIZER(1);
 
 
 #if DILIGENT_CPP_INTERFACE
@@ -110,14 +114,14 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 Uint32              _Height,
                 Uint32              _ArraySizeOrDepth,
                 TEXTURE_FORMAT      _Format,
-                Uint32              _MipLevels        = TextureDesc{}.MipLevels,
-                Uint32              _SampleCount      = TextureDesc{}.SampleCount,
-                USAGE               _Usage            = TextureDesc{}.Usage,
-                BIND_FLAGS          _BindFlags        = TextureDesc{}.BindFlags,
-                CPU_ACCESS_FLAGS    _CPUAccessFlags   = TextureDesc{}.CPUAccessFlags,
-                MISC_TEXTURE_FLAGS  _MiscFlags        = TextureDesc{}.MiscFlags,
-                OptimizedClearValue _ClearValue       = TextureDesc{}.ClearValue,
-                Uint64              _CommandQueueMask = TextureDesc{}.CommandQueueMask) noexcept : 
+                Uint32              _MipLevels            = TextureDesc{}.MipLevels,
+                Uint32              _SampleCount          = TextureDesc{}.SampleCount,
+                USAGE               _Usage                = TextureDesc{}.Usage,
+                BIND_FLAGS          _BindFlags            = TextureDesc{}.BindFlags,
+                CPU_ACCESS_FLAGS    _CPUAccessFlags       = TextureDesc{}.CPUAccessFlags,
+                MISC_TEXTURE_FLAGS  _MiscFlags            = TextureDesc{}.MiscFlags,
+                OptimizedClearValue _ClearValue           = TextureDesc{}.ClearValue,
+                Uint64              _ImmediateContextMask = TextureDesc{}.ImmediateContextMask) noexcept : 
         Type                 {_Type            }, 
         Width                {_Width           },
         Height               {_Height          },
@@ -130,7 +134,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         CPUAccessFlags       {_CPUAccessFlags  },
         MiscFlags            {_MiscFlags       },
         ClearValue           {_ClearValue      },
-        CommandQueueMask     {_CommandQueueMask}
+        ImmediateContextMask {_ImmediateContextMask}
     {}
 
     /// Tests if two structures are equivalent
@@ -146,19 +150,19 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
         return  // strcmp(Name, RHS.Name) == 0          &&
-                Type             == RHS.Type           &&
-                Width            == RHS.Width          &&
-                Height           == RHS.Height         &&
-                ArraySize        == RHS.ArraySize      &&
-                Format           == RHS.Format         &&
-                MipLevels        == RHS.MipLevels      &&
-                SampleCount      == RHS.SampleCount    &&
-                Usage            == RHS.Usage          &&
-                BindFlags        == RHS.BindFlags      &&
-                CPUAccessFlags   == RHS.CPUAccessFlags &&
-                MiscFlags        == RHS.MiscFlags      &&
-                ClearValue       == RHS.ClearValue     &&
-                CommandQueueMask == RHS.CommandQueueMask;
+                Type                 == RHS.Type           &&
+                Width                == RHS.Width          &&
+                Height               == RHS.Height         &&
+                ArraySize            == RHS.ArraySize      &&
+                Format               == RHS.Format         &&
+                MipLevels            == RHS.MipLevels      &&
+                SampleCount          == RHS.SampleCount    &&
+                Usage                == RHS.Usage          &&
+                BindFlags            == RHS.BindFlags      &&
+                CPUAccessFlags       == RHS.CPUAccessFlags &&
+                MiscFlags            == RHS.MiscFlags      &&
+                ClearValue           == RHS.ClearValue     &&
+                ImmediateContextMask == RHS.ImmediateContextMask;
     }
 #endif
 };

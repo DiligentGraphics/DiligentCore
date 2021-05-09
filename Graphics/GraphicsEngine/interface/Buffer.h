@@ -103,11 +103,16 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// created for this buffer.
     Uint32 ElementByteStride        DEFAULT_INITIALIZER(0);
 
-    /// Defines which command queues this buffer can be used with.
+    /// Defines which immediate contexts this buffer can be used in.
 
-    /// \remarks    Only specify these bits that will indicate these queues where the buffer will actually be used.
-    ///             Do not set unncessary bits as this will result in extra overhead.
-    Uint64 CommandQueueMask         DEFAULT_INITIALIZER(1);
+    /// When ImmediateContextMask contains 1 bit at position n, the buffer may be
+    /// used in the immediate context with index n directly. It may also be used in a command list
+    /// recorded by a deferred context that will be executed through that immediate context.
+    ///
+    /// \remarks    Only specify these bits that will indicate those immediate contexts where the buffer
+    ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.
+    Uint64 ImmediateContextMask     DEFAULT_INITIALIZER(1);
+
 
 #if DILIGENT_CPP_INTERFACE
     // We have to explicitly define constructors because otherwise the following initialization fails on Apple's clang:
@@ -117,18 +122,18 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     BufferDesc(Uint32           _uiSizeInBytes, 
                BIND_FLAGS       _BindFlags,
-               USAGE            _Usage             = BufferDesc{}.Usage,
-               CPU_ACCESS_FLAGS _CPUAccessFlags    = BufferDesc{}.CPUAccessFlags,
-               BUFFER_MODE      _Mode              = BufferDesc{}.Mode,
-               Uint32           _ElementByteStride = BufferDesc{}.ElementByteStride,
-               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask) noexcept : 
+               USAGE            _Usage                = BufferDesc{}.Usage,
+               CPU_ACCESS_FLAGS _CPUAccessFlags       = BufferDesc{}.CPUAccessFlags,
+               BUFFER_MODE      _Mode                 = BufferDesc{}.Mode,
+               Uint32           _ElementByteStride    = BufferDesc{}.ElementByteStride,
+               Uint64           _ImmediateContextMask = BufferDesc{}.ImmediateContextMask) noexcept : 
         uiSizeInBytes        {_uiSizeInBytes    },
         BindFlags            {_BindFlags        },
         Usage                {_Usage            },
         CPUAccessFlags       {_CPUAccessFlags   },
         Mode                 {_Mode             },
         ElementByteStride    {_ElementByteStride},
-        CommandQueueMask     {_CommandQueueMask }
+        ImmediateContextMask {_ImmediateContextMask}
     {
     }
 
@@ -145,13 +150,13 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                 // Name is primarily used for debug purposes and does not affect the state.
                 // It is ignored in comparison operation.
         return  // strcmp(Name, RHS.Name) == 0          &&
-                uiSizeInBytes     == RHS.uiSizeInBytes     && 
-                BindFlags         == RHS.BindFlags         &&
-                Usage             == RHS.Usage             &&
-                CPUAccessFlags    == RHS.CPUAccessFlags    &&
-                Mode              == RHS.Mode              &&
-                ElementByteStride == RHS.ElementByteStride && 
-                CommandQueueMask  == RHS.CommandQueueMask;
+                uiSizeInBytes        == RHS.uiSizeInBytes     && 
+                BindFlags            == RHS.BindFlags         &&
+                Usage                == RHS.Usage             &&
+                CPUAccessFlags       == RHS.CPUAccessFlags    &&
+                Mode                 == RHS.Mode              &&
+                ElementByteStride    == RHS.ElementByteStride && 
+                ImmediateContextMask == RHS.ImmediateContextMask;
     }
 #endif
 };

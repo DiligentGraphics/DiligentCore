@@ -66,7 +66,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
-        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) <= 1,
+        VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
                "CommandQueueMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
 
         VkImageCreateInfo ImageCI = {};
@@ -182,10 +182,10 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         ImageCI.pQueueFamilyIndices   = nullptr;
 
         std::array<uint32_t, MAX_COMMAND_QUEUES> QueueFamilyIndices = {};
-        if (PlatformMisc::CountOneBits(m_Desc.CommandQueueMask) > 1)
+        if (PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1)
         {
             uint32_t queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
-            GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.CommandQueueMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
+            GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
 
             // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
             if (queueFamilyIndexCount > 1)
@@ -241,7 +241,7 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
 
     const auto CmdQueueInd = pInitData->pContext ?
         ValidatedCast<DeviceContextVkImpl>(pInitData->pContext)->GetCommandQueueId() :
-        SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
+        SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
     // Vulkan validation layers do not like uninitialized memory, so if no initial data
     // is provided, we will clear the memory
@@ -575,7 +575,7 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
                 CreateMipLevelView(TEXTURE_VIEW_UNORDERED_ACCESS, MipLevel, &pMipLevelViews[MipLevel * 2 + 1]);
             }
 
-            if (auto pImmediateCtx = m_pDevice->GetImmediateContext(PlatformMisc::GetLSB(m_Desc.CommandQueueMask)))
+            if (auto pImmediateCtx = m_pDevice->GetImmediateContext(PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)))
             {
                 auto& GenerateMipsHelper = pImmediateCtx.RawPtr<DeviceContextVkImpl>()->GetGenerateMipsHelper();
                 GenerateMipsHelper.WarmUpCache(pViewVk->GetDesc().Format);
@@ -596,10 +596,10 @@ TextureVkImpl::~TextureVkImpl()
     // Vk object can only be destroyed when it is no longer used by the GPU
     // Wrappers for external texture will not be destroyed as they are created with null device pointer
     if (m_VulkanImage)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanImage), m_Desc.CommandQueueMask);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_VulkanImage), m_Desc.ImmediateContextMask);
     if (m_StagingBuffer)
-        m_pDevice->SafeReleaseDeviceObject(std::move(m_StagingBuffer), m_Desc.CommandQueueMask);
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.CommandQueueMask);
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_StagingBuffer), m_Desc.ImmediateContextMask);
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_MemoryAllocation), m_Desc.ImmediateContextMask);
 }
 
 VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc& ViewDesc)
