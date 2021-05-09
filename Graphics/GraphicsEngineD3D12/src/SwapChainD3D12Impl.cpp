@@ -59,7 +59,7 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters*       pRefCounters,
 // clang-format on
 {
     pRenderDeviceD3D12->LockCmdQueueAndRun(
-        GetCommandQueueId(),
+        SoftwareQueueIndex{pDeviceContextD3D12->GetDesc().ContextId},
         [this](ICommandQueueD3D12* pCmdQueue) //
         {
             CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());
@@ -210,7 +210,7 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
             {
                 m_pSwapChain.Release();
                 m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->LockCmdQueueAndRun(
-                    GetCommandQueueId(),
+                    SoftwareQueueIndex{pDeviceContext->GetDesc().ContextId},
                     [this](ICommandQueueD3D12* pCmdQueue) //
                     {
                         CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());

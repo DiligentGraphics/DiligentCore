@@ -102,7 +102,7 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
     }
 }
 
-VkQueue VulkanLogicalDevice::GetQueue(HardwareQueueId queueFamilyIndex, uint32_t queueIndex)
+VkQueue VulkanLogicalDevice::GetQueue(HardwareQueueIndex queueFamilyIndex, uint32_t queueIndex)
 {
     VkQueue vkQueue = VK_NULL_HANDLE;
     vkGetDeviceQueue(m_VkDevice,

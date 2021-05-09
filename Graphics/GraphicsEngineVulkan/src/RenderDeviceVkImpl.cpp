@@ -156,7 +156,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     for (Uint32 q = 0; q < CommandQueueCount; ++q)
     {
-        auto QueueFamilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueIndex{q}).GetQueueFamilyIndex()};
+        auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(SoftwareQueueIndex{q}).GetQueueFamilyIndex()};
 
         if (m_TransientCmdPoolMgrs.find(QueueFamilyIndex) == m_TransientCmdPoolMgrs.end())
         {
@@ -213,12 +213,12 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
 }
 
 
-void RenderDeviceVkImpl::AllocateTransientCmdPool(CommandQueueIndex                    CommandQueueId,
+void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex                   CommandQueueId,
                                                   VulkanUtilities::CommandPoolWrapper& CmdPool,
                                                   VkCommandBuffer&                     vkCmdBuff,
                                                   const Char*                          DebugPoolName)
 {
-    auto QueueFamilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
     auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
     VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
            "Con not find transiend command pool manager for queue family index (", Uint32{QueueFamilyIndex}, ")");
@@ -251,7 +251,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(CommandQueueIndex             
 }
 
 
-void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(CommandQueueIndex                     CommandQueueId,
+void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex                    CommandQueueId,
                                                            VkCommandBuffer                       vkCmdBuff,
                                                            VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
@@ -345,7 +345,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(CommandQueueIndex    
         VkCommandBuffer                     vkCmdBuffer = VK_NULL_HANDLE;
     };
 
-    auto QueueFamilyIndex = HardwareQueueId{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
     auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
     VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
            "Unable to find transiend command pool manager for queue family index ", Uint32{QueueFamilyIndex}, ".");
@@ -365,7 +365,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(CommandQueueIndex    
     // clang-format on
 }
 
-void RenderDeviceVkImpl::SubmitCommandBuffer(CommandQueueIndex                                           CommandQueueId,
+void RenderDeviceVkImpl::SubmitCommandBuffer(SoftwareQueueIndex                                          CommandQueueId,
                                              const VkSubmitInfo&                                         SubmitInfo,
                                              Uint64&                                                     SubmittedCmdBuffNumber, // Number of the submitted command buffer
                                              Uint64&                                                     SubmittedFenceValue,    // Fence value associated with the submitted command buffer
@@ -391,7 +391,7 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(CommandQueueIndex                  
     }
 }
 
-Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(CommandQueueIndex CommandQueueId, const VkSubmitInfo& SubmitInfo, std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences)
+Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(SoftwareQueueIndex CommandQueueId, const VkSubmitInfo& SubmitInfo, std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences)
 {
     Uint64 SubmittedFenceValue    = 0;
     Uint64 SubmittedCmdBuffNumber = 0;
@@ -411,7 +411,7 @@ void RenderDeviceVkImpl::IdleGPU()
     ReleaseStaleResources();
 }
 
-void RenderDeviceVkImpl::FlushStaleResources(CommandQueueIndex CmdQueueIndex)
+void RenderDeviceVkImpl::FlushStaleResources(SoftwareQueueIndex CmdQueueIndex)
 {
     // Submit empty command buffer to the queue. This will effectively signal the fence and
     // discard all resources
@@ -695,7 +695,7 @@ void RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueu
         auto CmdQueueInd = PlatformMisc::GetLSB(CommandQueueMask);
         CommandQueueMask &= ~(Uint64{1} << Uint64{CmdQueueInd});
 
-        auto& CmdQueue    = GetCommandQueue(CommandQueueIndex{CmdQueueInd});
+        auto& CmdQueue    = GetCommandQueue(SoftwareQueueIndex{CmdQueueInd});
         auto  FamilyIndex = CmdQueue.GetQueueFamilyIndex();
         VERIFY_EXPR(FamilyIndex < MaxCount);
 
@@ -708,10 +708,10 @@ void RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueu
     }
 }
 
-HardwareQueueId RenderDeviceVkImpl::GetQueueFamilyIndex(CommandQueueIndex CmdQueueInd) const
+HardwareQueueIndex RenderDeviceVkImpl::GetQueueFamilyIndex(SoftwareQueueIndex CmdQueueInd) const
 {
-    auto* CmdQueue = ValidatedCast<const CommandQueueVkImpl>(&GetCommandQueue(CommandQueueIndex{CmdQueueInd}));
-    return HardwareQueueId{CmdQueue->GetQueueFamilyIndex()};
+    auto* CmdQueue = ValidatedCast<const CommandQueueVkImpl>(&GetCommandQueue(SoftwareQueueIndex{CmdQueueInd}));
+    return HardwareQueueIndex{CmdQueue->GetQueueFamilyIndex()};
 }
 
 } // namespace Diligent

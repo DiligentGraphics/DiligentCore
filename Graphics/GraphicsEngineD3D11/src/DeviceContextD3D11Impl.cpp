@@ -50,17 +50,16 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
                                                RenderDeviceD3D11Impl*       pDevice,
                                                ID3D11DeviceContext1*        pd3d11DeviceContext,
                                                const EngineD3D11CreateInfo& EngineCI,
-                                               bool                         bIsDeferred) :
+                                               const DeviceContextDesc&     Desc) :
     // clang-format off
     TDeviceContextBase
     {
         pRefCounters,
         pDevice,
-        (EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : "Default immediate context"),
-        bIsDeferred
+        Desc
     },
-    m_pd3d11DeviceContext {pd3d11DeviceContext           },
-    m_D3D11ValidationFlags{EngineCI.D3D11ValidationFlags },
+    m_pd3d11DeviceContext {pd3d11DeviceContext          },
+    m_D3D11ValidationFlags{EngineCI.D3D11ValidationFlags},
     m_CmdListAllocator    {GetRawAllocator(), sizeof(CommandListD3D11Impl), 64}
 // clang-format on
 {
@@ -69,14 +68,10 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
 IMPLEMENT_QUERY_INTERFACE(DeviceContextD3D11Impl, IID_DeviceContextD3D11, TDeviceContextBase)
 
 
-void DeviceContextD3D11Impl::Begin(Uint32 CommandQueueId)
+void DeviceContextD3D11Impl::Begin(Uint32 ImmediateContextId)
 {
-    DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
-    DEV_CHECK_ERR(CommandQueueId == 0, "Direct3D11 supports only one command queue");
-
-    m_Desc.CommandQueueId = 0;
-    m_Desc.QueueId        = 0;
-    m_Desc.QueueType      = COMMAND_QUEUE_TYPE_GRAPHICS;
+    DEV_CHECK_ERR(ImmediateContextId == 0, "Direct3D11 supports only one immediate context queue");
+    TDeviceContextBase::Begin(ImmediateContextId, COMMAND_QUEUE_TYPE_GRAPHICS);
 }
 
 void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
@@ -1754,9 +1749,7 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
     }
 #endif
 
-    m_Desc.CommandQueueId = MAX_COMMAND_QUEUES;
-    m_Desc.QueueId        = MAX_COMMAND_QUEUES;
-    m_Desc.QueueType      = COMMAND_QUEUE_TYPE_UNKNOWN;
+    TDeviceContextBase::FinishCommandList();
 }
 
 void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommandLists,

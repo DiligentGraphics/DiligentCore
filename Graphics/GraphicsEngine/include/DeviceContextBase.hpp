@@ -75,8 +75,8 @@ bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttri
 bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs);
 bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                const StateTransitionDesc& Barrier,
-                               CommandQueueIndex          CmdQueueInd,
-                               COMMAND_QUEUE_TYPE         QueueType);
+                               DeviceContextIndex         ExecutionCtxId,
+                               const DeviceContextDesc&   CtxDesc);
 
 bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs);
 bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs);
@@ -138,25 +138,28 @@ public:
     /// \param pRenderDevice - Render device.
     /// \param Name          - Context name.
     /// \param bIsDeferred   - Flag indicating if this instance is a deferred context
-    DeviceContextBase(IReferenceCounters* pRefCounters,
-                      DeviceImplType*     pRenderDevice,
-                      const char*         Name,
-                      bool                bIsDeferred) :
+    DeviceContextBase(IReferenceCounters*      pRefCounters,
+                      DeviceImplType*          pRenderDevice,
+                      const DeviceContextDesc& Desc) :
         // clang-format off
-        TObjectBase{pRefCounters    },
-        m_pDevice  {pRenderDevice   },
-        m_Name     {Name ? Name : ""}
+        TObjectBase{pRefCounters },
+        m_pDevice  {pRenderDevice},
+        m_Name
+        {
+            Desc.Name != nullptr && *Desc.Name != '\0' ?
+                String{Desc.Name} :
+                String{"Context #"} + std::to_string(Uint32{Desc.ContextId}) + (Desc.IsDeferred ? " (deferred)" : " (immediate)")
+        },
+        m_Desc
+        {
+            m_Name.c_str(),
+            Desc.IsDeferred ? COMMAND_QUEUE_TYPE_UNKNOWN : Desc.QueueType,
+            Desc.IsDeferred,
+            Desc.ContextId,
+            Desc.QueueId
+        }
     // clang-format on
     {
-        m_Desc.Name           = m_Name.c_str();
-        m_Desc.QueueType      = bIsDeferred ? COMMAND_QUEUE_TYPE_UNKNOWN : COMMAND_QUEUE_TYPE_GRAPHICS;
-        m_Desc.IsDeferred     = bIsDeferred;
-        m_Desc.QueueId        = bIsDeferred ? MAX_COMMAND_QUEUES : 0;
-        m_Desc.CommandQueueId = bIsDeferred ? MAX_COMMAND_QUEUES : 0;
-
-        m_Desc.TextureCopyGranularity[0] = 1;
-        m_Desc.TextureCopyGranularity[1] = 1;
-        m_Desc.TextureCopyGranularity[2] = 1;
     }
 
     ~DeviceContextBase()
@@ -301,10 +304,11 @@ public:
     bool IsComputeCtx() const { return (m_Desc.QueueType & COMMAND_QUEUE_TYPE_COMPUTE) == COMMAND_QUEUE_TYPE_COMPUTE; }
     bool IsTransferCtx() const { return (m_Desc.QueueType & COMMAND_QUEUE_TYPE_TRANSFER) == COMMAND_QUEUE_TYPE_TRANSFER; }
 
-    CommandQueueIndex GetCommandQueueId() const
+    DeviceContextIndex GetContextId() const { return DeviceContextIndex{m_Desc.ContextId}; }
+    DeviceContextIndex GetExecutionCtxId() const
     {
-        VERIFY_EXPR(this->m_Desc.CommandQueueId < MAX_COMMAND_QUEUES);
-        return CommandQueueIndex{this->m_Desc.CommandQueueId};
+        VERIFY(!IsDeferred() || IsRecordingDeferredCommands(), "Execution context id may only be requested for deferred contexts while in recording state");
+        return IsDeferred() ? m_DstImmediateContextId : GetContextId();
     }
 
 protected:
@@ -455,6 +459,33 @@ protected:
 
     void PrepareCommittedResources(CommittedShaderResources& Resources, Uint32& DvpCompatibleSRBCount);
 
+    bool IsRecordingDeferredCommands() const
+    {
+        DEV_CHECK_ERR(IsDeferred(), "Only deferred contexts may record deferred commands.");
+        return m_DstImmediateContextId != INVALID_CONTEXT_ID;
+    }
+
+    void Begin(Uint32 ImmediateContextId, COMMAND_QUEUE_TYPE QueueType)
+    {
+        DEV_CHECK_ERR(!IsRecordingDeferredCommands(), "This context is already recording commands. Call FinishCommandList() before beginning new recording.");
+        DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
+        m_DstImmediateContextId = static_cast<Uint8>(ImmediateContextId);
+
+        m_Desc.QueueType = QueueType;
+        for (size_t i = 0; i < _countof(m_Desc.TextureCopyGranularity); ++i)
+            m_Desc.TextureCopyGranularity[i] = 1;
+    }
+
+    void FinishCommandList()
+    {
+        VERIFY_EXPR(IsDeferred());
+        VERIFY_EXPR(IsRecordingDeferredCommands());
+        m_DstImmediateContextId = INVALID_CONTEXT_ID;
+        m_Desc.QueueType        = COMMAND_QUEUE_TYPE_UNKNOWN;
+        for (size_t i = 0; i < _countof(m_Desc.TextureCopyGranularity); ++i)
+            m_Desc.TextureCopyGranularity[i] = 0;
+    }
+
 #ifdef DILIGENT_DEVELOPMENT
     // clang-format off
     void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const;
@@ -593,9 +624,15 @@ protected:
 
     RefCntAutoPtr<IObject> m_pUserData;
 
+    // Must go before m_Desc!
+    const String m_Name;
+
     DeviceContextDesc m_Desc;
 
-    const String m_Name;
+    // For deferred contexts in recording state only, the index
+    // of the destination immediate context where the command list
+    // will be submitted.
+    DeviceContextIndex m_DstImmediateContextId{INVALID_CONTEXT_ID};
 
 #ifdef DILIGENT_DEBUG
     // std::unordered_map is unbelievably slow. Keeping track of mapped buffers
@@ -672,8 +709,8 @@ inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
     int /*Dummy*/)
 {
     DEV_CHECK_ERR(IsComputeCtx(), "SetPipelineState is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-    DEV_CHECK_ERR((pPipelineState->GetDesc().CommandQueueMask & (Uint64{1} << GetCommandQueueId())) != 0,
-                  "PSO was not created for using in command queue ", Uint32{GetCommandQueueId()}, ".");
+    DEV_CHECK_ERR((pPipelineState->GetDesc().CommandQueueMask & (Uint64{1} << GetExecutionCtxId())) != 0,
+                  "The PSO was not created for using in device context '", m_Desc.Name, "'.");
 
     m_pPipelineState = pPipelineState;
 }
@@ -2110,7 +2147,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectAr
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
 {
-    DEV_CHECK_ERR(VerifyStateTransitionDesc(m_pDevice, Barrier, GetCommandQueueId(), this->m_Desc.QueueType), "StateTransitionDesc are invalid");
+    DEV_CHECK_ERR(VerifyStateTransitionDesc(m_pDevice, Barrier, GetExecutionCtxId(), this->m_Desc), "StateTransitionDesc are invalid");
 }
 
 template <typename ImplementationTraits>

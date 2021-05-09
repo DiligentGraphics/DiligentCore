@@ -260,7 +260,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 #endif // DILIGENT_USE_VOLK
 }
 
-HardwareQueueId VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const
+HardwareQueueIndex VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const
 {
     // All commands that are allowed on a queue that supports transfer operations are also allowed on
     // a queue that supports either graphics or compute operations. Thus, if the capabilities of a queue
@@ -325,7 +325,7 @@ HardwareQueueId VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) c
         LOG_ERROR_AND_THROW("Failed to find suitable queue family");
     }
 
-    return HardwareQueueId{FamilyInd};
+    return HardwareQueueIndex{FamilyInd};
 }
 
 bool VulkanPhysicalDevice::IsExtensionSupported(const char* ExtensionName) const
@@ -337,7 +337,7 @@ bool VulkanPhysicalDevice::IsExtensionSupported(const char* ExtensionName) const
     return false;
 }
 
-bool VulkanPhysicalDevice::CheckPresentSupport(HardwareQueueId queueFamilyIndex, VkSurfaceKHR VkSurface) const
+bool VulkanPhysicalDevice::CheckPresentSupport(HardwareQueueIndex queueFamilyIndex, VkSurfaceKHR VkSurface) const
 {
     VkBool32 PresentSupport = VK_FALSE;
     vkGetPhysicalDeviceSurfaceSupportKHR(m_VkDevice, queueFamilyIndex, VkSurface, &PresentSupport);

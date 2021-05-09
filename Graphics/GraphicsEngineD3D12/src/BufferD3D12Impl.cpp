@@ -155,7 +155,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
         const auto CmdQueueInd = pBuffData && pBuffData->pContext ?
             ValidatedCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
-            CommandQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
+            SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
 
         const auto StateMask = bInitializeBuffer ?
             GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :

@@ -49,23 +49,14 @@ public:
     using DeviceImplType    = typename EngineImplTraits::RenderDeviceImplType;
     using ICommandQueueType = typename EngineImplTraits::CommandQueueInterface;
 
-    DeviceContextNextGenBase(IReferenceCounters* pRefCounters,
-                             DeviceImplType*     pRenderDevice,
-                             ContextIndex        ContextId,
-                             CommandQueueIndex   CommandQueueId,
-                             const char*         Name,
-                             bool                bIsDeferred) :
+    DeviceContextNextGenBase(IReferenceCounters*      pRefCounters,
+                             DeviceImplType*          pRenderDevice,
+                             const DeviceContextDesc& Desc) :
         // clang-format off
-        TBase{pRefCounters, pRenderDevice, Name, bIsDeferred},
-        m_ContextId                   {ContextId         },
-        m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId}}
+        TBase{pRefCounters, pRenderDevice, Desc},
+        m_SubmittedBuffersCmdQueueMask{Desc.IsDeferred ? 0 : Uint64{1} << Uint64{Desc.ContextId}}
     // clang-format on
     {
-        if (!this->IsDeferred())
-        {
-            this->m_Desc.CommandQueueId = static_cast<Uint8>(CommandQueueId);
-            VERIFY(ContextId == CommandQueueId, "For immediate contexts, ContextId must match CommandQueueId");
-        }
     }
 
     ~DeviceContextNextGenBase()
@@ -74,27 +65,22 @@ public:
 
     virtual ICommandQueueType* DILIGENT_CALL_TYPE LockCommandQueue() override final
     {
-        if (this->IsDeferred())
-        {
-            LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
-            return nullptr;
-        }
+        DEV_CHECK_ERR(!this->IsDeferred(), "Deferred contexts have no associated command queues");
         return this->m_pDevice->LockCommandQueue(this->GetCommandQueueId());
     }
 
     virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final
     {
-        if (this->IsDeferred())
-        {
-            LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
-            return;
-        }
+        DEV_CHECK_ERR(!this->IsDeferred(), "Deferred contexts have no associated command queues");
         this->m_pDevice->UnlockCommandQueue(this->GetCommandQueueId());
     }
 
-    ContextIndex GetContextId() const { return ContextIndex{m_ContextId}; }
+    SoftwareQueueIndex GetCommandQueueId() const
+    {
+        return SoftwareQueueIndex{this->GetExecutionCtxId()};
+    }
 
-    HardwareQueueId GetHardwareQueueId() const { return HardwareQueueId{this->m_Desc.QueueId}; }
+    HardwareQueueIndex GetHardwareQueueId() const { return HardwareQueueIndex{this->m_Desc.QueueId}; }
 
     Uint64 GetSubmittedBuffersCmdQueueMask() const { return m_SubmittedBuffersCmdQueueMask.load(); }
 
@@ -106,10 +92,6 @@ protected:
         {
             // For deferred context, reset submitted cmd queue mask
             m_SubmittedBuffersCmdQueueMask.store(0);
-
-            this->m_Desc.QueueId        = MAX_COMMAND_QUEUES;
-            this->m_Desc.CommandQueueId = MAX_COMMAND_QUEUES;
-            this->m_Desc.QueueType      = COMMAND_QUEUE_TYPE_UNKNOWN;
         }
         else
         {
@@ -124,8 +106,6 @@ protected:
     }
 
 private:
-    const Uint32 m_ContextId;
-
     // This mask indicates which command queues command buffers from this context were submitted to.
     // For immediate context, this will always be 1 << GetCommandQueueId().
     // For deferred contexts, this will accumulate bits of the queues to which command buffers

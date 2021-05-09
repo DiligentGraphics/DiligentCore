@@ -34,7 +34,7 @@
 
 namespace VulkanUtilities
 {
-using Diligent::HardwareQueueId;
+using Diligent::HardwareQueueIndex;
 
 class VulkanPhysicalDevice
 {
@@ -82,17 +82,16 @@ public:
     static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice      vkDevice,
                                                         const VulkanInstance& Instance);
 
-    // clang-format off
-    HardwareQueueId  FindQueueFamily     (VkQueueFlags QueueFlags)                                  const;
-    VkPhysicalDevice GetVkDeviceHandle   ()                                                         const { return m_VkDevice; }
-    bool             IsExtensionSupported(const char* ExtensionName)                                const;
-    bool             CheckPresentSupport (HardwareQueueId queueFamilyIndex, VkSurfaceKHR VkSurface) const;
-    // clang-format on
+    HardwareQueueIndex FindQueueFamily(VkQueueFlags QueueFlags) const;
+
+    bool IsExtensionSupported(const char* ExtensionName) const;
+    bool CheckPresentSupport(HardwareQueueIndex queueFamilyIndex, VkSurfaceKHR VkSurface) const;
 
     static constexpr uint32_t InvalidMemoryTypeIndex = ~uint32_t{0};
 
     uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
 
+    VkPhysicalDevice                            GetVkDeviceHandle() const { return m_VkDevice; }
     uint32_t                                    GetVkVersion() const { return m_VkVersion; }
     const VkPhysicalDeviceProperties&           GetProperties() const { return m_Properties; }
     const VkPhysicalDeviceFeatures&             GetFeatures() const { return m_Features; }

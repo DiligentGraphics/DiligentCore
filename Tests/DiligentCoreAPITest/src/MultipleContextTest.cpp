@@ -288,7 +288,7 @@ protected:
         Desc.Format           = TEX_FORMAT_RGBA8_UNORM;
         Desc.Usage            = USAGE_DEFAULT;
         Desc.BindFlags        = Flags;
-        Desc.CommandQueueMask = QueueMask | (1ull << pInitialCtx->GetDesc().CommandQueueId);
+        Desc.CommandQueueMask = QueueMask | (1ull << pInitialCtx->GetDesc().ContextId);
 
         RefCntAutoPtr<ITexture> pTexture;
         pDevice->CreateTexture(Desc, nullptr, &pTexture);
@@ -348,9 +348,9 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     {
         GTEST_SKIP() << "Compute queue is not supported by this device";
     }
-    ASSERT_NE(pGraphicsCtx->GetDesc().CommandQueueId, pComputeCtx->GetDesc().CommandQueueId);
+    ASSERT_NE(pGraphicsCtx->GetDesc().ContextId, pComputeCtx->GetDesc().ContextId);
 
-    const Uint64 QueueMask = (1ull << pGraphicsCtx->GetDesc().CommandQueueId) | (1ull << pComputeCtx->GetDesc().CommandQueueId);
+    const Uint64 QueueMask = (1ull << pGraphicsCtx->GetDesc().ContextId) | (1ull << pComputeCtx->GetDesc().ContextId);
 
     RefCntAutoPtr<IBuffer> pConstants1;
     RefCntAutoPtr<IBuffer> pConstants2;
@@ -570,7 +570,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
     {
         GTEST_SKIP() << "Transfer queue is not supported by this device";
     }
-    ASSERT_NE(pGraphicsCtx->GetDesc().CommandQueueId, pTransferCtx->GetDesc().CommandQueueId);
+    ASSERT_NE(pGraphicsCtx->GetDesc().ContextId, pTransferCtx->GetDesc().ContextId);
 
     std::vector<Uint8> Pixels;
     {
@@ -596,7 +596,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
         }
     }
 
-    const Uint64 QueueMask = (1ull << pGraphicsCtx->GetDesc().CommandQueueId) | (1ull << pTransferCtx->GetDesc().CommandQueueId);
+    const Uint64 QueueMask = (1ull << pGraphicsCtx->GetDesc().ContextId) | (1ull << pTransferCtx->GetDesc().ContextId);
 
     RefCntAutoPtr<IBuffer> pConstants;
     {

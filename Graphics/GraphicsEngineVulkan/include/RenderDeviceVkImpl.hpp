@@ -187,13 +187,13 @@ public:
 
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // The method returns fence value associated with the submitted command buffer
-    Uint64 ExecuteCommandBuffer(CommandQueueIndex CommandQueueId, const VkSubmitInfo& SubmitInfo, std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences);
+    Uint64 ExecuteCommandBuffer(SoftwareQueueIndex CommandQueueId, const VkSubmitInfo& SubmitInfo, std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences);
 
-    void AllocateTransientCmdPool(CommandQueueIndex                    CommandQueueId,
+    void AllocateTransientCmdPool(SoftwareQueueIndex                   CommandQueueId,
                                   VulkanUtilities::CommandPoolWrapper& CmdPool,
                                   VkCommandBuffer&                     vkCmdBuff,
                                   const Char*                          DebugPoolName = nullptr);
-    void ExecuteAndDisposeTransientCmdBuff(CommandQueueIndex CommandQueueId, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
+    void ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex CommandQueueId, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final;
@@ -227,7 +227,7 @@ public:
 
     VulkanDynamicMemoryManager& GetDynamicMemoryManager() { return m_DynamicMemoryManager; }
 
-    void FlushStaleResources(CommandQueueIndex CmdQueueIndex);
+    void FlushStaleResources(SoftwareQueueIndex CmdQueueIndex);
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
@@ -245,7 +245,7 @@ public:
                                            uint32_t  outQueueFamilyIndices[],
                                            uint32_t& inoutQueueFamilyIndicesCount) const;
 
-    HardwareQueueId GetQueueFamilyIndex(CommandQueueIndex CmdQueueInd) const;
+    HardwareQueueIndex GetQueueFamilyIndex(SoftwareQueueIndex CmdQueueInd) const;
 
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
@@ -257,7 +257,7 @@ private:
     // Parameters:
     //      * SubmittedCmdBuffNumber - submitted command buffer number
     //      * SubmittedFenceValue    - fence value associated with the submitted command buffer
-    void SubmitCommandBuffer(CommandQueueIndex                                           CommandQueueId,
+    void SubmitCommandBuffer(SoftwareQueueIndex                                          CommandQueueId,
                              const VkSubmitInfo&                                         SubmitInfo,
                              Uint64&                                                     SubmittedCmdBuffNumber,
                              Uint64&                                                     SubmittedFenceValue,
@@ -275,7 +275,7 @@ private:
     // These one-time command pools are used by buffer and texture constructors to
     // issue copy commands. Vulkan requires that every command pool is used by one thread
     // at a time, so every constructor must allocate command buffer from its own pool.
-    std::unordered_map<HardwareQueueId, CommandPoolManager, HardwareQueueId::Hasher> m_TransientCmdPoolMgrs;
+    std::unordered_map<HardwareQueueIndex, CommandPoolManager, HardwareQueueIndex::Hasher> m_TransientCmdPoolMgrs;
 
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
 

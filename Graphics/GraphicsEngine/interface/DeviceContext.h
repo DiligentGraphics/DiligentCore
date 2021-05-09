@@ -72,26 +72,31 @@ struct DeviceContextDesc
     const char*  Name            DEFAULT_INITIALIZER(nullptr);
 
     /// Command queue type that this context uses.
-    /// This type matches the GraphicsAdapterInfo::Queues[QueueId].QueueType.
+    /// For immediate contexts, this type matches the GraphicsAdapterInfo::Queues[QueueId].QueueType.
+    /// For deferred contexts, the type is always UNKNOWN.
     COMMAND_QUEUE_TYPE QueueType DEFAULT_INITIALIZER(COMMAND_QUEUE_TYPE_UNKNOWN);
 
     /// Indicates if this is a deferred context.
     Bool         IsDeferred      DEFAULT_INITIALIZER(False);
 
-    /// Queue index in GraphicsAdapterInfo::Queues.
+    /// Device contex ID. This value corresponds to the index of the device context
+    /// in ppContexts array when the engine was initialized.
+    /// When starting recording commands with a deferred context, the context id
+    /// of the immediate context where the command list will be executed should be
+    /// given to IDeviceContext::Begin() method.
+    Uint8        ContextId       DEFAULT_INITIALIZER(0);
+
+    /// Hardware queue index in GraphicsAdapterInfo::Queues array.
     ///
-    /// For deferred contexts, this value is only valid between IDeviceContext::Begin() and
-    /// IDeviceContext::FinishCommandList() calls.
+    /// \remarks  For deferred contexts, this value is only valid between IDeviceContext::Begin() and
+    ///           IDeviceContext::FinishCommandList() calls and reflects the type of the
+    ///           command queue where the command list will be executed.
     ///
-    /// \remarks  Vulkan backend:     same as queue family index.
+    ///           Vulkan backend:     same as queue family index.
     ///           Direct3D12 backend: same as queue type.
     ///           Metal backend:      index of the unique command queue.
-    Uint8        QueueId        DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
+    Uint8        QueueId    DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
 
-    /// Command queue index, same as immediate context index defined in EngineCreateInfo::pContextInfo.
-    /// For deferred contexts, this value is only valid between IDeviceContext::Begin() and
-    /// IDeviceContext::FinishCommandList() calls.
-    Uint8        CommandQueueId DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
 
     /// Required texture granularity for copy operations, for a transfer queue.
 
@@ -99,6 +104,27 @@ struct DeviceContextDesc
     ///           For transfer queues, an application must align the texture offsets and sizes
     ///           by the granularity defined by this member.
     Uint32       TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
+
+#if DILIGENT_CPP_INTERFACE
+    DeviceContextDesc() noexcept{}
+
+    /// Initializes the structure with user-specified values.
+    DeviceContextDesc(const char*        _Name,
+                      COMMAND_QUEUE_TYPE _QueueType,
+                      Bool               _IsDeferred,
+                      Uint32             _ContextId,
+                      Uint32             _QueueId = DeviceContextDesc{}.QueueId) noexcept : 
+        Name      {_Name      },
+        QueueType {_QueueType },
+        IsDeferred{_IsDeferred},
+        ContextId {static_cast<decltype(ContextId)>(_ContextId)},
+        QueueId   {static_cast<decltype(QueueId)>(_QueueId)}
+    {
+        TextureCopyGranularity[0] = 1;
+        TextureCopyGranularity[1] = 1;
+        TextureCopyGranularity[2] = 1;
+    }
+#endif
 };
 typedef struct DeviceContextDesc DeviceContextDesc;
 
@@ -1546,13 +1572,18 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Returns the context description
     VIRTUAL const DeviceContextDesc REF METHOD(GetDesc)(THIS) CONST PURE;
 
-    /// Begin recording to a deferred context.
+    /// Begins recording commands in the deferred context.
 
-    /// \param [in] CommandQueueId - command queue index in EngineCreateInfo::pContextInfo.
+    /// This method must be called before any command in the deferred context may be recorded.
+    ///
+    /// \param [in] ImmediateContextId - the ID of the immediate context where commands from this
+    ///                                  deferred context will be executed, 
+    ///                                  see Diligent::DeviceContextDesc::ContextId.
     /// 
-    /// \remarks Defered context can be executed only on immediate context with the same CommandQueueId.
+    /// \warning Command list recorded by the context must not be submitted to any other immediate context
+    ///          other than one identified by ImmediateContextId.
     VIRTUAL void METHOD(Begin)(THIS_
-                               Uint32 CommandQueueId) PURE;
+                               Uint32 ImmediateContextId) PURE;
 
     /// Sets the pipeline state.
 

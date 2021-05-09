@@ -840,22 +840,22 @@ D3D12_SHADER_VISIBILITY ShaderStagesToD3D12ShaderVisibility(SHADER_TYPE Stages)
         D3D12_SHADER_VISIBILITY_ALL;
 }
 
-HardwareQueueId D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TYPE Type)
+HardwareQueueIndex D3D12CommandListTypeToQueueId(D3D12_COMMAND_LIST_TYPE Type)
 {
     switch (Type)
     {
         // clang-format off
-        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return HardwareQueueId{0};
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return HardwareQueueId{1};
-        case D3D12_COMMAND_LIST_TYPE_COPY:    return HardwareQueueId{2};
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:  return HardwareQueueIndex{0};
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: return HardwareQueueIndex{1};
+        case D3D12_COMMAND_LIST_TYPE_COPY:    return HardwareQueueIndex{2};
         // clang-format on
         default:
             UNEXPECTED("Unexpected command list type");
-            return HardwareQueueId{MAX_COMMAND_QUEUES};
+            return HardwareQueueIndex{MAX_COMMAND_QUEUES};
     }
 }
 
-D3D12_COMMAND_LIST_TYPE QueueIdToD3D12CommandListType(HardwareQueueId QueueId)
+D3D12_COMMAND_LIST_TYPE QueueIdToD3D12CommandListType(HardwareQueueIndex QueueId)
 {
     switch (Uint32{QueueId})
     {

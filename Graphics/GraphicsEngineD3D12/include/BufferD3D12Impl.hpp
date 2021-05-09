@@ -86,7 +86,7 @@ public:
     /// Implementation of IBufferD3D12::GetD3D12ResourceState().
     virtual D3D12_RESOURCE_STATES DILIGENT_CALL_TYPE GetD3D12ResourceState() const override final;
 
-    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(ContextIndex ContextId, class DeviceContextD3D12Impl* pCtx) const
+    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(DeviceContextIndex ContextId, class DeviceContextD3D12Impl* pCtx) const
     {
         if (m_Desc.Usage == USAGE_DYNAMIC)
         {

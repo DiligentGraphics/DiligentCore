@@ -114,7 +114,7 @@ public:
         return shared_from_this();
     }
 
-    VkQueue GetQueue(HardwareQueueId queueFamilyIndex, uint32_t queueIndex);
+    VkQueue GetQueue(HardwareQueueIndex queueFamilyIndex, uint32_t queueIndex);
 
     VkDevice GetVkDevice() const
     {
@@ -226,7 +226,7 @@ public:
 
     VkResult GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const;
 
-    VkPipelineStageFlags GetSupportedStagesMask(HardwareQueueId QueueFamilyIndex) const { return m_SupportedStagesMask[QueueFamilyIndex]; }
+    VkPipelineStageFlags GetSupportedStagesMask(HardwareQueueIndex QueueFamilyIndex) const { return m_SupportedStagesMask[QueueFamilyIndex]; }
 
     const VkPhysicalDeviceFeatures& GetEnabledFeatures() const { return m_EnabledFeatures; }
     const ExtensionFeatures&        GetEnabledExtFeatures() const { return m_EnabledExtFeatures; }

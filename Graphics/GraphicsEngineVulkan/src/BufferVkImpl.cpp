@@ -390,7 +390,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
                 const auto CmdQueueInd = pBuffData->pContext ?
                     ValidatedCast<DeviceContextVkImpl>(pBuffData->pContext)->GetCommandQueueId() :
-                    CommandQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
+                    SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.CommandQueueMask)};
 
                 VulkanUtilities::CommandPoolWrapper CmdPool;
                 VkCommandBuffer                     vkCmdBuff;

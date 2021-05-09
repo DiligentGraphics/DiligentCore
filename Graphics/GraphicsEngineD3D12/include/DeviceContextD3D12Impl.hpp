@@ -63,16 +63,14 @@ public:
 
     DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters,
                            RenderDeviceD3D12Impl*       pDevice,
-                           bool                         bIsDeferred,
                            const EngineD3D12CreateInfo& EngineCI,
-                           ContextIndex                 ContextInd,
-                           CommandQueueIndex            QueueInd);
+                           const DeviceContextDesc&     Desc);
     ~DeviceContextD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextD3D12, TDeviceContextBase)
 
     /// Implementation of IDeviceContext::Begin() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE Begin(Uint32 CommandQueueId) override final;
+    virtual void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;
@@ -423,8 +421,6 @@ private:
     };
     TextureUploadSpace AllocateTextureUploadSpace(TEXTURE_FORMAT TexFmt,
                                                   const Box&     Region);
-
-    void InitializeForQueue(CommandQueueIndex CommandQueueId);
 
 
     friend class SwapChainD3D12Impl;

@@ -255,7 +255,7 @@ public:
     template <bool VerifyOnly>
     void TransitionResources(DeviceContextVkImpl* pCtxVkImpl);
 
-    __forceinline Uint32 GetDynamicBufferOffsets(ContextIndex CtxId, DeviceContextVkImpl* pCtxVkImpl, std::vector<uint32_t>& Offsets) const;
+    __forceinline Uint32 GetDynamicBufferOffsets(DeviceContextIndex CtxId, DeviceContextVkImpl* pCtxVkImpl, std::vector<uint32_t>& Offsets) const;
 
 private:
     Resource* GetFirstResourcePtr()
@@ -291,7 +291,7 @@ private:
 #endif
 };
 
-__forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(ContextIndex           CtxId,
+__forceinline Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
                                                                     DeviceContextVkImpl*   pCtxVkImpl,
                                                                     std::vector<uint32_t>& Offsets) const
 {

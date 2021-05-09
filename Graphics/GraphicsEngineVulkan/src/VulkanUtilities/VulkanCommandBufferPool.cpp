@@ -36,7 +36,7 @@ namespace VulkanUtilities
 {
 
 VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice,
-                                                 HardwareQueueId                            queueFamilyIndex,
+                                                 HardwareQueueIndex                         queueFamilyIndex,
                                                  VkCommandPoolCreateFlags                   flags) :
     m_LogicalDevice{std::move(LogicalDevice)},
     m_SupportedStagesMask{m_LogicalDevice->GetSupportedStagesMask(queueFamilyIndex)}

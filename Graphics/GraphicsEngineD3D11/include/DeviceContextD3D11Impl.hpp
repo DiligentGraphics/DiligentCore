@@ -54,16 +54,16 @@ class DeviceContextD3D11Impl final : public DeviceContextBase<EngineD3D11ImplTra
 public:
     using TDeviceContextBase = DeviceContextBase<EngineD3D11ImplTraits>;
 
-    DeviceContextD3D11Impl(IReferenceCounters*                 pRefCounters,
-                           IMemoryAllocator&                   Allocator,
-                           RenderDeviceD3D11Impl*              pDevice,
-                           ID3D11DeviceContext1*               pd3d11DeviceContext,
-                           const struct EngineD3D11CreateInfo& EngineCI,
-                           bool                                bIsDeferred);
+    DeviceContextD3D11Impl(IReferenceCounters*          pRefCounters,
+                           IMemoryAllocator&            Allocator,
+                           RenderDeviceD3D11Impl*       pDevice,
+                           ID3D11DeviceContext1*        pd3d11DeviceContext,
+                           const EngineD3D11CreateInfo& EngineCI,
+                           const DeviceContextDesc&     Desc);
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IDeviceContext::Begin() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE Begin(Uint32 CommandQueueId) override final;
+    virtual void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;

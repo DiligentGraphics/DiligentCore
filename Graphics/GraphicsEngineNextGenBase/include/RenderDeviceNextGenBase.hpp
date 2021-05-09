@@ -144,10 +144,10 @@ public:
     void PurgeReleaseQueues(bool ForceRelease = false)
     {
         for (Uint32 q = 0; q < m_CmdQueueCount; ++q)
-            PurgeReleaseQueue(CommandQueueIndex{q}, ForceRelease);
+            PurgeReleaseQueue(SoftwareQueueIndex{q}, ForceRelease);
     }
 
-    void PurgeReleaseQueue(CommandQueueIndex QueueInd, bool ForceRelease = false)
+    void PurgeReleaseQueue(SoftwareQueueIndex QueueInd, bool ForceRelease = false)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
         auto& Queue               = m_CommandQueues[QueueInd];
@@ -155,7 +155,7 @@ public:
         Queue.ReleaseQueue.Purge(CompletedFenceValue);
     }
 
-    void IdleCommandQueue(CommandQueueIndex QueueInd, bool ReleaseResources)
+    void IdleCommandQueue(SoftwareQueueIndex QueueInd, bool ReleaseResources)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
         auto& Queue = m_CommandQueues[QueueInd];
@@ -187,7 +187,7 @@ public:
     void IdleAllCommandQueues(bool ReleaseResources)
     {
         for (Uint32 q = 0; q < m_CmdQueueCount; ++q)
-            IdleCommandQueue(CommandQueueIndex{q}, ReleaseResources);
+            IdleCommandQueue(SoftwareQueueIndex{q}, ReleaseResources);
     }
 
     struct SubmittedCommandBufferInfo
@@ -196,7 +196,7 @@ public:
         Uint64 FenceValue      = 0;
     };
     template <typename... SubmitDataType>
-    SubmittedCommandBufferInfo SubmitCommandBuffer(CommandQueueIndex QueueInd, bool DiscardStaleResources, const SubmitDataType&... SubmitData)
+    SubmittedCommandBufferInfo SubmitCommandBuffer(SoftwareQueueIndex QueueInd, bool DiscardStaleResources, const SubmitDataType&... SubmitData)
     {
         SubmittedCommandBufferInfo CmdBuffInfo;
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
@@ -234,35 +234,35 @@ public:
         return CmdBuffInfo;
     }
 
-    ResourceReleaseQueue<DynamicStaleResourceWrapper>& GetReleaseQueue(CommandQueueIndex QueueInd)
+    ResourceReleaseQueue<DynamicStaleResourceWrapper>& GetReleaseQueue(SoftwareQueueIndex QueueInd)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
         return m_CommandQueues[QueueInd].ReleaseQueue;
     }
 
-    const CommandQueueType& GetCommandQueue(CommandQueueIndex CommandQueueInd) const
+    const CommandQueueType& GetCommandQueue(SoftwareQueueIndex CommandQueueInd) const
     {
         VERIFY_EXPR(CommandQueueInd < m_CmdQueueCount);
         return *m_CommandQueues[CommandQueueInd].CmdQueue;
     }
 
-    Uint64 GetCompletedFenceValue(CommandQueueIndex CommandQueueInd)
+    Uint64 GetCompletedFenceValue(SoftwareQueueIndex CommandQueueInd)
     {
         return m_CommandQueues[CommandQueueInd].CmdQueue->GetCompletedFenceValue();
     }
 
-    Uint64 GetNextFenceValue(CommandQueueIndex CommandQueueInd)
+    Uint64 GetNextFenceValue(SoftwareQueueIndex CommandQueueInd)
     {
         return m_CommandQueues[CommandQueueInd].CmdQueue->GetNextFenceValue();
     }
 
-    Bool IsFenceSignaled(CommandQueueIndex CommandQueueInd, Uint64 FenceValue)
+    Bool IsFenceSignaled(SoftwareQueueIndex CommandQueueInd, Uint64 FenceValue)
     {
         return FenceValue <= GetCompletedFenceValue(CommandQueueInd);
     }
 
     template <typename TAction>
-    void LockCmdQueueAndRun(CommandQueueIndex QueueInd, TAction Action)
+    void LockCmdQueueAndRun(SoftwareQueueIndex QueueInd, TAction Action)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
         auto&                       Queue = m_CommandQueues[QueueInd];
@@ -270,7 +270,7 @@ public:
         Action(Queue.CmdQueue);
     }
 
-    CommandQueueType* LockCommandQueue(CommandQueueIndex QueueInd)
+    CommandQueueType* LockCommandQueue(SoftwareQueueIndex QueueInd)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
         auto& Queue = m_CommandQueues[QueueInd];
@@ -278,7 +278,7 @@ public:
         return Queue.CmdQueue;
     }
 
-    void UnlockCommandQueue(CommandQueueIndex QueueInd)
+    void UnlockCommandQueue(SoftwareQueueIndex QueueInd)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
         auto& Queue = m_CommandQueues[QueueInd];
@@ -288,17 +288,17 @@ public:
 private:
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue(Uint32 CommandQueueInd) override final
     {
-        return GetCompletedFenceValue(CommandQueueIndex{CommandQueueInd});
+        return GetCompletedFenceValue(SoftwareQueueIndex{CommandQueueInd});
     }
 
     virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue(Uint32 CommandQueueInd) override final
     {
-        return GetNextFenceValue(CommandQueueIndex{CommandQueueInd});
+        return GetNextFenceValue(SoftwareQueueIndex{CommandQueueInd});
     }
 
     virtual Bool DILIGENT_CALL_TYPE IsFenceSignaled(Uint32 CommandQueueInd, Uint64 FenceValue) override final
     {
-        return IsFenceSignaled(CommandQueueIndex{CommandQueueInd}, FenceValue);
+        return IsFenceSignaled(SoftwareQueueIndex{CommandQueueInd}, FenceValue);
     }
 
 protected:

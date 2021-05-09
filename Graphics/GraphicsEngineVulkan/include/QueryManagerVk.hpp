@@ -48,7 +48,7 @@ class QueryManagerVk
 public:
     QueryManagerVk(RenderDeviceVkImpl* RenderDeviceVk,
                    const Uint32        QueryHeapSizes[],
-                   CommandQueueIndex   CmdQueueInd);
+                   SoftwareQueueIndex  CmdQueueInd);
     ~QueryManagerVk();
 
     // clang-format off

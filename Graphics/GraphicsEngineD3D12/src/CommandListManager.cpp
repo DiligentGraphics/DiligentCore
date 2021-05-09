@@ -111,7 +111,7 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
 #endif
 }
 
-void CommandListManager::ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, CommandQueueIndex CmdQueue, Uint64 FenceValue)
+void CommandListManager::ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, SoftwareQueueIndex CmdQueue, Uint64 FenceValue)
 {
     struct StaleAllocator
     {

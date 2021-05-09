@@ -231,7 +231,7 @@ void FenceVkImpl::Wait(Uint64 Value)
     }
 }
 
-VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(CommandQueueIndex CommandQueueId, Uint64 Value)
+VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(SoftwareQueueIndex CommandQueueId, Uint64 Value)
 {
     DEV_CHECK_ERR(m_Desc.Type == FENCE_TYPE_GENERAL, "Fence must be created with FENCE_TYPE_GENERAL");
 
@@ -269,7 +269,7 @@ VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(Com
     return Result;
 }
 
-void FenceVkImpl::AddPendingSyncPoint(CommandQueueIndex CommandQueueId, Uint64 Value, SyncPointVkPtr SyncPoint)
+void FenceVkImpl::AddPendingSyncPoint(SoftwareQueueIndex CommandQueueId, Uint64 Value, SyncPointVkPtr SyncPoint)
 {
     if (IsTimelineSemaphore())
     {

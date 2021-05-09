@@ -44,7 +44,7 @@ public:
     {
         const VulkanUtilities::VulkanLogicalDevice& LogicalDevice;
         std::string                                 Name;
-        const HardwareQueueId                       queueFamilyIndex;
+        const HardwareQueueIndex                    queueFamilyIndex;
         const VkCommandPoolCreateFlags              flags;
     };
 
@@ -78,7 +78,7 @@ private:
     const VulkanUtilities::VulkanLogicalDevice& m_LogicalDevice;
 
     std::string                    m_Name;
-    const HardwareQueueId          m_QueueFamilyIndex;
+    const HardwareQueueIndex       m_QueueFamilyIndex;
     const VkCommandPoolCreateFlags m_CmdPoolFlags;
 
     std::mutex                                                                                               m_Mutex;

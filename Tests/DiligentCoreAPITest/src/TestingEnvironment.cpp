@@ -456,15 +456,14 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             LOG_ERROR_AND_THROW("Context must not be null");
 
         const auto CtxDesc = ppContexts[i]->GetDesc();
+        VERIFY(CtxDesc.ContextId == static_cast<Uint8>(i), "Invalid context index");
         if (i < m_NumImmediateContexts)
         {
             VERIFY(!CtxDesc.IsDeferred, "Immediate context expected");
-            VERIFY(CtxDesc.CommandQueueId == static_cast<Uint8>(i), "Invalid command queue index");
         }
         else
         {
             VERIFY(CtxDesc.IsDeferred, "Deferred context expected");
-            VERIFY(CtxDesc.CommandQueueId >= InvalidQueueId, "Command queue index must be invalid");
             VERIFY(CtxDesc.QueueId >= InvalidQueueId, "Hardware queue id must be invalid");
         }
         m_pDeviceContexts[i].Attach(ppContexts[i]);
@@ -476,7 +475,7 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
         const auto  CtxDesc = m_pDeviceContexts[i]->GetDesc();
         if (CtxCI.QueueId != CtxDesc.QueueId)
             LOG_ERROR_MESSAGE("QueueId mismatch");
-        if (i != CtxDesc.CommandQueueId)
+        if (i != CtxDesc.ContextId)
             LOG_ERROR_MESSAGE("CommandQueueId mismatch");
     }
 

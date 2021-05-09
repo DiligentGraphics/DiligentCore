@@ -146,15 +146,22 @@ void SwapChainVkImpl::CreateSurface()
 
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create OS-specific surface");
 
-    auto*       pRenderDeviceVk  = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    const auto& PhysicalDevice   = pRenderDeviceVk->GetPhysicalDevice();
-    auto&       CmdQueueVK       = pRenderDeviceVk->GetCommandQueue(GetCommandQueueId());
-    auto        QueueFamilyIndex = HardwareQueueId{CmdQueueVK.GetQueueFamilyIndex()};
-    if (!PhysicalDevice.CheckPresentSupport(QueueFamilyIndex, m_VkSurface))
+    if (auto pContext = m_wpDeviceContext.Lock())
     {
-        LOG_ERROR_AND_THROW("Selected physical device does not support present capability.\n"
-                            "There could be few ways to mitigate this problem. One is to try to find another queue that supports present, but does not support graphics and compute capabilities."
-                            "Another way is to find another physical device that exposes queue family that supports present and graphics capability. Neither apporach is currently implemented in Diligent Engine.");
+        auto*       pRenderDeviceVk  = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+        const auto& PhysicalDevice   = pRenderDeviceVk->GetPhysicalDevice();
+        auto&       CmdQueueVK       = pRenderDeviceVk->GetCommandQueue(SoftwareQueueIndex{pContext->GetDesc().ContextId});
+        auto        QueueFamilyIndex = HardwareQueueIndex{CmdQueueVK.GetQueueFamilyIndex()};
+        if (!PhysicalDevice.CheckPresentSupport(QueueFamilyIndex, m_VkSurface))
+        {
+            LOG_ERROR_AND_THROW("Selected physical device does not support present capability.\n"
+                                "There could be few ways to mitigate this problem. One is to try to find another queue that supports present, but does not support graphics and compute capabilities."
+                                "Another way is to find another physical device that exposes queue family that supports present and graphics capability. Neither apporach is currently implemented in Diligent Engine.");
+        }
+    }
+    else
+    {
+        DEV_ERROR("Immediate context has been released");
     }
 }
 
@@ -715,7 +722,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         VkResult Result             = VK_SUCCESS;
         PresentInfo.pResults        = &Result;
         pDeviceVk->LockCmdQueueAndRun(
-            GetCommandQueueId(),
+            SoftwareQueueIndex{pImmediateCtxVk->GetDesc().ContextId},
             [&PresentInfo](ICommandQueueVk* pCmdQueueVk) //
             {
                 pCmdQueueVk->Present(PresentInfo);
