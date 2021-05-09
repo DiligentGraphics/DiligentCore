@@ -30,14 +30,12 @@
 /// \file
 /// Implementation of the Diligent::SwapChainBase template class
 
-#include "PrivateConstants.h"
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "SwapChain.h"
 #include "ObjectBase.hpp"
 #include "Errors.hpp"
 #include "RefCntAutoPtr.hpp"
-#include "IndexWrapper.hpp"
 
 namespace Diligent
 {
@@ -71,7 +69,7 @@ public:
         m_DesiredPreTransform{SCDesc.PreTransform}
     // clang-format on
     {
-        VERIFY(!pDeviceContext->GetDesc().IsDeferred, "Deferred context is not supported for swapchain");
+        DEV_CHECK_ERR(!pDeviceContext->GetDesc().IsDeferred, "Deferred contexts can't be used for presenting");
     }
 
     // clang-format off

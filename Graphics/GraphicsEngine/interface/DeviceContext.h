@@ -72,8 +72,10 @@ struct DeviceContextDesc
     const char*  Name            DEFAULT_INITIALIZER(nullptr);
 
     /// Command queue type that this context uses.
-    /// For immediate contexts, this type matches the GraphicsAdapterInfo::Queues[QueueId].QueueType.
-    /// For deferred contexts, the type is always UNKNOWN.
+
+    /// For immediate contexts, this type matches GraphicsAdapterInfo::Queues[QueueId].QueueType.
+    /// For deferred contexts, the type is only defined between IDeviceContext::Begin and IDeviceContext::FinishCommandList
+    /// calls and matches the type of the immediate context where the command list will be executed.
     COMMAND_QUEUE_TYPE QueueType DEFAULT_INITIALIZER(COMMAND_QUEUE_TYPE_UNKNOWN);
 
     /// Indicates if this is a deferred context.
@@ -87,10 +89,10 @@ struct DeviceContextDesc
     Uint8        ContextId       DEFAULT_INITIALIZER(0);
 
     /// Hardware queue index in GraphicsAdapterInfo::Queues array.
-    ///
-    /// \remarks  For deferred contexts, this value is only valid between IDeviceContext::Begin() and
-    ///           IDeviceContext::FinishCommandList() calls and reflects the type of the
-    ///           command queue where the command list will be executed.
+
+    /// \remarks  This member is only defined for immediate contexts and matches
+    ///           QueueId member of ImmediateContextCreateInfo struct that was used to
+    ///           initialize the context.
     ///
     ///           Vulkan backend:     same as queue family index.
     ///           Direct3D12 backend: same as queue type.
@@ -103,6 +105,10 @@ struct DeviceContextDesc
     /// \remarks  For graphics and compute queues, the granularity is always {1,1,1}.
     ///           For transfer queues, an application must align the texture offsets and sizes
     ///           by the granularity defined by this member.
+    ///
+    ///           For deferred contexts, this member is only defined between IDeviceContext::Begin and
+    ///           IDeviceContext::FinishCommandList calls and matches the texture copy granularity of
+    ///           the immediate context where the command list will be executed.
     Uint32       TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE
@@ -120,9 +126,16 @@ struct DeviceContextDesc
         ContextId {static_cast<decltype(ContextId)>(_ContextId)},
         QueueId   {static_cast<decltype(QueueId)>(_QueueId)}
     {
-        TextureCopyGranularity[0] = 1;
-        TextureCopyGranularity[1] = 1;
-        TextureCopyGranularity[2] = 1;
+        if (!IsDeferred)
+        {
+            TextureCopyGranularity[0] = 1;
+            TextureCopyGranularity[1] = 1;
+            TextureCopyGranularity[2] = 1;
+        }
+        else
+        {
+            // For deferred contexts texture copy granularity is set by IDeviceContext::Begin() method.
+        }
     }
 #endif
 };
@@ -2177,7 +2190,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \note  If NativeFence feature is enabled then waiting for a value that is greater than
     ///        any pending value will cause a GPU stall.
     ///
-    /// \note  Direct3D12 and Vulkan backend: access to the fence is thread safe.
+    /// \note  Direct3D12 and Vulkan backend: access to the fence is thread-safe.
     ///
     /// \remarks  Wait is only allowed for immediate contexts.
     VIRTUAL void METHOD(DeviceWaitForFence)(THIS_
@@ -2376,10 +2389,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
 
     /// Unmaps the texture subresource.
-    
-    /// \param [in] pTexture    - Pointer to the texture to map.
-    /// \param [in] MipLevel    - Mip level to map.
-    /// \param [in] ArraySlice  - Array slice to map. This parameter must be 0 for non-array textures.
+
+    /// \param [in] pTexture    - Pointer to the texture to unmap.
+    /// \param [in] MipLevel    - Mip level to unmap.
+    /// \param [in] ArraySlice  - Array slice to unmap. This parameter must be 0 for non-array textures.
     /// 
     /// \remarks Supported contexts: graphics, compute, transfer.
     VIRTUAL void METHOD(UnmapTextureSubresource)(THIS_
@@ -2387,7 +2400,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                                  Uint32    MipLevel,
                                                  Uint32    ArraySlice) PURE;
 
-    
+
     /// Generates a mipmap chain.
 
     /// \param [in] pTextureView - Texture view to generate mip maps for.
@@ -2398,7 +2411,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     VIRTUAL void METHOD(GenerateMips)(THIS_
                                       ITextureView* pTextureView) PURE;
 
-    
+
     /// Finishes the current frame and releases dynamic resources allocated by the context.
 
     /// For immediate context, this method is called automatically by ISwapChain::Present() of the primary

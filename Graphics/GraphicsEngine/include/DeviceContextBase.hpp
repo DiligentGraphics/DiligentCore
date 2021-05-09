@@ -73,6 +73,10 @@ bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttri
                                             const TextureDesc&                      DstTexDesc);
 
 bool VerifyBeginRenderPassAttribs(const BeginRenderPassAttribs& Attribs);
+
+// Verifies state transition (resource barrier) description.
+// ExecutionCtxId - index of the immediate context where the barrier will be executed.
+// CtxDesc        - description of the context recording the command (deferred or immediate).
 bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                const StateTransitionDesc& Barrier,
                                DeviceContextIndex         ExecutionCtxId,
@@ -136,8 +140,7 @@ public:
 
     /// \param pRefCounters  - Reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - Render device.
-    /// \param Name          - Context name.
-    /// \param bIsDeferred   - Flag indicating if this instance is a deferred context
+    /// \param Desc          - Context description, see Diligent::DeviceContextDesc.
     DeviceContextBase(IReferenceCounters*      pRefCounters,
                       DeviceImplType*          pRenderDevice,
                       const DeviceContextDesc& Desc) :
@@ -300,14 +303,15 @@ public:
 
     bool HasActiveRenderPass() const { return m_pActiveRenderPass != nullptr; }
 
-    bool IsGraphicsCtx() const { return (m_Desc.QueueType & COMMAND_QUEUE_TYPE_GRAPHICS) == COMMAND_QUEUE_TYPE_GRAPHICS; }
-    bool IsComputeCtx() const { return (m_Desc.QueueType & COMMAND_QUEUE_TYPE_COMPUTE) == COMMAND_QUEUE_TYPE_COMPUTE; }
-    bool IsTransferCtx() const { return (m_Desc.QueueType & COMMAND_QUEUE_TYPE_TRANSFER) == COMMAND_QUEUE_TYPE_TRANSFER; }
-
     DeviceContextIndex GetContextId() const { return DeviceContextIndex{m_Desc.ContextId}; }
+
+    // Returns the index of the immediate context where commands from this context will be executed.
+    // For immediate contexts this is the same as ContextId. For deferred contexts, this is the index of
+    // the context that was given to Begin() method.
     DeviceContextIndex GetExecutionCtxId() const
     {
-        VERIFY(!IsDeferred() || IsRecordingDeferredCommands(), "Execution context id may only be requested for deferred contexts while in recording state");
+        VERIFY(!IsDeferred() || IsRecordingDeferredCommands(),
+               "For deferred contexts, the execution context id may only be requested while the context is in recording state");
         return IsDeferred() ? m_DstImmediateContextId : GetContextId();
     }
 
@@ -467,10 +471,12 @@ protected:
 
     void Begin(Uint32 ImmediateContextId, COMMAND_QUEUE_TYPE QueueType)
     {
+        DEV_CHECK_ERR(IsDeferred(), "Begin() is only allowed for deferred contexts.");
         DEV_CHECK_ERR(!IsRecordingDeferredCommands(), "This context is already recording commands. Call FinishCommandList() before beginning new recording.");
-        DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
         m_DstImmediateContextId = static_cast<Uint8>(ImmediateContextId);
+        VERIFY_EXPR(m_DstImmediateContextId == ImmediateContextId);
 
+        // Set command queue type while commands are being recorded
         m_Desc.QueueType = QueueType;
         for (size_t i = 0; i < _countof(m_Desc.TextureCopyGranularity); ++i)
             m_Desc.TextureCopyGranularity[i] = 1;
@@ -478,8 +484,8 @@ protected:
 
     void FinishCommandList()
     {
-        VERIFY_EXPR(IsDeferred());
-        VERIFY_EXPR(IsRecordingDeferredCommands());
+        DEV_CHECK_ERR(IsDeferred(), "FinishCommandList() is only allowed for deferred contexts.");
+        DEV_CHECK_ERR(IsRecordingDeferredCommands(), "This context is not recording commands. Call Begin() before finishing the recording.");
         m_DstImmediateContextId = INVALID_CONTEXT_ID;
         m_Desc.QueueType        = COMMAND_QUEUE_TYPE_UNKNOWN;
         for (size_t i = 0; i < _countof(m_Desc.TextureCopyGranularity); ++i)
@@ -505,12 +511,14 @@ protected:
     void DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName) const;
     void DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
     void DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName) const;
- 
+    // clang-format on
+
     // Verifies compatibility between current PSO and SRBs
     void DvpVerifySRBCompatibility(
         CommittedShaderResources&                                 Resources,
         std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature = nullptr) const;
 #else
+    // clang-format off
     void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs)const {}
     void DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs)const {}
     void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs)const {}
@@ -648,6 +656,7 @@ protected:
 #endif
 };
 
+#define DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(SupportedQueueType, ...) DEV_CHECK_ERR((m_Desc.QueueType & (SupportedQueueType)) == (SupportedQueueType), __VA_ARGS__, " is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.")
 
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
@@ -658,7 +667,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
     SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "SetVertexBuffers is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetVertexBuffers");
 
     DEV_CHECK_ERR(StartSlot < MAX_BUFFER_SLOTS, "Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MAX_BUFFER_SLOTS - 1, "].");
 
@@ -708,9 +717,9 @@ inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
     PipelineStateImplType* pPipelineState,
     int /*Dummy*/)
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "SetPipelineState is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "SetPipelineState");
     DEV_CHECK_ERR((pPipelineState->GetDesc().ImmediateContextMask & (Uint64{1} << GetExecutionCtxId())) != 0,
-                  "The PSO was not created for using in device context '", m_Desc.Name, "'.");
+                  "PSO '", pPipelineState->GetDesc().Name, "' can't be used in device context '", m_Desc.Name, "'.");
 
     m_pPipelineState = pPipelineState;
 }
@@ -721,8 +730,7 @@ inline void DeviceContextBase<ImplementationTraits>::CommitShaderResources(
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
     int)
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "CommitShaderResources is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
-
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "CommitShaderResources");
     DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
                   "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
@@ -748,7 +756,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
     m_IndexDataStartOffset = ByteOffset;
 
 #ifdef DILIGENT_DEVELOPMENT
-    DEV_CHECK_ERR(IsGraphicsCtx(), "SetIndexBuffer is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetIndexBuffer");
 
     DEV_CHECK_ERR(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
                   "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
@@ -786,7 +794,7 @@ inline void DeviceContextBase<ImplementationTraits>::GetPipelineState(IPipelineS
 template <typename ImplementationTraits>
 inline bool DeviceContextBase<ImplementationTraits>::SetBlendFactors(const float* BlendFactors, int)
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "SetBlendFactors is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetBlendFactors");
 
     bool FactorsDiffer = false;
     for (Uint32 f = 0; f < 4; ++f)
@@ -801,7 +809,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetBlendFactors(const float
 template <typename ImplementationTraits>
 inline bool DeviceContextBase<ImplementationTraits>::SetStencilRef(Uint32 StencilRef, int)
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "SetStencilRef is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetStencilRef");
 
     if (m_StencilRef != StencilRef)
     {
@@ -818,7 +826,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetViewports(
     Uint32&         RTWidth,
     Uint32&         RTHeight)
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "SetViewports is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetViewports");
 
     if (RTWidth == 0 || RTHeight == 0)
     {
@@ -863,7 +871,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetScissorRects(
     Uint32&     RTWidth,
     Uint32&     RTHeight)
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "SetScissorRects is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetScissorRects");
 
     if (RTWidth == 0 || RTHeight == 0)
     {
@@ -888,7 +896,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(
     ITextureView* ppRenderTargets[],
     ITextureView* pDepthStencil)
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "SetRenderTargets is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "SetRenderTargets");
 
     if (NumRenderTargets == 0 && pDepthStencil == nullptr)
     {
@@ -1240,7 +1248,7 @@ void DeviceContextBase<ImplementationTraits>::ResetRenderTargets()
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "BeginRenderPass is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "BeginRenderPass");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
     DEV_CHECK_ERR(m_pBoundFramebuffer == nullptr, "Attempting to begin render pass while another framebuffer ('", m_pBoundFramebuffer->GetDesc().Name, "') is bound.");
 
@@ -1293,7 +1301,7 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::NextSubpass()
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "NextSubpass is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "NextSubpass");
     DEV_CHECK_ERR(m_pActiveRenderPass != nullptr, "There is no active render pass");
     VERIFY(m_SubpassIndex + 1 < m_pActiveRenderPass->GetDesc().SubpassCount, "The render pass has reached the final subpass already");
     ++m_SubpassIndex;
@@ -1334,7 +1342,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateAttachmentStates(Uint
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::EndRenderPass()
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "EndRenderPass is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "EndRenderPass");
     DEV_CHECK_ERR(m_pActiveRenderPass != nullptr, "There is no active render pass");
     DEV_CHECK_ERR(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
     VERIFY(m_pActiveRenderPass->GetDesc().SubpassCount == m_SubpassIndex + 1,
@@ -1355,7 +1363,7 @@ inline void DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureV
 {
     DEV_CHECK_ERR(pView != nullptr, "Depth-stencil view to clear must not be null");
 
-    DEV_CHECK_ERR(IsGraphicsCtx(), "ClearDepthStencil is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "ClearDepthStencil");
 
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -1393,7 +1401,7 @@ template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureView* pView)
 {
     DEV_CHECK_ERR(pView != nullptr, "Render target view to clear must not be null");
-    DEV_CHECK_ERR(IsGraphicsCtx(), "ClearRenderTarget is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "ClearRenderTarget");
 
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -1437,14 +1445,14 @@ inline void DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, 
 {
     DEV_CHECK_ERR(pQuery != nullptr, "IDeviceContext::BeginQuery: pQuery must not be null");
 
-    DEV_CHECK_ERR(!IsDeferred(), "IDeviceContext::BeginQuery: Deferred contexts do not support queries");
+    DEV_CHECK_ERR(!IsDeferred(), "IDeviceContext::BeginQuery: deferred contexts do not support queries");
 
     const auto QueryType = pQuery->GetDesc().Type;
     DEV_CHECK_ERR(QueryType != QUERY_TYPE_TIMESTAMP,
                   "BeginQuery() is disabled for timestamp queries. Call EndQuery() to set the timestamp.");
 
-    DEV_CHECK_ERR((QueryType == QUERY_TYPE_DURATION ? IsComputeCtx() : IsGraphicsCtx()),
-                  "BeginQuery with type ", GetQueryTypeString(QueryType), " is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    const auto QueueType = QueryType == QUERY_TYPE_DURATION ? COMMAND_QUEUE_TYPE_COMPUTE : COMMAND_QUEUE_TYPE_GRAPHICS;
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "BeginQuery for query type ", GetQueryTypeString(QueryType));
 
     ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(this);
 }
@@ -1457,8 +1465,8 @@ inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, in
     DEV_CHECK_ERR(!IsDeferred(), "IDeviceContext::EndQuery: Deferred contexts do not support queries");
 
     const auto QueryType = pQuery->GetDesc().Type;
-    DEV_CHECK_ERR((QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? IsComputeCtx() : IsGraphicsCtx()),
-                  "BeginQuery with type ", GetQueryTypeString(QueryType), " is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    const auto QueueType = QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? COMMAND_QUEUE_TYPE_COMPUTE : COMMAND_QUEUE_TYPE_GRAPHICS;
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "EndQuery for query type ", GetQueryTypeString(QueryType));
 
     ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(this);
 }
@@ -1486,7 +1494,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateBuffer(
     const void*                    pData,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    DEV_CHECK_ERR(IsTransferCtx(), "UpdateBuffer is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_TRANSFER, "UpdateBuffer");
     DEV_CHECK_ERR(pBuffer != nullptr, "Buffer must not be null");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
@@ -1509,7 +1517,7 @@ inline void DeviceContextBase<ImplementationTraits>::CopyBuffer(
     Uint32                         Size,
     RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)
 {
-    DEV_CHECK_ERR(IsTransferCtx(), "CopyBuffer is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_TRANSFER, "CopyBuffer");
     DEV_CHECK_ERR(pSrcBuffer != nullptr, "Source buffer must not be null");
     DEV_CHECK_ERR(pDstBuffer != nullptr, "Destination buffer must not be null");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "CopyBuffer command must be used outside of render pass.");
@@ -1606,7 +1614,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateTexture(
     RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
     RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
 {
-    DEV_CHECK_ERR(IsTransferCtx(), "UpdateTexture is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_TRANSFER, "UpdateTexture");
     DEV_CHECK_ERR(pTexture != nullptr, "pTexture must not be null");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
 
@@ -1616,7 +1624,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateTexture(
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
-    DEV_CHECK_ERR(IsTransferCtx(), "CopyTexture is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_TRANSFER, "CopyTexture");
     DEV_CHECK_ERR(CopyAttribs.pSrcTexture, "Src texture must not be null");
     DEV_CHECK_ERR(CopyAttribs.pDstTexture, "Dst texture must not be null");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "CopyTexture command must be used outside of render pass.");
@@ -1652,7 +1660,7 @@ inline void DeviceContextBase<ImplementationTraits>::UnmapTextureSubresource(
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::GenerateMips(ITextureView* pTexView)
 {
-    DEV_CHECK_ERR(IsGraphicsCtx(), "GenerateMips is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "GenerateMips");
     DEV_CHECK_ERR(pTexView != nullptr, "pTexView must not be null");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "GenerateMips command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
@@ -1674,7 +1682,7 @@ void DeviceContextBase<ImplementationTraits>::ResolveTextureSubresource(
     const ResolveTextureSubresourceAttribs& ResolveAttribs)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    DEV_CHECK_ERR(IsGraphicsCtx(), "ResolveTextureSubresource is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "ResolveTextureSubresource");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource command must be used outside of render pass.");
 
     DEV_CHECK_ERR(pSrcTexture != nullptr && pDstTexture != nullptr, "Src and Dst textures must not be null");
@@ -1689,7 +1697,7 @@ void DeviceContextBase<ImplementationTraits>::ResolveTextureSubresource(
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "BuildBLAS is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "BuildBLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildBLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyBuildBLASAttribs(Attribs), "BuildBLASAttribs are invalid");
@@ -1698,7 +1706,7 @@ void DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& 
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "BuildTLAS is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "BuildTLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildTLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyBuildTLASAttribs(Attribs), "BuildTLASAttribs are invalid");
@@ -1707,7 +1715,7 @@ void DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& 
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "CopyBLAS is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "CopyBLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyBLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyCopyBLASAttribs(m_pDevice, Attribs), "CopyBLASAttribs are invalid");
@@ -1716,7 +1724,7 @@ void DeviceContextBase<ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& At
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "CopyTLAS is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "CopyTLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyTLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyCopyTLASAttribs(Attribs), "CopyTLASAttribs are invalid");
@@ -1726,7 +1734,7 @@ void DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& At
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "WriteBLASCompactedSize is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "WriteBLASCompactedSize");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::WriteBLASCompactedSize: command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyWriteBLASCompactedSizeAttribs(m_pDevice, Attribs), "WriteBLASCompactedSizeAttribs are invalid");
@@ -1735,7 +1743,7 @@ void DeviceContextBase<ImplementationTraits>::WriteBLASCompactedSize(const Write
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "WriteTLASCompactedSize is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "WriteTLASCompactedSize");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::WriteTLASCompactedSize: command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyWriteTLASCompactedSizeAttribs(m_pDevice, Attribs), "WriteTLASCompactedSizeAttribs are invalid");
@@ -1744,7 +1752,7 @@ void DeviceContextBase<ImplementationTraits>::WriteTLASCompactedSize(const Write
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "TraceRays is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "TraceRays");
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing,
                   "IDeviceContext::TraceRays: ray tracing is not supported by this device");
@@ -1781,7 +1789,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
 template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, IBuffer* pAttribsBuffer, int) const
 {
-    DEV_CHECK_ERR(IsComputeCtx(), "TraceRaysIndirect is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "TraceRaysIndirect");
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing2,
                   "IDeviceContext::TraceRaysIndirect: indirect trace rays is not supported by this device");
@@ -1920,7 +1928,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawArguments(cons
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
-    DEV_CHECK_ERR(IsGraphicsCtx(), "Draw is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "Draw");
 
     DEV_CHECK_ERR(m_pPipelineState, "Draw command arguments are invalid: no pipeline state is bound.");
 
@@ -1936,7 +1944,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedArgumen
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
-    DEV_CHECK_ERR(IsGraphicsCtx(), "DrawIndexed is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndexed");
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawIndexed command arguments are invalid: no pipeline state is bound.");
 
@@ -1955,7 +1963,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
-    DEV_CHECK_ERR(IsGraphicsCtx(), "DrawMesh is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMesh");
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMesh: mesh shaders are not supported by this device");
 
@@ -1976,7 +1984,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArgume
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
-    DEV_CHECK_ERR(IsGraphicsCtx(), "DrawIndirect is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndirect");
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -1999,7 +2007,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirec
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
-    DEV_CHECK_ERR(IsGraphicsCtx(), "DrawIndexedIndirect is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndexedIndirect");
 
     DEV_CHECK_ERR(m_pPipelineState, "DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -2024,7 +2032,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectAr
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
-    DEV_CHECK_ERR(IsGraphicsCtx(), "DrawMeshIndirect is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMeshIndirect");
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMeshIndirect: mesh shaders are not supported by this device");
 
@@ -2046,7 +2054,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectCo
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return;
 
-    DEV_CHECK_ERR(IsGraphicsCtx(), "DrawMeshIndirectCount is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.");
+    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMeshIndirectCount");
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMeshIndirectCount: mesh shaders are not supported by this device");
 
@@ -2250,5 +2258,7 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifySRBCompatibility(
 }
 
 #endif // DILIGENT_DEVELOPMENT
+
+#undef DVP_CHECK_QUEUE_TYPE_COMPATIBILITY
 
 } // namespace Diligent

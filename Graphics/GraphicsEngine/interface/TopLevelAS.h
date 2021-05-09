@@ -58,11 +58,12 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// is going to be the target of a compacting copy command (IDeviceContext::CopyTLAS() with COPY_AS_MODE_COMPACT).
     Uint32                    CompactedSize    DEFAULT_INITIALIZER(0);
 
-    /// Defines which immediate contexts this TLAS can be used in.
+    /// Defines which immediate contexts are allowed to execute commands that use this TLAS.
 
-    /// When ImmediateContextMask contains 1 bit at position n, the TLAS may be
-    /// used in the immediate context with index n directly. It may also be used in a command list
-    /// recorded by a deferred context that will be executed through that immediate context.
+    /// When ImmediateContextMask contains a bit at position n, the acceleration structure may be
+    /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
+    /// It may also be used in a command list recorded by a deferred context that will be executed
+    /// through that immediate context.
     ///
     /// \remarks    Only specify these bits that will indicate those immediate contexts where the TLAS
     ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.

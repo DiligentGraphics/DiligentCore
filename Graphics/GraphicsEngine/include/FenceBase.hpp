@@ -70,40 +70,36 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Fence, TDeviceObjectBase)
 
 
-#ifdef DILIGENT_DEVELOPMENT
     // Validate IFence::Signal() and IDeviceContext::EnqueueSignal()
     void DvpSignal(Uint64 NewValue)
     {
+#ifdef DILIGENT_DEVELOPMENT
         auto EnqueuedValue = m_EnqueuedFenceValue.load();
         DEV_CHECK_ERR(NewValue >= EnqueuedValue,
-                      "Fence '", this->m_Desc.Name, "' signaled or equeued for signal with value ", NewValue,
-                      ", but the previous value (", EnqueuedValue, ") is greater than the new value. "
-                                                                   "Signal operation will have no effect.");
+                      "Fence '", this->m_Desc.Name, "' is being signaled or equeued for signal with value ", NewValue,
+                      ", but the previous value (", EnqueuedValue,
+                      ") is greater than the new value. Signal operation will have no effect.");
 
         while (!m_EnqueuedFenceValue.compare_exchange_weak(EnqueuedValue, std::max(EnqueuedValue, NewValue)))
         {
             // If exchange fails, EnqueuedValue will hold the actual value of m_EnqueuedFenceValue.
         }
+#endif
     }
 
     // Validate IDeviceContext::DeviceWaitForFence()
     void DvpDeviceWait(Uint64 Value)
     {
+#ifdef DILIGENT_DEVELOPMENT
         if (!this->GetDevice()->GetFeatures().NativeFence)
         {
             auto EnqueuedValue = m_EnqueuedFenceValue.load();
             DEV_CHECK_ERR(Value < EnqueuedValue,
-                          "Can not wait for value (", Value, ") that is greater than last enqueued for signal value (", EnqueuedValue,
+                          "Can not wait for value ", Value, " that is greater than the last enqueued for signal value (", EnqueuedValue,
                           "). This is not supported when NativeFence feature is disabled.");
         }
-    }
-#else
-    void DvpSignal(Uint64 NewValue)
-    {}
-
-    void DvpDeviceWait(Uint64 Value)
-    {}
 #endif
+    }
 
 protected:
     void UpdateLastCompletedFenceValue(uint64_t NewValue)

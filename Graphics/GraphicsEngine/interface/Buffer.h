@@ -103,11 +103,12 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// created for this buffer.
     Uint32 ElementByteStride        DEFAULT_INITIALIZER(0);
 
-    /// Defines which immediate contexts this buffer can be used in.
+    /// Defines which immediate contexts are allowed to execute commands that use this buffer.
 
-    /// When ImmediateContextMask contains 1 bit at position n, the buffer may be
-    /// used in the immediate context with index n directly. It may also be used in a command list
-    /// recorded by a deferred context that will be executed through that immediate context.
+    /// When ImmediateContextMask contains a bit at position n, the buffer may be
+    /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
+    /// It may also be used in a command list recorded by a deferred context that will be executed
+    /// through that immediate context.
     ///
     /// \remarks    Only specify these bits that will indicate those immediate contexts where the buffer
     ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.
@@ -176,7 +177,7 @@ struct BufferData
     /// The buffer will be in write state after the initialization.
     /// If an application uses the buffer in another context afterwards, it
     /// must synchronize the access to the buffer using fence.
-    /// When null is provided, the first context enabled by CommandQueueMask
+    /// When null is provided, the first context enabled by ImmediateContextMask
     /// will be used.
     struct IDeviceContext*  pContext  DEFAULT_INITIALIZER(nullptr);
 

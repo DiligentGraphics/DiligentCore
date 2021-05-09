@@ -171,7 +171,7 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// that can be read and written by GPU and can also be directly accessed by CPU.
     ///
     /// \remarks An application should check if unified memory is available on the device by querying
-    ///          the adapter info (see Diligent::IRenderDevice::GraphicsAdapterInfo().Memory and Diligent::AdapterMemoryInfo).
+    ///          the adapter info (see Diligent::IRenderDevice::GetAdapterInfo().Memory and Diligent::AdapterMemoryInfo).
     ///          If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
     /// 
     ///          Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
@@ -1240,7 +1240,7 @@ DILIGENT_TYPED_ENUM(ADAPTER_TYPE, Uint8)
 
     /// Integrated hardware adapter
     ADAPTER_TYPE_INTEGRATED,
-        
+
     /// Discrete hardware adapter
     ADAPTER_TYPE_DISCRETE,
 };
@@ -2002,6 +2002,9 @@ struct RenderDeviceInfo
 
     /// \note For optional features requested during the initialization, the
     ///       struct will indicate the actual feature state (enabled or disabled).
+    ///
+    ///       The feature state in the adapter info indicates if the GPU supports the
+    ///       feature, but if it is not enabled, an application must not use it.
     DeviceFeatures Features;
 
 #if DILIGENT_CPP_INTERFACE
@@ -2266,7 +2269,7 @@ struct ImmediateContextCreateInfo
     ///          for this queue.
     Uint8          QueueId      DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
 
-    /// Priority of the queue, see Diligent::QUEUE_PRIORITY.
+    /// Priority of the software queue created by the context, see Diligent::QUEUE_PRIORITY.
 
     /// Direct3D12 backend: each context may use a unique queue priority.
     /// Vulkan backend:     all contexts with the same QueueId must use the same priority.
@@ -2295,7 +2298,7 @@ struct EngineCreateInfo
     /// Every immediate device contexts encompases a command queue of a specific type.
     /// It may record commands directly or execute command lists recorded by deferred contexts.
     ///
-    /// If not specified, a single graphics context will be created.
+    /// If not specified, single graphics context will be created.
     ///
     /// Recomended configuration:
     ///   * Modern discrete GPU:      1 graphics, 1 compute, 1 transfer context.
@@ -2669,7 +2672,7 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// A list of InstanceExtensionCount Vulkan instance extensions to enable.
     const char* const* ppInstanceExtensionNames DEFAULT_INITIALIZER(nullptr);
 
-    /// Number of Vulkan device extensions
+    /// Number of Vulkan device extensions in ppDeviceExtensionNames array.
     Uint32             DeviceExtensionCount     DEFAULT_INITIALIZER(0);
 
     /// List of Vulkan device extensions to enable.

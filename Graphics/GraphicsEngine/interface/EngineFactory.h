@@ -74,7 +74,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
     /// Enumerates adapters available on this machine.
 
     /// \param [in]     MinVersion  - Minimum required API version (feature level for Direct3D).
-    /// \param [in,out] NumAdapters - Number of adapters. If Adapters is null, this value
+    /// \param [in,out] NumAdapters - The number of adapters. If Adapters is null, this value
     ///                               will be overwritten with the number of adapters available
     ///                               on this system. If Adapters is not null, this value should
     ///                               contain the maximum number of elements reserved in the array

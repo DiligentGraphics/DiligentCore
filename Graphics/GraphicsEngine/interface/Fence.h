@@ -66,6 +66,7 @@ DILIGENT_TYPED_ENUM(FENCE_TYPE, Uint8)
 /// Fence description
 struct FenceDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
+    /// Fence type, see Diligent::FENCE_TYPE.
     FENCE_TYPE Type DEFAULT_INITIALIZER(FENCE_TYPE_CPU_WAIT_ONLY);
 };
 typedef struct FenceDesc FenceDesc;
@@ -85,8 +86,8 @@ typedef struct FenceDesc FenceDesc;
 ///
 /// \remarks When a fence that was previously signaled by IDeviceContext::EnqueueSignal() is destroyed,
 ///          it may block the GPU until all prior commands have completed execution.
-/// 
-/// \remarks In Direct3D12 and Vulkan backend fence is thread safe.
+///
+/// \remarks In Direct3D12 and Vulkan backends, fence is thread-safe.
 DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
@@ -96,8 +97,8 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
 
     /// Returns the last completed value signaled by the GPU
 
-    /// \remarks   In Direct3D11 backend this method is not thread safe (even if the fence
-    ///            object is protected by mutex) and must only be called by the same thread 
+    /// \remarks   In Direct3D11 backend, this method is not thread-safe (even if the fence
+    ///            object is protected by a mutex) and must only be called by the same thread 
     ///            that signals the fence via IDeviceContext::EnqueueSignal().
     VIRTUAL Uint64 METHOD(GetCompletedValue)(THIS) PURE;
 
@@ -108,8 +109,8 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
     ///                     The value must be greater than the current value of the fence.
     /// 
     /// \note  Fence value will be changed immediately on the CPU.
-    ///        Use ICommandQueueVk::SignalFence or ICommandQueueD3D12::SignalFence to add a signal command
-    ///        to the queue, which will change the value on the GPU when all previously submitted commands
+    ///        Use IDeviceContext::EnqueueSignal to enqueue a signal command
+    ///        that will change the value on the GPU after all previously submitted commands
     ///        are complete.
     /// 
     /// \note  The fence must have been created with type FENCE_TYPE_GENERAL.

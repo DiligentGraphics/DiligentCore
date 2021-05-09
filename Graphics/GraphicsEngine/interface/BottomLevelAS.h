@@ -163,11 +163,12 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// is going to be the target of a compacting copy (IDeviceContext::CopyBLAS() with COPY_AS_MODE_COMPACT).
     Uint32                     CompactedSize    DEFAULT_INITIALIZER(0);
 
-    /// Defines which immediate contexts this BLAS can be used in.
+    /// Defines which immediate contexts are allowed to execute commands that use this BLAS.
 
-    /// When ImmediateContextMask contains 1 bit at position n, the BLAS may be
-    /// used in the immediate context with index n directly. It may also be used in a command list
-    /// recorded by a deferred context that will be executed through that immediate context.
+    /// When ImmediateContextMask contains a bit at position n, the acceleration structure may be
+    /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
+    /// It may also be used in a command list recorded by a deferred context that will be executed
+    /// through that immediate context.
     ///
     /// \remarks    Only specify these bits that will indicate those immediate contexts where the BLAS
     ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.

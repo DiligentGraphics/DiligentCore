@@ -163,7 +163,7 @@ private:
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
                       "No bits in the immediate mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
-                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues.");
+                      ") correspond to one of ", pDevice->GetCommandQueueCount(), " available software command queues.");
         this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
     }
 

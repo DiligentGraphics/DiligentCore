@@ -1,6 +1,29 @@
 ## Current Progress
 
 * Added multiple immediate device contexts and refactored adapter queries (API Version 240095)
+  * `CommandQueueMask` member of `TextureDesc`, `BufferDesc`, `PipelineStateDesc`, `TopLevelASDesc`,
+    and `BottomLevelASDesc`, was renamed to `ImmediateContextMask`
+  * Added `pContext` member to `TextureData` and `BufferData` structs to indicate which context to
+    use for initialization.
+  * Removed `GetDeviceCaps` and `GetDeviceProperties` `IDeviceContext` methods and added
+   `GetDeviceInfo` and `GetAdapterInfo` methods; added `RenderDeviceInfo` struct.
+  * Renamed `SamplerCaps` to `SamplerProperties, `TextureCaps` to `TextureProperties`; added `BufferProperties`,
+    `RayTracingProperties`, and `MeshShaderProperties` structs
+  * Removed `DeviceLimits` struct
+  * Removed `DeviceCaps` struct and moved its members to `GraphicsAdapterInfo` and `RenderDeviceInfo` structs
+  * Added `NativeFence` to `DeviceFeatures`
+  * Added `CommandQueueInfo` struct
+  * Added `COMMAND_QUEUE_TYPE` and `QUEUE_PRIORITY` enums
+  * Renamed `ShaderVersion` struct to `Version`
+  * Reworked `GraphicsAdapterInfo` struct
+  * Added `ImmediateContextCreateInfo` struct and `pImmediateContextInfo`, `NumImmediateContexts` members to `EngineCreateInfo` struct
+  * Added `AdapterId` and `GraphicsAPIVersion` members to `EngineCreateInfo` struct
+  * Removed `DIRECT3D_FEATURE_LEVEL` enum
+  * Added `FENCE_TYPE` enum
+  * Renamed `IFence::Reset` to `IFence::Signal`; added `IFence::Wait` method
+  * Added `IEngineFactory::EnumerateAdapters` method
+  * Added `DeviceContextDesc` struct and `IDeviceContext::GetDesc` method
+  * Added `IDeviceContext::Begin` method, renamed `IDeviceContext::SignalFence` to `IDeviceContext::EnqueueSignal`
 * Added debug annotations `IDeviceContext::BeginDebugGroup`, `IDeviceContext::EndDebugGroup`,
  `IDeviceContext::InsertDebugLabel` (API Version 240095)
 * Added `DefaultVariableMergeStages` member to `PipelineResourceLayoutDesc` struct (API240094)
