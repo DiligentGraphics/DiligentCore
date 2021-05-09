@@ -90,7 +90,7 @@ private:
 
     struct SyncPointData
     {
-        Uint64         Value;
+        const Uint64   Value;
         SyncPointVkPtr SyncPoint;
     };
 

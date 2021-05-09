@@ -104,7 +104,7 @@ protected:
 
     bool CheckCSBasedMipGenerationSupport(VkFormat vkFmt) const;
 
-    void InitializeTextureContent(const TextureData*          pInitData,
+    void InitializeTextureContent(const TextureData&          InitData,
                                   const TextureFormatAttribs& FmtAttribs,
                                   const VkImageCreateInfo&    ImageCI);
     void CreateStagingTexture(const TextureData*          pInitData,

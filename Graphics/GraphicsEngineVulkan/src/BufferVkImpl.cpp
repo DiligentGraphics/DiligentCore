@@ -181,19 +181,15 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     VkBuffCI.pQueueFamilyIndices   = nullptr;                   // The list of queue families that will access this buffer
                                                                 // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
 
-    std::array<uint32_t, MAX_COMMAND_QUEUES> QueueFamilyIndices = {};
-    if (PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1)
+    const auto QueueFamilyIndices = PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1 ?
+        GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask) :
+        std::vector<uint32_t>{};
+    if (QueueFamilyIndices.size() > 1)
     {
-        uint32_t queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
-        GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
-
         // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
-        if (queueFamilyIndexCount > 1)
-        {
-            VkBuffCI.sharingMode           = VK_SHARING_MODE_CONCURRENT;
-            VkBuffCI.pQueueFamilyIndices   = QueueFamilyIndices.data();
-            VkBuffCI.queueFamilyIndexCount = queueFamilyIndexCount;
-        }
+        VkBuffCI.sharingMode           = VK_SHARING_MODE_CONCURRENT;
+        VkBuffCI.pQueueFamilyIndices   = QueueFamilyIndices.data();
+        VkBuffCI.queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
     }
 
     constexpr VkBufferUsageFlags UsageThatRequiresBackingBuffer =

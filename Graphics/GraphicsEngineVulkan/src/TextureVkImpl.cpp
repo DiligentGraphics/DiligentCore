@@ -181,19 +181,15 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         ImageCI.queueFamilyIndexCount = 0;
         ImageCI.pQueueFamilyIndices   = nullptr;
 
-        std::array<uint32_t, MAX_COMMAND_QUEUES> QueueFamilyIndices = {};
-        if (PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1)
+        const auto QueueFamilyIndices = PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1 ?
+            GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask) :
+            std::vector<uint32_t>{};
+        if (QueueFamilyIndices.size() > 1)
         {
-            uint32_t queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
-            GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask, QueueFamilyIndices.data(), queueFamilyIndexCount);
-
             // If sharingMode is VK_SHARING_MODE_CONCURRENT, queueFamilyIndexCount must be greater than 1
-            if (queueFamilyIndexCount > 1)
-            {
-                ImageCI.sharingMode           = VK_SHARING_MODE_CONCURRENT;
-                ImageCI.pQueueFamilyIndices   = QueueFamilyIndices.data();
-                ImageCI.queueFamilyIndexCount = queueFamilyIndexCount;
-            }
+            ImageCI.sharingMode           = VK_SHARING_MODE_CONCURRENT;
+            ImageCI.pQueueFamilyIndices   = QueueFamilyIndices.data();
+            ImageCI.queueFamilyIndexCount = static_cast<uint32_t>(QueueFamilyIndices.size());
         }
 
         // initialLayout must be either VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED (11.4)
@@ -217,7 +213,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
 
         if (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0)
-            InitializeTextureContent(pInitData, FmtAttribs, ImageCI);
+            InitializeTextureContent(*pInitData, FmtAttribs, ImageCI);
         else
             SetState(RESOURCE_STATE_UNDEFINED);
     }
@@ -233,14 +229,14 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     VERIFY_EXPR(IsInKnownState());
 }
 
-void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitData,
+void TextureVkImpl::InitializeTextureContent(const TextureData&          InitData,
                                              const TextureFormatAttribs& FmtAttribs,
                                              const VkImageCreateInfo&    ImageCI)
 {
     const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
 
-    const auto CmdQueueInd = pInitData->pContext ?
-        ValidatedCast<DeviceContextVkImpl>(pInitData->pContext)->GetCommandQueueId() :
+    const auto CmdQueueInd = InitData.pContext ?
+        ValidatedCast<DeviceContextVkImpl>(InitData.pContext)->GetCommandQueueId() :
         SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
     // Vulkan validation layers do not like uninitialized memory, so if no initial data
@@ -277,10 +273,10 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
     VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
-    if (pInitData->NumSubresources != ExpectedNumSubresources)
-        LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", pInitData->NumSubresources, " provided");
+    if (InitData.NumSubresources != ExpectedNumSubresources)
+        LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", InitData.NumSubresources, " provided");
 
-    std::vector<VkBufferImageCopy> Regions(pInitData->NumSubresources);
+    std::vector<VkBufferImageCopy> Regions(InitData.NumSubresources);
 
     Uint64 uploadBufferSize = 0;
     Uint32 subres           = 0;
@@ -288,7 +284,7 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
     {
         for (Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
         {
-            const auto& SubResData = pInitData->pSubResources[subres];
+            const auto& SubResData = InitData.pSubResources[subres];
             (void)SubResData;
             auto& CopyRegion = Regions[subres];
 
@@ -322,7 +318,7 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
             ++subres;
         }
     }
-    VERIFY_EXPR(subres == pInitData->NumSubresources);
+    VERIFY_EXPR(subres == InitData.NumSubresources);
 
     VkBufferCreateInfo VkStagingBuffCI    = {};
     VkStagingBuffCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -358,7 +354,7 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
     {
         for (Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
         {
-            const auto& SubResData = pInitData->pSubResources[subres];
+            const auto& SubResData = InitData.pSubResources[subres];
             const auto& CopyRegion = Regions[subres];
 
             auto MipInfo = GetMipLevelProperties(m_Desc, mip);
@@ -385,7 +381,7 @@ void TextureVkImpl::InitializeTextureContent(const TextureData*          pInitDa
             ++subres;
         }
     }
-    VERIFY_EXPR(subres == pInitData->NumSubresources);
+    VERIFY_EXPR(subres == InitData.NumSubresources);
 
     auto err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");

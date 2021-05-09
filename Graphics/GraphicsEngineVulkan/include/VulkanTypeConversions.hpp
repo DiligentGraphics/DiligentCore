@@ -108,6 +108,6 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                                           const VkPhysicalDeviceFeatures&                                   vkFeatures,
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures&   ExtFeatures,
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
-                                          DEVICE_FEATURE_STATE                                              EnabledState = DEVICE_FEATURE_STATE_ENABLED);
+                                          DEVICE_FEATURE_STATE                                              OptionalState = DEVICE_FEATURE_STATE_ENABLED);
 
 } // namespace Diligent

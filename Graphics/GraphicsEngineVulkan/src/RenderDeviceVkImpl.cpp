@@ -154,6 +154,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
                                                        m_LogicalVkDevice->GetEnabledExtFeatures(),
                                                        m_PhysicalDevice->GetExtProperties());
 
+    // Every queue family needs its own command pool
     for (Uint32 q = 0; q < CommandQueueCount; ++q)
     {
         auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(SoftwareQueueIndex{q}).GetQueueFamilyIndex()};
@@ -681,37 +682,31 @@ void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceS
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, IsDeviceInternal);
 }
 
-void RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64    CommandQueueMask,
-                                                           uint32_t  outQueueFamilyIndices[],
-                                                           uint32_t& inoutQueueFamilyIndicesCount) const
+std::vector<uint32_t> RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64 CommandQueueMask) const
 {
-    std::bitset<MAX_COMMAND_QUEUES> QueueFamilyBits;
+    std::bitset<MAX_COMMAND_QUEUES> QueueFamilyBits{};
 
-    const auto MaxCount = inoutQueueFamilyIndicesCount;
-
-    inoutQueueFamilyIndicesCount = 0;
-    for (; CommandQueueMask != 0 && inoutQueueFamilyIndicesCount < MaxCount;)
+    std::vector<uint32_t> QueueFamilyIndices;
+    while (CommandQueueMask != 0)
     {
         auto CmdQueueInd = PlatformMisc::GetLSB(CommandQueueMask);
         CommandQueueMask &= ~(Uint64{1} << Uint64{CmdQueueInd});
 
         auto& CmdQueue    = GetCommandQueue(SoftwareQueueIndex{CmdQueueInd});
         auto  FamilyIndex = CmdQueue.GetQueueFamilyIndex();
-        VERIFY_EXPR(FamilyIndex < MaxCount);
-
         if (!QueueFamilyBits[FamilyIndex])
         {
             QueueFamilyBits[FamilyIndex] = true;
-
-            outQueueFamilyIndices[inoutQueueFamilyIndicesCount++] = FamilyIndex;
+            QueueFamilyIndices.push_back(FamilyIndex);
         }
     }
+    return QueueFamilyIndices;
 }
 
 HardwareQueueIndex RenderDeviceVkImpl::GetQueueFamilyIndex(SoftwareQueueIndex CmdQueueInd) const
 {
-    auto* CmdQueue = ValidatedCast<const CommandQueueVkImpl>(&GetCommandQueue(SoftwareQueueIndex{CmdQueueInd}));
-    return HardwareQueueIndex{CmdQueue->GetQueueFamilyIndex()};
+    const auto& CmdQueue = GetCommandQueue(SoftwareQueueIndex{CmdQueueInd});
+    return HardwareQueueIndex{CmdQueue.GetQueueFamilyIndex()};
 }
 
 } // namespace Diligent
