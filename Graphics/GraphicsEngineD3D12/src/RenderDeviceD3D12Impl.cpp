@@ -193,7 +193,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     }
 }
 
-CommandListManager& RenderDeviceD3D12Impl::GetCmdListManager(CommandQueueIndex CommandQueueId)
+CommandListManager& RenderDeviceD3D12Impl::GetCmdListManager(SoftwareQueueIndex CommandQueueId)
 {
     const auto* CmdQueue         = ValidatedCast<const CommandQueueD3D12Impl>(&GetCommandQueue(CommandQueueId));
     const auto  ExpectedListType = CmdQueue->GetCommandListType();
@@ -254,7 +254,7 @@ void RenderDeviceD3D12Impl::FreeCommandContext(PooledCommandContext&& Ctx)
 #endif
 }
 
-void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(CommandQueueIndex CommandQueueId, PooledCommandContext&& Ctx)
+void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(SoftwareQueueIndex CommandQueueId, PooledCommandContext&& Ctx)
 {
     auto& CmdListMngr = GetCmdListManager(CommandQueueId);
     VERIFY_EXPR(CmdListMngr.GetCommandListType() == Ctx->GetCommandListType());
@@ -273,7 +273,7 @@ void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(CommandQueueI
     FreeCommandContext(std::move(Ctx));
 }
 
-Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContexts(CommandQueueIndex                                      CommandQueueId,
+Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContexts(SoftwareQueueIndex                                     CommandQueueId,
                                                              Uint32                                                 NumContexts,
                                                              PooledCommandContext                                   pContexts[],
                                                              bool                                                   DiscardStaleObjects,
@@ -338,7 +338,7 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContexts(CommandQueueIndex  
     return FenceValue;
 }
 
-void RenderDeviceD3D12Impl::SignalFences(CommandQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& SignalFences)
+void RenderDeviceD3D12Impl::SignalFences(SoftwareQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& SignalFences)
 {
     auto& CmdQueue = m_CommandQueues[CommandQueueId].CmdQueue;
     for (auto& val_fence : SignalFences)
@@ -350,7 +350,7 @@ void RenderDeviceD3D12Impl::SignalFences(CommandQueueIndex CommandQueueId, std::
     }
 }
 
-void RenderDeviceD3D12Impl::WaitFences(CommandQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& WaitFences)
+void RenderDeviceD3D12Impl::WaitFences(SoftwareQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& WaitFences)
 {
     auto& CmdQueue = m_CommandQueues[CommandQueueId].CmdQueue;
     for (auto& val_fence : WaitFences)
@@ -368,7 +368,7 @@ void RenderDeviceD3D12Impl::IdleGPU()
     ReleaseStaleResources();
 }
 
-void RenderDeviceD3D12Impl::FlushStaleResources(CommandQueueIndex CommandQueueId)
+void RenderDeviceD3D12Impl::FlushStaleResources(SoftwareQueueIndex CommandQueueId)
 {
     // Submit empty command list to the queue. This will effectively signal the fence and
     // discard all resources
@@ -381,13 +381,13 @@ void RenderDeviceD3D12Impl::ReleaseStaleResources(bool ForceRelease)
 }
 
 
-D3D12_COMMAND_LIST_TYPE RenderDeviceD3D12Impl::GetCommandQueueType(CommandQueueIndex CmdQueueInd) const
+D3D12_COMMAND_LIST_TYPE RenderDeviceD3D12Impl::GetCommandQueueType(SoftwareQueueIndex CmdQueueInd) const
 {
     const auto* CmdQueue = ValidatedCast<const CommandQueueD3D12Impl>(&GetCommandQueue(CmdQueueInd));
     return CmdQueue->GetCommandListType();
 }
 
-RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateCommandContext(CommandQueueIndex CommandQueueId, const Char* ID)
+RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateCommandContext(SoftwareQueueIndex CommandQueueId, const Char* ID)
 {
     auto& CmdListMngr = GetCmdListManager(CommandQueueId);
     {

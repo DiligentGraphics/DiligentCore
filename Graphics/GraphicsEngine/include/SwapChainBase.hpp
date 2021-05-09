@@ -114,13 +114,6 @@ protected:
         return false;
     }
 
-    CommandQueueIndex GetCommandQueueId()
-    {
-        auto Ctx = m_wpDeviceContext.Lock();
-        VERIFY_EXPR(Ctx);
-        return CommandQueueIndex{Ctx ? Ctx->GetDesc().CommandQueueId : MAX_COMMAND_QUEUES};
-    }
-
     /// Strong reference to the render device
     RefCntAutoPtr<IRenderDevice> m_pRenderDevice;
 

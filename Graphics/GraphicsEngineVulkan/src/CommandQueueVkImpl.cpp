@@ -37,14 +37,14 @@ namespace Diligent
 
 CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters,
                                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                       CommandQueueIndex                                     CommandQueueId,
+                                       SoftwareQueueIndex                                    CommandQueueId,
                                        Uint32                                                NumCommandQueues,
                                        Uint32                                                vkQueueIndex,
                                        const ImmediateContextCreateInfo&                     CreateInfo) :
     // clang-format off
     TBase{pRefCounters},
     m_LogicalDevice             {LogicalDevice},
-    m_VkQueue                   {LogicalDevice->GetQueue(HardwareQueueId{CreateInfo.QueueId}, vkQueueIndex)},
+    m_VkQueue                   {LogicalDevice->GetQueue(HardwareQueueIndex{CreateInfo.QueueId}, vkQueueIndex)},
     m_QueueFamilyIndex          {CreateInfo.QueueId},
     m_CommandQueueId            {static_cast<Uint8>(CommandQueueId)},
     m_SupportedTimelineSemaphore{LogicalDevice->GetEnabledExtFeatures().TimelineSemaphore.timelineSemaphore == VK_TRUE},
@@ -78,7 +78,7 @@ CommandQueueVkImpl::~CommandQueueVkImpl()
     // is called on that device.
 }
 
-SyncPointVk::SyncPointVk(CommandQueueIndex                         CommandQueueId,
+SyncPointVk::SyncPointVk(SoftwareQueueIndex                        CommandQueueId,
                          Uint32                                    NumContexts,
                          VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr,
                          VkDevice                                  LogicalDevice,

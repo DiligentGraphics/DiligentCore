@@ -326,8 +326,8 @@ bool VarifyResourceState(RESOURCE_STATE States, COMMAND_QUEUE_TYPE QueueType, co
 
 bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                const StateTransitionDesc& Barrier,
-                               const CommandQueueIndex    CmdQueueInd,
-                               COMMAND_QUEUE_TYPE         QueueType)
+                               DeviceContextIndex         ExecutionCtxId,
+                               const DeviceContextDesc&   CtxDesc)
 {
 #define CHECK_STATE_TRANSITION_DESC(Expr, ...) CHECK_PARAMETER(Expr, "State transition parameters are invalid: ", __VA_ARGS__)
 
@@ -408,8 +408,8 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
         UNEXPECTED("unsupported resource type");
     }
 
-    CHECK_STATE_TRANSITION_DESC((CommandQueueMask & (Uint64{1} << Uint64{CmdQueueInd})) != 0,
-                                "resource was created with CommandQueueMask 0x", std::hex, CommandQueueMask, " and can not be used in command queue ", Uint32{CmdQueueInd}, ".");
+    CHECK_STATE_TRANSITION_DESC((CommandQueueMask & (Uint64{1} << Uint64{ExecutionCtxId})) != 0,
+                                "resource was created with CommandQueueMask 0x", std::hex, CommandQueueMask, " and can not be used in device context '", CtxDesc.Name, "'.");
 
     if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
     {
@@ -424,8 +424,8 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     CHECK_STATE_TRANSITION_DESC(Barrier.NewState != RESOURCE_STATE_UNKNOWN && Barrier.NewState != RESOURCE_STATE_UNDEFINED,
                                 "NewState must not be UNKNOWN or UNDEFINED");
 
-    VarifyResourceState(Barrier.OldState, QueueType, "OldState");
-    VarifyResourceState(Barrier.NewState, QueueType, "NewState");
+    VarifyResourceState(Barrier.OldState, CtxDesc.QueueType, "OldState");
+    VarifyResourceState(Barrier.NewState, CtxDesc.QueueType, "NewState");
 
 #undef CHECK_STATE_TRANSITION_DESC
 

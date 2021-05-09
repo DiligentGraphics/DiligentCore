@@ -147,14 +147,12 @@ void EngineFactoryOpenGLImpl::EnumerateAdapters(Version              MinVersion,
 /// \param [in]  SCDesc             - Swap chain description.
 /// \param [out] ppSwapChain        - Address of the memory location where pointer to the new
 ///                                   swap chain will be written.
-void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& _EngineCI,
+void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
                                                          IRenderDevice**           ppDevice,
                                                          IDeviceContext**          ppImmediateContext,
                                                          const SwapChainDesc&      SCDesc,
                                                          ISwapChain**              ppSwapChain)
 {
-    EngineGLCreateInfo EngineCI = _EngineCI;
-
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
@@ -170,8 +168,8 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
 
     if (EngineCI.NumDeferredContexts > 0)
     {
-        LOG_WARNING_MESSAGE("OpenGL back-end does not support deferred contexts");
-        EngineCI.NumDeferredContexts = 0;
+        LOG_ERROR_MESSAGE("OpenGL back-end does not support deferred contexts");
+        return;
     }
 
     if (EngineCI.NumImmediateContexts > 1)
@@ -196,7 +194,16 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         RenderDeviceGLImpl* pRenderDeviceOpenGL(NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI, &SCDesc));
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, (EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : ""), false));
+        DeviceContextGLImpl* pDeviceContextOpenGL{
+            NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(
+                pRenderDeviceOpenGL,
+                DeviceContextDesc{
+                    EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : nullptr,
+                    COMMAND_QUEUE_TYPE_GRAPHICS,
+                    False,
+                    0 // Context id
+                })    //
+        };
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
@@ -286,7 +293,17 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
         RenderDeviceGLImpl* pRenderDeviceOpenGL(NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI));
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        DeviceContextGLImpl* pDeviceContextOpenGL(NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, (EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : ""), false));
+        DeviceContextGLImpl* pDeviceContextOpenGL{
+            NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(
+                pRenderDeviceOpenGL,
+                DeviceContextDesc{
+                    EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : nullptr,
+                    COMMAND_QUEUE_TYPE_GRAPHICS,
+                    False,
+                    0, // Context Id
+                    0  // Queue Id
+                })     //
+        };
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));

@@ -63,24 +63,19 @@ static std::string GetContextObjectName(const char* Object, bool bIsDeferred, Ui
 
 DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters,
                                                RenderDeviceD3D12Impl*       pDeviceD3D12Impl,
-                                               bool                         bIsDeferred,
                                                const EngineD3D12CreateInfo& EngineCI,
-                                               ContextIndex                 ContextId,
-                                               CommandQueueIndex            CommandQueueId) :
+                                               const DeviceContextDesc&     Desc) :
     // clang-format off
     TDeviceContextBase
     {
         pRefCounters,
         pDeviceD3D12Impl,
-        ContextId,
-        CommandQueueId,
-        (ContextId < EngineCI.NumImmediateContexts ? EngineCI.pImmediateContextInfo[ContextId].Name : ""),
-        bIsDeferred
+        Desc
     },
     m_DynamicHeap
     {
         pDeviceD3D12Impl->GetDynamicMemoryManager(),
-        GetContextObjectName("Dynamic heap", bIsDeferred, ContextId),
+        GetContextObjectName("Dynamic heap", Desc.IsDeferred, Desc.ContextId),
         EngineCI.DynamicHeapPageSize
     },
     m_DynamicGPUDescriptorAllocator
@@ -89,13 +84,13 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
             GetRawAllocator(),
             pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
             EngineCI.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV],
-            GetContextObjectName("CBV_SRV_UAV dynamic descriptor allocator", bIsDeferred, ContextId)
+            GetContextObjectName("CBV_SRV_UAV dynamic descriptor allocator", Desc.IsDeferred, Desc.ContextId)
         },
         {
             GetRawAllocator(),
             pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
             EngineCI.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER],
-            GetContextObjectName("SAMPLER     dynamic descriptor allocator", bIsDeferred, ContextId)
+            GetContextObjectName("SAMPLER     dynamic descriptor allocator", Desc.IsDeferred, Desc.ContextId)
         }
     },
     m_CmdListAllocator{GetRawAllocator(), sizeof(CommandListD3D12Impl), 64}
@@ -103,7 +98,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
 {
     if (!IsDeferred())
     {
-        InitializeForQueue(CommandQueueIndex{CommandQueueId});
+        RequestCommandContext();
     }
     auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
@@ -198,31 +193,14 @@ DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
     }
 }
 
-void DeviceContextD3D12Impl::InitializeForQueue(CommandQueueIndex CommandQueueInd)
+void DeviceContextD3D12Impl::Begin(Uint32 ImmediateContextId)
 {
-    DEV_CHECK_ERR(CommandQueueInd < m_pDevice->GetCommandQueueCount(), "CommandQueueInd is out of range");
-
-    const auto& CmdQueue    = m_pDevice->GetCommandQueue(CommandQueueInd);
+    DEV_CHECK_ERR(ImmediateContextId < m_pDevice->GetCommandQueueCount(), "ImmediateContextId is out of range");
+    const auto& CmdQueue    = m_pDevice->GetCommandQueue(SoftwareQueueIndex{ImmediateContextId});
     const auto  CmdListType = ValidatedCast<const CommandQueueD3D12Impl>(&CmdQueue)->GetCommandListType();
-    const auto  QueueId     = D3D12CommandListTypeToQueueId(CmdListType);
-
-    m_Desc.QueueId                   = static_cast<Uint8>(QueueId);
-    m_Desc.CommandQueueId            = static_cast<Uint8>(CommandQueueInd);
-    m_Desc.QueueType                 = D3D12CommandListTypeToCmdQueueType(CmdListType);
-    m_Desc.TextureCopyGranularity[0] = 1;
-    m_Desc.TextureCopyGranularity[1] = 1;
-    m_Desc.TextureCopyGranularity[2] = 1;
-
-    VERIFY(m_Desc.QueueId == QueueId, "Not enough bits to store queue index");
-    VERIFY(m_Desc.CommandQueueId == CommandQueueInd, "Not enough bits to store command queue index");
-
+    const auto  QueueType   = D3D12CommandListTypeToCmdQueueType(CmdListType);
+    TDeviceContextBase::Begin(ImmediateContextId, QueueType);
     RequestCommandContext();
-}
-
-void DeviceContextD3D12Impl::Begin(Uint32 CommandQueueId)
-{
-    DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
-    InitializeForQueue(CommandQueueIndex{CommandQueueId});
 }
 
 void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
@@ -2135,6 +2113,8 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     Flush(false);
 
     InvalidateState();
+
+    TDeviceContextBase::FinishCommandList();
 }
 
 void DeviceContextD3D12Impl::ExecuteCommandLists(Uint32               NumCommandLists,

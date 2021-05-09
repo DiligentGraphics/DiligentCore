@@ -59,47 +59,42 @@ static std::string GetContextObjectName(const char* Object, bool bIsDeferred, Ui
 
 DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
                                          RenderDeviceVkImpl*                   pDeviceVkImpl,
-                                         bool                                  bIsDeferred,
                                          const EngineVkCreateInfo&             EngineCI,
-                                         ContextIndex                          ContextId,
-                                         CommandQueueIndex                     CommandQueueId,
+                                         const DeviceContextDesc&              Desc,
                                          std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper) :
     // clang-format off
     TDeviceContextBase
     {
         pRefCounters,
         pDeviceVkImpl,
-        ContextId,
-        CommandQueueId,
-        (ContextId < EngineCI.NumImmediateContexts ? EngineCI.pImmediateContextInfo[ContextId].Name : ""),
-        bIsDeferred
+        Desc
     },
     m_CmdListAllocator { GetRawAllocator(), sizeof(CommandListVkImpl), 64 },
     // Upload heap must always be thread-safe as Finish() may be called from another thread
     m_UploadHeap
     {
         *pDeviceVkImpl,
-        GetContextObjectName("Upload heap", bIsDeferred, ContextId),
+        GetContextObjectName("Upload heap", Desc.IsDeferred, Desc.ContextId),
         EngineCI.UploadHeapPageSize
     },
     m_DynamicHeap
     {
         pDeviceVkImpl->GetDynamicMemoryManager(),
-        GetContextObjectName("Dynamic heap", bIsDeferred, ContextId),
+        GetContextObjectName("Dynamic heap", Desc.IsDeferred, Desc.ContextId),
         EngineCI.DynamicHeapPageSize
     },
     m_DynamicDescrSetAllocator
     {
         pDeviceVkImpl->GetDynamicDescriptorPool(),
-        GetContextObjectName("Dynamic descriptor set allocator", bIsDeferred, ContextId),
+        GetContextObjectName("Dynamic descriptor set allocator", Desc.IsDeferred, Desc.ContextId),
     },
     m_GenerateMipsHelper{std::move(GenerateMipsHelper)}
 // clang-format on
 {
     if (!IsDeferred())
     {
-        InitializeForQueue(CommandQueueId);
-        m_QueryMgr.reset(new QueryManagerVk{pDeviceVkImpl, EngineCI.QueryPoolSizes, CommandQueueId});
+        InitializeForQueue(GetCommandQueueId());
+        m_QueryMgr.reset(new QueryManagerVk{pDeviceVkImpl, EngineCI.QueryPoolSizes, GetCommandQueueId()});
     }
 
     m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
@@ -168,14 +163,12 @@ DeviceContextVkImpl::~DeviceContextVkImpl()
     //     global managers and do not need to wait for GPU to idle.
 }
 
-void DeviceContextVkImpl::InitializeForQueue(CommandQueueIndex CommandQueueId)
+void DeviceContextVkImpl::InitializeForQueue(SoftwareQueueIndex CommandQueueId)
 {
     DEV_CHECK_ERR(CommandQueueId < m_pDevice->GetCommandQueueCount(), "CommandQueueId is out of range");
 
-    const auto  QueueFamilyIndex = HardwareQueueId{m_pDevice->GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
-    const auto& PhysicalDevice   = m_pDevice->GetPhysicalDevice();
-    const auto& QueueProps       = PhysicalDevice.GetQueueProperties();
-
+    const auto  QueueFamilyIndex = HardwareQueueIndex{m_pDevice->GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    const auto& QueueProps       = m_pDevice->GetPhysicalDevice().GetQueueProperties();
     DEV_CHECK_ERR(QueueFamilyIndex < QueueProps.size(), "QueueFamilyIndex is out of range");
 
     if (m_CmdPool)
@@ -189,26 +182,22 @@ void DeviceContextVkImpl::InitializeForQueue(CommandQueueIndex CommandQueueId)
         VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT});
 
     // Set queue properties
-    const auto& QueueInfo = QueueProps[QueueFamilyIndex];
-
+    const auto& QueueInfo{QueueProps[QueueFamilyIndex]};
     m_Desc.QueueId                   = static_cast<Uint8>(QueueFamilyIndex);
-    m_Desc.CommandQueueId            = static_cast<Uint8>(CommandQueueId);
     m_Desc.QueueType                 = VkQueueFlagsToCmdQueueType(QueueInfo.queueFlags);
     m_Desc.TextureCopyGranularity[0] = QueueInfo.minImageTransferGranularity.width;
     m_Desc.TextureCopyGranularity[1] = QueueInfo.minImageTransferGranularity.height;
     m_Desc.TextureCopyGranularity[2] = QueueInfo.minImageTransferGranularity.depth;
-
-    VERIFY(m_Desc.QueueId == QueueFamilyIndex, "Not enough bits to store queue index");
-    VERIFY(m_Desc.CommandQueueId == CommandQueueId, "Not enough bits to store command queue index");
 }
 
-void DeviceContextVkImpl::Begin(Uint32 CommandQueueId)
+void DeviceContextVkImpl::Begin(Uint32 ImmediateContextId)
 {
     DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
-    InitializeForQueue(CommandQueueIndex{CommandQueueId});
+    InitializeForQueue(SoftwareQueueIndex{ImmediateContextId});
+    m_DstImmediateContextId = static_cast<Uint8>(ImmediateContextId);
 }
 
-void DeviceContextVkImpl::DisposeVkCmdBuffer(CommandQueueIndex CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
+void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
 {
     VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
     VERIFY_EXPR(m_CmdPool != nullptr);
@@ -256,7 +245,7 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(CommandQueueIndex CmdQueue, VkComma
     ReleaseQueue.DiscardResource(CmdBufferRecycler{vkCmdBuff, *m_CmdPool}, FenceValue);
 }
 
-inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(CommandQueueIndex CmdQueue, Uint64 FenceValue)
+inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(SoftwareQueueIndex CmdQueue, Uint64 FenceValue)
 {
     VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unifinished render pass");
     auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
@@ -2425,6 +2414,8 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     m_Desc.QueueType = COMMAND_QUEUE_TYPE_UNKNOWN;
 
     InvalidateState();
+
+    TDeviceContextBase::FinishCommandList();
 }
 
 void DeviceContextVkImpl::ExecuteCommandLists(Uint32               NumCommandLists,

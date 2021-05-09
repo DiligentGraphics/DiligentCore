@@ -186,27 +186,27 @@ public:
     /// Implementation of IRenderDevice::IdleGPU() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
-    D3D12_COMMAND_LIST_TYPE GetCommandQueueType(CommandQueueIndex CmdQueueInd) const;
+    D3D12_COMMAND_LIST_TYPE GetCommandQueueType(SoftwareQueueIndex CmdQueueInd) const;
 
     using PooledCommandContext = std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext>>;
-    PooledCommandContext AllocateCommandContext(CommandQueueIndex CommandQueueId, const Char* ID = "");
+    PooledCommandContext AllocateCommandContext(SoftwareQueueIndex CommandQueueId, const Char* ID = "");
 
-    void CloseAndExecuteTransientCommandContext(CommandQueueIndex CommandQueueId, PooledCommandContext&& Ctx);
+    void CloseAndExecuteTransientCommandContext(SoftwareQueueIndex CommandQueueId, PooledCommandContext&& Ctx);
 
-    Uint64 CloseAndExecuteCommandContexts(CommandQueueIndex                                      CommandQueueId,
+    Uint64 CloseAndExecuteCommandContexts(SoftwareQueueIndex                                     CommandQueueId,
                                           Uint32                                                 NumContexts,
                                           PooledCommandContext                                   pContexts[],
                                           bool                                                   DiscardStaleObjects,
                                           std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pSignalFences,
                                           std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>* pWaitFences);
 
-    void SignalFences(CommandQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& SignalFences);
-    void WaitFences(CommandQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& WaitFences);
+    void SignalFences(SoftwareQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& SignalFences);
+    void WaitFences(SoftwareQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& WaitFences);
 
     // Disposes an unused command context
     void DisposeCommandContext(PooledCommandContext&& Ctx);
 
-    void FlushStaleResources(CommandQueueIndex CommandQueueId);
+    void FlushStaleResources(SoftwareQueueIndex CommandQueueId);
 
     /// Implementation of IRenderDevice::() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final;
@@ -248,7 +248,7 @@ private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     void         FreeCommandContext(PooledCommandContext&& Ctx);
 
-    CommandListManager& GetCmdListManager(CommandQueueIndex CommandQueueId);
+    CommandListManager& GetCmdListManager(SoftwareQueueIndex CommandQueueId);
     CommandListManager& GetCmdListManager(D3D12_COMMAND_LIST_TYPE CmdListType);
 
     CComPtr<ID3D12Device> m_pd3d12Device;

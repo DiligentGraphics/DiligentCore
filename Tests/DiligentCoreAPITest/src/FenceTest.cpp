@@ -251,7 +251,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
     {
         GTEST_SKIP() << "At least two different hardware queues are required";
     }
-    ASSERT_NE(pGraphicsCtx->GetDesc().CommandQueueId, pComputeCtx->GetDesc().CommandQueueId);
+    ASSERT_NE(pGraphicsCtx->GetDesc().ContextId, pComputeCtx->GetDesc().ContextId);
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
@@ -292,7 +292,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 
     RefCntAutoPtr<IBuffer> pConstants2;
     BuffDesc.Name             = "Constants 2";
-    BuffDesc.CommandQueueMask = (1ull << pGraphicsCtx->GetDesc().CommandQueueId) | (1ull << pComputeCtx->GetDesc().CommandQueueId);
+    BuffDesc.CommandQueueMask = (1ull << pGraphicsCtx->GetDesc().ContextId) | (1ull << pComputeCtx->GetDesc().ContextId);
     pDevice->CreateBuffer(BuffDesc, nullptr, &pConstants2);
     ASSERT_NE(pConstants2, nullptr);
 

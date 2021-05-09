@@ -53,10 +53,9 @@ class DeviceContextGLImpl final : public DeviceContextBase<EngineGLImplTraits>
 public:
     using TDeviceContextBase = DeviceContextBase<EngineGLImplTraits>;
 
-    DeviceContextGLImpl(IReferenceCounters* pRefCounters,
-                        RenderDeviceGLImpl* pDeviceGL,
-                        const char*         ContextName,
-                        bool                bIsDeferred);
+    DeviceContextGLImpl(IReferenceCounters*      pRefCounters,
+                        RenderDeviceGLImpl*      pDeviceGL,
+                        const DeviceContextDesc& Desc);
 
     /// Queries the specific interface, see IObject::QueryInterface() for details.
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

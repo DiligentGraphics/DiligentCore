@@ -32,34 +32,49 @@
 namespace Diligent
 {
 
-template <typename IndexType>
-struct TIndexWrapper
+template <typename IndexType, typename UniqueTag>
+struct IndexWrapper
 {
 public:
-    TIndexWrapper() {}
+    IndexWrapper() {}
 
-    explicit TIndexWrapper(Uint32 Value) :
+    template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type>
+    explicit IndexWrapper(T Value) noexcept :
         m_Value{static_cast<IndexType>(Value)}
     {
-        VERIFY(m_Value == Value, "Not enought bits to store value");
+        VERIFY(static_cast<T>(m_Value) == Value, "Not enought bits to store value ", Value);
     }
 
-    TIndexWrapper(const TIndexWrapper&) = default;
-    TIndexWrapper(TIndexWrapper&&)      = default;
+    template <typename OtherType, typename OtherTag>
+    explicit IndexWrapper(const IndexWrapper<OtherType, OtherTag>& OtherIdx) noexcept :
+        IndexWrapper{static_cast<Uint32>(OtherIdx)}
+    {
+    }
+
+    IndexWrapper(const IndexWrapper&) = default;
+    IndexWrapper(IndexWrapper&&)      = default;
 
     operator Uint32() const
     {
         return m_Value;
     }
 
-    bool operator==(const TIndexWrapper& Other) const
+    template <typename T, typename = typename std::enable_if<std::is_integral<T>::value, T>::type>
+    IndexWrapper& operator=(const T& Value)
+    {
+        m_Value = static_cast<IndexType>(Value);
+        VERIFY(static_cast<T>(m_Value) == Value, "Not enought bits to store value ", Value);
+        return *this;
+    }
+
+    bool operator==(const IndexWrapper& Other) const
     {
         return m_Value == Other.m_Value;
     }
 
     struct Hasher
     {
-        size_t operator()(const TIndexWrapper& Idx) const
+        size_t operator()(const IndexWrapper& Idx) const
         {
             return size_t{Idx.m_Value};
         }
@@ -69,8 +84,8 @@ private:
     IndexType m_Value = 0;
 };
 
-using HardwareQueueId   = TIndexWrapper<Uint8>;
-using CommandQueueIndex = TIndexWrapper<Uint8>;
-using ContextIndex      = TIndexWrapper<Uint8>;
+using HardwareQueueIndex = IndexWrapper<Uint8, struct _HardwareQueueIndexTag>;
+using SoftwareQueueIndex = IndexWrapper<Uint8, struct _SoftwareQueueIndexTag>;
+using DeviceContextIndex = IndexWrapper<Uint8, struct _DeviceContextIndexTag>;
 
 } // namespace Diligent

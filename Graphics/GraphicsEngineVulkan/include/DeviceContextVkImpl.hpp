@@ -72,17 +72,15 @@ public:
 
     DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
                         RenderDeviceVkImpl*                   pDevice,
-                        bool                                  bIsDeferred,
                         const EngineVkCreateInfo&             EngineCI,
-                        ContextIndex                          ContextId,
-                        CommandQueueIndex                     CommandQueueId,
+                        const DeviceContextDesc&              Desc,
                         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper);
     ~DeviceContextVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextVk, TDeviceContextBase)
 
     /// Implementation of IDeviceContext::Begin() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE Begin(Uint32 CommandQueueId) override final;
+    virtual void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;
@@ -452,8 +450,8 @@ private:
         }
     }
 
-    inline void DisposeVkCmdBuffer(CommandQueueIndex CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
-    inline void DisposeCurrentCmdBuffer(CommandQueueIndex CmdQueue, Uint64 FenceValue);
+    inline void DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue);
+    inline void DisposeCurrentCmdBuffer(SoftwareQueueIndex CmdQueue, Uint64 FenceValue);
 
     void CopyBufferToTexture(VkBuffer                       vkSrcBuffer,
                              Uint32                         SrcBufferOffset,
@@ -483,7 +481,7 @@ private:
 
     void CreateASCompactedSizeQueryPool();
 
-    void InitializeForQueue(CommandQueueIndex CommandQueueId);
+    void InitializeForQueue(SoftwareQueueIndex CommandQueueId);
 
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 

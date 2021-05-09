@@ -833,7 +833,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 VERIFY_EXPR(QueueIndex != DEFAULT_QUEUE_ID);
                 auto& QueueCI = QueueInfos[QueueIndex];
 
-                CommandQueuesVk[CtxInd] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, CommandQueueIndex{CtxInd}, EngineCI.NumImmediateContexts, QueueCI.queueCount, ContextInfo);
+                CommandQueuesVk[CtxInd] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, SoftwareQueueIndex{CtxInd}, EngineCI.NumImmediateContexts, QueueCI.queueCount, ContextInfo);
                 CommandQueues[CtxInd]   = CommandQueuesVk[CtxInd];
                 QueueCI.queueCount += 1;
             }
@@ -845,7 +845,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             DefaultContextInfo.Name    = "Graphics context";
             DefaultContextInfo.QueueId = static_cast<Uint8>(QueueInfos[0].queueFamilyIndex);
 
-            CommandQueuesVk[0] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, CommandQueueIndex{0}, 1, 1, DefaultContextInfo);
+            CommandQueuesVk[0] = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, SoftwareQueueIndex{0}, 1, 1, DefaultContextInfo);
             CommandQueues[0]   = CommandQueuesVk[0];
         }
 
@@ -896,7 +896,12 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     if (!LogicalDevice || !ppCommandQueues || !ppDevice || !ppContexts)
         return;
 
-    VERIFY_EXPR(std::max(1u, EngineCI.NumImmediateContexts) == CommandQueueCount);
+    ImmediateContextCreateInfo DefaultImmediateCtxCI;
+
+    const auto        NumImmediateContexts  = EngineCI.NumImmediateContexts > 0 ? EngineCI.NumImmediateContexts : 1;
+    const auto* const pImmediateContextInfo = EngineCI.NumImmediateContexts > 0 ? EngineCI.pImmediateContextInfo : &DefaultImmediateCtxCI;
+
+    VERIFY_EXPR(NumImmediateContexts == CommandQueueCount);
 
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));
@@ -905,7 +910,10 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     {
         auto& RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceVkImpl* pRenderDeviceVk(NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, this, EngineCI, AdapterInfo, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice));
+        RenderDeviceVkImpl* pRenderDeviceVk{
+            NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(
+                RawMemAllocator, this, EngineCI, AdapterInfo, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice) //
+        };
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         if (OnRenderDeviceCreated != nullptr)
@@ -915,7 +923,22 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         for (Uint32 CtxInd = 0; CtxInd < CommandQueueCount; ++CtxInd)
         {
-            RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk{NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, false, EngineCI, ContextIndex{CtxInd}, CommandQueueIndex{CtxInd}, GenerateMipsHelper)};
+            const auto  QueueId    = ppCommandQueues[CtxInd]->GetQueueFamilyIndex();
+            const auto& QueueProps = pRenderDeviceVk->GetPhysicalDevice().GetQueueProperties();
+            const auto  QueueType  = VkQueueFlagsToCmdQueueType(QueueProps[QueueId].queueFlags);
+
+            RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk{
+                NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(
+                    pRenderDeviceVk,
+                    EngineCI,
+                    DeviceContextDesc{
+                        pImmediateContextInfo[CtxInd].Name,
+                        QueueType,
+                        false,  // IsDeferred
+                        CtxInd, // Context id
+                        QueueId},
+                    GenerateMipsHelper //
+                    )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
             pImmediateCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CtxInd));
@@ -924,7 +947,18 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk{NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(pRenderDeviceVk, true, EngineCI, ContextIndex{CommandQueueCount + DeferredCtx}, CommandQueueIndex{MAX_COMMAND_QUEUES}, GenerateMipsHelper)};
+            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk{
+                NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(
+                    pRenderDeviceVk,
+                    EngineCI,
+                    DeviceContextDesc{
+                        nullptr,
+                        COMMAND_QUEUE_TYPE_UNKNOWN,
+                        true,                           // IsDeferred
+                        CommandQueueCount + DeferredCtx // Context id
+                    },
+                    GenerateMipsHelper //
+                    )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
             pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CommandQueueCount + DeferredCtx));

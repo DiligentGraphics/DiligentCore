@@ -50,7 +50,7 @@ class SyncPointVk final : public std::enable_shared_from_this<SyncPointVk>
 {
 private:
     friend class CommandQueueVkImpl;
-    SyncPointVk(CommandQueueIndex CommandQueueId, Uint32 NumContexts, VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr, VkDevice LogicalDevice, Uint64 dbgValue);
+    SyncPointVk(SoftwareQueueIndex CommandQueueId, Uint32 NumContexts, VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr, VkDevice LogicalDevice, Uint64 dbgValue);
 
     void GetSemaphores(std::vector<VkSemaphore>& Semaphores);
 
@@ -76,13 +76,13 @@ public:
         return m_Fence;
     }
 
-    CommandQueueIndex GetCommandQueueId() const
+    SoftwareQueueIndex GetCommandQueueId() const
     {
         return m_CommandQueueId;
     }
 
 private:
-    const CommandQueueIndex                  m_CommandQueueId;
+    const SoftwareQueueIndex                 m_CommandQueueId;
     const Uint8                              m_NumSemaphores; // same as NumContexts
     VulkanUtilities::VulkanRecycledFence     m_Fence;
     VulkanUtilities::VulkanRecycledSemaphore m_Semaphores[1]; // [m_NumSemaphores]
@@ -97,7 +97,7 @@ public:
 
     CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters,
                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                       CommandQueueIndex                                     CommandQueueId,
+                       SoftwareQueueIndex                                    CommandQueueId,
                        Uint32                                                NumCommandQueues,
                        Uint32                                                vkQueueIndex,
                        const ImmediateContextCreateInfo&                     CreateInfo);
@@ -155,11 +155,11 @@ private:
 
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
 
-    const VkQueue           m_VkQueue;
-    const HardwareQueueId   m_QueueFamilyIndex;
-    const CommandQueueIndex m_CommandQueueId;
-    const bool              m_SupportedTimelineSemaphore;
-    const Uint8             m_NumCommandQueues;
+    const VkQueue            m_VkQueue;
+    const HardwareQueueIndex m_QueueFamilyIndex;
+    const SoftwareQueueIndex m_CommandQueueId;
+    const bool               m_SupportedTimelineSemaphore;
+    const Uint8              m_NumCommandQueues;
 
     // Fence is signaled right after a command buffer has been
     // submitted to the command queue for execution.

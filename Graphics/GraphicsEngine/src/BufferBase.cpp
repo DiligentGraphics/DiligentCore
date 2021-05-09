@@ -157,11 +157,11 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
         const auto& CtxDesc = pBuffData->pContext->GetDesc();
         if (CtxDesc.IsDeferred)
             LOG_BUFFER_ERROR_AND_THROW("Deferred contexts can't be used to initialize resources");
-        if ((Desc.CommandQueueMask & (Uint64{1} << CtxDesc.CommandQueueId)) == 0)
+        if ((Desc.CommandQueueMask & (Uint64{1} << CtxDesc.ContextId)) == 0)
         {
-            LOG_BUFFER_ERROR_AND_THROW("Can not initialize the buffer in command queue ", CtxDesc.CommandQueueId,
-                                       " as CommandQueueMask (", std::hex, Desc.CommandQueueMask, ") does not contain ",
-                                       std::hex, (Uint64{1} << CtxDesc.CommandQueueId), " bit.");
+            LOG_BUFFER_ERROR_AND_THROW("Can not initialize the buffer in device context '", CtxDesc.Name,
+                                       "' as CommandQueueMask (", std::hex, Desc.CommandQueueMask, ") does not contain ",
+                                       std::hex, (Uint64{1} << CtxDesc.ContextId), " bit.");
         }
     }
 }

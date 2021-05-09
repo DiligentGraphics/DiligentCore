@@ -44,4 +44,6 @@ static constexpr Uint32 MAX_RESOURCES_IN_SIGNATURE = (1u << 16u) - 1u;
 
 static constexpr Uint32 MAX_COMMAND_QUEUES = 64;
 
+static constexpr Uint8 INVALID_CONTEXT_ID = 0xFFu;
+
 } // namespace Diligent

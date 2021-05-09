@@ -42,7 +42,7 @@ class VulkanCommandBufferPool
 {
 public:
     VulkanCommandBufferPool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice,
-                            HardwareQueueId                            queueFamilyIndex,
+                            HardwareQueueIndex                         queueFamilyIndex,
                             VkCommandPoolCreateFlags                   flags);
 
     // clang-format off

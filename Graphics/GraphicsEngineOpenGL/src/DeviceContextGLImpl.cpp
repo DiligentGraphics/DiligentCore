@@ -58,17 +58,15 @@
 namespace Diligent
 {
 
-DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters* pRefCounters,
-                                         RenderDeviceGLImpl* pDeviceGL,
-                                         const char*         ContextName,
-                                         bool                bIsDeferred) :
+DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters*      pRefCounters,
+                                         RenderDeviceGLImpl*      pDeviceGL,
+                                         const DeviceContextDesc& Desc) :
     // clang-format off
     TDeviceContextBase
     {
         pRefCounters,
         pDeviceGL,
-        ContextName,
-        bIsDeferred
+        Desc
     },
     m_ContextState{pDeviceGL},
     m_DefaultFBO  {false    }

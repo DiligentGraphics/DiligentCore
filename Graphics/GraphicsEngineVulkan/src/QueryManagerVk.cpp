@@ -38,9 +38,9 @@
 namespace Diligent
 {
 
-QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*     pRenderDeviceVk,
-                               const Uint32            QueryHeapSizes[],
-                               const CommandQueueIndex CmdQueueInd)
+QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
+                               const Uint32             QueryHeapSizes[],
+                               const SoftwareQueueIndex CmdQueueInd)
 {
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
@@ -48,7 +48,7 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*     pRenderDeviceVk,
     auto timestampPeriod = PhysicalDevice.GetProperties().limits.timestampPeriod;
     m_CounterFrequency   = static_cast<Uint64>(1000000000.0 / timestampPeriod);
 
-    const auto  QueueFamilyIndex = HardwareQueueId{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
+    const auto  QueueFamilyIndex = HardwareQueueIndex{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
     const auto& EnabledFeatures  = LogicalDevice.GetEnabledFeatures();
     const auto  StageMask        = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
     const auto  QueueFlags       = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
