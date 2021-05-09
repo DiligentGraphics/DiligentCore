@@ -229,14 +229,14 @@ public:
     using ShaderBindingTableImplType        = typename EngineImplTraits::ShaderBindingTableImplType;
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
 
-    /// \param pRefCounters         - Reference counters object that controls the lifetime of this render device
-    /// \param RawMemAllocator      - Allocator that will be used to allocate memory for all device objects (including render device itself)
-    /// \param pEngineFactory       - Engine factory that was used to create this device
-    /// \param NumImmediateContexts - The number of immediate device contexts
-    /// \param NumDeferredContexts  - The number of deferred device contexts
+    /// \param pRefCounters    - Reference counters object that controls the lifetime of this render device
+    /// \param RawMemAllocator - Allocator that will be used to allocate memory for all device objects (including render device itself)
+    /// \param pEngineFactory  - Engine factory that was used to create this device
+    /// \param EngineCI        - Engigne create info struct, see Diligent::EngineCreateInfo.
+    /// \param AdapterInfo     - Graphics adatper info, see Diligent::AdapterInfo.
     ///
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
-    ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
+    ///          device objects. The object sizes from EngineImplTraits are used to initialize the allocators.
     RenderDeviceBase(IReferenceCounters*        pRefCounters,
                      IMemoryAllocator&          RawMemAllocator,
                      IEngineFactory*            pEngineFactory,
@@ -354,7 +354,7 @@ public:
     }
 
 
-    /// Implementation of IRenderDevice::GetProperties().
+    /// Implementation of IRenderDevice::GetDeviceInfo().
     virtual const RenderDeviceInfo& DILIGENT_CALL_TYPE GetDeviceInfo() const override final
     {
         return m_DeviceInfo;
@@ -432,6 +432,7 @@ public:
 
     VALIDATION_FLAGS GetValidationFlags() const { return m_ValidationFlags; }
 
+    // Convenience function
     const DeviceFeatures& GetFeatures() const
     {
         return m_DeviceInfo.Features;
@@ -657,7 +658,7 @@ protected:
     std::vector<TextureFormatInfoExt, STDAllocatorRawMem<TextureFormatInfoExt>> m_TextureFormatsInfo;
     std::vector<bool, STDAllocatorRawMem<bool>>                                 m_TexFmtInfoInitFlags;
 
-    /// Weak reference to the immediate contexts. Immediate contexts hold strong reference
+    /// Weak references to immediate contexts. Immediate contexts hold strong reference
     /// to the device, so we must use weak references to avoid circular dependencies.
     std::vector<RefCntWeakPtr<IDeviceContext>, STDAllocatorRawMem<RefCntWeakPtr<IDeviceContext>>> m_wpImmediateContexts;
 

@@ -40,6 +40,7 @@ namespace Diligent
 
 const APIInfo& GetAPIInfo();
 
+/// Validates engine create info EngineCI and throws an exception in case of an error.
 void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdapterInfo& AdapterInfo) noexcept(false);
 
 /// Template class implementing base functionality of the engine factory

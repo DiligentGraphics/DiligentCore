@@ -60,9 +60,13 @@ public:
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this command list.
     /// \param pDevice           - Pointer to the device.
+    /// \param pDeferredCtx      - Deferred context that recorded this command list.
     /// \param bIsDeviceInternal - Flag indicating if the CommandList is an internal device object and
     ///							   must not keep a strong reference to the device.
-    CommandListBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, DeviceContextImplType* pDeferredCtx, bool bIsDeviceInternal = false) :
+    CommandListBase(IReferenceCounters*    pRefCounters,
+                    RenderDeviceImplType*  pDevice,
+                    DeviceContextImplType* pDeferredCtx,
+                    bool                   bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, CommandListDesc{}, bIsDeviceInternal},
         m_QueueId{pDeferredCtx->GetDesc().QueueId}
     {

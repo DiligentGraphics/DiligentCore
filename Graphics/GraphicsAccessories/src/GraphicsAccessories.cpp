@@ -1715,7 +1715,7 @@ void CopyTextureSubresource(const TextureSubResData& SrcSubres,
 
 String GetCommandQueueTypeString(COMMAND_QUEUE_TYPE Type)
 {
-    static_assert(COMMAND_QUEUE_TYPE_MAX_BIT == 0x7, "Please update the code below to handle the new context type");
+    static_assert(COMMAND_QUEUE_TYPE_MAX_BIT == 0x7, "Please update the code below to handle the new command queue type");
 
     String Result;
     if ((Type & COMMAND_QUEUE_TYPE_GRAPHICS) == COMMAND_QUEUE_TYPE_GRAPHICS)

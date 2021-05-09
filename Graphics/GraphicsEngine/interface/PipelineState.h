@@ -362,11 +362,12 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Has no effect if the PSO is created with explicit pipeline resource signature(s).
     Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
 
-    /// Defines which immediate contexts this PSO can be used in.
+    /// Defines which immediate contexts are allowed to execute commands that use this pipeline state.
 
-    /// When ImmediateContextMask contains 1 bit at position n, the PSO may be
-    /// used in the immediate context with index n directly. It may also be used in a command list
-    /// recorded by a deferred context that will be executed through that immediate context.
+    /// When ImmediateContextMask contains a bit at position n, the pipeline state may be
+    /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
+    /// It may also be used in a command list recorded by a deferred context that will be executed
+    /// through that immediate context.
     ///
     /// \remarks    Only specify these bits that will indicate those immediate contexts where the PSO
     ///             will actually be used. Do not set unncessary bits as this will result in extra overhead.
