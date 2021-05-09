@@ -186,7 +186,10 @@ public:
     /// Implementation of IRenderDevice::IdleGPU() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
-    D3D12_COMMAND_LIST_TYPE GetCommandQueueType(SoftwareQueueIndex CmdQueueInd) const;
+    D3D12_COMMAND_LIST_TYPE GetCommandQueueType(SoftwareQueueIndex CmdQueueInd) const
+    {
+        return GetCommandQueue(CmdQueueInd).GetD3D12CommandQueueDesc().Type;
+    }
 
     using PooledCommandContext = std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext>>;
     PooledCommandContext AllocateCommandContext(SoftwareQueueIndex CommandQueueId, const Char* ID = "");

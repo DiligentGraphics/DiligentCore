@@ -72,7 +72,11 @@ public:
     // Implementation of ICommandQueueD3D12::WaitFence().
     virtual void DILIGENT_CALL_TYPE WaitFence(ID3D12Fence* pFence, Uint64 Value) override final;
 
-    D3D12_COMMAND_LIST_TYPE GetCommandListType() const;
+    // Implementation of ICommandQueueD3D12::GetD3D12CommandQueueDesc().
+    virtual const D3D12_COMMAND_QUEUE_DESC& DILIGENT_CALL_TYPE GetD3D12CommandQueueDesc(THIS) const override final
+    {
+        return m_d3d12CmdQueueDesc;
+    }
 
 private:
     // A value that will be signaled by the command queue next
@@ -83,6 +87,8 @@ private:
 
     std::mutex                  m_QueueMtx;
     CComPtr<ID3D12CommandQueue> m_pd3d12CmdQueue;
+
+    const D3D12_COMMAND_QUEUE_DESC m_d3d12CmdQueueDesc;
 
     // The fence is signaled right after the command list has been
     // submitted to the command queue for execution.

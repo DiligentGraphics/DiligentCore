@@ -196,9 +196,8 @@ DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
 void DeviceContextD3D12Impl::Begin(Uint32 ImmediateContextId)
 {
     DEV_CHECK_ERR(ImmediateContextId < m_pDevice->GetCommandQueueCount(), "ImmediateContextId is out of range");
-    const auto& CmdQueue    = m_pDevice->GetCommandQueue(SoftwareQueueIndex{ImmediateContextId});
-    const auto  CmdListType = ValidatedCast<const CommandQueueD3D12Impl>(&CmdQueue)->GetCommandListType();
-    const auto  QueueType   = D3D12CommandListTypeToCmdQueueType(CmdListType);
+    const auto d3d12CmdListType = m_pDevice->GetCommandQueueType(SoftwareQueueIndex{ImmediateContextId});
+    const auto QueueType        = D3D12CommandListTypeToCmdQueueType(d3d12CmdListType);
     TDeviceContextBase::Begin(ImmediateContextId, QueueType);
     RequestCommandContext();
 }
@@ -2110,7 +2109,10 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
 
     CommandListD3D12Impl* pCmdListD3D12(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)(m_pDevice, this, std::move(m_CurrCmdCtx)));
     pCmdListD3D12->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
-    Flush(false);
+
+    // We can't request new cmd context because we don't know the command queue type
+    constexpr auto RequestNewCmdCtx = false;
+    Flush(RequestNewCmdCtx);
 
     InvalidateState();
 

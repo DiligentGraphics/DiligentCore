@@ -1474,8 +1474,8 @@ inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, in
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::EnqueueSignal(IFence* pFence, Uint64 Value, int)
 {
-    DEV_CHECK_ERR(!IsDeferred(), "Fence can only be signaled from immediate context");
-    DEV_CHECK_ERR(pFence, "Fence must not be null");
+    DEV_CHECK_ERR(!IsDeferred(), "Fence signal can only be enqueued from immediate context");
+    DEV_CHECK_ERR(pFence != nullptr, "Fence must not be null");
 }
 
 template <typename ImplementationTraits>

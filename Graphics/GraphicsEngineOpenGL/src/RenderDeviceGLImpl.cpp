@@ -28,7 +28,6 @@
 #include "pch.h"
 
 #include "RenderDeviceGLImpl.hpp"
-#include "EngineFactoryBase.hpp"
 
 #include "BufferGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
@@ -146,7 +145,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         RawMemAllocator,
         pEngineFactory,
         EngineCI,
-        GraphicsAdapterInfo{}
+        GraphicsAdapterInfo{} // Adapter properties can only be queried after GL context is initialized
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext{EngineCI, m_DeviceInfo.Type, m_DeviceInfo.APIVersion, pSCDesc}

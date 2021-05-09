@@ -94,9 +94,12 @@ struct DeviceContextDesc
     ///           QueueId member of ImmediateContextCreateInfo struct that was used to
     ///           initialize the context.
     ///
-    ///           Vulkan backend:     same as queue family index.
-    ///           Direct3D12 backend: same as queue type.
-    ///           Metal backend:      index of the unique command queue.
+    ///           - Vulkan backend: same as queue family index.
+    ///           - Direct3D12 backend:
+    ///             - 0 - Graphics queue
+    ///             - 1 - Compute queue
+    ///             - 2 - Transfer queue
+    ///           - Metal backend: index of the unique command queue.
     Uint8        QueueId    DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
 
 

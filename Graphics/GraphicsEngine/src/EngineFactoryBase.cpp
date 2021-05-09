@@ -1,13 +1,12 @@
 /*
  *  Copyright 2019-2021 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
- *  
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- *  
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,8 +41,7 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
 {
     if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {
-        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
-        return;
+        LOG_ERROR_AND_THROW("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.EngineAPIVersion, ")");
     }
 
     if ((EngineCI.NumImmediateContexts > 0) != (EngineCI.pImmediateContextInfo != nullptr))
@@ -52,7 +50,7 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
     }
 
     constexpr auto MaxImmediateContexts = 8 * std::min(sizeof(decltype(BufferDesc::ImmediateContextMask)), sizeof(decltype(TextureDesc::ImmediateContextMask)));
-    static_assert(MAX_COMMAND_QUEUES == MaxImmediateContexts, "Number of bits in CommandQueueMask must be equal to MAX_COMMAND_QUEUES");
+    static_assert(MAX_COMMAND_QUEUES == MaxImmediateContexts, "Number of bits in MaxImmediateContexts must be equal to MAX_COMMAND_QUEUES");
 
     if (EngineCI.NumImmediateContexts >= MaxImmediateContexts)
     {
@@ -66,8 +64,8 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
 
         if (ContextInfo.QueueId >= AdapterInfo.NumQueues)
         {
-            LOG_ERROR_AND_THROW("pContextInfo[", CtxInd, "].QueueId (", ContextInfo.QueueId, ") must be less than ",
-                                AdapterInfo.NumQueues, ".");
+            LOG_ERROR_AND_THROW("pContextInfo[", CtxInd, "].QueueId (", ContextInfo.QueueId, ") must be less than AdapterInfo.NumQueues (",
+                                AdapterInfo.NumQueues, ").");
         }
         QueueCount[ContextInfo.QueueId] += 1;
         if (QueueCount[ContextInfo.QueueId] > AdapterInfo.Queues[ContextInfo.QueueId].MaxDeviceContexts)

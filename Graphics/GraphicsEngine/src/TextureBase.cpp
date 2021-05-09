@@ -152,9 +152,9 @@ void ValidateTextureDesc(const TextureDesc& Desc) noexcept(false)
     if (Desc.Usage == USAGE_DYNAMIC &&
         PlatformMisc::CountOneBits(Desc.ImmediateContextMask) > 1)
     {
-        // Dynamic textures require implicit state transition that uses global state,
-        // which is not safe in multiple contexts.
-        LOG_TEXTURE_ERROR_AND_THROW("USAGE_DYNAMIC textures may only be used in single device context.");
+        // Dynamic textures always use backing resource that requires implicit state transitions
+        // in map/unamp operations, which is not safe in multiple contexts.
+        LOG_TEXTURE_ERROR_AND_THROW("USAGE_DYNAMIC textures may only be used in one immediate device context.");
     }
 }
 

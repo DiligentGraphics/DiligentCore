@@ -79,10 +79,10 @@ DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters*      pRefCounters,
 IMPLEMENT_QUERY_INTERFACE(DeviceContextGLImpl, IID_DeviceContextGL, TDeviceContextBase)
 
 
-void DeviceContextGLImpl::Begin(Uint32 CommandQueueId)
+void DeviceContextGLImpl::Begin(Uint32 ImmediateContextId)
 {
     UNEXPECTED("OpenGL does not support deferred contexts");
-    (void)(CommandQueueId);
+    (void)(ImmediateContextId);
 }
 
 void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)

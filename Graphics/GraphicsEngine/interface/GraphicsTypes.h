@@ -2306,6 +2306,10 @@ struct EngineCreateInfo
     const ImmediateContextCreateInfo* pImmediateContextInfo DEFAULT_INITIALIZER(nullptr);
 
     /// The number of immediate contexts in pImmediateContextInfo array.
+
+    /// \warning  If an application uses more than one immediate context,
+    ///           it must manually call IDeviceContext::FinishFrame for
+    ///           additional contexts to let the engine release stale resources.
     Uint32                   NumImmediateContexts   DEFAULT_INITIALIZER(0);
 
     /// The number of deferred contexts to create when initializing the engine. If non-zero number 
@@ -2313,6 +2317,9 @@ struct EngineCreateInfo
     /// functions (IEngineFactoryD3D11::CreateDeviceAndContextsD3D11,
     /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12, and IEngineFactoryVk::CreateDeviceAndContextsVk)
     /// starting at position max(1, NumImmediateContexts).
+    ///
+    /// \warning  An application must manually call IDeviceContext::FinishFrame for
+    ///           deferred contexts to let the engine release stale resources.
     Uint32                   NumDeferredContexts    DEFAULT_INITIALIZER(0);
 
     /// Requested device features.
