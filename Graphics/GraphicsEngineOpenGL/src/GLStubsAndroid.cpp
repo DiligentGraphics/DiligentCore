@@ -215,6 +215,22 @@
     DECLARE_GL_FUNCTION( glQueryCounter, PFNGLQUERYCOUNTERPROC, GLuint id, GLenum target)
 #endif
 
+#ifdef LOAD_GL_OBJECT_LABEL
+    PFNGLOBJECTLABELPROC glObjectLabel = nullptr;
+#endif
+
+#ifdef LOAD_GL_POP_DEBUG_GROUP
+    PFNGLPOPDEBUGGROUPPROC glPopDebugGroup = nullptr;
+#endif
+
+#ifdef LOAD_GL_PUSH_DEBUG_GROUP
+    PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup = nullptr;
+#endif
+
+#ifdef LOAD_GL_DEBUG_MESSAGE_INSERT
+    PFNGLDEBUGMESSAGEINSERTPROC glDebugMessageInsert = nullptr;
+#endif
+
 
 void LoadGLFunctions()
 {
