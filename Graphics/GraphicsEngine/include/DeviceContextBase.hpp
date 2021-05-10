@@ -469,7 +469,7 @@ protected:
         return m_DstImmediateContextId != INVALID_CONTEXT_ID;
     }
 
-    void Begin(Uint32 ImmediateContextId, COMMAND_QUEUE_TYPE QueueType)
+    void Begin(DeviceContextIndex ImmediateContextId, COMMAND_QUEUE_TYPE QueueType)
     {
         DEV_CHECK_ERR(IsDeferred(), "Begin() is only allowed for deferred contexts.");
         DEV_CHECK_ERR(!IsRecordingDeferredCommands(), "This context is already recording commands. Call FinishCommandList() before beginning new recording.");

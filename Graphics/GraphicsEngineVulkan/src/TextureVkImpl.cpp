@@ -67,7 +67,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
         VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
-               "CommandQueueMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
+               "ImmediateContextMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
 
         VkImageCreateInfo ImageCI = {};
 

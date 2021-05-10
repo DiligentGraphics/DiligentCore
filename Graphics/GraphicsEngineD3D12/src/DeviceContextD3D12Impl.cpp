@@ -198,7 +198,7 @@ void DeviceContextD3D12Impl::Begin(Uint32 ImmediateContextId)
     DEV_CHECK_ERR(ImmediateContextId < m_pDevice->GetCommandQueueCount(), "ImmediateContextId is out of range");
     const auto d3d12CmdListType = m_pDevice->GetCommandQueueType(SoftwareQueueIndex{ImmediateContextId});
     const auto QueueType        = D3D12CommandListTypeToCmdQueueType(d3d12CmdListType);
-    TDeviceContextBase::Begin(ImmediateContextId, QueueType);
+    TDeviceContextBase::Begin(DeviceContextIndex{ImmediateContextId}, QueueType);
     RequestCommandContext();
 }
 

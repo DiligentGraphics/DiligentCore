@@ -273,18 +273,20 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         return;
     }
 
-    if (EngineCI.NumImmediateContexts > 1)
-    {
-        LOG_ERROR_MESSAGE("Direct3D11 backend does not support multiple immediate contexts");
-        return;
-    }
-
     VERIFY(ppDevice && ppContexts, "Null pointer provided");
     if (!ppDevice || !ppContexts)
         return;
 
+    const auto NumImmediateContexts = std::max(1u, EngineCI.NumImmediateContexts);
+
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (NumImmediateContexts + EngineCI.NumDeferredContexts));
+
+    if (NumImmediateContexts > 1)
+    {
+        LOG_ERROR_MESSAGE("Direct3D11 backend does not support multiple immediate contexts");
+        return;
+    }
 
     try
     {
@@ -358,7 +360,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for (Uint32 ctx = 0; ctx < 1 + EngineCI.NumDeferredContexts; ++ctx)
+        for (Uint32 ctx = 0; ctx < NumImmediateContexts + EngineCI.NumDeferredContexts; ++ctx)
         {
             if (ppContexts[ctx] != nullptr)
             {

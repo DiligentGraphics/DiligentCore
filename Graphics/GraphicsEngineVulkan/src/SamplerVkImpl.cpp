@@ -85,7 +85,7 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
 
 SamplerVkImpl::~SamplerVkImpl()
 {
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_VkSampler), m_CommandQueueMask);
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_VkSampler), m_ImmediateContextMask);
 }
 
 } // namespace Diligent

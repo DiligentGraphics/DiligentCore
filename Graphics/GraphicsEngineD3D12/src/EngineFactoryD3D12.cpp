@@ -553,7 +553,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
             NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, this, EngineCI, AdapterInfo, d3d12Device, CommandQueueCount, ppCommandQueues)};
         pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
-        for (Uint32 CtxInd = 0; CtxInd < CommandQueueCount; ++CtxInd)
+        for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
         {
             const auto d3d12CmdListType = ppCommandQueues[CtxInd]->GetD3D12CommandQueueDesc().Type;
             const auto QueueId          = D3D12CommandListTypeToQueueId(d3d12CmdListType);
@@ -585,13 +585,13 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
                     DeviceContextDesc{
                         nullptr,
                         COMMAND_QUEUE_TYPE_UNKNOWN,
-                        true,                            // IsDeferred
-                        CommandQueueCount + DeferredCtx, // Context index
-                    }                                    //
+                        true,                               // IsDeferred
+                        NumImmediateContexts + DeferredCtx, // Context index
+                    }                                       //
                     )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
             // keep a weak reference to the context
-            pDeferredCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CommandQueueCount + DeferredCtx));
+            pDeferredCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + NumImmediateContexts + DeferredCtx));
             pRenderDeviceD3D12->SetDeferredContext(DeferredCtx, pDeferredCtxD3D12);
         }
     }
@@ -602,7 +602,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for (Uint32 ctx = 0; ctx < CommandQueueCount + EngineCI.NumDeferredContexts; ++ctx)
+        for (Uint32 ctx = 0; ctx < NumImmediateContexts + EngineCI.NumDeferredContexts; ++ctx)
         {
             if (ppContexts[ctx] != nullptr)
             {

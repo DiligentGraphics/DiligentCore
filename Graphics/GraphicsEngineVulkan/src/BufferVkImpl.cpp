@@ -232,7 +232,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
     else
     {
         VERIFY(m_Desc.Usage != USAGE_DYNAMIC || PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) <= 1,
-               "CommandQueueMask must contain single set bit, this error should've been handled in ValidateBufferDesc()");
+               "ImmediateContextMask must contain single set bit, this error should've been handled in ValidateBufferDesc()");
 
         m_VulkanBuffer = LogicalDevice.CreateBuffer(VkBuffCI, m_Desc.Name);
 

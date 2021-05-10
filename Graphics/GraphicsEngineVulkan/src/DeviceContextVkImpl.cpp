@@ -203,8 +203,10 @@ void DeviceContextVkImpl::PrepareCommandPool(SoftwareQueueIndex CommandQueueId)
 void DeviceContextVkImpl::Begin(Uint32 ImmediateContextId)
 {
     DEV_CHECK_ERR(IsDeferred(), "Begin() should only be called for deferred contexts.");
+    DEV_CHECK_ERR(!IsRecordingDeferredCommands(), "This context is already recording commands. Call FinishCommandList() before beginning new recording.");
     PrepareCommandPool(SoftwareQueueIndex{ImmediateContextId});
     m_DstImmediateContextId = static_cast<Uint8>(ImmediateContextId);
+    VERIFY_EXPR(m_DstImmediateContextId == ImmediateContextId);
 }
 
 void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkCommandBuffer vkCmdBuff, Uint64 FenceValue)
