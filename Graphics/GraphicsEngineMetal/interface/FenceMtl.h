@@ -40,8 +40,8 @@ static const INTERFACE_ID IID_FenceMtl =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define IFenceMtlInclusiveMethods \
-    IFenceInclusiveMethods        \
-        IFenceMtlMethods FenceMtl
+    IFenceInclusiveMethods;       \
+    IFenceMtlMethods FenceMtl
 
 // clang-format off
 

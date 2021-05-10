@@ -210,7 +210,7 @@ void MeshShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 
     RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
 
-    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
+    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
     auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
 
     pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
@@ -300,7 +300,7 @@ void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
 
     RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
 
-    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
+    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
     auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
 
     pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
@@ -367,7 +367,7 @@ void AmplificationShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 
     RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
 
-    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
+    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
     auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
 
     pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);

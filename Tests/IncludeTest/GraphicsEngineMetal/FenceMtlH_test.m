@@ -27,3 +27,9 @@
 
 #include <Metal/Metal.h>
 #include "DiligentCore/Graphics/GraphicsEngineMetal/interface/FenceMtl.h"
+
+void TestFenceMtl_CInterface(IFenceMtl* pFence)
+{
+    id<MTLSharedEvent> mtlEvent = IFenceMtl_GetMtlSharedEvent(pFence);
+    (void)mtlEvent;
+}

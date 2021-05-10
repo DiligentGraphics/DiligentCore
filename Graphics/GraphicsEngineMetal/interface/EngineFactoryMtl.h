@@ -50,6 +50,7 @@ static const INTERFACE_ID IID_EngineFactoryMtl =
     IEngineFactoryMtlMethods EngineFactoryMtl
 
 // clang-format off
+struct ICommandQueueMtl;
 
 DILIGENT_BEGIN_INTERFACE(IEngineFactoryMtl, IEngineFactory)
 {

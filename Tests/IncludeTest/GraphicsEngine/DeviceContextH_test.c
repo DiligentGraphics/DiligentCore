@@ -110,4 +110,8 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
     IDeviceContext_BeginDebugGroup(pCtx, (const Char*)NULL, (const float*)NULL);
     IDeviceContext_EndDebugGroup(pCtx);
     IDeviceContext_InsertDebugLabel(pCtx, (const Char*)NULL, (const float*)NULL);
+
+    struct ICommandQueue* pQueue = IDeviceContext_LockCommandQueue(pCtx);
+    (void)pQueue;
+    IDeviceContext_UnlockCommandQueue(pCtx);
 }

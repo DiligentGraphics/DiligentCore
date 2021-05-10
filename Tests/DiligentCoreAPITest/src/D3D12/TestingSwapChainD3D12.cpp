@@ -236,7 +236,7 @@ void TestingSwapChainD3D12::TakeSnapshot()
 
     RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
 
-    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
+    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
     auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
 
     pd3d12Queue->ExecuteCommandLists(1, pCmdLits);
@@ -290,7 +290,7 @@ void TestingSwapChainD3D12::TakeSnapshot(ITexture* pBlitFrom)
 
     RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
 
-    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
+    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
     auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
 
     pd3d12Queue->ExecuteCommandLists(1, pCmdLits);

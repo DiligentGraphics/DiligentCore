@@ -35,9 +35,4 @@ void TestDeviceContextD3D12_CInterface(IDeviceContextD3D12* pCtx)
 
     ID3D12GraphicsCommandList* pd3d12CmdList = IDeviceContextD3D12_GetD3D12CommandList(pCtx);
     (void)pd3d12CmdList;
-
-    ICommandQueueD3D12* pd3d12CmdQueue = IDeviceContextD3D12_LockCommandQueue(pCtx);
-    (void)pd3d12CmdQueue;
-
-    IDeviceContextD3D12_UnlockCommandQueue(pCtx);
 }

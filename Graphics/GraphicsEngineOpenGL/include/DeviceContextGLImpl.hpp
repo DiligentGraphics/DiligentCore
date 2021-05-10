@@ -279,6 +279,12 @@ public:
     /// Implementation of IDeviceContext::InsertDebugLabel() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override final;
 
+    /// Implementation of IDeviceContext::LockCommandQueue() in OpenGL backend.
+    virtual ICommandQueue* DILIGENT_CALL_TYPE LockCommandQueue() override final { return nullptr; }
+
+    /// Implementation of IDeviceContext::UnlockCommandQueue() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final {}
+
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 

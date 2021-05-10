@@ -425,10 +425,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             AddContext(COMMAND_QUEUE_TYPE_TRANSFER, "Transfer", CI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics 2", CI.AdapterId);
 
-            CreateInfo.AdapterId    = CI.AdapterId;
-            CreateInfo.NumContexts  = static_cast<Uint32>(ContextCI.size());
-            CreateInfo.pContextInfo = CreateInfo.NumContexts ? ContextCI.data() : nullptr;
-            CreateInfo.Features     = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
+            CreateInfo.AdapterId             = CI.AdapterId;
+            CreateInfo.NumImmediateContexts  = static_cast<Uint32>(ContextCI.size());
+            CreateInfo.pImmediateContextInfo = CreateInfo.NumImmediateContexts ? ContextCI.data() : nullptr;
+            CreateInfo.Features              = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);

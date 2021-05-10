@@ -27,36 +27,36 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::ICommandQueueMtl interface
+/// Definition of the Diligent::ICommandQueue interface
 
-#include "../../GraphicsEngine/interface/CommandQueue.h"
+#include "../../../Primitives/interface/Object.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-// {1C0013CB-41B8-453D-8983-4D935F5973B0}
-static const INTERFACE_ID IID_CommandQueueMtl =
-    {0x1c0013cb, 0x41b8, 0x453d, {0x89, 0x83, 0x4d, 0x93, 0x5f, 0x59, 0x73, 0xb0}};
+// {0FF427F7-6284-409E-8161-A023CA07EF5D}
+static const INTERFACE_ID IID_CommandQueue =
+    {0xff427f7, 0x6284, 0x409e, {0x81, 0x61, 0xa0, 0x23, 0xca, 0x7, 0xef, 0x5d}};
 
-#define DILIGENT_INTERFACE_NAME ICommandQueueMtl
+#define DILIGENT_INTERFACE_NAME ICommandQueue
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-#define ICommandQueueMtlInclusiveMethods \
-    ICommandQueueInclusiveMethods;       \
-    ICommandQueueMtlMethods CommandQueueMtl
+#define ICommandQueueInclusiveMethods \
+    IObjectInclusiveMethods;          \
+    ICommandQueueMethods CommandQueue
 
 // clang-format off
 
 /// Command queue interface
-DILIGENT_BEGIN_INTERFACE(ICommandQueueMtl, ICommandQueue)
+DILIGENT_BEGIN_INTERFACE(ICommandQueue, IObject)
 {
-    /// Returns a pointer to Metal command queue (MTLCommandQueue)
-    VIRTUAL id<MTLCommandQueue> METHOD(GetMtlCommandQueue)(THIS) CONST PURE;
+    /// Returns the value of the internal fence that will be signaled next time
+    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS) CONST PURE;
 
-    /// Submits a given command buffer to the command queue
+    /// Returns the last completed value of the internal fence
+    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS) PURE;
 
-    /// \return Fence value associated with the submitted command buffer
-    VIRTUAL Uint64 METHOD(Submit)(THIS_
-                                  id<MTLCommandBuffer> mtlCommandBuffer) PURE;
+    /// Blocks execution until all pending GPU commands are complete
+    VIRTUAL Uint64 METHOD(WaitForIdle)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -66,8 +66,9 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define ICommandQueueMtl_GetMtlCommandQueue(This)  CALL_IFACE_METHOD(CommandQueueMtl, GetMtlCommandQueue, This)
-#    define ICommandQueueMtl_Submit(This, ...)         CALL_IFACE_METHOD(CommandQueueMtl, Submit,             This, __VA_ARGS__)
+#    define ICommandQueue_GetNextFenceValue(This)        CALL_IFACE_METHOD(CommandQueue, GetNextFenceValue,      This)
+#    define ICommandQueue_GetCompletedFenceValue(This)   CALL_IFACE_METHOD(CommandQueue, GetCompletedFenceValue, This)
+#    define ICommandQueue_WaitForIdle(This)              CALL_IFACE_METHOD(CommandQueue, WaitForIdle,            This)
 
 // clang-format on
 

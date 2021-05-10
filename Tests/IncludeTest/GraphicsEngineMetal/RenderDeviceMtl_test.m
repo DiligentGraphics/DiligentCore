@@ -34,12 +34,12 @@ void TestRenderDeviceMtl_CInterface(IRenderDeviceMtl* pDevice)
     (void) mtlDevice;
 
     Uint64 Value;
-    Value = IRenderDeviceMtl_GetNextFenceValue(0u);
+    Value = IRenderDeviceMtl_GetNextFenceValue(pDevice, 0u);
     (void)Value;
-    Value = IRenderDeviceMtl_GetCompletedFenceValue(1u);
+    Value = IRenderDeviceMtl_GetCompletedFenceValue(pDevice, 1u);
     (void)Value;
 
-    Bool bValue = IRenderDeviceMtl_IsFenceSignaled(0u, (Uint64)10);
+    Bool bValue = IRenderDeviceMtl_IsFenceSignaled(pDevice, 0u, (Uint64)10);
     (void)bValue;
 
     IRenderDeviceMtl_CreateTextureFromMtlResource(pDevice, (id<MTLTexture>)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);

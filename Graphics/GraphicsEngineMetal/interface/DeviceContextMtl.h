@@ -42,7 +42,7 @@ static const INTERFACE_ID IID_DeviceContextMtl =
 
 #define IDeviceContextMtlInclusiveMethods \
     IDeviceContextInclusiveMethods;       \
-    IDeviceContextMtlMethods DeviceContextMt
+    IDeviceContextMtlMethods DeviceContextMtl
 
 // clang-format off
 
@@ -66,24 +66,6 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContextMtl, IDeviceContext)
     ///
     ///           Engine will end all active encoders.
     VIRTUAL id<MTLCommandBuffer> METHOD(GetMtlCommandBuffer)(THIS) PURE;
-
-    /// Locks the internal mutex and returns a pointer to the command queue that is associated with this device context.
-
-    /// \return - a pointer to ICommandQueueMtl interface of the command queue associated with the context.
-    ///
-    /// \remarks  Only immediate device contexts have associated command queues.
-    ///
-    ///           The engine locks the internal mutex to prevent simultaneous access to the command queue.
-    ///           An application must release the lock by calling IDeviceContextMtl::UnlockCommandQueue()
-    ///           when it is done working with the queue or the engine will not be able to submit any command
-    ///           list to the queue. Nested calls to LockCommandQueue() are not allowed.
-    ///           The queue pointer never changes while the context is alive, so an application may cache and
-    ///           use the pointer if it does not need to prevent potential simultaneous access to the queue from
-    ///           other threads.
-    VIRTUAL ICommandQueueMtl* METHOD(LockCommandQueue)(THIS) PURE;
-
-    /// Unlocks the command queue that was previously locked by IDeviceContextMtl::LockCommandQueue().
-    VIRTUAL void METHOD(UnlockCommandQueue)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -94,8 +76,6 @@ DILIGENT_END_INTERFACE
 // clang-format off
 
 #    define IDeviceContextMtl_GetMtlCommandBuffer(This)  CALL_IFACE_METHOD(DeviceContextMtl, GetMtlCommandBuffer,   This)
-#    define IDeviceContextMtl_LockCommandQueue(This)     CALL_IFACE_METHOD(DeviceContextMtl, LockCommandQueue,      This)
-#    define IDeviceContextMtl_UnlockCommandQueue(This)   CALL_IFACE_METHOD(DeviceContextMtl, UnlockCommandQueue,    This)
 
 // clang-format on
 

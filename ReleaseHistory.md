@@ -1,5 +1,7 @@
 ## Current Progress
 
+* Added `ICommandQueue` interface, `IDeviceContext::LockCommandQueue` and `IDeviceContext::UnlockCommandQueue` methods,
+  removed fence query methods from `IRenderDeviceVk`, `IRenderDeviceD3D12`, and `IRenderDeviceMtl` (API Version 240096)
 * Added multiple immediate device contexts and refactored adapter queries (API Version 240095)
   * `CommandQueueMask` member of `TextureDesc`, `BufferDesc`, `PipelineStateDesc`, `TopLevelASDesc`,
     and `BottomLevelASDesc`, was renamed to `ImmediateContextMask`
