@@ -191,7 +191,7 @@ void MeshShaderDrawReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer);
 
     vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
     vkDestroyPipelineLayout(vkDevice, vkLayout, nullptr);
@@ -369,7 +369,7 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer);
 
     vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
     vkDestroyPipelineLayout(vkDevice, vkLayout, nullptr);
@@ -538,7 +538,7 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer);
 
     vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
     vkDestroyPipelineLayout(vkDevice, vkLayout, nullptr);

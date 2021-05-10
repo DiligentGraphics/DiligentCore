@@ -62,8 +62,9 @@ void ClearRenderTargetReferenceVk(ISwapChain* pSwapChain, const float ClearColor
 
     auto res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
+    (void)res;
 
-    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer);
 }
 
 } // namespace Testing

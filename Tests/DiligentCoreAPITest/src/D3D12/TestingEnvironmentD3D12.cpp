@@ -103,8 +103,7 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
 
 void TestingEnvironmentD3D12::ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle)
 {
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{GetDeviceContext(), IID_DeviceContextD3D12};
-    RefCntAutoPtr<ICommandQueueD3D12>  pQeueD3D12{pContextD3D12->LockCommandQueue(), IID_CommandQueueD3D12};
+    RefCntAutoPtr<ICommandQueueD3D12> pQeueD3D12{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueD3D12};
 
     auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
 
@@ -113,7 +112,7 @@ void TestingEnvironmentD3D12::ExecuteCommandList(ID3D12CommandList* pCmdList, bo
     if (WaitForIdle)
         IdleCommandQueue(pd3d12Queue);
 
-    pContextD3D12->UnlockCommandQueue();
+    GetDeviceContext()->UnlockCommandQueue();
 }
 
 TestingEnvironment* CreateTestingEnvironmentD3D12(const TestingEnvironment::CreateInfo& CI,

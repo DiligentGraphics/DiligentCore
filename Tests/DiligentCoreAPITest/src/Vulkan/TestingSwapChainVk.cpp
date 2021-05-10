@@ -238,40 +238,41 @@ void TestingSwapChainVk::EndRenderPass(VkCommandBuffer vkCmdBuffer)
     vkCmdEndRenderPass(vkCmdBuffer);
 }
 
-void TestingSwapChainVk::TakeSnapshot(ITexture* pBlitFrom)
+void TestingSwapChainVk::TakeSnapshot(ITexture* pCopyFrom)
 {
-    VkImage SrcVkImage = m_vkRenderTargetImage;
-    if (pBlitFrom)
-    {
-        RefCntAutoPtr<ITextureVk> pBlitFromVk{pBlitFrom, IID_TextureVk};
-        VERIFY_EXPR(pBlitFromVk);
-        VERIFY_EXPR(pBlitFromVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        VERIFY_EXPR(GetDesc().Width == pBlitFromVk->GetDesc().Width);
-        VERIFY_EXPR(GetDesc().Height == pBlitFromVk->GetDesc().Height);
-        VERIFY_EXPR(GetDesc().ColorBufferFormat == pBlitFromVk->GetDesc().Format);
-        SrcVkImage = pBlitFromVk->GetVkImage();
-    }
-
     auto* pEnv = TestingEnvironmentVk::GetInstance();
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
-    TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_ActiveGraphicsShaderStages);
+    VkImage vSrcImage = VK_NULL_HANDLE;
+    if (pCopyFrom == nullptr)
+    {
+        TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_ActiveGraphicsShaderStages);
+        vSrcImage = m_vkRenderTargetImage;
+    }
+    else
+    {
+        RefCntAutoPtr<ITextureVk> pSrcTexVk{pCopyFrom, IID_TextureVk};
+        VERIFY_EXPR(pSrcTexVk);
+        VERIFY_EXPR(pSrcTexVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        VERIFY_EXPR(GetDesc().Width == pSrcTexVk->GetDesc().Width);
+        VERIFY_EXPR(GetDesc().Height == pSrcTexVk->GetDesc().Height);
+        VERIFY_EXPR(GetDesc().ColorBufferFormat == pSrcTexVk->GetDesc().Format);
+        vSrcImage = pSrcTexVk->GetVkImage();
+    }
 
-    VkBufferImageCopy BuffImgCopy = {};
-
+    VkBufferImageCopy BuffImgCopy{};
     BuffImgCopy.imageExtent                 = VkExtent3D{m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1};
     BuffImgCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     BuffImgCopy.imageSubresource.layerCount = 1;
     VERIFY(m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM, "Unexpected color buffer format");
     BuffImgCopy.bufferRowLength = m_SwapChainDesc.Width; // In texels
 
-    vkCmdCopyImageToBuffer(vkCmdBuffer, SrcVkImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    vkCmdCopyImageToBuffer(vkCmdBuffer, vSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                            m_vkStagingBuffer, 1, &BuffImgCopy);
-    auto res = vkEndCommandBuffer(vkCmdBuffer);
-    VERIFY(res >= 0, "Failed to end command buffer");
+    vkEndCommandBuffer(vkCmdBuffer);
 
-    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer);
 
     VERIFY_EXPR(m_StagingBufferSize == m_SwapChainDesc.Width * m_SwapChainDesc.Height * 4);
     void* pStagingDataPtr = nullptr;

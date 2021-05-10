@@ -106,7 +106,7 @@ public:
 
     VkCommandBuffer AllocateCommandBuffer();
 
-    void SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool WaitForIdle);
+    void SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool WaitForIdle = true);
 
     static void TransitionImageLayout(VkCommandBuffer                CmdBuffer,
                                       VkImage                        Image,

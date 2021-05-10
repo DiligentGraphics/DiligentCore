@@ -125,7 +125,7 @@ void GeometryShaderReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList->DrawInstanced(2, 1, 0, 0);
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 } // namespace Testing

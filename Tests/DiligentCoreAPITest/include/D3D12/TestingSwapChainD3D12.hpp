@@ -49,7 +49,7 @@ public:
                           IDeviceContext*      pContext,
                           const SwapChainDesc& SCDesc);
 
-    virtual void TakeSnapshot(ITexture* pBlitFrom = nullptr) override final;
+    virtual void TakeSnapshot(ITexture* pCopyFrom) override final;
 
     void TransitionRenderTarget(ID3D12GraphicsCommandList* pCmdList,
                                 D3D12_RESOURCE_STATES      RTVState);

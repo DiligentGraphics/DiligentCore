@@ -102,7 +102,7 @@ void ComputeShaderReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList->Dispatch((SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1);
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 } // namespace Testing

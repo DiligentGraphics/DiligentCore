@@ -154,7 +154,7 @@ void ComputeShaderReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer);
 
     vkDestroyDescriptorPool(vkDevice, vkDescriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(vkDevice, vkSetLayout, nullptr);

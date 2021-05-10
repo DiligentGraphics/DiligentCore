@@ -428,8 +428,7 @@ VkCommandBuffer TestingEnvironmentVk::AllocateCommandBuffer()
 
 void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool WaitForIdle)
 {
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{GetDeviceContext(), IID_DeviceContextVk};
-    RefCntAutoPtr<ICommandQueueVk>  pQeueVk{pContextVk->LockCommandQueue(), IID_CommandQueueVk};
+    RefCntAutoPtr<ICommandQueueVk> pQeueVk{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueVk};
 
     auto vkQueue = pQeueVk->GetVkQueue();
 
@@ -448,7 +447,7 @@ void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool
         vkResetFences(m_vkDevice, 1, &m_vkFence);
     }
 
-    pContextVk->UnlockCommandQueue();
+    GetDeviceContext()->UnlockCommandQueue();
 }
 
 static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags              AccessFlags,

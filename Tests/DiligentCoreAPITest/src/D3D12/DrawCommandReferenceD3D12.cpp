@@ -143,7 +143,7 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClear
     TriRenderer.Draw(pCmdList, SCDesc.Width, SCDesc.Height);
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
@@ -253,7 +253,7 @@ void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pCle
     static_cast<ID3D12GraphicsCommandList4*>(pCmdList.p)->EndRenderPass();
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
@@ -418,7 +418,7 @@ void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float
     }
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 } // namespace Testing
