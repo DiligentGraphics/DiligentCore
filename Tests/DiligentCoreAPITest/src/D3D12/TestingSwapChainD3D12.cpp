@@ -209,30 +209,31 @@ void TestingSwapChainD3D12::TransitionRenderTarget(ID3D12GraphicsCommandList* pC
     TransitionBuffers(pCmdList, RTVState, m_DepthBufferState);
 }
 
-void TestingSwapChainD3D12::TakeSnapshot(ITexture* pBlitFrom)
+void TestingSwapChainD3D12::TakeSnapshot(ITexture* pCopyFrom)
 {
     auto* pEnv     = TestingEnvironmentD3D12::GetInstance();
     auto  pCmdList = pEnv->CreateGraphicsCommandList();
 
-    D3D12_TEXTURE_COPY_LOCATION SrcLocation = {};
-
+    D3D12_TEXTURE_COPY_LOCATION SrcLocation{};
     SrcLocation.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    SrcLocation.pResource        = m_pd3d12RenderTaget;
     SrcLocation.SubresourceIndex = 0;
 
-    if (pBlitFrom)
+    if (pCopyFrom == nullptr)
     {
-        RefCntAutoPtr<ITextureD3D12> pBlitFromD3D12{pBlitFrom, IID_TextureD3D12};
-        VERIFY_EXPR(pBlitFromD3D12);
-        VERIFY_EXPR(pBlitFromD3D12->GetD3D12ResourceState() == D3D12_RESOURCE_STATE_COPY_SOURCE);
-        VERIFY_EXPR(GetDesc().Width == pBlitFromD3D12->GetDesc().Width);
-        VERIFY_EXPR(GetDesc().Height == pBlitFromD3D12->GetDesc().Height);
-        VERIFY_EXPR(GetDesc().ColorBufferFormat == pBlitFromD3D12->GetDesc().Format);
-        SrcLocation.pResource = pBlitFromD3D12->GetD3D12Texture();
+        TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        SrcLocation.pResource = m_pd3d12RenderTaget;
+    }
+    else
+    {
+        RefCntAutoPtr<ITextureD3D12> pSrcTexD3D12{pCopyFrom, IID_TextureD3D12};
+        VERIFY_EXPR(pSrcTexD3D12->GetD3D12ResourceState() == D3D12_RESOURCE_STATE_COPY_SOURCE);
+        VERIFY_EXPR(GetDesc().Width == pSrcTexD3D12->GetDesc().Width);
+        VERIFY_EXPR(GetDesc().Height == pSrcTexD3D12->GetDesc().Height);
+        VERIFY_EXPR(GetDesc().ColorBufferFormat == pSrcTexD3D12->GetDesc().Format);
+        SrcLocation.pResource = pSrcTexD3D12->GetD3D12Texture();
     }
 
-    D3D12_TEXTURE_COPY_LOCATION DstLocation = {};
-
+    D3D12_TEXTURE_COPY_LOCATION DstLocation{};
     DstLocation.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
     DstLocation.pResource       = m_pd3d12StagingBuffer;
     DstLocation.PlacedFootprint = m_StagingBufferFootprint;
@@ -240,7 +241,7 @@ void TestingSwapChainD3D12::TakeSnapshot(ITexture* pBlitFrom)
     pCmdList->CopyTextureRegion(&DstLocation, 0, 0, 0, &SrcLocation, nullptr);
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 
     D3D12_RANGE InvalidateRange = {0, static_cast<SIZE_T>(m_StagingBufferSize)};
     void*       pStagingDataPtr = nullptr;

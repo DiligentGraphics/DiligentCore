@@ -131,9 +131,9 @@ TestingSwapChainGL::~TestingSwapChainGL()
         glDeleteFramebuffers(1, &m_FBO);
 }
 
-void TestingSwapChainGL::TakeSnapshot(ITexture* pBlitFrom)
+void TestingSwapChainGL::TakeSnapshot(ITexture* pCopyFrom)
 {
-    VERIFY(pBlitFrom == nullptr, "Not implemented");
+    VERIFY(pCopyFrom == nullptr, "Not implemented");
 
     m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
     m_ReferenceData.resize(m_SwapChainDesc.Height * m_ReferenceDataPitch);

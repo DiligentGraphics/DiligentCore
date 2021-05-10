@@ -73,7 +73,7 @@ public:
 
     void IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue);
 
-    void ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle);
+    void ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle = true);
 
     virtual bool HasDXCompiler() const override final
     {

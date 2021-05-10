@@ -39,7 +39,6 @@ namespace Testing
 void ClearRenderTargetReferenceD3D12(ISwapChain* pSwapChain, const float ClearColor[])
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext               = pEnv->GetDeviceContext();
     auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
 
     auto pCmdList = pEnv->CreateGraphicsCommandList();
@@ -50,16 +49,7 @@ void ClearRenderTargetReferenceD3D12(ISwapChain* pSwapChain, const float ClearCo
     pCmdList->ClearRenderTargetView(RTVDescriptorHandle, ClearColor, 0, nullptr);
 
     pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    RefCntAutoPtr<ICommandQueueD3D12> pQeueD3D12{pContextD3D12->LockCommandQueue(), IID_CommandQueueD3D12};
-    auto*                             pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 } // namespace Testing

@@ -205,7 +205,7 @@ void MeshShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList6->DispatchMesh(1, 1, 1);
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 
@@ -284,7 +284,7 @@ void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList->ExecuteIndirect(pDrawMeshSignature, 1, pIndirectBuffer, 0, nullptr, 0);
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 
@@ -340,7 +340,7 @@ void AmplificationShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList6->DispatchMesh(8, 1, 1);
 
     pCmdList->Close();
-    pEnv->ExecuteCommandList(pCmdList, true);
+    pEnv->ExecuteCommandList(pCmdList);
 }
 
 #else

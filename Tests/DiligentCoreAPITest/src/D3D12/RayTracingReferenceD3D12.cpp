@@ -489,7 +489,7 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to map buffer";
 
         Ctx.MappedOffset    = 0;
-        Ctx.MaxMappedOffset = UploadSize;
+        Ctx.MaxMappedOffset = static_cast<size_t>(UploadSize);
     }
 }
 
@@ -690,8 +690,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
     }
 
     Ctx.pCmdList->Close();
-
-    pEnv->ExecuteCommandList(Ctx.pCmdList, true);
+    pEnv->ExecuteCommandList(Ctx.pCmdList);
 }
 
 void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
@@ -826,8 +825,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
     }
 
     Ctx.pCmdList->Close();
-
-    pEnv->ExecuteCommandList(Ctx.pCmdList, true);
+    pEnv->ExecuteCommandList(Ctx.pCmdList);
 }
 
 
@@ -958,8 +956,7 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
     }
 
     Ctx.pCmdList->Close();
-
-    pEnv->ExecuteCommandList(Ctx.pCmdList, true);
+    pEnv->ExecuteCommandList(Ctx.pCmdList);
 }
 
 
@@ -1277,8 +1274,7 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
     }
 
     Ctx.pCmdList->Close();
-
-    pEnv->ExecuteCommandList(Ctx.pCmdList, true);
+    pEnv->ExecuteCommandList(Ctx.pCmdList);
 }
 
 } // namespace Testing
