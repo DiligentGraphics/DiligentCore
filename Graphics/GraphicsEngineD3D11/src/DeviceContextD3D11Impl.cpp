@@ -71,7 +71,7 @@ IMPLEMENT_QUERY_INTERFACE(DeviceContextD3D11Impl, IID_DeviceContextD3D11, TDevic
 void DeviceContextD3D11Impl::Begin(Uint32 ImmediateContextId)
 {
     DEV_CHECK_ERR(ImmediateContextId == 0, "Direct3D11 supports only one immediate context");
-    TDeviceContextBase::Begin(ImmediateContextId, COMMAND_QUEUE_TYPE_GRAPHICS);
+    TDeviceContextBase::Begin(DeviceContextIndex{ImmediateContextId}, COMMAND_QUEUE_TYPE_GRAPHICS);
 }
 
 void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)

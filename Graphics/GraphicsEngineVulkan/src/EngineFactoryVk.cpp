@@ -229,20 +229,18 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
             SupportedStages |= WaveOpStages & VK_SHADER_STAGE_ALL_RAY_TRACING;
         }
 
-        {
-            auto& WaveOpProps{AdapterInfo.WaveOp};
-            WaveOpProps.MinSize         = vkWaveProps.subgroupSize;
-            WaveOpProps.MaxSize         = vkWaveProps.subgroupSize;
-            WaveOpProps.SupportedStages = VkShaderStageFlagsToShaderTypes(SupportedStages);
-            WaveOpProps.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
+        auto& WaveOpProps{AdapterInfo.WaveOp};
+        WaveOpProps.MinSize         = vkWaveProps.subgroupSize;
+        WaveOpProps.MaxSize         = vkWaveProps.subgroupSize;
+        WaveOpProps.SupportedStages = VkShaderStageFlagsToShaderTypes(SupportedStages);
+        WaveOpProps.Features        = VkSubgroupFeatureFlagsToWaveFeatures(vkWaveProps.supportedOperations);
 #if defined(_MSC_VER) && defined(_WIN64)
-            static_assert(sizeof(WaveOpProps) == 16, "Did you add a new member to WaveOpProperties? Please initialize it here.");
+        static_assert(sizeof(WaveOpProps) == 16, "Did you add a new member to WaveOpProperties? Please initialize it here.");
 #endif
-        }
     }
 
     // Mesh shader properties
-    if (vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE)
+    if (AdapterInfo.Features.MeshShaders)
     {
         auto& MeshProps{AdapterInfo.MeshShader};
         MeshProps.MaxTaskCount = vkDeviceExtProps.MeshShader.maxDrawMeshTasksCount;
@@ -367,6 +365,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
     if (!ppDevice || !ppContexts)
         return;
 
+    *ppDevice = nullptr;
+    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
+
     if (m_RenderDeviceCreated)
     {
         LOG_ERROR_MESSAGE("We have global pointers to Vulkan functions and can not simultaniously use more than one instance and logical device.");
@@ -374,8 +375,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
     }
 
     SetRawAllocator(EngineCI.pRawMemAllocator);
-    *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
 
     try
     {
@@ -396,7 +395,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         // Enable device features if they are supported and throw an error if not supported, but required by user.
         const auto AdapterInfo = GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
-        auto EnabledFeatures = EnableDeviceFeatures(AdapterInfo.Features, EngineCI.Features);
+        const auto EnabledFeatures = EnableDeviceFeatures(AdapterInfo.Features, EngineCI.Features);
 
         std::vector<VkDeviceQueueGlobalPriorityCreateInfoEXT> QueueGlobalPriority;
         std::vector<VkDeviceQueueCreateInfo>                  QueueInfos;
@@ -904,7 +903,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
     VERIFY_EXPR(NumImmediateContexts == CommandQueueCount);
 
     *ppDevice = nullptr;
-    memset(ppContexts, 0, sizeof(*ppContexts) * (CommandQueueCount + EngineCI.NumDeferredContexts));
+    memset(ppContexts, 0, sizeof(*ppContexts) * (NumImmediateContexts + EngineCI.NumDeferredContexts));
 
     try
     {
@@ -921,7 +920,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));
 
-        for (Uint32 CtxInd = 0; CtxInd < CommandQueueCount; ++CtxInd)
+        for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
         {
             const auto  QueueId    = ppCommandQueues[CtxInd]->GetQueueFamilyIndex();
             const auto& QueueProps = pRenderDeviceVk->GetPhysicalDevice().GetQueueProperties();
@@ -954,14 +953,14 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                     DeviceContextDesc{
                         nullptr,
                         COMMAND_QUEUE_TYPE_UNKNOWN,
-                        true,                           // IsDeferred
-                        CommandQueueCount + DeferredCtx // Context id
+                        true,                              // IsDeferred
+                        NumImmediateContexts + DeferredCtx // Context id
                     },
                     GenerateMipsHelper //
                     )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
-            pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CommandQueueCount + DeferredCtx));
+            pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + NumImmediateContexts + DeferredCtx));
             pRenderDeviceVk->SetDeferredContext(DeferredCtx, pDeferredCtxVk);
         }
     }
@@ -972,7 +971,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
             (*ppDevice)->Release();
             *ppDevice = nullptr;
         }
-        for (Uint32 ctx = 0; ctx < CommandQueueCount + EngineCI.NumDeferredContexts; ++ctx)
+        for (Uint32 ctx = 0; ctx < NumImmediateContexts + EngineCI.NumDeferredContexts; ++ctx)
         {
             if (ppContexts[ctx] != nullptr)
             {

@@ -242,7 +242,7 @@ private:
             this->m_pRawPtr = nullptr;
         }
 
-        // Keep Name, Flags, CompactedSize, CommandQueueMask
+        // Keep Name, Flags, CompactedSize, ImmediateContextMask
         this->m_Desc.pTriangles    = nullptr;
         this->m_Desc.TriangleCount = 0;
         this->m_Desc.pBoxes        = nullptr;

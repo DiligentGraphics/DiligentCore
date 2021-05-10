@@ -2275,6 +2275,18 @@ struct ImmediateContextCreateInfo
     /// Vulkan backend:     all contexts with the same QueueId must use the same priority.
     /// Other backends:     queue priority is ignored.
     QUEUE_PRIORITY Priority     DEFAULT_INITIALIZER(QUEUE_PRIORITY_MEDIUM);
+
+#if DILIGENT_CPP_INTERFACE
+    ImmediateContextCreateInfo() noexcept {}
+
+    ImmediateContextCreateInfo(const char*    _Name,
+                               Uint8          _QueueId,
+                               QUEUE_PRIORITY _Priority = ImmediateContextCreateInfo{}.Priority) noexcept :
+        Name    {_Name},
+        QueueId {_QueueId},
+        Priority{_Priority}
+    {}
+#endif
 };
 typedef struct ImmediateContextCreateInfo ImmediateContextCreateInfo;
 

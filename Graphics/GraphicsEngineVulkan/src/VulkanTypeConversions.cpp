@@ -1953,10 +1953,12 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     const auto& SubgroupProps          = ExtProps.Subgroup;
     const auto  RequiredSubgroupFeats  = VK_SUBGROUP_FEATURE_BASIC_BIT;
     const auto  RequiredSubgroupStages = VK_SHADER_STAGE_COMPUTE_BIT;
-    INIT_FEATURE(WaveOp,
-                 (vkVersion >= VK_API_VERSION_1_1 &&
-                  (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
-                  (SubgroupProps.supportedStages & RequiredSubgroupStages) == RequiredSubgroupStages));
+    Features.WaveOp =
+        (vkVersion >= VK_API_VERSION_1_1 &&
+         (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
+         (SubgroupProps.supportedStages & RequiredSubgroupStages) == RequiredSubgroupStages) ?
+        DEVICE_FEATURE_STATE_ENABLED :
+        DEVICE_FEATURE_STATE_DISABLED;
 
     const auto& VertexAttribDivisorFeats = ExtFeatures.VertexAttributeDivisor;
     INIT_FEATURE(InstanceDataStepRate,
