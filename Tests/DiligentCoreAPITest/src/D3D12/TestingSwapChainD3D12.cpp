@@ -209,13 +209,10 @@ void TestingSwapChainD3D12::TransitionRenderTarget(ID3D12GraphicsCommandList* pC
     TransitionBuffers(pCmdList, RTVState, m_DepthBufferState);
 }
 
-void TestingSwapChainD3D12::TakeSnapshot()
+void TestingSwapChainD3D12::TakeSnapshot(ITexture* pBlitFrom)
 {
     auto* pEnv     = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
     auto  pCmdList = pEnv->CreateGraphicsCommandList();
-
-    TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
     D3D12_TEXTURE_COPY_LOCATION SrcLocation = {};
 
@@ -223,6 +220,17 @@ void TestingSwapChainD3D12::TakeSnapshot()
     SrcLocation.pResource        = m_pd3d12RenderTaget;
     SrcLocation.SubresourceIndex = 0;
 
+    if (pBlitFrom)
+    {
+        RefCntAutoPtr<ITextureD3D12> pBlitFromD3D12{pBlitFrom, IID_TextureD3D12};
+        VERIFY_EXPR(pBlitFromD3D12);
+        VERIFY_EXPR(pBlitFromD3D12->GetD3D12ResourceState() == D3D12_RESOURCE_STATE_COPY_SOURCE);
+        VERIFY_EXPR(GetDesc().Width == pBlitFromD3D12->GetDesc().Width);
+        VERIFY_EXPR(GetDesc().Height == pBlitFromD3D12->GetDesc().Height);
+        VERIFY_EXPR(GetDesc().ColorBufferFormat == pBlitFromD3D12->GetDesc().Format);
+        SrcLocation.pResource = pBlitFromD3D12->GetD3D12Texture();
+    }
+
     D3D12_TEXTURE_COPY_LOCATION DstLocation = {};
 
     DstLocation.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
@@ -232,15 +240,7 @@ void TestingSwapChainD3D12::TakeSnapshot()
     pCmdList->CopyTextureRegion(&DstLocation, 0, 0, 0, &SrcLocation, nullptr);
 
     pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(1, pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
+    pEnv->ExecuteCommandList(pCmdList, true);
 
     D3D12_RANGE InvalidateRange = {0, static_cast<SIZE_T>(m_StagingBufferSize)};
     void*       pStagingDataPtr = nullptr;
@@ -254,62 +254,6 @@ void TestingSwapChainD3D12::TakeSnapshot()
                m_ReferenceDataPitch);
     }
     m_pd3d12StagingBuffer->Unmap(0, nullptr);
-
-    pContextD3D12->UnlockCommandQueue();
-}
-
-void TestingSwapChainD3D12::TakeSnapshot(ITexture* pBlitFrom)
-{
-    RefCntAutoPtr<ITextureD3D12> pBlitFromD3D12{pBlitFrom, IID_TextureD3D12};
-    VERIFY_EXPR(pBlitFromD3D12);
-    VERIFY_EXPR(pBlitFromD3D12->GetD3D12ResourceState() == D3D12_RESOURCE_STATE_COPY_SOURCE);
-    VERIFY_EXPR(GetDesc().Width == pBlitFromD3D12->GetDesc().Width);
-    VERIFY_EXPR(GetDesc().Height == pBlitFromD3D12->GetDesc().Height);
-    VERIFY_EXPR(GetDesc().ColorBufferFormat == pBlitFromD3D12->GetDesc().Format);
-
-    auto* pEnv     = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
-    auto  pCmdList = pEnv->CreateGraphicsCommandList();
-
-    D3D12_TEXTURE_COPY_LOCATION SrcLocation = {};
-
-    SrcLocation.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    SrcLocation.pResource        = pBlitFromD3D12->GetD3D12Texture();
-    SrcLocation.SubresourceIndex = 0;
-
-    D3D12_TEXTURE_COPY_LOCATION DstLocation = {};
-
-    DstLocation.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-    DstLocation.pResource       = m_pd3d12StagingBuffer;
-    DstLocation.PlacedFootprint = m_StagingBufferFootprint;
-
-    pCmdList->CopyTextureRegion(&DstLocation, 0, 0, 0, &SrcLocation, nullptr);
-
-    pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(1, pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    D3D12_RANGE InvalidateRange = {0, static_cast<SIZE_T>(m_StagingBufferSize)};
-    void*       pStagingDataPtr = nullptr;
-    m_pd3d12StagingBuffer->Map(0, &InvalidateRange, &pStagingDataPtr);
-    m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
-    m_ReferenceData.resize(m_SwapChainDesc.Height * m_ReferenceDataPitch);
-    for (Uint32 row = 0; row < m_SwapChainDesc.Height; ++row)
-    {
-        memcpy(&m_ReferenceData[row * m_ReferenceDataPitch],
-               reinterpret_cast<const Uint8*>(pStagingDataPtr) + m_StagingBufferFootprint.Footprint.RowPitch * row,
-               m_ReferenceDataPitch);
-    }
-    m_pd3d12StagingBuffer->Unmap(0, nullptr);
-
-    pContextD3D12->UnlockCommandQueue();
 }
 
 void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,

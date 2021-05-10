@@ -121,7 +121,6 @@ private:
 void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext               = pEnv->GetDeviceContext();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
     auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
 
@@ -144,23 +143,12 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClear
     TriRenderer.Draw(pCmdList, SCDesc.Width, SCDesc.Height);
 
     pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(pCmdList, true);
 }
 
 void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext               = pEnv->GetDeviceContext();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
     auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
 
@@ -265,23 +253,12 @@ void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pCle
     static_cast<ID3D12GraphicsCommandList4*>(pCmdList.p)->EndRenderPass();
 
     pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(pCmdList, true);
 }
 
 void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext               = pEnv->GetDeviceContext();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
     auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
 
@@ -441,17 +418,7 @@ void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float
     }
 
     pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(pCmdList, true);
 }
 
 } // namespace Testing

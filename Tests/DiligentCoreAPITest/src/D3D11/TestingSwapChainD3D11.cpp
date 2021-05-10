@@ -100,8 +100,10 @@ TestingSwapChainD3D11::TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
     }
 }
 
-void TestingSwapChainD3D11::TakeSnapshot()
+void TestingSwapChainD3D11::TakeSnapshot(ITexture* pBlitFrom)
 {
+    VERIFY(pBlitFrom == nullptr, "Not implemented");
+
     m_pd3d11Context->CopyResource(m_pd3d11StagingTex, m_pd3d11RenderTarget);
     D3D11_MAPPED_SUBRESOURCE MappedData;
 
@@ -125,11 +127,6 @@ void TestingSwapChainD3D11::TakeSnapshot()
 
     m_pd3d11Context->Unmap(m_pd3d11StagingTex, 0);
     m_pd3d11Context->ClearState();
-}
-
-void TestingSwapChainD3D11::TakeSnapshot(ITexture* pBlitFrom)
-{
-    UNEXPECTED("Not implemented");
 }
 
 void CreateTestingSwapChainD3D11(IRenderDevice*       pDevice,

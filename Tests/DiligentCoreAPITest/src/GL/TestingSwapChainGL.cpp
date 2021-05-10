@@ -131,19 +131,16 @@ TestingSwapChainGL::~TestingSwapChainGL()
         glDeleteFramebuffers(1, &m_FBO);
 }
 
-void TestingSwapChainGL::TakeSnapshot()
+void TestingSwapChainGL::TakeSnapshot(ITexture* pBlitFrom)
 {
+    VERIFY(pBlitFrom == nullptr, "Not implemented");
+
     m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
     m_ReferenceData.resize(m_SwapChainDesc.Height * m_ReferenceDataPitch);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
     glReadPixels(0, 0, m_SwapChainDesc.Width, m_SwapChainDesc.Height, GL_RGBA, GL_UNSIGNED_BYTE, m_ReferenceData.data());
     VERIFY(glGetError() == GL_NO_ERROR, "Failed to read pixels from the framebuffer");
-}
-
-void TestingSwapChainGL::TakeSnapshot(ITexture* pBlitFrom)
-{
-    UNEXPECTED("Not implemented");
 }
 
 void CreateTestingSwapChainGL(IRenderDevice*       pDevice,

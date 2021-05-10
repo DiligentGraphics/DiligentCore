@@ -60,8 +60,7 @@ static constexpr INTERFACE_ID IID_TestingSwapChain =
 class ITestingSwapChain : public IObject
 {
 public:
-    virtual void TakeSnapshot()                    = 0;
-    virtual void TakeSnapshot(ITexture* pBlitFrom) = 0;
+    virtual void TakeSnapshot(ITexture* pBlitFrom = nullptr) = 0;
 
     virtual ITextureView* GetCurrentBackBufferUAV() = 0;
 };

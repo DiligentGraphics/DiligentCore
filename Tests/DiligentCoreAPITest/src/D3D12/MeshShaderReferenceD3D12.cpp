@@ -159,7 +159,6 @@ static void CreateMeshPipeline(ID3D12Device* pd3d12Device, ID3DBlob* pAS, ID3DBl
 void MeshShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext               = pEnv->GetDeviceContext();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
     auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
 
@@ -206,24 +205,13 @@ void MeshShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList6->DispatchMesh(1, 1, 1);
 
     pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(pCmdList, true);
 }
 
 
 void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext               = pEnv->GetDeviceContext();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
     auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
 
@@ -296,24 +284,13 @@ void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList->ExecuteIndirect(pDrawMeshSignature, 1, pIndirectBuffer, 0, nullptr, 0);
 
     pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(pCmdList, true);
 }
 
 
 void AmplificationShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pContext               = pEnv->GetDeviceContext();
     auto* pd3d12Device           = pEnv->GetD3D12Device();
     auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
 
@@ -363,17 +340,7 @@ void AmplificationShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
     pCmdList6->DispatchMesh(8, 1, 1);
 
     pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {pCmdList};
-
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = ValidatedCast<ICommandQueueD3D12>(pContextD3D12->LockCommandQueue());
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(pCmdList, true);
 }
 
 #else
