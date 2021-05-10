@@ -40,12 +40,7 @@ namespace Testing
 
 void ClearRenderTargetReferenceVk(ISwapChain* pSwapChain, const float ClearColor[])
 {
-    auto* pEnv     = TestingEnvironmentVk::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
-
-    VkResult res = VK_SUCCESS;
-    (void)res;
-
+    auto* pEnv                = TestingEnvironmentVk::GetInstance();
     auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
@@ -65,21 +60,10 @@ void ClearRenderTargetReferenceVk(ISwapChain* pSwapChain, const float ClearColor
     SubResRange.levelCount = 1;
     vkCmdClearColorImage(vkCmdBuffer, pTestingSwapChainVk->GetVkRenderTargetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &vkClearColor, 1, &SubResRange);
 
-    res = vkEndCommandBuffer(vkCmdBuffer);
+    auto res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
-
-    pContextVk->UnlockCommandQueue();
+    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 }
 
 } // namespace Testing

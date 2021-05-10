@@ -44,7 +44,6 @@ void MeshShaderDrawReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv     = TestingEnvironmentVk::GetInstance();
     auto  vkDevice = pEnv->GetVkDevice();
-    auto* pContext = pEnv->GetDeviceContext();
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -192,19 +191,7 @@ void MeshShaderDrawReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vkQueue);
-
-    pContextVk->UnlockCommandQueue();
+    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 
     vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
     vkDestroyPipelineLayout(vkDevice, vkLayout, nullptr);
@@ -217,7 +204,6 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv     = TestingEnvironmentVk::GetInstance();
     auto  vkDevice = pEnv->GetVkDevice();
-    auto* pContext = pEnv->GetDeviceContext();
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -383,19 +369,7 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vkQueue);
-
-    pContextVk->UnlockCommandQueue();
+    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 
     vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
     vkDestroyPipelineLayout(vkDevice, vkLayout, nullptr);
@@ -410,7 +384,6 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv     = TestingEnvironmentVk::GetInstance();
     auto  vkDevice = pEnv->GetVkDevice();
-    auto* pContext = pEnv->GetDeviceContext();
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -565,19 +538,7 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vkQueue);
-
-    pContextVk->UnlockCommandQueue();
+    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 
     vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
     vkDestroyPipelineLayout(vkDevice, vkLayout, nullptr);

@@ -43,8 +43,7 @@ public:
                        const SwapChainDesc& SCDesc);
     ~TestingSwapChainGL();
 
-    virtual void TakeSnapshot() override final;
-    virtual void TakeSnapshot(ITexture* pBlitFrom) override final;
+    virtual void TakeSnapshot(ITexture* pBlitFrom = nullptr) override final;
 
     GLuint GetRenderTargetGLHandle()
     {

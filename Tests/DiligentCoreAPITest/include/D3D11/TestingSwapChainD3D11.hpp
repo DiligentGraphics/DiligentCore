@@ -49,8 +49,7 @@ public:
                           IDeviceContext*      pContext,
                           const SwapChainDesc& SCDesc);
 
-    virtual void TakeSnapshot() override final;
-    virtual void TakeSnapshot(ITexture* pBlitFrom) override final;
+    virtual void TakeSnapshot(ITexture* pBlitFrom = nullptr) override final;
 
     ID3D11Texture2D* GetD3D11RenderTarget()
     {

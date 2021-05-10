@@ -44,7 +44,6 @@ void ComputeShaderReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv     = TestingEnvironmentVk::GetInstance();
     auto  vkDevice = pEnv->GetVkDevice();
-    auto* pContext = pEnv->GetDeviceContext();
 
     VkResult res = VK_SUCCESS;
     (void)res;
@@ -155,19 +154,7 @@ void ComputeShaderReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vkQueue);
-
-    pContextVk->UnlockCommandQueue();
+    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 
     vkDestroyDescriptorPool(vkDevice, vkDescriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(vkDevice, vkSetLayout, nullptr);

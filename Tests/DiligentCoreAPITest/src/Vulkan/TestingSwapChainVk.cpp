@@ -238,68 +238,21 @@ void TestingSwapChainVk::EndRenderPass(VkCommandBuffer vkCmdBuffer)
     vkCmdEndRenderPass(vkCmdBuffer);
 }
 
-void TestingSwapChainVk::TakeSnapshot()
-{
-    auto* pEnv     = TestingEnvironmentVk::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
-
-    VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
-
-    TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_ActiveGraphicsShaderStages);
-
-    VkBufferImageCopy BuffImgCopy = {};
-
-    BuffImgCopy.imageExtent                 = VkExtent3D{m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1};
-    BuffImgCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    BuffImgCopy.imageSubresource.layerCount = 1;
-    VERIFY(m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM, "Unexpected color buffer format");
-    BuffImgCopy.bufferRowLength = m_SwapChainDesc.Width; // In texels
-
-    vkCmdCopyImageToBuffer(vkCmdBuffer, m_vkRenderTargetImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                           m_vkStagingBuffer, 1, &BuffImgCopy);
-    vkEndCommandBuffer(vkCmdBuffer);
-
-
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vkQueue);
-
-    VERIFY_EXPR(m_StagingBufferSize == m_SwapChainDesc.Width * m_SwapChainDesc.Height * 4);
-    void* pStagingDataPtr = nullptr;
-    vkMapMemory(m_vkDevice, m_vkStagingBufferMemory, 0, m_StagingBufferSize, 0, &pStagingDataPtr);
-
-    m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
-    m_ReferenceData.resize(m_SwapChainDesc.Height * m_ReferenceDataPitch);
-    for (Uint32 row = 0; row < m_SwapChainDesc.Height; ++row)
-    {
-        memcpy(&m_ReferenceData[row * m_ReferenceDataPitch],
-               reinterpret_cast<const Uint8*>(pStagingDataPtr) + m_SwapChainDesc.Width * 4 * row,
-               m_ReferenceDataPitch);
-    }
-
-    vkUnmapMemory(m_vkDevice, m_vkStagingBufferMemory);
-    pContextVk->UnlockCommandQueue();
-}
-
 void TestingSwapChainVk::TakeSnapshot(ITexture* pBlitFrom)
 {
-    RefCntAutoPtr<ITextureVk> pBlitFromVk{pBlitFrom, IID_TextureVk};
-    VERIFY_EXPR(pBlitFromVk);
-    VERIFY_EXPR(pBlitFromVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    VERIFY_EXPR(GetDesc().Width == pBlitFromVk->GetDesc().Width);
-    VERIFY_EXPR(GetDesc().Height == pBlitFromVk->GetDesc().Height);
-    VERIFY_EXPR(GetDesc().ColorBufferFormat == pBlitFromVk->GetDesc().Format);
+    VkImage SrcVkImage = m_vkRenderTargetImage;
+    if (pBlitFrom)
+    {
+        RefCntAutoPtr<ITextureVk> pBlitFromVk{pBlitFrom, IID_TextureVk};
+        VERIFY_EXPR(pBlitFromVk);
+        VERIFY_EXPR(pBlitFromVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        VERIFY_EXPR(GetDesc().Width == pBlitFromVk->GetDesc().Width);
+        VERIFY_EXPR(GetDesc().Height == pBlitFromVk->GetDesc().Height);
+        VERIFY_EXPR(GetDesc().ColorBufferFormat == pBlitFromVk->GetDesc().Format);
+        SrcVkImage = pBlitFromVk->GetVkImage();
+    }
 
-    auto* pEnv     = TestingEnvironmentVk::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    auto* pEnv = TestingEnvironmentVk::GetInstance();
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
@@ -313,22 +266,12 @@ void TestingSwapChainVk::TakeSnapshot(ITexture* pBlitFrom)
     VERIFY(m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM, "Unexpected color buffer format");
     BuffImgCopy.bufferRowLength = m_SwapChainDesc.Width; // In texels
 
-    vkCmdCopyImageToBuffer(vkCmdBuffer, pBlitFromVk->GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    vkCmdCopyImageToBuffer(vkCmdBuffer, SrcVkImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                            m_vkStagingBuffer, 1, &BuffImgCopy);
-    vkEndCommandBuffer(vkCmdBuffer);
+    auto res = vkEndCommandBuffer(vkCmdBuffer);
+    VERIFY(res >= 0, "Failed to end command buffer");
 
-
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vkQueue);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 
     VERIFY_EXPR(m_StagingBufferSize == m_SwapChainDesc.Width * m_SwapChainDesc.Height * 4);
     void* pStagingDataPtr = nullptr;
@@ -344,7 +287,6 @@ void TestingSwapChainVk::TakeSnapshot(ITexture* pBlitFrom)
     }
 
     vkUnmapMemory(m_vkDevice, m_vkStagingBufferMemory);
-    pContextVk->UnlockCommandQueue();
 }
 
 void CreateTestingSwapChainVk(TestingEnvironmentVk* pEnv,

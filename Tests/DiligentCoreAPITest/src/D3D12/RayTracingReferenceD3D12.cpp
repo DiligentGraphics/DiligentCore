@@ -68,9 +68,10 @@ struct RTContext
     CComPtr<ID3D12Resource>              pInstanceBuffer;
     CComPtr<ID3D12Resource>              pSBTBuffer;
     CComPtr<ID3D12Resource>              pUploadBuffer;
-    void*                                MappedPtr     = nullptr;
-    size_t                               MappedOffset  = 0;
-    ID3D12Resource*                      pRenderTarget = nullptr;
+    void*                                MappedPtr       = nullptr;
+    size_t                               MappedOffset    = 0;
+    size_t                               MaxMappedOffset = 0;
+    ID3D12Resource*                      pRenderTarget   = nullptr;
     CComPtr<ID3D12DescriptorHeap>        pDescHeap;
     Uint32                               DescHeapCount  = 0;
     Uint32                               DescHandleSize = 0;
@@ -487,7 +488,8 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
         hr = Ctx.pUploadBuffer->Map(0, nullptr, &Ctx.MappedPtr);
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to map buffer";
 
-        Ctx.MappedOffset = 0;
+        Ctx.MappedOffset    = 0;
+        Ctx.MaxMappedOffset = UploadSize;
     }
 }
 
@@ -495,6 +497,7 @@ void UpdateBuffer(RTContext& Ctx, ID3D12Resource* pBuffer, UINT64 Offset, const 
 {
     VERIFY_EXPR(pBuffer != nullptr);
     VERIFY_EXPR(pData != nullptr);
+    VERIFY_EXPR(Ctx.MappedOffset + DataSize <= Ctx.MaxMappedOffset);
 
     Ctx.pCmdList->CopyBufferRegion(pBuffer, Offset, Ctx.pUploadBuffer, Ctx.MappedOffset, DataSize);
 
