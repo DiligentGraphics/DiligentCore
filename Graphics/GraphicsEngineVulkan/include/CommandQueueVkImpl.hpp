@@ -109,8 +109,14 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueVk, TBase)
 
-    /// Implementation of ICommandQueueVk::GetNextFenceValue().
+    /// Implementation of ICommandQueue::GetNextFenceValue().
     virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue.load(); }
+
+    /// Implementation of ICommandQueue::GetCompletedFenceValue().
+    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue() override final;
+
+    /// Implementation of ICommandQueue::WaitForIdle().
+    virtual Uint64 DILIGENT_CALL_TYPE WaitForIdle() override final;
 
     /// Implementation of ICommandQueueVk::SubmitCmdBuffer().
     virtual Uint64 DILIGENT_CALL_TYPE SubmitCmdBuffer(VkCommandBuffer cmdBuffer) override final;
@@ -126,12 +132,6 @@ public:
 
     /// Implementation of ICommandQueueVk::GetQueueFamilyIndex().
     virtual uint32_t DILIGENT_CALL_TYPE GetQueueFamilyIndex() const override final { return m_QueueFamilyIndex; }
-
-    /// Implementation of ICommandQueueVk::GetQueueFamilyIndex().
-    virtual Uint64 DILIGENT_CALL_TYPE WaitForIdle() override final;
-
-    /// Implementation of ICommandQueueVk::GetCompletedFenceValue().
-    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue() override final;
 
     /// Implementation of ICommandQueueVk::EnqueueSignalFence().
     virtual void DILIGENT_CALL_TYPE EnqueueSignalFence(VkFence vkFence) override final;

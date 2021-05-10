@@ -30,7 +30,7 @@
 /// \file
 /// Definition of the Diligent::ICommandQueueVk interface
 
-#include "../../../Primitives/interface/Object.h"
+#include "../../GraphicsEngine/interface/CommandQueue.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -42,17 +42,14 @@ static const INTERFACE_ID IID_CommandQueueVk =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define ICommandQueueVkInclusiveMethods \
-    IObjectInclusiveMethods;            \
+    ICommandQueueInclusiveMethods;      \
     ICommandQueueVkMethods CommandQueueVk
 
 // clang-format off
 
 /// Command queue interface
-DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, IObject)
+DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, ICommandQueue)
 {
-    /// Returns the fence value that will be signaled next time
-    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS) CONST PURE;
-
     /// Submits a given command buffer to the command queue
 
     /// \return Fence value associated with the submitted command buffer
@@ -79,14 +76,6 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, IObject)
     /// Returns vulkan command queue family index
     VIRTUAL uint32_t METHOD(GetQueueFamilyIndex)(THIS) CONST PURE;
 
-    /// Returns value of the last completed fence
-    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS) PURE;
-
-    /// Blocks execution until all pending GPU commands are complete
-
-    /// \return Last completed fence value
-    VIRTUAL Uint64 METHOD(WaitForIdle)(THIS) PURE;
-
     /// Signals the given fence
     VIRTUAL void METHOD(EnqueueSignalFence)(THIS_
                                             VkFence vkFence) PURE;
@@ -106,14 +95,11 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define ICommandQueueVk_GetNextFenceValue(This)           CALL_IFACE_METHOD(CommandQueueVk, GetNextFenceValue,      This)
 #    define ICommandQueueVk_SubmitCmdBuffer(This, ...)        CALL_IFACE_METHOD(CommandQueueVk, SubmitCmdBuffer,        This, __VA_ARGS__)
 #    define ICommandQueueVk_Submit(This, ...)                 CALL_IFACE_METHOD(CommandQueueVk, Submit,                 This, __VA_ARGS__)
 #    define ICommandQueueVk_Present(This, ...)                CALL_IFACE_METHOD(CommandQueueVk, Present,                This, __VA_ARGS__)
 #    define ICommandQueueVk_GetVkQueue(This)                  CALL_IFACE_METHOD(CommandQueueVk, GetVkQueue,             This)
 #    define ICommandQueueVk_GetQueueFamilyIndex(This)         CALL_IFACE_METHOD(CommandQueueVk, GetQueueFamilyIndex,    This)
-#    define ICommandQueueVk_GetCompletedFenceValue(This)      CALL_IFACE_METHOD(CommandQueueVk, GetCompletedFenceValue, This)
-#    define ICommandQueueVk_WaitForIdle(This)                 CALL_IFACE_METHOD(CommandQueueVk, WaitForIdle,            This)
 #    define ICommandQueueVk_EnqueueSignalFence(This, ...)     CALL_IFACE_METHOD(CommandQueueVk, EnqueueSignalFence,     This, __VA_ARGS__)
 #    define ICommandQueueVk_EnqueueSignal(This, ...)          CALL_IFACE_METHOD(CommandQueueVk, EnqueueSignal,          This, __VA_ARGS__)
 

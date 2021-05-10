@@ -67,7 +67,7 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
 
     RefCntAutoPtr<IDeviceContextVk> pContextVk{GetDeviceContext(), IID_DeviceContextVk};
 
-    auto*      pQeueVk          = pContextVk->LockCommandQueue();
+    auto*      pQeueVk          = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
     const auto QueueFamilyIndex = pQeueVk->GetQueueFamilyIndex();
     pContextVk->UnlockCommandQueue();
 
@@ -430,7 +430,7 @@ void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool
 {
     RefCntAutoPtr<IDeviceContextVk> pContextVk{GetDeviceContext(), IID_DeviceContextVk};
 
-    auto* pQeueVk = pContextVk->LockCommandQueue();
+    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
     auto  vkQueue = pQeueVk->GetVkQueue();
 
     VkSubmitInfo SubmitInfo       = {};

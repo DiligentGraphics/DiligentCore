@@ -216,7 +216,7 @@ void GeometryShaderReferenceVk(ISwapChain* pSwapChain)
 
     RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
 
-    auto* pQeueVk = pContextVk->LockCommandQueue();
+    auto* pQeueVk = ValidatedCast<ICommandQueueVk>(pContextVk->LockCommandQueue());
     auto  vkQueue = pQeueVk->GetVkQueue();
 
     VkSubmitInfo SubmitInfo       = {};

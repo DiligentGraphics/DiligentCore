@@ -43,6 +43,7 @@ set(INTERFACE
     interface/BufferView.h
     interface/CommandList.h
     interface/Constants.h
+    interface/CommandQueue.h
     interface/DepthStencilState.h
     interface/DeviceContext.h
     interface/DeviceObject.h

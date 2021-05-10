@@ -29,15 +29,8 @@
 
 void TestCommandQueueMtl_CInterface(ICommandQueueMtl* pCmdQueue)
 {
-    Uint64 Value;
-    Value = ICommandQueueMtl_GetNextFenceValue(pCmdQueue);
-    (void)Value;
     id<MTLCommandQueue> mtlQueue = ICommandQueueMtl_GetMtlCommandQueue(pCmdQueue);
     (void)mtlQueue;
-    Value = ICommandQueueMtl_GetCompletedFenceValue(pCmdQueue);
-    (void)Value;
-    Value = ICommandQueueMtl_WaitForIdle(pCmdQueue);
-    (void)Value;
-    Value = ICommandQueueMtl_Submit(pCmdQueue, (id<MTLCommandBuffer>)nil);
+    Uint64 Value = ICommandQueueMtl_Submit(pCmdQueue, (id<MTLCommandBuffer>)nil);
     (void)Value;
 }

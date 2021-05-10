@@ -30,7 +30,7 @@
 /// \file
 /// Definition of the Diligent::ICommandQueueD3D12 interface
 
-#include "../../../Primitives/interface/Object.h"
+#include "../../GraphicsEngine/interface/CommandQueue.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -42,17 +42,14 @@ static const INTERFACE_ID IID_CommandQueueD3D12 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #define ICommandQueueD3D12InclusiveMethods \
-    IObjectInclusiveMethods;               \
+    ICommandQueueInclusiveMethods;         \
     ICommandQueueD3D12Methods CommandQueueD3D12
 
 // clang-format off
 
 /// Command queue interface
-DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, IObject)
+DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, ICommandQueue)
 {
-    /// Returns the fence value that will be signaled next time
-    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS) CONST PURE;
-
     /// Submits command lists for execution.
 
     /// \param[in]  NumCommandLists - The number of command lists to submit.
@@ -66,12 +63,6 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, IObject)
 
     /// Returns D3D12 command queue. May return null if queue is anavailable
     VIRTUAL ID3D12CommandQueue* METHOD(GetD3D12CommandQueue)(THIS) PURE;
-
-    /// Returns value of the last completed fence
-    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS) PURE;
-
-    /// Blocks execution until all pending GPU commands are complete
-    VIRTUAL Uint64 METHOD(WaitForIdle)(THIS) PURE;
 
     /// Signals the given fence
     VIRTUAL void METHOD(EnqueueSignal)(THIS_
@@ -94,11 +85,8 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define ICommandQueueD3D12_GetNextFenceValue(This)        CALL_IFACE_METHOD(CommandQueueD3D12, GetNextFenceValue,        This)
 #    define ICommandQueueD3D12_Submit(This, ...)              CALL_IFACE_METHOD(CommandQueueD3D12, Submit,                   This, __VA_ARGS__)
 #    define ICommandQueueD3D12_GetD3D12CommandQueue(This)     CALL_IFACE_METHOD(CommandQueueD3D12, GetD3D12CommandQueue,     This)
-#    define ICommandQueueD3D12_GetCompletedFenceValue(This)   CALL_IFACE_METHOD(CommandQueueD3D12, GetCompletedFenceValue,   This)
-#    define ICommandQueueD3D12_WaitForIdle(This)              CALL_IFACE_METHOD(CommandQueueD3D12, WaitForIdle,              This)
 #    define ICommandQueueD3D12_EnqueueSignal(This, ...)       CALL_IFACE_METHOD(CommandQueueD3D12, EnqueueSignal,            This, __VA_ARGS__)
 #    define ICommandQueueD3D12_WaitFence(This, ...)           CALL_IFACE_METHOD(CommandQueueD3D12, WaitFence,                This, __VA_ARGS__)
 #    define ICommandQueueD3D12_GetD3D12CommandQueueDesc(This) CALL_IFACE_METHOD(CommandQueueD3D12, GetD3D12CommandQueueDesc, This)

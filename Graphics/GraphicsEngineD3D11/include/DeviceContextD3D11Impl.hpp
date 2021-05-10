@@ -276,6 +276,12 @@ public:
     /// Implementation of IDeviceContext::InsertDebugLabel() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override final;
 
+    /// Implementation of IDeviceContext::LockCommandQueue() in Direct3D11 backend.
+    virtual ICommandQueue* DILIGENT_CALL_TYPE LockCommandQueue() override final { return nullptr; }
+
+    /// Implementation of IDeviceContext::UnlockCommandQueue() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final {}
+
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }
 
