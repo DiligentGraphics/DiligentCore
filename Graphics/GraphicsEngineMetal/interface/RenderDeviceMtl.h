@@ -48,39 +48,34 @@ static const INTERFACE_ID IID_RenderDeviceMtl =
 DILIGENT_BEGIN_INTERFACE(IRenderDeviceMtl, IRenderDevice)
 {
     /// Returns the pointer to Metal device (MTLDevice).
-    VIRTUAL id<MTLDevice> DILIGENT_CALL_TYPE METHOD(GetMtlDevice)(THIS) CONST PURE;
-
-    /// Returns the pointer to Metal command queue (MTLCommandQueue).
-    VIRTUAL id<MTLCommandQueue> DILIGENT_CALL_TYPE METHOD(GetMtlCommandQueue)(THIS) CONST PURE;
+    VIRTUAL id<MTLDevice> METHOD(GetMtlDevice)(THIS) CONST PURE;
 
     /// Creates a texture from existing Metal resource
-    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateTextureFromMtlResource)(THIS_
-                                                                         id<MTLTexture> mtlTexture,
-                                                                         RESOURCE_STATE InitialState,
-                                                                         ITexture**     ppTexture) PURE;
+    VIRTUAL void METHOD(CreateTextureFromMtlResource)(THIS_
+                                                      id<MTLTexture> mtlTexture,
+                                                      RESOURCE_STATE InitialState,
+                                                      ITexture**     ppTexture) PURE;
 
     /// Creates a buffer from existing Metal resource
-    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateBufferFromMtlResource)(THIS_
-                                                                        id<MTLBuffer>        mtlBuffer,
-                                                                        const BufferDesc REF BuffDesc,
-                                                                        RESOURCE_STATE       InitialState,
-                                                                        IBuffer**            ppBuffer) PURE;
+    VIRTUAL void METHOD(CreateBufferFromMtlResource)(THIS_
+                                                     id<MTLBuffer>        mtlBuffer,
+                                                     const BufferDesc REF BuffDesc,
+                                                     RESOURCE_STATE       InitialState,
+                                                     IBuffer**            ppBuffer) PURE;
 
     /// Creates a buffer from existing Metal resource
-    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateBLASFromMtlResource)(
-        THIS_
-        id<MTLAccelerationStructure> mtlBLAS,
-        const BottomLevelASDesc REF  Desc,
-        RESOURCE_STATE               InitialState,
-        IBottomLevelAS**             ppBLAS) API_AVAILABLE(ios(14), macosx(11.0)) PURE;
+    VIRTUAL void METHOD(CreateBLASFromMtlResource)(THIS_
+                                                   id<MTLAccelerationStructure> mtlBLAS,
+                                                   const BottomLevelASDesc REF  Desc,
+                                                   RESOURCE_STATE               InitialState,
+                                                   IBottomLevelAS**             ppBLAS) API_AVAILABLE(ios(14), macosx(11.0)) PURE;
 
     /// Creates a buffer from existing Metal resource
-    VIRTUAL void DILIGENT_CALL_TYPE METHOD(CreateTLASFromMtlResource)(
-        THIS_
-        id<MTLAccelerationStructure> mtlTLAS,
-        const TopLevelASDesc REF     Desc,
-        RESOURCE_STATE               InitialState,
-        ITopLevelAS**                ppTLAS) API_AVAILABLE(ios(14), macosx(11.0)) PURE;
+    VIRTUAL void METHOD(CreateTLASFromMtlResource)(THIS_
+                                                   id<MTLAccelerationStructure> mtlTLAS,
+                                                   const TopLevelASDesc REF     Desc,
+                                                   RESOURCE_STATE               InitialState,
+                                                   ITopLevelAS**                ppTLAS) API_AVAILABLE(ios(14), macosx(11.0)) PURE;
 };
 DILIGENT_END_INTERFACE
 
