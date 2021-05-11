@@ -46,8 +46,7 @@ public:
                         const SwapChainDesc&   SCDesc);
     ~TestingSwapChainMtl();
 
-    virtual void TakeSnapshot() override final;
-    virtual void TakeSnapshot(ITexture* pBlitFrom) override final;
+    virtual void TakeSnapshot(ITexture* pCopyFrom) override final;
 
 private:
     id<MTLBuffer> m_MtlStagingBuffer;

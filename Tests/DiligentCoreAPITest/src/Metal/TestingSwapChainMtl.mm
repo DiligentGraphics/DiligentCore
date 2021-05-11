@@ -63,52 +63,26 @@ TestingSwapChainMtl::~TestingSwapChainMtl()
     [m_MtlStagingBuffer release];
 }
 
-void TestingSwapChainMtl::TakeSnapshot()
+void TestingSwapChainMtl::TakeSnapshot(ITexture* pCopyFrom)
 {
     auto* pEnv = TestingEnvironmentMtl::GetInstance();
     auto mtlCommandQueue = pEnv->GetMtlCommandQueue();
 
-    auto* pRTV = ValidatedCast<ITextureViewMtl>(GetCurrentBackBufferRTV());
-    auto mtlTexture = pRTV->GetMtlTexture();
-
-    m_ReferenceDataPitch = m_SwapChainDesc.Height * 4;
-    m_ReferenceData.resize(m_SwapChainDesc.Width * m_ReferenceDataPitch);
-
-    @autoreleasepool
+    id<MTLTexture> mtlTexture = nil;
+    if (pCopyFrom != nullptr)
     {
-        // Command buffer is autoreleased
-        auto commandBuffer = [mtlCommandQueue commandBuffer];
-        // Command encoder is autoreleased
-        auto blitEncoder   = [commandBuffer blitCommandEncoder];
-        [blitEncoder copyFromTexture:mtlTexture
-            sourceSlice:0
-            sourceLevel:0
-            sourceOrigin:MTLOrigin{0,0,0}
-            sourceSize:MTLSize{m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1}
-            toBuffer:m_MtlStagingBuffer
-            destinationOffset:0
-            destinationBytesPerRow:m_ReferenceDataPitch
-            destinationBytesPerImage:0];
-        [blitEncoder synchronizeResource:m_MtlStagingBuffer];
-        [blitEncoder endEncoding];
-        [commandBuffer commit];
-        [commandBuffer waitUntilCompleted];
-        memcpy(m_ReferenceData.data(), [m_MtlStagingBuffer contents], m_ReferenceData.size());
+        auto* pSrcTexMtl = ValidatedCast<ITextureMtl>(pCopyFrom);
+        mtlTexture = (id<MTLTexture>)pSrcTexMtl->GetMtlResource();
+
+        VERIFY_EXPR(m_SwapChainDesc.Width == pSrcTexMtl->GetDesc().Width);
+        VERIFY_EXPR(m_SwapChainDesc.Height == pSrcTexMtl->GetDesc().Height);
+        VERIFY_EXPR(m_SwapChainDesc.ColorBufferFormat == pSrcTexMtl->GetDesc().Format);
     }
-}
-
-void TestingSwapChainMtl::TakeSnapshot(ITexture* pBlitFrom)
-{
-    auto* pEnv = TestingEnvironmentMtl::GetInstance();
-    auto mtlCommandQueue = pEnv->GetMtlCommandQueue();
-
-    auto* pBlitFromMtl = ValidatedCast<ITextureMtl>(pBlitFrom);
-    auto  mtlTexture   = (id<MTLTexture>)pBlitFromMtl->GetMtlResource();
-
-    VERIFY_EXPR(m_SwapChainDesc.Width == pBlitFromMtl->GetDesc().Width);
-    VERIFY_EXPR(m_SwapChainDesc.Height == pBlitFromMtl->GetDesc().Height);
-    VERIFY_EXPR(m_SwapChainDesc.ColorBufferFormat == pBlitFromMtl->GetDesc().Format);
-
+    else
+    {
+        auto* pRTV = ValidatedCast<ITextureViewMtl>(GetCurrentBackBufferRTV());
+        mtlTexture = pRTV->GetMtlTexture();
+    }
     m_ReferenceDataPitch = m_SwapChainDesc.Height * 4;
     m_ReferenceData.resize(m_SwapChainDesc.Width * m_ReferenceDataPitch);
 
