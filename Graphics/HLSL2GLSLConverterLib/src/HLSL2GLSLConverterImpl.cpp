@@ -3529,46 +3529,64 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessGeometryShaderArguments(To
         if (TopLevelParam.storageQualifier == ShaderParameterInfo::StorageQualifier::In)
         {
             if (TopLevelParam.GSAttribs.PrimType == ShaderParameterInfo::GSAttributes::PrimitiveType::Undefined)
-                LOG_ERROR_AND_THROW("Geometry shader input misses primitive type");
-
-            const Char* GLLayout = nullptr;
-            switch (TopLevelParam.GSAttribs.PrimType)
             {
-                // clang-format off
-                case ShaderParameterInfo::GSAttributes::PrimitiveType::Point:        GLLayout = "points";               break;
-                case ShaderParameterInfo::GSAttributes::PrimitiveType::Line:         GLLayout = "lines";                break;
-                case ShaderParameterInfo::GSAttributes::PrimitiveType::Triangle:     GLLayout = "triangles";            break;
-                case ShaderParameterInfo::GSAttributes::PrimitiveType::LineAdj:      GLLayout = "lines_adjacency";      break;
-                case ShaderParameterInfo::GSAttributes::PrimitiveType::TriangleAdj:  GLLayout = "triangles_adjacency";  break;
-                default: LOG_ERROR_AND_THROW("Unexpected GS input primitive type");
-                // clang-format om
-            }
-            GlobalVarsSS << "layout (" << GLLayout << ") in;\n";
-            PrologueSS << "    const int _NumElements = " << TopLevelParam.ArraySize << ";\n";
-            PrologueSS << "    " << TopLevelParam.Type << ' ' << TopLevelParam.Name << "[_NumElements];\n";
-            PrologueSS << "    for(int i=0; i < _NumElements; ++i)\n    {\n";
-
-            ProcessShaderArgument(
-                TopLevelParam, GSInd, InVar, PrologueSS,
-                [&](const std::vector<const ShaderParameterInfo*>& MemberStack, const ShaderParameterInfo& Param, const String& Getter) //
-                {
-                    String FullIndexedParamName = BuildParameterName(MemberStack, '.', "", "", "[i]");
-                    PrologueSS << "    ";
-                    if (!Getter.empty())
-                        PrologueSS << "    " << Getter << '(' << FullIndexedParamName << ");\n";
-                    else
+                // uint PrimID : SV_PrimitiveID
+                ProcessShaderArgument(
+                    TopLevelParam, GSInd, InVar, PrologueSS,
+                    [&](const std::vector<const ShaderParameterInfo*>& MemberStack, const ShaderParameterInfo& Param, const String& Getter) //
                     {
-                        auto VarName      = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_gsin_" : "_");
-                        auto InputVarName = VarName + "[i]";
-                        DefineInterfaceVar(m_bUseInOutLocationQualifiers ? inLocation++ : -1,
-                                           RequiresFlatQualifier(Param.Type) ? "flat in" : "in",
-                                           Param.Type, VarName + "[]", InterfaceVarsInSS);
-                        InitVariable(FullIndexedParamName, InputVarName, PrologueSS);
-                    }
-                } //
-            );
+                        String FullParamName = BuildParameterName(MemberStack, '.');
+                        if (Getter.empty())
+                        {
+                            LOG_ERROR_AND_THROW("Unexpected input semantic \"", Param.Semantic,
+                                                "\". The only allowed semantic for the geometry shader input is \"SV_PrimitiveID\".");
+                        }
+                        PrologueSS << "    " << Getter << '(' << FullParamName << ");\n";
+                    } //
+                );
+            }
+            else
+            {
+                const Char* GLLayout = nullptr;
+                switch (TopLevelParam.GSAttribs.PrimType)
+                {
+                    // clang-format off
+                    case ShaderParameterInfo::GSAttributes::PrimitiveType::Point:        GLLayout = "points";               break;
+                    case ShaderParameterInfo::GSAttributes::PrimitiveType::Line:         GLLayout = "lines";                break;
+                    case ShaderParameterInfo::GSAttributes::PrimitiveType::Triangle:     GLLayout = "triangles";            break;
+                    case ShaderParameterInfo::GSAttributes::PrimitiveType::LineAdj:      GLLayout = "lines_adjacency";      break;
+                    case ShaderParameterInfo::GSAttributes::PrimitiveType::TriangleAdj:  GLLayout = "triangles_adjacency";  break;
+                    // clang-format on
+                    default:
+                        LOG_ERROR_AND_THROW("Unexpected GS input primitive type");
+                }
+                GlobalVarsSS << "layout (" << GLLayout << ") in;\n";
+                PrologueSS << "    const int _NumElements = " << TopLevelParam.ArraySize << ";\n";
+                PrologueSS << "    " << TopLevelParam.Type << ' ' << TopLevelParam.Name << "[_NumElements];\n";
+                PrologueSS << "    for(int i=0; i < _NumElements; ++i)\n    {\n";
 
-            PrologueSS << "    }\n";
+                ProcessShaderArgument(
+                    TopLevelParam, GSInd, InVar, PrologueSS,
+                    [&](const std::vector<const ShaderParameterInfo*>& MemberStack, const ShaderParameterInfo& Param, const String& Getter) //
+                    {
+                        String FullIndexedParamName = BuildParameterName(MemberStack, '.', "", "", "[i]");
+                        PrologueSS << "    ";
+                        if (!Getter.empty())
+                            PrologueSS << "    " << Getter << '(' << FullIndexedParamName << ");\n";
+                        else
+                        {
+                            auto VarName      = BuildParameterName(MemberStack, '_', m_bUseInOutLocationQualifiers ? "_gsin_" : "_");
+                            auto InputVarName = VarName + "[i]";
+                            DefineInterfaceVar(m_bUseInOutLocationQualifiers ? inLocation++ : -1,
+                                               RequiresFlatQualifier(Param.Type) ? "flat in" : "in",
+                                               Param.Type, VarName + "[]", InterfaceVarsInSS);
+                            InitVariable(FullIndexedParamName, InputVarName, PrologueSS);
+                        }
+                    } //
+                );
+
+                PrologueSS << "    }\n";
+            }
         }
         else if (TopLevelParam.storageQualifier == ShaderParameterInfo::StorageQualifier::InOut)
         {
@@ -3699,7 +3717,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessComputeShaderArguments(Tok
                     String FullParamName = BuildParameterName(MemberStack, '.');
                     if (Getter.empty())
                     {
-                        LOG_ERROR_AND_THROW("Unexpected input semantic \"", Param.Semantic, "\". The only allowed semantics for the compute shader inputs are \"ATTRIB*\", \"SV_VertexID\", and \"SV_InstanceID\".");
+                        LOG_ERROR_AND_THROW("Unexpected input semantic \"", Param.Semantic,
+                                            "\". The only allowed semantics for the compute shader inputs are \"SV_DispatchThreadID\", "
+                                            "\"SV_GroupID\", \"SV_GroupThreadID\", and \"SV_GroupIndex\".");
                     }
                     PrologueSS << "    " << Getter << '(' << Param.Type << "," << FullParamName << ");\n";
                 } //

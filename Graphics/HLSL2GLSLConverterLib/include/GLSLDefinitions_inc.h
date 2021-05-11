@@ -1143,7 +1143,7 @@
 "};\n"
 "\n"
 "#define _GET_GL_POSITION(Pos)_ResizeVector(Pos, gl_in[i].gl_Position)\n"
-"#define _GET_GL_PRIMITIVE_ID(PrimId)_TypeConvertStore(PrimId, gl_in[i].gl_PrimitiveIDIn)\n"
+"#define _GET_GL_PRIMITIVE_ID(PrimId)_TypeConvertStore(PrimId, gl_PrimitiveIDIn)\n"
 "\n"
 "#define _SET_GL_POSITION(Pos)gl_Position=_ExpandVector(Pos)\n"
 "#define _SET_GL_LAYER(Layer)_TypeConvertStore(gl_Layer,Layer)\n"
