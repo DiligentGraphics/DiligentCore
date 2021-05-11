@@ -2272,29 +2272,29 @@ void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                 
             float4{0.f, 0.f, 1.f, 0.f},
         };
 
-    auto UpdateBuffer = [pContext](IBufferView* pBuffView, const void* pData, size_t DataSize) //
+    auto UpdateBuffer = [pContext](IBufferView* pBuffView, const void* pData, size_t OffsetInFloat4, size_t DataSize) //
     {
         auto* pBuffer = pBuffView->GetBuffer();
         if (pBuffer->GetDesc().Usage == USAGE_DYNAMIC)
         {
             MapHelper<float4> pBuffData{pContext, pBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
-            memcpy(pBuffData, pData, DataSize);
+            memcpy(pBuffData + OffsetInFloat4, pData, DataSize);
         }
         else
         {
-            pContext->UpdateBuffer(pBuffer, 0, static_cast<Uint32>(DataSize), pData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->UpdateBuffer(pBuffer, static_cast<Uint32>(sizeof(float4) * OffsetInFloat4), static_cast<Uint32>(DataSize), pData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         }
     };
 
-    UpdateBuffer(pPositionsBuffView, Pos, sizeof(float4) * 3);
-    UpdateBuffer(pColorsBuffView, Color4, sizeof(float4) * 3);
+    UpdateBuffer(pPositionsBuffView, Pos, 0, sizeof(float4) * 3);
+    UpdateBuffer(pColorsBuffView, Color4, 4, sizeof(float4) * 3);
     pContext->TransitionShaderResources(pPSO, pSRB);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
 
-    UpdateBuffer(pPositionsBuffView, Pos + 3, sizeof(float4) * 3);
-    UpdateBuffer(pColorsBuffView, Color4, sizeof(float4) * 3);
+    UpdateBuffer(pPositionsBuffView, Pos + 3, 0, sizeof(float4) * 3);
+    UpdateBuffer(pColorsBuffView, Color4, 4, sizeof(float4) * 3);
     pContext->TransitionShaderResources(pPSO, pSRB);
 
     pContext->Draw(drawAttrs);
@@ -2392,13 +2392,14 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         BuffDesc.CPUAccessFlags    = UseDynamicBuffers ? CPU_ACCESS_WRITE : CPU_ACCESS_NONE;
         BuffDesc.Mode              = BuffMode;
         BuffDesc.ElementByteStride = 16;
-        BuffDesc.uiSizeInBytes     = sizeof(float) * 16;
+        BuffDesc.uiSizeInBytes     = sizeof(float4) * 4;
 
         RefCntAutoPtr<IBuffer> pPositionsBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pPositionsBuffer);
         ASSERT_NE(pPositionsBuffer, nullptr);
 
-        BuffDesc.Name = "Structured buffer draw test - colors";
+        BuffDesc.Name          = "Structured buffer draw test - colors";
+        BuffDesc.uiSizeInBytes = sizeof(float4) * 8;
         RefCntAutoPtr<IBuffer> pColorsBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pColorsBuffer);
         ASSERT_NE(pColorsBuffer, nullptr);
@@ -2406,8 +2407,12 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         RefCntAutoPtr<IBufferView> pPosBuffView, pColorBufferView;
         if (BuffMode == BUFFER_MODE_STRUCTURED)
         {
-            pPosBuffView     = pPositionsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE);
-            pColorBufferView = pColorsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE);
+            pPosBuffView = pPositionsBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE);
+
+            BufferViewDesc BuffSRVDesc;
+            BuffSRVDesc.ViewType   = BUFFER_VIEW_SHADER_RESOURCE;
+            BuffSRVDesc.ByteOffset = sizeof(float4) * 4;
+            pColorsBuffer->CreateView(BuffSRVDesc, &pColorBufferView);
         }
         else
         {
@@ -2416,6 +2421,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
             BuffSRVDesc.Format.NumComponents = 4;
             BuffSRVDesc.Format.ValueType     = VT_FLOAT32;
             pPositionsBuffer->CreateView(BuffSRVDesc, &pPosBuffView);
+            BuffSRVDesc.ByteOffset = sizeof(float4) * 4;
             pColorsBuffer->CreateView(BuffSRVDesc, &pColorBufferView);
         }
 
