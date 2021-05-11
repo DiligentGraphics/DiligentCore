@@ -256,11 +256,6 @@ public:
         return m_CommandQueues[CommandQueueInd].CmdQueue->GetNextFenceValue();
     }
 
-    Bool IsFenceSignaled(SoftwareQueueIndex CommandQueueInd, Uint64 FenceValue)
-    {
-        return FenceValue <= GetCompletedFenceValue(CommandQueueInd);
-    }
-
     template <typename TAction>
     void LockCmdQueueAndRun(SoftwareQueueIndex QueueInd, TAction Action)
     {
@@ -283,22 +278,6 @@ public:
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
         auto& Queue = m_CommandQueues[QueueInd];
         Queue.Mtx.unlock();
-    }
-
-private:
-    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue(Uint32 CommandQueueInd) override final
-    {
-        return GetCompletedFenceValue(SoftwareQueueIndex{CommandQueueInd});
-    }
-
-    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue(Uint32 CommandQueueInd) override final
-    {
-        return GetNextFenceValue(SoftwareQueueIndex{CommandQueueInd});
-    }
-
-    virtual Bool DILIGENT_CALL_TYPE IsFenceSignaled(Uint32 CommandQueueInd, Uint64 FenceValue) override final
-    {
-        return IsFenceSignaled(SoftwareQueueIndex{CommandQueueInd}, FenceValue);
     }
 
 protected:

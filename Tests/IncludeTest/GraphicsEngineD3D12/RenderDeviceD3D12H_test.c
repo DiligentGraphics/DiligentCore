@@ -33,14 +33,6 @@ void TestRenderDeviceD3D12CInterface(IRenderDeviceD3D12* pDevice)
     ID3D12Device* pD3D12Device = IRenderDeviceD3D12_GetD3D12Device(pDevice);
     (void)pD3D12Device;
 
-    Uint64 Fence = IRenderDeviceD3D12_GetNextFenceValue(pDevice, (Uint32)0);
-    (void)Fence;
-
-    Fence = IRenderDeviceD3D12_GetCompletedFenceValue(pDevice, (Uint32)0);
-
-    bool IsSignaled = IRenderDeviceD3D12_IsFenceSignaled(pDevice, (Uint32)0, (Uint64)0);
-    (void)IsSignaled;
-
     IRenderDeviceD3D12_CreateTextureFromD3DResource(pDevice, (ID3D12Resource*)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
     IRenderDeviceD3D12_CreateBufferFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
     IRenderDeviceD3D12_CreateBLASFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BottomLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (IBottomLevelAS**)NULL);

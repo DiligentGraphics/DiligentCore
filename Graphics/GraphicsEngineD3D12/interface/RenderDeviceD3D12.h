@@ -56,31 +56,6 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
     /// so Release() must not be called.
     VIRTUAL ID3D12Device* METHOD(GetD3D12Device)(THIS) PURE;
 
-    /// Returns the fence value that will be signaled by the GPU command queue next
-
-    /// \param [in] CommandQueueIndex - Index of the command queue that, aka immediate context index.
-    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
-    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS_
-                                             Uint32 CommandQueueIndex) PURE;
-
-    /// Returns the last completed fence value for the given command queue
-
-    /// \param [in] CommandQueueIndex - Index of the command queue, aka immediate context index.
-    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
-    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS_
-                                                  Uint32 CommandQueueIndex) PURE;
-
-    /// Checks if the fence value has been signaled by the GPU.
-
-    /// \return                         True if all associated work has been finished.
-    ///
-    /// \param [in] CommandQueueIndex - Index of the command queue, aka immediate context index.
-    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
-    /// \param [in] FenceValue        - Value to check for completion.
-    VIRTUAL Bool METHOD(IsFenceSignaled)(THIS_
-                                         Uint32 CommandQueueIndex,
-                                         Uint64 FenceValue) PURE;
-
     /// Creates a texture object from native d3d12 resource
 
     /// \param [in]  pd3d12Texture - pointer to the native D3D12 texture
@@ -152,9 +127,6 @@ DILIGENT_END_INTERFACE
 // clang-format off
 
 #    define IRenderDeviceD3D12_GetD3D12Device(This)                    CALL_IFACE_METHOD(RenderDeviceD3D12, GetD3D12Device,               This)
-#    define IRenderDeviceD3D12_GetNextFenceValue(This, ...)            CALL_IFACE_METHOD(RenderDeviceD3D12, GetNextFenceValue,            This, __VA_ARGS__)
-#    define IRenderDeviceD3D12_GetCompletedFenceValue(This, ...)       CALL_IFACE_METHOD(RenderDeviceD3D12, GetCompletedFenceValue,       This, __VA_ARGS__)
-#    define IRenderDeviceD3D12_IsFenceSignaled(This, ...)              CALL_IFACE_METHOD(RenderDeviceD3D12, IsFenceSignaled,              This, __VA_ARGS__)
 #    define IRenderDeviceD3D12_CreateTextureFromD3DResource(This, ...) CALL_IFACE_METHOD(RenderDeviceD3D12, CreateTextureFromD3DResource, This, __VA_ARGS__)
 #    define IRenderDeviceD3D12_CreateBufferFromD3DResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceD3D12, CreateBufferFromD3DResource,  This, __VA_ARGS__)
 #    define IRenderDeviceD3D12_CreateBLASFromD3DResource(This, ...)    CALL_IFACE_METHOD(RenderDeviceD3D12, CreateBLASFromD3DResource,    This, __VA_ARGS__)

@@ -64,31 +64,6 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     /// \note This version is the minimum of the instance version and what the physical device supports.
     VIRTUAL Uint32 METHOD(GetVkVersion)(THIS) PURE;
 
-    /// Returns the fence value that will be signaled by the GPU command queue next
-
-    /// \param [in] CommandQueueIndex - Index of the command queue, aka immediate context index.
-    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
-    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS_
-                                             Uint32 CommandQueueIndex) PURE;
-
-    /// Returns the last completed fence value for the given command queue
-
-    /// \param [in] CommandQueueIndex - Index of the command queue, aka immediate context index.
-    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
-    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS_
-                                                  Uint32 CommandQueueIndex) PURE;
-
-    /// Checks if the fence value has been signaled by the GPU.
-
-    /// \return                         True if all associated work has been finished.
-    ///
-    /// \param [in] CommandQueueIndex - Index of the command queue, aka immediate context index.
-    ///                                 See Diligent::EngineCreateInfo::pContextInfo.
-    /// \param [in] FenceValue        - Value that associated with submitted commands.
-    VIRTUAL Bool METHOD(IsFenceSignaled)(THIS_
-                                         Uint32 CommandQueueIndex, 
-                                         Uint64 FenceValue) PURE;
-
     /// Creates a texture object from native Vulkan image
 
     /// \param [in]  vkImage      - Vulkan image handle
@@ -194,9 +169,6 @@ DILIGENT_END_INTERFACE
 #    define IRenderDeviceVk_GetVkDevice(This)                         CALL_IFACE_METHOD(RenderDeviceVk, GetVkDevice,                    This)
 #    define IRenderDeviceVk_GetVkPhysicalDevice(This)                 CALL_IFACE_METHOD(RenderDeviceVk, GetVkPhysicalDevice,            This)
 #    define IRenderDeviceVk_GetVkInstance(This)                       CALL_IFACE_METHOD(RenderDeviceVk, GetVkInstance,                  This)
-#    define IRenderDeviceVk_GetNextFenceValue(This, ...)              CALL_IFACE_METHOD(RenderDeviceVk, GetNextFenceValue,              This, __VA_ARGS__)
-#    define IRenderDeviceVk_GetCompletedFenceValue(This, ...)         CALL_IFACE_METHOD(RenderDeviceVk, GetCompletedFenceValue,         This, __VA_ARGS__)
-#    define IRenderDeviceVk_IsFenceSignaled(This, ...)                CALL_IFACE_METHOD(RenderDeviceVk, IsFenceSignaled,                This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateTextureFromVulkanImage(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateTextureFromVulkanImage,   This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateBufferFromVulkanResource(This, ...) CALL_IFACE_METHOD(RenderDeviceVk, CreateBufferFromVulkanResource, This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateBLASFromVulkanResource(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateBLASFromVulkanResource,   This, __VA_ARGS__)
