@@ -132,4 +132,12 @@ TEST(HLSL2GLSLConverterTest, CS_RWBuff)
     EXPECT_NE(pCS, nullptr);
 }
 
+TEST(HLSL2GLSLConverterTest, GS)
+{
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto pGS = CreateTestShader("GS.hlsl", "main", SHADER_TYPE_GEOMETRY);
+    EXPECT_NE(pGS, nullptr);
+}
+
 } // namespace
