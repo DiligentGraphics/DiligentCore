@@ -39,14 +39,6 @@ void TestRenderDeviceVkCInterface(IRenderDeviceVk* pDevice)
     VkInstance vkInst = IRenderDeviceVk_GetVkInstance(pDevice);
     (void)vkInst;
 
-    Uint64 Fence = IRenderDeviceVk_GetNextFenceValue(pDevice, (Uint32)0);
-    (void)Fence;
-
-    Fence = IRenderDeviceVk_GetCompletedFenceValue(pDevice, (Uint32)0);
-
-    bool IsSignaled = IRenderDeviceVk_IsFenceSignaled(pDevice, (Uint32)0, (Uint64)0);
-    (void)IsSignaled;
-
     IRenderDeviceVk_CreateTextureFromVulkanImage(pDevice, (VkImage)NULL, (TextureDesc*)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
     IRenderDeviceVk_CreateBufferFromVulkanResource(pDevice, (VkBuffer)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
     IRenderDeviceVk_CreateBLASFromVulkanResource(pDevice, (VkAccelerationStructureKHR)NULL, (BottomLevelASDesc*)NULL, RESOURCE_STATE_BUILD_AS_READ, (IBottomLevelAS**)NULL);
