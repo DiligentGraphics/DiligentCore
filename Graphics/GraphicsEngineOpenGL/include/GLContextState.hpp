@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <limits>
+
 #include "GraphicsTypes.h"
 #include "GLObjectWrapper.hpp"
 #include "UniqueIdentifier.hpp"

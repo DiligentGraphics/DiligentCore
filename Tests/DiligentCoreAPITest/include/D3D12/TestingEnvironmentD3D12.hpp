@@ -88,7 +88,9 @@ public:
 
     virtual bool SupportsRayTracing() const override final
     {
-        return m_pDevice->GetDeviceInfo().Features.RayTracing && HasDXCompiler();
+        return m_pDevice->GetDeviceInfo().Features.RayTracing &&
+            (m_pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) != 0 &&
+            HasDXCompiler();
     }
 
     HRESULT CompileDXILShader(const std::string& Source,

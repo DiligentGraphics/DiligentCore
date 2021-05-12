@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "GraphicsUtilities.h"
 #include "DebugUtilities.hpp"

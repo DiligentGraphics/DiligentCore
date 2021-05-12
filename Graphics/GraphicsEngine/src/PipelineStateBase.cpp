@@ -475,6 +475,9 @@ void ValidateRayTracingPipelineCreateInfo(IRenderDevice*                        
     if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING.");
 
+    if (!DeviceInfo.Features.RayTracing || (RTProps.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) == 0)
+        LOG_PSO_ERROR_AND_THROW("Standalone ray tracing shaders are not supported");
+
     ValidatePipelineResourceSignatures(CreateInfo, DeviceInfo.Features);
     ValidatePipelineResourceLayoutDesc(PSODesc, DeviceInfo.Features);
 

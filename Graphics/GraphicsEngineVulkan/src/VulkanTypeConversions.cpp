@@ -1943,14 +1943,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     INIT_FEATURE(RayTracing,
                  vkVersion                              >= VK_API_VERSION_1_1 &&
                  AccelStructFeats.accelerationStructure != VK_FALSE           &&
-                 RayTracingFeats.rayTracingPipeline     != VK_FALSE);
-    INIT_FEATURE(RayTracing2,
-                 vkVersion                                           >= VK_API_VERSION_1_1 &&
-                 AccelStructFeats.accelerationStructure              != VK_FALSE           &&
-                 RayTracingFeats.rayTracingPipeline                  != VK_FALSE           &&
-                 RayTracingFeats.rayTracingPipelineTraceRaysIndirect != VK_FALSE           &&
-                 RayTracingFeats.rayTraversalPrimitiveCulling        != VK_FALSE           &&
-                 RayQueryFeats.rayQuery                              != VK_FALSE);
+                 (RayTracingFeats.rayTracingPipeline != VK_FALSE || RayQueryFeats.rayQuery != VK_FALSE));
     // clang-format on
 
     const auto& SubgroupProps          = ExtProps.Subgroup;
@@ -1976,7 +1969,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 #undef INIT_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     return Features;

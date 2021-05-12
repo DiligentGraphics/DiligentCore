@@ -81,8 +81,12 @@ public:
         if ((ShdrDesc.ShaderType == SHADER_TYPE_AMPLIFICATION || ShdrDesc.ShaderType == SHADER_TYPE_MESH) && !deviceFeatures.MeshShaders)
             LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device.");
 
-        if ((ShdrDesc.ShaderType & SHADER_TYPE_ALL_RAY_TRACING) != 0 && !deviceFeatures.RayTracing)
-            LOG_ERROR_AND_THROW("Ray tracing shaders are not supported by this device.");
+        if ((ShdrDesc.ShaderType & SHADER_TYPE_ALL_RAY_TRACING) != 0)
+        {
+            const auto RTCaps = pDevice->GetAdapterInfo().RayTracing.CapFlags;
+            if (!deviceFeatures.RayTracing || (RTCaps & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) == 0)
+                LOG_ERROR_AND_THROW("Standalone ray tracing shaders are not supported by this device.");
+        }
 
         if (ShdrDesc.ShaderType == SHADER_TYPE_TILE && !deviceFeatures.TileShaders)
             LOG_ERROR_AND_THROW("Tile shaders are not supported by this device.");

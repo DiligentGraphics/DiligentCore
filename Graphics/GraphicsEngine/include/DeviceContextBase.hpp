@@ -1772,6 +1772,9 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing,
                   "IDeviceContext::TraceRays: ray tracing is not supported by this device");
+    const auto& RTProps = m_pDevice->GetAdapterInfo().RayTracing;
+    DEV_CHECK_ERR((RTProps.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) != 0,
+                  "IDeviceContext::TraceRays: standalone ray tracing shaders are not supported by this device");
     DEV_CHECK_ERR(m_pPipelineState,
                   "IDeviceContext::TraceRays command arguments are invalid: no pipeline state is bound.");
     DEV_CHECK_ERR(m_pPipelineState->GetDesc().IsRayTracingPipeline(),
@@ -1796,10 +1799,9 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
            "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer is expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
            GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
 
-    const auto MaxRayGenThreads = m_pDevice->GetAdapterInfo().RayTracing.MaxRayGenThreads;
-    DEV_CHECK_ERR((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) <= MaxRayGenThreads,
+    DEV_CHECK_ERR((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) <= RTProps.MaxRayGenThreads,
                   "IDeviceContext::TraceRays command arguments are invalid: the dimension must not exceed the ",
-                  MaxRayGenThreads, " threads");
+                  RTProps.MaxRayGenThreads, " threads");
 }
 
 template <typename ImplementationTraits>
@@ -1807,8 +1809,11 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "TraceRaysIndirect");
 
-    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing2,
-                  "IDeviceContext::TraceRaysIndirect: indirect trace rays is not supported by this device");
+    DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing,
+                  "IDeviceContext::TraceRaysIndirect: ray tracing is not supported by this device");
+    const auto& RTProps = m_pDevice->GetAdapterInfo().RayTracing;
+    DEV_CHECK_ERR((RTProps.CapFlags & RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING) != 0,
+                  "IDeviceContext::TraceRays: indirect ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pPipelineState,
                   "IDeviceContext::TraceRaysIndirect command arguments are invalid: no pipeline state is bound.");
     DEV_CHECK_ERR(m_pPipelineState->GetDesc().IsRayTracingPipeline(),
@@ -1842,6 +1847,8 @@ template <typename ImplementationTraits>
 void DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const
 {
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::UpdateSBT: ray tracing is not supported by this device");
+    DEV_CHECK_ERR((m_pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) != 0,
+                  "IDeviceContext::UpdateSBT: standalone ray tracing shaders are not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::UpdateSBT must be performed outside of render pass");
     DEV_CHECK_ERR(pSBT != nullptr, "IDeviceContext::UpdateSBT command arguments are invalid: pSBT must not be null");
 

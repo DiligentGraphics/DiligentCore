@@ -761,6 +761,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
         MaxDynamicBuffArraySize +
         3 /*non array resources*/ +
         1 /*output UAV texture*/;
+    (void)MaxUAVBuffers;
 
     bool UseReducedUAVCount = false;
     switch (DeviceInfo.Type)
@@ -971,6 +972,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
         MaxDynamicTexArraySize +
         3 /*non array resources*/ +
         1 /*output UAV texture*/;
+    (void)MaxUAVTextures;
 
     bool UseReducedUAVCount = false;
     switch (DeviceInfo.Type)

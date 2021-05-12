@@ -1515,7 +1515,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceInfo().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || (pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING) == 0)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }
@@ -1673,7 +1673,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceInfo().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || (pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING) == 0)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }
@@ -1827,7 +1827,7 @@ TEST_P(RT7, TraceRaysIndirect)
     Uint32 TestId  = GetParam();
     auto*  pEnv    = TestingEnvironment::GetInstance();
     auto*  pDevice = pEnv->GetDevice();
-    if (!pEnv->SupportsRayTracing() || !pDevice->GetDeviceInfo().Features.RayTracing2)
+    if (!pEnv->SupportsRayTracing() || (pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING) == 0)
     {
         GTEST_SKIP() << "Indirect ray tracing is not supported by this device";
     }
@@ -2039,13 +2039,14 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     auto*       pEnv       = TestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const auto& RTProps    = pDevice->GetAdapterInfo().RayTracing;
 
     if (DeviceInfo.IsMetalDevice())
     {
-        if (!DeviceInfo.Features.RayTracing2)
+        if (!DeviceInfo.Features.RayTracing && (RTProps.CapFlags & RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING) == 0)
             GTEST_SKIP() << "Ray tracing is not supported by this device";
     }
-    else if (!pEnv->SupportsRayTracing() || !DeviceInfo.Features.RayTracing2)
+    else if (!pEnv->SupportsRayTracing() || (RTProps.CapFlags & RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING) == 0)
     {
         GTEST_SKIP() << "Inline ray tracing is not supported by this device";
     }

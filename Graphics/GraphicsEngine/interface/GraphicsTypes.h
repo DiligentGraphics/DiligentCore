@@ -1582,11 +1582,9 @@ struct DeviceFeatures
     /// Indicates if device supports mesh and amplification shaders
     DEVICE_FEATURE_STATE MeshShaders                   DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
-    /// Indicates if device supports ray tracing shaders
+    /// Indicates if device supports ray tracing.
+    /// See Diligent::RayTracingProperties for more information.
     DEVICE_FEATURE_STATE RayTracing                    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
-
-    /// Indicates if device supports inline ray tracing and indirect commands
-    DEVICE_FEATURE_STATE RayTracing2                   DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports bindless resources
     DEVICE_FEATURE_STATE BindlessResources             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
@@ -1697,7 +1695,6 @@ struct DeviceFeatures
         Tessellation                      {State},
         MeshShaders                       {State},
         RayTracing                        {State},
-        RayTracing2                       {State},
         BindlessResources                 {State},
         OcclusionQueries                  {State},
         BinaryOcclusionQueries            {State},
@@ -1727,7 +1724,7 @@ struct DeviceFeatures
         TileShaders                       {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 38, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 37, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -1957,12 +1954,33 @@ struct BufferProperties
 typedef struct BufferProperties BufferProperties;
 
 
+/// Ray tracing capability flags
+DILIGENT_TYPED_ENUM(RAY_TRACING_CAP_FLAGS, Uint8)
+{
+    /// No ray-tracing capabilities
+    RAY_TRACING_CAP_FLAG_NONE                 = 0x00,
+
+    /// The device supports standalone ray tracing shaders (e.g. ray generation, closest hit, any hit, etc.)
+    /// When this feature is disabled, inline ray tracing may still be supported where rays can be traced
+    /// from graphics or compute shaders.
+    RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS   = 0x01,
+
+    /// The device supports inline ray tracing in graphics or compute shaders.
+    RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING   = 0x02,
+
+    /// The device supports IDeviceContext::TraceRaysIndirect() command.
+    RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING = 0x04
+};
+DEFINE_FLAG_ENUM_OPERATORS(RAY_TRACING_CAP_FLAGS)
+
+
 /// Ray tracing properties
 struct RayTracingProperties
 {
     /// Maximum supported value for RayTracingPipelineDesc::MaxRecursionDepth.
     Uint32 MaxRecursionDepth        DEFAULT_INITIALIZER(0);
 
+    /// For internal use
     Uint32 ShaderGroupHandleSize    DEFAULT_INITIALIZER(0);
     Uint32 MaxShaderRecordStride    DEFAULT_INITIALIZER(0);
     Uint32 ShaderGroupBaseAlignment DEFAULT_INITIALIZER(0);
@@ -1978,6 +1996,9 @@ struct RayTracingProperties
 
     /// The maximum number of geometries in a bottom-level AS.
     Uint32 MaxGeometriesPerBLAS     DEFAULT_INITIALIZER(0);
+
+    /// Ray tracing capability flags, see Diligent::RAY_TRACING_CAP_FLAGS.
+    RAY_TRACING_CAP_FLAGS CapFlags  DEFAULT_INITIALIZER(RAY_TRACING_CAP_FLAG_NONE);
 };
 typedef struct RayTracingProperties RayTracingProperties;
 
