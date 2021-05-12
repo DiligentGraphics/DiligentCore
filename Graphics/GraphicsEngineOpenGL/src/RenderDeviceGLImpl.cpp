@@ -617,7 +617,6 @@ void RenderDeviceGLImpl::InitAdapterInfo(bool ForceNonSeparablePrograms)
 
         Features.MeshShaders                = DEVICE_FEATURE_STATE_DISABLED;
         Features.RayTracing                 = DEVICE_FEATURE_STATE_DISABLED;
-        Features.RayTracing2                = DEVICE_FEATURE_STATE_DISABLED;
         Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_DISABLED;
         Features.InstanceDataStepRate       = DEVICE_FEATURE_STATE_ENABLED;
         Features.NativeFence                = DEVICE_FEATURE_STATE_DISABLED;
@@ -853,7 +852,7 @@ void RenderDeviceGLImpl::InitAdapterInfo(bool ForceNonSeparablePrograms)
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 }
 

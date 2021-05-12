@@ -803,11 +803,11 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features5{};
             if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &d3d12Features5, sizeof(d3d12Features5))))
             {
+                auto& RayTracingProps{AdapterInfo.RayTracing};
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
                 {
                     Features.RayTracing = DEVICE_FEATURE_STATE_ENABLED;
 
-                    auto& RayTracingProps{AdapterInfo.RayTracing};
                     RayTracingProps.MaxRecursionDepth        = D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH;
                     RayTracingProps.ShaderGroupHandleSize    = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
                     RayTracingProps.MaxShaderRecordStride    = D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE;
@@ -816,14 +816,15 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     RayTracingProps.MaxInstancesPerTLAS      = D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE;
                     RayTracingProps.MaxPrimitivesPerBLAS     = D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
                     RayTracingProps.MaxGeometriesPerBLAS     = D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
-#if defined(_MSC_VER) && defined(_WIN64)
-                    static_assert(sizeof(RayTracingProps) == 32, "Did you add a new member to RayTracingProperites? Please initialize it here.");
-#endif
+                    RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS;
                 }
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
                 {
-                    Features.RayTracing2 = DEVICE_FEATURE_STATE_ENABLED;
+                    RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING | RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING;
                 }
+#if defined(_MSC_VER) && defined(_WIN64)
+                static_assert(sizeof(RayTracingProps) == 36, "Did you add a new member to RayTracingProperites? Please initialize it here.");
+#endif
             }
         }
 
@@ -869,7 +870,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
     }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     return AdapterInfo;

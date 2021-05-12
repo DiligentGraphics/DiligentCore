@@ -199,8 +199,14 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         RayTracingProps.MaxInstancesPerTLAS      = static_cast<Uint32>(vkASLimits.maxInstanceCount);
         RayTracingProps.MaxPrimitivesPerBLAS     = static_cast<Uint32>(vkASLimits.maxPrimitiveCount);
         RayTracingProps.MaxGeometriesPerBLAS     = static_cast<Uint32>(vkASLimits.maxGeometryCount);
+        if (vkExtFeatures.RayTracingPipeline.rayTracingPipeline)
+            RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS;
+        if (vkExtFeatures.RayQuery.rayQuery)
+            RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING;
+        if (vkExtFeatures.RayTracingPipeline.rayTracingPipelineTraceRaysIndirect)
+            RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING;
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(RayTracingProps) == 32, "Did you add a new member to RayTracingProperites? Please initialize it here.");
+        static_assert(sizeof(RayTracingProps) == 36, "Did you add a new member to RayTracingProperites? Please initialize it here.");
 #endif
     }
 
@@ -672,7 +678,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             }
 
             // Ray tracing
-            if (EnabledFeatures.RayTracing != DEVICE_FEATURE_STATE_DISABLED || EnabledFeatures.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
+            if (EnabledFeatures.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
             {
                 // this extensions added to Vulkan 1.2 core
                 if (!DeviceExtFeatures.Spirv15)
@@ -691,47 +697,48 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME), "VK_KHR_buffer_device_address extension must be supported");
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME), "VK_KHR_deferred_host_operations extension must be supported");
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME), "VK_KHR_acceleration_structure extension must be supported");
-                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME), "VK_KHR_ray_tracing_pipeline extension must be supported");
                 DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);    // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME); // required for VK_KHR_acceleration_structure
                 DeviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);   // required for ray tracing
-                DeviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);     // required for ray tracing
 
                 EnabledExtFeats.AccelStruct         = DeviceExtFeatures.AccelStruct;
-                EnabledExtFeats.RayTracingPipeline  = DeviceExtFeatures.RayTracingPipeline;
                 EnabledExtFeats.BufferDeviceAddress = DeviceExtFeatures.BufferDeviceAddress;
 
                 // disable unused features
                 EnabledExtFeats.AccelStruct.accelerationStructureCaptureReplay                    = false;
                 EnabledExtFeats.AccelStruct.accelerationStructureHostCommands                     = false;
                 EnabledExtFeats.AccelStruct.descriptorBindingAccelerationStructureUpdateAfterBind = false;
-
-                EnabledExtFeats.RayTracingPipeline.rayTracingPipelineShaderGroupHandleCaptureReplay      = false;
-                EnabledExtFeats.RayTracingPipeline.rayTracingPipelineShaderGroupHandleCaptureReplayMixed = false;
+                EnabledExtFeats.AccelStruct.accelerationStructureIndirectBuild                    = false;
 
                 *NextExt = &EnabledExtFeats.AccelStruct;
                 NextExt  = &EnabledExtFeats.AccelStruct.pNext;
-                *NextExt = &EnabledExtFeats.RayTracingPipeline;
-                NextExt  = &EnabledExtFeats.RayTracingPipeline.pNext;
                 *NextExt = &EnabledExtFeats.BufferDeviceAddress;
                 NextExt  = &EnabledExtFeats.BufferDeviceAddress.pNext;
 
-                // Inline ray tracing from any shader.
-                if (EnabledFeatures.RayTracing2 != DEVICE_FEATURE_STATE_DISABLED)
+                // Ray tracing shader.
+                if (PhysicalDevice->IsExtensionSupported(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) &&
+                    DeviceExtFeatures.RayTracingPipeline.rayTracingPipeline == VK_TRUE)
                 {
-                    VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_RAY_QUERY_EXTENSION_NAME), "VK_KHR_ray_query extension must be supported");
-                    DeviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+                    EnabledExtFeats.RayTracingPipeline = DeviceExtFeatures.RayTracingPipeline;
 
+                    // disable unused features
+                    EnabledExtFeats.RayTracingPipeline.rayTracingPipelineShaderGroupHandleCaptureReplay      = false;
+                    EnabledExtFeats.RayTracingPipeline.rayTracingPipelineShaderGroupHandleCaptureReplayMixed = false;
+
+                    *NextExt = &EnabledExtFeats.RayTracingPipeline;
+                    NextExt  = &EnabledExtFeats.RayTracingPipeline.pNext;
+                }
+
+                // Inline ray tracing from any shader.
+                if (PhysicalDevice->IsExtensionSupported(VK_KHR_RAY_QUERY_EXTENSION_NAME) &&
+                    DeviceExtFeatures.RayQuery.rayQuery == VK_TRUE)
+                {
+                    DeviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
                     EnabledExtFeats.RayQuery = DeviceExtFeatures.RayQuery;
 
                     *NextExt = &EnabledExtFeats.RayQuery;
                     NextExt  = &EnabledExtFeats.RayQuery.pNext;
-                }
-                else
-                {
-                    EnabledExtFeats.AccelStruct.accelerationStructureIndirectBuild         = false;
-                    EnabledExtFeats.RayTracingPipeline.rayTracingPipelineTraceRaysIndirect = false;
-                    EnabledExtFeats.RayTracingPipeline.rayTraversalPrimitiveCulling        = false; // for GLSL_EXT_ray_flags_primitive_culling
                 }
             }
 
@@ -783,7 +790,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(Diligent::DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(Diligent::DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)

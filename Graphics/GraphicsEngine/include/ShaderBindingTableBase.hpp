@@ -82,6 +82,9 @@ public:
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
         const auto& RTProps = this->m_pDevice->GetAdapterInfo().RayTracing;
+        if (!pDevice->GetFeatures().RayTracing)
+            LOG_ERROR_AND_THROW("Ray tracing is not supported by device");
+
         ValidateShaderBindingTableDesc(this->m_Desc, RTProps.ShaderGroupHandleSize, RTProps.MaxShaderRecordStride);
 
         this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);

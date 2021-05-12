@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Removed `RayTracing2` device feature and added `RAY_TRACING_CAP_FLAGS` enum (API Version 240099)
 * Added tile shaders (API Version 240098)
   * Added `PIPELINE_TYPE_TILE` and `SHADER_TYPE_TILE` enum values
   * Added `TileShaders` device feature

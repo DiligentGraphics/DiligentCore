@@ -66,13 +66,6 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
         LOG_INFO_MESSAGE("Can not disable SeparablePrograms");
     }
 
-    if (SupportedFeatures.RayTracing != DEVICE_FEATURE_STATE_DISABLED &&
-        RequestedFeatures.RayTracing == DEVICE_FEATURE_STATE_DISABLED &&
-        RequestedFeatures.RayTracing2 == DEVICE_FEATURE_STATE_ENABLED)
-    {
-        LOG_ERROR_MESSAGE("Can not enable RayTracing2 when RayTracing is disabled");
-    }
-
     DeviceFeatures EnabledFeatures;
 #define ENABLE_FEATURE(Feature, FeatureName) \
     EnabledFeatures.Feature = GetFeatureState(RequestedFeatures.Feature, SupportedFeatures.Feature, FeatureName)
@@ -88,7 +81,6 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(Tessellation,                      "Tessellation is");
     ENABLE_FEATURE(MeshShaders,                       "Mesh shaders are");
     ENABLE_FEATURE(RayTracing,                        "Ray tracing is");
-    ENABLE_FEATURE(RayTracing2,                       "Inline ray tracing is");
     ENABLE_FEATURE(BindlessResources,                 "Bindless resources are");
     ENABLE_FEATURE(OcclusionQueries,                  "Occlusion queries are");
     ENABLE_FEATURE(BinaryOcclusionQueries,            "Binary occlusion queries are");
@@ -120,7 +112,7 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
 #undef ENABLE_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(Diligent::DeviceFeatures) == 38, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(Diligent::DeviceFeatures) == 37, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
     return EnabledFeatures;
 }

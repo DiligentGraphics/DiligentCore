@@ -86,6 +86,9 @@ public:
                    bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
+        if (!pDevice->GetFeatures().RayTracing)
+            LOG_ERROR_AND_THROW("Ray tracing is not supported by device");
+
         ValidateTopLevelASDesc(this->m_Desc);
     }
 

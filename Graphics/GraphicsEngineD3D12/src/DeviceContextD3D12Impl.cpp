@@ -134,7 +134,8 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         VERIFY_EXPR(CmdSignatureDesc.ByteStride == DrawMeshIndirectCommandStride);
     }
 #endif
-    if (pDeviceD3D12Impl->GetFeatures().RayTracing2 == DEVICE_FEATURE_STATE_ENABLED)
+    if (pDeviceD3D12Impl->GetFeatures().RayTracing == DEVICE_FEATURE_STATE_ENABLED &&
+        (pDeviceD3D12Impl->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING) != 0)
     {
         CmdSignatureDesc.ByteStride = sizeof(D3D12_DISPATCH_RAYS_DESC);
         IndirectArg.Type            = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS;
