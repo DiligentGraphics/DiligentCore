@@ -2281,6 +2281,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///
     /// \warning    OpenGL and Vulkan do not support nested queries of the same type.
     ///
+    /// \remarks    On some devices, queries for a single draw or dispatch command may not be supported.
+    ///             In this case, the query will begin at the next available moment (for example,
+    ///             when the next render pass begins or ends).
+    ///
     /// \remarks Supported contexts for graphics queries: graphics.
     ///          Supported contexts for time queries:     graphics, compute.
     VIRTUAL void METHOD(BeginQuery)(THIS_

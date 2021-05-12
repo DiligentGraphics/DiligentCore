@@ -26,3 +26,14 @@
  */
 
 #include "DiligentCore/Graphics/GraphicsEngine/interface/Query.h"
+
+void TestQueryCInterface(IQuery* pQuery)
+{
+    const QueryDesc* pDesc = IQuery_GetDesc(pQuery);
+    (void)pDesc;
+
+    bool Available = IQuery_GetData(pQuery, NULL, 0, true);
+    (void)Available;
+
+    IQuery_Invalidate(pQuery);
+}

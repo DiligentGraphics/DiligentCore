@@ -88,6 +88,8 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl*      pRenderDeviceVk,
         QueryPoolCI.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
         QueryPoolCI.pNext = nullptr;
         QueryPoolCI.flags = 0;
+
+        static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (QueryType)
         {
             case QUERY_TYPE_OCCLUSION:
@@ -156,6 +158,8 @@ QueryManagerVk::~QueryManagerVk()
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
         auto& HeapInfo = m_Heaps[QueryType];
+        if (HeapInfo.PoolSize == 0)
+            continue;
 
         auto OutstandingQueries = HeapInfo.PoolSize - (HeapInfo.AvailableQueries.size() + HeapInfo.StaleQueries.size());
         if (OutstandingQueries != 0)
@@ -229,7 +233,7 @@ Uint32 QueryManagerVk::ResetStaleQueries(VulkanUtilities::VulkanCommandBuffer& C
         for (auto& StaleQuery : HeapInfo.StaleQueries)
         {
             CmdBuff.ResetQueryPool(HeapInfo.vkQueryPool, StaleQuery, 1);
-            HeapInfo.AvailableQueries.push_front(StaleQuery);
+            HeapInfo.AvailableQueries.push_back(StaleQuery);
             ++NumQueriesReset;
         }
         HeapInfo.StaleQueries.clear();

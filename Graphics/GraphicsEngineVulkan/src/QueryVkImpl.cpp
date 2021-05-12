@@ -146,6 +146,7 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         const auto  StageMask     = LogicalDevice.GetSupportedStagesMask(pContextVk->GetHardwareQueueId());
         auto        vkQueryPool   = pQueryMgr->GetQueryPool(m_Desc.Type);
 
+        static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (m_Desc.Type)
         {
             case QUERY_TYPE_OCCLUSION:
@@ -277,9 +278,9 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
                 if (DataAvailable && pData != nullptr)
                 {
-                    auto& QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    auto& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
                     VERIFY_EXPR(EndCounter >= StartCounter);
-                    QueryData.Counter   = EndCounter - StartCounter;
+                    QueryData.Duration  = EndCounter - StartCounter;
                     QueryData.Frequency = pQueryMgr->GetCounterFrequency();
                 }
             }

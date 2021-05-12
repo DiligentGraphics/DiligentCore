@@ -101,7 +101,7 @@ public:
                 break;
 
             default:
-                UNEXPECTED("Unexpected device type");
+                UNEXPECTED("Unexpected query type");
         }
     }
 
