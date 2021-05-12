@@ -182,8 +182,9 @@ protected:
 
     void InitTestQueries(IDeviceContext* pContext, std::vector<RefCntAutoPtr<IQuery>>& Queries, const QueryDesc& queryDesc)
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
-        auto* pDevice = pEnv->GetDevice();
+        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pDevice    = pEnv->GetDevice();
+        auto  deviceInfo = pDevice->GetDeviceInfo();
 
         if (Queries.empty())
         {
@@ -203,6 +204,13 @@ protected:
                 DrawQuad(pContext);
             pContext->EndQuery(Queries[i]);
             Queries[i]->GetData(nullptr, 0);
+
+            if (deviceInfo.IsMetalDevice())
+            {
+                // Metal may not support queries for draw calls.
+                // Flush() is one of the ways to begin new render pass.
+                pContext->Flush();
+            }
         }
 
         if (queryDesc.Type == QUERY_TYPE_DURATION)
@@ -212,7 +220,7 @@ protected:
             pContext->FinishFrame();
         }
         pContext->WaitForIdle();
-        if (pDevice->GetDeviceInfo().IsGLDevice())
+        if (deviceInfo.IsGLDevice())
         {
             // glFinish() is not a guarantee that queries will become available.
             // Even using glFenceSync + glClientWaitSync does not help.

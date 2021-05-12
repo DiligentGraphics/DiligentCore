@@ -29,7 +29,6 @@
 
 #include <mutex>
 #include <array>
-#include <deque>
 #include <vector>
 
 #include "Query.h"
@@ -80,7 +79,7 @@ private:
     {
         VulkanUtilities::QueryPoolWrapper vkQueryPool;
 
-        std::deque<Uint32>  AvailableQueries;
+        std::vector<Uint32> AvailableQueries;
         std::vector<Uint32> StaleQueries;
 
         Uint32 PoolSize            = 0;
