@@ -61,13 +61,13 @@ jobs:
         retention-days: 90
 
 
-  build-clang-9:
+  build-clang-10:
     strategy:
       matrix:
         config: [Debug, Release]
 
     runs-on: ubuntu-latest
-    name: Linux x64, Clang 9, ${{ matrix.config }}
+    name: Linux x64, Clang 10, ${{ matrix.config }}
 
     steps:
     - name: Clone repository
@@ -89,8 +89,8 @@ jobs:
     - name: Configure CMake
       if: success()
       env:
-        CC: clang-9
-        CXX: clang++-9
+        CC: clang-10
+        CXX: clang++-10
       shell: bash
       run: |
         cd $GITHUB_WORKSPACE/BuildTools/Scripts/github_actions
@@ -112,7 +112,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: ${{ success() && matrix.config == 'Release' }}
       with:
-        name: DiligentCore-Linux-x64-Clang9-${{ matrix.config }}
+        name: DiligentCore-Linux-x64-Clang10-${{ matrix.config }}
         path: |
           ${{runner.workspace}}/build/install/
           !${{runner.workspace}}/build/install/**/*.a
