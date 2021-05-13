@@ -60,7 +60,7 @@ DILIGENT_BEGIN_INTERFACE(ITextureD3D12, ITexture)
 
     /// \param [in] state - D3D12 resource state to be set for this texture
     VIRTUAL void METHOD(SetD3D12ResourceState)(THIS_
-                                                   D3D12_RESOURCE_STATES state) PURE;
+                                               D3D12_RESOURCE_STATES state) PURE;
 
     /// Returns current D3D12 texture state.
     /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN),

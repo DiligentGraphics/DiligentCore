@@ -33,7 +33,6 @@ so it must always be handled first.
     - [Linux](#initialization_linux)
     - [MacOS](#initialization_macos)
     - [iOS](#initialization_ios)
-    - [Attaching to Already Initialized Graphics API](#initialization_attaching)
     - [Destroying the Engine](#initialization_destroying)
   - [Creating Resources](#creating_resources)
   - [Creating Shaders](#creating_shaders)
@@ -42,10 +41,9 @@ so it must always be handled first.
   - [Binding Shader Resources](#binding_resources)
   - [Setting the Pipeline State and Invoking Draw Command](#draw_command)
 - [Low-level API interoperability](#low_level_api_interoperability)
-- [Repository structure](#repository_structure)
+- [License](#license)
 - [Contributing](#contributing)
 - [License](https://github.com/DiligentGraphics/DiligentCore#license)
-- [References](#references)
 - [Release History](#release_history)
 
 
@@ -251,11 +249,6 @@ performed by the application, and the engine attaches to the context initialized
 [EAGLView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/iOS/EAGLView.m)
 for details.
 
-<a name="initialization_attaching"></a>
-### Attaching to Already Initialized Graphics API
-
-An alternative way to initialize the engine is to attach to existing D3D11/D3D12 device or OpenGL/GLES context.
-Refer to [Native API interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/) for more details.
 
 <a name="initialization_destroying"></a>
 ### Destroying the Engine
@@ -363,7 +356,7 @@ m_pDevice->CreateShader(ShaderCI, &pShader);
 
 Diligent Engine follows Direct3D12/Vulkan style to configure the graphics/compute pipeline. One monolithic Pipelines State Object (PSO)
 encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state
-descriptions etc.). To create a pipeline state object, define an instance of `GraphicsPipelineStateCreateInfo` structure:
+descriptions etc.). To create a graphics pipeline state object, define an instance of `GraphicsPipelineStateCreateInfo` structure:
 
 ```cpp
 GraphicsPipelineStateCreateInfo PSOCreateInfo;
@@ -372,8 +365,7 @@ PipelineStateDesc&              PSODesc = PSOCreateInfo.PSODesc;
 PSODesc.Name = "My pipeline state";
 ```
 
-Describe the pipeline specifics such as if the pipeline is a compute pipeline, number and format
-of render targets as well as depth-stencil format:
+Describe the pipeline specifics such as if the number and format of render targets as well as depth-stencil format:
 
 ```cpp
 // This is a graphics pipeline
@@ -383,7 +375,7 @@ PSOCreateInfo.GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_RGBA8_UNORM_SRGB;
 PSOCreateInfo.GraphicsPipeline.DSVFormat        = TEX_FORMAT_D32_FLOAT;
 ```
 
-Initialize depth-stencil state description structure DepthStencilStateDesc. Note that the constructor initializes
+Initialize depth-stencil state description `DepthStencilStateDesc`. Note that the constructor initializes
 the members with default values and you may only set the ones that are different from default.
 
 ```cpp
@@ -393,7 +385,7 @@ DepthStencilDesc.DepthEnable            = true;
 DepthStencilDesc.DepthWriteEnable       = true;
 ```
 
-Initialize blend state description structure `BlendStateDesc`:
+Initialize blend state description `BlendStateDesc`:
 
 ```cpp
 // Init blend state
@@ -410,7 +402,7 @@ RT0.DestBlendAlpha        = BLEND_FACTOR_INV_SRC_ALPHA;
 RT0.BlendOpAlpha          = BLEND_OPERATION_ADD;
 ```
 
-Initialize rasterizer state description structure `RasterizerStateDesc`:
+Initialize rasterizer state description `RasterizerStateDesc`:
 
 ```cpp
 // Init rasterizer state
@@ -422,7 +414,7 @@ RasterizerDesc.ScissorEnable         = True;
 RasterizerDesc.AntialiasedLineEnable = False;
 ```
 
-Initialize input layout description structure `InputLayoutDesc`:
+Initialize input layout description `InputLayoutDesc`:
 
 ```cpp
 // Define input layout
@@ -551,13 +543,15 @@ pRenderDevice->CreateResourceMapping( ResMappingDesc, &pResMapping );
 The resource mapping can then be used to bind all static resources in a pipeline state (`IPipelineState::BindStaticResources()`):
 
 ```cpp
-m_pPSO->BindStaticResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
+m_pPSO->BindStaticResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping,
+                            BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 ```
 
 or all mutable and dynamic resources in a shader resource binding (`IShaderResourceBinding::BindResources()`):
 
 ```cpp
-m_pSRB->BindResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
+m_pSRB->BindResources(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, pResMapping,
+                      BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 ```
 
 The last parameter to all `BindResources()` functions defines how resources should be resolved:
@@ -618,9 +612,8 @@ the `IDeviceContext::CommitShaderResources()` method:
 m_pContext->CommitShaderResources(m_pSRB, COMMIT_SHADER_RESOURCES_FLAG_TRANSITION_RESOURCES);
 ```
 
-If the method is not called, the engine will detect that resources are not committed and output
-debug message. Note that `CommitShaderResources()` must be called after the right pipeline state has been
-bound to the context. Note that the last parameter tells the system to transition resources to correct states.
+If the method is not called, the engine will detect that resources are not committed and output a
+debug message. Note that the last parameter tells the system to transition resources to correct states.
 If this flag is not specified, the resources must be explicitly transitioned to required states by a call to
 `IDeviceContext::TransitionShaderResources()`:
 
@@ -630,25 +623,23 @@ m_pContext->TransitionShaderResources(m_pPSO, m_pSRB);
 
 Note that the method requires pointer to the pipeline state that created the shader resource binding.
 
-When all required states and resources are bound, `IDeviceContext::Draw()` can be used to execute draw
-command or `IDeviceContext::DispatchCompute()` can be used to execute compute command. Note that for a draw command,
-graphics pipeline must be bound, and for dispatch command, compute pipeline must be bound. `Draw()` takes
-`DrawAttribs` structure as an argument. The structure members define all attributes required to perform the command
-(number of vertices or indices, if draw call is indexed or not, if draw call is instanced or not,
-if draw call is indirect or not, etc.). For example:
+When all required states and resources are bound, `IDeviceContext::DrawIndexed()` can be used to execute a draw
+command or `IDeviceContext::DispatchCompute()` can be used to execute a compute command. Note that for a draw command,
+a graphics pipeline must be bound, and for a dispatch command, a compute pipeline must be bound. `DrawIndexed()` takes
+`DrawIndexedAttribs` structure as an argument, for example:
 
 ```cpp
-DrawAttribs attrs;
+DrawIndexedAttribs attrs;
 attrs.IndexType  = VT_UINT16;
 attrs.NumIndices = 36;
 attrs.Flags      = DRAW_FLAG_VERIFY_STATES;
-pContext->Draw(attrs);
+pContext->DrawIndexed(attrs);
 ```
 
 `DRAW_FLAG_VERIFY_STATES` flag instructs the engine to verify that vertex and index buffers used by the
 draw command are transitioned to proper states.
 
-`DispatchCompute()` takes DispatchComputeAttribs structure that defines compute grid dimensions:
+`DispatchCompute()` takes `DispatchComputeAttribs` structure that defines compute grid dimensions:
 
 ```cpp
 m_pContext->SetPipelineState(m_pComputePSO);
@@ -657,7 +648,7 @@ DispatchComputeAttribs DispatchAttrs(64, 64, 8);
 m_pContext->DispatchCompute(DispatchAttrs);
 ```
 
-You can learn more about the engine API by looking at the [engine samples' source code](https://github.com/DiligentGraphics/DiligentSamples) and the [API Reference][1].
+You can learn more about the engine API by looking at the [samples and tutorials](https://github.com/DiligentGraphics/DiligentSamples).
 
 
 <a name="low_level_api_interoperability"></a>
@@ -667,40 +658,14 @@ Diligent Engine extensively supports interoperability with underlying low-level 
 by attaching to existing D3D11/D3D12 device or OpenGL/GLES context and provides access to the underlying native API
 objects. Refer to the following pages for more information:
 
-[Direct3D11 Interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d11-interoperability/)
+[Direct3D11 Interoperability](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11#interoperability-with-direct3d11)
 
-[Direct3D12 Interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d12-interoperability/)
+[Direct3D12 Interoperability](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12#interoperability-with-direct3d12)
 
-[OpenGL/GLES Interoperability](http://diligentgraphics.com/diligent-engine/native-api-interoperability/openglgles-interoperability/)
+[OpenGL/GLES Interoperability](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL#interoperability-with-openglgles)
 
 
-<a name="repository_structure"></a>
-# Repository structure
-
- The repository contains the following projects:
-
- | Project                                                          | Description       |
- |------------------------------------------------------------------|-------------------|
- | [Primitives](https://github.com/DiligentGraphics/DiligentCore/tree/master/Primitives)                                        | Definitions of basic types (Int32, Int16, Uint32, etc.) and interfaces (IObject, IReferenceCounters, etc.) |
- | [Common](https://github.com/DiligentGraphics/DiligentCore/tree/master/Common)                                                | Common functionality such as file wrapper, logging, debug utilities, etc. |
- | [Graphics/GraphicsAccessories](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsAccessories)    | Basic graphics accessories used by all implementations  |
- | [Graphics/GraphicsEngine](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngine)              | Platform-independent base functionality |
- | [Graphics/GraphicsEngineD3DBase](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3DBase)| Base functionality for D3D11/D3D12 implementations |
- | [Graphics/GraphicsEngineD3D11](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D11)     | Implementation of Direct3D11 rendering backend |
- | [Graphics/GraphicsEngineD3D12](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12)     | Implementation of Direct3D12 rendering backend |
- | [Graphics/GraphicsEngineOpenGL](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL)   | Implementation of OpenGL/GLES rendering backend |
- | [Graphics/GraphicsEngineVulkan](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineVulkan)   | Implementation of Vulkan rendering backend |
- | [Graphics/GraphicsEngineMetal](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineMetal)     | Implementation of Metal rendering backend |
- | [Graphics/GraphicsTools](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsTools)                 | Graphics utilities build on top of core interfaces (definitions of commonly used states, texture uploaders, etc.) |
- | [Graphics/HLSL2GLSLConverterLib](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/HLSL2GLSLConverterLib) | HLSL to GLSL source code converter library |
- | [Platforms/Basic](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Basic)      | Interface for platform-specific routines and implementation of some common functionality |
- | [Platforms/Android](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Android)  | Implementation of platform-specific routines on Android |
- | [Platforms/Apple](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Apple)      | Implementation of platform-specific routines on Apple platforms (MacOS, iOS)|
- | [Platforms/UWP](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/UWP)          | Implementation of platform-specific routines on Universal Windows platform |
- | [Platforms/Win32](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Win32)      | Implementation of platform-specific routines on Win32 platform |
- | [Platforms/Linux](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
- | External | Third-party libraries and modules |
-
+<a name="license"></a>
 # License
 
 See [Apache 2.0 license](License.txt).
@@ -735,14 +700,6 @@ for each commit and pull request, and the build will fail if any code formatting
 to [this page](https://github.com/DiligentGraphics/DiligentCore/blob/master/doc/code_formatting.md) for instructions
 on how to set up clang-format and automatic code formatting.
 
-<a name="references"></a>
-# References
-
-[Diligent Engine Architecture](http://diligentgraphics.com/diligent-engine/architecture/)
-
-[API Basics](http://diligentgraphics.com/diligent-engine/api-basics/)
-
-[API Reference][1]
 
 <a name="release_history"></a>
 # Release History
@@ -755,6 +712,3 @@ See [Release History](ReleaseHistory.md)
 
 [![Diligent Engine on Twitter](https://github.com/DiligentGraphics/DiligentCore/blob/master/media/twitter.png)](https://twitter.com/diligentengine)
 [![Diligent Engine on Facebook](https://github.com/DiligentGraphics/DiligentCore/blob/master/media/facebook.png)](https://www.facebook.com/DiligentGraphics/)
-
-
-[1]: https://cdn.rawgit.com/DiligentGraphics/DiligentCore/4949ec8a/doc/html/index.html

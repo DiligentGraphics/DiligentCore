@@ -1,7 +1,7 @@
 
 # GraphicsEngineD3D11
 
-Implementation of Direct3D11 back-end
+Implementation of Direct3D11 backend
 
 # Initialization
 
@@ -45,29 +45,46 @@ device and immediate context.
 
 Below are some of the methods that provide access to internal D3D11 objects:
 
-|                              Function                                       |                              Description                                                                      |
-|-----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
-| `ID3D11Buffer* IBufferD3D11::GetD3D11Buffer()`                              | returns a pointer to the `ID3D11Buffer` interface of the internal Direct3D11 buffer object                      |
-| `ID3D11Resource* ITextureD3D11::GetD3D11Texture()`                          | returns a pointer to the `ID3D11Resource` interface of the internal Direct3D11 texture object                   |
-| `ID3D11View* IBufferViewD3D11()::GetD3D11View()`                            | returns a pointer to the `ID3D11View` interface of the internal Direct3D11 object representing the buffer view       |
-| `ID3D11View* ITextureViewD3D11::GetD3D11View()`                             | returns a pointer to the `ID3D11View` interface of the internal Direct3D11 object representing the texture view      |
-| `ID3D11Device* IRenderDeviceD3D11::GetD3D11Device()`                        | returns a pointer to the native Direct3D11 device object                                                           |
-| `ID3D11DeviceContext* IDeviceContextD3D11::GetD3D11DeviceContext()`         | returns a pointer to the native `ID3D11DeviceContext` object                                                    |
+|                              Function                                     |                              Description                                                                        |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `ID3D11Buffer* IBufferD3D11::GetD3D11Buffer`                              | returns a pointer to the `ID3D11Buffer` interface of the internal Direct3D11 buffer object                      |
+| `ID3D11Resource* ITextureD3D11::GetD3D11Texture`                          | returns a pointer to the `ID3D11Resource` interface of the internal Direct3D11 texture object                   |
+| `ID3D11View* IBufferViewD3D11()::GetD3D11View`                            | returns a pointer to the `ID3D11View` interface of the internal Direct3D11 object representing the buffer view  |
+| `ID3D11View* ITextureViewD3D11::GetD3D11View`                             | returns a pointer to the `ID3D11View` interface of the internal Direct3D11 object representing the texture view |
+| `ID3D11Device* IRenderDeviceD3D11::GetD3D11Device`                        | returns a pointer to the native Direct3D11 device object                                                        |
+| `ID3D11DeviceContext* IDeviceContextD3D11::GetD3D11DeviceContext`         | returns a pointer to the native `ID3D11DeviceContext` object                                                    |
+| `ID3D11BlendState* IPipelineStateD3D11::GetD3D11BlendState`               | returns a pointer to the native `ID3D11BlendState` object                                                       |
+| `ID3D11RasterizerState* IPipelineStateD3D11::GetD3D11RasterizerState`     | returns a pointer to the native `ID3D11RasterizerState` object                                                  |
+| `ID3D11DepthStencilState* IPipelineStateD3D11::GetD3D11DepthStencilState` | returns a pointer to the native `ID3D11DepthStencilState` object                                                |
+| `ID3D11InputLayout* IPipelineStateD3D11::GetD3D11InputLayout`             | returns a pointer to the native `ID3D11InputLayout` object                                                      |
+| `ID3D11VertexShader* IPipelineStateD3D11::GetD3D11VertexShader`           | returns a pointer to the native `ID3D11VertexShader` object                                                     |
+| `ID3D11PixelShader* IPipelineStateD3D11::GetD3D11PixelShader`             | returns a pointer to the native `ID3D11PixelShader` object                                                      |
+| `ID3D11GeometryShader* IPipelineStateD3D11::GetD3D11PixelShader`          | returns a pointer to the native `ID3D11GeometryShader` object                                                   |
+| `ID3D11GeometryShader* IPipelineStateD3D11::GetD3D11GeometryShader`       | returns a pointer to the native `ID3D11GeometryShader` object                                                   |
+| `ID3D11DomainShader* IPipelineStateD3D11::GetD3D11DomainShader`           | returns a pointer to the native `ID3D11DomainShader` object                                                     |
+| `ID3D11HullShader* IPipelineStateD3D11::GetD3D11HullShader`               | returns a pointer to the native `ID3D11HullShader` object                                                       |
+| `ID3D11ComputeShader* IPipelineStateD3D11::GetD3D11ComputeShader`         | returns a pointer to the native `ID3D11ComputeShader` object                                                    |
+| `ID3D11Query* IQueryD3D11::GetD3D11Query`                                 | returns a pointer to the native `ID3D11Query` object                                                            |
+| `ID3D11SamplerState* ISamplerD3D11::GetD3D11SamplerState`                 | returns a pointer to the native `ID3D11SamplerState` object                                                     |
+| `ID3D11DeviceChild* IShaderD3D11::GetD3D11Shader`                         | returns a pointer to the native `ID3D11DeviceChild` object representing the shader                              |
+| `ITextureViewD3D11* ISwapChainD3D11::GetCurrentBackBufferRTV`             | returns a pointer to the native `ITextureViewD3D11` object representing current back buffer render target view  |
+| `ITextureViewD3D11* ISwapChainD3D11::GetDepthBufferDSV`                   | returns a pointer to the native `ITextureViewD3D11` object representing depth-stencil view                      |
+| `IDXGISwapChain* ISwapChainD3D11::GetDXGISwapChain`                       | returns a pointer to the native `IDXGISwapChain` object                                                         |
 
 ## Creating Diligent Engine Objects from Direct3D11 Resources
 
-* `void IRenderDeviceD3D11::CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)` -
-   creates a Diligent Engine buffer object from the native Direct3D11 buffer
-* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)` -
-   create a Diligent Engine texture object from the native Direct3D11 1D texture
-* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)` -
-   create a Diligent Engine texture object from the native Direct3D11 2D texture
-* `void IRenderDeviceD3D11::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)` -
-   create a Diligent Engine texture object from the native Direct3D11 3D texture
+|                              Function                 |                              Description                                        |
+|-------------------------------------------------------|---------------------------------------------------------------------------------|
+| `IRenderDeviceD3D11::CreateBufferFromD3DResource`     | creates a Diligent Engine buffer object from the native Direct3D11 buffer       |
+| `IRenderDeviceD3D11::CreateTexture1DFromD3DResource`  | creates a Diligent Engine texture object from the native Direct3D11 1D texture  |
+| `IRenderDeviceD3D11::CreateTexture2DFromD3DResource`  | creates a Diligent Engine texture object from the native Direct3D11 2D texture  |
+| `IRenderDeviceD3D11::CreateTexture3DFromD3DResource`  | creates a Diligent Engine texture object from the native Direct3D11 3D texture  |
+ 
 
 ## Initializing the Engine by Attaching to Existing Direct3D11 Device and Immediate Context
 
-The code snippet below shows how diligent engine can be attached to Direct3D11 device returned by Unity
+You can use `IEngineFactoryD3D11::AttachToD3D11Device` to attach the engine to existing Direct3D11 device and immediate context.
+For example, the code snippet below shows how Diligent Engine can be attached to Direct3D11 device returned by Unity:
 
 ```cpp
 IUnityGraphicsD3D11* d3d = interfaces->Get<IUnityGraphicsD3D11>();
@@ -78,14 +95,6 @@ auto* pFactoryD3d11 = GetEngineFactoryD3D11();
 EngineD3D11CreateInfo EngineCI;
 pFactoryD3d11->AttachToD3D11Device(d3d11NativeDevice, d3d11ImmediateContext, EngineCI, &m_Device, &m_Context, 0);
 ```
-
-For more information about interoperability with Direct3D11, please visit [Diligent Engine web site](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d11-interoperability/)
-
-# References
-
-[Interoperability with Direct3D11](http://diligentgraphics.com/diligent-engine/native-api-interoperability/direct3d11-interoperability/)
-
-[Architecture of D3D11-based implementation](http://diligentgraphics.com/diligent-engine/architecture/d3d11)
 
 -------------------
 
