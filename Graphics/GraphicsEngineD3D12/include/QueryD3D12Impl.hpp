@@ -67,7 +67,7 @@ public:
         return m_QueryHeapIndex[QueryId];
     }
 
-    bool OnEndQuery(IDeviceContext* pContext);
+    bool OnEndQuery(DeviceContextD3D12Impl* pContext);
 
 private:
     std::array<Uint32, 2> m_QueryHeapIndex = {QueryManagerD3D12::InvalidIndex, QueryManagerD3D12::InvalidIndex};

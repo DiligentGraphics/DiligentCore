@@ -51,6 +51,9 @@ public:
     // Render device implementation type (RenderDeviceD3D12Impl, RenderDeviceVkImpl, etc.).
     using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
 
+    // Device context implementation type (DeviceContextD3D12Impl, DeviceContextVkImpl, etc.).
+    using DeviceContextImplType = typename EngineImplTraits::DeviceContextImplType;
+
     enum class QueryState
     {
         Inactive,
@@ -121,7 +124,7 @@ public:
         m_State = QueryState::Inactive;
     }
 
-    void OnBeginQuery(struct IDeviceContext* pContext)
+    void OnBeginQuery(DeviceContextImplType* pContext)
     {
         DEV_CHECK_ERR(this->m_Desc.Type != QUERY_TYPE_TIMESTAMP,
                       "BeginQuery cannot be called on timestamp query '", this->m_Desc.Name,
@@ -135,7 +138,7 @@ public:
         m_State    = QueryState::Querying;
     }
 
-    void OnEndQuery(IDeviceContext* pContext)
+    void OnEndQuery(DeviceContextImplType* pContext)
     {
         if (this->m_Desc.Type != QUERY_TYPE_TIMESTAMP)
         {
@@ -210,7 +213,7 @@ public:
     }
 
 protected:
-    RefCntAutoPtr<IDeviceContext> m_pContext;
+    RefCntAutoPtr<DeviceContextImplType> m_pContext;
 
     QueryState m_State = QueryState::Inactive;
 };
