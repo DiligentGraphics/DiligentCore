@@ -137,6 +137,7 @@ public:
     using ShaderBindingTableImplType        = typename EngineImplTraits::ShaderBindingTableImplType;
     using ShaderResourceCacheImplType       = typename EngineImplTraits::ShaderResourceCacheImplType;
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
+    using DeviceContextImplType             = typename EngineImplTraits::DeviceContextImplType;
 
     /// \param pRefCounters  - Reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - Render device.
@@ -1470,7 +1471,7 @@ inline void DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, 
     const auto QueueType = QueryType == QUERY_TYPE_DURATION ? COMMAND_QUEUE_TYPE_COMPUTE : COMMAND_QUEUE_TYPE_GRAPHICS;
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "BeginQuery for query type ", GetQueryTypeString(QueryType));
 
-    ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(this);
+    ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(static_cast<DeviceContextImplType*>(this));
 }
 
 template <typename ImplementationTraits>
@@ -1484,7 +1485,7 @@ inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, in
     const auto QueueType = QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? COMMAND_QUEUE_TYPE_COMPUTE : COMMAND_QUEUE_TYPE_GRAPHICS;
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "EndQuery for query type ", GetQueryTypeString(QueryType));
 
-    ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(this);
+    ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(static_cast<DeviceContextImplType*>(this));
 }
 
 template <typename ImplementationTraits>

@@ -65,8 +65,8 @@ public:
         return m_QueryPoolIndex[QueryId];
     }
 
-    bool OnEndQuery(IDeviceContext* pContext);
-    bool OnBeginQuery(IDeviceContext* pContext);
+    bool OnEndQuery(DeviceContextVkImpl* pContext);
+    bool OnBeginQuery(DeviceContextVkImpl* pContext);
 
 private:
     bool AllocateQueries();

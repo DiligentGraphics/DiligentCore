@@ -83,10 +83,9 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
-    auto* pCtxD3D11Impl = m_pContext.RawPtr<DeviceContextD3D11Impl>();
-    VERIFY_EXPR(!pCtxD3D11Impl->IsDeferred());
+    VERIFY_EXPR(!m_pContext->IsDeferred());
 
-    auto* pd3d11Ctx = pCtxD3D11Impl->GetD3D11DeviceContext();
+    auto* pd3d11Ctx = m_pContext->GetD3D11DeviceContext();
 
     bool DataReady = false;
     switch (m_Desc.Type)

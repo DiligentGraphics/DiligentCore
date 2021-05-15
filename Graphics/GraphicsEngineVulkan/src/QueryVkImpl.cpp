@@ -101,14 +101,14 @@ bool QueryVkImpl::AllocateQueries()
     return true;
 }
 
-bool QueryVkImpl::OnBeginQuery(IDeviceContext* pContext)
+bool QueryVkImpl::OnBeginQuery(DeviceContextVkImpl* pContext)
 {
     TQueryBase::OnBeginQuery(pContext);
 
     return AllocateQueries();
 }
 
-bool QueryVkImpl::OnEndQuery(IDeviceContext* pContext)
+bool QueryVkImpl::OnEndQuery(DeviceContextVkImpl* pContext)
 {
     TQueryBase::OnEndQuery(pContext);
 
@@ -124,7 +124,7 @@ bool QueryVkImpl::OnEndQuery(IDeviceContext* pContext)
         return false;
     }
 
-    auto CmdQueueId      = m_pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId();
+    auto CmdQueueId      = m_pContext->GetCommandQueueId();
     m_QueryEndFenceValue = m_pDevice->GetNextFenceValue(CmdQueueId);
 
     return true;
@@ -134,16 +134,15 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
-    auto*      pContextVk          = m_pContext.RawPtr<DeviceContextVkImpl>();
-    const auto CmdQueueId          = pContextVk->GetCommandQueueId();
+    const auto CmdQueueId          = m_pContext->GetCommandQueueId();
     const auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
     bool       DataAvailable       = false;
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
-        auto* pQueryMgr = pContextVk->GetQueryManager();
+        auto* pQueryMgr = m_pContext->GetQueryManager();
         VERIFY_EXPR(pQueryMgr != nullptr);
         const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        const auto  StageMask     = LogicalDevice.GetSupportedStagesMask(pContextVk->GetHardwareQueueId());
+        const auto  StageMask     = LogicalDevice.GetSupportedStagesMask(m_pContext->GetHardwareQueueId());
         auto        vkQueryPool   = pQueryMgr->GetQueryPool(m_Desc.Type);
 
         static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");

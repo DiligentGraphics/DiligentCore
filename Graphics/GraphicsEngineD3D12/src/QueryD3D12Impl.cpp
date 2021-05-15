@@ -71,11 +71,11 @@ QueryD3D12Impl::~QueryD3D12Impl()
     }
 }
 
-bool QueryD3D12Impl::OnEndQuery(IDeviceContext* pContext)
+bool QueryD3D12Impl::OnEndQuery(DeviceContextD3D12Impl* pContext)
 {
     TQueryBase::OnEndQuery(pContext);
 
-    auto CmdQueueId      = m_pContext.RawPtr<DeviceContextD3D12Impl>()->GetCommandQueueId();
+    auto CmdQueueId      = m_pContext->GetCommandQueueId();
     m_QueryEndFenceValue = m_pDevice->GetNextFenceValue(CmdQueueId);
 
     return true;
@@ -85,7 +85,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
-    auto CmdQueueId          = m_pContext.RawPtr<DeviceContextD3D12Impl>()->GetCommandQueueId();
+    auto CmdQueueId          = m_pContext->GetCommandQueueId();
     auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {

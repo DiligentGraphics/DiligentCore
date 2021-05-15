@@ -30,6 +30,7 @@
 #include "QueryGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "EngineMemory.h"
+#include "DeviceContextGLImpl.hpp"
 
 namespace Diligent
 {
