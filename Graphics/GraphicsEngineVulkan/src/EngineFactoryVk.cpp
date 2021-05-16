@@ -114,7 +114,8 @@ public:
 private:
     std::function<void(RenderDeviceVkImpl*)> OnRenderDeviceCreated = nullptr;
 
-    bool m_RenderDeviceCreated = false;
+    // To track that there is only one render device
+    RefCntWeakPtr<IRenderDevice> m_wpDevice;
 };
 
 
@@ -328,9 +329,9 @@ void EngineFactoryVkImpl::EnumerateAdapters(Version              MinVersion,
                                             Uint32&              NumAdapters,
                                             GraphicsAdapterInfo* Adapters) const
 {
-    if (m_RenderDeviceCreated)
+    if (m_wpDevice.IsValid())
     {
-        LOG_ERROR_MESSAGE("We have global pointers to Vulkan functions and can not simultaniously use more than one instance and logical device.");
+        LOG_ERROR_MESSAGE("We use global pointers to Vulkan functions and can not simultaneously create more than one instance and logical device.");
         NumAdapters = 0;
         return;
     }
@@ -374,9 +375,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (std::max(1u, EngineCI.NumImmediateContexts) + EngineCI.NumDeferredContexts));
 
-    if (m_RenderDeviceCreated)
+    if (m_wpDevice.IsValid())
     {
-        LOG_ERROR_MESSAGE("We have global pointers to Vulkan functions and can not simultaniously use more than one instance and logical device.");
+        LOG_ERROR_MESSAGE("We use global pointers to Vulkan functions and can not simultaneously create more than one instance and logical device.");
         return;
     }
 
@@ -871,7 +872,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
 
         AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, static_cast<Uint32>(CommandQueues.size()), CommandQueues.data(), EngineCI, AdapterInfo, ppDevice, ppContexts);
 
-        m_RenderDeviceCreated = true;
+        m_wpDevice = *ppDevice;
     }
     catch (std::runtime_error&)
     {

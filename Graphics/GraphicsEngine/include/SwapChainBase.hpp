@@ -69,6 +69,7 @@ public:
         m_DesiredPreTransform{SCDesc.PreTransform}
     // clang-format on
     {
+        DEV_CHECK_ERR(pDeviceContext, "Device context must not be null");
         DEV_CHECK_ERR(!pDeviceContext->GetDesc().IsDeferred, "Deferred contexts can't be used for presenting");
     }
 
