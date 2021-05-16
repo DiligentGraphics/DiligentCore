@@ -41,7 +41,7 @@ Below are some of the methods that provide access to internal GL object handles:
 
 ## Initializing the Engine by Attaching to Existing GL Context
 
-The code snippet below shows how diligent engine can be attached to existing GL context
+The code snippet below shows how diligent engine can be attached to existing GL context that is active in the current thread.
 
 ```cpp
 auto* pFactoryGL = GetEngineFactoryOpenGL();

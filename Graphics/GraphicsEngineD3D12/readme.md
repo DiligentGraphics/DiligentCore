@@ -16,15 +16,15 @@ Below are some of the methods that provide access to internal Direct3D12 objects
 |                              Function                                  |                              Description                                                                      |
 |------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
 | `IBufferD3D12::GetD3D12Buffer(size_t& DataStartByteOffset, ContextId)` | returns a pointer to the `ID3D12Resource` interface of the internal Direct3D12 buffer object. Note that dynamic buffers are suballocated from dynamic heap, and every context has its own dynamic heap. Offset from the beginning of the dynamic heap for a context identified by `ContextId` is returned in `DataStartByteOffset` parameter |
-| `IBufferD3D12::SetD3D12ResourceState`                                  | sets the buffer usage state. This method should be used when an application transitions the buffer to inform diligent engine about the current usage state |
+| `IBufferD3D12::SetD3D12ResourceState`                                  | sets the buffer usage state. This method should be used when an application transitions the buffer to inform the engine about the current usage state |
 | `IBufferD3D12::GetD3D12ResourceState`                                  | returns current Direct3D12 buffer state |
 | `IBufferViewD3D12::GetCPUDescriptorHandle`                             | returns CPU descriptor handle of the buffer view |
 | `ITextureD3D12::GetD3D12Texture`                                       | returns a pointer to the `ID3D12Resource` interface of the internal Direct3D12 texture object |
-| `ITextureD3D12::SetD3D12ResourceState`                                 | sets the texture usage state. This method should be used when an application transitions the texture to inform diligent engine about the current usage state |
+| `ITextureD3D12::SetD3D12ResourceState`                                 | sets the texture usage state. This method should be used when an application transitions the texture to inform the engine about the current usage state |
 | `ITextureD3D12::GetD3D12ResourceState`                                 | returns current Direct3D12 texture state |
 | `ITextureViewD3D12::GetCPUDescriptorHandle`                            | returns CPU descriptor handle of the texture view |
-| `IDeviceContextD3D12::TransitionTextureState`                          | transitions internal Direct3D12 texture object to a specified state |
-| `IDeviceContextD3D12::TransitionBufferState`                           | transitions internal Direct3D12 buffer object to a specified state |
+| `IDeviceContextD3D12::TransitionTextureState`                          | transitions internal Direct3D12 texture object to the specified state |
+| `IDeviceContextD3D12::TransitionBufferState`                           | transitions internal Direct3D12 buffer object to the specified state |
 | `IDeviceContextD3D12::GetD3D12CommandList`                             | returns a pointer to Direct3D12 graphics command list that is currently being recorded |
 | `IPipelineStateD3D12::GetD3D12PipelineState`                           | returns `ID3D12PipelineState` interface of the internal Direct3D12 pipeline state object object |
 | `IPipelineStateD3D12::GetD3D12RootSignature`                           | returns a pointer to the root signature object associated with this pipeline state |
@@ -37,7 +37,7 @@ Below are some of the methods that provide access to internal Direct3D12 objects
 | `IBottomLevelASD3D12::GetD3D12BLAS`                                    | returns `ID3D12Resource` interface of the internal Direct3D12 BLAS object |
 | `ITopLevelASD3D12::GetD3D12TLAS`                                       | returns `ID3D12Resource` interface of the internal Direct3D12 TLAS object |
 | `ITopLevelASD3D12::GetCPUDescriptorHandle`                             | returns a CPU descriptor handle of the D3D12 acceleration structure |
-| `IShaderBindingTableD3D12::GetD3D12BindingTable`                       | returns the shader binding table structure that can be used with ID3D12GraphicsCommandList4::DispatchRays() call |
+| `IShaderBindingTableD3D12::GetD3D12BindingTable`                       | returns the shader binding table structure that can be used with `ID3D12GraphicsCommandList4::DispatchRays` call |
 | `ISwapChainD3D12::GetDXGISwapChain`                                    | returns a pointer to the IDXGISwapChain interface of the internal DXGI object |
 
 ## Synchronization Tools
@@ -45,18 +45,18 @@ Below are some of the methods that provide access to internal Direct3D12 objects
 |                              Function          |                              Description         |
 |------------------------------------------------|--------------------------------------------------|
 | `ICommandQueueD3D12::Submit`                   | submits a Direct3D12 command lists for execution |
-| `ICommandQueueD3D12::GetD3D12CommandQueue`     | Returns Direct3D12 command queue                 |
-| `ICommandQueueD3D12::EnqueueSignal`            |  Signals the Direct3D12 fence                    |
-| `ICommandQueueD3D12::WaitFence`                |  Waits for the Direct3D12 fence                  |
+| `ICommandQueueD3D12::GetD3D12CommandQueue`     | returns Direct3D12 command queue                 |
+| `ICommandQueueD3D12::EnqueueSignal`            | signals the Direct3D12 fence                     |
+| `ICommandQueueD3D12::WaitFence`                | waits for the Direct3D12 fence on the GPU        |
 
 ## Creating Diligent Engine Objects from D3D12 Resources
 
 |                              Function              |                              Description                                                                      |
 |----------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
-| `IRenderDeviceD3D12::CreateTextureFromD3DResource` | creates a Diligent Engine texture object from native Direct3D12 resource |
-| `IRenderDeviceD3D12::CreateBufferFromD3DResource`  | creates a Diligent Engine buffer object from native Direct3D12 resource. The method takes a pointer to the native Direct3D12 resiyrce `pd3d12Buffer`, buffer description `BuffDesc` and writes a pointer to the `IBuffer` interface at the memory location pointed to by `ppBuffer`. The system can recover buffer size, but the rest of the fields of `BuffDesc` structure need to be populated by the client as they cannot be recovered from Direct3D12 resource description. |
-| `IRenderDeviceD3D12::CreateBLASFromD3DResource`    | creates a Diligent Engine bottom-level acceleration structure from native Direct3D12 resource |
-| `IRenderDeviceD3D12::CreateTLASFromD3DResource`    | creates a Diligent Engine top-level acceleration structure from native Direct3D12 resource |
+| `IRenderDeviceD3D12::CreateTextureFromD3DResource` | creates a Diligent Engine texture object from the native Direct3D12 resource |
+| `IRenderDeviceD3D12::CreateBufferFromD3DResource`  | creates a Diligent Engine buffer object from the native Direct3D12 resource. The method takes a pointer to the native Direct3D12 resiyrce `pd3d12Buffer`, buffer description `BuffDesc` and writes a pointer to the `IBuffer` interface at the memory location pointed to by `ppBuffer`. The system can recover buffer size, but the rest of the fields of `BuffDesc` structure need to be populated by the client as they cannot be recovered from Direct3D12 resource description. |
+| `IRenderDeviceD3D12::CreateBLASFromD3DResource`    | creates a Diligent Engine bottom-level acceleration structure from the native Direct3D12 resource |
+| `IRenderDeviceD3D12::CreateTLASFromD3DResource`    | creates a Diligent Engine top-level acceleration structure from the native Direct3D12 resource |
 
 
 ## Initializing the Engine by Attaching to Existing D3D12 Device
@@ -73,8 +73,8 @@ void IEngineFactoryD3D12::AttachToD3D12Device(void*                           pd
 ```
 
 The method takes a pointer to the native D3D12 device `pd3d12NativeDevice`, initialization parameters `EngineCI`,
-and returns diligent engine device interface in `ppDevice`, and diligent engine contexts in `ppContexts`. Pointer to the
-immediate context goes at position 0. If `EngineCI.NumDeferredContexts` > 0, pointers to deferred contexts go afterwards.
+and returns the Diligent Engine device in `ppDevice`, and contexts in `ppContexts` parameters. Pointers to the
+immediate contexts go first. If `EngineCI.NumDeferredContexts` > 0, pointers to deferred contexts go afterwards.
 The function also takes an array of command queue objects `ppCommandQueues`, which need to implement
 `ICommandQueueD3D12` interface.
 

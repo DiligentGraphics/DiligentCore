@@ -57,13 +57,13 @@ Below are some of the methods that provide access to internal Vulkan objects:
 
 ## Creating Diligent Engine Objects from Vk Resources
 
-|                              Function              |                              Description                                                |
-|----------------------------------------------------|-----------------------------------------------------------------------------------------|
-| `IRenderDeviceVk::CreateTextureFromVulkanImage`    | creates a Diligent Engine texture object from native Vulkan handle                      |
-| `IRenderDeviceVk::CreateBufferFromVulkanResource`  | creates a Diligent Engine buffer object from native Vukan handle                        |
-| `IRenderDeviceVk::CreateBLASFromVulkanResource`    | creates a Diligent Engine bottom-level acceleration structure from native Vulkan handle |
-| `IRenderDeviceVk::CreateTLASFromVulkanResource`    | creates a Diligent Engine top-level acceleration structure from native Vulkan handle    |
-| `IRenderDeviceVk::CreateFenceFromVulkanResource`   | creates a Diligent Engine fence from native Vulkan handle                               |
+|                              Function              |                              Description                                                    |
+|----------------------------------------------------|---------------------------------------------------------------------------------------------|
+| `IRenderDeviceVk::CreateTextureFromVulkanImage`    | creates a Diligent Engine texture object from the native Vulkan handle                      |
+| `IRenderDeviceVk::CreateBufferFromVulkanResource`  | creates a Diligent Engine buffer object from the native Vukan handle                        |
+| `IRenderDeviceVk::CreateBLASFromVulkanResource`    | creates a Diligent Engine bottom-level acceleration structure from the native Vulkan handle |
+| `IRenderDeviceVk::CreateTLASFromVulkanResource`    | creates a Diligent Engine top-level acceleration structure from the native Vulkan handle    |
+| `IRenderDeviceVk::CreateFenceFromVulkanResource`   | creates a Diligent Engine fence from the native Vulkan handle                               |
 
 
 
