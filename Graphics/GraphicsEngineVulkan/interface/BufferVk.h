@@ -50,10 +50,10 @@ static const INTERFACE_ID IID_BufferVk =
 /// Exposes Vulkan-specific functionality of a buffer object.
 DILIGENT_BEGIN_INTERFACE(IBufferVk, IBuffer)
 {
-    /// Returns a vulkan buffer handle
+    /// Returns a Vulkan handle of the internal buffer object.
     VIRTUAL VkBuffer METHOD(GetVkBuffer)(THIS) CONST PURE;
 
-    /// Sets vulkan access flags
+    /// Sets the Vulkan access flags.
 
     /// \param [in] AccessFlags - Vulkan access flags to be set for this buffer
     VIRTUAL void METHOD(SetAccessFlags)(THIS_
@@ -63,7 +63,7 @@ DILIGENT_BEGIN_INTERFACE(IBufferVk, IBuffer)
     /// returns Vulkan access flags corresponding to the state. If the state is unknown, returns 0.
     VIRTUAL VkAccessFlags METHOD(GetAccessFlags)(THIS) CONST PURE;
 
-    /// Returns a Vulkan device address.
+    /// Returns a Vulkan device address of the internal buffer object.
     VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

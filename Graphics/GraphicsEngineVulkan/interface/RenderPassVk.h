@@ -48,7 +48,7 @@ static const INTERFACE_ID IID_RenderPassVk =
 /// Exposes Vulkan-specific functionality of a RenderPass object.
 DILIGENT_BEGIN_INTERFACE(IRenderPassVk, IRenderPass)
 {
-    /// Returns a Vulkan RenderPass object handle
+    /// Returns a Vulkan handle of the internal render pass object.
     VIRTUAL VkRenderPass METHOD(GetVkRenderPass)() CONST PURE;
 };
 DILIGENT_END_INTERFACE

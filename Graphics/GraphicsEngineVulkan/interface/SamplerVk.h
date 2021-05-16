@@ -48,7 +48,7 @@ static const INTERFACE_ID IID_SamplerVk =
 /// Exposes Vulkan-specific functionality of a sampler object.
 DILIGENT_BEGIN_INTERFACE(ISamplerVk, ISampler)
 {
-    /// Returns a vulkan sampler object handle
+    /// Returns a Vulkan handle of the internal sampler object.
     VIRTUAL VkSampler METHOD(GetVkSampler)() CONST PURE;
 };
 DILIGENT_END_INTERFACE

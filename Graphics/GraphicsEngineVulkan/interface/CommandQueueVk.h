@@ -56,7 +56,7 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, ICommandQueue)
     VIRTUAL Uint64 METHOD(SubmitCmdBuffer)(THIS_
                                            VkCommandBuffer cmdBuffer) PURE;
 
-    /// Submits a given chunk of work to the command queue
+    /// Submits a given work batch to the internal Vulkan command queue
 
     /// \return Fence value associated with the submitted command buffer
     VIRTUAL Uint64 METHOD(Submit)(THIS_
@@ -66,7 +66,7 @@ DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, ICommandQueue)
     VIRTUAL VkResult METHOD(Present)(THIS_
                                      const VkPresentInfoKHR REF PresentInfo) PURE;
 
-    /// Returns Vulkan command queue. May return VK_NULL_HANDLE if queue is anavailable
+    /// Returns Vulkan command queue handle. May return VK_NULL_HANDLE if queue is anavailable
     ///
     /// \warning  Access to the VkQueue must be externally synchronized.
     ///           Don't use this method to submit commands directly, use SubmitCmdBuffer() or Submit(),

@@ -1,35 +1,7 @@
 
 # GraphicsEngineOpenGL
 
-Implementation of OpenGL/GLES back-end
-
-# Initialization
-
-The following code snippet shows how to initialize Diligent Engine in OpenGL/GLES mode.
-
-```cpp
-#include "EngineFactoryOpenGL.h"
-using namespace Diligent;
-
-// ...
-
-#if ENGINE_DLL
-    auto GetEngineFactoryOpenGL = LoadGraphicsEngineOpenGL();
-    if (GetEngineFactoryOpenGL == nullptr)
-        return false;
-#endif
-RefCntAutoPtr<IRenderDevice> pRenderDevice;
-RefCntAutoPtr<IDeviceContext> pImmediateContext;
-SwapChainDesc SCDesc;
-RefCntAutoPtr<ISwapChain> pSwapChain;
-auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
-EngineGLCreateInfo EngineCI;
-EngineCI = NativeWindowHandle;
-pFactoryOpenGL->CreateDeviceAndSwapChainGL(
-    EngineCI, &pRenderDevice, &pImmediateContext, SCDesc, &pSwapChain);
-```
-
-Alternatively, the engine can be initialized by attaching to existing OpenGL context (see [below](#initializing-the-engine-by-attaching-to-existing-gl-context)).
+Implementation of OpenGL/GLES backend
 
 # Interoperability with OpenGL/GLES
 
@@ -39,14 +11,17 @@ context.
 
 ## Accessing Native GL objects
 
-Below are some of the methods that provide access to internal D3D11 objects:
+Below are some of the methods that provide access to internal GL object handles:
 
-|                       Function                    |                              Description                                                                      |
-|---------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
-| `GLuint IBufferGL::GetGLBufferHandle()`           | returns GL buffer handle                    |
-| `bool IDeviceContextGL::UpdateCurrentGLContext()` | attaches to the active GL context in the thread. Returns false if there is no active context, and true otherwise.  If an application uses multiple GL contexts, this method must be called before any other command to let the engine update the active context. |
-| `GLuint ITextureGL::GetGLTextureHandle()`         | returns GL texture handle                    |
-| `GLenum ITextureGL::GetBindTarget()`              | returns GL texture bind target               |
+|                       Function             |                              Description                                                                      |
+|--------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| `IBufferGL::GetGLBufferHandle`             | returns OpenGL buffer handle                     |
+| `IDeviceContextGL::UpdateCurrentGLContext` | attaches to the active GL context in the thread. Returns false if there is no active context, and true otherwise.  If an application uses multiple GL contexts, this method must be called before any other command to let the engine update the active context. |
+| `ITextureGL::GetGLTextureHandle`           | returns OpenGL texture handle                    |
+| `ITextureGL::GetBindTarget`                | returns OpenGL texture bind target               |
+| `IQueryGL::GetGlQueryHandle`               | returns OpenGL query handle                      |
+| `ISwapChainGL::GetDefaultFBO`              | returns default framebuffer handle               |
+
 
 ## Creating Diligent Engine Objects from OpenGL Handles
 
@@ -70,15 +45,9 @@ The code snippet below shows how diligent engine can be attached to existing GL 
 
 ```cpp
 auto* pFactoryGL = GetEngineFactoryOpenGL();
-EngineCreationAttribs Attribs;
-pFactoryGL->AttachToActiveGLContext(Attribs, &m_Device, &m_Context);
+EngineCreationAttribs EngineCI;
+pFactoryGL->AttachToActiveGLContext(EngineCI, &m_Device, &m_Context);
 ```
-
-For more information about interoperability with OpenGL, please visit [Diligent Engine web site](http://diligentgraphics.com/diligent-engine/native-api-interoperability/openglgles-interoperability/)
-
-# References
-
-[Interoperability with OpenGL/GLES](http://diligentgraphics.com/diligent-engine/native-api-interoperability/openglgles-interoperability/)
 
 -------------------
 

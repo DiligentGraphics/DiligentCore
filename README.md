@@ -1,9 +1,9 @@
 # Diligent Core [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=An%20easy-to-use%20cross-platform%20graphics%20library%20that%20takes%20full%20advantage%20of%20%23Direct3D12%20and%20%23VulkanAPI&url=https://github.com/DiligentGraphics/DiligentEngine) <img src="media/diligentgraphics-logo.png" height=64 align="right" valign="middle">
 
-This module implements [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine)'s core functionality: Direct3D11, Direct3D12,
-OpenGL, OpenGLES, and Vulkan rendering backends as well as basic platform-specific utilities. It is self-contained and can be built by its own.
-The module's cmake script defines a number of variables that are required to generate build files for other modules,
-so it must always be handled first.
+Diligent Core is a modern cross-platfrom low-level graphics API that makes the foundation of [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine).
+The module implements Direct3D11, Direct3D12, OpenGL, OpenGLES, and Vulkan rendering backends (Metal implementation is available for commercial clients),
+as well as basic platform-specific utilities. It is self-contained and can be built by its own.
+The module's cmake script defines a number of variables that are required to generate build files for other modules, so it must always be included first.
 
 | Platform             | Build Status  |
 | ---------------------| ------------- |
@@ -32,6 +32,7 @@ so it must always be handled first.
     - [Universal Windows Platform](#initialization_uwp)
     - [Linux](#initialization_linux)
     - [MacOS](#initialization_macos)
+    - [Android](#initialization_android)
     - [iOS](#initialization_ios)
     - [Destroying the Engine](#initialization_destroying)
   - [Creating Resources](#creating_resources)
@@ -43,7 +44,6 @@ so it must always be handled first.
 - [Low-level API interoperability](#low_level_api_interoperability)
 - [License](#license)
 - [Contributing](#contributing)
-- [License](https://github.com/DiligentGraphics/DiligentCore#license)
 - [Release History](#release_history)
 
 
@@ -76,68 +76,75 @@ On Win32 platform, you can create OpenGL, Direct3D11, Direct3D12 or Vulkan devic
 void InitializeDiligentEngine(HWND NativeWindowHandle)
 {
     SwapChainDesc SCDesc;
-    SCDesc.SamplesCount = 1;
+    // RefCntAutoPtr<IRenderDevice>  m_pDevice;
+    // RefCntAutoPtr<IDeviceContext> m_pImmediateContext;
+    // RefCntAutoPtr<ISwapChain>     m_pSwapChain;
     switch (m_DeviceType)
     {
         case DeviceType::D3D11:
         {
             EngineD3D11CreateInfo EngineCI;
-#if ENGINE_DLL
-            GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
+                EngineD3D11CreateInfo EngineCI;
+#    if ENGINE_DLL
             // Load the dll and import GetEngineFactoryD3D11() function
-            LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
-#endif
+            auto* GetEngineFactoryD3D11 = LoadGraphicsEngineD3D11();
+#    endif
             auto* pFactoryD3D11 = GetEngineFactoryD3D11();
             pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice, &m_pImmediateContext);
-            pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext,
-                                    SCDesc, NativeWindowHandle, &m_pSwapChain);
+            Win32NativeWindow Window{hWnd};
+            pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext, SCDesc,
+                                                FullScreenModeDesc{}, Window, &m_pSwapChain);
         }
         break;
 
         case DeviceType::D3D12:
         {
-#if ENGINE_DLL
-            GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
+#    if ENGINE_DLL
             // Load the dll and import GetEngineFactoryD3D12() function
-            LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
-#endif
+            auto GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
+#    endif
             EngineD3D12CreateInfo EngineCI;
+
             auto* pFactoryD3D12 = GetEngineFactoryD3D12();
             pFactoryD3D12->CreateDeviceAndContextsD3D12(EngineCI, &m_pDevice, &m_pImmediateContext);
-            pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext,
-                                    SCDesc, NativeWindowHandle, &m_pSwapChain);
+            Win32NativeWindow Window{hWnd};
+            pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext, SCDesc,
+                                                FullScreenModeDesc{}, Window, &m_pSwapChain);
         }
         break;
 
     case DeviceType::OpenGL:
     {
-
-#if ENGINE_DLL
-        // Declare function pointer
-        GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = nullptr;
+#    if EXPLICITLY_LOAD_ENGINE_GL_DLL
         // Load the dll and import GetEngineFactoryOpenGL() function
-        LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
-#endif
+        auto GetEngineFactoryOpenGL = LoadGraphicsEngineOpenGL();
+#    endif
         auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
+
         EngineGLCreateInfo EngineCI;
-        EngineCI.Window.hWnd = NativeWindowHandle;
-        pFactoryOpenGL->CreateDeviceAndSwapChainGL(
-            EngineCI, &m_pDevice, &m_pImmediateContext, SCDesc, &m_pSwapChain);
+        EngineCI.Window.hWnd = hWnd;
+
+        pFactoryOpenGL->CreateDeviceAndSwapChainGL(EngineCI, &m_pDevice, &m_pImmediateContext,
+                                                   SCDesc, &m_pSwapChain);
     }
     break;
 
     case DeviceType::Vulkan:
     {
-#if ENGINE_DLL
-        GetEngineFactoryVkType GetEngineFactoryVk = nullptr;
+#    if EXPLICITLY_LOAD_ENGINE_VK_DLL
         // Load the dll and import GetEngineFactoryVk() function
-        LoadGraphicsEngineVk(GetEngineFactoryVk);
-#endif
+        auto GetEngineFactoryVk = LoadGraphicsEngineVk();
+#    endif
         EngineVkCreateInfo EngineCI;
+
         auto* pFactoryVk = GetEngineFactoryVk();
         pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice, &m_pImmediateContext);
-        pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext,
-                                      SCDesc, NativeWindowHandle, &m_pSwapChain);
+
+        if (!m_pSwapChain && hWnd != nullptr)
+        {
+            Win32NativeWindow Window{hWnd};
+            pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, Window, &m_pSwapChain);
+        }
     }
     break;
 
@@ -163,21 +170,21 @@ dynamic library and imports the functions required to initialize the engine. You
 
 You also need to add the following directories to the include search paths:
 
-* DiligentCore/Graphics/GraphicsEngineD3D11/interface
-* DiligentCore/Graphics/GraphicsEngineD3D12/interface
-* DiligentCore/Graphics/GraphicsEngineOpenGL/interface
-* DiligentCore/Graphics/GraphicsEngineVulkan/interface
+* `DiligentCore/Graphics/GraphicsEngineD3D11/interface`
+* `DiligentCore/Graphics/GraphicsEngineD3D12/interface`
+* `DiligentCore/Graphics/GraphicsEngineOpenGL/interface`
+* `DiligentCore/Graphics/GraphicsEngineVulkan/interface`
 
-Also, enable Diligent namespace:
+Also, enable `Diligent` namespace:
 
 ```cpp
 using namespace Diligent;
 ```
 
 `IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()`, `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`, and 
-`IEngineFactoryVk::CreateDeviceAndContextsVk()` functions can also create a specified number of deferred contexts, which 
-can be used for multi-threaded command recording. Deferred contexts can only be created during the initialization of the 
-engine. The function populates an array of pointers to the contexts, where the immediate context goes at position 0,
+`IEngineFactoryVk::CreateDeviceAndContextsVk()` functions can also create a specified number of immediate and deferred contexts,
+which can be used for asynchronous rendering and multi-threaded command recording. The contexts may only be created during
+the initialization of the engine. The function populates an array of pointers to the contexts, where the immediates contexts go first,
 followed by all deferred contexts.
 
 For more details, take a look at 
@@ -209,9 +216,9 @@ attaches to the one initialized by the app. An example of the engine initializat
 
 On MacOS, Diligent Engine supports OpenGL, Vulkan and Metal backends. Initialization of GL context on MacOS is
 performed by the application, and the engine attaches to the context created by the app; see
-[GLView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/OSX/GLView.m)
+[GLView.mm](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/OSX/GLView.mm)
 for details. Vulkan backend is initialized similar to other platforms. See 
-[MetalView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/OSX/MetalView.m).
+[MetalView.mm](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/OSX/MetalView.mm).
 
 <a name="initialization_android"></a>
 ### Android
@@ -246,7 +253,7 @@ static
 
 iOS implementation supports OpenGLES and Metal backend. Initialization of GL context on iOS is
 performed by the application, and the engine attaches to the context initialized by the app; see
-[EAGLView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/iOS/EAGLView.m)
+[EAGLView.mm](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/iOS/EAGLView.mm)
 for details.
 
 
@@ -663,6 +670,8 @@ objects. Refer to the following pages for more information:
 [Direct3D12 Interoperability](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineD3D12#interoperability-with-direct3d12)
 
 [OpenGL/GLES Interoperability](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineOpenGL#interoperability-with-openglgles)
+
+[Vulkan Interoperability](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineVulkan#interoperability-with-vulkan)
 
 
 <a name="license"></a>

@@ -48,7 +48,7 @@ static const INTERFACE_ID IID_FramebufferVk =
 /// Exposes Vulkan-specific functionality of a Framebuffer object.
 DILIGENT_BEGIN_INTERFACE(IFramebufferVk, IFramebuffer)
 {
-    /// Returns a Vulkan framebuffer object handle
+    /// Returns Vulkan framebuffer object handle
     VIRTUAL VkFramebuffer METHOD(GetVkFramebuffer)() CONST PURE;
 };
 DILIGENT_END_INTERFACE

@@ -50,7 +50,7 @@ static const INTERFACE_ID IID_BufferViewVk =
 /// Exposes Vulkan-specific functionality of a buffer view object.
 DILIGENT_BEGIN_INTERFACE(IBufferViewVk, IBufferView)
 {
-    /// Returns Vulkan buffer view object.
+    /// Returns a Vulkan handle of the internal buffer view object.
     VIRTUAL VkBufferView METHOD(GetVkBufferView)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

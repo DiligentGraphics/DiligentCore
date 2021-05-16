@@ -49,10 +49,10 @@ static const INTERFACE_ID IID_PipelineStateVk =
 /// Exposes Vulkan-specific functionality of a pipeline state object.
 DILIGENT_BEGIN_INTERFACE(IPipelineStateVk, IPipelineState)
 {
-    /// Returns the pointer to the internal render pass object.
+    /// Returns a pointer to the internal render pass object.
     VIRTUAL IRenderPassVk* METHOD(GetRenderPass)(THIS) CONST PURE;
 
-    /// Returns handle to a vulkan pipeline pass object.
+    /// Returns a Vulkan handle of the internal pipeline state object.
     VIRTUAL VkPipeline METHOD(GetVkPipeline)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
