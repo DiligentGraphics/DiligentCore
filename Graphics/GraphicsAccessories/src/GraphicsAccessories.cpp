@@ -1744,6 +1744,9 @@ String GetCommandQueueTypeString(COMMAND_QUEUE_TYPE Type)
 {
     static_assert(COMMAND_QUEUE_TYPE_MAX_BIT == 0x7, "Please update the code below to handle the new command queue type");
 
+    if (Type == COMMAND_QUEUE_TYPE_UNKNOWN)
+        return "UNKNOWN";
+
     String Result;
     if ((Type & COMMAND_QUEUE_TYPE_GRAPHICS) == COMMAND_QUEUE_TYPE_GRAPHICS)
         Result = "GRAPHICS";

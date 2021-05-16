@@ -673,7 +673,17 @@ protected:
 #endif
 };
 
-#define DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(SupportedQueueType, ...) DEV_CHECK_ERR((m_Desc.QueueType & (SupportedQueueType)) == (SupportedQueueType), __VA_ARGS__, " is not supported in ", GetCommandQueueTypeString(m_Desc.QueueType), " queue.")
+#define DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(SupportedQueueType, ...)                                                            \
+    do                                                                                                                         \
+    {                                                                                                                          \
+        if (m_Desc.QueueType == COMMAND_QUEUE_TYPE_UNKNOWN)                                                                    \
+        {                                                                                                                      \
+            VERIFY(IsDeferred(), "Queue type may never be unknown for immediate contexts. This looks like a bug.");            \
+            DEV_ERROR("Queue type is UNKNOWN. This indicates that Begin() has never been called for a deferred context.");     \
+        }                                                                                                                      \
+        DEV_CHECK_ERR((m_Desc.QueueType & (SupportedQueueType)) == (SupportedQueueType), __VA_ARGS__, " is not supported in ", \
+                      GetCommandQueueTypeString(m_Desc.QueueType), " queue.");                                                 \
+    } while (false)
 
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
