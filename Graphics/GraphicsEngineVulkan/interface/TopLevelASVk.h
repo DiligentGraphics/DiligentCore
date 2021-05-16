@@ -48,10 +48,10 @@ static const INTERFACE_ID IID_TopLevelASVk =
 /// Exposes Vulkan-specific functionality of a Top-level acceleration structure object.
 DILIGENT_BEGIN_INTERFACE(ITopLevelASVk, ITopLevelAS)
 {
-    /// Returns a Vulkan TLAS object handle.
+    /// Returns a Vulkan handle of the internal top-level AS object.
     VIRTUAL VkAccelerationStructureKHR METHOD(GetVkTLAS)(THIS) CONST PURE;
 
-    /// Returns a Vulkan TLAS device address.
+    /// Returns a Vulkan device address of the internal top-level AS object.
     VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

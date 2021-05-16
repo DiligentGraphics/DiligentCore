@@ -51,27 +51,27 @@ static const INTERFACE_ID IID_DeviceContextVk =
 /// Exposes Vulkan-specific functionality of a device context.
 DILIGENT_BEGIN_INTERFACE(IDeviceContextVk, IDeviceContext)
 {
-    /// Transitions internal vulkan image to a specified layout
+    /// Transitions the internal Vulkan image to the specified layout
 
-    /// \param [in] pTexture - texture to transition
+    /// \param [in] pTexture  - texture to transition
     /// \param [in] NewLayout - Vulkan image layout this texture to transition to
     /// \remarks The texture state must be known to the engine.
     VIRTUAL void METHOD(TransitionImageLayout)(THIS_
                                                ITexture*     pTexture,
                                                VkImageLayout NewLayout) PURE;
 
-    /// Transitions internal vulkan buffer object to a specified state
+    /// Transitions the internal Vulkan buffer object to the specified state
 
-    /// \param [in] pBuffer - Buffer to transition
+    /// \param [in] pBuffer        - Buffer to transition
     /// \param [in] NewAccessFlags - Access flags to set for the buffer
     /// \remarks The buffer state must be known to the engine.
     VIRTUAL void METHOD(BufferMemoryBarrier)(THIS_
                                              IBuffer*      pBuffer,
                                              VkAccessFlags NewAccessFlags) PURE;
 
-    /// Returns a command buffer handle that is currently being recorded
+    /// Returns the Vulkan handle of the command buffer currently being recorded
 
-    /// \return - a handle to the current command buffer
+    /// \return - handle to the current command buffer
     ///
     /// \remarks  Any command on the device context may potentially submit the command buffer for
     ///           execution into the command queue and make it invalid. An application should

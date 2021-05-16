@@ -50,10 +50,10 @@ static const INTERFACE_ID IID_RenderDeviceVk =
 /// Exposes Vulkan-specific functionality of a render device.
 DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
 {
-    /// Returns logical Vulkan device handle
+    /// Returns a handle of the logical Vulkan device
     VIRTUAL VkDevice METHOD(GetVkDevice)(THIS) PURE;
 
-    /// Returns physical Vulkan device
+    /// Returns a handle of the physical Vulkan device
     VIRTUAL VkPhysicalDevice METHOD(GetVkPhysicalDevice)(THIS) PURE;
 
     /// Returns Vulkan instance

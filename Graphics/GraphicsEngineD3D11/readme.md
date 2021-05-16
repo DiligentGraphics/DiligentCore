@@ -3,38 +3,6 @@
 
 Implementation of Direct3D11 backend
 
-# Initialization
-
-The following code snippet shows how to initialize Diligent Engine in Direct3D11 mode.
-
-```cpp
-#include "EngineFactoryD3D11.h"
-using namespace Diligent;
-
-// ...
-
-EngineD3D11CreateInfo EngineCI;
-
-
-// Get pointer to the function that returns the factory
-#if ENGINE_DLL
-    // Load the dll and import GetEngineFactoryD3D11() function
-    auto GetEngineFactoryD3D11 = LoadGraphicsEngineD3D11();
-#endif
-auto* pFactoryD3D11 = GetEngineFactoryD3D11();
-
-RefCntAutoPtr<IRenderDevice> pRenderDevice;
-RefCntAutoPtr<IDeviceContext> pImmediateContext;
-SwapChainDesc SwapChainDesc;
-RefCntAutoPtr<ISwapChain> pSwapChain;
-pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &pRenderDevice, &pImmediateContext);
-NativeWindow Window;
-Window.hWnd = hWnd;
-pFactoryD3D11->CreateSwapChainD3D11(pRenderDevice, pImmediateContext, SwapChainDesc, Window, &pSwapChain);
-```
-
-Alternatively, the engine can be initialized by attaching to existing D3D11 device and immediate context (see below).
-
 # Interoperability with Direct3D11
 
 Diligent Engine exposes methods to access internal D3D11 objects, is able to create diligent engine buffers

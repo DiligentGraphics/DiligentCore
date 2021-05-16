@@ -50,7 +50,7 @@ static const INTERFACE_ID IID_FenceVk =
 /// Exposes Vulkan-specific functionality of a fence object.
 DILIGENT_BEGIN_INTERFACE(IFenceVk, IFence)
 {
-    /// If timeline semaphore is supported returns semaphore object, otherwise returns VK_NULL_HANDLE.
+    /// If timeline semaphores are supported, returns the semaphore object; otherwise returns VK_NULL_HANDLE.
     VIRTUAL VkSemaphore METHOD(GetVkSemaphore)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE

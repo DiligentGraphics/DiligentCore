@@ -3,37 +3,6 @@
 
 Implementation of Direct3D12 backend
 
-# Initialization
-
-The following code snippet shows how to initialize Diligent Engine in Direct3D12 mode.
-
-```cpp
-#include "EngineFactoryD3D12.h"
-using namespace Diligent;
-
-// ...
-#if ENGINE_DLL
-    // Load the dll and import GetEngineFactoryD3D12() function
-    auto GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
-#endif
-auto* pFactoryD3D12 = GetEngineFactoryD3D12();
-EngineD3D12CreateInfo EngineCI;
-EngineCI.CPUDescriptorHeapAllocationSize[0] = 1024;
-EngineCI.CPUDescriptorHeapAllocationSize[1] = 32;
-EngineCI.CPUDescriptorHeapAllocationSize[2] = 16;
-EngineCI.CPUDescriptorHeapAllocationSize[3] = 16;
-RefCntAutoPtr<IRenderDevice>  pRenderDevice;
-RefCntAutoPtr<IDeviceContext> pImmediateContext;
-SwapChainDesc SwapChainDesc;
-RefCntAutoPtr<ISwapChain> pSwapChain;
-pFactoryD3D12->CreateDeviceAndContextsD3D12(EngineCI, &pRenderDevice, &pImmediateContext);
-NativeWindow Window;
-Window.hWnd = hWnd;
-pFactoryD3D12->CreateSwapChainD3D12(pRenderDevice, pImmediateContext, SwapChainDesc, Window, &pSwapChain);
-```
-
-Alternatively, the engine can be initialized by attaching to existing Direct3D12 device (see below).
-
 # Interoperability with Direct3D12
 
 Diligent Engine exposes methods to access internal Direct3D12 objects, is able to create diligent engine buffers
