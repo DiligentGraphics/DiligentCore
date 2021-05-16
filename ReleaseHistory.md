@@ -1,4 +1,5 @@
-## Current Progress
+
+## v2.5
 
 * Removed `RayTracing2` device feature and added `RAY_TRACING_CAP_FLAGS` enum (API Version 240099)
 * Added tile shaders (API Version 240098)
