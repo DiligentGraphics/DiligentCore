@@ -27,7 +27,6 @@ Below are some of the methods that provide access to internal D3D11 objects:
 | `ID3D11InputLayout* IPipelineStateD3D11::GetD3D11InputLayout`             | returns a pointer to the native `ID3D11InputLayout` object                                                      |
 | `ID3D11VertexShader* IPipelineStateD3D11::GetD3D11VertexShader`           | returns a pointer to the native `ID3D11VertexShader` object                                                     |
 | `ID3D11PixelShader* IPipelineStateD3D11::GetD3D11PixelShader`             | returns a pointer to the native `ID3D11PixelShader` object                                                      |
-| `ID3D11GeometryShader* IPipelineStateD3D11::GetD3D11PixelShader`          | returns a pointer to the native `ID3D11GeometryShader` object                                                   |
 | `ID3D11GeometryShader* IPipelineStateD3D11::GetD3D11GeometryShader`       | returns a pointer to the native `ID3D11GeometryShader` object                                                   |
 | `ID3D11DomainShader* IPipelineStateD3D11::GetD3D11DomainShader`           | returns a pointer to the native `ID3D11DomainShader` object                                                     |
 | `ID3D11HullShader* IPipelineStateD3D11::GetD3D11HullShader`               | returns a pointer to the native `ID3D11HullShader` object                                                       |
