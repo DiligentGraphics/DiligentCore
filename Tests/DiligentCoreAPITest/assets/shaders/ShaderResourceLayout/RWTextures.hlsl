@@ -14,13 +14,20 @@ float4 CheckValue(float4 Val, float4 Expected)
                   Val.w == Expected.w ? 1.0 : 0.0);
 }
 
+#ifdef METAL
+// Metal does not support read-write access to textures
+#   define CHECK_VALUE(Val, Expected) float4(1.0, 1.0, 1.0, 1.0)
+#else
+#   define CHECK_VALUE CheckValue
+#endif
+
 float4 VerifyResources()
 {
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
 
-    AllCorrect *= CheckValue(g_RWTex2D_Static[int2(5, 6)], Tex2D_Static_Ref);
-    AllCorrect *= CheckValue(g_RWTex2D_Mut   [int2(6, 7)], Tex2D_Mut_Ref);
-    AllCorrect *= CheckValue(g_RWTex2D_Dyn   [int2(7, 8)], Tex2D_Dyn_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWTex2D_Static[int2(5, 6)], Tex2D_Static_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWTex2D_Mut   [int2(6, 7)], Tex2D_Mut_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWTex2D_Dyn   [int2(7, 8)], Tex2D_Dyn_Ref);
 
     float4 f4Color = float4(1.0, 2.0, 3.0, 4.0);
     g_RWTex2D_Static[int2(0,0)] = f4Color;
@@ -29,31 +36,31 @@ float4 VerifyResources()
 
     // glslang is not smart enough to unroll the loops even when explicitly told to do so
 
-    AllCorrect *= CheckValue(g_RWTex2DArr_Static[0][int2(10, 12)], Tex2DArr_Static_Ref0);
-    AllCorrect *= CheckValue(g_RWTex2DArr_Static[1][int2(14, 17)], Tex2DArr_Static_Ref1);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Static[0][int2(10, 12)], Tex2DArr_Static_Ref0);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Static[1][int2(14, 17)], Tex2DArr_Static_Ref1);
 
     g_RWTex2DArr_Static[0][int2(0,0)] = f4Color;
     g_RWTex2DArr_Static[1][int2(0,0)] = f4Color;
 
-    AllCorrect *= CheckValue(g_RWTex2DArr_Mut[0][int2(32, 21)], Tex2DArr_Mut_Ref0);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Mut[0][int2(32, 21)], Tex2DArr_Mut_Ref0);
     g_RWTex2DArr_Mut[0][int2(0,0)] = f4Color;
 
 #if (MUTABLE_TEX_ARRAY_SIZE == 4)
-    AllCorrect *= CheckValue(g_RWTex2DArr_Mut[1][int2(31, 24)], Tex2DArr_Mut_Ref1);
-    AllCorrect *= CheckValue(g_RWTex2DArr_Mut[2][int2(42, 56)], Tex2DArr_Mut_Ref2);
-    AllCorrect *= CheckValue(g_RWTex2DArr_Mut[3][int2(45, 54)], Tex2DArr_Mut_Ref3);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Mut[1][int2(31, 24)], Tex2DArr_Mut_Ref1);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Mut[2][int2(42, 56)], Tex2DArr_Mut_Ref2);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Mut[3][int2(45, 54)], Tex2DArr_Mut_Ref3);
 
     g_RWTex2DArr_Mut[1][int2(0,0)] = f4Color;
     g_RWTex2DArr_Mut[2][int2(0,0)] = f4Color;
     g_RWTex2DArr_Mut[3][int2(0,0)] = f4Color;
 #endif
 
-    AllCorrect *= CheckValue(g_RWTex2DArr_Dyn[0][int2(67, 54)], Tex2DArr_Dyn_Ref0);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Dyn[0][int2(67, 54)], Tex2DArr_Dyn_Ref0);
     g_RWTex2DArr_Dyn[0][int2(0,0)] = f4Color;
 
 #if (DYNAMIC_TEX_ARRAY_SIZE == 3)
-    AllCorrect *= CheckValue(g_RWTex2DArr_Dyn[1][int2(73, 58)], Tex2DArr_Dyn_Ref1);
-    AllCorrect *= CheckValue(g_RWTex2DArr_Dyn[2][int2(78, 92)], Tex2DArr_Dyn_Ref2);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Dyn[1][int2(73, 58)], Tex2DArr_Dyn_Ref1);
+    AllCorrect *= CHECK_VALUE(g_RWTex2DArr_Dyn[2][int2(78, 92)], Tex2DArr_Dyn_Ref2);
 
     g_RWTex2DArr_Dyn[1][int2(0,0)] = f4Color;
     g_RWTex2DArr_Dyn[2][int2(0,0)] = f4Color;

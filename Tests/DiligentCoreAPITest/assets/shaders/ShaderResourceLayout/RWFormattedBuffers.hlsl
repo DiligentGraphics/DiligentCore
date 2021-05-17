@@ -14,14 +14,21 @@ float4 CheckValue(float4 Val, float4 Expected)
                   Val.w == Expected.w ? 1.0 : 0.0);
 }
 
+#ifdef METAL
+// Metal does not support read-write access to formatted buffers
+#   define CHECK_VALUE(Val, Expected) float4(1.0, 1.0, 1.0, 1.0)
+#else
+#   define CHECK_VALUE CheckValue
+#endif
+
 float4 VerifyResources()
 {
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
 
     // Read from elements 1,2,3
-    AllCorrect *= CheckValue(g_RWBuff_Static[1], Buff_Static_Ref);
-    AllCorrect *= CheckValue(g_RWBuff_Mut   [2], Buff_Mut_Ref);
-    AllCorrect *= CheckValue(g_RWBuff_Dyn   [3], Buff_Dyn_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWBuff_Static[1], Buff_Static_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWBuff_Mut   [2], Buff_Mut_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWBuff_Dyn   [3], Buff_Dyn_Ref);
 
     // Write to element 0
     float4 f4Data = float4(1.0, 2.0, 3.0, 4.0);
@@ -31,32 +38,32 @@ float4 VerifyResources()
 
     // glslang is not smart enough to unroll the loops even when explicitly told to do so
 
-    AllCorrect *= CheckValue(g_RWBuffArr_Static[0][1], BuffArr_Static_Ref0);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Static[0][1], BuffArr_Static_Ref0);
 
     g_RWBuffArr_Static[0][0] = f4Data;
 #if (STATIC_BUFF_ARRAY_SIZE == 4)
-    AllCorrect *= CheckValue(g_RWBuffArr_Static[1][1], BuffArr_Static_Ref1);
-    AllCorrect *= CheckValue(g_RWBuffArr_Static[2][2], BuffArr_Static_Ref2);
-    AllCorrect *= CheckValue(g_RWBuffArr_Static[3][3], BuffArr_Static_Ref3);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Static[1][1], BuffArr_Static_Ref1);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Static[2][2], BuffArr_Static_Ref2);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Static[3][3], BuffArr_Static_Ref3);
 
     g_RWBuffArr_Static[1][0] = f4Data;
     g_RWBuffArr_Static[2][0] = f4Data;
     g_RWBuffArr_Static[3][0] = f4Data;
 #endif
 
-    AllCorrect *= CheckValue(g_RWBuffArr_Mut[0][1], BuffArr_Mut_Ref0);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Mut[0][1], BuffArr_Mut_Ref0);
     g_RWBuffArr_Mut[0][0] = f4Data;
 
 #if (MUTABLE_BUFF_ARRAY_SIZE == 3)
-    AllCorrect *= CheckValue(g_RWBuffArr_Mut[1][2], BuffArr_Mut_Ref1);
-    AllCorrect *= CheckValue(g_RWBuffArr_Mut[2][2], BuffArr_Mut_Ref2);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Mut[1][2], BuffArr_Mut_Ref1);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Mut[2][2], BuffArr_Mut_Ref2);
 
     g_RWBuffArr_Mut[1][0] = f4Data;
     g_RWBuffArr_Mut[2][0] = f4Data;
 #endif
 
-    AllCorrect *= CheckValue(g_RWBuffArr_Dyn[0][1], BuffArr_Dyn_Ref0);
-    AllCorrect *= CheckValue(g_RWBuffArr_Dyn[1][2], BuffArr_Dyn_Ref1);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Dyn[0][1], BuffArr_Dyn_Ref0);
+    AllCorrect *= CHECK_VALUE(g_RWBuffArr_Dyn[1][2], BuffArr_Dyn_Ref1);
 
     g_RWBuffArr_Dyn[0][0] = f4Data;
     g_RWBuffArr_Dyn[1][0] = f4Data;
