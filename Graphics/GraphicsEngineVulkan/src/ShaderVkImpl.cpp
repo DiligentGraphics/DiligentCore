@@ -65,7 +65,13 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         static constexpr char VulkanDefine[] =
             "#ifndef VULKAN\n"
             "#   define VULKAN 1\n"
-            "#endif\n";
+            "#endif\n"
+#if PLATFORM_MACOS || PLATFORM_IOS
+            "#ifndef METAL\n"
+            "#   define METAL 1\n"
+            "#endif\n"
+#endif
+            ;
 
         auto ShaderCompiler = ShaderCI.ShaderCompiler;
         if (ShaderCompiler == SHADER_COMPILER_DXC)

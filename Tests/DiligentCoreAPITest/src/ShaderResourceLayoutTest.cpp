@@ -769,6 +769,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
         case RENDER_DEVICE_TYPE_D3D11:
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
+        case RENDER_DEVICE_TYPE_METAL:
             UseReducedUAVCount = true;
             break;
 
@@ -788,7 +789,6 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 #endif
 
         case RENDER_DEVICE_TYPE_D3D12:
-        case RENDER_DEVICE_TYPE_METAL:
             break;
 
         default:
@@ -980,6 +980,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
         case RENDER_DEVICE_TYPE_D3D11:
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
+        case RENDER_DEVICE_TYPE_METAL:
             UseReducedUAVCount = true;
             break;
 
@@ -999,7 +1000,6 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
 #endif
 
         case RENDER_DEVICE_TYPE_D3D12:
-        case RENDER_DEVICE_TYPE_METAL:
             break;
 
         default:
