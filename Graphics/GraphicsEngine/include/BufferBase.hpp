@@ -43,7 +43,7 @@ namespace Diligent
 {
 
 /// Validates buffer description and throws an exception in case of an error.
-void ValidateBufferDesc(const BufferDesc& Desc, const AdapterMemoryInfo& memoryInfo) noexcept(false);
+void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) noexcept(false);
 
 /// Validates initial buffer data parameters and throws an exception in case of an error.
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData) noexcept(false);
@@ -94,7 +94,7 @@ public:
         m_pDefaultUAV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)},
         m_pDefaultSRV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)}
     {
-        ValidateBufferDesc(this->m_Desc, pDevice->GetAdapterInfo().Memory);
+        ValidateBufferDesc(this->m_Desc, pDevice);
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,

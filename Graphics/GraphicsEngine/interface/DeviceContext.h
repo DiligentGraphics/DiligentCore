@@ -1176,11 +1176,14 @@ struct InstanceMatrix
     }
 
     /// Sets the rotation part.
-    InstanceMatrix& SetRotation(const float* pMatrix3x3) noexcept
+    InstanceMatrix& SetRotation(const float* pMatrix, Uint32 RowSize = 3) noexcept
     {
-        data[0][0] = pMatrix3x3[0];  data[1][0] = pMatrix3x3[1];  data[2][0] = pMatrix3x3[2];
-        data[0][1] = pMatrix3x3[3];  data[1][1] = pMatrix3x3[4];  data[2][1] = pMatrix3x3[5];
-        data[0][2] = pMatrix3x3[6];  data[1][2] = pMatrix3x3[7];  data[2][2] = pMatrix3x3[8];
+        for (Uint32 r = 0; r < 3; ++r)
+        {
+            for (Uint32 c = 0; c < 3; ++c)
+                data[r][c] = pMatrix[c * RowSize + r];
+        }
+
         return *this;
     }
 #endif
@@ -1202,7 +1205,12 @@ struct TLASBuildInstanceData
     /// Instance to world transformation.
     InstanceMatrix            Transform;
 
-    /// User-defined value that can be accessed in the shader via InstanceID() in HLSL and gl_InstanceCustomIndex in GLSL.
+    /// User-defined value that can be accessed in the shader:
+    ///   HLSL: `InstanceID()` in closest-hit and intersection shaders.
+    ///   HLSL: `RayQuery::CommittedInstanceID()` within inline ray tracing.
+    ///   GLSL: `gl_InstanceCustomIndex` in closest-hit and intersection shaders.
+    ///   GLSL: `rayQueryGetIntersectionInstanceCustomIndex` within inline ray tracing.
+    ///   MSL:  `intersection_result< instancing >::instance_id`.
     /// Only the lower 24 bits are used.
     Uint32                    CustomId        DEFAULT_INITIALIZER(0);
 

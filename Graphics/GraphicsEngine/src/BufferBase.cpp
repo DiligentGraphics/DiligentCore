@@ -43,8 +43,11 @@ namespace Diligent
     } while (false)
 
 
-void ValidateBufferDesc(const BufferDesc& Desc, const AdapterMemoryInfo& memoryInfo) noexcept(false)
+void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) noexcept(false)
 {
+    const auto& MemoryInfo = pDevice->GetAdapterInfo().Memory;
+    const auto& Features   = pDevice->GetDeviceInfo().Features;
+
     static_assert(BIND_FLAGS_LAST == 0x400L, "Please update this function to handle the new bind flags");
 
     constexpr Uint32 AllowedBindFlags =
@@ -72,6 +75,9 @@ void ValidateBufferDesc(const BufferDesc& Desc, const AdapterMemoryInfo& memoryI
         }
     }
 
+    if ((Desc.BindFlags & BIND_RAY_TRACING) != 0)
+        VERIFY_BUFFER(Features.RayTracing, "BIND_RAY_TRACING flag can't be used when RayTracing feature is not enabled.");
+
     switch (Desc.Usage)
     {
         case USAGE_IMMUTABLE:
@@ -91,20 +97,20 @@ void ValidateBufferDesc(const BufferDesc& Desc, const AdapterMemoryInfo& memoryI
             break;
 
         case USAGE_UNIFIED:
-            VERIFY_BUFFER(memoryInfo.UnifiedMemory != 0,
+            VERIFY_BUFFER(MemoryInfo.UnifiedMemory != 0,
                           "Unified memory is not present on this device. Check the amount of available unified memory "
                           "in the device caps before creating unified buffers.");
             VERIFY_BUFFER(Desc.CPUAccessFlags != CPU_ACCESS_NONE,
                           "at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a unified buffer.");
             if (Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
             {
-                VERIFY_BUFFER(memoryInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_WRITE,
+                VERIFY_BUFFER(MemoryInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_WRITE,
                               "Unified memory on this device does not support write access. Check the available access flags "
                               "in the device caps before creating unified buffers.");
             }
             if (Desc.CPUAccessFlags & CPU_ACCESS_READ)
             {
-                VERIFY_BUFFER(memoryInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_READ,
+                VERIFY_BUFFER(MemoryInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_READ,
                               "Unified memory on this device does not support read access. Check the available access flags "
                               "in the device caps before creating unified buffers.");
             }

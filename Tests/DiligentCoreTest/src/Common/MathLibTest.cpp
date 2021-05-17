@@ -964,6 +964,44 @@ TEST(Common_BasicMath, MatrixInverse)
             }
         }
     }
+
+    // Determinant
+    {
+        // clang-format off
+        float3x3 m1
+        {
+            1,  2,   3,
+            5,  6,   7,
+            9, 10,  11
+        };
+        // clang-format on
+        auto det = m1.Determinant();
+        EXPECT_EQ(det, 0);
+    }
+
+    {
+        // clang-format off
+        const float3x3 m
+        {
+            7,   8,  3,
+            5,   1,  4,
+            5,  11,  7
+        };
+        // clang-format on
+
+        auto inv      = m.Inverse();
+        auto identity = m * inv;
+
+        for (int j = 0; j < 3; ++j)
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                float ref = i == j ? 1.f : 0.f;
+                auto  val = identity[i][j];
+                EXPECT_NEAR(val, ref, 1e-6f);
+            }
+        }
+    }
 }
 
 

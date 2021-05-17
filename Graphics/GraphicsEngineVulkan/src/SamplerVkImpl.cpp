@@ -30,6 +30,7 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
+#include "BasicMath.hpp"
 
 namespace Diligent
 {
@@ -45,34 +46,30 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
 // clang-format on
 {
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    const auto& Limits        = pRenderDeviceVk->GetPhysicalDevice().GetProperties().limits;
 
     VkSamplerCreateInfo SamplerCI{};
-    SamplerCI.sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    SamplerCI.pNext            = nullptr;
-    SamplerCI.flags            = 0; // reserved for future use
-    SamplerCI.magFilter        = FilterTypeToVkFilter(m_Desc.MagFilter);
-    SamplerCI.minFilter        = FilterTypeToVkFilter(m_Desc.MinFilter);
-    SamplerCI.mipmapMode       = FilterTypeToVkMipmapMode(m_Desc.MipFilter);
-    SamplerCI.addressModeU     = AddressModeToVkAddressMode(m_Desc.AddressU);
-    SamplerCI.addressModeV     = AddressModeToVkAddressMode(m_Desc.AddressV);
-    SamplerCI.addressModeW     = AddressModeToVkAddressMode(m_Desc.AddressW);
-    SamplerCI.mipLodBias       = m_Desc.MipLODBias;
-    SamplerCI.anisotropyEnable = IsAnisotropicFilter(m_Desc.MinFilter);
-#ifdef DILIGENT_DEVELOPMENT
-    if ((SamplerCI.anisotropyEnable != VK_FALSE) != IsAnisotropicFilter(m_Desc.MagFilter))
-    {
-        LOG_ERROR("Min and mag filters must both be either anisotropic filters or non-anisotropic ones");
-    }
-#endif
+    SamplerCI.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    SamplerCI.pNext        = nullptr;
+    SamplerCI.flags        = 0; // reserved for future use
+    SamplerCI.magFilter    = FilterTypeToVkFilter(m_Desc.MagFilter);
+    SamplerCI.minFilter    = FilterTypeToVkFilter(m_Desc.MinFilter);
+    SamplerCI.mipmapMode   = FilterTypeToVkMipmapMode(m_Desc.MipFilter);
+    SamplerCI.addressModeU = AddressModeToVkAddressMode(m_Desc.AddressU);
+    SamplerCI.addressModeV = AddressModeToVkAddressMode(m_Desc.AddressV);
+    SamplerCI.addressModeW = AddressModeToVkAddressMode(m_Desc.AddressW);
+    SamplerCI.mipLodBias   = m_Desc.MipLODBias;
 
-    SamplerCI.maxAnisotropy = static_cast<float>(m_Desc.MaxAnisotropy);
+    SamplerCI.anisotropyEnable = IsAnisotropicFilter(m_Desc.MinFilter);
+    DEV_CHECK_ERR(!SamplerCI.anisotropyEnable || (m_Desc.MaxAnisotropy >= 1 && static_cast<float>(m_Desc.MaxAnisotropy) <= Limits.maxSamplerAnisotropy),
+                  "MaxAnisotropy (", m_Desc.MaxAnisotropy, ") must be in range 1 .. ", Limits.maxSamplerAnisotropy, ".");
+    SamplerCI.maxAnisotropy = SamplerCI.anisotropyEnable ? clamp(static_cast<float>(m_Desc.MaxAnisotropy), 1.f, Limits.maxSamplerAnisotropy) : 0.f;
+    DEV_CHECK_ERR((SamplerCI.anisotropyEnable != VK_FALSE) == IsAnisotropicFilter(m_Desc.MagFilter),
+                  "Min and mag filters must both be either anisotropic filters or non-anisotropic ones");
+
     SamplerCI.compareEnable = IsComparisonFilter(m_Desc.MinFilter);
-#ifdef DILIGENT_DEVELOPMENT
-    if ((SamplerCI.compareEnable != VK_FALSE) != IsComparisonFilter(m_Desc.MagFilter))
-    {
-        LOG_ERROR("Min and mag filters must both be either comparison filters or non-comparison ones");
-    }
-#endif
+    DEV_CHECK_ERR((SamplerCI.compareEnable != VK_FALSE) == IsComparisonFilter(m_Desc.MagFilter),
+                  "Min and mag filters must both be either comparison filters or non-comparison ones");
 
     SamplerCI.compareOp               = ComparisonFuncToVkCompareOp(m_Desc.ComparisonFunc);
     SamplerCI.minLod                  = m_Desc.MinLOD;
