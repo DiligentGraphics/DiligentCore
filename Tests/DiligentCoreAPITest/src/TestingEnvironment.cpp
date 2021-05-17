@@ -25,6 +25,8 @@
  *  of the possibility of such damages.
  */
 
+#include <algorithm>
+
 #include "TestingEnvironment.hpp"
 #include "PlatformDebug.hpp"
 #include "TestingSwapChainBase.hpp"

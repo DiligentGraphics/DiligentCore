@@ -139,7 +139,7 @@ public:
         m_pAllocator          = nullptr;
         m_pDescriptorHeap     = nullptr;
         m_NumHandles          = 0;
-        m_AllocationManagerId = static_cast<Uint16>(~0u);
+        m_AllocationManagerId = InvalidAllocationMgrId;
         m_DescriptorSize      = 0;
     }
 
@@ -226,11 +226,13 @@ private:
     // Number of descriptors in the allocation
     Uint32 m_NumHandles = 0;
 
+    static constexpr Uint16 InvalidAllocationMgrId = 0xFFFF;
+
     // Allocation manager ID. One allocator may support several
     // allocation managers. This field is required to identify
     // the manager within the allocator that was used to create
     // this allocation
-    Uint16 m_AllocationManagerId = static_cast<Uint16>(~0u);
+    Uint16 m_AllocationManagerId = InvalidAllocationMgrId;
 
     // Descriptor size
     Uint16 m_DescriptorSize = 0;
