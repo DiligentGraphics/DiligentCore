@@ -228,6 +228,8 @@ template <class T> struct Vector2
 
     Vector2() :
         x{0}, y{0} {}
+    explicit Vector2(T s) :
+        x{s}, y{s} {}
     Vector2(T _x, T _y) :
         x{_x}, y{_y} {}
 
@@ -433,6 +435,8 @@ template <class T> struct Vector3
 
     Vector3() :
         x{0}, y{0}, z{0} {}
+    explicit Vector3(T s) :
+        x{s}, y{s}, z{s} {}
     Vector3(T _x, T _y, T _z) :
         x{_x}, y{_y}, z{_z} {}
 
@@ -652,6 +656,8 @@ template <class T> struct Vector4
 
     Vector4() :
         x{0}, y{0}, z{0}, w{0} {}
+    explicit Vector4(T s) :
+        x{s}, y{s}, z{s}, w{s} {}
     Vector4(T _x, T _y, T _z, T _w) :
         x{_x}, y{_y}, z{_z}, w{_w} {}
     Vector4(const Vector3<T>& v3, T _w) :
@@ -1058,6 +1064,55 @@ template <class T> struct Matrix3x3
         det -= _12 * (_21 * _33 - _31 * _23);
         det += _13 * (_21 * _32 - _31 * _22);
         return det;
+    }
+
+    Matrix3x3 Inverse() const
+    {
+        Matrix3x3 Inv;
+
+        Inv._11 = Matrix2x2<T>(_22, _23,
+                               _32, _33)
+                      .Determinant();
+
+        Inv._12 = -Matrix2x2<T>(_21, _23,
+                                _31, _33)
+                       .Determinant();
+
+        Inv._13 = Matrix2x2<T>(_21, _22,
+                               _31, _32)
+                      .Determinant();
+
+
+        Inv._21 = -Matrix2x2<T>(_12, _13,
+                                _32, _33)
+                       .Determinant();
+
+        Inv._22 = Matrix2x2<T>(_11, _13,
+                               _31, _33)
+                      .Determinant();
+
+        Inv._23 = -Matrix2x2<T>(_11, _12,
+                                _31, _32)
+                       .Determinant();
+
+
+        Inv._31 = Matrix2x2<T>(_12, _13,
+                               _22, _23)
+                      .Determinant();
+
+        Inv._32 = -Matrix2x2<T>(_11, _13,
+                                _21, _23)
+                       .Determinant();
+
+        Inv._33 = Matrix2x2<T>(_11, _12,
+                               _21, _22)
+                      .Determinant();
+
+        auto det = _11 * Inv._11 + _12 * Inv._12 + _13 * Inv._13;
+        Inv      = Inv.Transpose();
+        Inv *= static_cast<T>(1) / det;
+
+        return Inv;
     }
 };
 
