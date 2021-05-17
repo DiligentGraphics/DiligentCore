@@ -215,7 +215,7 @@ private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     bool         CheckExtension(const Char* ExtensionString) const;
     void         FlagSupportedTexFormats();
-    void         InitAdapterInfo(bool ForceNonSeparablePrograms);
+    void         InitAdapterInfo();
 
     int m_ShowDebugGLOutput = 1;
 

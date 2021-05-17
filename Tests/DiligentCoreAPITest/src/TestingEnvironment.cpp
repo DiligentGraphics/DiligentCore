@@ -357,11 +357,12 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
             // Always enable validation
             CreateInfo.SetValidationLevel(VALIDATION_LEVEL_1);
 
-            CreateInfo.DebugMessageCallback      = MessageCallback;
-            CreateInfo.Window                    = Window;
-            CreateInfo.Features                  = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
-            CreateInfo.ForceNonSeparablePrograms = CI.ForceNonSeparablePrograms;
-            NumDeferredCtx                       = 0;
+            CreateInfo.DebugMessageCallback = MessageCallback;
+            CreateInfo.Window               = Window;
+            CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
+            if (CI.ForceNonSeparablePrograms)
+                CreateInfo.Features.SeparablePrograms = DEVICE_FEATURE_STATE_DISABLED;
+            NumDeferredCtx = 0;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             RefCntAutoPtr<ISwapChain> pSwapChain; // We will use testing swap chain instead
             pFactoryOpenGL->CreateDeviceAndSwapChainGL(

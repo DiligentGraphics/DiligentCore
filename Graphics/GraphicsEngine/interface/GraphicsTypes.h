@@ -1541,8 +1541,6 @@ struct DeviceFeatures
     /// \remarks    The only case when separable programs are not supported is when the engine is 
     ///             initialized in GLES3.0 mode. In GLES3.1+ and in all other backends, the
     ///             feature is always enabled.
-    ///             In OpenGL backend, it may forcibly be disabled using ForceNonSeparablePrograms 
-    ///             member of EngineGLCreateInfo struct (this is primarily used for testing).
     ///             The are two main limitations when separable programs are disabled:
     ///             - If the same shader variable is present in multiple shader stages,
     ///               it will always be shared between all stages and different resources
@@ -2418,11 +2416,6 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Native window wrapper
     NativeWindow Window;
-
-    /// Force using non-separable programs.
-
-    /// Setting this to true is typically needed for testing purposes only.
-    bool ForceNonSeparablePrograms DEFAULT_INITIALIZER(false);
 
 #if DILIGENT_CPP_INTERFACE
     EngineGLCreateInfo() noexcept : EngineGLCreateInfo{EngineCreateInfo{}}

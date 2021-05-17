@@ -133,6 +133,30 @@ class TopLevelASGLImpl
 class ShaderBindingTableGLImpl
 {};
 
+static void VerifyEngineGLCreateInfo(const EngineGLCreateInfo& EngineCI) noexcept(false)
+{
+    if (EngineCI.Features.ShaderResourceQueries == DEVICE_FEATURE_STATE_ENABLED &&
+        EngineCI.Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
+    {
+        LOG_ERROR_AND_THROW("Requested state for ShaderResourceQueries feature is ENABLED, while requested state for SeparablePrograms feature is DISABLED. "
+                            "ShaderResourceQueries may only be enabled when SeparablePrograms feature is also enabled.");
+    }
+
+    if (EngineCI.Features.GeometryShaders == DEVICE_FEATURE_STATE_ENABLED &&
+        EngineCI.Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
+    {
+        LOG_ERROR_AND_THROW("Requested state for GeometryShaders feature is ENABLED, while requested state for SeparablePrograms feature is DISABLED. "
+                            "GeometryShaders may only be enabled when SeparablePrograms feature is also enabled.");
+    }
+
+    if (EngineCI.Features.Tessellation == DEVICE_FEATURE_STATE_ENABLED &&
+        EngineCI.Features.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
+    {
+        LOG_ERROR_AND_THROW("Requested state for Tessellation feature is ENABLED, while requested state for SeparablePrograms feature is DISABLED. "
+                            "Tessellation may only be enabled when SeparablePrograms feature is also enabled.");
+    }
+}
+
 RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                                        IMemoryAllocator&         RawMemAllocator,
                                        IEngineFactory*           pEngineFactory,
@@ -151,7 +175,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     m_GLContext{EngineCI, m_DeviceInfo.Type, m_DeviceInfo.APIVersion, pSCDesc}
 // clang-format on
 {
-    DEV_CHECK_ERR(EngineCI.NumDeferredContexts == 0, "EngineCI.NumDeferredContexts > 0 should've been caught by CreateDeviceAndSwapChainGL() or AttachToActiveGLContext()");
+    VerifyEngineGLCreateInfo(EngineCI);
+
+    VERIFY(EngineCI.NumDeferredContexts == 0, "EngineCI.NumDeferredContexts > 0 should've been caught by CreateDeviceAndSwapChainGL() or AttachToActiveGLContext()");
 
     GLint NumExtensions = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &NumExtensions);
@@ -196,8 +222,19 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     }
 #endif
 
-    InitAdapterInfo(EngineCI.ForceNonSeparablePrograms);
+    InitAdapterInfo();
+
+    // Enable requested device features
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
+    if (m_AdapterInfo.Features.SeparablePrograms && !EngineCI.Features.SeparablePrograms)
+    {
+        VERIFY_EXPR(!m_DeviceInfo.Features.SeparablePrograms);
+        LOG_INFO_MESSAGE("Disabling separable shader programs");
+    }
+    m_DeviceInfo.Features.ShaderResourceQueries = m_DeviceInfo.Features.SeparablePrograms;
+    m_DeviceInfo.Features.GeometryShaders       = std::min(m_DeviceInfo.Features.SeparablePrograms, m_DeviceInfo.Features.GeometryShaders);
+    m_DeviceInfo.Features.Tessellation          = std::min(m_DeviceInfo.Features.SeparablePrograms, m_DeviceInfo.Features.Tessellation);
+
     FlagSupportedTexFormats();
 
     // get device limits
@@ -504,7 +541,7 @@ bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString) const
     return m_ExtensionStrings.find(ExtensionString) != m_ExtensionStrings.end();
 }
 
-void RenderDeviceGLImpl::InitAdapterInfo(bool ForceNonSeparablePrograms)
+void RenderDeviceGLImpl::InitAdapterInfo()
 {
     const auto GLVersion = m_DeviceInfo.APIVersion;
 
@@ -595,7 +632,7 @@ void RenderDeviceGLImpl::InitAdapterInfo(bool ForceNonSeparablePrograms)
     // Enable features and set properties
     {
 #define ENABLE_FEATURE(FeatureName, Supported) \
-    Features.FeatureName = (Supported) ? DEVICE_FEATURE_STATE_OPTIONAL : DEVICE_FEATURE_STATE_DISABLED;
+    Features.FeatureName = (Supported) ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
 
         auto& Features = m_AdapterInfo.Features;
 
@@ -654,9 +691,6 @@ void RenderDeviceGLImpl::InitAdapterInfo(bool ForceNonSeparablePrograms)
             ENABLE_FEATURE(VertexPipelineUAVWritesAndAtomics, MaxVertexSSBOs);
         }
 
-        if (ForceNonSeparablePrograms)
-            LOG_INFO_MESSAGE("Forcing non-separable shader programs");
-
         auto& TexProps = m_AdapterInfo.Texture;
         auto& SamProps = m_AdapterInfo.Sampler;
         if (m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GL)
@@ -667,8 +701,10 @@ void RenderDeviceGLImpl::InitAdapterInfo(bool ForceNonSeparablePrograms)
             const bool IsGL41OrAbove = GLVersion >= Version{4, 1};
             const bool IsGL40OrAbove = GLVersion >= Version{4, 0};
 
+            // Separable programs may be disabled
+            Features.SeparablePrograms = DEVICE_FEATURE_STATE_OPTIONAL;
+
             // clang-format off
-            ENABLE_FEATURE(SeparablePrograms,             !ForceNonSeparablePrograms);
             ENABLE_FEATURE(IndirectRendering,             true);
             ENABLE_FEATURE(WireframeFill,                 true);
             ENABLE_FEATURE(MultithreadedResourceCreation, false);
@@ -728,8 +764,10 @@ void RenderDeviceGLImpl::InitAdapterInfo(bool ForceNonSeparablePrograms)
             const bool IsGLES31OrAbove = GLVersion >= Version{3, 1};
             const bool IsGLES32OrAbove = GLVersion >= Version{3, 2};
 
+            // Separable programs may be disabled
+            Features.SeparablePrograms = (IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects")) ? DEVICE_FEATURE_STATE_OPTIONAL : DEVICE_FEATURE_STATE_DISABLED;
+
             // clang-format off
-            ENABLE_FEATURE(SeparablePrograms,             (IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects")) && !ForceNonSeparablePrograms);
             ENABLE_FEATURE(IndirectRendering,             IsGLES31OrAbove || strstr(Extensions, "draw_indirect"));
             ENABLE_FEATURE(WireframeFill,                 false);
             ENABLE_FEATURE(MultithreadedResourceCreation, false);
