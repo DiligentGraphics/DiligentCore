@@ -148,8 +148,8 @@ struct PipelineResourceDesc
                          const char*                   _Name,
                          Uint32                        _ArraySize,
                          SHADER_RESOURCE_TYPE          _ResourceType,
-                         SHADER_RESOURCE_VARIABLE_TYPE _VarType,
-                         PIPELINE_RESOURCE_FLAGS       _Flags = PIPELINE_RESOURCE_FLAG_NONE)noexcept : 
+                         SHADER_RESOURCE_VARIABLE_TYPE _VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                         PIPELINE_RESOURCE_FLAGS       _Flags   = PIPELINE_RESOURCE_FLAG_NONE)noexcept : 
         Name        {_Name        },
         ShaderStages{_ShaderStages},
         ArraySize   {_ArraySize   },
