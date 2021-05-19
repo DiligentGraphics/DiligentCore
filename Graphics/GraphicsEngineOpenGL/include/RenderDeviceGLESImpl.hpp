@@ -46,8 +46,9 @@ public:
     virtual bool Invalidate();
 
     virtual void Suspend();
-
+#if PLATFORM_ANDROID
     virtual EGLint Resume(ANativeWindow* window);
+#endif
 };
 
 } // namespace Diligent

@@ -88,7 +88,9 @@ void GLContextState::Invalidate()
     // Unity messes up at least VAO left in the context,
     // so unbid what we bound
     glUseProgram(0);
+#ifndef PLATFORM_EMSCRIPTEN
     glBindProgramPipeline(0);
+#endif
     glBindVertexArray(0);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -148,12 +150,16 @@ void GLContextState::SetProgram(const GLProgramObj& GLProgram)
 
 void GLContextState::SetPipeline(const GLPipelineObj& GLPipeline)
 {
+#ifndef PLATFORM_EMSCRIPTEN
     GLuint GLPipelineHandle = 0;
     if (UpdateBoundObject(m_GLPipelineId, GLPipeline, GLPipelineHandle))
     {
         glBindProgramPipeline(GLPipelineHandle);
         DEV_CHECK_GL_ERROR("Failed to bind program pipeline");
     }
+#else
+    UNSUPPORTED("SetPipeline is not supported in Emscripten");
+#endif
 }
 
 void GLContextState::BindVAO(const GLVertexArrayObj& VAO)

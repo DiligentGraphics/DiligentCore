@@ -53,6 +53,10 @@
 
 #    include "../Apple/interface/IOSNativeWindow.h"
 
+#elif PLATFORM_EMSCRIPTEN
+
+#    include "../Emscripten/interface/EmscriptenNativeWindow.h"
+
 #else
 #    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
 #endif
@@ -83,8 +87,12 @@ typedef struct MacOSNativeWindow NativeWindow;
 
 typedef struct IOSNativeWindow NativeWindow;
 
+#elif PLATFORM_EMSCRIPTEN
+
+typedef struct EmscriptenNativeWindow NativeWindow;
+
 #else
-#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_EMSCRIPTEN.
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -79,7 +79,7 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     auto& GLContext        = pRenderDeviceGL->m_GLContext;
     m_SwapChainDesc.Width  = GLContext.GetScreenWidth();
     m_SwapChainDesc.Height = GLContext.GetScreenHeight();
-#elif PLATFORM_MACOS
+#elif PLATFORM_MACOS || PLATFORM_EMSCRIPTEN
     //Set dummy width and height until resize is called by the app
     m_SwapChainDesc.Width  = 1024;
     m_SwapChainDesc.Height = 768;
@@ -104,6 +104,8 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
     GLContext.SwapBuffers(static_cast<int>(SyncInterval));
 #elif PLATFORM_MACOS
     LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
+#elif PLATFORM_EMSCRIPTEN
+    LOG_ERROR("Swap buffers operation must be performed by the app on Emscripten");
 #else
 #    error Unsupported platform
 #endif
