@@ -1562,7 +1562,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
         GTEST_SKIP() << "Direct3D does not support GLSL";
     }
 
-    if (deviceCaps.IsVulkanDevice() && !pEnv->HasDXCompiler())
+    if (deviceCaps.IsVulkanDevice() && !IsGLSL && !pEnv->HasDXCompiler())
     {
         GTEST_SKIP() << "Vulkan requires DXCompiler which is not found";
     }
