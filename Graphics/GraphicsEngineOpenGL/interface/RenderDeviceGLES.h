@@ -34,22 +34,45 @@
 #include <android/native_window.h>
 #include <EGL/egl.h>
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {F705A0D9-2023-4DE1-8B3C-C56E4CEB8DB7}
-static const Diligent::INTERFACE_ID IID_RenderDeviceGLES =
+static const INTERFACE_ID IID_RenderDeviceGLES =
     {0xf705a0d9, 0x2023, 0x4de1, {0x8b, 0x3c, 0xc5, 0x6e, 0x4c, 0xeb, 0x8d, 0xb7}};
 
+#define DILIGENT_INTERFACE_NAME IRenderDeviceGLES
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IRenderDeviceGLESInclusiveMethods \
+    IRenderDeviceGLInclusiveMethods;      \
+    IRenderDeviceGLESMethods RenderDeviceGLES
+
+// clang-format off
+
 /// Interface to the render device object implemented in OpenGLES
-class IRenderDeviceGLES : public Diligent::IRenderDeviceGL
+DILIGENT_BEGIN_INTERFACE(IRenderDeviceGLES, IRenderDeviceGL)
 {
-public:
-    virtual bool Invalidate() = 0;
+    VIRTUAL bool METHOD(Invalidate)(THIS) PURE;
 
-    virtual void Suspend() = 0;
+    VIRTUAL void METHOD(Suspend)(THIS) PURE;
 
-    virtual EGLint Resume(ANativeWindow* window) = 0;
+    VIRTUAL EGLint METHOD(Resume)(THIS_
+                                  ANativeWindow* window) PURE;
 };
+DILIGENT_END_INTERFACE
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format off
+
+#    define IRenderDeviceGLES_Invalidate(This)   CALL_IFACE_METHOD(RenderDeviceGLES, Invalidate, This)
+#    define IRenderDeviceGLES_Suspend(This)      CALL_IFACE_METHOD(RenderDeviceGLES, Suspend,    This)
+#    define IRenderDeviceGLES_Resume(This, ...)  CALL_IFACE_METHOD(RenderDeviceGLES, Resume,     This, __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent
