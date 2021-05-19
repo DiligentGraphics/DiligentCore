@@ -111,6 +111,12 @@ static void SetDefaultGraphicsAdapterInfo(GraphicsAdapterInfo& AdapterInfo)
 {
     AdapterInfo = {};
 
+#if PLATFORM_ANDROID || PLATFORM_IOS
+    AdapterInfo.Type = ADAPTER_TYPE_INTEGRATED;
+#else
+    AdapterInfo.Type = ADAPTER_TYPE_UNKNOWN;
+#endif
+
     AdapterInfo.NumQueues = 1;
 
     AdapterInfo.Queues[0].QueueType                 = COMMAND_QUEUE_TYPE_GRAPHICS;

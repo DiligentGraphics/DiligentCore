@@ -39,6 +39,7 @@ RenderDeviceGLESImpl::RenderDeviceGLESImpl(IReferenceCounters*       pRefCounter
                                            const SwapChainDesc*      pSCDesc) :
     RenderDeviceGLImpl(pRefCounters, RawMemAllocator, pEngineFactory, InitAttribs, pSCDesc)
 {
+    m_AdapterInfo.Type = ADAPTER_TYPE_INTEGRATED;
 }
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceGLESImpl, IID_RenderDeviceGLES, RenderDeviceGLImpl)
