@@ -194,7 +194,7 @@ set(PRIVATE_DEPENDENCIES
 )
 
 if (${DILIGENT_NO_HLSL})
-    message("HLSL support is disabled. Vulkan backend may not be able to consume SPIRV bytecode generated from HLSL.")
+    message("HLSL support is disabled. Vulkan backend will not be able to consume SPIRV bytecode generated from HLSL.")
 else()
     list(APPEND PRIVATE_DEPENDENCIES SPIRV-Tools-opt)
 endif()

@@ -66,7 +66,9 @@ private:
     VkImageLayout GenerateMipsCS(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
     VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, VkImageSubresourceRange& SubresRange) const;
 
+#if !DILIGENT_NO_GLSLANG
     RenderDeviceVkImpl& m_DeviceVkImpl;
+#endif
 
     std::mutex                                                                       m_PSOMutex;
     std::unordered_map<TEXTURE_FORMAT, std::array<RefCntAutoPtr<IPipelineState>, 4>> m_PSOHash;
