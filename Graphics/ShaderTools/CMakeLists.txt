@@ -72,24 +72,27 @@ endif()
 
 if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
     set(ENABLE_SPIRV TRUE)
+    if (NOT ${DILIGENT_NO_GLSLANG})
+        set(USE_GLSLANG TRUE)
+        set(USE_SPIRV_TOOLS TRUE)
+    endif()
+    if (NOT ${DILIGENT_NO_HLSL})
+        set(USE_SPIRV_TOOLS TRUE)
+    endif()
 endif()
 
 if(ENABLE_SPIRV)
     list(APPEND SOURCE src/SPIRVShaderResources.cpp)
     list(APPEND INCLUDE include/SPIRVShaderResources.hpp)
 
-    if (NOT ${DILIGENT_NO_GLSLANG})
+    if (${USE_SPIRV_TOOLS})
+        list(APPEND SOURCE src/SPIRVTools.cpp)
+        list(APPEND INCLUDE include/SPIRVTools.hpp)
+    endif()
+
+    if (${USE_GLSLANG})
         list(APPEND SOURCE src/GLSLangUtils.cpp)
         list(APPEND INCLUDE include/GLSLangUtils.hpp)
-
-        if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            # Disable the following warning:
-            #   moving a local object in a return statement prevents copy elision [-Wpessimizing-move]
-            set_source_files_properties(src/SPIRVUtils.cpp
-            PROPERTIES
-                COMPILE_FLAGS -Wno-pessimizing-move
-            )
-        endif()
     endif()
 endif()
 
@@ -133,12 +136,18 @@ if(ENABLE_SPIRV)
         spirv-cross-core
     )
 
-    if (NOT ${DILIGENT_NO_GLSLANG})
+    if (${USE_SPIRV_TOOLS})
         target_link_libraries(Diligent-ShaderTools 
         PRIVATE
-            glslang
-            SPIRV
             SPIRV-Tools-opt
+        )
+    endif()
+
+    if (${USE_GLSLANG})
+        target_link_libraries(Diligent-ShaderTools 
+        PRIVATE
+            SPIRV
+            glslang
         )
 
         target_include_directories(Diligent-ShaderTools 

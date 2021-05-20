@@ -45,21 +45,11 @@
 
 #if !DILIGENT_NO_HLSL
 #    include "spirv-tools/optimizer.hpp"
+#    include "SPIRVTools.hpp"
 #endif
 
 namespace Diligent
 {
-
-#if !DILIGENT_NO_HLSL
-namespace GLSLangUtils
-{
-void SpvOptimizerMessageConsumer(
-    spv_message_level_t level,
-    const char* /* source */,
-    const spv_position_t& /* position */,
-    const char* message);
-}
-#endif
 
 namespace
 {
@@ -80,7 +70,7 @@ bool StripReflection(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, 
     }
 
     spvtools::Optimizer SpirvOptimizer{Target};
-    SpirvOptimizer.SetMessageConsumer(GLSLangUtils::SpvOptimizerMessageConsumer);
+    SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
     // Decorations defined in SPV_GOOGLE_hlsl_functionality1 are the only instructions
     // removed by strip-reflect-info pass. SPIRV offsets become INVALID after this operation.
     SpirvOptimizer.RegisterPass(spvtools::CreateStripReflectInfoPass());

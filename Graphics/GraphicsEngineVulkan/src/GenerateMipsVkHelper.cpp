@@ -42,13 +42,14 @@
 #include "../../GraphicsTools/interface/CommonlyUsedStates.h"
 #include "../../GraphicsTools/interface/MapHelper.hpp"
 
-
+#if !DILIGENT_NO_GLSLANG
 // clang-format off
 static const char* g_GenerateMipsCSSource =
 {
     #include "../shaders/GenerateMipsCS_inc.h"
 };
 // clang-format on
+#endif
 
 namespace Diligent
 {
@@ -182,8 +183,12 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
     return PSOs;
 }
 
-GenerateMipsVkHelper::GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl) :
-    m_DeviceVkImpl(DeviceVkImpl)
+GenerateMipsVkHelper::GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl)
+#if !DILIGENT_NO_GLSLANG
+    // clang-format off
+    : m_DeviceVkImpl{DeviceVkImpl}
+// clang-format on
+#endif
 {
 #if !DILIGENT_NO_GLSLANG
     BufferDesc ConstantsCBDesc;
