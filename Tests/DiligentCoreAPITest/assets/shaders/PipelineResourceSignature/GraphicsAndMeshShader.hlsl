@@ -1,8 +1,8 @@
-cbuffer Constants
+struct VSOutput
 {
-    float4 g_Data;
+    float4 f4Position : SV_Position;
+    float4 f4Color    : COLOR;
 };
-
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -12,6 +12,13 @@ float4 CheckValue(float4 Val, float4 Expected)
                   Val.w == Expected.w ? 1.0 : 0.0);
 }
 
+
+#if defined(VERTEX_SHADER) || defined(MESH_SHADER)
+cbuffer Constants
+{
+    float4 g_Data;
+};
+
 float4 VerifyResourcesVS()
 {
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
@@ -19,13 +26,6 @@ float4 VerifyResourcesVS()
     AllCorrect *= CheckValue(g_Data, Buff_Ref);
 	return AllCorrect;
 }
-
-
-struct VSOutput
-{
-    float4 f4Position : SV_Position;
-    float4 f4Color    : COLOR;
-};
 
 void VSMain(in  uint     VertId : SV_VertexID,
             out VSOutput Out)
@@ -64,8 +64,10 @@ void MSMain(             uint     I      : SV_GroupIndex,
                                  I % 3 == 2 ? 1.0 : 0.0,
                                  1.0) * VerifyResourcesVS();
 }
+#endif
 
 
+#ifdef PIXEL_SHADER
 Texture2D    g_Texture;
 SamplerState g_Texture_sampler;
 
@@ -82,3 +84,4 @@ float4 PSMain(in VSOutput In) : SV_Target
 {
     return In.f4Color * VerifyResourcesPS();
 }
+#endif
