@@ -989,12 +989,15 @@ struct BLASBuildTriangleData
     /// The buffer must be created with BIND_RAY_TRACING flag.
     IBuffer*    pVertexBuffer         DEFAULT_INITIALIZER(nullptr);
 
-    /// Data offset in bytes in pVertexBuffer.
-    /// Offset must be aligned by RayTracingProperties::VertexBufferAlignmnent and a multiple of VertexStride.
+    /// Data offset, in bytes, in pVertexBuffer.
+    /// D3D12 and Vulkan: offset must be a multiple of the VertexValueType size.
+    /// Metal:            stride must be aligned by RayTracingProperties::VertexBufferAlignmnent
+    ///                   and must be a multiple of the VertexStride.
     Uint32      VertexOffset          DEFAULT_INITIALIZER(0);
 
-    /// Stride in bytes between vertices.
-    /// Stride must be a multiple of the VertexValueType size.
+    /// Stride, in bytes, between vertices.
+    /// D3D12 and Vulkan: stride must be a multiple of the VertexValueType size.
+    /// Metal:            stride must be aligned by RayTracingProperties::VertexBufferAlignmnent.
     Uint32      VertexStride          DEFAULT_INITIALIZER(0);
 
     /// The number of triangle vertices.
@@ -1020,7 +1023,7 @@ struct BLASBuildTriangleData
 
     /// Data offset in bytes in pIndexBuffer.
     /// Offset must be aligned by RayTracingProperties::IndexBufferAlignment
-    /// and must be a multiple of index size.
+    /// and must be a multiple of the IndexType size.
     Uint32      IndexOffset           DEFAULT_INITIALIZER(0);
 
     /// The type of triangle indices, see Diligent::VALUE_TYPE.
@@ -1060,8 +1063,9 @@ struct BLASBuildBoundingBoxData
     IBuffer*    pBoxBuffer   DEFAULT_INITIALIZER(nullptr);
 
     /// Data offset in bytes in pBoxBuffer.
-    /// Offset must be aligned by RayTracingProperties::BoxBufferAlignment
-    /// and must be a multiple of BoxStride.
+    /// D3D12 and Vulkan: offset must be aligned by RayTracingProperties::BoxBufferAlignment.
+    /// Metal:            offset must be aligned by RayTracingProperties::BoxBufferAlignment
+    ///                   and must be a multiple of the BoxStride.
     Uint32      BoxOffset    DEFAULT_INITIALIZER(0);
 
     /// Stride in bytes between each AABB.
