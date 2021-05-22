@@ -990,9 +990,11 @@ struct BLASBuildTriangleData
     IBuffer*    pVertexBuffer         DEFAULT_INITIALIZER(nullptr);
 
     /// Data offset in bytes in pVertexBuffer.
+    /// Offset must be aligned by RayTracingProperties::VertexBufferAlignmnent and a multiple of VertexStride.
     Uint32      VertexOffset          DEFAULT_INITIALIZER(0);
 
     /// Stride in bytes between vertices.
+    /// Stride must be a multiple of the VertexValueType size.
     Uint32      VertexStride          DEFAULT_INITIALIZER(0);
 
     /// The number of triangle vertices.
@@ -1017,17 +1019,21 @@ struct BLASBuildTriangleData
     IBuffer*    pIndexBuffer          DEFAULT_INITIALIZER(nullptr);
 
     /// Data offset in bytes in pIndexBuffer.
+    /// Offset must be aligned by RayTracingProperties::IndexBufferAlignment
+    /// and must be a multiple of index size.
     Uint32      IndexOffset           DEFAULT_INITIALIZER(0);
 
     /// The type of triangle indices, see Diligent::VALUE_TYPE.
     /// This is an optional value. Must be undefined or same as in BLASTriangleDesc.
     VALUE_TYPE  IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
 
-    /// Geometry transformation data source.
+    /// Geometry transformation data source, must contain a float4x3 matrix aka Diligent::InstanceMatrix.
     /// The buffer must be created with BIND_RAY_TRACING flag.
+    /// \note Transform buffer is not supported in Metal backend.
     IBuffer*    pTransformBuffer      DEFAULT_INITIALIZER(nullptr);
 
     /// Data offset in bytes in pTransformBuffer.
+    /// Offset must be aligned by RayTracingProperties::TransformBufferAlignment.
     Uint32      TransformBufferOffset DEFAULT_INITIALIZER(0);
 
     /// Geometry flags, se Diligent::RAYTRACING_GEOMETRY_FLAGS.
@@ -1054,9 +1060,12 @@ struct BLASBuildBoundingBoxData
     IBuffer*    pBoxBuffer   DEFAULT_INITIALIZER(nullptr);
 
     /// Data offset in bytes in pBoxBuffer.
+    /// Offset must be aligned by RayTracingProperties::BoxBufferAlignment
+    /// and must be a multiple of BoxStride.
     Uint32      BoxOffset    DEFAULT_INITIALIZER(0);
 
     /// Stride in bytes between each AABB.
+    /// Stride must be aligned by RayTracingProperties::BoxBufferAlignment.
     Uint32      BoxStride    DEFAULT_INITIALIZER(0);
 
     /// Number of AABBs.
@@ -1116,6 +1125,7 @@ struct BuildBLASAttribs
     IBuffer*                        pScratchBuffer              DEFAULT_INITIALIZER(nullptr);
 
     /// Offset from the beginning of the buffer.
+    /// Offset must be aligned by RayTracingProperties::ScratchBufferAlignment.
     Uint32                          ScratchBufferOffset         DEFAULT_INITIALIZER(0);
 
     /// Scratch buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
@@ -1268,6 +1278,7 @@ struct BuildTLASAttribs
     IBuffer*                        pInstanceBuffer               DEFAULT_INITIALIZER(nullptr);
 
     /// Offset from the beginning of the buffer to the location of instance data.
+    /// Offset must be aligned by RayTracingProperties::InstanceBufferAlignment.
     Uint32                          InstanceBufferOffset          DEFAULT_INITIALIZER(0);
 
     /// Instance buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
@@ -1297,6 +1308,7 @@ struct BuildTLASAttribs
     IBuffer*                        pScratchBuffer                DEFAULT_INITIALIZER(nullptr);
 
     /// Offset from the beginning of the buffer.
+    /// Offset must be aligned by RayTracingProperties::ScratchBufferAlignment.
     Uint32                          ScratchBufferOffset           DEFAULT_INITIALIZER(0);
 
     /// Scratch buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).

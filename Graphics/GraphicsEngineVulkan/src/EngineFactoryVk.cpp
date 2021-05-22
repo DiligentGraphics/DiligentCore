@@ -200,6 +200,13 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         RayTracingProps.MaxInstancesPerTLAS      = static_cast<Uint32>(vkASLimits.maxInstanceCount);
         RayTracingProps.MaxPrimitivesPerBLAS     = static_cast<Uint32>(vkASLimits.maxPrimitiveCount);
         RayTracingProps.MaxGeometriesPerBLAS     = static_cast<Uint32>(vkASLimits.maxGeometryCount);
+        RayTracingProps.VertexBufferAlignmnent   = 1;
+        RayTracingProps.IndexBufferAlignment     = 1;
+        RayTracingProps.TransformBufferAlignment = 16; // from specs
+        RayTracingProps.BoxBufferAlignment       = 8;  // from specs
+        RayTracingProps.ScratchBufferAlignment   = static_cast<Uint32>(vkASLimits.minAccelerationStructureScratchOffsetAlignment);
+        RayTracingProps.InstanceBufferAlignment  = 16; // from specs
+
         if (vkExtFeatures.RayTracingPipeline.rayTracingPipeline)
             RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS;
         if (vkExtFeatures.RayQuery.rayQuery)
@@ -207,7 +214,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         if (vkExtFeatures.RayTracingPipeline.rayTracingPipelineTraceRaysIndirect)
             RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING;
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(RayTracingProps) == 36, "Did you add a new member to RayTracingProperites? Please initialize it here.");
+        static_assert(sizeof(RayTracingProps) == 60, "Did you add a new member to RayTracingProperites? Please initialize it here.");
 #endif
     }
 

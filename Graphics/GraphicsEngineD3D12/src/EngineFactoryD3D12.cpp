@@ -816,6 +816,12 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     RayTracingProps.MaxInstancesPerTLAS      = D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE;
                     RayTracingProps.MaxPrimitivesPerBLAS     = D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
                     RayTracingProps.MaxGeometriesPerBLAS     = D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
+                    RayTracingProps.VertexBufferAlignmnent   = 1;
+                    RayTracingProps.IndexBufferAlignment     = 1;
+                    RayTracingProps.TransformBufferAlignment = D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT;
+                    RayTracingProps.BoxBufferAlignment       = D3D12_RAYTRACING_AABB_BYTE_ALIGNMENT;
+                    RayTracingProps.ScratchBufferAlignment   = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
+                    RayTracingProps.InstanceBufferAlignment  = D3D12_RAYTRACING_INSTANCE_DESCS_BYTE_ALIGNMENT;
                     RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS;
                 }
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
@@ -823,7 +829,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                     RayTracingProps.CapFlags |= RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING | RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING;
                 }
 #if defined(_MSC_VER) && defined(_WIN64)
-                static_assert(sizeof(RayTracingProps) == 36, "Did you add a new member to RayTracingProperites? Please initialize it here.");
+                static_assert(sizeof(RayTracingProps) == 60, "Did you add a new member to RayTracingProperites? Please initialize it here.");
 #endif
             }
         }

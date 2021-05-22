@@ -1995,6 +1995,24 @@ struct RayTracingProperties
     /// The maximum number of geometries in a bottom-level AS.
     Uint32 MaxGeometriesPerBLAS     DEFAULT_INITIALIZER(0);
 
+    /// The minimum alignment for vertex buffer offset in BLASBuildTriangleData::VertexOffset.
+    Uint32 VertexBufferAlignmnent   DEFAULT_INITIALIZER(0);
+    
+    /// The minimum alignment for index buffer offset in BLASBuildTriangleData::IndexOffset.
+    Uint32 IndexBufferAlignment     DEFAULT_INITIALIZER(0);
+    
+    /// The minimum alignment for transform buffer offset in BLASBuildTriangleData::TransformBufferOffset.
+    Uint32 TransformBufferAlignment DEFAULT_INITIALIZER(0);
+    
+    /// The minimum alignment for box buffer offset in BLASBuildBoundingBoxData::BoxOffset.
+    Uint32 BoxBufferAlignment       DEFAULT_INITIALIZER(0);
+    
+    /// The minimum alignment for scratch buffer offset in BuildBLASAttribs::ScratchBufferOffset and BuildTLASAttribs::ScratchBufferOffset.
+    Uint32 ScratchBufferAlignment   DEFAULT_INITIALIZER(0);
+    
+    /// The minimum alignment for instance buffer offset in BuildTLASAttribs::InstanceBufferOffset.
+    Uint32 InstanceBufferAlignment  DEFAULT_INITIALIZER(0);
+
     /// Ray tracing capability flags, see Diligent::RAY_TRACING_CAP_FLAGS.
     RAY_TRACING_CAP_FLAGS CapFlags  DEFAULT_INITIALIZER(RAY_TRACING_CAP_FLAG_NONE);
 };

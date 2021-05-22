@@ -82,8 +82,8 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                DeviceContextIndex         ExecutionCtxId,
                                const DeviceContextDesc&   CtxDesc);
 
-bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs& Attribs);
-bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs);
+bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const RayTracingProperties& RTProps);
+bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, const RayTracingProperties& RTProps);
 bool VerifyCopyBLASAttribs(const IRenderDevice* pDevice, const CopyBLASAttribs& Attribs);
 bool VerifyCopyTLASAttribs(const CopyTLASAttribs& Attribs);
 bool VerifyWriteBLASCompactedSizeAttribs(const IRenderDevice* pDevice, const WriteBLASCompactedSizeAttribs& Attribs);
@@ -1727,7 +1727,7 @@ void DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& 
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "BuildBLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildBLAS command must be performed outside of render pass");
-    DEV_CHECK_ERR(VerifyBuildBLASAttribs(m_pDevice, Attribs), "BuildBLASAttribs are invalid");
+    DEV_CHECK_ERR(VerifyBuildBLASAttribs(Attribs, m_pDevice->GetAdapterInfo().RayTracing), "BuildBLASAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
@@ -1736,7 +1736,7 @@ void DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& 
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "BuildTLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildTLAS command must be performed outside of render pass");
-    DEV_CHECK_ERR(VerifyBuildTLASAttribs(Attribs), "BuildTLASAttribs are invalid");
+    DEV_CHECK_ERR(VerifyBuildTLASAttribs(Attribs, m_pDevice->GetAdapterInfo().RayTracing), "BuildTLASAttribs are invalid");
 }
 
 template <typename ImplementationTraits>
