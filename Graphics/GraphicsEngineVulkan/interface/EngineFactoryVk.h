@@ -98,6 +98,14 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryVk, IEngineFactory)
                                            const SwapChainDesc REF SwapChainDesc,
                                            const NativeWindow REF  Window,
                                            ISwapChain**            ppSwapChain) PURE;
+
+    /// Enable device simulation layer (if available).
+
+    /// Vulkan instance will be created with the device simulation layer.
+    /// Use VK_DEVSIM_FILENAME environment variable to define the path to the .json file.
+    /// 
+    /// \remarks Use this function before calling EnumerateAdapters() and CreateDeviceAndContextsVk().
+    VIRTUAL void METHOD(EnableDeviceSimulation)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -109,6 +117,7 @@ DILIGENT_END_INTERFACE
 
 #    define IEngineFactoryVk_CreateDeviceAndContextsVk(This, ...) CALL_IFACE_METHOD(EngineFactoryVk, CreateDeviceAndContextsVk, This, __VA_ARGS__)
 #    define IEngineFactoryVk_CreateSwapChainVk(This, ...)         CALL_IFACE_METHOD(EngineFactoryVk, CreateSwapChainVk,         This, __VA_ARGS__)
+#    define IEngineFactoryVk_EnableDeviceSimulation(This)         CALL_IFACE_METHOD(EngineFactoryVk, EnableDeviceSimulation,    This)
 
 // clang-format on
 

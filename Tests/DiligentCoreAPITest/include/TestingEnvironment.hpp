@@ -56,6 +56,7 @@ public:
         Uint32             AdapterId                 = DEFAULT_ADAPTER_ID;
         Uint32             NumDeferredContexts       = 4;
         bool               ForceNonSeparablePrograms = false;
+        bool               EnableDeviceSimulation    = false;
     };
     TestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc);
 

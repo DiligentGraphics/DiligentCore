@@ -127,6 +127,10 @@ int main(int argc, char** argv)
         {
             TestEnvCI.ForceNonSeparablePrograms = true;
         }
+        else if (strcmp(arg, "--vk_dev_sim") == 0)
+        {
+            TestEnvCI.EnableDeviceSimulation = true;
+        }
     }
 
     if (TestEnvCI.deviceType == RENDER_DEVICE_TYPE_UNDEFINED)

@@ -105,6 +105,11 @@ public:
                                                       Uint32&              NumAdapters,
                                                       GraphicsAdapterInfo* Adapters) const override final;
 
+    virtual void DILIGENT_CALL_TYPE EnableDeviceSimulation() override final
+    {
+        m_EnableDeviceSimulation = true;
+    }
+
 #if PLATFORM_ANDROID
     virtual void InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
                                        const char*             NativeActivityClassName,
@@ -116,6 +121,8 @@ private:
 
     // To track that there is only one render device
     RefCntWeakPtr<IRenderDevice> m_wpDevice;
+
+    bool m_EnableDeviceSimulation = false;
 };
 
 
@@ -346,7 +353,7 @@ void EngineFactoryVkImpl::EnumerateAdapters(Version              MinVersion,
     // Create instance with maximum available version.
     // If Volk is not enabled then version will be 1.0
     const uint32_t APIVersion = VK_MAKE_VERSION(0xFF, 0xFF, 0);
-    auto           Instance   = VulkanUtilities::VulkanInstance::Create(APIVersion, false, 0, nullptr, nullptr);
+    auto           Instance   = VulkanUtilities::VulkanInstance::Create({APIVersion, false, m_EnableDeviceSimulation, 0, nullptr, nullptr});
 
     if (Adapters == nullptr)
     {
@@ -397,14 +404,23 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             EngineCI.GraphicsAPIVersion;
 
         auto Instance = VulkanUtilities::VulkanInstance::Create(
-            VK_MAKE_VERSION(GraphicsAPIVersion.Major, GraphicsAPIVersion.Minor, 0),
-            EngineCI.EnableValidation,
-            EngineCI.InstanceExtensionCount,
-            EngineCI.ppInstanceExtensionNames,
-            reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator));
+            {
+                VK_MAKE_VERSION(GraphicsAPIVersion.Major, GraphicsAPIVersion.Minor, 0),
+                EngineCI.EnableValidation,
+                m_EnableDeviceSimulation,
+                EngineCI.InstanceExtensionCount,
+                EngineCI.ppInstanceExtensionNames,
+                reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator) //
+            });
 
         auto vkDevice       = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
         auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, *Instance);
+
+        std::vector<const char*> DeviceExtensions =
+            {
+                VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
+            };
 
         // Enable device features if they are supported and throw an error if not supported, but required by user.
         const auto AdapterInfo = GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice);
@@ -455,8 +471,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 Priority = ContextInfo.Priority;
             }
 
-            if (Instance->IsExtensionEnabled(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME))
+            if (PhysicalDevice->IsExtensionSupported(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME))
             {
+                DeviceExtensions.push_back(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME);
                 QueueGlobalPriority.resize(QueueInfos.size());
                 for (Uint32 QInd = 0; QInd < QueueInfos.size(); ++QInd)
                 {
@@ -537,12 +554,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         vkEnabledFeatures.shaderSampledImageArrayDynamicIndexing  = vkDeviceFeatures.shaderSampledImageArrayDynamicIndexing;
         vkEnabledFeatures.shaderStorageBufferArrayDynamicIndexing = vkDeviceFeatures.shaderStorageBufferArrayDynamicIndexing;
         vkEnabledFeatures.shaderStorageImageArrayDynamicIndexing  = vkDeviceFeatures.shaderStorageImageArrayDynamicIndexing;
-
-        std::vector<const char*> DeviceExtensions =
-            {
-                VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
-            };
 
         using ExtensionFeatures                    = VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures;
         const ExtensionFeatures& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();

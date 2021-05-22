@@ -44,11 +44,17 @@ public:
     VulkanInstance& operator = (      VulkanInstance&&) = delete;
     // clang-format on
 
-    static std::shared_ptr<VulkanInstance> Create(uint32_t               ApiVersion,
-                                                  bool                   EnableValidation,
-                                                  uint32_t               InstanceExtensionCount,
-                                                  const char* const*     ppInstanceExtensionNames,
-                                                  VkAllocationCallbacks* pVkAllocator);
+    struct CreateInfo
+    {
+        uint32_t               ApiVersion               = 0;
+        bool                   EnableValidation         = false;
+        bool                   EnableDeviceSimulation   = false;
+        uint32_t               InstanceExtensionCount   = 0;
+        const char* const*     ppInstanceExtensionNames = nullptr;
+        VkAllocationCallbacks* pVkAllocator             = nullptr;
+    };
+    static std::shared_ptr<VulkanInstance> Create(const CreateInfo& CI);
+
     ~VulkanInstance();
 
     std::shared_ptr<VulkanInstance> GetSharedPtr()
@@ -76,11 +82,7 @@ public:
     const std::vector<VkPhysicalDevice>& GetVkPhysicalDevices() const { return m_PhysicalDevices; }
 
 private:
-    VulkanInstance(uint32_t               ApiVersion,
-                   bool                   EnableValidation,
-                   uint32_t               InstanceExtensionCount,
-                   const char* const*     ppInstanceExtensionNames,
-                   VkAllocationCallbacks* pVkAllocator);
+    explicit VulkanInstance(const CreateInfo& CI);
 
     bool                         m_DebugUtilsEnabled = false;
     VkAllocationCallbacks* const m_pVkAllocator;
