@@ -386,6 +386,10 @@ TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc
 #    endif
 
             auto* pFactoryVk = GetEngineFactoryVk();
+
+            if (CI.EnableDeviceSimulation)
+                pFactoryVk->EnableDeviceSimulation();
+
             EnumerateAdapters(pFactoryVk, Version{});
             AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics", CI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_COMPUTE, "Compute", CI.AdapterId);

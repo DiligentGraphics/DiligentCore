@@ -79,22 +79,14 @@ bool VulkanInstance::IsExtensionEnabled(const char* ExtensionName) const
     return false;
 }
 
-std::shared_ptr<VulkanInstance> VulkanInstance::Create(uint32_t               ApiVersion,
-                                                       bool                   EnableValidation,
-                                                       uint32_t               InstanceExtensionCount,
-                                                       const char* const*     ppInstanceExtensionNames,
-                                                       VkAllocationCallbacks* pVkAllocator)
+std::shared_ptr<VulkanInstance> VulkanInstance::Create(const CreateInfo& CI)
 {
-    auto Instance = new VulkanInstance{ApiVersion, EnableValidation, InstanceExtensionCount, ppInstanceExtensionNames, pVkAllocator};
+    auto Instance = new VulkanInstance{CI};
     return std::shared_ptr<VulkanInstance>{Instance};
 }
 
-VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
-                               bool                   EnableValidation,
-                               uint32_t               InstanceExtensionCount,
-                               const char* const*     ppInstanceExtensionNames,
-                               VkAllocationCallbacks* pVkAllocator) :
-    m_pVkAllocator{pVkAllocator}
+VulkanInstance::VulkanInstance(const CreateInfo& CI) :
+    m_pVkAllocator{CI.pVkAllocator}
 {
 #if DILIGENT_USE_VOLK
     if (volkInitialize() != VK_SUCCESS)
@@ -161,21 +153,18 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         InstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     }
 
-    if (IsExtensionAvailable(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME))
+    if (CI.ppInstanceExtensionNames != nullptr)
     {
-        InstanceExtensions.push_back(VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME);
-    }
-
-    if (ppInstanceExtensionNames != nullptr)
-    {
-        for (uint32_t ext = 0; ext < InstanceExtensionCount; ++ext)
-            InstanceExtensions.push_back(ppInstanceExtensionNames[ext]);
+        for (uint32_t ext = 0; ext < CI.InstanceExtensionCount; ++ext)
+            InstanceExtensions.push_back(CI.ppInstanceExtensionNames[ext]);
     }
     else
     {
-        if (InstanceExtensionCount != 0)
-            LOG_ERROR_MESSAGE("Global extensions pointer is null while extensions count is ", InstanceExtensionCount,
+        if (CI.InstanceExtensionCount != 0)
+        {
+            LOG_ERROR_MESSAGE("Global extensions pointer is null while extensions count is ", CI.InstanceExtensionCount,
                               ". Please initialize 'ppInstanceExtensionNames' member of EngineVkCreateInfo struct.");
+        }
     }
 
     for (const auto* ExtName : InstanceExtensions)
@@ -184,7 +173,7 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
             LOG_ERROR_AND_THROW("Required extension ", ExtName, " is not available");
     }
 
-    if (EnableValidation)
+    if (CI.EnableValidation)
     {
         m_DebugUtilsEnabled = IsExtensionAvailable(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         if (m_DebugUtilsEnabled)
@@ -197,6 +186,7 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         }
     }
 
+    auto ApiVersion = CI.ApiVersion;
 #if DILIGENT_USE_VOLK
     if (vkEnumerateInstanceVersion != nullptr && ApiVersion > VK_API_VERSION_1_0)
     {
@@ -216,8 +206,8 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
 
     std::vector<const char*> InstanceLayers;
 
-    // Set to 1 and define environment variable VK_DEVSIM_FILENAME to enable device simulation layer
-#if 0
+    // Use VK_DEVSIM_FILENAME environment variable to define the simulation layer
+    if (CI.EnableDeviceSimulation)
     {
         static const char* DeviceSimulationLayer = "VK_LAYER_LUNARG_device_simulation";
 
@@ -227,9 +217,8 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
             InstanceLayers.push_back(DeviceSimulationLayer);
         }
     }
-#endif
 
-    if (EnableValidation)
+    if (CI.EnableValidation)
     {
         for (size_t l = 0; l < _countof(VulkanUtilities::ValidationLayerNames); ++l)
         {
