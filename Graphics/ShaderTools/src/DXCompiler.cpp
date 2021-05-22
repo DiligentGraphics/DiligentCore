@@ -749,9 +749,12 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             {
                 L"-spirv",
                 L"-fspv-reflect",
-                //L"-WX", // Warnings as errors
-                L"-O3", // Optimization level 3
-                L"-Zpc" // Matrices in column-major order
+                L"-Zpc", // Matrices in column-major order
+#ifdef DILIGENT_DEBUG
+                L"-Od",
+#else
+                L"-O3"
+#endif
             });
 
         if (m_APIVersion >= VK_API_VERSION_1_2 && ShaderModel >= ShaderVersion{6, 3})
