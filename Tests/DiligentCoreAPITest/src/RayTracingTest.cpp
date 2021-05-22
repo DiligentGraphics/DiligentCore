@@ -82,7 +82,7 @@ void Shuffle(It first, It last)
     std::shuffle(first, last, g);
 }
 
-void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTriangleData* pTriangles, Uint32 TriangleCount, bool Update, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
+void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTriangleData* pTriangles, Uint32 TriangleCount, RAYTRACING_BUILD_AS_FLAGS Flags, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
 {
     // Create BLAS for triangles
     std::vector<BLASTriangleDesc> TriangleInfos;
@@ -118,7 +118,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTrian
 
     BottomLevelASDesc ASDesc;
     ASDesc.Name          = "Triangle BLAS";
-    ASDesc.Flags         = RAYTRACING_BUILD_AS_ALLOW_COMPACTION | (Update ? RAYTRACING_BUILD_AS_ALLOW_UPDATE : RAYTRACING_BUILD_AS_NONE);
+    ASDesc.Flags         = Flags;
     ASDesc.pTriangles    = TriangleInfos.data();
     ASDesc.TriangleCount = static_cast<Uint32>(TriangleInfos.size());
 
@@ -149,7 +149,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTrian
 
     pContext->BuildBLAS(Attribs);
 
-    if (Update)
+    if ((Flags & RAYTRACING_BUILD_AS_ALLOW_UPDATE) != 0)
     {
         Shuffle(pTriangles, pTriangles + TriangleCount);
 
@@ -158,7 +158,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTrian
     }
 }
 
-void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBoundingBoxData* pBoxes, Uint32 BoxCount, bool Update, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
+void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBoundingBoxData* pBoxes, Uint32 BoxCount, RAYTRACING_BUILD_AS_FLAGS Flags, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
 {
     // Create BLAS for boxes
     std::vector<BLASBoundingBoxDesc> BoxInfos;
@@ -176,7 +176,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBound
 
     BottomLevelASDesc ASDesc;
     ASDesc.Name     = "Boxes BLAS";
-    ASDesc.Flags    = RAYTRACING_BUILD_AS_ALLOW_COMPACTION | (Update ? RAYTRACING_BUILD_AS_ALLOW_UPDATE : RAYTRACING_BUILD_AS_NONE);
+    ASDesc.Flags    = Flags;
     ASDesc.pBoxes   = BoxInfos.data();
     ASDesc.BoxCount = static_cast<Uint32>(BoxInfos.size());
 
@@ -207,7 +207,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBound
 
     pContext->BuildBLAS(Attribs);
 
-    if (Update)
+    if ((Flags & RAYTRACING_BUILD_AS_ALLOW_UPDATE) != 0)
     {
         Shuffle(pBoxes, pBoxes + BoxCount);
 
@@ -216,13 +216,13 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildBound
     }
 }
 
-void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitGroupStride, bool Update, RefCntAutoPtr<ITopLevelAS>& pTLAS)
+void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitGroupStride, RAYTRACING_BUILD_AS_FLAGS Flags, RefCntAutoPtr<ITopLevelAS>& pTLAS)
 {
     // Create TLAS
     TopLevelASDesc TLASDesc;
     TLASDesc.Name             = "TLAS";
     TLASDesc.MaxInstanceCount = InstanceCount;
-    TLASDesc.Flags            = RAYTRACING_BUILD_AS_ALLOW_COMPACTION | (Update ? RAYTRACING_BUILD_AS_ALLOW_UPDATE : RAYTRACING_BUILD_AS_NONE);
+    TLASDesc.Flags            = Flags;
 
     pDevice->CreateTLAS(TLASDesc, &pTLAS);
     ASSERT_NE(pTLAS, nullptr);
@@ -268,7 +268,7 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, TLASBuildInsta
 
     pContext->BuildTLAS(Attribs);
 
-    if (Update)
+    if ((Flags & RAYTRACING_BUILD_AS_ALLOW_UPDATE) != 0)
     {
         Shuffle(pInstances, pInstances + InstanceCount);
 
@@ -557,14 +557,42 @@ std::string TestIdToString(const testing::TestParamInfo<int>& info)
     return name;
 }
 
-bool TestBLASUpdate(Uint32 TestId)
+RAYTRACING_BUILD_AS_FLAGS BLASTestFlags(Uint32 TestId)
 {
-    return TestId == UpdateBLAS;
+    switch (TestId)
+    {
+        // clang-format off
+        case Default:                     return RAYTRACING_BUILD_AS_NONE;
+        case CopiedBLAS:                  return RAYTRACING_BUILD_AS_NONE;
+        case CopiedTLAS:                  return RAYTRACING_BUILD_AS_PREFER_FAST_TRACE;
+        case CopiedBLAS_CopiedTLAS:       return RAYTRACING_BUILD_AS_NONE;
+        case CompactedBLAS:               return RAYTRACING_BUILD_AS_ALLOW_COMPACTION;
+        case CompactedTLAS:               return RAYTRACING_BUILD_AS_NONE;
+        case CompactedBLAS_CompactedTLAS: return RAYTRACING_BUILD_AS_ALLOW_COMPACTION;
+        case UpdateBLAS:                  return RAYTRACING_BUILD_AS_ALLOW_UPDATE;
+        case UpdateTLAS:                  return RAYTRACING_BUILD_AS_PREFER_FAST_BUILD;
+        default:                          return RAYTRACING_BUILD_AS_NONE;
+            // clang-format on
+    }
 }
 
-bool TestTLASUpdate(Uint32 TestId)
+RAYTRACING_BUILD_AS_FLAGS TLASTestFlags(Uint32 TestId)
 {
-    return TestId == UpdateTLAS;
+    switch (TestId)
+    {
+        // clang-format off
+        case Default:                     return RAYTRACING_BUILD_AS_NONE;
+        case CopiedBLAS:                  return RAYTRACING_BUILD_AS_PREFER_FAST_TRACE;
+        case CopiedTLAS:                  return RAYTRACING_BUILD_AS_NONE;
+        case CopiedBLAS_CopiedTLAS:       return RAYTRACING_BUILD_AS_NONE;
+        case CompactedBLAS:               return RAYTRACING_BUILD_AS_NONE;
+        case CompactedTLAS:               return RAYTRACING_BUILD_AS_ALLOW_COMPACTION;
+        case CompactedBLAS_CompactedTLAS: return RAYTRACING_BUILD_AS_ALLOW_COMPACTION;
+        case UpdateBLAS:                  return RAYTRACING_BUILD_AS_PREFER_FAST_BUILD;
+        case UpdateTLAS:                  return RAYTRACING_BUILD_AS_ALLOW_UPDATE;
+        default:                          return RAYTRACING_BUILD_AS_NONE;
+            // clang-format on
+    }
 }
 
 const auto TestParamRange = testing::Range(int{BeginRange}, int{EndRange});
@@ -703,7 +731,7 @@ TEST_P(RT1, TriangleClosestHitShader)
     Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
-    CreateBLAS(pDevice, pContext, &Triangle, 1, TestBLASUpdate(TestId), pTempBLAS);
+    CreateBLAS(pDevice, pContext, &Triangle, 1, BLASTestFlags(TestId), pTempBLAS);
 
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
@@ -715,7 +743,7 @@ TEST_P(RT1, TriangleClosestHitShader)
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
     const Uint32               HitGroupStride = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TLASTestFlags(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -897,7 +925,7 @@ TEST_P(RT2, TriangleAnyHitShader)
     Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANY_HIT_INVOCATION;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
-    CreateBLAS(pDevice, pContext, &Triangle, 1, TestBLASUpdate(TestId), pTempBLAS);
+    CreateBLAS(pDevice, pContext, &Triangle, 1, BLASTestFlags(TestId), pTempBLAS);
 
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
@@ -909,7 +937,7 @@ TEST_P(RT2, TriangleAnyHitShader)
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
     const Uint32               HitGroupStride = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TLASTestFlags(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -1089,7 +1117,7 @@ TEST_P(RT3, ProceduralIntersection)
     Box.Flags        = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
-    CreateBLAS(pDevice, pContext, &Box, 1, TestBLASUpdate(TestId), pTempBLAS);
+    CreateBLAS(pDevice, pContext, &Box, 1, BLASTestFlags(TestId), pTempBLAS);
 
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
@@ -1101,7 +1129,7 @@ TEST_P(RT3, ProceduralIntersection)
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
     const Uint32               HitGroupStride = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TLASTestFlags(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -1338,7 +1366,7 @@ TEST_P(RT4, MultiGeometry)
     Triangles[2].Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
-    CreateBLAS(pDevice, pContext, Triangles, _countof(Triangles), TestBLASUpdate(TestId), pTempBLAS);
+    CreateBLAS(pDevice, pContext, Triangles, _countof(Triangles), BLASTestFlags(TestId), pTempBLAS);
 
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
@@ -1356,7 +1384,7 @@ TEST_P(RT4, MultiGeometry)
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
     const Uint32               HitGroupStride = 1;
-    CreateTLAS(pDevice, pContext, Instances, _countof(Instances), HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
+    CreateTLAS(pDevice, pContext, Instances, _countof(Instances), HitGroupStride, TLASTestFlags(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -1616,7 +1644,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
     Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
-    CreateBLAS(pDevice, pContext, &Triangle, 1, TestBLASUpdate(TestId), pTempBLAS);
+    CreateBLAS(pDevice, pContext, &Triangle, 1, BLASTestFlags(TestId), pTempBLAS);
 
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
@@ -1628,7 +1656,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
     const Uint32               HitGroupStride = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TLASTestFlags(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -1786,7 +1814,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
     Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
-    CreateBLAS(pDevice, pContext, &Triangle, 1, TestBLASUpdate(TestId), pTempBLAS);
+    CreateBLAS(pDevice, pContext, &Triangle, 1, BLASTestFlags(TestId), pTempBLAS);
 
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
@@ -1798,7 +1826,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
     const Uint32               HitGroupStride = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TLASTestFlags(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -1952,7 +1980,7 @@ TEST_P(RT7, TraceRaysIndirect)
     Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
-    CreateBLAS(pDevice, pContext, &Triangle, 1, TestBLASUpdate(TestId), pTempBLAS);
+    CreateBLAS(pDevice, pContext, &Triangle, 1, BLASTestFlags(TestId), pTempBLAS);
 
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
@@ -1964,7 +1992,7 @@ TEST_P(RT7, TraceRaysIndirect)
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
     const Uint32               HitGroupStride = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TLASTestFlags(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
@@ -2155,7 +2183,7 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
-    CreateBLAS(pDevice, pContext, &Triangle, 1, TestBLASUpdate(TestId), pTempBLAS);
+    CreateBLAS(pDevice, pContext, &Triangle, 1, BLASTestFlags(TestId), pTempBLAS);
 
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
@@ -2167,7 +2195,7 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
 
     RefCntAutoPtr<ITopLevelAS> pTempTLAS;
     const Uint32               HitGroupStride = 1;
-    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TestTLASUpdate(TestId), pTempTLAS);
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitGroupStride, TLASTestFlags(TestId), pTempTLAS);
 
     RefCntAutoPtr<ITopLevelAS> pTLAS;
     TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);

@@ -433,7 +433,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
 }
 
 
-bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs& Attribs)
+bool VerifyBuildBLASAttribs(const BuildBLASAttribs& Attribs, const RayTracingProperties& RTProps)
 {
 #define CHECK_BUILD_BLAS_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Build BLAS attribs are invalid: ", __VA_ARGS__)
 
@@ -443,8 +443,7 @@ bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.pBoxData != nullptr || Attribs.BoxDataCount == 0, "BoxDataCount is ", Attribs.BoxDataCount, ", but pBoxData is null.");
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.pTriangleData != nullptr || Attribs.TriangleDataCount == 0, "TriangleDataCount is ", Attribs.TriangleDataCount, ", but pTriangleData is null.");
 
-    const auto& BLASDesc   = Attribs.pBLAS->GetDesc();
-    const auto  DeviceType = pDevice->GetDeviceInfo().Type;
+    const auto& BLASDesc = Attribs.pBLAS->GetDesc();
 
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.BoxDataCount <= BLASDesc.BoxCount, "BoxDataCount (", Attribs.BoxDataCount, ") must be less than or equal to pBLAS->GetDesc().BoxCount (", BLASDesc.BoxCount, ").");
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.TriangleDataCount <= BLASDesc.TriangleCount, "TriangleDataCount (", Attribs.TriangleDataCount, ") must be less than or equal to pBLAS->GetDesc().TriangleCount (", BLASDesc.TriangleCount, ").");
@@ -496,6 +495,10 @@ bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs
                                  "pTriangleData[", i, "].VertexOffset (", tri.VertexOffset, ") must be a multiple of VertexStride (",
                                  tri.VertexStride, ").");
 
+        CHECK_BUILD_BLAS_ATTRIBS(tri.VertexOffset % RTProps.VertexBufferAlignmnent == 0,
+                                 "pTriangleData[", i, "].VertexOffset (", tri.VertexOffset, ") must be aligned by ", RTProps.VertexBufferAlignmnent,
+                                 " (RayTracingProperties::VertexBufferAlignmnent)");
+
         CHECK_BUILD_BLAS_ATTRIBS(tri.VertexOffset + VertexDataSize <= VertBufDesc.uiSizeInBytes,
                                  "pTriangleData[", i, "].pVertexBuffer is too small for the specified VertexStride (", tri.VertexStride, ") and VertexCount (",
                                  tri.VertexCount, "): at least ", tri.VertexOffset + VertexDataSize, " bytes are required.");
@@ -519,19 +522,15 @@ bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs
                                      "pTriangleData[", i, "].pIndexBuffer was not created with BIND_RAY_TRACING flag.");
 
             CHECK_BUILD_BLAS_ATTRIBS(tri.IndexOffset + IndexDataSize <= InstBufDesc.uiSizeInBytes,
-                                     "pTriangleData[", i, "].pIndexBuffer is too small for specified IndexType and IndexCount: at least",
+                                     "pTriangleData[", i, "].pIndexBuffer is too small for specified IndexType and IndexCount: at least ",
                                      tri.IndexOffset + IndexDataSize, " bytes are required.");
 
             CHECK_BUILD_BLAS_ATTRIBS(tri.IndexOffset % GetValueSize(TriDesc.IndexType) == 0,
                                      "pTriangleData[", i, "].IndexOffset (", tri.IndexOffset, ") must be a multiple of (", GetValueSize(TriDesc.IndexType), ") bytes.");
 
-            if (DeviceType == RENDER_DEVICE_TYPE_METAL)
-            {
-                const Uint32 MtlIndexOffsetAlignment = 32;
-                CHECK_BUILD_BLAS_ATTRIBS(tri.IndexOffset % MtlIndexOffsetAlignment == 0,
-                                         "pTriangleData[", i, "].IndexOffset (", tri.IndexOffset,
-                                         ") must be a multiple of the platform buffer offset alignment (", MtlIndexOffsetAlignment, ").");
-            }
+            CHECK_BUILD_BLAS_ATTRIBS(tri.IndexOffset % RTProps.IndexBufferAlignment == 0,
+                                     "pTriangleData[", i, "].IndexOffset (", tri.IndexOffset, ") must be aligned by ", RTProps.IndexBufferAlignment,
+                                     " (RayTracingProperties::IndexBufferAlignment).");
         }
         else
         {
@@ -544,18 +543,28 @@ bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs
 
         if (tri.pTransformBuffer != nullptr)
         {
-            CHECK_BUILD_BLAS_ATTRIBS((tri.pTransformBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
+            const auto& TrfrmBufDesc = tri.pTransformBuffer->GetDesc();
+
+            CHECK_BUILD_BLAS_ATTRIBS((TrfrmBufDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                                      "pTriangleData[", i, "].pTransformBuffer was not created with BIND_RAY_TRACING flag.");
 
             CHECK_BUILD_BLAS_ATTRIBS(TriDesc.AllowsTransforms, "pTriangleData[", i, "] uses transform buffer, but AllowsTransforms is false.");
+
+            CHECK_BUILD_BLAS_ATTRIBS(tri.TransformBufferOffset + sizeof(InstanceMatrix) <= TrfrmBufDesc.uiSizeInBytes,
+                                     "pTriangleData[", i, "].pTransformBuffer is too small: at least ", tri.TransformBufferOffset + sizeof(InstanceMatrix), " bytes are required.");
+
+            CHECK_BUILD_BLAS_ATTRIBS(tri.TransformBufferOffset % RTProps.TransformBufferAlignment == 0,
+                                     "pTriangleData[", i, "].TransformBufferOffset (", tri.TransformBufferOffset, ") must be aligned by ", RTProps.TransformBufferAlignment,
+                                     " (RayTracingProperties::TransformBufferAlignment).");
         }
     }
 
     for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
     {
-        const auto&  box       = Attribs.pBoxData[i];
-        const Uint32 BoxSize   = sizeof(float) * 6;
-        const Uint32 GeomIndex = Attribs.pBLAS->GetGeometryDescIndex(box.GeometryName);
+        const auto&  box           = Attribs.pBoxData[i];
+        const Uint32 BoxSize       = sizeof(float) * 6;
+        const Uint32 BoxBufferSize = box.BoxCount * box.BoxStride;
+        const Uint32 GeomIndex     = Attribs.pBLAS->GetGeometryDescIndex(box.GeometryName);
 
         CHECK_BUILD_BLAS_ATTRIBS(GeomIndex != INVALID_INDEX,
                                  "pBoxData[", i, "].GeometryName (", box.GeometryName, ") is not found in BLAS description.");
@@ -567,12 +576,24 @@ bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs
 
         CHECK_BUILD_BLAS_ATTRIBS(box.BoxStride >= BoxSize,
                                  "pBoxData[", i, "].BoxStride (", box.BoxStride, ") must be at least ", BoxSize, " bytes.");
-        CHECK_BUILD_BLAS_ATTRIBS(box.BoxStride % 8 == 0,
-                                 "pBoxData[", i, "].BoxStride (", box.BoxStride, ") must be aligned to 8 bytes.");
+
+        const Uint32 BoxStrideAlignment = 8;
+        CHECK_BUILD_BLAS_ATTRIBS(box.BoxStride % BoxStrideAlignment == 0,
+                                 "pBoxData[", i, "].BoxStride (", box.BoxStride, ") must be aligned by ", BoxStrideAlignment, ".");
+
+        CHECK_BUILD_BLAS_ATTRIBS(box.BoxOffset % RTProps.BoxBufferAlignment == 0,
+                                 "pBoxData[", i, "].BoxOffset (", box.BoxOffset, ") must be aligned by ", RTProps.BoxBufferAlignment,
+                                 " (RayTracingProperties::BoxBufferAlignment).");
 
         CHECK_BUILD_BLAS_ATTRIBS(box.pBoxBuffer != nullptr, "pBoxData[", i, "].pBoxBuffer must not be null.");
 
-        CHECK_BUILD_BLAS_ATTRIBS((box.pBoxBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
+        const auto& BoxBufDesc = box.pBoxBuffer->GetDesc();
+
+        CHECK_BUILD_BLAS_ATTRIBS(box.BoxOffset + BoxBufferSize <= BoxBufDesc.uiSizeInBytes,
+                                 "pBoxData[", i, "].pBoxBuffer is too small for the specified BoxStride (", box.BoxStride,
+                                 ") and BoxCount (", box.BoxCount, "): at least", box.BoxOffset + BoxBufferSize, " bytes are required.");
+
+        CHECK_BUILD_BLAS_ATTRIBS((BoxBufDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                                  "pBoxData[", i, "].pBoxBuffer was not created with BIND_RAY_TRACING flag.");
     }
 
@@ -580,6 +601,10 @@ bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs
 
     CHECK_BUILD_BLAS_ATTRIBS(Attribs.ScratchBufferOffset <= ScratchDesc.uiSizeInBytes,
                              "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.uiSizeInBytes, ").");
+
+    CHECK_BUILD_BLAS_ATTRIBS(Attribs.ScratchBufferOffset % RTProps.ScratchBufferAlignment == 0,
+                             "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") must be aligned by ", RTProps.ScratchBufferAlignment,
+                             " (RayTracingProperties::ScratchBufferAlignment).");
 
     if (Attribs.Update)
     {
@@ -601,7 +626,7 @@ bool VerifyBuildBLASAttribs(const IRenderDevice* pDevice, const BuildBLASAttribs
 }
 
 
-bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
+bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, const RayTracingProperties& RTProps)
 {
 #define CHECK_BUILD_TLAS_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Build TLAS attribs are invalid: ", __VA_ARGS__)
 
@@ -673,6 +698,10 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
                              "pInstanceBuffer size (", InstDesc.uiSizeInBytes, ") is too small: at least ",
                              InstDataSize + Attribs.InstanceBufferOffset, " bytes are required.");
 
+    CHECK_BUILD_TLAS_ATTRIBS(Attribs.InstanceBufferOffset % RTProps.InstanceBufferAlignment == 0,
+                             "InstanceBufferOffset (", Attribs.InstanceBufferOffset, ") must be aligned by ", RTProps.InstanceBufferAlignment,
+                             " (RayTracingProperties::InstanceBufferAlignment).");
+
     CHECK_BUILD_TLAS_ATTRIBS((InstDesc.BindFlags & BIND_RAY_TRACING) == BIND_RAY_TRACING,
                              "pInstanceBuffer was not created with BIND_RAY_TRACING flag.");
 
@@ -680,6 +709,10 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs)
 
     CHECK_BUILD_TLAS_ATTRIBS(Attribs.ScratchBufferOffset <= ScratchDesc.uiSizeInBytes,
                              "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") is greater than the buffer size (", ScratchDesc.uiSizeInBytes, ").");
+
+    CHECK_BUILD_TLAS_ATTRIBS(Attribs.ScratchBufferOffset % RTProps.ScratchBufferAlignment == 0,
+                             "ScratchBufferOffset (", Attribs.ScratchBufferOffset, ") must be aligned by ", RTProps.ScratchBufferAlignment,
+                             " (RayTracingProperties::ScratchBufferAlignment).");
 
     if (Attribs.Update)
     {
