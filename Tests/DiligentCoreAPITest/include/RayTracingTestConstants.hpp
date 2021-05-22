@@ -36,11 +36,15 @@ namespace TestingConstants
 // clang-format off
     namespace TriangleClosestHit
     {
-        static const float3 Vertices[] =
+        static const float4 Vertices[] =
         {
-            float3{0.25f, 0.25f, 0.0f},
-            float3{0.75f, 0.25f, 0.0f},
-            float3{0.50f, 0.75f, 0.0f}
+            float4{0.25f, 0.25f, 0.0f, 0.0f},
+            float4{0.75f, 0.25f, 0.0f, 0.0f},
+            float4{0.50f, 0.75f, 0.0f, 0.0f}
+        };
+        static const Uint32 Indices[] = 
+        {
+            0, 1, 2
         };
     } // namespace TriangleClosestHit
 

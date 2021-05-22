@@ -32,10 +32,12 @@
 #include "TestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
+#include "Align.hpp"
 
 #include "gtest/gtest.h"
 
 #include "InlineShaders/RayTracingTestHLSL.h"
+#include "InlineShaders/RayTracingTestGLSL.h"
 #include "InlineShaders/RayTracingTestMSL.h"
 #include "RayTracingTestConstants.hpp"
 
@@ -595,6 +597,19 @@ RAYTRACING_BUILD_AS_FLAGS TLASTestFlags(Uint32 TestId)
     }
 }
 
+struct BufferOffsets
+{
+    Uint32 VBOffset;
+    Uint32 IBOffset;
+};
+BufferOffsets GetBufferOffsets(IRenderDevice* pDevice, Uint32 TestId, Uint32 VertexSize)
+{
+    const auto& RTProps = pDevice->GetAdapterInfo().RayTracing;
+    return BufferOffsets{AlignUp((TestId / 3) * VertexSize, RTProps.VertexBufferAlignmnent),
+                         AlignUp((TestId / 2) * Uint32{sizeof(Uint32)}, RTProps.IndexBufferAlignment)};
+}
+
+
 const auto TestParamRange = testing::Range(int{BeginRange}, int{EndRange});
 
 
@@ -703,28 +718,26 @@ TEST_P(RT1, TriangleClosestHitShader)
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
     ASSERT_NE(pRayTracingSRB, nullptr);
 
-    const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
+    const auto& Vertices    = TestingConstants::TriangleClosestHit::Vertices;
+    const auto  BuffOffsets = GetBufferOffsets(pDevice, TestId, sizeof(Vertices[0]));
 
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
         BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
         BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Vertices);
-
-        BufferData BufData;
-        BufData.pData    = Vertices;
-        BufData.DataSize = sizeof(Vertices);
-
-        pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
+        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
+
+        pContext->UpdateBuffer(pVertexBuffer, BuffOffsets.VBOffset, sizeof(Vertices), Vertices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     BLASBuildTriangleData Triangle;
     Triangle.GeometryName         = "Triangle";
     Triangle.pVertexBuffer        = pVertexBuffer;
     Triangle.VertexStride         = sizeof(Vertices[0]);
+    Triangle.VertexOffset         = BuffOffsets.VBOffset;
     Triangle.VertexCount          = _countof(Vertices);
     Triangle.VertexValueType      = VT_FLOAT32;
     Triangle.VertexComponentCount = 3;
@@ -897,27 +910,25 @@ TEST_P(RT2, TriangleAnyHitShader)
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
     ASSERT_NE(pRayTracingSRB, nullptr);
 
-    const auto& Vertices = TestingConstants::TriangleAnyHit::Vertices;
+    const auto& Vertices    = TestingConstants::TriangleAnyHit::Vertices;
+    const auto  BuffOffsets = GetBufferOffsets(pDevice, TestId, sizeof(Vertices[0]));
 
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
         BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
         BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Vertices);
-
-        BufferData BufData;
-        BufData.pData    = Vertices;
-        BufData.DataSize = sizeof(Vertices);
-
-        pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
+        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
+
+        pContext->UpdateBuffer(pVertexBuffer, BuffOffsets.VBOffset, sizeof(Vertices), Vertices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     BLASBuildTriangleData Triangle;
     Triangle.GeometryName         = "Triangle";
     Triangle.pVertexBuffer        = pVertexBuffer;
+    Triangle.VertexOffset         = BuffOffsets.VBOffset;
     Triangle.VertexStride         = sizeof(Vertices[0]);
     Triangle.VertexCount          = _countof(Vertices);
     Triangle.VertexValueType      = VT_FLOAT32;
@@ -1288,35 +1299,41 @@ TEST_P(RT4, MultiGeometry)
     const auto& Weights          = TestingConstants::MultiGeometry::Weights;
     const auto& PrimitiveOffsets = TestingConstants::MultiGeometry::PrimitiveOffsets;
     const auto& Primitives       = TestingConstants::MultiGeometry::Primitives;
+    const auto  BuffOffsets      = GetBufferOffsets(pDevice, TestId, sizeof(Vertices[0]));
 
-    RefCntAutoPtr<IBuffer> pVertexBuffer;
-    RefCntAutoPtr<IBuffer> pIndexBuffer;
-    RefCntAutoPtr<IBuffer> pPerInstanceBuffer;
-    RefCntAutoPtr<IBuffer> pPrimitiveBuffer;
+    RefCntAutoPtr<IBuffer>     pVertexBuffer;
+    RefCntAutoPtr<IBufferView> pVertexBufferView;
+    RefCntAutoPtr<IBuffer>     pIndexBuffer;
+    RefCntAutoPtr<IBuffer>     pPerInstanceBuffer;
+    RefCntAutoPtr<IBuffer>     pPrimitiveBuffer;
     {
         BufferDesc BuffDesc;
         BuffDesc.Name          = "Indices";
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
         BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Indices);
-        BufferData BufData     = {Indices, sizeof(Indices)};
-        pDevice->CreateBuffer(BuffDesc, &BufData, &pIndexBuffer);
+        BuffDesc.uiSizeInBytes = BuffOffsets.IBOffset + sizeof(Indices);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pIndexBuffer);
         ASSERT_NE(pIndexBuffer, nullptr);
 
         BuffDesc.Name              = "Vertices";
         BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
         BuffDesc.BindFlags         = BIND_RAY_TRACING | BIND_SHADER_RESOURCE;
-        BuffDesc.uiSizeInBytes     = sizeof(Vertices);
+        BuffDesc.uiSizeInBytes     = BuffOffsets.VBOffset + sizeof(Vertices);
         BuffDesc.ElementByteStride = sizeof(Vertices[0]);
-        BufData                    = {Vertices, sizeof(Vertices)};
-        pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
+
+        BufferViewDesc ViewDesc;
+        ViewDesc.ViewType   = BUFFER_VIEW_SHADER_RESOURCE;
+        ViewDesc.ByteOffset = BuffOffsets.VBOffset;
+        ViewDesc.ByteWidth  = sizeof(Vertices);
+        pVertexBuffer->CreateView(ViewDesc, &pVertexBufferView);
+        ASSERT_NE(pVertexBufferView, nullptr);
 
         BuffDesc.Name              = "PerInstanceData";
         BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
         BuffDesc.uiSizeInBytes     = sizeof(PrimitiveOffsets);
         BuffDesc.ElementByteStride = sizeof(PrimitiveOffsets[0]);
-        BufData                    = {PrimitiveOffsets, sizeof(PrimitiveOffsets)};
+        BufferData BufData         = {PrimitiveOffsets, sizeof(PrimitiveOffsets)};
         pDevice->CreateBuffer(BuffDesc, &BufData, &pPerInstanceBuffer);
         ASSERT_NE(pPerInstanceBuffer, nullptr);
 
@@ -1326,43 +1343,49 @@ TEST_P(RT4, MultiGeometry)
         BufData                    = {Primitives, sizeof(Primitives)};
         pDevice->CreateBuffer(BuffDesc, &BufData, &pPrimitiveBuffer);
         ASSERT_NE(pPrimitiveBuffer, nullptr);
+
+        pContext->UpdateBuffer(pVertexBuffer, BuffOffsets.VBOffset, sizeof(Vertices), Vertices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->UpdateBuffer(pIndexBuffer, BuffOffsets.IBOffset, sizeof(Indices), Indices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     BLASBuildTriangleData Triangles[3] = {};
     Triangles[0].GeometryName          = "Geom 1";
     Triangles[0].pVertexBuffer         = pVertexBuffer;
     Triangles[0].VertexStride          = sizeof(Vertices[0]);
+    Triangles[0].VertexOffset          = BuffOffsets.VBOffset;
     Triangles[0].VertexCount           = _countof(Vertices);
     Triangles[0].VertexValueType       = VT_FLOAT32;
     Triangles[0].VertexComponentCount  = 3;
     Triangles[0].pIndexBuffer          = pIndexBuffer;
     Triangles[0].IndexType             = VT_UINT32;
     Triangles[0].PrimitiveCount        = (PrimitiveOffsets[1] - PrimitiveOffsets[0]);
-    Triangles[0].IndexOffset           = PrimitiveOffsets[0] * sizeof(uint) * 3;
+    Triangles[0].IndexOffset           = BuffOffsets.IBOffset + PrimitiveOffsets[0] * sizeof(uint) * 3;
     Triangles[0].Flags                 = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     Triangles[1].GeometryName         = "Geom 2";
     Triangles[1].pVertexBuffer        = pVertexBuffer;
     Triangles[1].VertexStride         = sizeof(Vertices[0]);
+    Triangles[1].VertexOffset         = BuffOffsets.VBOffset;
     Triangles[1].VertexCount          = _countof(Vertices);
     Triangles[1].VertexValueType      = VT_FLOAT32;
     Triangles[1].VertexComponentCount = 3;
     Triangles[1].pIndexBuffer         = pIndexBuffer;
     Triangles[1].IndexType            = VT_UINT32;
     Triangles[1].PrimitiveCount       = (PrimitiveOffsets[2] - PrimitiveOffsets[1]);
-    Triangles[1].IndexOffset          = PrimitiveOffsets[1] * sizeof(uint) * 3;
+    Triangles[1].IndexOffset          = BuffOffsets.IBOffset + PrimitiveOffsets[1] * sizeof(uint) * 3;
     Triangles[1].Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     Triangles[2].GeometryName         = "Geom 3";
     Triangles[2].pVertexBuffer        = pVertexBuffer;
     Triangles[2].VertexStride         = sizeof(Vertices[0]);
+    Triangles[2].VertexOffset         = BuffOffsets.VBOffset;
     Triangles[2].VertexCount          = _countof(Vertices);
     Triangles[2].VertexValueType      = VT_FLOAT32;
     Triangles[2].VertexComponentCount = 3;
     Triangles[2].pIndexBuffer         = pIndexBuffer;
     Triangles[2].IndexType            = VT_UINT32;
     Triangles[2].PrimitiveCount       = (_countof(Primitives) - PrimitiveOffsets[2]);
-    Triangles[2].IndexOffset          = PrimitiveOffsets[2] * sizeof(uint) * 3;
+    Triangles[2].IndexOffset          = BuffOffsets.IBOffset + PrimitiveOffsets[2] * sizeof(uint) * 3;
     Triangles[2].Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
@@ -1416,7 +1439,7 @@ TEST_P(RT4, MultiGeometry)
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_CLOSEST_HIT, "g_PerInstance")->SetArray(&pObject, 1, 1);
 
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_CLOSEST_HIT, "g_Primitives")->Set(pPrimitiveBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
-    pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_CLOSEST_HIT, "g_Vertices")->Set(pVertexBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE));
+    pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_CLOSEST_HIT, "g_Vertices")->Set(pVertexBufferView);
 
     pContext->SetPipelineState(pRayTracingPSO);
     pContext->CommitShaderResources(pRayTracingSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -1616,27 +1639,25 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
     ASSERT_NE(pRayTracingSRB, nullptr);
 
-    const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
+    const auto& Vertices    = TestingConstants::TriangleClosestHit::Vertices;
+    const auto  BuffOffsets = GetBufferOffsets(pDevice, TestId, sizeof(Vertices[0]));
 
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
         BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
         BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Vertices);
-
-        BufferData BufData;
-        BufData.pData    = Vertices;
-        BufData.DataSize = sizeof(Vertices);
-
-        pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
+        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
+
+        pContext->UpdateBuffer(pVertexBuffer, BuffOffsets.VBOffset, sizeof(Vertices), Vertices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     BLASBuildTriangleData Triangle;
     Triangle.GeometryName         = "Triangle";
     Triangle.pVertexBuffer        = pVertexBuffer;
+    Triangle.VertexOffset         = BuffOffsets.VBOffset;
     Triangle.VertexStride         = sizeof(Vertices[0]);
     Triangle.VertexCount          = _countof(Vertices);
     Triangle.VertexValueType      = VT_FLOAT32;
@@ -1786,28 +1807,26 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
     pPSO->CreateShaderResourceBinding(&pSRB, true);
     ASSERT_NE(pSRB, nullptr);
 
-    const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
+    const auto& Vertices    = TestingConstants::TriangleClosestHit::Vertices;
+    const auto  BuffOffsets = GetBufferOffsets(pDevice, TestId, sizeof(Vertices[0]));
 
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
         BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
         BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Vertices);
-
-        BufferData BufData;
-        BufData.pData    = Vertices;
-        BufData.DataSize = sizeof(Vertices);
-
-        pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
+        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
+
+        pContext->UpdateBuffer(pVertexBuffer, BuffOffsets.VBOffset, sizeof(Vertices), Vertices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     BLASBuildTriangleData Triangle;
     Triangle.GeometryName         = "Triangle";
     Triangle.pVertexBuffer        = pVertexBuffer;
     Triangle.VertexStride         = sizeof(Vertices[0]);
+    Triangle.VertexOffset         = BuffOffsets.VBOffset;
     Triangle.VertexCount          = _countof(Vertices);
     Triangle.VertexValueType      = VT_FLOAT32;
     Triangle.VertexComponentCount = 3;
@@ -1952,27 +1971,25 @@ TEST_P(RT7, TraceRaysIndirect)
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
     ASSERT_NE(pRayTracingSRB, nullptr);
 
-    const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
+    const auto& Vertices    = TestingConstants::TriangleClosestHit::Vertices;
+    const auto  BuffOffsets = GetBufferOffsets(pDevice, TestId, sizeof(Vertices[0]));
 
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
         BufferDesc BuffDesc;
         BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
         BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Vertices);
-
-        BufferData BufData;
-        BufData.pData    = Vertices;
-        BufData.DataSize = sizeof(Vertices);
-
-        pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
+        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
+
+        pContext->UpdateBuffer(pVertexBuffer, BuffOffsets.VBOffset, sizeof(Vertices), Vertices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     BLASBuildTriangleData Triangle;
     Triangle.GeometryName         = "Triangle";
     Triangle.pVertexBuffer        = pVertexBuffer;
+    Triangle.VertexOffset         = BuffOffsets.VBOffset;
     Triangle.VertexStride         = sizeof(Vertices[0]);
     Triangle.VertexCount          = _countof(Vertices);
     Triangle.VertexValueType      = VT_FLOAT32;
@@ -2155,31 +2172,40 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     pPSO->CreateShaderResourceBinding(&pSRB, true);
     ASSERT_NE(pSRB, nullptr);
 
-    const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
+    const auto& Vertices    = TestingConstants::TriangleClosestHit::Vertices;
+    const auto& Indices     = TestingConstants::TriangleClosestHit::Indices;
+    const auto  BuffOffsets = GetBufferOffsets(pDevice, TestId, sizeof(Vertices[0]));
 
     RefCntAutoPtr<IBuffer> pVertexBuffer;
+    RefCntAutoPtr<IBuffer> pIndexBuffer;
     {
         BufferDesc BuffDesc;
-        BuffDesc.Name          = "Triangle vertices";
-        BuffDesc.Usage         = USAGE_IMMUTABLE;
+        BuffDesc.Name          = "Triangle indices";
         BuffDesc.BindFlags     = BIND_RAY_TRACING;
-        BuffDesc.uiSizeInBytes = sizeof(Vertices);
+        BuffDesc.uiSizeInBytes = BuffOffsets.IBOffset + sizeof(Indices);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pIndexBuffer);
+        ASSERT_NE(pIndexBuffer, nullptr);
 
-        BufferData BufData;
-        BufData.pData    = Vertices;
-        BufData.DataSize = sizeof(Vertices);
-
-        pDevice->CreateBuffer(BuffDesc, &BufData, &pVertexBuffer);
+        BuffDesc.Name          = "Triangle vertices";
+        BuffDesc.uiSizeInBytes = BuffOffsets.VBOffset + sizeof(Vertices);
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pVertexBuffer);
         ASSERT_NE(pVertexBuffer, nullptr);
+
+        pContext->UpdateBuffer(pVertexBuffer, BuffOffsets.VBOffset, sizeof(Vertices), Vertices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->UpdateBuffer(pIndexBuffer, BuffOffsets.IBOffset, sizeof(Indices), Indices, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     BLASBuildTriangleData Triangle;
     Triangle.GeometryName         = "Triangle";
     Triangle.pVertexBuffer        = pVertexBuffer;
+    Triangle.VertexOffset         = BuffOffsets.VBOffset;
     Triangle.VertexStride         = sizeof(Vertices[0]);
     Triangle.VertexCount          = _countof(Vertices);
     Triangle.VertexValueType      = VT_FLOAT32;
     Triangle.VertexComponentCount = 3;
+    Triangle.pIndexBuffer         = pIndexBuffer;
+    Triangle.IndexOffset          = BuffOffsets.IBOffset;
+    Triangle.IndexType            = VT_UINT32;
     Triangle.Flags                = RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
