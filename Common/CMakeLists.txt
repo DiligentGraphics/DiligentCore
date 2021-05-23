@@ -34,6 +34,7 @@ set(INTERFACE
     interface/UniqueIdentifier.hpp
     interface/ValidatedCast.hpp
     interface/CompilerDefinitions.h
+    interface/EnumCast.hpp
 )
 
 set(SOURCE 
