@@ -218,11 +218,6 @@ private:
 
     RefCountersImpl() noexcept
     {
-        m_lNumStrongReferences = 0;
-        m_lNumWeakReferences   = 0;
-#ifdef DILIGENT_DEBUG
-        memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
-#endif
     }
 
     class ObjectWrapperBase
@@ -392,11 +387,9 @@ private:
             // So we copy the object wrapper and destroy the object after unlocking the
             // reference counters
             size_t ObjectWrapperBufferCopy[ObjectWrapperBufferSize];
-            for (size_t i = 0; i < ObjectWrapperBufferSize; ++i)
-                ObjectWrapperBufferCopy[i] = m_ObjectWrapperBuffer[i];
-#ifdef DILIGENT_DEBUG
+            memcpy(ObjectWrapperBufferCopy, m_ObjectWrapperBuffer, sizeof(m_ObjectWrapperBuffer));
             memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
-#endif
+
             auto* pWrapper = reinterpret_cast<ObjectWrapperBase*>(ObjectWrapperBufferCopy);
 
             // In a multithreaded environment, reference counters object may
@@ -480,10 +473,13 @@ private:
     // which does have virtual destructor.
     static constexpr size_t ObjectWrapperBufferSize = sizeof(ObjectWrapper<IObjectStub, IMemoryAllocator>) / sizeof(size_t);
 
-    size_t                   m_ObjectWrapperBuffer[ObjectWrapperBufferSize];
-    Atomics::AtomicLong      m_lNumStrongReferences;
-    Atomics::AtomicLong      m_lNumWeakReferences;
+    size_t m_ObjectWrapperBuffer[ObjectWrapperBufferSize]{};
+
+    Atomics::AtomicLong m_lNumStrongReferences{0};
+    Atomics::AtomicLong m_lNumWeakReferences{0};
+
     ThreadingTools::LockFlag m_LockFlag;
+
     enum class ObjectState : Int32
     {
         NotInitialized,
