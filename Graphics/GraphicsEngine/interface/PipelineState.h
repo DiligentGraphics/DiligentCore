@@ -202,7 +202,7 @@ struct GraphicsPipelineDesc
 
     /// Render target formats.
     /// All formats must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.
-    TEXTURE_FORMAT RTVFormats[8] DEFAULT_INITIALIZER({});
+    TEXTURE_FORMAT RTVFormats[DILIGENT_MAX_RENDER_TARGETS] DEFAULT_INITIALIZER({});
 
     /// Depth-stencil format.
     /// Must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.
@@ -553,7 +553,7 @@ struct TilePipelineDesc
     Uint8 SampleCount            DEFAULT_INITIALIZER(1);
 
     /// Render target formats.
-    TEXTURE_FORMAT RTVFormats[8] DEFAULT_INITIALIZER({});
+    TEXTURE_FORMAT RTVFormats[DILIGENT_MAX_RENDER_TARGETS] DEFAULT_INITIALIZER({});
 };
 typedef struct TilePipelineDesc TilePipelineDesc;
 

@@ -1119,7 +1119,7 @@ void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE 
 
     auto& CmdCtx = GetCmdContext();
 
-    D3D12_CPU_DESCRIPTOR_HANDLE RTVHandles[8]; // Do not waste time initializing array to zero
+    D3D12_CPU_DESCRIPTOR_HANDLE RTVHandles[MAX_RENDER_TARGETS]; // Do not waste time initializing array to zero
     D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle = {};
     for (UINT i = 0; i < NumRenderTargets; ++i)
     {

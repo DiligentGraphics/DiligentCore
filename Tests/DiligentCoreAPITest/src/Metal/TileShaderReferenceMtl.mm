@@ -31,7 +31,6 @@
 #include "TextureViewMtl.h"
 
 #include "InlineShaders/TileShaderTestMSL.h"
-#include "RayTracingTestConstants.hpp"
 
 namespace Diligent
 {
