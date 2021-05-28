@@ -264,7 +264,7 @@ void main()
     {
         vec4 temp      = vec4(float(DTid));
         vec4 blendWith = subgroupShuffle(temp, (DTid + 5) & 7);
-        Accum += (dot(temp, temp) < 0.0 ? 1 : 0);
+        Accum += (dot(blendWith, blendWith) < 0.0 ? 1 : 0);
     }
     #endif
     #if WAVE_FEATURE_SHUFFLE_RELATIVE
@@ -310,6 +310,143 @@ void main()
     pDevice->CreateShader(ShaderCI, &pCS);
     ASSERT_NE(pCS, nullptr);
 
+
+    ComputePipelineStateCreateInfo PSOCreateInfo;
+    PSOCreateInfo.PSODesc.Name = "Wave op test";
+    PSOCreateInfo.pCS          = pCS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+}
+
+
+TEST(WaveOpTest, CompileShader_MSL)
+{
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+
+    if (!DeviceInfo.IsMetalDevice())
+    {
+        GTEST_SKIP();
+    }
+    if (!DeviceInfo.Features.WaveOp)
+    {
+        GTEST_SKIP() << "Wave operations are not supported by this device";
+    }
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    const auto& WaveOpProps = pDevice->GetAdapterInfo().WaveOp;
+
+    ASSERT_NE(WaveOpProps.Features, WAVE_FEATURE_UNKNOWN);
+    ASSERT_TRUE((WaveOpProps.Features & WAVE_FEATURE_BASIC) != 0);
+
+    ASSERT_NE(WaveOpProps.SupportedStages, SHADER_TYPE_UNKNOWN);
+    ASSERT_TRUE((WaveOpProps.SupportedStages & SHADER_TYPE_COMPUTE) != 0);
+
+    ASSERT_GT(WaveOpProps.MinSize, 0u);
+    ASSERT_GE(WaveOpProps.MaxSize, WaveOpProps.MinSize);
+
+    std::stringstream ShaderSourceStream;
+    // clang-format off
+    ShaderSourceStream << "#define WAVE_FEATURE_BASIC "            << int{(WaveOpProps.Features & WAVE_FEATURE_BASIC)            != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_VOTE "             << int{(WaveOpProps.Features & WAVE_FEATURE_VOTE)             != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_ARITHMETIC "       << int{(WaveOpProps.Features & WAVE_FEATURE_ARITHMETIC)       != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_BALLOUT "          << int{(WaveOpProps.Features & WAVE_FEATURE_BALLOUT)          != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_SHUFFLE "          << int{(WaveOpProps.Features & WAVE_FEATURE_SHUFFLE)          != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_SHUFFLE_RELATIVE " << int{(WaveOpProps.Features & WAVE_FEATURE_SHUFFLE_RELATIVE) != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_CLUSTERED "        << int{(WaveOpProps.Features & WAVE_FEATURE_CLUSTERED)        != 0} << "\n";
+    ShaderSourceStream << "#define WAVE_FEATURE_QUAD "             << int{(WaveOpProps.Features & WAVE_FEATURE_QUAD)             != 0} << "\n";
+    // clang-format on
+
+    static const char ShaderBody[] = R"(
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_simdgroup>
+using namespace metal;
+
+kernel void CSMain(
+#if WAVE_FEATURE_BASIC
+    uint LaneIndex  [[thread_index_in_simdgroup]],
+    uint WaveSize   [[threads_per_simdgroup]],
+#endif
+#if WAVE_FEATURE_QUAD
+    uint QuadId     [[thread_index_in_quadgroup]],
+#endif
+    device uint* g_WBuffer [[buffer(0)]],
+    uint         DTid      [[thread_index_in_threadgroup]]
+)
+{
+    uint Accum = 0;
+    #if WAVE_FEATURE_BASIC
+    {
+        Accum += (LaneIndex % WaveSize);
+    }
+    #endif
+    #if WAVE_FEATURE_VOTE
+    {
+        if (simd_all(Accum > 0xFFFF))
+            Accum += 1;
+    }
+    #endif
+    #if WAVE_FEATURE_ARITHMETIC
+    {
+        uint sum = simd_sum(DTid);
+        Accum += (sum & 1);
+    }
+    #endif
+    #if WAVE_FEATURE_BALLOUT
+    {
+        float val = simd_broadcast(float(DTid) * 0.1f, ushort(LaneIndex));
+        Accum += (val > 3.5f);
+    }
+    #endif
+    #if WAVE_FEATURE_SHUFFLE
+    {
+        float4 temp      = float4(float(DTid));
+        float4 blendWith = simd_shuffle(temp, ushort((DTid + 5) & 7));
+        Accum += (dot(blendWith, blendWith) < 0.0 ? 1 : 0);
+    }
+    #endif
+    #if WAVE_FEATURE_SHUFFLE_RELATIVE
+    {
+        float4 temp = float4(float(DTid));
+        for (uint i = 2; i < WaveSize; i *= 2)
+        {
+            float4 other = simd_shuffle_up(temp, ushort(i));
+
+            if (i <= LaneIndex)
+                temp = temp * other;
+        }
+        Accum += (dot(temp, temp) > 0.5 ? 1 : 0);
+    }
+    #endif
+    #if WAVE_FEATURE_QUAD
+    {
+        float val = quad_broadcast(float(DTid) * 0.1f, ushort(LaneIndex));
+        Accum += (val > 2.5f);
+    }
+    #endif
+
+    g_WBuffer[DTid] = Accum;
+}
+)";
+
+    ShaderSourceStream << ShaderBody;
+    const String Source = ShaderSourceStream.str();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_MSL;
+    ShaderCI.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+    ShaderCI.Desc.Name       = "Wave op test - CS";
+    ShaderCI.EntryPoint      = "CSMain";
+    ShaderCI.Source          = Source.c_str();
+
+    RefCntAutoPtr<IShader> pCS;
+    pDevice->CreateShader(ShaderCI, &pCS);
+    ASSERT_NE(pCS, nullptr);
 
     ComputePipelineStateCreateInfo PSOCreateInfo;
     PSOCreateInfo.PSODesc.Name = "Wave op test";
