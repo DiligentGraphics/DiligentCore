@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.11)
 
 project(Diligent-GraphicsEngineD3D12 CXX)
 
@@ -212,9 +212,23 @@ source_group("shaders" FILES
     shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
-# User can download WinPixEventRuntime from https://www.nuget.org/packages/WinPixEventRuntime
-set(DILIGENT_PIX_EVENT_RUNTIME_PATH "" CACHE PATH "Path to WinPixEventRuntime to enable Direct3D12 debug utils")
-if(EXISTS "${DILIGENT_PIX_EVENT_RUNTIME_PATH}")
+option(DILIGENT_LOAD_PIX_EVENT_RUNTIME OFF "Download WinPixEventRuntime to enable Direct3D12 debug utils")
+if(${DILIGENT_LOAD_PIX_EVENT_RUNTIME})
+    include(FetchContent)
+    set(DILIGENT_PIX_EVENT_RUNTIME_PATH "${CMAKE_BINARY_DIR}/WinPixEventRuntime")
+    FetchContent_Declare(
+        WinPixEventRuntime
+        URL                 "https://www.nuget.org/api/v2/package/WinPixEventRuntime"
+        DOWNLOAD_DIR        ${DILIGENT_PIX_EVENT_RUNTIME_PATH}
+        LOG_DOWNLOAD        1
+        SOURCE_DIR			${DILIGENT_PIX_EVENT_RUNTIME_PATH}
+        CONFIGURE_COMMAND	${CMAKE_COMMAND} -E tar -xf "${CMAKE_BINARY_DIR}/WinPixEventRuntime/winpixeventruntime.*.nupkg"
+        LOG_CONFIGURE 		1
+    )
+    FetchContent_GetProperties(WinPixEventRuntime)
+    if(NOT WinPixEventRuntime_POPULATED)
+        FetchContent_Populate(WinPixEventRuntime)
+    endif()
     if(EXISTS "${DILIGENT_PIX_EVENT_RUNTIME_PATH}/include/WinPixEventRuntime/pix3.h")
         if(PLATFORM_WIN32 AND ${CMAKE_SIZEOF_VOID_P} EQUAL 8)
             set(DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH ${DILIGENT_PIX_EVENT_RUNTIME_PATH}/bin/x64/WinPixEventRuntime.dll)
@@ -241,9 +255,6 @@ if(EXISTS "${DILIGENT_PIX_EVENT_RUNTIME_PATH}")
                 message(STATUS "'${DILIGENT_PIX_EVENT_RUNTIME_LIB_PATH}' is not valid. Pix events will be disabled")
             endif()
         endif()
-    else()
-        message(STATUS "Path to WinPixEventRuntime '${DILIGENT_PIX_EVENT_RUNTIME_PATH} is not valid, can't find 'pix3.h'")
-        set(DILIGENT_PIX_EVENT_RUNTIME_PATH_VALID OFF)
     endif()
 endif()
 
